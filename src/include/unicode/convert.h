@@ -65,6 +65,20 @@ namespace utils {
         DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(2, 1, utf16_to_utf8)
         DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(1, 2, utf8_to_utf16)
 
+#define DEFINE_CONVERT_BETWEEN_SAME_SIZE(SIZE)                                                    \
+    template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, SIZE, SIZE>> \
+    constexpr bool convert(Sequencer<T>& in, U& out) {                                            \
+        while (!in.eos()) {                                                                       \
+            out.push_back(in.current());                                                          \
+            in.consume();                                                                         \
+        }                                                                                         \
+        return true;                                                                              \
+    }
+
+        DEFINE_CONVERT_BETWEEN_SAME_SIZE(1)
+        DEFINE_CONVERT_BETWEEN_SAME_SIZE(2)
+        DEFINE_CONVERT_BETWEEN_SAME_SIZE(4)
+
         template <bool decode_all = false, class T, class U>
         constexpr bool convert(T&& in, U& out) {
             Sequencer<typename BufferType<T&>::type> seq(in);
