@@ -35,6 +35,8 @@ namespace utils {
 
         template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 1, 4>>
         constexpr bool convert(T&& in, U& out) {
+            Sequencer<typename BufferType<T&>::type> seq(in);
+            return convert(seq, out);
         }
 
     }  // namespace utf
