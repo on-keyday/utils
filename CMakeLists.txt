@@ -16,7 +16,7 @@ find_package(Threads REQUIRED)
 
 add_executable(test_core "src/test/test_core.cpp")
 add_executable(test_utfconvert "src/test/test_utfconvert.cpp")
-add_executable(test_fallback "src/test/test_fallback.cpp")
+add_executable(test_fallback "src/test/test_fallback_sequence.cpp")
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)

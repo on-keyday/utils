@@ -25,7 +25,7 @@ namespace utils {
                 return 0;
             }
             size_t offset = 0;
-            size_t maxlen = buf.size() - rptr > tmp.size() ? tmp.size() : buf.size();
+            size_t maxlen = buf.size() - rptr > tmp.size() ? tmp.size() : buf.size() - rptr;
             while (true) {
                 if (offset >= maxlen) {
                     return offset;
