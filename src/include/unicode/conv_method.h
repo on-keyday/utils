@@ -97,7 +97,7 @@ namespace utils {
                 if (!is_utf16_low_surrogate(sec)) {
                     return false;
                 }
-                output = internal::make_surrogate_char<C>(in, sec);
+                output = internal::make_surrogate_char<unsigned_t, C>(in, sec);
                 input.consume(2);
             }
             else {
