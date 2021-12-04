@@ -33,7 +33,7 @@ namespace utils {
 
             template <class T, class C = char32_t>
             constexpr void make_utf32_from_utf8(size_t len, T& input, C& output, size_t offset) {
-                using unsigned_t = std::make_unsigned_t<Sequencer<T>::char_type>;
+                using unsigned_t = std::make_unsigned_t<typename Sequencer<T>::char_type>;
                 C ret = 0;
                 for (int i = 0; i < len; i++) {
                     auto mul = (len - i - 1);

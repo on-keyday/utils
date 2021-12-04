@@ -16,7 +16,7 @@ namespace utils {
             size_t pos = 0;
             constexpr void push_back(C c) {
                 if (pos >= 4) {
-                    return false;
+                    return;
                 }
                 buf[pos] = c;
                 pos++;
@@ -47,7 +47,7 @@ namespace utils {
             size_t pos = 0;
             constexpr void push_back(C c) {
                 if (pos >= 2) {
-                    return false;
+                    return;
                 }
                 buf[pos] = c;
                 pos++;
@@ -76,7 +76,7 @@ namespace utils {
             size_t pos = 0;
             constexpr void push_back(C c) {
                 if (pos >= 1) {
-                    return false;
+                    return;
                 }
                 buf[pos] = c;
                 pos++;
