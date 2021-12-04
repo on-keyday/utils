@@ -84,7 +84,7 @@ namespace utils {
         template <bool decode_all = false, class T, class U>
         constexpr bool convert(T&& in, U& out) {
             Sequencer<typename BufferType<T&>::type> seq(in);
-            return convert<decode_all>(seq, out);
+            return convert<decode_all, typename BufferType<T&>::type, U>(seq, out);
         }
 
     }  // namespace utf
