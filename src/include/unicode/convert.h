@@ -15,16 +15,15 @@ namespace utils {
         using expect_size_t = expect_size<typename BufferType<T>::char_type, typename BufferType<U>::char_type, expectT, expectU>;
 
         template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 1, 4>>
-        bool convert(T&& in, U& out) {
-            Sequencer<typename BufferType<T&>::type> buf;
+        constexpr bool convert(Sequencer<T>& in, U& out) {
             while (!buf.eos()) {
                 char32_t c = 0;
-                if (utf8_to_utf32(buf, c)) {
+                if (utf8_to_utf32(in, c)) {
                     out.push_back(c);
                 }
                 else {
                     if constexpr (decode_all) {
-                        out.push_back(buf.current());
+                        out.push_back(in.current());
                         buf.consume();
                         continue;
                     }
@@ -32,6 +31,10 @@ namespace utils {
                 }
             }
             return true;
+        }
+
+        template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 1, 4>>
+        constexpr bool convert(T&& in, U& out) {
         }
 
     }  // namespace utf
