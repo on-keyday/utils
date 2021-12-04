@@ -17,7 +17,21 @@ namespace utils {
         template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 1, 4>>
         bool convert(T&& in, U& out) {
             Sequencer<typename BufferType<T&>::type> buf;
-            utf8_to_utf32(buf, out);
+            while (!buf.eos()) {
+                char32_t c = 0;
+                if (utf8_to_utf32(buf, c)) {
+                    out.push_back(c);
+                }
+                else {
+                    if constexpr (decode_all) {
+                        out.push_back(buf.current());
+                        buf.consume();
+                        continue;
+                    }
+                    return false;
+                }
+            }
+            return true;
         }
 
     }  // namespace utf
