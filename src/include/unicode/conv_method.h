@@ -39,7 +39,7 @@ namespace utils {
                 return true;
             }
             auto make = [&](auto len) {
-                internal::make_utf32_from_utf8(len, input.buf, output, input.rptr);
+                internal::make_utf32_from_utf8(len, input.buf.buffer, output, input.rptr);
             };
             auto test_mask = [&](size_t offset, std::uint8_t maskkind) -> bool {
                 if (maskkind == 0) {
