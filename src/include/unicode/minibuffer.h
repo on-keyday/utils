@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include "../core/buffer.h"
 
 namespace utils {
     namespace utf {
@@ -14,6 +15,17 @@ namespace utils {
         struct Minibuffer<C, 1> {
             C buf[4] = {0};
             size_t pos = 0;
+
+            constexpr Minibuffer() {}
+
+            template <class T>
+            constexpr Minibuffer(T&& t) {
+                Buffer<typename BufferType<T&>::type> buf(t);
+                for (auto i = 0; i < buf.size(); i++) {
+                    push_back(buf.at(i));
+                }
+            }
+
             constexpr void push_back(C c) {
                 if (pos >= 4) {
                     return;
@@ -45,6 +57,17 @@ namespace utils {
         struct Minibuffer<C, 2> {
             C buf[2] = {0};
             size_t pos = 0;
+
+            constexpr Minibuffer() {}
+
+            template <class T>
+            constexpr Minibuffer(T&& t) {
+                Buffer<typename BufferType<T&>::type> buf(t);
+                for (auto i = 0; i < buf.size(); i++) {
+                    push_back(buf.at(i));
+                }
+            }
+
             constexpr void push_back(C c) {
                 if (pos >= 2) {
                     return;
@@ -74,6 +97,17 @@ namespace utils {
         struct Minibuffer<C, 4> {
             C buf[1] = {0};
             size_t pos = 0;
+
+            constexpr Minibuffer() {}
+
+            template <class T>
+            constexpr Minibuffer(T&& t) {
+                Buffer<typename BufferType<T&>::type> buf(t);
+                for (auto i = 0; i < buf.size(); i++) {
+                    push_back(buf.at(i));
+                }
+            }
+
             constexpr void push_back(C c) {
                 if (pos >= 1) {
                     return;
