@@ -21,13 +21,16 @@ namespace utils {
                     return seq.backto();
                 }
                 size_t base = seq.rptr;
-                if (seq.eos()) {
+                if (offset == 4 && seq.eos()) {
                     base--;
                 }
                 minbuf_t minbuf;
                 for (size_t i = offset; i != 0; i--) {
                     seq.rptr = base - i;
                     if (convert_one(seq, minbuf)) {
+                        if (offset == 2 && i == 2 && minbuf.size() != 2) {
+                            continue;
+                        }
                         seq.rptr = base - i;
                         return true;
                     }
