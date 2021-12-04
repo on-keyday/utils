@@ -1,0 +1,101 @@
+/*license*/
+
+// minibuffer - mimimum buffer for conversion
+#pragma once
+
+#include <cstdint>
+
+namespace utils {
+    namespace utf {
+        template <class C, size_t size = sizeof(C)>
+        struct Minibuffer;
+
+        template <class C>
+        struct Minibuffer<C, 1> {
+            C buf[4] = {0};
+            size_t pos = 0;
+            constexpr void push_back(C c) {
+                if (pos >= 4) {
+                    return false;
+                }
+                buf[pos] = c;
+                pos++;
+            }
+
+            constexpr C operator[](size_t position) const {
+                if (pos <= position) {
+                    return C();
+                }
+                return buf[position];
+            }
+
+            constexpr size_t size() const {
+                return pos;
+            }
+
+            constexpr void clear() const {
+                buf[0] = 0;
+                buf[1] = 0;
+                buf[2] = 0;
+                buf[3] = 0;
+            }
+        };
+
+        template <class C>
+        struct Minibuffer<C, 2> {
+            C buf[2] = {0};
+            size_t pos = 0;
+            constexpr void push_back(C c) {
+                if (pos >= 2) {
+                    return false;
+                }
+                buf[pos] = c;
+                pos++;
+            }
+
+            constexpr C operator[](size_t position) const {
+                if (pos <= position) {
+                    return C();
+                }
+                return buf[position];
+            }
+
+            constexpr size_t size() const {
+                return pos;
+            }
+
+            constexpr void clear() const {
+                buf[0] = 0;
+                buf[1] = 0;
+            }
+        };
+
+        template <class C>
+        struct Minibuffer<C, 4> {
+            C buf[1] = {0};
+            size_t pos = 0;
+            constexpr void push_back(C c) {
+                if (pos >= 1) {
+                    return false;
+                }
+                buf[pos] = c;
+                pos++;
+            }
+
+            constexpr C operator[](size_t position) const {
+                if (pos <= position) {
+                    return C();
+                }
+                return buf[position];
+            }
+
+            constexpr size_t size() const {
+                return pos;
+            }
+
+            constexpr void clear() const {
+                buf[0] = 0;
+            }
+        };
+    }  // namespace utf
+}  // namespace utils
