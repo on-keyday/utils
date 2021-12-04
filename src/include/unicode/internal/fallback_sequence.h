@@ -16,15 +16,18 @@ namespace utils {
                 }
                 using minbuf_t = Minibuffer<std::remove_cvref_t<typename BufferType<T>::char_type>>;
                 constexpr size_t offset = minbuf_t::bufsize;
-                size_t base = seq.rptr;
                 if (seq.current(-1) < 0x80 || offset == 1) {
                     return seq.backto();
+                }
+                size_t base = seq.rptr;
+                if (seq.eos()) {
+                    base--;
                 }
                 minbuf_t minbuf;
                 for (size_t i = offset; i != 0; i--) {
                     seq.rptr = base - i;
                     if (convert_one(seq, minbuf)) {
-                        seq.rptr = base - offset + 1;
+                        seq.rptr = base - offset;
                         return true;
                     }
                 }
