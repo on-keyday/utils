@@ -25,7 +25,8 @@ constexpr bool test_fallback_utf16() {
 void test_fallback() {
     constexpr auto result1 = test_fallback_utf8();
     static_assert(result1 == true, "fallback for utf8 is wrong");
-    auto result2 = test_fallback_utf16();
+    constexpr auto result2 = test_fallback_utf16();
+    static_assert(result2 == true, "fallback for utf16 is wrong");
 }
 
 int main() {

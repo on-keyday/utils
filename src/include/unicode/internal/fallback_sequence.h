@@ -21,7 +21,7 @@ namespace utils {
                     return seq.backto();
                 }
                 size_t base = seq.rptr;
-                if (offset == 4 && seq.eos()) {
+                if (seq.eos()) {
                     base--;
                 }
                 minbuf_t minbuf;
