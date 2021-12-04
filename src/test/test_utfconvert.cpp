@@ -43,6 +43,7 @@ void test_utf_convert() {
     constexpr auto expect_result4 = utils::utf::Minibuffer<char16_t>{u"𠮷"};
     constexpr auto result4 = test_utf32_to_utf16();
     static_assert(result4 == expect_result4, "utf32_to_utf16 is wrong");
+
     std::string str;
     utils::utf::convert("", str);
     utils::Sequencer<std::string> ptr;
