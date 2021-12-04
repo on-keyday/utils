@@ -55,6 +55,23 @@ namespace utils {
                 return 0x10000 + (first - 0xD800) * 0x400 + (second - 0xDC00);
             }
 
+            template <class T, class C>
+            constexpr void make_utf8_from_utf32(size_t len, C input, T& output) {
+                unsigned char mask = (unsigned char)~utf8bits(1);
+                for (auto i = 0; i < ; i++) {
+                    auto mul = (len - 1 - i);
+                    auto shift = 6 * mul;
+                    unsigned char abyte = 0, shiftC = (unsigned char)(input >> shift);
+                    if (i == 0) {
+                        abyte = utf8bits(len - 1) | (shiftC & mask);
+                    }
+                    else {
+                        abyte = utf8bits(0) | (shiftC & mask);
+                    }
+                    output.push_back(abyte);
+                }
+            }
+
         }  // namespace internal
     }      // namespace utf
 }  // namespace utils

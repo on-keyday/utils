@@ -1,6 +1,6 @@
 /*license*/
 
-// conv_method - utf conversion method
+// convert - utf conversion method
 #pragma once
 
 #include "../core/sequencer.h"
@@ -99,6 +99,10 @@ namespace utils {
                 input.consume();
             }
             return true;
+        }
+
+        template <class T, class C>
+        constexpr bool utf32_to_utf8(C input, T& output) {
         }
     }  // namespace utf
 }  // namespace utils
