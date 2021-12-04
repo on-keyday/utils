@@ -21,7 +21,7 @@ namespace utils {
                 }
                 using minbuf_t = Minibuffer<typename BufferType<T>::char_type>;
                 minbuf_t minbuf;
-                for (size_t i = offset; i != 0; i--) {
+                for (size_t i = offset; i > 1; i--) {
                     seq.rptr = base - offset;
                     if (convert_one(seq, minbuf)) {
                         seq.rptr = base - offset;
