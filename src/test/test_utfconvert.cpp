@@ -16,8 +16,11 @@ constexpr char32_t test_utf16_to_utf32() {
     return result;
 }
 
-constexpr utils::utf::Minibuffer<char8_t> result_buf() {
-    return utils::utf::Minibuffer<char8_t>{u8"𠮷"};
+constexpr utils::utf::Minibuffer<char8_t> test_utf32_to_utf8() {
+    char32_t testword = U'𠮷';
+    utils::utf::Minibuffer<char8_t> result;
+    utils::utf::utf32_to_utf8(testword, result);
+    return result;
 }
 
 void test_utf_convert() {
@@ -26,6 +29,8 @@ void test_utf_convert() {
     constexpr auto result2 = test_utf16_to_utf32();
     static_assert(result2 == U'𠮷', "utf16_to_utf32 is wrong");
     constexpr auto expect_result3 = utils::utf::Minibuffer<char8_t>{u8"𠮷"};
+    constexpr auto result3 = test_utf32_to_utf8();
+    static_assert(result3 == expect_result3, "utf32_to_utf16 is wrong");
 }
 
 int main() {

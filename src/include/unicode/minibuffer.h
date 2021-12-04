@@ -8,12 +8,11 @@
 
 namespace utils {
     namespace utf {
-        template <class C, size_t size = sizeof(C)>
-        struct Minibuffer;
-
         template <class C>
-        struct Minibuffer<C, 1> {
-            C buf[4] = {0};
+        struct Minibuffer {
+            static constexpr size_t bufsize = 4 / sizeof(C);
+            static_assert(bufsize != 0, "too large char size");
+            C buf[bufsize] = {0};
             size_t pos = 0;
 
             constexpr Minibuffer() {}
@@ -45,91 +44,26 @@ namespace utils {
                 return pos;
             }
 
-            constexpr void clear() const {
-                buf[0] = 0;
-                buf[1] = 0;
-                buf[2] = 0;
-                buf[3] = 0;
+            constexpr void clear() {
+                for (size_t i = 0; i < bufsize; i++) {
+                    buf[i] = 0;
+                }
             }
-        };
-
-        template <class C>
-        struct Minibuffer<C, 2> {
-            C buf[2] = {0};
-            size_t pos = 0;
-
-            constexpr Minibuffer() {}
 
             template <class T>
-            constexpr Minibuffer(T&& t) {
-                Buffer<typename BufferType<T&>::type> buf(t);
-                for (auto i = 0; i < buf.size(); i++) {
-                    push_back(buf.at(i));
+            constexpr bool operator==(T&& obj) const {
+                Buffer<typename BufferType<T&>::type> buf(obj);
+                if (buf.size() != size()) {
+                    return false;
                 }
-            }
-
-            constexpr void push_back(C c) {
-                if (pos >= 2) {
-                    return;
+                for (auto i = 0; i < size(); i++) {
+                    if (buf.at(i) != this->buf[i]) {
+                        return false;
+                    }
                 }
-                buf[pos] = c;
-                pos++;
-            }
-
-            constexpr C operator[](size_t position) const {
-                if (pos <= position) {
-                    return C();
-                }
-                return buf[position];
-            }
-
-            constexpr size_t size() const {
-                return pos;
-            }
-
-            constexpr void clear() const {
-                buf[0] = 0;
-                buf[1] = 0;
+                return true;
             }
         };
 
-        template <class C>
-        struct Minibuffer<C, 4> {
-            C buf[1] = {0};
-            size_t pos = 0;
-
-            constexpr Minibuffer() {}
-
-            template <class T>
-            constexpr Minibuffer(T&& t) {
-                Buffer<typename BufferType<T&>::type> buf(t);
-                for (auto i = 0; i < buf.size(); i++) {
-                    push_back(buf.at(i));
-                }
-            }
-
-            constexpr void push_back(C c) {
-                if (pos >= 1) {
-                    return;
-                }
-                buf[pos] = c;
-                pos++;
-            }
-
-            constexpr C operator[](size_t position) const {
-                if (pos <= position) {
-                    return C();
-                }
-                return buf[position];
-            }
-
-            constexpr size_t size() const {
-                return pos;
-            }
-
-            constexpr void clear() const {
-                buf[0] = 0;
-            }
-        };
     }  // namespace utf
 }  // namespace utils
