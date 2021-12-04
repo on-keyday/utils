@@ -9,11 +9,9 @@
 namespace utils {
     namespace utf {
         namespace internal {
-            template <class T, size_t expect>
-            using size_same = std::enable_if_t<sizeof(typename BufferType<T>::char_type) == expect, T>;
 
             template <class T>
-            bool fallback_impl(Sequencer<size_same<T, 1>>& seq) {
+            bool fallback_impl(Sequencer<T>& seq) {
                 if (seq.rptr == 0) {
                     return false;
                 }
