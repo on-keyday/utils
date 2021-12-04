@@ -57,11 +57,11 @@ namespace utils {
 
             template <class T, class C>
             constexpr void make_utf8_from_utf32(size_t len, C input, T& output) {
-                unsigned char mask = (unsigned char)~utf8bits(1);
-                for (auto i = 0; i < ; i++) {
+                constexpr std::uint8_t mask = static_cast<std::uint8_t>(~utf8bits(1));
+                for (auto i = 0; i < len; i++) {
                     auto mul = (len - 1 - i);
                     auto shift = 6 * mul;
-                    unsigned char abyte = 0, shiftC = (unsigned char)(input >> shift);
+                    std::uint8_t abyte = 0, shiftC = static_cast<std::uint8_t>(input >> shift);
                     if (i == 0) {
                         abyte = utf8bits(len - 1) | (shiftC & mask);
                     }
