@@ -48,6 +48,15 @@ namespace utils {
         DEFINE_CONVERT_WITH_UTF32(1, utf8_to_utf32, utf32_to_utf8)
         DEFINE_CONVERT_WITH_UTF32(2, utf16_to_utf32, utf32_to_utf16)
 
+        template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 2, 1>>
+        constexpr bool convert(Sequencer<T>& in, U& out) {
+            if (!utf16_to_utf8(in, out)) {
+                if (decode_all) {
+                    in.consume();
+                }
+            }
+        }
+
         template <bool decode_all = false, class T, class U>
         constexpr bool convert(T&& in, U& out) {
             Sequencer<typename BufferType<T&>::type> seq(in);
