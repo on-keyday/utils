@@ -50,6 +50,11 @@ namespace utils {
                 output = ret;
             }
 
+            template <class T, class C>
+            constexpr C make_surrogate_char(T first, T second) {
+                return 0x10000 + (first - 0xD800) * 0x400 + (second - 0xDC00);
+            }
+
         }  // namespace internal
     }      // namespace utf
 }  // namespace utils
