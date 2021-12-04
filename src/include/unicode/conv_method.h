@@ -43,7 +43,7 @@ namespace utils {
             };
             auto test_mask = [&](size_t offset, std::uint8_t maskkind) -> bool {
                 if (maskkind == 0) {
-                    return true;
+                    return false;
                 }
                 return ofs(offset) & internal::utf8bits(maskkind);
             };
@@ -51,7 +51,7 @@ namespace utils {
                 if (input.remain() < len) {
                     return false;
                 }
-                if (!test_mask(0, test1) || !test_mask(1, test2)) {
+                if (!test_mask(0, test1) && !test_mask(1, test2)) {
                     return false;
                 }
                 make(len);
