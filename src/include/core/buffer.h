@@ -38,11 +38,11 @@ namespace utils {
         constexpr Buffer(unconst_type&& in)
             : buffer(std::forward<unref_type>(in)) {}
 
-        constexpr char_type at(size_t position) {
+        constexpr decltype(auto) at(size_t position) {
             return buffer[position];
         }
 
-        constexpr char_type at(size_t position) const {
+        constexpr decltype(auto) at(size_t position) const {
             return buffer[position];
         }
 
