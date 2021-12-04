@@ -49,7 +49,7 @@ namespace utils {
 #define DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(FROM, TO, METHOD)                            \
     template <bool decode_all, class T, class U>                                           \
     constexpr bool convert_impl(Sequencer<T>& in, expect_size_t<U, T, U, FROM, TO>& out) { \
-        if (!utf16_to_utf8(in, out)) {                                                     \
+        if (!METHOD(in, out)) {                                                            \
             if constexpr (decode_all) {                                                    \
                 out.push_back(in.current());                                               \
                 in.consume();                                                              \
