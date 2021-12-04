@@ -14,8 +14,9 @@ namespace utils {
                 if (seq.rptr == 0) {
                     return false;
                 }
-                using minbuf_t = Minibuffer<std::remove_cvref_t<typename BufferType<T>::char_type>>;
-                constexpr size_t offset = minbuf_t::bufsize;
+                using minbuf_t = Minibuffer<char32_t>;
+                constexpr size_t offset = 4 / sizeof(typename BufferType<T>::char_type);
+                static_assert(offset != 0, "too large char type");
                 if (seq.current(-1) < 0x80 || offset == 1) {
                     return seq.backto();
                 }
