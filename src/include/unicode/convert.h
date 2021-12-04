@@ -103,6 +103,38 @@ namespace utils {
 
         template <class T, class C>
         constexpr bool utf32_to_utf8(C input, T& output) {
+            using unsigned_t = std::make_unsigned_t<C>;
+            auto in = static_cast<unsigned_t>(input);
+            if (in < 0x80) {
+                output.push_back(in);
+            }
+            else if (in < 0x800) {
+                internal::make_utf8_from_utf32<2>(in, output);
+            }
+            else if (in < 0x10000) {
+                internal::make_utf8_from_utf32<3>(in, output);
+            }
+            else if (in < 0x110000) {
+                internal::make_utf8_from_utf32<4>(in, output);
+            }
+            else {
+                return false;
+            }
+            return true;
+        }
+
+        template <class T, class C>
+        constexpr bool utf32_to_utf16(C input, T& output) {
+            using unsigned_t = std::make_unsigned_t<C>;
+            auto in = static_cast<unsigned_t>(input);
+            if (in >= 0x110000) {
+                return false;
+            }
+            if (in > 0xffff) {
+            }
+            else {
+                output.push_back(in);
+            }
         }
     }  // namespace utf
 }  // namespace utils

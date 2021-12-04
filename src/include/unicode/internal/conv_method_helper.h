@@ -55,8 +55,8 @@ namespace utils {
                 return 0x10000 + (first - 0xD800) * 0x400 + (second - 0xDC00);
             }
 
-            template <class T, class C>
-            constexpr void make_utf8_from_utf32(size_t len, C input, T& output) {
+            template <size_t len, class T, class C>
+            constexpr void make_utf8_from_utf32(C input, T& output) {
                 constexpr std::uint8_t mask = static_cast<std::uint8_t>(~utf8bits(1));
                 for (auto i = 0; i < len; i++) {
                     auto mul = (len - 1 - i);
