@@ -10,15 +10,15 @@ namespace utils {
     namespace utf {
         namespace internal {
             template <class T>
-            bool fallback(Sequencer<T>& seq) {
+            constexpr bool fallback(Sequencer<T>& seq) {
                 if (seq.rptr == 0) {
                     return false;
                 }
-                using minbuf_t = Minibuffer<typename BufferType<T>::char_type>;
+                using minbuf_t = Minibuffer<std::remove_cvref_t<typename BufferType<T>::char_type>>;
                 constexpr size_t offset = minbuf_t::bufsize;
                 size_t base = seq.rptr;
                 if (seq.current(-1) < 0x80 || offset == 1) {
-                    return backto();
+                    return seq.backto();
                 }
                 minbuf_t minbuf;
                 for (size_t i = offset; i != 0; i--) {
