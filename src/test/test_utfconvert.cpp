@@ -1,6 +1,7 @@
 /*license*/
 
 #include "../include/unicode/conv_method.h"
+#include "../include/unicode/convert.h"
 
 constexpr char32_t test_utf8_to_utf32() {
     char8_t testword[] = u8"𠮷";

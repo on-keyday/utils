@@ -48,34 +48,22 @@ namespace utils {
         DEFINE_CONVERT_WITH_UTF32(1, utf8_to_utf32, utf32_to_utf8)
         DEFINE_CONVERT_WITH_UTF32(2, utf16_to_utf32, utf32_to_utf16)
 
-        template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 2, 1>>
-        constexpr bool convert(Sequencer<T>& in, U& out) {
-            while (!in.eos()) {
-                if (!utf16_to_utf8(in, out)) {
-                    if (decode_all) {
-                        out.push_back(in.current());
-                        in.consume();
-                        continue;
-                    }
-                    return false;
-                }
-            }
-        }
-
-        template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 1, 2>>
-        constexpr bool convert() {
-            while (!in.eos()) {
-                if (!utf8_to_utf16(in, out)) {
-                    if (decode_all) {
-                        out.push_back(in.current());
-                        in.consume();
-                        continue;
-                    }
-                    return false;
-                }
-            }
-            return true;
-        }
+#define DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(FROM, TO, METHOD)                                 \
+    template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, FROM, TO>> \
+    constexpr bool convert(Sequencer<T>& in, U& out) {                                          \
+        while (!in.eos()) {                                                                     \
+            if (!utf16_to_utf8(in, out)) {                                                      \
+                if (decode_all) {                                                               \
+                    out.push_back(in.current());                                                \
+                    in.consume();                                                               \
+                    continue;                                                                   \
+                }                                                                               \
+                return false;                                                                   \
+            }                                                                                   \
+        }                                                                                       \
+    }
+        DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(2, 1, utf16_to_utf8)
+        DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(1, 2, utf8_to_utf16)
 
         template <bool decode_all = false, class T, class U>
         constexpr bool convert(T&& in, U& out) {
