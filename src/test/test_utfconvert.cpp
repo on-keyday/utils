@@ -45,6 +45,8 @@ void test_utf_convert() {
     static_assert(result4 == expect_result4, "utf32_to_utf16 is wrong");
     std::string str;
     utils::utf::convert("", str);
+    utils::Sequencer<std::string> ptr;
+    utils::utf::convert(ptr, str);
 }
 
 int main() {
