@@ -75,14 +75,30 @@ namespace utils {
         DEFINE_CONVERT_BETWEEN_SAME_SIZE(4)
 
         template <bool mask_failure = false, class T, class U>
-        constexpr bool convert(T&& in, U& out) {
+        constexpr bool convert_one(T&& in, U& out) {
             Sequencer<typename BufferType<T&>::type> seq(in);
             return convert_impl<mask_failure, typename BufferType<T&>::type, U>(seq, out);
         }
 
         template <bool mask_failure = false, class T, class U>
-        constexpr bool convert(Sequencer<T>& in, U& out) {
+        constexpr bool convert_one(Sequencer<T>& in, U& out) {
             return convert_impl<mask_failure, T, U>(in, out);
+        }
+
+        template <bool mask_failure = false, class T, class U>
+        constexpr bool convert(Sequencer<T>& in, U& out) {
+            while (!in.eos()) {
+                if (!convert_one<mask_failure>(in, out)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        template <bool mask_failure = false, class T, class U>
+        constexpr bool convert(T&& in, U& out) {
+            Sequencer<typename BufferType<T&>::type> seq(in);
+            return convert<mask_failure>(seq, out);
         }
 
     }  // namespace utf
