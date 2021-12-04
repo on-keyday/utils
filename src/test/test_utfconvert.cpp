@@ -32,6 +32,12 @@ constexpr utils::utf::Minibuffer<char16_t> test_utf32_to_utf16() {
     return result;
 }
 
+constexpr utils::utf::Minibuffer<char16_t> test_convert() {
+    utils::utf::Minibuffer<char16_t> result;
+    utils::utf::convert(u8"𠮷", result);
+    return result;
+}
+
 void test_utf_convert() {
     constexpr auto result1 = test_utf8_to_utf32();
     static_assert(result1 == U'𠮷', "utf8_to_utf32 is wrong");
@@ -43,11 +49,7 @@ void test_utf_convert() {
     constexpr auto expect_result4 = utils::utf::Minibuffer<char16_t>{u"𠮷"};
     constexpr auto result4 = test_utf32_to_utf16();
     static_assert(result4 == expect_result4, "utf32_to_utf16 is wrong");
-
-    std::string str;
-    utils::utf::convert("", str);
-    utils::Sequencer<std::string> ptr;
-    utils::utf::convert(ptr, str);
+    constexpr auto result5 = test_convert();
 }
 
 int main() {

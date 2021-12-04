@@ -26,7 +26,7 @@ namespace utils {
             }
 
             constexpr void push_back(C c) {
-                if (pos >= 4) {
+                if (pos >= bufsize) {
                     return;
                 }
                 buf[pos] = c;
