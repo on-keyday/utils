@@ -27,7 +27,7 @@ namespace utils {
             if constexpr (decode_all) {                                                   \
                 out.push_back(in.current());                                              \
                 in.consume();                                                             \
-                continue;                                                                 \
+                return true;                                                              \
             }                                                                             \
             return false;                                                                 \
         }                                                                                 \
@@ -53,7 +53,7 @@ namespace utils {
             if constexpr (decode_all) {                                                    \
                 out.push_back(in.current());                                               \
                 in.consume();                                                              \
-                continue;                                                                  \
+                return true;                                                               \
             }                                                                              \
             return false;                                                                  \
         }                                                                                  \
