@@ -1,6 +1,6 @@
 /*license*/
 
-// convert - convert() function to use in template
+// convert - generic function for convert utf
 #pragma once
 
 #include "conv_method.h"
@@ -50,11 +50,31 @@ namespace utils {
 
         template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 2, 1>>
         constexpr bool convert(Sequencer<T>& in, U& out) {
-            if (!utf16_to_utf8(in, out)) {
-                if (decode_all) {
-                    in.consume();
+            while (!in.eos()) {
+                if (!utf16_to_utf8(in, out)) {
+                    if (decode_all) {
+                        out.push_back(in.current());
+                        in.consume();
+                        continue;
+                    }
+                    return false;
                 }
             }
+        }
+
+        template <bool decode_all = false, class T, class U, class = expect_size_t<T, U, 1, 2>>
+        constexpr bool convert() {
+            while (!in.eos()) {
+                if (!utf8_to_utf16(in, out)) {
+                    if (decode_all) {
+                        out.push_back(in.current());
+                        in.consume();
+                        continue;
+                    }
+                    return false;
+                }
+            }
+            return true;
         }
 
         template <bool decode_all = false, class T, class U>
