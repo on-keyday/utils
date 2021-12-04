@@ -6,6 +6,7 @@
 #include "../core/sequencer.h"
 #include "minibuffer.h"
 #include "convert.h"
+#include "internal/fallback_sequence.h"
 
 namespace utils {
     namespace utf {
@@ -15,6 +16,10 @@ namespace utils {
             Minibuffer<char> view;
             size_t viewptr = 0;
             size_t converted_size = 0;
+
+            bool fallback() {
+                return internal::fallback(sequence);
+            }
 
             bool read_one() {
                 if (sequence.eos()) {

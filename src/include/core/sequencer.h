@@ -111,6 +111,10 @@ namespace utils {
             return true;
         }
 
+        constexpr void seekend() {
+            rptr = buf.size();
+        }
+
         constexpr bool eos() const {
             return buf.in_range(rptr) == false;
         }
