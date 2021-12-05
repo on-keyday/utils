@@ -22,6 +22,10 @@ namespace utils {
             this->info.close();
         }
 
+        bool View::is_open() const {
+            return this->info.is_open();
+        }
+
         std::uint8_t View::operator[](size_t position) const {
             if (position >= info.stat.st_size) {
                 return 0;

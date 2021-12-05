@@ -21,6 +21,8 @@ namespace utils {
                 return open(static_cast<const platform::path_char*>(result.c_str()));
             }
 
+            bool is_open() const;
+
             size_t size() const;
 
             std::uint8_t operator[](size_t position) const;
