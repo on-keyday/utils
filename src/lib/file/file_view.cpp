@@ -16,5 +16,14 @@ namespace utils {
             this->info.close();
             this->virtual_ptr = 0;
         }
+
+        std::uint8_t View::operator[](size_t position) const {
+            if (info.mapptr) {
+                if (position >= info.stat.st_size) {
+                    return 0;
+                }
+                return info.mapptr[position];
+            }
+        }
     }  // namespace file
 }  // namespace utils
