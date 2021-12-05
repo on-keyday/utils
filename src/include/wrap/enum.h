@@ -49,5 +49,62 @@ namespace utils {
         return static_cast<basety>(a) <=> static_cast<basety>(b); \
     }
 
+        template <class E, E trueval, E falseval, E defaultval = falseval>
+        struct EnumWrap {
+            E e;
+            constexpr EnumWrap()
+                : e(defaultval) {}
+            constexpr EnumWrap(bool i)
+                : e(i ? trueval : falseval) {}
+            constexpr EnumWrap(E i)
+                : e(i) {}
+            constexpr operator bool() const {
+                return e == trueval;
+            }
+
+            constexpr operator E() const {
+                return e;
+            }
+
+            constexpr EnumWrap operator|(const EnumWrap& i) const {
+                return e | i.e;
+            }
+
+            constexpr EnumWrap operator&(const EnumWrap& i) const {
+                return e & i.e;
+            }
+
+            constexpr EnumWrap operator^(const EnumWrap& i) const {
+                return e ^ i.e;
+            }
+
+            constexpr EnumWrap& operator|=(const EnumWrap& i) {
+                e |= i.e;
+                return *this;
+            }
+
+            constexpr EnumWrap& operator&=(const EnumWrap& i) {
+                e &= i.e;
+                return *this;
+            }
+
+            constexpr EnumWrap& operator^=(const EnumWrap& i) {
+                e ^= i.e;
+                return *this;
+            }
+
+            constexpr EnumWrap operator~() const {
+                return ~e;
+            }
+
+            constexpr std::strong_ordering operator<=>(const EnumWrap& i) const {
+                return e <=> i.e;
+            }
+
+            constexpr bool is(const EnumWrap& other) const {
+                return e == other.e;
+            }
+        };
+
     }  // namespace wrap
 }  // namespace utils
