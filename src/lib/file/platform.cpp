@@ -123,6 +123,7 @@ namespace utils {
                 if (this->file) {
                     ::fclose(this->file);
                     this->file = nullptr;
+                    this->fd = -1;
                 }
                 else if (this->fd != -1) {
                     _close(this->fd);
