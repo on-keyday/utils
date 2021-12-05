@@ -30,6 +30,7 @@ namespace utils {
                 bool from(void* handle);
                 size_t size() const;
                 void close();
+                bool is_open() const;
                 ~FileInfo();
             };
         }  // namespace platform
