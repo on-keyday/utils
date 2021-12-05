@@ -20,11 +20,13 @@ namespace utils {
                 int fd = ~0;
                 char* mapptr = nullptr;
 #ifdef _WIN32
+                using stat_type = struct ::_stat64;
                 void* maphandle = nullptr;
-                struct ::_stat64 stat = {0};
 #else
-                struct ::stat stat = {0};
+                using stat_type = struct ::stat;
+                long maplen = 0;
 #endif
+                stat_type stat = {0};
                 bool open(const path_char* filename);
                 bool from(::FILE* file);
                 bool from(int fd);

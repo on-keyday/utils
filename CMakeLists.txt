@@ -8,7 +8,6 @@ else()
 link_directories("/lib/x86_64-linux-gnu")
 endif()
 
-include_directories("src/commonlib"  "D:/OpenSSL/build-x64/include")
 
 set(CMAKE_CXX_STANDARD 20)
 

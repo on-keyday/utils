@@ -56,6 +56,7 @@ namespace utils {
                 if (!info->mapptr) {
                     return false;
                 }
+                info->maplen = mapsize;
                 return true;
             }
 #endif
@@ -100,8 +101,25 @@ namespace utils {
                 }
                 return true;
             }
+#ifdef _WIN32
+            static void clean_map(ReadFileInfo* info) {
+                ::UnmapViewOfFile(info->mapptr);
+                info->mapptr = nullptr;
+                ::CloseHandle(info->maphandle);
+                info->maphandle = nullptr;
+            }
+#else
+            static void clean_map(ReadFileInfo* info) {
+                ::munmap(info->mapptr, info->maplen);
+                info->mapptr = nullptr;
+                info->maplen = 0;
+            }
+#endif
 
             void ReadFileInfo::close() {
+                if (this->mapptr) {
+                    clean_map(this);
+                }
                 if (this->file) {
                     ::fclose(this->file);
                     this->file = nullptr;
@@ -110,6 +128,7 @@ namespace utils {
                     _close(this->fd);
                     this->fd = -1;
                 }
+                this->stat = ReadFileInfo::stat_type{0};
             }
         }  // namespace platform
     }      // namespace file
