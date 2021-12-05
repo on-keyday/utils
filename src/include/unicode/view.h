@@ -86,6 +86,7 @@ namespace utils {
             template <class... Args>
             constexpr View(Args&&... args)
                 : sequence(std::forward<Args>(args)...) {
+                count_converted_size();
             }
 
             constexpr size_t size() const {
