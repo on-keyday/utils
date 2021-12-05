@@ -71,7 +71,7 @@ namespace utils {
             char** argvvalue = nullptr;
 
            public:
-            U8Arg(int& argc, char**& argv);
+            explicit U8Arg(int& argc, char**& argv);
 
             ~U8Arg();
 #else
