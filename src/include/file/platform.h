@@ -18,6 +18,7 @@ namespace utils {
             struct FileInfo {
                 ::FILE* file = nullptr;
                 int fd = ~0;
+                char* mapptr = nullptr;
 #ifdef _WIN32
                 void* handle = nullptr;
                 struct ::_stat64 stat = {0};

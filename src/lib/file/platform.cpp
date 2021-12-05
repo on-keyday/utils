@@ -9,7 +9,7 @@ namespace utils {
         namespace platform {
 #ifdef _WIN32
             static bool open_impl(FileInfo* info, const path_char* path) {
-                ::CreateFileW(
+                info->handle = ::CreateFileW(
                     path,
                     GENERIC_READ,
                     FILE_SHARE_READ,
@@ -17,6 +17,10 @@ namespace utils {
                     OPEN_EXISTING,
                     FILE_ATTRIBUTE_NORMAL,
                     NULL);
+                if (info->handle == INVALID_HANDLE_VALUE) {
+                    info->handle = nullptr;
+                    return false;
+                }
             }
 #else
             static bool open_impl(FileInfo* info, const path_char* path) {
@@ -35,6 +39,9 @@ namespace utils {
 
             bool FileInfo::open(const path_char* path) {
                 if (!path) {
+                    return false;
+                }
+                if (is_open()) {
                     return false;
                 }
             }
