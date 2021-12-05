@@ -25,6 +25,8 @@ namespace utils {
             size_t size() const;
 
             std::uint8_t operator[](size_t position) const;
+
+            void close();
         };
     }  // namespace file
 }  // namespace utils

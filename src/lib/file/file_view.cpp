@@ -11,5 +11,10 @@ namespace utils {
         size_t View::size() const {
             return this->info.stat.st_size;
         }
+
+        void View::close() {
+            this->info.close();
+            this->virtual_ptr = 0;
+        }
     }  // namespace file
 }  // namespace utils
