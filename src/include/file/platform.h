@@ -28,9 +28,6 @@ namespace utils {
 #endif
                 stat_type stat = {0};
                 bool open(const path_char* filename);
-                bool from(::FILE* file);
-                bool from(int fd);
-                bool from(void* handle);
                 size_t size() const;
                 void close();
                 bool is_open() const;

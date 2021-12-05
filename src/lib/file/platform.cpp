@@ -135,6 +135,10 @@ namespace utils {
                 }
                 this->stat = ReadFileInfo::stat_type{0};
             }
+
+            ReadFileInfo::~ReadFileInfo() {
+                this->close();
+            }
         }  // namespace platform
     }      // namespace file
 }  // namespace utils
