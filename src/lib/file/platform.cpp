@@ -9,6 +9,22 @@
 #include <unistd.h>
 #endif
 
+#ifdef _WIN32
+#define _sopen_s(fd, path, mode, share, perm) ::_wsopen_s(fd, path, mode, share, perm)
+#define _close(fd) ::_close(fd)
+#undef _stat
+#define _stat(path, stat) ::_wstat64(path, stat)
+#define _fdopen(fd, mode) _fdopen(fd, mode)
+#else
+#define sopen_s(fd, path, mode, share, perm) (*(fd) = ::open(path, mode))
+#define _close(fd) ::close(fd)
+#define _stat(path, stat) stat(path, stat)
+#define _fdopen(fd, mode) fdopen(fd, mode)
+#define _O_RDONLY O_RDONLY
+#define _SH_DENYWR 0
+#define _S_IREAD 0
+#endif
+
 using namespace utils::file::platform;
 
 namespace utils {
@@ -44,28 +60,24 @@ namespace utils {
             }
 #endif
             static bool open_impl(ReadFileInfo* info, const path_char* path) {
-#ifdef _WIN32
-                info->fd = ::_wopen(path, _O_RDONLY);
+                _sopen_s(&info->fd, path, _O_RDONLY, _SH_DENYWR, _S_IREAD);
                 if (info->fd == -1) {
                     return false;
                 }
-                auto result = ::_wstat64(path, &info->stat);
+                auto result = _stat(path, &info->stat);
                 if (result != 0) {
-                    ::_close(info->fd);
+                    _close(info->fd);
                     info->fd = -1;
-                }
-#else
-                info->fd = ::open(path, O_RDONLY);
-                if (info->fd == -1) {
                     return false;
                 }
-                auto reuslt = ::stat(path, &info->stat);
-                if (result != 0) {
-                    ::_close(info->fd);
-                    info->fd = -1;
+                if (!try_get_map(info)) {
+                    info->file = _fdopen(info->fd, "rb");
+                    if (!info->file) {
+                        _close(info->fd);
+                        info->fd = -1;
+                        return false;
+                    }
                 }
-#endif
-
                 return true;
             }
 
@@ -83,6 +95,10 @@ namespace utils {
                 if (is_open()) {
                     return false;
                 }
+                if (!open_impl(this, path)) {
+                    return false;
+                }
+                return true;
             }
         }  // namespace platform
     }      // namespace file
