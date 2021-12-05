@@ -57,6 +57,8 @@ namespace utils {
     }
             DEFINE_WRITE_SEQ(write, seq)
             DEFINE_WRITE_SEQ(write_big, seq_big)
+            DEFINE_WRITE_SEQ(write_little, seq_little)
+            DEFINE_WRITE_SEQ(write_hton, seq_hton)
         };
     }  // namespace endian
 }  // namespace utils
