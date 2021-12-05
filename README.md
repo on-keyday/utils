@@ -4,6 +4,9 @@ to remove needless dependency, dirty hack, and to improve portability and visibi
 
 library was tested easily with code on src/test.
 
+# std version
+C++20
+
 # License
 
 MIT license
