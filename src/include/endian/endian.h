@@ -64,18 +64,19 @@ namespace utils {
 #endif
 
         template <class T, class C>
-        constexpr T to_big(C* c) {
+        constexpr T to_big_us(C* c) {
             return native() == Endian::little ? internal::reverse_endian<T>(c) : internal::copy_as_is<T>(c);
         }
 
         template <class T, class C>
-        constexpr T to_little(C* c) {
+        constexpr T to_little_us(C* c) {
             return native() == Endian::big ? internal::reverse_endian<T>(c) : internal::copy_as_is<T>(c);
         }
 
         template <class T, class C>
-        constexpr T to_network(C* c) {
-            return to_big_endian<T>(c);
+        constexpr T to_network_us(C* c) {
+            return to_big<T>(c);
         }
+
     }  // namespace endian
 }  // namespace utils
