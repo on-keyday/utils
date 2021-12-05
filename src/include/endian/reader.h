@@ -47,6 +47,21 @@ namespace utils {
             DEFINE_READ(from_big, big)
             DEFINE_READ(from_little, little)
             DEFINE_READ(from_network, ntoh)
+
+#undef DEFINE_READ
+#define DEFINE_READ_SEQ(FUNC, SUFFIX)                                         \
+    template <class T, class Buf, size_t size = sizeof(T), size_t offset = 0> \
+    constexpr bool read_##SUFFIX(Buf& buf, size_t toread) {                   \
+        if (seq.remain() < size * toread) {                                   \
+            return false;                                                     \
+        }                                                                     \
+        for (size_t i = 0; i < toread; i++) {                                 \
+            T t;                                                              \
+            FUNC<T, size, offset>(t);                                         \
+            buf.push_back(t);                                                 \
+        }                                                                     \
+        return true;                                                          \
+    }
         };
     }  // namespace endian
 }  // namespace utils
