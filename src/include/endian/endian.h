@@ -63,6 +63,8 @@ namespace utils {
         }
 #endif
 
+        // _us suffix means unsafe
+
         template <class T, class C>
         constexpr T to_big_us(C* c) {
             return native() == Endian::little ? internal::reverse_endian<T>(c) : internal::copy_as_is<T>(c);
@@ -75,7 +77,22 @@ namespace utils {
 
         template <class T, class C>
         constexpr T to_network_us(C* c) {
-            return to_big<T>(c);
+            return to_big_us<T>(c);
+        }
+
+        template <class T>
+        constexpr T to_big(T* t) {
+            return to_big_us<T, T>(t);
+        }
+
+        template <class T>
+        constexpr T to_little(T* t) {
+            return to_little_us<T, T>(t);
+        }
+
+        template <class T>
+        constexpr T to_network(T* t) {
+            return to_network_us<T, T>(t);
         }
 
     }  // namespace endian
