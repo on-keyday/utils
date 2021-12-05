@@ -31,7 +31,7 @@ namespace utils {
                 return convert_one(sequence, view);
             }
 
-            constexpr bool count_converted_size() const {
+            constexpr bool count_converted_size() {
                 auto tmp = sequence.rptr;
                 sequence.rptr = 0;
                 size_t count = 0;
