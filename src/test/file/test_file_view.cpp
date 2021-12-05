@@ -18,6 +18,7 @@ void test_file_view() {
     utils::Sequencer<utils::file::View&> view(file);
 
     assert(view.seek_if(u8"𠮷野家") && "file seek failed");
+    assert(view.match("\r\n") && "expect to open binary mode but not");
 }
 
 int main() {
