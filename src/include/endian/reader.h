@@ -37,13 +37,16 @@ namespace utils {
 
 #define DEFINE_READ(FUNC, SUFFIX)                                  \
     template <class T, size_t size = sizeof(T), size_t offset = 0> \
-    constexpr bool read_ #SUFFIX(T& t) {                           \
+    constexpr bool read_##SUFFIX(T& t) {                           \
         if (!read<T, size, offset>(t)) {                           \
             return false;                                          \
         }                                                          \
         t = FUNC(&t);                                              \
         return true;                                               \
     }
+            DEFINE_READ(from_big, big)
+            DEFINE_READ(from_little, little)
+            DEFINE_READ(from_network, ntoh)
         };
     }  // namespace endian
 }  // namespace utils
