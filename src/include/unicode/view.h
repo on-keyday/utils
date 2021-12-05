@@ -72,6 +72,11 @@ namespace utils {
                             if (!fallback()) {
                                 return false;
                             }
+                            if (sequence.rptr != 0) {
+                                if (!fallback()) {
+                                    return false;
+                                }
+                            }
                             if (!read_one()) {
                                 return false;
                             }

@@ -28,7 +28,7 @@ namespace utils {
                 for (size_t i = offset; i != 0; i--) {
                     seq.rptr = base - i;
                     if (convert_one(seq, minbuf)) {
-                        if (offset == 2 && i == 2 && minbuf.size() != 2) {
+                        if (offset == 2 && i == 2 && seq.rptr != base) {
                             continue;
                         }
                         seq.rptr = base - i;
