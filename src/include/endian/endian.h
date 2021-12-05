@@ -4,7 +4,7 @@
 #pragma once
 
 #if __has_include(<bit>)
-#define UTILS_USE_STD_ENDIAN
+//#define UTILS_USE_STD_ENDIAN
 #include <bit>
 #endif
 namespace utils {
@@ -59,8 +59,7 @@ namespace utils {
         }
 #else
         Endian native() {
-            static Endian native_ = internal::native_impl();
-            return native_;
+            return internal::native_impl();
         }
 #endif
 

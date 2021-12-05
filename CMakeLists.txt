@@ -21,6 +21,8 @@ add_executable(utfconvert "src/test/test_utfconvert.cpp")
 add_executable(fallback "src/test/test_fallback_sequence.cpp")
 add_executable(utfview "src/test/test_utfview.cpp")
 add_executable(utf_operator "src/test/test_utf_operator.cpp")
+add_executable(endian "src/test/test_endian.cpp")
+
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)
 #else()
