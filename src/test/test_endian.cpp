@@ -20,7 +20,7 @@ void test_endian() {
     utils::endian::Writer<std::string&> w(buf);
     w.write_hton(1);
     assert(w.buf.size() == 4 && "endian writer is incorrect");
-    assert(w.buf == "\0\0\0\1" && "endian writer is incorrect");
+    assert(w.buf == std::string("\0\0\0\1", 4) && "endian writer is incorrect");
 }
 
 int main() {
