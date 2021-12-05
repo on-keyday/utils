@@ -29,6 +29,8 @@ namespace utils {
                 bool from(int fd);
                 bool from(void* handle);
                 size_t size() const;
+                void close();
+                ~FileInfo();
             };
         }  // namespace platform
     }      // namespace file
