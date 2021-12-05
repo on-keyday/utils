@@ -48,6 +48,7 @@ namespace utils {
                 for (size_t i = 0; i < bufsize; i++) {
                     buf[i] = 0;
                 }
+                pos = 0;
             }
 
             template <class T>
