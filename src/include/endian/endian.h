@@ -4,7 +4,7 @@
 #pragma once
 
 #if __has_include(<bit>)
-//#define UTILS_USE_STD_ENDIAN
+#define UTILS_USE_STD_ENDIAN
 #include <bit>
 #endif
 namespace utils {
