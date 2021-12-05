@@ -10,19 +10,20 @@
 
 namespace utils {
     namespace utf {
-        template <class Buf>
+        template <class Buf, class Char>
         class View {
-            Sequencer<Buf> sequence;
-            Minibuffer<char> view;
-            size_t viewptr = 0;
-            size_t converted_size = 0;
-            size_t virtual_ptr = 0;
+            mutable Sequencer<Buf> sequence;
+            mutable Minibuffer<Char> view;
+            mutable size_t viewptr = 0;
+            mutable size_t virtual_ptr = 0;
 
-            constexpr bool fallback() {
+            size_t converted_size = 0;
+
+            constexpr bool fallback() const {
                 return internal::fallback(sequence);
             }
 
-            constexpr bool read_one() {
+            constexpr bool read_one() const {
                 if (sequence.eos()) {
                     return false;
                 }
@@ -30,7 +31,7 @@ namespace utils {
                 return convert_one(sequence, view);
             }
 
-            constexpr bool count_converted_size() {
+            constexpr bool count_converted_size() const {
                 auto tmp = sequence.rptr;
                 sequence.rptr = 0;
                 size_t count = 0;
@@ -47,7 +48,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool move_to(size_t position) {
+            constexpr bool move_to(size_t position) const {
                 if (position == virtual_ptr) {
                     return true;
                 }
@@ -82,6 +83,16 @@ namespace utils {
             }
 
            public:
+            constexpr size_t size() const {
+                return converted_size;
+            }
+
+            constexpr Char operator[](size_t pos) const {
+                if (!move_to(pos)) {
+                    return Char();
+                }
+                return view[viewptr];
+            }
         };
     }  // namespace utf
 }  // namespace utils
