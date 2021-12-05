@@ -106,5 +106,23 @@ namespace utils {
             }
         };
 
+#define BEGIN_ENUM_STRING_MSG(TYPE, FUNC) \
+    constexpr const char* FUNC(TYPE e) {  \
+        switch (e) {
+#define BEGIN_ENUM_ERROR_MSG(TYPE) BEGIN_ENUM_STRING_MSG(TYPE, error_message)
+
+#define ENUM_STRING_MSG(e, word) \
+    case e:                      \
+        return word;
+#define ENUM_ERROR_MSG(e, word) ENUM_STRING_MSG(e, word)
+
+#define END_ENUM_STRING_MSG(word) \
+    default:                      \
+        return word;              \
+        }                         \
+        }
+
+#define END_ENUM_ERROR_MSG END_ENUM_STRING_MSG("unknown error")
+
     }  // namespace wrap
 }  // namespace utils
