@@ -1,6 +1,6 @@
 /*license*/
 
-#include "../include/unicode/view.h"
+#include "../include/utf/view.h"
 
 #include <string>
 
