@@ -10,14 +10,19 @@
 namespace utils {
     namespace file {
         namespace platform {
+#ifdef _WIN32
+            using path_char = wchar_t;
+#else
+            using path_char = char;
+#endif
             struct FileInfo {
                 ::FILE* file = nullptr;
                 int fd = ~0;
 #ifdef _WIN32
                 void* handle = nullptr;
-                struct ::_stat64 stat;
+                struct ::_stat64 stat = {0};
 #else
-                struct ::stat stat;
+                struct ::stat stat = {0};
 #endif
             };
         }  // namespace platform
