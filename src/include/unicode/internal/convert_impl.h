@@ -1,6 +1,6 @@
 /*license*/
 
-// convert_impl - implementation of convert utf
+// convert_impl - implementation of convert()
 #pragma once
 
 #include "../conv_method.h"

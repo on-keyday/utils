@@ -1,7 +1,7 @@
 /*license*/
 
 // view - low memory utf view
-// to reduce memory cost, pay time cost
+// trade-off: to reduce memory cost, pay time cost
 #pragma once
 
 #include "../core/sequencer.h"
@@ -25,9 +25,6 @@ namespace utils {
             }
 
             constexpr bool read_one() const {
-                if (sequence.eos()) {
-                    return false;
-                }
                 view.clear();
                 return convert_one(sequence, view);
             }
@@ -60,7 +57,7 @@ namespace utils {
                     while (position != virtual_ptr) {
                         virtual_ptr++;
                         viewptr++;
-                        if (view.size() >= viewptr) {
+                        if (view.size() <= viewptr) {
                             if (!read_one()) {
                                 return false;
                             }
@@ -73,6 +70,9 @@ namespace utils {
                         virtual_ptr--;
                         if (viewptr == 0) {
                             if (!fallback()) {
+                                return false;
+                            }
+                            if (!read_one()) {
                                 return false;
                             }
                             viewptr = view.size();
@@ -106,5 +106,14 @@ namespace utils {
                 return view[viewptr];
             }
         };
+
+        template <class T>
+        using U8View = View<T, std::uint8_t>;
+
+        template <class T>
+        using U16View = View<T, char16_t>;
+
+        template <class T>
+        using U32View = View<T, char32_t>;
     }  // namespace utf
 }  // namespace utils
