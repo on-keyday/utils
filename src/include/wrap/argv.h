@@ -53,9 +53,10 @@ namespace utils {
             void arg(Int& argc, Char**& argv) {
                 argv_.clear();
                 for (size_t i = 0; i < argv_.size(); i++) {
-                    argv_.push_back(holder_[i].c_str());
+                    argv_.push_back(const_cast<Char*>(holder_[i].c_str()));
                 }
                 argv_.push_back(nullptr);
+                argv = argv_.data();
                 argc = static_cast<Int>(holder_.size());
             }
         };

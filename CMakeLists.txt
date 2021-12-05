@@ -26,7 +26,8 @@ add_executable(fileview "src/test/file/test_file_view.cpp")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
   "src/lib/file/platform.cpp"
-  "src/lib/file/file_view.cpp")
+  "src/lib/file/file_view.cpp"
+  "src/lib/wrap/argv.cpp")
 
 target_link_libraries(fileview libutils)
 
