@@ -8,7 +8,6 @@ namespace utils {
     namespace file {
         class View {
             mutable platform::ReadFileInfo info;
-            mutable size_t virtual_ptr = 0;
 
            public:
             bool open(const platform::path_char* path);

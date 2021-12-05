@@ -20,7 +20,6 @@ namespace utils {
 
         void View::close() {
             this->info.close();
-            this->virtual_ptr = 0;
         }
 
         std::uint8_t View::operator[](size_t position) const {
@@ -31,7 +30,10 @@ namespace utils {
                 return info.mapptr[position];
             }
             else if (info.file) {
-                _fseek(info.file, position, SEEK_SET);
+                if (_fseek(info.file, position, SEEK_SET) != 0) {
+                    return 0;
+                }
+                return fgetc(info.file);
             }
             return 0;
         }
