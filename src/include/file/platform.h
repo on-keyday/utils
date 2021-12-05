@@ -24,6 +24,11 @@ namespace utils {
 #else
                 struct ::stat stat = {0};
 #endif
+                bool open(const path_char* filename);
+                bool from(::FILE* file);
+                bool from(int fd);
+                bool from(void* handle);
+                size_t size() const;
             };
         }  // namespace platform
     }      // namespace file
