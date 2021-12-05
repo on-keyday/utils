@@ -24,6 +24,7 @@ void test_endian() {
     assert(w.buf == std::string("\0\0\0\1", 4) && "endian writer is incorrect");
     w.buf.clear();
     w.write_hton<int, 4, 1>(1);
+    assert(w.buf == std::string("\0\0\1", 3) && "endian writer request to write 3 byte but not");
     utils::endian::Reader<std::string&> d(w.buf);
     int result = 0;
     d.read_ntoh<int, 4, 1>(result);
