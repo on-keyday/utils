@@ -8,7 +8,7 @@ namespace utils {
 #ifdef _WIN32
 
         static bool get_warg(int& wargc, wchar_t**& wargv) {
-            return (bool)(wargv = CommandLineToArgvW(GetCommandLineW(), &wargc));
+            return (bool)(wargv = ::CommandLineToArgvW(::GetCommandLineW(), &wargc));
         }
         U8Arg::U8Arg(int& argc, char**& argv)
             : argcvalue(argc), argvvalue(argv), argcplace(&argc), argvplace(&argv) {
@@ -17,7 +17,7 @@ namespace utils {
             auto result = get_warg(wargc, wargv);
             assert(result);
             replaced.translate(wargv, wargv + wargc);
-            LocalFree(wargv);
+            ::LocalFree(wargv);
             replaced.arg(argc, argv);
         }
 
