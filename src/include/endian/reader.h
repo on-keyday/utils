@@ -62,6 +62,13 @@ namespace utils {
         }                                                                     \
         return true;                                                          \
     }
+
+            DEFINE_READ_SEQ(read, seq)
+            DEFINE_READ_SEQ(read_big, seq_big)
+            DEFINE_READ_SEQ(read_little, seq_little)
+            DEFINE_READ_SEQ(read_ntoh, seq_ntoh)
+
+#undef DEFINE_READ_SEQ
         };
     }  // namespace endian
 }  // namespace utils
