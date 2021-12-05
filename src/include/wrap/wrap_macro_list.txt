@@ -1,3 +1,5 @@
+this list shows WRAP_TYPE macros
+
 macro                                default
 UTILS_WRAP_STRING_TYPE               std::string
 UTILS_WRAP_U16STRING_TYPE            std::u16string
