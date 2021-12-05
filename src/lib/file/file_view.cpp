@@ -24,6 +24,9 @@ namespace utils {
                 }
                 return info.mapptr[position];
             }
+            else if (info.file) {
+            }
+            return 0;
         }
     }  // namespace file
 }  // namespace utils
