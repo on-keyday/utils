@@ -4,6 +4,7 @@
 #pragma once
 
 #include "endian.h"
+#include <utility>
 
 namespace utils {
     namespace endian {

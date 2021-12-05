@@ -1,7 +1,9 @@
 /*license*/
 
 #include "../include/endian/endian.h"
+#include "../include/endian/writer.h"
 #include <cassert>
+#include <string>
 
 void test_endian() {
     utils::endian::Endian native = utils::endian::native();
@@ -14,6 +16,11 @@ void test_endian() {
         test = utils::endian::to_big(&test);
     }
     assert(test == expected && "endian convert is incorrect");
+    std::string buf;
+    utils::endian::Writer<std::string&> w(buf);
+    w.write_hton(1);
+    assert(w.buf.size() == 4 && "endian writer is incorrect");
+    assert(w.buf == "\0\0\0\1" && "endian writer is incorrect");
 }
 
 int main() {
