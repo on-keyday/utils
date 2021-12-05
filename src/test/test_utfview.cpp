@@ -12,8 +12,9 @@ constexpr bool test_view_utf8_to_utf32() {
 }
 
 void test_utfview() {
-    constexpr bool result1 = test_view_utf8_to_utf32();
+    bool result1 = test_view_utf8_to_utf32();
 }
 
 int main() {
+    test_utfview();
 }

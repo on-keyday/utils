@@ -1,6 +1,7 @@
 /*license*/
 
 // view - low memory utf view
+// to reduce memory cost, pay time cost
 #pragma once
 
 #include "../core/sequencer.h"
@@ -86,7 +87,12 @@ namespace utils {
             template <class... Args>
             constexpr View(Args&&... args)
                 : sequence(std::forward<Args>(args)...) {
-                count_converted_size();
+                if (count_converted_size()) {
+                    read_one();
+                }
+                else {
+                    view.clear();
+                }
             }
 
             constexpr size_t size() const {
