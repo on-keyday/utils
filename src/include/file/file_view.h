@@ -1,7 +1,7 @@
 /*license*/
 
 #include "platform.h"
-#include "../wrap/string.h"
+#include "../wrap/lite/string.h"
 #include "../utf/convert.h"
 
 namespace utils {
