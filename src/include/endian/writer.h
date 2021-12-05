@@ -29,7 +29,7 @@ namespace utils {
 
             template <class T>
             void write_hton(const T& t) {
-                to_network(&t);
+                return write(to_network(&t));
             }
         };
     }  // namespace endian
