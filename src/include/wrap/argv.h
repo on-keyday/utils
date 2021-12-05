@@ -62,11 +62,14 @@ namespace utils {
 
         struct U8Argv {
 #ifdef _WIN32
+           private:
             ArgvVector<> replaced;
             int* argcplace = nullptr;
             char*** argvplace = nullptr;
             int argcvalue = 0;
             char** argvvalue = nullptr;
+
+           public:
             U8Argv(int& argc, char**& argv);
 
             ~U8Argv();
