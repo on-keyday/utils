@@ -2,6 +2,7 @@
 
 #include "../include/endian/endian.h"
 #include "../include/endian/writer.h"
+#include "../include/endian/reader.h"
 #include <cassert>
 #include <string>
 
@@ -21,6 +22,12 @@ void test_endian() {
     w.write_hton(1);
     assert(w.buf.size() == 4 && "endian writer is incorrect");
     assert(w.buf == std::string("\0\0\0\1", 4) && "endian writer is incorrect");
+    w.buf.clear();
+    w.write_hton<int, 4, 1>(1);
+    utils::endian::Reader<std::string&> d(w.buf);
+    int result = 0;
+    d.read_ntoh<int, 4, 1>(result);
+    assert(result == 1 && "endian reader is incorrect");
 }
 
 int main() {
