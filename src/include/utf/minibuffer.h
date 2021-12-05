@@ -12,7 +12,7 @@ namespace utils {
         struct Minibuffer {
             static constexpr size_t bufsize = 4 / sizeof(C);
             static_assert(bufsize != 0, "too large char size");
-            C buf[bufsize] = {0};
+            C buf[bufsize + 1] = {0};
             size_t pos = 0;
 
             constexpr Minibuffer() {}
@@ -49,6 +49,10 @@ namespace utils {
                     buf[i] = 0;
                 }
                 pos = 0;
+            }
+
+            constexpr const C* c_str() const {
+                return buf;
             }
 
             template <class T>
