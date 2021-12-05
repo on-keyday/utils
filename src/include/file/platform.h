@@ -15,12 +15,12 @@ namespace utils {
 #else
             using path_char = char;
 #endif
-            struct FileInfo {
+            struct ReadFileInfo {
                 ::FILE* file = nullptr;
                 int fd = ~0;
                 char* mapptr = nullptr;
 #ifdef _WIN32
-                void* handle = nullptr;
+                void* maphandle = nullptr;
                 struct ::_stat64 stat = {0};
 #else
                 struct ::stat stat = {0};
@@ -32,7 +32,7 @@ namespace utils {
                 size_t size() const;
                 void close();
                 bool is_open() const;
-                ~FileInfo();
+                ~ReadFileInfo();
             };
         }  // namespace platform
     }      // namespace file
