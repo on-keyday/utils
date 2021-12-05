@@ -20,7 +20,7 @@ namespace utils {
             };
 
             template <class T, bool mask_failure, class U>
-            constexpr bool operator>>(internal::FromObj<T, mask_failure>&& in, U& out) {
+            constexpr bool operator>>(FromObj<T, mask_failure>&& in, U& out) {
                 return utf::convert<mask_failure>(in.seq, out);
             }
         }  // namespace internal
