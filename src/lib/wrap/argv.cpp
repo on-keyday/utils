@@ -17,6 +17,7 @@ namespace utils {
             auto result = get_warg(wargc, wargv);
             assert(result);
             replaced.translate(wargv, wargv + wargc);
+            LocalFree(wargv);
             replaced.arg(argc, argv);
         }
 
