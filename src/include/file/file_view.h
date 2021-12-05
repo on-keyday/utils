@@ -13,7 +13,7 @@ namespace utils {
            public:
             bool open(const platform::path_char* path);
 
-            template <class String, class Tmpbuf = wrap::path_string>
+            template <class Tmpbuf = wrap::path_string, class String>
             bool open(String&& str) {
                 Tmpbuf result;
                 if (!utf::convert(str, result)) {
