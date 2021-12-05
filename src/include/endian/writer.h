@@ -38,19 +38,19 @@ namespace utils {
             DEFINE_WRITE(to_little, little)
             DEFINE_WRITE(to_network, hton)
 
-#define DEFINE_WRITE_SEQ(FUNC, SUFFIX)                             \
-    template <class T, size_t size = sizeof(T), size_t offset = 0> \
-    constexpr void write_##SUFFIX(const T& seq) {                  \
-        for (auto& s : seq) {                                      \
-            FUNC<T, size, offset>(s);                              \
-        }                                                          \
-    }                                                              \
-                                                                   \
-    template <class Begin, class End>                              \
-    constexpr void write_##SUFFIX(Begin begin, End end) {          \
-        for (auto i = begin; i != end; i++) {                      \
-            FUNC<T, size, offset>(*i);                             \
-        }                                                          \
+#define DEFINE_WRITE_SEQ(FUNC, SUFFIX)                                                                                                             \
+    template <class T, size_t size = sizeof(T), size_t offset = 0>                                                                                 \
+    constexpr void write_##SUFFIX(const T& seq) {                                                                                                  \
+        for (auto& s : seq) {                                                                                                                      \
+            FUNC<T, size, offset>(s);                                                                                                              \
+        }                                                                                                                                          \
+    }                                                                                                                                              \
+                                                                                                                                                   \
+    template <class Begin, class End, class T = std::remove_cvref_t<decltype(*std::declval<Begin>())>, size_t size = sizeof(T), size_t offset = 0> \
+    constexpr void write_##SUFFIX(Begin begin, End end) {                                                                                          \
+        for (auto i = begin; i != end; i++) {                                                                                                      \
+            FUNC<T, size, offset>(*i);                                                                                                             \
+        }                                                                                                                                          \
     }
             DEFINE_WRITE_SEQ(write, seq)
             DEFINE_WRITE_SEQ(write_big, seq_big)
