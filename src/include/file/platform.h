@@ -17,7 +17,7 @@ namespace utils {
 #endif
             struct ReadFileInfo {
                 ::FILE* file = nullptr;
-                int fd = ~0;
+                int fd = -1;
                 char* mapptr = nullptr;
 #ifdef _WIN32
                 using stat_type = struct ::_stat64;
