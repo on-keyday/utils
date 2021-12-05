@@ -10,7 +10,7 @@ namespace utils {
         static bool get_warg(int& wargc, wchar_t**& wargv) {
             return (bool)(wargv = CommandLineToArgvW(GetCommandLineW(), &wargc));
         }
-        U8Argv::U8Argv(int& argc, char**& argv)
+        U8Arg::U8Arg(int& argc, char**& argv)
             : argcvalue(argc), argvvalue(argv), argcplace(&argc), argvplace(&argv) {
             int wargc;
             wchar_t** wargv;
@@ -20,7 +20,7 @@ namespace utils {
             replaced.arg(argc, argv);
         }
 
-        U8Argv::~U8Argv() {
+        U8Arg::~U8Arg() {
             *argcplace = argcvalue;
             *argvplace = argvvalue;
         }
