@@ -82,17 +82,17 @@ namespace utils {
 
         template <class T>
         constexpr T to_big(T* t) {
-            return to_big_us<T, T>(t);
+            return to_big_us<std::remove_cv_t<T>, T>(t);
         }
 
         template <class T>
         constexpr T to_little(T* t) {
-            return to_little_us<T, T>(t);
+            return to_little_us<std::remove_cv_t<T>, T>(t);
         }
 
         template <class T>
         constexpr T to_network(T* t) {
-            return to_network_us<T, T>(t);
+            return to_network_us<std::remove_cv_t<T>, T>(t);
         }
 
     }  // namespace endian

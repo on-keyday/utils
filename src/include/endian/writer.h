@@ -26,6 +26,11 @@ namespace utils {
                     buf.push_back(ptr[i]);
                 }
             }
+
+            template <class T>
+            void write_hton(const T& t) {
+                to_network(&t);
+            }
         };
     }  // namespace endian
 }  // namespace utils
