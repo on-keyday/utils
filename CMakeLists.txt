@@ -14,10 +14,13 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(Threads REQUIRED)
 
+
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "test")
 add_executable(test_core "src/test/test_core.cpp")
 add_executable(test_utfconvert "src/test/test_utfconvert.cpp")
 add_executable(test_fallback "src/test/test_fallback_sequence.cpp")
 add_executable(test_utfview "src/test/test_utfview.cpp")
+add_executable(test_utf_operator "src/test/test_utf_operator.cpp")
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)
 #else()
