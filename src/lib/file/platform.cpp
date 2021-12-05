@@ -100,6 +100,17 @@ namespace utils {
                 }
                 return true;
             }
+
+            void ReadFileInfo::close() {
+                if (this->file) {
+                    ::fclose(this->file);
+                    this->file = nullptr;
+                }
+                else if (this->fd != -1) {
+                    _close(this->fd);
+                    this->fd = -1;
+                }
+            }
         }  // namespace platform
     }      // namespace file
 }  // namespace utils

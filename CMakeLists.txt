@@ -24,7 +24,10 @@ add_executable(utf_operator "src/test/test_utf_operator.cpp")
 add_executable(endian "src/test/test_endian.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
-add_library(file "src/lib/file/platform.cpp")
+add_library(libutils
+  "src/lib/file/platform.cpp")
+
+
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)
