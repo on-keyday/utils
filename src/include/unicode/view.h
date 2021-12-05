@@ -78,6 +78,7 @@ namespace utils {
                         viewptr--;
                     }
                 }
+                return true;
             }
 
            public:
