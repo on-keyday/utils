@@ -6,12 +6,12 @@
 
 namespace utils {
     namespace file {
-        struct View {
+        class View {
             platform::ReadFileInfo info;
             size_t virtual_ptr = 0;
-            bool open(const platform::path_char* path) {
-                return info.open(path);
-            }
+
+           public:
+            bool open(const platform::path_char* path);
 
             template <class String, class Tmpbuf = wrap::path_string>
             bool open(String&& str) {
@@ -21,6 +21,8 @@ namespace utils {
                 }
                 return open(static_cast<const platform::path_char*>(result.c_str()));
             }
+
+            size_t size() const;
         };
     }  // namespace file
 }  // namespace utils

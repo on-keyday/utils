@@ -24,7 +24,8 @@ add_executable(endian "src/test/test_endian.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
-  "src/lib/file/platform.cpp")
+  "src/lib/file/platform.cpp"
+  "src/lib/file/file_view.cpp")
 
 
 
