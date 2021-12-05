@@ -60,5 +60,6 @@ namespace utils {
             DEFINE_WRITE_SEQ(write_little, seq_little)
             DEFINE_WRITE_SEQ(write_hton, seq_hton)
         };
+#undef DEFINE_WRITE_SEQ
     }  // namespace endian
 }  // namespace utils
