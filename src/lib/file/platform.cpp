@@ -30,17 +30,17 @@ namespace utils {
                     info->maphandle = nullptr;
                     return false;
                 }
-                info->stat.st_size;
                 return true;
             }
 #else
             static bool try_get_map(ReadFileInfo* info) {
                 long pagesize = ::getpagesize(), mapsize = 0;
                 mapsize = (info->stat.st_size / pagesize + 1) * pagesize;
-                char* tmpmap = (char*)mmap(nullptr, mapsize, PROT_READ, MAP_SHARED, info->fd, 0);
-                if (tmpmap == MAP_FAILED) {
+                info->mapptr = reinterpret_cast<char*>(mmap(nullptr, mapsize, PROT_READ, MAP_SHARED, info->fd, 0));
+                if (!info->mapptr) {
                     return false;
                 }
+                return true;
             }
 #endif
             static bool open_impl(ReadFileInfo* info, const path_char* path) {
