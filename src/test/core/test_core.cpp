@@ -1,6 +1,6 @@
 /*license*/
 
-#include "../include/core/sequencer.h"
+#include "../../include/core/sequencer.h"
 
 #include <string>
 

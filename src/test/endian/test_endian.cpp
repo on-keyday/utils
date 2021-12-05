@@ -1,8 +1,8 @@
 /*license*/
 
-#include "../include/endian/endian.h"
-#include "../include/endian/writer.h"
-#include "../include/endian/reader.h"
+#include "../../include/endian/endian.h"
+#include "../../include/endian/writer.h"
+#include "../../include/endian/reader.h"
 #include <cassert>
 #include <string>
 

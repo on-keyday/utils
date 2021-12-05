@@ -1,7 +1,7 @@
 /*license*/
 
-#include "../include/utf/conv_method.h"
-#include "../include/utf/convert.h"
+#include "../../include/utf/conv_method.h"
+#include "../../include/utf/convert.h"
 #include <string>
 
 constexpr char32_t test_utf8_to_utf32() {
