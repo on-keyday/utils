@@ -82,6 +82,10 @@ namespace utils {
                 return true;
             }
 
+            size_t ReadFileInfo::size() const {
+                return this->stat.st_size;
+            }
+
             bool ReadFileInfo::is_open() const {
                 if (this->file || this->fd != ~0) {
                     return true;
