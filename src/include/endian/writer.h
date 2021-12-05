@@ -16,45 +16,41 @@ namespace utils {
             raw_type buf;
 
             template <class... Args>
-            Writer(Args&&... args)
+            constexpr Writer(Args&&... args)
                 : buf(std::forward<Args>(args)...) {}
 
-            template <class T>
+            template <class T, size_t size = sizeof(T), size_t offset = 0>
             constexpr void write(const T& t) {
+                static_assert(size <= sizeof(T), "size is too large");
+                static_assert(offset < size, "offset is too large");
                 const char* ptr = reinterpret_cast<const char*>(&t);
-                for (auto i = 0; i < sizeof(T); i++) {
+                for (auto i = offset; i < size; i++) {
                     buf.push_back(ptr[i]);
                 }
             }
 
-            template <class T>
-            constexpr void write_big(const T& t) {
-                write(to_big(&t));
-            }
+#define DEFINE_WRITE(FUNC, SUFFIX)                                 \
+    template <class T, size_t size = sizeof(T), size_t offset = 0> \
+    constexpr void write_##SUFFIX(const T& t) {                    \
+        write<T, size, offset>(FUNC(&t));                          \
+    }
+            DEFINE_WRITE(to_big, big)
+            DEFINE_WRITE(to_little, little)
+            DEFINE_WRITE(to_network, hton)
 
-            template <class T>
-            constexpr void write_little(const T& t) {
-                write(to_little(&t));
-            }
-
-            template <class T>
-            constexpr void write_hton(const T& t) {
-                write(to_network(&t));
-            }
-
-#define DEFINE_WRITE_SEQ(FUNC, SUFFIX)                    \
-    template <class T>                                    \
-    constexpr void write_##SUFFIX(const T& seq) {         \
-        for (auto& s : seq) {                             \
-            FUNC(s);                                      \
-        }                                                 \
-    }                                                     \
-                                                          \
-    template <class Begin, class End>                     \
-    constexpr void write_##SUFFIX(Begin begin, End end) { \
-        for (auto i = begin; i != end; i++) {             \
-            FUNC(*i);                                     \
-        }                                                 \
+#define DEFINE_WRITE_SEQ(FUNC, SUFFIX)                             \
+    template <class T, size_t size = sizeof(T), size_t offset = 0> \
+    constexpr void write_##SUFFIX(const T& seq) {                  \
+        for (auto& s : seq) {                                      \
+            FUNC<T, size, offset>(s);                              \
+        }                                                          \
+    }                                                              \
+                                                                   \
+    template <class Begin, class End>                              \
+    constexpr void write_##SUFFIX(Begin begin, End end) {          \
+        for (auto i = begin; i != end; i++) {                      \
+            FUNC<T, size, offset>(*i);                             \
+        }                                                          \
     }
             DEFINE_WRITE_SEQ(write, seq)
             DEFINE_WRITE_SEQ(write_big, seq_big)

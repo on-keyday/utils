@@ -98,5 +98,22 @@ namespace utils {
             return to_network_us<std::remove_cv_t<T>, T>(t);
         }
 
+        // from_* and to_* are same, but to show semantics distinction, provided
+
+        template <class T>
+        constexpr std::remove_cv_t<T> from_big(T* t) {
+            return to_big_us<std::remove_cv_t<T>, T>(t);
+        }
+
+        template <class T>
+        constexpr std::remove_cv_t<T> from_little(T* t) {
+            return to_little_us<std::remove_cv_t<T>, T>(t);
+        }
+
+        template <class T>
+        constexpr std::remove_cv_t<T> from_network(T* t) {
+            return to_network_us<std::remove_cv_t<T>, T>(t);
+        }
+
     }  // namespace endian
 }  // namespace utils
