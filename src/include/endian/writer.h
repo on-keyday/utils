@@ -38,6 +38,7 @@ namespace utils {
             DEFINE_WRITE(to_little, little)
             DEFINE_WRITE(to_network, hton)
 
+#undef DEFINE_WRITE
 #define DEFINE_WRITE_SEQ(FUNC, SUFFIX)                                                                                                             \
     template <class T, size_t size = sizeof(T), size_t offset = 0>                                                                                 \
     constexpr void write_##SUFFIX(const T& seq) {                                                                                                  \

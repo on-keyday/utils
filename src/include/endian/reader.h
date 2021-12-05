@@ -35,14 +35,15 @@ namespace utils {
                 return true;
             }
 
-            template <class T, size_t size = sizeof(T), size_t offset = 0>
-            constexpr bool read_big(T& t) {
-                if (!read<T, size, offset>(t)) {
-                    return false;
-                }
-                t = from_big(&t);
-                return true;
-            }
+#define DEFINE_READ(FUNC, SUFFIX)                                  \
+    template <class T, size_t size = sizeof(T), size_t offset = 0> \
+    constexpr bool read_ #SUFFIX(T& t) {                           \
+        if (!read<T, size, offset>(t)) {                           \
+            return false;                                          \
+        }                                                          \
+        t = FUNC(&t);                                              \
+        return true;                                               \
+    }
         };
     }  // namespace endian
 }  // namespace utils
