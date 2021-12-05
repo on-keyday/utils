@@ -8,12 +8,12 @@
 void test_file_view() {
     utils::file::View file;
     // Assum:
-    // current directry is ${workspaceRoot}/test/
+    // current directry is ${workspaceRoot}/
     // target file ${workspaceRoot}/src/test/file/test.txt is exists
 
-    assert(std::filesystem::exists("../src/test/file/test.txt") && "expected file not exists");
+    assert(std::filesystem::exists("src/test/file/test.txt") && "expected file not exists");
 
-    file.open("../src/test/file/test.txt");
+    file.open("src/test/file/test.txt");
     assert(file.is_open() && "file not opened");
     utils::Sequencer<utils::file::View&> view(file);
 
