@@ -7,8 +7,8 @@
 namespace utils {
     namespace file {
         class View {
-            platform::ReadFileInfo info;
-            size_t virtual_ptr = 0;
+            mutable platform::ReadFileInfo info;
+            mutable size_t virtual_ptr = 0;
 
            public:
             bool open(const platform::path_char* path);
@@ -23,6 +23,8 @@ namespace utils {
             }
 
             size_t size() const;
+
+            std::uint8_t operator[](size_t position) const;
         };
     }  // namespace file
 }  // namespace utils
