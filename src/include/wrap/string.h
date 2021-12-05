@@ -3,13 +3,31 @@
 // string - wrap default string type
 #pragma once
 
-#ifndef UTILS_WRAP_STRING_TYPE
+#if !defined(UTILS_WRAP_STRING_TYPE) || !defined(UTILS_WRAP_U16STRING_TYPE) || !defined(UTILS_WRAP_U32STRING_TYPE) || !defined(UTILS_WRAP_PATHSTRING_TYPE)
 #include <string>
+#ifndef UTILS_WRAP_STRING_TYPE
 #define UTILS_WRAP_STRING_TYPE std::string
+#endif
+#ifndef UTILS_WRAP_U16STRING_TYPE
+#define UTILS_WRAP_U16STRING_TYPE std::u16string
+#endif
+#ifndef UTILS_WRAP_U32STRING_TYPE
+#define UTILS_WRAP_U32STRING_TYPE std::u32string
+#ifndef UTILS_WRAP_PATHSTRING_TYPE
+#ifdef _WIN32
+#define UTILS_WRAP_PATHSTRING_TYPE std::wstring
+#else
+#define UTILS_WRAP_PATHSTRING_TYPE std::string
+#endif
+#endif
+#endif
 #endif
 
 namespace utils {
     namespace wrap {
         using string = UTILS_WRAP_STRING_TYPE;
-    }
+        using u16string = UTILS_WRAP_U16STRING_TYPE;
+        using u32string = UTILS_WRAP_U32STRING_TYPE;
+        using path_string = UTILS_WRAP_PATHSTRING_TYPE;
+    }  // namespace wrap
 }  // namespace utils
