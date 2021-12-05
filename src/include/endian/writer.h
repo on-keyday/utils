@@ -8,9 +8,9 @@
 namespace utils {
     namespace endian {
 
-        template <class T>
+        template <class Buf>
         struct Writer {
-            using raw_type = T;
+            using raw_type = Buf;
 
             raw_type buf;
 

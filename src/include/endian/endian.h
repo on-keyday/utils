@@ -7,6 +7,9 @@
 #define UTILS_USE_STD_ENDIAN
 #include <bit>
 #endif
+
+#include <type_traits>
+
 namespace utils {
     namespace endian {
         enum class Endian {
