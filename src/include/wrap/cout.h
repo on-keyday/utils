@@ -54,6 +54,29 @@ namespace utils {
             }
         };
 
+        struct Pack {
+            path_string result;
+            void write(const path_string& str) {
+                result += str;
+            }
+
+           private:
+            void pack_impl(stringstream& ss) {}
+
+            template <class T, class... Args>
+            void pack_impl(stringstream& ss, T&& t, Args&&... arg) {
+                WriteWrapper::write(*this, std::forward<T>(t), nullptr);
+                pack_impl(ss, std::forward<Args>(args)...);
+            }
+
+           public:
+            template <class Args>
+            Pack(Args&&... args) {
+                stringstream ss;
+                pack_impl(ss, std::forward<Args>(args)...)
+            }
+        };
+
         struct UtfOut {
            private:
             ostream& out;
