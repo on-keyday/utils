@@ -14,6 +14,7 @@ namespace utils {
     template PARAM struct NAME : decltype(NAME##_impl::template has ARG(nullptr)) {}
 
 #define DEFINE_SFINAE_T(NAME, EXPR) SFINAE_HELPER_BASE(NAME, <class T>, <T>, EXPR)
+#define DEFINE_SFINAE_TU(NAME, EXPR) SFINAE_HELPER_BASE(NAME, <class T, class U>, <T, U>, EXPR)
 
     }  // namespace wrap
 }  // namespace utils
