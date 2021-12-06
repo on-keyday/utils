@@ -31,7 +31,7 @@ void test_channecl() {
         auto [w, r] = utils::thread::make_chan<int>();
         r.set_blocking(true);
         w.set_blocking(true);
-        std::thread(write_thread, w);
+        std::thread(write_thread, w).detach();
         int v;
         while (r >> v) {
             std::cout << v << "\n";

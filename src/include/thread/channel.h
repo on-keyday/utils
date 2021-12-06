@@ -106,7 +106,7 @@ namespace utils {
             ChanState blocking_store(T&& t) {
                 while (true) {
                     lock_.lock();
-                    auto res = unlock_store(t);
+                    auto res = unlock_store(std::move(t));
                     if (res == ChanStateValue::full) {
                         write_blocking.flag.test_and_set();
                         lock_.unlock();
