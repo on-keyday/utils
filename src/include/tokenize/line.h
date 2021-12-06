@@ -42,7 +42,7 @@ namespace utils {
         template <class T>
         constexpr bool read_line(Sequencer<T>& seq, LineKind& kind, size_t& count) {
             const char* line;
-            kind = match_line(seq, line);
+            kind = match_line(seq, &line);
             if (kind == LineKind::unknown) {
                 return false;
             }

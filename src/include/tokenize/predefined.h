@@ -37,7 +37,7 @@ namespace utils {
         template <class T, class String, template <class...> class Vec, class... Args>
         constexpr bool match(Sequencer<T>& seq, Predefined<String, Vec>& predef, String& matched, Args&&... args) {
             if (predef.match(seq, matched)) {
-                match_line(seq, );
+                match_line(seq, nullptr);
             }
         }
     }  // namespace tokenize
