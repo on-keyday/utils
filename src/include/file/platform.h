@@ -7,14 +7,12 @@
 
 #include <sys/stat.h>
 
+#include "../wrap/lite/char.h"
+
 namespace utils {
     namespace file {
         namespace platform {
-#ifdef _WIN32
-            using path_char = wchar_t;
-#else
-            using path_char = char;
-#endif
+
             struct ReadFileInfo {
                 ::FILE* file = nullptr;
                 int fd = -1;
@@ -27,7 +25,7 @@ namespace utils {
                 long maplen = 0;
 #endif
                 stat_type stat = {0};
-                bool open(const path_char* filename);
+                bool open(const wrap::path_char* filename);
                 void close();
                 bool is_open() const;
                 ~ReadFileInfo();

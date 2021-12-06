@@ -10,7 +10,7 @@
 
 namespace utils {
     namespace file {
-        bool View::open(const platform::path_char* path) {
+        bool View::open(const wrap::path_char* path) {
             return this->info.open(path);
         }
 

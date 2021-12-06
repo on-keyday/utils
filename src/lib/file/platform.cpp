@@ -60,7 +60,7 @@ namespace utils {
                 return true;
             }
 #endif
-            static bool open_impl(ReadFileInfo* info, const path_char* path) {
+            static bool open_impl(ReadFileInfo* info, const wrap::path_char* path) {
                 _sopen_s(&info->fd, path, _O_RDONLY, _SH_DENYWR, _S_IREAD);
                 if (info->fd == -1) {
                     return false;
@@ -89,7 +89,7 @@ namespace utils {
                 return false;
             }
 
-            bool ReadFileInfo::open(const path_char* path) {
+            bool ReadFileInfo::open(const wrap::path_char* path) {
                 if (!path) {
                     return false;
                 }

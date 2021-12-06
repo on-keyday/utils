@@ -10,7 +10,7 @@ namespace utils {
             mutable platform::ReadFileInfo info;
 
            public:
-            bool open(const platform::path_char* path);
+            bool open(const wrap::path_char* path);
 
             template <class Tmpbuf = wrap::path_string, class String>
             bool open(String&& str) {
@@ -18,7 +18,7 @@ namespace utils {
                 if (!utf::convert(str, result)) {
                     return false;
                 }
-                return open(static_cast<const platform::path_char*>(result.c_str()));
+                return open(static_cast<const wrap::path_char*>(result.c_str()));
             }
 
             bool is_open() const;
