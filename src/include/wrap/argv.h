@@ -1,6 +1,7 @@
 /*license*/
 
 // argv - wrap argv to utf8
+// need to link libutils
 #pragma once
 
 #include "../utf/convert.h"

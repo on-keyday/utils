@@ -1,5 +1,8 @@
 /*license*/
 
+// file_view - file view
+// need to link libutils
+#pragma once
 #include "platform.h"
 #include "../wrap/lite/string.h"
 #include "../utf/convert.h"

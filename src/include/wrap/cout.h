@@ -1,6 +1,7 @@
 /*license*/
 
 // cout - wrapper of cout
+// need to link libutils
 #pragma once
 
 #include <iosfwd>

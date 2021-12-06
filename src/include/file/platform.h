@@ -1,6 +1,7 @@
 /*license*/
 
 // platform - platform dependency wrapper
+// need to link libutils
 #pragma once
 
 #include <cstdio>
