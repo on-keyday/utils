@@ -20,9 +20,19 @@ namespace utils {
             size_t limit = ~0;
 
            public:
+            void change_limit(size_t limit) {
+                lock_.lock();
+                this->limit = limit;
+                lock_.unlock();
+            }
+
             bool subscribe(SendChan<T, Que>&& w, size_t& id) {
                 lock_.lock();
                 if (w.is_closed()) {
+                    lock_.unlock();
+                    return false;
+                }
+                if (listener.size() >= limit) {
                     lock_.unlock();
                     return false;
                 }
@@ -79,6 +89,9 @@ namespace utils {
             wrap::shared_ptr<ForkBuffer<T, Que, Map>> buffer;
 
            public:
+            ForkChan(wrap::shared_ptr<ForkBuffer<T, Que, Map>>& buf)
+                : buffer(buf) {}
+
             bool operator<<(T&& t) {
                 if (buffer) {
                     buffer->store(std::move(t));
@@ -98,5 +111,8 @@ namespace utils {
                 return nullptr;
             }
         };
+        template <class T, template <class...> class Que = wrap::queue, template <class...> class Map = wrap::map>
+        ForkChan<T, Que, Map> make_forkchan() {
+        }
     }  // namespace thread
 }  // namespace utils
