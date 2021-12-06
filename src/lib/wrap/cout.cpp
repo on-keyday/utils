@@ -78,5 +78,23 @@ namespace utils {
                 this->out << p;
             }
         }
+
+        UtfOut& cout_wrap() {
+#ifdef _WIN32
+            static UtfOut cout(std::wcout);
+#else
+            static UtfOut cout(std::cout);
+#endif
+            return cout;
+        }
+
+        UtfOut& cerr_wrap() {
+#ifdef _WIN32
+            static UtfOut cerr(std::wcerr);
+#else
+            static UtfOut cerr(std::cerr);
+#endif
+            return cerr;
+        }
     }  // namespace wrap
 }  // namespace utils

@@ -58,5 +58,8 @@ namespace utils {
         extern int stdoutmode;
         extern int stderrmode;
         extern bool sync_stdio;
+
+        UtfOut& cout_wrap();
+        UtfOut& cerr_wrap();
     }  // namespace wrap
 }  // namespace utils
