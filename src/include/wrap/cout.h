@@ -3,8 +3,10 @@
 // cout - wrapper of cout
 #pragma once
 
-#include <ios>
+#include <iosfwd>
 #include <sstream>
+#include "lite/char.h"
+#include "lite/string.h"
 
 namespace utils {
     namespace wrap {
@@ -16,8 +18,9 @@ namespace utils {
 
         struct UtfOut {
             ostream& out;
+            std::stringstream ss;
 
-            void write(const char* str);
+            void write(const path_char* str);
         };
     }  // namespace wrap
 }  // namespace utils
