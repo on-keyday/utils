@@ -22,6 +22,38 @@ namespace utils {
         using stringstream = std::stringstream;
 #endif
 
+        struct WriteWrapper {
+            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<T>()[0])
+            template <class Out>
+            static Out& invoke(Out& out, T&& t, stringstream&, thread::LiteLock*) {
+                path_string tmp;
+                utf::convert<true>(t, tmp);
+                out.write(tmp);
+                return out;
+            }
+            SFINAE_BLOCK_T_ELSE(is_string)
+            template <class Out>
+            static Out& invoke(Out& out, T&& t, stringstream& ss, thread::LiteLock* lock) {
+                if (lock) {
+                    lock->lock();
+                }
+                ss.str(path_string());
+                ss << t;
+                auto tmp = ss.str();
+                if (lock) {
+                    lock->unlock();
+                }
+                out.write(tmp);
+                return out;
+            }
+            SFINAE_BLOCK_T_END()
+
+            template <class Out, class T>
+            static Out& write(Out& out, T&& t, stringstream& ss, thread::LiteLock* lock) {
+                return is_string<T>::invoke(out, std::forward<T>(t), ss, lock);
+            }
+        };
+
         struct UtfOut {
            private:
             ostream& out;
@@ -53,7 +85,7 @@ namespace utils {
 
             template <class T>
             UtfOut& operator<<(T&& t) {
-                return is_string<T>::invoke(*this, std::forward<T>(t));
+                return WriteWrapper::write(*this, std::forward<T>(t), ss, &lock);
             }
 
             void write(const path_string&);
