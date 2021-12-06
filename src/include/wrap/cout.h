@@ -70,7 +70,7 @@ namespace utils {
             }
 
            public:
-            template <class Args>
+            template <class... Args>
             Pack(Args&&... args) {
                 stringstream ss;
                 pack_impl(ss, std::forward<Args>(args)...)
