@@ -56,6 +56,7 @@ void test_channecl() {
             auto sub = fork.subscribe(std::move(w));
             std::thread(recv_thread, i, r, sub).detach();
         }
+        fork.set_blocking(true);
         for (auto i = 0; i < 10000; i++) {
             fork << std::move(i);
         }
