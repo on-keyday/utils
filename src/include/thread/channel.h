@@ -95,12 +95,16 @@ namespace utils {
             void change_limit(size_t limit) {
                 lock_.lock();
                 this->limit = limit;
+                read_blocking.unlock();
+                write_blocking.unlock();
                 lock_.unlock();
             }
 
             void change_policy(ChanDisposePolicy policy) {
                 lock_.lock();
                 this->policy = policy;
+                read_blocking.unlock();
+                write_blocking.unlock();
                 lock_.unlock();
             }
 
