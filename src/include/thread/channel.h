@@ -83,8 +83,8 @@ namespace utils {
             }
 
            public:
-            ChanBuffer(size_t limit = ~0, ChanDisposePolicy polocy = ChanDisposePolicy::dispose_new)
-                : limit(limit), policy(polocy) {
+            ChanBuffer(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new)
+                : limit(limit), policy(policy) {
             }
 
             ChanState store(T&& t) {
@@ -180,6 +180,15 @@ namespace utils {
                 return this->buffer->store(std::move(t));
             }
         };
+
+        template <class T, template <class...> class Que = wrap::queue>
+        std::pair<SendChan<T, Que>, RecvChan<T, Que>> make_chan(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new) {
+            auto buffer = wrap::make_shared<ChanBuffer<T, Que>>(limit, policy);
+            return {
+                SendChan<T, Que>(buffer),
+                RecvChan<T, Que>(buffer),
+            };
+        }
 
     }  // namespace thread
 }  // namespace utils
