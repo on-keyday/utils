@@ -34,13 +34,15 @@ namespace utils {
             return t.match() || or_match(seq, matched, std::forward<Args>(args)...);
         }
 
-        template <class T, class String, template <class...> class Vec, class... Args>
-        constexpr bool match(Sequencer<T>& seq, Predefined<String, Vec>& predef, String& matched, Args&&... args) {
+        template <bool check_after, class T, class String, template <class...> class Vec, class... Args>
+        constexpr bool match_predefined(Sequencer<T>& seq, Predefined<String, Vec>& predef, String& matched, Args&&... args) {
             if (auto matchsize = predef.match(seq, matched)) {
                 seq.consume(matchsize);
-                if (!match_line(seq, nullptr) || !match_space(seq) || or_match(seq, matched, std::forward<Args>(args)...)) {
-                    seq.backto(matchsize);
-                    return false;
+                if (check_after) {
+                    if (!match_line(seq, nullptr) && !match_space(seq) && !or_match(seq, matched, std::forward<Args>(args)...)) {
+                        seq.backto(matchsize);
+                        return false;
+                    }
                 }
                 return true;
             }
