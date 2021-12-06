@@ -142,9 +142,13 @@ namespace utils {
             bool is_closed() const {
                 return buffer ? buffer->is_closed() : true;
             }
+
+            bool close() {
+                return buffer ? buffer->close() : true;
+            }
         };
 
-        template <class T, template <class...> class Que>
+        template <class T, template <class...> class Que = wrap::queue>
         struct RecvChan : ChanBase<T, Que> {
            private:
             bool blocking = false;
@@ -169,7 +173,7 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que>
+        template <class T, template <class...> class Que = wrap::queue>
         struct SendChan : ChanBase<T, Que> {
             using ChanBase<T, Que>::ChanBase;
 

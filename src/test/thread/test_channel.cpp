@@ -3,6 +3,12 @@
 #include "../../include/thread/channel.h"
 #include <cassert>
 
+void write_thread(utils::thread::SendChan<int> w) {
+    for (auto i = 0; i < 10000; i++) {
+        w << std::move(i);
+    }
+}
+
 void test_channecl() {
     auto [w, r] = utils::thread::make_chan<int>(5);
     w << 32;
