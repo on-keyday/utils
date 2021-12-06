@@ -181,6 +181,18 @@ namespace utils {
                 blocking = flag;
             }
 
+            void change_limit(size_t limit) {
+                if (buffer) {
+                    buffer->change_limit(limit);
+                }
+            }
+
+            void change_policy(ChanDisposePolicy policy) {
+                if (buffer) {
+                    buffer->change_policy(policy);
+                }
+            }
+
             bool is_closed() const {
                 return buffer ? buffer->is_closed() : true;
             }
