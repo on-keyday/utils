@@ -129,5 +129,40 @@ namespace utils {
             }
         };
 
+        template <class T, template <class...> class Que>
+        struct ChanBase {
+           protected:
+            using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que>>;
+            buffer_t buffer;
+
+           public:
+            ChanBase(buffer_t& in)
+                : buffer(in) {}
+
+            bool is_closed() const {
+                return buffer ? buffer->is_closed() : true;
+            }
+        };
+
+        template <class T, template <class...> class Que>
+        struct RecvChan : ChanBase<T, Que> {
+           private:
+            bool blocking = false;
+
+           public:
+            void set_blocking(bool flag) {
+                blocking = flag;
+            }
+
+            ChanState operator>>(T& t) {
+                if (blocking) {
+                    return this->buffer->blocking_load(t);
+                }
+                else {
+                    return this->buffer->load(t);
+                }
+            }
+        };
+
     }  // namespace thread
 }  // namespace utils
