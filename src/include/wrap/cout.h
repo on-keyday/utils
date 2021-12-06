@@ -55,7 +55,7 @@ namespace utils {
             UtfOut& operator<<(T&& t) {
                 return is_string<T>::invoke(*this, std::forward<T>(t));
             }
-            void lock();
+
             void write(const path_string&);
         };
         extern int stdinmode;
