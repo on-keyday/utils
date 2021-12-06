@@ -15,18 +15,32 @@ namespace utils {
         struct ForkBuffer {
            private:
             LiteLock lock_;
-            Map<size_t, SendChan<T, Que>> litenr;
+            Map<size_t, SendChan<T, Que>> litener;
             size_t index = 0;
             size_t limit = ~0;
 
            public:
-            void subscribe() {
+            void subscribe(SendChan<T, Que>&& w, size_t& id) {
+                lock_.lock();
+                if (w.is_closed()) {
+                    return;
+                }
+                index++;
+                SendChan<T, Que>& place = listener[index];
+                place = std::move(w);
+                place.set_blocking(false);
+                id = index;
+                lock_.unlock();
+            }
+
+            void dispose(size_t id) {
+                listener.erase(id);
             }
 
             void store(T&& t) {
                 lock_.lock();
                 T copy(std::move(t));
-                std::erase_if(listner.begin(), litenr.end(), [&](auto& v) {
+                std::erase_if(listner.begin(), litener.end(), [&](auto& v) {
                     SendChan<T, Que>& c = std::get<1>(v);
                     if (c.is_closed()) {
                         return true;
