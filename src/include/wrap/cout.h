@@ -10,6 +10,7 @@
 #include "../helper/sfinae.h"
 #include "../core/buffer.h"
 #include "../utf/convert.h"
+#include "../thread/lite_lock.h"
 
 namespace utils {
     namespace wrap {
@@ -26,6 +27,7 @@ namespace utils {
             ostream& out;
             stringstream ss;
             ::FILE* std_handle = nullptr;
+            thread::LiteLock lock;
 
            public:
             UtfOut(ostream& out);
@@ -39,9 +41,11 @@ namespace utils {
             }
             SFINAE_BLOCK_T_ELSE(is_string)
             static UtfOut& invoke(UtfOut& out, T&& t) {
+                out.lock.lock();
                 out.ss.str(path_string());
                 out.ss << t;
                 auto tmp = out.ss.str();
+                out.lock.unlock();
                 out.write(tmp);
                 return out;
             }
@@ -51,7 +55,7 @@ namespace utils {
             UtfOut& operator<<(T&& t) {
                 return is_string<T>::invoke(*this, std::forward<T>(t));
             }
-
+            void lock();
             void write(const path_string&);
         };
         extern int stdinmode;

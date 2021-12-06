@@ -4,7 +4,7 @@
 void test_cout() {
     auto& cout = utils::wrap::cout_wrap();
 
-    cout << "strings";
+    cout << U"ありがとう!\n";
     cout << 3;
 }
 

@@ -65,6 +65,9 @@ namespace utils {
             std_handle = is_std(this->out);
         }
 
+        void UtfOut::lock() {
+        }
+
         void UtfOut::write(const path_string& p) {
             if (std_handle) {
                 if (!initialized) {
