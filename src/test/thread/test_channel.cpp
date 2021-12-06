@@ -28,7 +28,7 @@ void test_channecl() {
         assert(result2 == utils::thread::ChanStateValue::full && "expect full but not");
     }
     {
-        auto [w, r] = utils::thread::make_chan<int>();
+        auto [w, r] = utils::thread::make_chan<int>(5);
         r.set_blocking(true);
         w.set_blocking(true);
         std::thread(write_thread, w).detach();
