@@ -29,12 +29,15 @@ namespace utils {
             static UtfOut& invoke(UtfOut& out, T&& t) {
                 wrap::path_string tmp;
                 utf::convert<true>(t, tmp);
-                out.write(tmp.c_str());
+                out.write(tmp);
                 return out;
             }
             SFINAE_BLOCK_T_ELSE(is_string)
             static UtfOut& invoke(UtfOut& out, T&& t) {
                 out.ss << t;
+                auto tmp = out.ss.str();
+                out.write(tmp);
+                return out;
             }
             SFINAE_BLOCK_T_END()
 
@@ -43,7 +46,7 @@ namespace utils {
                 return is_string<T>::invoke(*this, std::forward<T>(t));
             }
 
-            void write(const path_char* str);
+            void write(const path_string&);
         };
     }  // namespace wrap
 }  // namespace utils
