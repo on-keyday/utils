@@ -32,7 +32,7 @@ void recv_thread(size_t index, utils::thread::RecvChan<int> r, utils::wrap::shar
 
 void dummmy_message(utils::thread::ForkChan<int> fork) {
     while (!fork.is_closed()) {
-        cout << utils::wrap::pack(std::this_thread::get_id(), ":dummy");
+        cout << utils::wrap::pack(std::this_thread::get_id(), ":dummy\n");
     }
 }
 
