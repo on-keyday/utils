@@ -19,6 +19,7 @@ namespace utils {
             size_t index = 0;
             size_t limit = ~0;
             std::atomic_flag closed;
+            bool blocking = false;
 
            public:
             ForkBuffer(size_t limit)
@@ -27,6 +28,12 @@ namespace utils {
             void change_limit(size_t limit) {
                 lock_.lock();
                 this->limit = limit;
+                lock_.unlock();
+            }
+
+            void set_blocking(bool blocking) {
+                lock_.lock();
+                this->blocking = blocking;
                 lock_.unlock();
             }
 
