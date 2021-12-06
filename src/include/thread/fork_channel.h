@@ -122,6 +122,8 @@ namespace utils {
         };
         template <class T, template <class...> class Que = wrap::queue, template <class...> class Map = wrap::map>
         ForkChan<T, Que, Map> make_forkchan(size_t limit = ~0) {
+            auto buf = wrap::make_shared<ForkBuffer<T, Que, Map>>(limit);
+            return ForkChan<T, Que, Map>(buf);
         }
     }  // namespace thread
 }  // namespace utils
