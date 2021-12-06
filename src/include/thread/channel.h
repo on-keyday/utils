@@ -150,17 +150,34 @@ namespace utils {
             bool blocking = false;
 
            public:
+            using ChanBase<T, Que>::ChanBase;
+
             void set_blocking(bool flag) {
                 blocking = flag;
             }
 
             ChanState operator>>(T& t) {
+                if (!this->buffer) {
+                    return false;
+                }
                 if (blocking) {
                     return this->buffer->blocking_load(t);
                 }
                 else {
                     return this->buffer->load(t);
                 }
+            }
+        };
+
+        template <class T, template <class...> class Que>
+        struct SendChan : ChanBase<T, Que> {
+            using ChanBase<T, Que>::ChanBase;
+
+            ChanState operator<<(T&& t) {
+                if (!this->buffer) {
+                    return false;
+                }
+                return this->buffer->store(std::move(t));
             }
         };
 
