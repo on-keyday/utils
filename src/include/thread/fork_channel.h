@@ -20,6 +20,9 @@ namespace utils {
             size_t limit = ~0;
 
            public:
+            ForkBuffer(size_t limit)
+                : limit(limit) {}
+
             void change_limit(size_t limit) {
                 lock_.lock();
                 this->limit = limit;
@@ -118,7 +121,7 @@ namespace utils {
             }
         };
         template <class T, template <class...> class Que = wrap::queue, template <class...> class Map = wrap::map>
-        ForkChan<T, Que, Map> make_forkchan() {
+        ForkChan<T, Que, Map> make_forkchan(size_t limit = ~0) {
         }
     }  // namespace thread
 }  // namespace utils
