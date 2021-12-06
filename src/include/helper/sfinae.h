@@ -5,7 +5,7 @@
 #include <type_traits>
 
 namespace utils {
-    namespace wrap {
+    namespace helper {
 #define SFINAE_HELPER_BASE(NAME, PARAM, ARG, EXPR)                            \
     struct NAME##_impl {                                                      \
         template PARAM static std::true_type has(decltype((EXPR), (void)0)*); \
@@ -16,5 +16,5 @@ namespace utils {
 #define DEFINE_SFINAE_T(NAME, EXPR) SFINAE_HELPER_BASE(NAME, <class T>, <T>, EXPR)
 #define DEFINE_SFINAE_TU(NAME, EXPR) SFINAE_HELPER_BASE(NAME, <class T, class U>, <T, U>, EXPR)
 
-    }  // namespace wrap
+    }  // namespace helper
 }  // namespace utils

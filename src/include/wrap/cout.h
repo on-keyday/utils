@@ -7,6 +7,7 @@
 #include <sstream>
 #include "lite/char.h"
 #include "lite/string.h"
+#include "../helper/sfinae.h"
 
 namespace utils {
     namespace wrap {
