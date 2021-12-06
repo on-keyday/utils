@@ -24,6 +24,7 @@ add_executable(endian "src/test/endian/test_endian.cpp")
 add_executable(fileview "src/test/file/test_file_view.cpp")
 add_executable(cout "src/test/wrap/test_cout.cpp")
 add_executable(channel "src/test/thread/test_channel.cpp")
+add_executable(predefined "src/test/tokenize/test_predefined.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
