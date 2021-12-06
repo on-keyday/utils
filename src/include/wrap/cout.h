@@ -23,8 +23,9 @@ namespace utils {
             ostream& out;
             std::stringstream ss;
 
-            DEFINE_SFINAE_T(is_string, std::declval<Buffer<typename BufferType<T&>::type>>());
-
+            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>());
+            SFINAE_BLOCK_T_ELSE(is_string)
+            SFINAE_BLOCK_T_END()
             template <class T, bool flag = is_string<T>::value>
             UtfOut& operator<<(T&& t) {
                 wrap::path_string tmp;
