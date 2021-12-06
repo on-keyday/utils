@@ -26,7 +26,7 @@ void recv_thread(size_t index, utils::thread::RecvChan<int> r, utils::wrap::shar
     r.set_blocking(true);
     int v;
     while (r >> v) {
-        cout << utils::wrap::pack(index, ":", v, "\n");
+        cout << utils::wrap::pack(std::this_thread::get_id(), ":", index, ":", v, "\n");
     }
 }
 
@@ -67,7 +67,8 @@ void test_channecl() {
             fork << std::move(i);
         }
         fork.close();
-        Sleep(100);
+
+        Sleep(200);
     }
 }
 

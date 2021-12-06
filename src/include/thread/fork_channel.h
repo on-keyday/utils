@@ -160,6 +160,13 @@ namespace utils {
                 return nullptr;
             }
 
+            bool is_closed() const {
+                if (buffer) {
+                    return buffer->is_closed();
+                }
+                return true;
+            }
+
             void close() {
                 if (buffer) {
                     buffer->close();
