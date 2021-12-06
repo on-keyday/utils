@@ -6,6 +6,12 @@
 #include "../../include/wrap/cout.h"
 #include "../../include/thread/fork_channel.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#define Sleep sleep
+#endif
+
 auto& cout = utils::wrap::cout_wrap();
 
 void write_thread(utils::thread::SendChan<int> w) {
@@ -61,6 +67,7 @@ void test_channecl() {
             fork << std::move(i);
         }
         fork.close();
+        Sleep(100);
     }
 }
 
