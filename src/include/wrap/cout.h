@@ -30,7 +30,7 @@ namespace utils {
            public:
             UtfOut(ostream& out);
 
-            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>().size())
+            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<T>()[0])
             static UtfOut& invoke(UtfOut& out, T&& t) {
                 path_string tmp;
                 utf::convert<true>(t, tmp);

@@ -5,6 +5,7 @@ void test_cout() {
     auto& cout = utils::wrap::cout_wrap();
 
     cout << "strings";
+    cout << 3;
 }
 
 int main() {
