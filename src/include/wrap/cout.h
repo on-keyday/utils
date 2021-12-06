@@ -98,25 +98,6 @@ namespace utils {
            public:
             UtfOut(ostream& out);
 
-            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<T>()[0])
-            static UtfOut& invoke(UtfOut& out, T&& t) {
-                path_string tmp;
-                utf::convert<true>(t, tmp);
-                out.write(tmp);
-                return out;
-            }
-            SFINAE_BLOCK_T_ELSE(is_string)
-            static UtfOut& invoke(UtfOut& out, T&& t) {
-                out.lock.lock();
-                out.ss.str(path_string());
-                out.ss << t;
-                auto tmp = out.ss.str();
-                out.lock.unlock();
-                out.write(tmp);
-                return out;
-            }
-            SFINAE_BLOCK_T_END()
-
             template <class T>
             UtfOut& operator<<(T&& t) {
                 return WriteWrapper::write(*this, std::forward<T>(t), ss, &lock);

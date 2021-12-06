@@ -6,8 +6,8 @@ void test_cout() {
 
     cout << U"ありがとう!\n";
     cout << 3;
-    auto pack = utils::wrap::pack("error:", 3, U" is not ", u"a vector");
-    pack.pack(u8"please pay money\n");
+    auto pack = utils::wrap::pack("\nerror: ", 3, U" is not ", u"a vector\n");
+    pack.pack(u8"please pay かねはらえ");
     cout << std::move(pack);
 }
 
