@@ -66,7 +66,7 @@ namespace utils {
                 lock_.lock();
                 if (is_closed()) {
                     lock_.unlock();
-                    return false;
+                    return;
                 }
                 T copy(std::move(t));
                 std::erase_if(listner.begin(), litener.end(), [&](auto& v) {
