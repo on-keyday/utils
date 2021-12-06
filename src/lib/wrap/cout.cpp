@@ -69,7 +69,7 @@ namespace utils {
             if (std_handle) {
                 if (!initialized) {
                     auto result = io_init();
-                    assert(result);
+                    assert(result && "io init failed");
                 }
                 ::fwrite(p.c_str(), sizeof(path_char), p.size(), std_handle);
                 ::fflush(std_handle);
