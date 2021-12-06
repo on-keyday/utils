@@ -83,6 +83,7 @@ namespace utils {
                         return true;
                     }
                     auto tomov = copy;
+                    c.set_blocking(blocking);
                     if ((c << std::move(tomov)) == ChanStateValue::closed) {
                         return true;
                     }
@@ -134,6 +135,12 @@ namespace utils {
                     return buffer->store(std::move(t));
                 }
                 return false;
+            }
+
+            void set_blocking(bool flag) {
+                if (buffer) {
+                    buffer->set_blocking(flag);
+                }
             }
 
             void change_limit(size_t limit) {
