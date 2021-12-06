@@ -40,7 +40,8 @@ namespace utils {
             if (auto matchsize = predef.match(seq, matched)) {
                 seq.consume(matchsize);
                 if (check_after) {
-                    if (match_line(seq, nullptr) == LineKind::unknown && !match_space(seq) && !or_match(seq, matched, std::forward<Args>(args)...)) {
+                    String tmp;
+                    if (match_line(seq, nullptr) == LineKind::unknown && !match_space(seq) && !or_match(seq, tmp, std::forward<Args>(args)...)) {
                         seq.backto(matchsize);
                         return false;
                     }
