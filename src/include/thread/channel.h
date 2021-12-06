@@ -174,6 +174,7 @@ namespace utils {
             bool blocking = false;
 
            public:
+            constexpr ChanBase() {}
             ChanBase(buffer_t& in)
                 : buffer(in) {}
 
