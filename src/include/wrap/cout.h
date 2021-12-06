@@ -23,15 +23,17 @@ namespace utils {
             ostream& out;
             std::stringstream ss;
 
-            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>());
+            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>())
+            static UtfOut& invoke(UtfOut& out, T&& t) {
+                wrap::path_string tmp;
+                utf::convert<true>(t, tmp);
+                out.write(tmp.c_str());
+                return out;
+            }
             SFINAE_BLOCK_T_ELSE(is_string)
             SFINAE_BLOCK_T_END()
             template <class T, bool flag = is_string<T>::value>
             UtfOut& operator<<(T&& t) {
-                wrap::path_string tmp;
-                utf::convert<true>(t, tmp);
-                write(tmp.c_str());
-                return *this;
             }
 
             template <class T>
