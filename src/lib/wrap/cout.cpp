@@ -1,4 +1,5 @@
 #include "../../include/wrap/cout.h"
+#include <cstdio>
 #include <iostream>
 #ifdef _WIN32
 #include <fcntl.h>
@@ -16,48 +17,66 @@ namespace utils {
         int stderrmode = _O_U8TEXT;
         bool sync_stdio = false;
 
-        static bool is_std(ostream& out) {
+        static ::FILE* is_std(ostream& out) {
             auto addr = std::addressof(out);
 #ifdef _WIN32
-            if (addr == std::addressof(std::wcout) || addr == std::addressof(std::wcerr) ||
-                addr == std::addressof(std::wclog))
+            if (addr == std::addressof(std::wcout))
 #else
-            if (addr == std::addressof(std::cout) || addr == std::addressof(std::cerr) ||
-                addr == std::addressof(std::clog))
+            if (addr == std::addressof(std::cout))
 #endif
             {
-                return true;
+                return stdout;
+            }
+#ifdef _WIN32
+            else if (addr == std::addressof(std::wcerr) ||
+                     addr == std::addressof(std::wclog))
+#else
+            else if (addr == std::addressof(std::cerr) ||
+                     addr == std::addressof(std::clog))
+#endif
+            {
+                return stderr;
             }
             return false;
         }
 
-        static bool io_init(ostream& out) {
-            if (is_std(out)) {
+        static bool io_init() {
 #ifdef _WIN32
-                if (_setmode(_fileno(stdin), stdinmode) == -1) {
-                    //err = "error:text input mode change failed";
-                    return false;
-                }
-                if (_setmode(_fileno(stdout), stdoutmode) == -1) {
-                    //err = "error:text output mode change failed\n";
-                    return false;
-                }
-                if (_setmode(_fileno(stderr), stderrmode) == -1) {
-                    //err = "error:text error mode change failed\n";
-                    return false;
-                }
-#endif
-                std::ios_base::sync_with_stdio(sync_stdio);
-                initialized = true;
+            if (_setmode(_fileno(stdin), stdinmode) == -1) {
+                //err = "error:text input mode change failed";
+                return false;
             }
+            if (_setmode(_fileno(stdout), stdoutmode) == -1) {
+                //err = "error:text output mode change failed\n";
+                return false;
+            }
+            if (_setmode(_fileno(stderr), stderrmode) == -1) {
+                //err = "error:text error mode change failed\n";
+                return false;
+            }
+#endif
+            std::ios_base::sync_with_stdio(sync_stdio);
+            initialized = true;
             return true;
         }
 
+        UtfOut::UtfOut(ostream& out)
+            : out(out) {
+            std_handle = is_std(this->out);
+        }
+
         void UtfOut::write(const path_string& p) {
-            if (!initialized) {
-                io_init(this->out);
+            if (std_handle) {
+                if (!initialized) {
+                    auto result = io_init();
+                    assert(result);
+                }
+                ::fwrite(p.c_str(), sizeof(path_char), p.size(), std_handle);
+                ::fflush(std_handle);
             }
-            this->out << p;
+            else {
+                this->out << p;
+            }
         }
     }  // namespace wrap
 }  // namespace utils

@@ -22,8 +22,13 @@ namespace utils {
 #endif
 
         struct UtfOut {
+           private:
             ostream& out;
             stringstream ss;
+            ::FILE* std_handle = false;
+
+           public:
+            UtfOut(ostream& out);
 
             SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>().size())
             static UtfOut& invoke(UtfOut& out, T&& t) {
