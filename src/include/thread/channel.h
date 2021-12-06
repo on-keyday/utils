@@ -33,7 +33,8 @@ namespace utils {
             size_t limit = ~0;
             LiteLock lock_;
             std::atomic_flag closed;
-            LiteLock blocking;
+            LiteLock read_blocking;
+            LiteLock write_blocking;
             ChanDisposePolicy policy = ChanDisposePolicy::dispose_new;
 
             bool check_limit() {
@@ -67,6 +68,7 @@ namespace utils {
                 }
                 t = std::move(que.front());
                 que.pop_front();
+                write_blocking.unlock();
                 return true;
             }
 
@@ -78,7 +80,7 @@ namespace utils {
                     return ChanStateValue::full;
                 }
                 que.push_back(std::move(t));
-                blocking.unlock();
+                read_blocking.unlock();
                 return true;
             }
 
@@ -101,14 +103,29 @@ namespace utils {
                 return res;
             }
 
+            ChanState blocking_store(T&& t) {
+                while (true) {
+                    lock_.lock();
+                    auto res = unlock_store(t);
+                    if (res == ChanStateValue::full) {
+                        write_blocking.flag.test_and_set();
+                        lock_.unlock();
+                        write_blocking.flag.wait(true);
+                        continue;
+                    }
+                    lock_.unlock();
+                    return res;
+                }
+            }
+
             ChanState blocking_load(T& t) {
                 while (true) {
                     lock_.lock();
                     auto res = unlock_load(t);
                     if (res == ChanStateValue::empty) {
-                        blocking.flag.test_and_set();
+                        read_blocking.flag.test_and_set();
                         lock_.unlock();
-                        blocking.flag.wait(true);
+                        read_blocking.flag.wait(true);
                         continue;
                     }
                     lock_.unlock();
@@ -119,7 +136,8 @@ namespace utils {
             bool close() {
                 lock_.lock();
                 auto res = closed.test_and_set();
-                blocking.unlock();
+                read_blocking.unlock();
+                write_blocking.unlock();
                 lock_.unlock();
                 return res;
             }
