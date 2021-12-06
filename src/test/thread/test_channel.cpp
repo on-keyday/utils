@@ -34,7 +34,7 @@ void test_channecl() {
         std::thread(write_thread, w);
         int v;
         while (r >> v) {
-            std::cout << v;
+            std::cout << v << "\n";
         }
     }
 }

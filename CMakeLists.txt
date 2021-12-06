@@ -23,6 +23,7 @@ add_executable(utf_operator "src/test/utf/test_utf_operator.cpp")
 add_executable(endian "src/test/endian/test_endian.cpp")
 add_executable(fileview "src/test/file/test_file_view.cpp")
 add_executable(cout "src/test/wrap/test_cout.cpp")
+add_executable(channel "src/test/thread/test_cout.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
