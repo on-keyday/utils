@@ -11,6 +11,6 @@
 namespace utils {
     namespace wrap {
         template <class T>
-        using vector = std::vector<T>;
+        using vector = UTILS_WRAP_VECTOR_TEMPLATE<T>;
     }
 }  // namespace utils

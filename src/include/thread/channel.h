@@ -6,6 +6,7 @@
 #include "lite_lock.h"
 #include "../wrap/lite/queue.h"
 #include "../wrap/lite/enum.h"
+#include "../wrap/lite/smart_ptr.h"
 
 namespace utils {
     namespace thread {
@@ -127,5 +128,6 @@ namespace utils {
                 return closed.test();
             }
         };
+
     }  // namespace thread
 }  // namespace utils

@@ -7,3 +7,5 @@ UTILS_WRAP_U32STRING_TYPE            std::u32string
 UTILS_WRAP_PATHSTRING_TYPE           (windows) std::wstring (other) std::string
 UTILS_WRAP_VECTOR_TEMPLATE           std::vector
 UTILS_WRAP_QUEUE_TEMPLATE            std::deque
+UTILS_WRAP_SHARED_PTR_TEMPLATE       std::shared_ptr
+UTILS_WRAP_MAKE_SHARED_PTR_FUNC      std::make_shared
