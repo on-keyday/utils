@@ -80,7 +80,7 @@ namespace utils {
         }
 
         UtfOut& UtfOut::operator<<(internal::Pack&& pack) {
-            write(pack.result);
+            write(pack.impl.result);
             return *this;
         }
 

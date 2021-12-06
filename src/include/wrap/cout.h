@@ -54,14 +54,15 @@ namespace utils {
                 return is_string<T>::invoke(out, std::forward<T>(t), ss, lock);
             }
         };
+
+        struct UtfOut;
         namespace internal {
-            struct Pack {
+            struct PackImpl {
                 path_string result;
                 void write(const path_string& str) {
                     result += str;
                 }
 
-               private:
                 void pack_impl(stringstream& ss) {}
 
                 template <class T, class... Args>
@@ -69,12 +70,18 @@ namespace utils {
                     WriteWrapper::write(*this, std::forward<T>(t), ss, nullptr);
                     pack_impl(ss, std::forward<Args>(args)...);
                 }
+            };
+
+            struct Pack {
+               private:
+                friend struct UtfOut;
+                PackImpl impl;
 
                public:
                 template <class... Args>
                 Pack&& pack(Args&&... args) {
                     stringstream ss;
-                    pack_impl(ss, std::forward<Args>(args)...);
+                    impl.pack_impl(ss, std::forward<Args>(args)...);
                     return std::move(*this);
                 }
 
@@ -83,6 +90,7 @@ namespace utils {
                     pack(std::forward<Args>(args)...);
                 }
             };
+
         }  // namespace internal
 
         template <class... Args>
