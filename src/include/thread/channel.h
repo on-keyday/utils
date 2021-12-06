@@ -92,6 +92,18 @@ namespace utils {
                 : limit(limit), policy(policy) {
             }
 
+            void change_limit(size_t limit) {
+                lock_.lock();
+                this->limit = limit;
+                lock_.unlock();
+            }
+
+            void change_policy(ChanDisposePolicy policy) {
+                lock_.lock();
+                this->policy = policy;
+                lock_.unlock();
+            }
+
             ChanState store(T&& t) {
                 lock_.lock();
                 auto res = unlock_store(std::move(t));
