@@ -42,7 +42,9 @@ namespace utils {
                     seq.backto(matchsize);
                     return false;
                 }
+                return true;
             }
+            return false;
         }
     }  // namespace tokenize
 }  // namespace utils
