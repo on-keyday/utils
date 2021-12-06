@@ -36,8 +36,12 @@ namespace utils {
 
         template <class T, class String, template <class...> class Vec, class... Args>
         constexpr bool match(Sequencer<T>& seq, Predefined<String, Vec>& predef, String& matched, Args&&... args) {
-            if (predef.match(seq, matched)) {
-                match_line(seq, nullptr);
+            if (auto matchsize = predef.match(seq, matched)) {
+                seq.consume(matchsize);
+                if (!match_line(seq, nullptr) || !match_space(seq) || or_match(seq, matched, std::forward<Args>(args)...)) {
+                    seq.backto(matchsize);
+                    return false;
+                }
             }
         }
     }  // namespace tokenize
