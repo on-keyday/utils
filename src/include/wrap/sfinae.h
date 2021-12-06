@@ -11,7 +11,7 @@ namespace utils {
         template PARAM static std::true_type has(decltype((EXPR), (void)0)*); \
         template PARAM static std::false_type has(...);                       \
     };                                                                        \
-    template PARAM struct NAME : decltype(template NAME##_impl::has ARG(nullptr)) {}
+    template PARAM struct NAME : decltype(NAME##_impl::template has ARG(nullptr)) {}
 
     }  // namespace wrap
 }  // namespace utils
