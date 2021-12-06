@@ -87,7 +87,7 @@ namespace utils {
                 return false;
             }
 
-            wrap::shared_ptr<Subscriber<T, Que, Map>> subscribe(SendChan<T, Que>&& w) {
+            [[nodiscard]] wrap::shared_ptr<Subscriber<T, Que, Map>> subscribe(SendChan<T, Que>&& w) {
                 if (buffer) {
                     size_t id;
                     if (!buffer->subscribe(std::move(w), id)) {
