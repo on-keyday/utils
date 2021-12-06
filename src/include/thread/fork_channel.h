@@ -18,6 +18,7 @@ namespace utils {
             Map<size_t, SendChan<T, Que>> litener;
             size_t index = 0;
             size_t limit = ~0;
+            std::atomic_flag closed;
 
            public:
             ForkBuffer(size_t limit)
@@ -29,8 +30,16 @@ namespace utils {
                 lock_.unlock();
             }
 
+            bool is_closed() const {
+                return closed.test();
+            }
+
             bool subscribe(SendChan<T, Que>&& w, size_t& id) {
                 lock_.lock();
+                if (is_closed()) {
+                    lock_.unlock();
+                    return false;
+                }
                 if (w.is_closed()) {
                     lock_.unlock();
                     return false;
@@ -48,11 +57,17 @@ namespace utils {
             }
 
             void dispose(size_t id) {
+                lock_.lock();
                 listener.erase(id);
+                lock_.unlock();
             }
 
             void store(T&& t) {
                 lock_.lock();
+                if (is_closed()) {
+                    lock_.unlock();
+                    return false;
+                }
                 T copy(std::move(t));
                 std::erase_if(listner.begin(), litener.end(), [&](auto& v) {
                     SendChan<T, Que>& c = std::get<1>(v);
@@ -65,6 +80,13 @@ namespace utils {
                     }
                     return false;
                 });
+                lock_.unlock();
+            }
+
+            void close() {
+                lock_.lock();
+                closed.test_and_set();
+                litener.clear();
                 lock_.unlock();
             }
         };
@@ -120,6 +142,7 @@ namespace utils {
                 return nullptr;
             }
         };
+
         template <class T, template <class...> class Que = wrap::queue, template <class...> class Map = wrap::map>
         ForkChan<T, Que, Map> make_forkchan(size_t limit = ~0) {
             auto buf = wrap::make_shared<ForkBuffer<T, Que, Map>>(limit);
