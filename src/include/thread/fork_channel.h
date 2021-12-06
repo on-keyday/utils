@@ -100,6 +100,12 @@ namespace utils {
                 return false;
             }
 
+            void change_limit(size_t limit) {
+                if (buffer) {
+                    buffer->change_limit(limit);
+                }
+            }
+
             [[nodiscard]] wrap::shared_ptr<Subscriber<T, Que, Map>> subscribe(SendChan<T, Que>&& w) {
                 if (buffer) {
                     size_t id;
