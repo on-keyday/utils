@@ -49,5 +49,9 @@ namespace utils {
 
             void write(const path_string&);
         };
+        extern int stdinmode;
+        extern int stdoutmode;
+        extern int stderrmode;
+        extern bool sync_stdio;
     }  // namespace wrap
 }  // namespace utils
