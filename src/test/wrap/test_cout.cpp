@@ -9,4 +9,5 @@ void test_cout() {
 }
 
 int main() {
+    test_cout();
 }
