@@ -82,6 +82,10 @@ namespace utils {
             }
 
            public:
+            ChanBuffer(size_t limit = ~0, ChanDisposePolicy polocy = ChanDisposePolicy::dispose_new)
+                : limit(limit), policy(polocy) {
+            }
+
             ChanState store(T&& t) {
                 lock_.lock();
                 auto res = unlock_store(std::move(t));
