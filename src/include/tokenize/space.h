@@ -46,7 +46,7 @@ namespace utils {
             using char_t = std::remove_cvref_t<typename BufferType<T>::char_type>;
             auto c = get_space16(0);
             for (auto i = 0; c; i++) {
-                if (seq.match(get_space(c))) {
+                if (seq.match(get_space<char_t>(c))) {
                     return c;
                 }
                 c = get_space16(i + 1);

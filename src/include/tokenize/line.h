@@ -20,19 +20,19 @@ namespace utils {
         constexpr LineKind match_line(Sequencer<T>& seq, const char** line) {
             if (seq.match("\r\n")) {
                 if (line) {
-                    line = "\r\n";
+                    *line = "\r\n";
                 }
                 return LineKind::crlf;
             }
             else if (seq.match("\r")) {
                 if (line) {
-                    line = "\r";
+                    *line = "\r";
                 }
                 return LineKind::cr;
             }
             else if (seq.match("\n")) {
                 if (line) {
-                    line = "\n";
+                    *line = "\n";
                 }
                 return LineKind::lf;
             }

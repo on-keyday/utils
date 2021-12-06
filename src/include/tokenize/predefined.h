@@ -21,6 +21,7 @@ namespace utils {
                         return n;
                     }
                 }
+                return 0;
             }
         };
 
@@ -31,7 +32,7 @@ namespace utils {
 
         template <class T, class String, class Predef, class... Args>
         constexpr bool or_match(Sequencer<T>& seq, String& matched, Predef&& t, Args&&... args) {
-            return t.match() || or_match(seq, matched, std::forward<Args>(args)...);
+            return t.match(seq, matched) || or_match(seq, matched, std::forward<Args>(args)...);
         }
 
         template <bool check_after, class T, class String, template <class...> class Vec, class... Args>
@@ -39,7 +40,7 @@ namespace utils {
             if (auto matchsize = predef.match(seq, matched)) {
                 seq.consume(matchsize);
                 if (check_after) {
-                    if (!match_line(seq, nullptr) && !match_space(seq) && !or_match(seq, matched, std::forward<Args>(args)...)) {
+                    if (match_line(seq, nullptr) == LineKind::unknown && !match_space(seq) && !or_match(seq, matched, std::forward<Args>(args)...)) {
                         seq.backto(matchsize);
                         return false;
                     }
