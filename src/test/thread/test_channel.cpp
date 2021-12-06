@@ -69,6 +69,7 @@ void test_channecl() {
             std::thread(recv_thread, i, r, sub).detach();
         }
         fork.set_blocking(true);
+        std::thread(dummmy_message, fork).detach();
         for (auto i = 0; i < 10000; i++) {
             fork << std::move(i);
         }
