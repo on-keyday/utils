@@ -38,7 +38,10 @@ namespace utils {
             ChanDisposePolicy policy = ChanDisposePolicy::dispose_new;
 
             bool check_limit() {
-                while (que.size() >= limit && que.size() != 0) {
+                if (limit == 0) {
+                    return false;
+                }
+                while (que.size() >= limit) {
                     if (policy == ChanDisposePolicy::dispose_front) {
                         que.pop_front();
                     }
