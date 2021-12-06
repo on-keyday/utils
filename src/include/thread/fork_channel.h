@@ -89,9 +89,9 @@ namespace utils {
                 lock_.lock();
                 closed.test_and_set();
                 for (auto& l : listener) {
-                    l.close();
+                    std::get<1>(l).close();
                 }
-                litener.clear();
+                listener.clear();
                 lock_.unlock();
             }
         };
