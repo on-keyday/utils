@@ -22,6 +22,7 @@ add_executable(utfview "src/test/utf/test_utfview.cpp")
 add_executable(utf_operator "src/test/utf/test_utf_operator.cpp")
 add_executable(endian "src/test/endian/test_endian.cpp")
 add_executable(fileview "src/test/file/test_file_view.cpp")
+add_executable(cout "src/test/wrap/test_cout.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
@@ -31,6 +32,7 @@ add_library(libutils
   "src/lib/wrap/cout.cpp")
 
 target_link_libraries(fileview libutils)
+target_link_libraries(cout libutils)
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)
