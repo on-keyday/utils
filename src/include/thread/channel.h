@@ -34,6 +34,7 @@ namespace utils {
             std::atomic_flag closed;
             LiteLock blocking;
             ChanDisposePolicy policy = ChanDisposePolicy::dispose_new;
+
             bool check_limit() {
                 if (que.size() >= limit) {
                     if (policy == ChanDisposePolicy::dispose_front) {
@@ -116,6 +117,10 @@ namespace utils {
                 blocking.unlock();
                 lock_.unlock();
                 return res;
+            }
+
+            bool is_closed() const {
+                return closed.test();
             }
         };
     }  // namespace thread
