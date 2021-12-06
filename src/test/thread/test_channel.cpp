@@ -59,6 +59,7 @@ void test_channecl() {
         for (auto i = 0; i < 10000; i++) {
             fork << std::move(i);
         }
+        fork.close();
     }
 }
 
