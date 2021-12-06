@@ -70,6 +70,13 @@ namespace utils {
         }
 
         template <class String, class F = compare_type<String>>
+        constexpr size_t match_n(String&& cmp, F&& f = default_compare<String>()) {
+            Buffer<typename buf_t<String&>::type> tmp(cmp);
+            size_t offset = match_impl(tmp, std::forward<F>(f));
+            return offset == tmp.size() ? offset : 0;
+        }
+
+        template <class String, class F = compare_type<String>>
         constexpr bool seek_if(String&& cmp, F&& f = default_compare<String>()) {
             Buffer<typename buf_t<String&>::type> tmp(cmp);
             size_t offset = match_impl(tmp, std::forward<F>(f));
