@@ -17,17 +17,23 @@ namespace utils {
         };
 
         template <class T>
-        constexpr LineKind match_line(Sequencer<T>& seq, const char*& line) {
+        constexpr LineKind match_line(Sequencer<T>& seq, const char** line) {
             if (seq.match("\r\n")) {
-                line = "\r\n";
+                if (line) {
+                    line = "\r\n";
+                }
                 return LineKind::crlf;
             }
             else if (seq.match("\r")) {
-                line = "\r";
+                if (line) {
+                    line = "\r";
+                }
                 return LineKind::cr;
             }
             else if (seq.match("\n")) {
-                line = "\n";
+                if (line) {
+                    line = "\n";
+                }
                 return LineKind::lf;
             }
             return LineKind::unknown;
