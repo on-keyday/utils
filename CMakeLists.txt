@@ -34,6 +34,7 @@ add_library(libutils
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
+target_link_libraries(channel libutils)
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)

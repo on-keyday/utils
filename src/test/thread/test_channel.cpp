@@ -3,14 +3,25 @@
 #include "../../include/thread/channel.h"
 #include <cassert>
 #include <thread>
-#include <iostream>
+#include "../../include/wrap/cout.h"
+#include "../../include/thread/fork_channel.h"
+
+auto& cout = utils::wrap::cout_wrap();
 
 void write_thread(utils::thread::SendChan<int> w) {
     for (auto i = 0; i < 10000; i++) {
         w << std::move(i);
-        _sleep(5);
+        //_sleep(5);
     }
     w.close();
+}
+
+void recv_thread(size_t index, utils::thread::RecvChan<int> r, utils::wrap::shared_ptr<utils::thread::Subscriber<int>> ptr) {
+    r.set_blocking(true);
+    int v;
+    while (r >> v) {
+        cout << utils::wrap::pack(index, ":", v, "\n");
+    }
 }
 
 void test_channecl() {
@@ -35,7 +46,18 @@ void test_channecl() {
         std::thread(write_thread, w).detach();
         int v;
         while (r >> v) {
-            std::cout << v << "\n";
+            cout << utils::wrap::pack(v, "\n");
+        }
+    }
+    {
+        auto fork = utils::thread::make_forkchan<int>();
+        for (auto i = 0; i < 5; i++) {
+            auto [w, r] = utils::thread::make_chan<int>(5);
+            auto sub = fork.subscribe(std::move(w));
+            std::thread(recv_thread, i, r, sub).detach();
+        }
+        for (auto i = 0; i < 10000; i++) {
+            fork << std::move(i);
         }
     }
 }

@@ -15,7 +15,7 @@ namespace utils {
         struct ForkBuffer {
            private:
             LiteLock lock_;
-            Map<size_t, SendChan<T, Que>> litener;
+            Map<size_t, SendChan<T, Que>> listener;
             size_t index = 0;
             size_t limit = ~0;
             std::atomic_flag closed;
@@ -54,6 +54,7 @@ namespace utils {
                 place.set_blocking(false);
                 id = index;
                 lock_.unlock();
+                return true;
             }
 
             void dispose(size_t id) {
@@ -69,7 +70,7 @@ namespace utils {
                     return false;
                 }
                 T copy(std::move(t));
-                std::erase_if(listner.begin(), litener.end(), [&](auto& v) {
+                std::erase_if(listener, [&](auto& v) {
                     SendChan<T, Que>& c = std::get<1>(v);
                     if (c.is_closed()) {
                         return true;
@@ -87,6 +88,9 @@ namespace utils {
             void close() {
                 lock_.lock();
                 closed.test_and_set();
+                for (auto& l : listener) {
+                    l.close();
+                }
                 litener.clear();
                 lock_.unlock();
             }
@@ -140,6 +144,12 @@ namespace utils {
                     return wrap::make_shared<Subscriber<T, Que, Map>>(id, buffer);
                 }
                 return nullptr;
+            }
+
+            void close() {
+                if (buffer) {
+                    buffer->close();
+                }
             }
         };
 
