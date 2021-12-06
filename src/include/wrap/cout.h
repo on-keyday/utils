@@ -74,7 +74,7 @@ namespace utils {
 
             struct Pack {
                private:
-                friend struct UtfOut;
+                friend struct wrap::UtfOut;
                 PackImpl impl;
 
                public:
