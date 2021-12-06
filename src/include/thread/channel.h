@@ -152,10 +152,15 @@ namespace utils {
            protected:
             using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que>>;
             buffer_t buffer;
+            bool blocking = false;
 
            public:
             ChanBase(buffer_t& in)
                 : buffer(in) {}
+
+            void set_blocking(bool flag) {
+                blocking = flag;
+            }
 
             bool is_closed() const {
                 return buffer ? buffer->is_closed() : true;
@@ -168,21 +173,13 @@ namespace utils {
 
         template <class T, template <class...> class Que = wrap::queue>
         struct RecvChan : ChanBase<T, Que> {
-           private:
-            bool blocking = false;
-
-           public:
             using ChanBase<T, Que>::ChanBase;
-
-            void set_blocking(bool flag) {
-                blocking = flag;
-            }
 
             ChanState operator>>(T& t) {
                 if (!this->buffer) {
                     return false;
                 }
-                if (blocking) {
+                if (this->blocking) {
                     return this->buffer->blocking_load(t);
                 }
                 else {
@@ -199,7 +196,12 @@ namespace utils {
                 if (!this->buffer) {
                     return false;
                 }
-                return this->buffer->store(std::move(t));
+                if (this->blocking) {
+                    return this->buffer->blocking_store(std::move(t));
+                }
+                else {
+                    return this->buffer->store(std::move(t));
+                }
             }
         };
 
