@@ -25,15 +25,16 @@ namespace utils {
             ostream& out;
             stringstream ss;
 
-            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>())
+            SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>().size())
             static UtfOut& invoke(UtfOut& out, T&& t) {
-                wrap::path_string tmp;
+                path_string tmp;
                 utf::convert<true>(t, tmp);
                 out.write(tmp);
                 return out;
             }
             SFINAE_BLOCK_T_ELSE(is_string)
             static UtfOut& invoke(UtfOut& out, T&& t) {
+                out.ss.str(path_string());
                 out.ss << t;
                 auto tmp = out.ss.str();
                 out.write(tmp);
