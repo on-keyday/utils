@@ -75,7 +75,7 @@ namespace utils {
                 Pack&& pack(Args&&... args) {
                     stringstream ss;
                     pack_impl(ss, std::forward<Args>(args)...);
-                    return *this;
+                    return std::move(*this);
                 }
 
                 template <class... Args>
