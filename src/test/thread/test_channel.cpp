@@ -2,6 +2,8 @@
 
 #include "../../include/thread/channel.h"
 #include <cassert>
+#include <thread>
+#include <iostream>
 
 void write_thread(utils::thread::SendChan<int> w) {
     for (auto i = 0; i < 10000; i++) {
@@ -27,6 +29,13 @@ void test_channecl() {
     }
     {
         auto [w, r] = utils::thread::make_chan<int>();
+        r.set_blocking(true);
+        w.set_blocking(true);
+        std::thread(write_thread, w);
+        int v;
+        while (r >> v) {
+            std::cout << v;
+        }
     }
 }
 
