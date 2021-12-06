@@ -8,6 +8,7 @@
 #include "lite/char.h"
 #include "lite/string.h"
 #include "../helper/sfinae.h"
+#include "../core/buffer.h"
 
 namespace utils {
     namespace wrap {
@@ -20,6 +21,8 @@ namespace utils {
         struct UtfOut {
             ostream& out;
             std::stringstream ss;
+
+            DEFINE_SFINAE_T(is_string, std::declval<Buffer<typename BufferType<T&>::type>>());
 
             void write(const path_char* str);
         };
