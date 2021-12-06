@@ -22,8 +22,5 @@ namespace utils {
             TokenKind kind = TokenKind::root;
         };
 
-        template <class String>
-        struct Space : Token<String> {
-        };
     }  // namespace tokenize
 }  // namespace utils

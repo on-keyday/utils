@@ -18,15 +18,15 @@ namespace utils {
 
         template <class T>
         constexpr LineKind match_line(Sequencer<T>& seq, const char*& line) {
-            if (seq.seek_if("\r\n")) {
+            if (seq.match("\r\n")) {
                 line = "\r\n";
                 return LineKind::crlf;
             }
-            else if (seq.seek_if("\r")) {
+            else if (seq.match("\r")) {
                 line = "\r";
                 return LineKind::cr;
             }
-            else if (seq.seek_if("\n")) {
+            else if (seq.match("\n")) {
                 line = "\n";
                 return LineKind::lf;
             }
@@ -40,7 +40,7 @@ namespace utils {
             if (kind == LineKind::unknown) {
                 return false;
             }
-            count = 1;
+            count = 0;
             while (seq.seek_if(line)) {
                 count++;
             }
