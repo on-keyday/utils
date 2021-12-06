@@ -1,4 +1,4 @@
-this list shows WRAP_TYPE macros
+this list shows wrap macros
 
 macro                                default
 UTILS_WRAP_STRING_TYPE               std::string
