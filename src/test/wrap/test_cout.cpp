@@ -7,7 +7,7 @@ void test_cout() {
     cout << U"ありがとう!\n";
     cout << 3;
     cout << utils::wrap::pack("\nerror: ", 3, U" is not ", u"a vector\n")
-                .pack(u8"please pay money, つまるところ かねはらえ");
+                .pack(u8"please pay money, つまるところ かねはらえ\n", std::hex, 12);
 }
 
 int main() {

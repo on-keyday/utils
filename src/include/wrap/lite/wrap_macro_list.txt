@@ -5,3 +5,5 @@ UTILS_WRAP_STRING_TYPE               std::string
 UTILS_WRAP_U16STRING_TYPE            std::u16string
 UTILS_WRAP_U32STRING_TYPE            std::u32string
 UTILS_WRAP_PATHSTRING_TYPE           (windows) std::wstring (other) std::string
+UTILS_WRAP_VECTOR_TEMPLATE           std::vector
+UTILS_WRAP_QUEUE_TEMPLATE            std::deque
