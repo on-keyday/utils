@@ -25,7 +25,7 @@ namespace utils {
            private:
             ostream& out;
             stringstream ss;
-            ::FILE* std_handle = false;
+            ::FILE* std_handle = nullptr;
 
            public:
             UtfOut(ostream& out);

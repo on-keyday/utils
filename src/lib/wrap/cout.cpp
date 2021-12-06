@@ -37,7 +37,7 @@ namespace utils {
             {
                 return stderr;
             }
-            return false;
+            return nullptr;
         }
 
         static bool io_init() {

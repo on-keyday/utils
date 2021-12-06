@@ -27,7 +27,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
   "src/lib/file/platform.cpp"
   "src/lib/file/file_view.cpp"
-  "src/lib/wrap/argv.cpp")
+  "src/lib/wrap/argv.cpp"
+  "src/lib/wrap/cout.cpp")
 
 target_link_libraries(fileview libutils)
 
