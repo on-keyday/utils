@@ -184,10 +184,7 @@ namespace utils {
         template <class T, template <class...> class Que = wrap::queue>
         std::pair<SendChan<T, Que>, RecvChan<T, Que>> make_chan(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new) {
             auto buffer = wrap::make_shared<ChanBuffer<T, Que>>(limit, policy);
-            return {
-                SendChan<T, Que>(buffer),
-                RecvChan<T, Que>(buffer),
-            };
+            return {SendChan<T, Que>(buffer), RecvChan<T, Que>(buffer)};
         }
 
     }  // namespace thread
