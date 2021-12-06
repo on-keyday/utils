@@ -19,4 +19,5 @@ void test_channecl() {
 }
 
 int main() {
+    test_channecl();
 }
