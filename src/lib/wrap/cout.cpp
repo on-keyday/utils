@@ -81,6 +81,7 @@ namespace utils {
 
         UtfOut& UtfOut::operator<<(internal::Pack&& pack) {
             write(pack.result);
+            return *this;
         }
 
         UtfOut& cout_wrap() {

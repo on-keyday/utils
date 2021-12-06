@@ -64,8 +64,8 @@ namespace utils {
                 void pack_impl(stringstream& ss) {}
 
                 template <class T, class... Args>
-                void pack_impl(stringstream& ss, T&& t, Args&&... arg) {
-                    WriteWrapper::write(*this, std::forward<T>(t), nullptr);
+                void pack_impl(stringstream& ss, T&& t, Args&&... args) {
+                    WriteWrapper::write(*this, std::forward<T>(t), ss, nullptr);
                     pack_impl(ss, std::forward<Args>(args)...);
                 }
 
@@ -73,12 +73,12 @@ namespace utils {
                 template <class... Args>
                 void pack(Args&&... args) {
                     stringstream ss;
-                    pack_impl(ss, std::forward<Args>(args)...)
+                    pack_impl(ss, std::forward<Args>(args)...);
                 }
 
                 template <class... Args>
                 Pack(Args&&... args) {
-                    pack(std::forward<Args>(args)...)
+                    pack(std::forward<Args>(args)...);
                 }
             };
         }  // namespace internal
