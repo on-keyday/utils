@@ -8,6 +8,7 @@
 void write_thread(utils::thread::SendChan<int> w) {
     for (auto i = 0; i < 10000; i++) {
         w << std::move(i);
+        _sleep(5);
     }
     w.close();
 }
@@ -28,7 +29,7 @@ void test_channecl() {
         assert(result2 == utils::thread::ChanStateValue::full && "expect full but not");
     }
     {
-        auto [w, r] = utils::thread::make_chan<int>(5);
+        auto [w, r] = utils::thread::make_chan<int>(6);
         r.set_blocking(true);
         w.set_blocking(true);
         std::thread(write_thread, w).detach();

@@ -1,6 +1,6 @@
 /*license*/
 
-// channel - channel between thread
+// channel - channel between threads
 #pragma once
 
 #include "lite_lock.h"
