@@ -15,13 +15,15 @@ namespace utils {
     namespace wrap {
 #ifdef _WIN32
         using ostream = std::wostream;
+        using stringstream = std::wstringstream;
 #else
         using ostream = std::ostream;
+        using stringstream = std::stringstream;
 #endif
 
         struct UtfOut {
             ostream& out;
-            std::stringstream ss;
+            stringstream ss;
 
             SFINAE_BLOCK_T_BEGIN(is_string, std::declval<Buffer<typename BufferType<T&>::type>>())
             static UtfOut& invoke(UtfOut& out, T&& t) {
@@ -31,13 +33,14 @@ namespace utils {
                 return out;
             }
             SFINAE_BLOCK_T_ELSE(is_string)
-            SFINAE_BLOCK_T_END()
-            template <class T, bool flag = is_string<T>::value>
-            UtfOut& operator<<(T&& t) {
+            static UtfOut& invoke(UtfOut& out, T&& t) {
+                out.ss << t;
             }
+            SFINAE_BLOCK_T_END()
 
             template <class T>
             UtfOut& operator<<(T&& t) {
+                return is_string<T>::invoke(*this, std::forward<T>(t));
             }
 
             void write(const path_char* str);
