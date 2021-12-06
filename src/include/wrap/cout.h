@@ -53,29 +53,35 @@ namespace utils {
                 return is_string<T>::invoke(out, std::forward<T>(t), ss, lock);
             }
         };
+        namespace internal {
+            struct Pack {
+                path_string result;
+                void write(const path_string& str) {
+                    result += str;
+                }
 
-        struct Pack {
-            path_string result;
-            void write(const path_string& str) {
-                result += str;
-            }
+               private:
+                void pack_impl(stringstream& ss) {}
 
-           private:
-            void pack_impl(stringstream& ss) {}
+                template <class T, class... Args>
+                void pack_impl(stringstream& ss, T&& t, Args&&... arg) {
+                    WriteWrapper::write(*this, std::forward<T>(t), nullptr);
+                    pack_impl(ss, std::forward<Args>(args)...);
+                }
 
-            template <class T, class... Args>
-            void pack_impl(stringstream& ss, T&& t, Args&&... arg) {
-                WriteWrapper::write(*this, std::forward<T>(t), nullptr);
-                pack_impl(ss, std::forward<Args>(args)...);
-            }
+               public:
+                template <class... Args>
+                Pack(Args&&... args) {
+                    stringstream ss;
+                    pack_impl(ss, std::forward<Args>(args)...)
+                }
+            };
+        }  // namespace internal
 
-           public:
-            template <class... Args>
-            Pack(Args&&... args) {
-                stringstream ss;
-                pack_impl(ss, std::forward<Args>(args)...)
-            }
-        };
+        template <class... Args>
+        internal::Pack pack(Args&&... args) {
+            return internal::Pack(std::forward<Args>(args)...);
+        }
 
         struct UtfOut {
            private:
@@ -112,6 +118,8 @@ namespace utils {
             }
 
             void write(const path_string&);
+
+            UtfOut& operator<<(internal::Pack&& pack);
         };
         extern int stdinmode;
         extern int stdoutmode;

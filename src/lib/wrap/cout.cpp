@@ -79,6 +79,10 @@ namespace utils {
             }
         }
 
+        UtfOut& UtfOut::operator<<(internal::Pack&& pack) {
+            write(pack.result);
+        }
+
         UtfOut& cout_wrap() {
 #ifdef _WIN32
             static UtfOut cout(std::wcout);
