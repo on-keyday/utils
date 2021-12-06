@@ -13,8 +13,16 @@ namespace utils {
 
         template <class T, template <class...> class Que = wrap::queue, template <class...> class Map = wrap::map>
         struct ForkBuffer {
+           private:
             LiteLock lock_;
             Map<size_t, SendChan<T, Que>> litenr;
+            size_t index = 0;
+            size_t limit = ~0;
+
+           public:
+            void subscribe() {
+            }
+
             void store(T&& t) {
                 lock_.lock();
                 T copy(std::move(t));
@@ -29,6 +37,7 @@ namespace utils {
                     }
                     return false;
                 });
+                lock_.unlock();
             }
         };
     }  // namespace thread
