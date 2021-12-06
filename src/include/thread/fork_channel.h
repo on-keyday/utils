@@ -62,11 +62,11 @@ namespace utils {
                 lock_.unlock();
             }
 
-            void store(T&& t) {
+            bool store(T&& t) {
                 lock_.lock();
                 if (is_closed()) {
                     lock_.unlock();
-                    return;
+                    return false;
                 }
                 T copy(std::move(t));
                 std::erase_if(listner.begin(), litener.end(), [&](auto& v) {
@@ -81,6 +81,7 @@ namespace utils {
                     return false;
                 });
                 lock_.unlock();
+                return true;
             }
 
             void close() {
@@ -119,8 +120,7 @@ namespace utils {
 
             bool operator<<(T&& t) {
                 if (buffer) {
-                    buffer->store(std::move(t));
-                    return true;
+                    return buffer->store(std::move(t));
                 }
                 return false;
             }
