@@ -85,6 +85,13 @@ namespace utils {
                     return std::move(*this);
                 }
 
+                template <class T>
+                Pack&& operator<<(T&& t) {
+                    stringstream ss;
+                    impl.pack_impl(ss, std::forward<T>(t));
+                    return std::move(*this);
+                }
+
                 template <class... Args>
                 Pack(Args&&... args) {
                     pack(std::forward<Args>(args)...);
