@@ -29,7 +29,7 @@ namespace utils {
                 auto current = output;
                 auto to_next = [&](auto& tmp) {
                     current->next = tmp;
-                    tmp->prev = current.get();
+                    tmp->prev = std::addressof(*current);
                     current = tmp;
                 };
                 while (!input.eos()) {

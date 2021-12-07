@@ -51,10 +51,10 @@ namespace utils {
                 auto comment = wrap::make_shared<Comment<String>>();
                 comment->comment = std::move(merged);
                 first->next = comment;
-                comment->prev = first.get();
+                comment->prev = std::addressof(*first);
                 if (last) {
                     comment->next = last;
-                    last->prev = comment.get();
+                    last->prev = std::addressof(*comment);
                 }
                 first = last;
                 return 1;
