@@ -134,11 +134,42 @@ namespace utils {
             if (!parse_group(ctx, group)) {
                 return false;
             }
+            wrap::shared_ptr<Or<String, Vec>> or_;
             auto& r = ctx.r;
-            auto e = r.read();
-            if (!e || e->is(tknz::TokenKind::line)) {
-                return true;
+            while (true) {
+                auto e = r.read();
+                if (!e || e->is(tknz::TokenKind::line)) {
+                    if (endbrace) {
+                        ctx.err.packln("error: expect ] but token is EOL");
+                        return false;
+                    }
+                    if (or_) {
+                        group = or_;
+                    }
+                    return true;
+                }
+                if (endbrace && e->has("]")) {
+                    r.consume();
+                    if (or_) {
+                        group = or_;
+                    }
+                    return true;
+                }
+                if (!e->has("|")) {
+                    ctx.err.packln("error: expect | but token is ", e->to_string());
+                }
+                r.consume();
+                if (!or_) {
+                    or_ = wrap::make_shared<Or<String, Vec>>();
+                    or_->type = SyntaxType::or_;
+                    or_->or_list.push_back(std::move(group));
+                }
+                if (!parse_group(ctx, group)) {
+                    return false;
+                }
+                or_->or_list.push_back(std::move(group));
             }
+            return true;
         }
 
         template <class String, template <class...> class Vec>
@@ -148,13 +179,17 @@ namespace utils {
             auto& r = ctx.r;
             while (true) {
                 auto e = r.read();
-                if (!e || e->is(tknz::TokenKind::line) || e->has("|")) {
+                if (!e || e->is(tknz::TokenKind::line) || e->has("|") || e->has("]")) {
                     break;
                 }
                 wrap::shared_ptr<Element<String, Vec>> elm;
                 if (e->has("[")) {
                     r.consume();
                     if (!parse_or(ctx, elm, true)) {
+                        return false;
+                    }
+                    if (!parse_attribute(ctx, elm)) {
+                        ctx.packln("note: at parsing []");
                         return false;
                     }
                 }
@@ -166,7 +201,7 @@ namespace utils {
                 gr->group.push_back(std::move(elm));
             }
             if (!gr->group.size()) {
-                ctx.err.pack("error: expect syntax elment but not");
+                ctx.err.packln("error: expect syntax elment but not");
                 return false;
             }
             group = gr;
