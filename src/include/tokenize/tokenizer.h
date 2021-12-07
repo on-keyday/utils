@@ -8,6 +8,7 @@
 #include "space.h"
 #include "predefined.h"
 #include "identifier.h"
+#include "comment.h"
 
 #include "../wrap/lite/vector.h"
 
@@ -23,7 +24,7 @@ namespace utils {
             using token_t = wrap::shared_ptr<Token<String>>;
 
             template <class T>
-            bool tokenize(Sequencer<T>& input, wrap::shared_ptr<Token<String>>& output) {
+            bool tokenize(Sequencer<T>& input, token_t& output) {
                 output = wrap::make_shared<Token<String>>();
                 auto current = output;
                 auto to_next = [&](auto& tmp) {

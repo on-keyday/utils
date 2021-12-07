@@ -8,6 +8,7 @@
 #include "line.h"
 #include "predefined.h"
 #include "identifier.h"
+#include "comment.h"
 
 namespace utils {
 
@@ -80,6 +81,19 @@ namespace utils {
                     }
                     if (ptr->is(TokenKind::space)) {
                         return static_cast<Space<String>*>(std::addressof(*ptr));
+                    }
+                    return nullptr;
+                }
+            };
+
+            template <class String>
+            struct CastHelper<String, Comment<String>> {
+                static Comment<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                    if (!ptr) {
+                        return nullptr;
+                    }
+                    if (ptr->is(TokenKind::comment)) {
+                        return static_cast<Comment<String>*>(std::addressof(*ptr));
                     }
                     return nullptr;
                 }
