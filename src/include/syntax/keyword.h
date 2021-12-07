@@ -38,6 +38,7 @@ namespace utils {
             if (v >= sizeof(keyword_str) / sizeof(keyword_str[0])) {
                 return "";
             }
+            return keyword_str[v];
         }
     }  // namespace syntax
 }  // namespace utils
