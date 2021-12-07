@@ -54,7 +54,7 @@ namespace utils {
         }
 
         template <class String>
-        struct Space : Token<String> {
+        struct Line : Token<String> {
             LineKind line = 0;
             size_t count = 0;
         };
