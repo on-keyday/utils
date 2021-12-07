@@ -157,6 +157,7 @@ namespace utils {
                 }
                 if (!e->has("|")) {
                     ctx.err.packln("error: expect | but token is ", e->to_string());
+                    return false;
                 }
                 r.consume();
                 if (!or_) {
