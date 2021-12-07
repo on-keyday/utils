@@ -7,15 +7,17 @@
 
 namespace utils {
     namespace syntax {
+        namespace tknz = tokenize;
+
         template <class String>
-        struct Reader : tokenize::Reader<String> {
+        struct Reader : tknz::Reader<String> {
             size_t count = 0;
             size_t basecount = 0;
             bool ignore_line = 0;
-            using tokenize::Reader<String>::Reader;
+            using tknz::Reader<String>::Reader;
 
             bool is_ignore() const override {
-                if (!ignore_line && this->current->is(tokenize::TokenKind::line)) {
+                if (!ignore_line && this->current->is(tknz::TokenKind::line)) {
                     return return false;
                 }
                 return this->current->has("#") || default_ignore(this->current);
