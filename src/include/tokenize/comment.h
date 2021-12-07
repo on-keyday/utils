@@ -47,7 +47,7 @@ namespace utils {
             }
 
             template <class String>
-            int make_and_merge_comment(wrap::shared_ptr<Token<String>>& first, wrap::shared_ptr<Token<String>>& last, String& merged) {
+            int make_and_merge_comment(wrap::shared_ptr<Token<String>>& first, wrap::shared_ptr<Token<String>>& last, String& merged, bool oneline) {
                 auto comment = = wrap::make_shared<Comment<String>>();
                 comment->comment = std::move(merged);
                 first->next = comment;
@@ -57,7 +57,7 @@ namespace utils {
             }
 
             template <class String, class F>
-            int merge_impl(wrap::shared_ptr<Token<String>>& p, F&& rule) {
+            int merge_impl(wrap::shared_ptr<Token<String>>& p, F&& rule, bool oneline = false) {
                 String merged;
                 wrap::shared_ptr<Token<String>> lastp;
                 if (!merge_until(merged, p, lastp, rule)) {
@@ -67,7 +67,7 @@ namespace utils {
                     p = lastp;
                     return 1;
                 }
-                return make_and_merge_comment(p, lastp, merged);
+                return make_and_merge_comment(p, lastp, merged, oneline);
             }
 
         }  // namespace internal
@@ -112,7 +112,7 @@ namespace utils {
                     }
                     return false;
                 };
-                return internal::merge_impl(p, rule);
+                return internal::merge_impl(p, rule, true);
             }
             return 0;
         }
