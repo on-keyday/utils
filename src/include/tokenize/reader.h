@@ -64,15 +64,15 @@ namespace utils {
                 return read();
             }
 
+            token_t& get() {
+                return current;
+            }
+
             token_t& consume_get() {
                 if (!consume()) {
                     return current;
                 }
                 return get();
-            }
-
-            token_t& get() {
-                return current;
             }
 
             bool eos() const {
