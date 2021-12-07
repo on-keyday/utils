@@ -32,6 +32,10 @@ namespace utils {
             virtual bool has(const String&) const {
                 return false;
             }
+
+            virtual size_t layer() const {
+                return 0;
+            }
         };
 
     }  // namespace tokenize

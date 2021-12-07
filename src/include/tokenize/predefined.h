@@ -96,12 +96,22 @@ namespace utils {
         template <class String>
         struct Predef : Token<String> {
             String token;
+            bool has(const String& str) const override {
+                return token == str;
+            }
         };
 
         template <class String>
         struct PredefCtx : Token<String> {
             String token;
             size_t layer = 0;
+            bool has(const String& str) const override {
+                return token == str;
+            }
+
+            size_t layer() const override {
+                return layer;
+            }
         };
     }  // namespace tokenize
 }  // namespace utils

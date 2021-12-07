@@ -25,6 +25,9 @@ namespace utils {
         template <class String>
         struct Identifier : Token<String> {
             String identifier;
+            bool has(const String& str) const override {
+                return identifier == str;
+            }
         };
     }  // namespace tokenize
 }  // namespace utils

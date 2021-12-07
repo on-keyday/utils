@@ -75,7 +75,7 @@ namespace utils {
             char16_t space = 0;
             size_t count = 0;
 
-            virtual bool has(const String& str) const {
+            bool has(const String& str) const override {
                 String cmp;
                 auto sp = get_space(space);
                 for (size_t i = 0; i < count; i++) {
