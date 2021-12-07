@@ -13,7 +13,7 @@ namespace utils {
         struct Reader : tknz::Reader<String> {
             size_t count = 0;
             size_t basecount = 0;
-            bool ignore_line = 0;
+            bool ignore_line = true;
             using tknz::Reader<String>::Reader;
 
             bool is_ignore() const override {
@@ -29,6 +29,7 @@ namespace utils {
 
             Reader from_current() {
                 Reader ret(this->current);
+                ret.ignore_line = ignore_line;
                 ret.basecount = count;
                 ret.count = count;
                 return ret;
