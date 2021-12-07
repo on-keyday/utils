@@ -43,7 +43,7 @@ void test_tokenizer() {
                              tokenize::escaped_comment<std::string>("\"", "\\"));
     assert(result && "expect true but merge is failed");
 
-    cout << "merged:\n";
+    cout << "\nmerged:\n";
     for (auto p = output; p; p = p->next) {
         cout << p->what() << ":`" << p->to_string() << "`\n";
     }
