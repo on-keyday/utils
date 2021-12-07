@@ -90,9 +90,12 @@ namespace utils {
                             tmp->kind = TokenKind::identifier;
                             tmp->identifier = std::move(identifier);
                             to_next(tmp);
+                            continue;
                         }
                     }
+                    return false;
                 }
+                return true;
             }
         };
     }  // namespace tokenize

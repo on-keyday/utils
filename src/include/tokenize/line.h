@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "../core/sequencer.h"
+#include "../wrap/lite/enum.h"
 
 namespace utils {
     namespace tokenize {
@@ -13,8 +14,10 @@ namespace utils {
             unknown = 0,
             lf = 1,
             cr = 2,
-            crlf = 3,
+            crlf = cr | lf,
         };
+
+        DEFINE_ENUM_FLAGOP(LineKind)
 
         template <class T>
         constexpr LineKind match_line(Sequencer<T>& seq, const char** line) {
@@ -57,6 +60,19 @@ namespace utils {
         struct Line : Token<String> {
             LineKind line = 0;
             size_t count = 0;
+
+            virtual bool has(const String& str) {
+                String cmp;
+                for (size_t i = 0; i < count; i++) {
+                    if (any(line & LineKind::cr)) {
+                        cmp.push_back('\r');
+                    }
+                    if (any(line & LineKind::lf)) {
+                        cmp.push_back('\n');
+                    }
+                }
+                return cmp == str;
+            }
         };
     }  // namespace tokenize
 }  // namespace utils

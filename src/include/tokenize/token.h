@@ -24,6 +24,14 @@ namespace utils {
             TokenKind kind = TokenKind::root;
             wrap::shared_ptr<Token<String>> next = nullptr;
             Token<String>* prev = nullptr;
+
+            bool is(TokenKind k) const {
+                return kind == k;
+            }
+
+            virtual bool has(const String&) const {
+                return false;
+            }
         };
 
     }  // namespace tokenize
