@@ -14,7 +14,7 @@ namespace utils {
         template <class T, class String, class... Args>
         bool read_identifier(Sequencer<T>& seq, String& token, Args&&... args) {
             while (!seq.eos()) {
-                if (!internal::is_not_separated(seq, std::forward<Args>(args)...)) {
+                if (!internal::is_not_separated<String>(seq, std::forward<Args>(args)...)) {
                     break;
                 }
                 token.push_back(seq.current());

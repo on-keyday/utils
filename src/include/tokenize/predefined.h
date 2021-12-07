@@ -33,7 +33,7 @@ namespace utils {
             size_t match(Sequencer<T>& seq, String& matched, size_t* layer = nullptr) const {
                 for (auto& v : predef) {
                     if (auto n = seq.match_n(std::get<0>(v))) {
-                        matched = v;
+                        matched = std::get<0>(v);
                         if (layer) {
                             *layer = std::get<1>(v);
                         }
@@ -68,7 +68,7 @@ namespace utils {
             if (auto matchsize = predef.match(seq, matched)) {
                 seq.consume(matchsize);
                 if (check_after) {
-                    if (internal::is_not_separated(seq, std::forward<Args>(args)...)) {
+                    if (internal::is_not_separated<String>(seq, std::forward<Args>(args)...)) {
                         seq.backto(matchsize);
                         return false;
                     }
@@ -83,7 +83,7 @@ namespace utils {
             if (auto matchsize = predef.match(seq, matched, &layer)) {
                 seq.consume(matchsize);
                 if (check_after) {
-                    if (internal::after_is_not_separated(seq, std::forward<Args>(args))) {
+                    if (internal::is_not_separated<String>(seq, std::forward<Args>(args)...)) {
                         seq.backto(matchsize);
                         return false;
                     }
@@ -120,7 +120,7 @@ namespace utils {
             }
 
             size_t layer() const override {
-                return layer;
+                return layer_;
             }
         };
     }  // namespace tokenize

@@ -84,6 +84,7 @@ namespace utils {
                         cmp.push_back(sp[i]);
                     }
                 }
+                return cmp;
             }
 
             bool has(const String& str) const override {
