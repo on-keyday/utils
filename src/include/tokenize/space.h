@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../utf/convert.h"
+#include "token.h"
 
 namespace utils {
     namespace tokenize {
@@ -68,5 +69,11 @@ namespace utils {
             }
             return true;
         }
+
+        template <class String>
+        struct Space : Token<String> {
+            char16_t space = 0;
+            size_t count = 0;
+        };
     }  // namespace tokenize
 }  // namespace utils

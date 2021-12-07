@@ -52,5 +52,11 @@ namespace utils {
             }
             return true;
         }
+
+        template <class String>
+        struct Space : Token<String> {
+            LineKind line = 0;
+            size_t count = 0;
+        };
     }  // namespace tokenize
 }  // namespace utils
