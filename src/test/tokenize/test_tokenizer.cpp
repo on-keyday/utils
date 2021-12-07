@@ -13,12 +13,12 @@ void test_tokenizer() {
     decltype(tokenizer)::token_t output;
 
     tokenizer.keyword.predef = {"def", "func", "int", "bool"};
-    tokenizer.symbol.predef = {"(", ")", "->", "/*", "*/", "\""};
+    tokenizer.symbol.predef = {"(", ")", "->", "/*", "*/", "\"", "\\"};
 
     char8_t testword[] =
         u8R"(
         /* this is comment */
-        "/* this is string */"
+        "/* this is string */ \" escaped "
         def あれれ int
         def define int
         func Hey()->bool
@@ -38,7 +38,8 @@ void test_tokenizer() {
         cout << p->what() << ":`" << p->to_string() << "`\n";
     }
 
-    result = tokenize::merge(output, tokenize::blcok_comment<std::string>("/*", "*/"),
+    result = tokenize::merge(output,
+                             tokenize::blcok_comment<std::string>("/*", "*/"),
                              tokenize::escaped_comment<std::string>("\"", "\\"));
     assert(result && "expect true but merge is failed");
 
