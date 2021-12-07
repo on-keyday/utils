@@ -9,8 +9,27 @@ namespace utils {
     namespace syntax {
 
         template <class String, template <class...> class Vec>
+        bool parse_attribute(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& elm) {
+            if (!elm) {
+                return false;
+            }
+            while (true) {
+                auto e = r.read();
+                if (!e) {
+                    break;
+                }
+                if (e->has(attribute(Attribute::adjacent))) {
+                }
+            }
+            return true;
+        }
+
+        template <class String, template <class...> class Vec>
         bool parse_single(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& single) {
             auto e = r.read();
+            if (!e) {
+                return false;
+            }
             if (e->has("\"")) {
                 e = r.consume_get();
                 if (!e->is(tknz::TokenKind::comment)) {
@@ -19,6 +38,7 @@ namespace utils {
                 auto s = wrap::make_shared<Single<String, Vec>>();
                 s->type = SyntaxType::literal;
                 s->tok = e;
+                single = s;
                 e = r.consume_get();
                 if (!e) {
                     return false;
@@ -26,6 +46,23 @@ namespace utils {
                 if (!e->has("\"")) {
                     return false;
                 }
+            }
+            else if (e->is(tknz::TokenKind::keyword)) {
+                auto s = wrap::make_shared<Single<String, Vec>>();
+                s->type = SyntaxType::keyword;
+                s->tok = e;
+                single = s;
+                r.consume();
+            }
+            else if (e->is(tknz::TokenKind::identifier)) {
+                auto s = wrap::make_shared<Single<String, Vec>>();
+                s->type = SyntaxType::reference;
+                s->tok = e;
+                single = s;
+                r.consume();
+            }
+            else {
+                return false;
             }
         }
 
