@@ -13,7 +13,6 @@ namespace utils {
         struct ParseContext {
             Reader<String> r;
             wrap::internal::Pack err;
-            bool abort = false;
         };
 
         template <class String, template <class...> class Vec>
@@ -112,6 +111,7 @@ namespace utils {
                 r.consume();
             }
             else {
+                ctx.err.pack("error: expect literal, keyword, or identifier  but token is ", e->to_string());
                 return false;
             }
             if (!parse_attribute(ctx, single)) {
@@ -127,9 +127,50 @@ namespace utils {
         }
 
         template <class String, template <class...> class Vec>
+        bool parse_group(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group);
+
+        template <class String, template <class...> class Vec>
+        bool parse_or(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group, bool endbrace) {
+            if (!parse_group(ctx, group)) {
+                return false;
+            }
+            auto& r = ctx.r;
+            auto e = r.read();
+            if (!e || e->is(tknz::TokenKind::line)) {
+                return true;
+            }
+        }
+
+        template <class String, template <class...> class Vec>
         bool parse_group(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group) {
             auto gr = wrap::make_shared<Group<String, Vec>>();
             gr->type = SyntaxType::group;
+            auto& r = ctx.r;
+            while (true) {
+                auto e = r.read();
+                if (!e || e->is(tknz::TokenKind::line) || e->has("|")) {
+                    break;
+                }
+                wrap::shared_ptr<Element<String, Vec>> elm;
+                if (e->has("[")) {
+                    r.consume();
+                    if (!parse_or(ctx, elm, true)) {
+                        return false;
+                    }
+                }
+                else {
+                    if (!parse_single(ctx, elm)) {
+                        return false;
+                    }
+                }
+                gr->group.push_back(std::move(elm));
+            }
+            if (!gr->group.size()) {
+                ctx.err.pack("error: expect syntax elment but not");
+                return false;
+            }
+            group = gr;
+            return true;
         }
     }  // namespace syntax
 }  // namespace utils
