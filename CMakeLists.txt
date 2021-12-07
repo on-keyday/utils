@@ -25,6 +25,7 @@ add_executable(fileview "src/test/file/test_file_view.cpp")
 add_executable(cout "src/test/wrap/test_cout.cpp")
 add_executable(channel "src/test/thread/test_channel.cpp")
 add_executable(predefined "src/test/tokenize/test_predefined.cpp")
+add_executable(tokenizer "src/test/tokenize/test_tokenizer.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
@@ -36,6 +37,7 @@ add_library(libutils
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
 target_link_libraries(channel libutils)
+target_link_libraries(tokenizer libutils)
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)
