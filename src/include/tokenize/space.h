@@ -77,7 +77,8 @@ namespace utils {
 
             bool has(const String& str) const override {
                 String cmp;
-                auto sp = get_space(space);
+                using char_t = std::remove_cvref_t<typename BufferType<String>::char_type>;
+                auto sp = get_space<char_t>(space);
                 for (size_t i = 0; i < count; i++) {
                     for (auto i = 0; i < sp.size(); i++) {
                         cmp.push_back(sp[i]);
