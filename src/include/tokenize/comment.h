@@ -7,6 +7,22 @@
 namespace utils {
     namespace tokenize {
 
+        template <class String>
+        struct Comment : Token<String> {
+            String comment;
+
+            constexpr Comment()
+                : Token<String>(TokenKind::comment) {}
+
+            String to_string() const override {
+                return comment;
+            }
+
+            bool has(const String& str) const override {
+                return comment == str;
+            }
+        };
+
         template <bool nest, class String>
         bool merge_until(String& merged, wrap::shared_ptr<Token<String>>& root, wrap::shared_ptr<Token<String>>& lastmerged, wrap::shared_ptr<Token<String>>& lastp, const String& begin, const String& end) {
             auto prev = root;
@@ -45,22 +61,12 @@ namespace utils {
                         p = lastp;
                         return 1;
                     }
+                    auto remove_first = p->next;
+                    auto remove_last = lastmerged;
                 }
             }
             return 0;
         }
 
-        template <class String>
-        struct Comment : Token<String> {
-            String comment;
-
-            String to_string() const override {
-                return comment;
-            }
-
-            bool has(const String& str) const override {
-                return comment == str;
-            }
-        };
     }  // namespace tokenize
 }  // namespace utils
