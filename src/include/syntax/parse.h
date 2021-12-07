@@ -22,17 +22,50 @@ namespace utils {
             if (!elm) {
                 return false;
             }
+            auto err = [&](auto& name, auto e) {
+                ctx.err.packln("error: attribute `", name, "` (symbol `", attribute(e), "`) is already exists.");
+            };
+            auto checK_attr = [&](auto name, auto kind) {
+                if (e->has(attribute(kind))) {
+                    if (any(elm->attr & kind)) {
+                        err(name, kind);
+                        return -1;
+                    }
+                    elm->attr |= kind;
+                    return 1;
+                }
+                return 0;
+            };
             while (true) {
                 auto e = r.read();
                 if (!e) {
                     break;
                 }
-                if (e->has(attribute(Attribute::adjacent))) {
-                    if (any(elm->attr & Attribute::adjacent)) {
-                        ctx.err.packln("error: attribute adjacent `", attribute(Attribute::adjacent), " is already exists");
+                if (auto res = checK_attr("adjacent", Attribute::adjacent)) {
+                    if (res < 0) {
                         return false;
                     }
+                    continue;
                 }
+                else if (res = checK_attr("fatal", Attribute::fatal)) {
+                    if (res < 0) {
+                        return false;
+                    }
+                    continue;
+                }
+                else if (res = checK_attr("ifexists", Attribute::ifexists)) {
+                    if (res < 0) {
+                        return false;
+                    }
+                    continue;
+                }
+                else if (res = checK_attr("repeat", Attribute::repeat)) {
+                    if (res < 0) {
+                        return false;
+                    }
+                    continue;
+                }
+                break;
             }
             return true;
         }
@@ -44,12 +77,13 @@ namespace utils {
             if (!e) {
                 return false;
             }
+            wrap::shared_ptr<Single<String, Vec>> s;
             if (e->has("\"")) {
                 e = r.consume_get();
                 if (!e->is(tknz::TokenKind::comment)) {
                     return false;
                 }
-                auto s = wrap::make_shared<Single<String, Vec>>();
+                s = wrap::make_shared<Single<String, Vec>>();
                 s->type = SyntaxType::literal;
                 s->tok = e;
                 single = s;
@@ -64,14 +98,14 @@ namespace utils {
                 }
             }
             else if (e->is(tknz::TokenKind::keyword)) {
-                auto s = wrap::make_shared<Single<String, Vec>>();
+                s = wrap::make_shared<Single<String, Vec>>();
                 s->type = SyntaxType::keyword;
                 s->tok = e;
                 single = s;
                 r.consume();
             }
             else if (e->is(tknz::TokenKind::identifier)) {
-                auto s = wrap::make_shared<Single<String, Vec>>();
+                s = wrap::make_shared<Single<String, Vec>>();
                 s->type = SyntaxType::reference;
                 s->tok = e;
                 single = s;
@@ -80,6 +114,16 @@ namespace utils {
             else {
                 return false;
             }
+            if (!parse_attribute(ctx, single)) {
+                ctx.err.pack("note: at syntax element ");
+                if (s->type == SyntaxType::literal) {
+                    ctx.err.packln("\"", s->tok->to_string(), "\"");
+                }
+                else {
+                    ctx.err.packln(s->tok->to_string());
+                }
+            }
+            return true;
         }
 
         template <class String, template <class...> class Vec>
