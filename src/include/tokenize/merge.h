@@ -52,6 +52,23 @@ namespace utils {
                 }
                 return true;
             }
+
+            template <class String>
+            bool merge_each(wrap::shared_ptr<Token<String>>& inout) {
+                return true;
+            }
+
+            template <class String, class Ctx, class... Ctxs>
+            bool merge_each(wrap::shared_ptr<Token<String>>& inout, Ctx&& ctx, Ctxs&&... other) {
+                auto res = merge_impl(inout, ctx);
+                if (!res) {
+                    return false;
+                }
+                if (!inout) {
+                    return true;
+                }
+                return merge_each(inout, std::forward<Ctxs>(other)...);
+            }
         }  // namespace internal
 
         template <class String>
