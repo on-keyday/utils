@@ -54,7 +54,7 @@ namespace utils {
             }
 
             bool is(TokenKind k) const {
-                return kind == k;
+                return kind_ == k;
             }
 
             virtual bool has(const String&) const {
