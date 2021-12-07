@@ -75,7 +75,7 @@ namespace utils {
             char16_t space = 0;
             size_t count = 0;
 
-            bool has(const String& str) const override {
+            String to_string() const override {
                 String cmp;
                 using char_t = std::remove_cvref_t<typename BufferType<String>::char_type>;
                 auto sp = get_space<char_t>(space);
@@ -84,7 +84,10 @@ namespace utils {
                         cmp.push_back(sp[i]);
                     }
                 }
-                return cmp == str;
+            }
+
+            bool has(const String& str) const override {
+                return to_string() == str;
             }
         };
     }  // namespace tokenize

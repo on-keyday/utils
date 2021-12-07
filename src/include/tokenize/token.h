@@ -36,6 +36,10 @@ namespace utils {
             virtual size_t layer() const {
                 return 0;
             }
+
+            virtual String to_string() const {
+                return String();
+            }
         };
 
     }  // namespace tokenize

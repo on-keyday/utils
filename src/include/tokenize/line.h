@@ -61,7 +61,7 @@ namespace utils {
             LineKind line = 0;
             size_t count = 0;
 
-            virtual bool has(const String& str) const {
+            String to_string() const override {
                 String cmp;
                 for (size_t i = 0; i < count; i++) {
                     if (any(line & LineKind::cr)) {
@@ -71,7 +71,11 @@ namespace utils {
                         cmp.push_back('\n');
                     }
                 }
-                return cmp == str;
+                return cmp;
+            }
+
+            bool has(const String& str) const override {
+                return to_string() == str;
             }
         };
     }  // namespace tokenize

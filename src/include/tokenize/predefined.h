@@ -96,6 +96,11 @@ namespace utils {
         template <class String>
         struct Predef : Token<String> {
             String token;
+
+            String to_string() const override {
+                return token;
+            }
+
             bool has(const String& str) const override {
                 return token == str;
             }
@@ -105,6 +110,11 @@ namespace utils {
         struct PredefCtx : Token<String> {
             String token;
             size_t layer = 0;
+
+            String to_string() const override {
+                return token;
+            }
+
             bool has(const String& str) const override {
                 return token == str;
             }

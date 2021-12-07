@@ -25,6 +25,11 @@ namespace utils {
         template <class String>
         struct Identifier : Token<String> {
             String identifier;
+
+            String to_string() const override {
+                return identifier;
+            }
+
             bool has(const String& str) const override {
                 return identifier == str;
             }
