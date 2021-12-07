@@ -4,6 +4,7 @@
 #pragma once
 
 #include "token.h"
+#include "comment.h"
 
 namespace utils {
     namespace tokenize {
@@ -25,7 +26,27 @@ namespace utils {
                 String end;
                 String escape;
             };
+
+            template <class String>
+            bool merge_impl(wrap::shared_ptr<Token<String>>& inout, CommentMergeContext<String>& ctx) {
+                if (any(ctx.type & CommentType::block)) {
+                    auto res = make_comment_between(inout, ctx.begin, ctx.end, any(ctx.type & CommentType::nest));
+                    if (res < 0) {
+                        return false;
+                    }
+                }
+                else if (any(ctx.type & CommentType::oneline)) {
+                    auto res = make_comment_util_line(inout, ctx.begin);
+                    if (res < 0) {
+                        return false;
+                    }
+                }
+            }
         }  // namespace internal
+
+        template <class String>
+        bool merge(wrap::shared_ptr<Token<String>>& input) {
+        }
 
     }  // namespace tokenize
 }  // namespace utils
