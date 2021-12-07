@@ -11,10 +11,14 @@ namespace utils {
         struct Reader : tokenize::Reader<String> {
             size_t count = 0;
             size_t basecount = 0;
+            bool ignore_line = 0;
             using tokenize::Reader<String>::Reader;
 
             bool is_ignore() const override {
-                return current->has("#") || default_ignore(this->current);
+                if (!ignore_line && this->current->is(tokenize::TokenKind::line)) {
+                    return return false;
+                }
+                return this->current->has("#") || default_ignore(this->current);
             }
 
             void consume_hook() override {
