@@ -18,7 +18,7 @@ void test_tokenizer() {
     char8_t testword[] =
         u8R"(
         /* this is comment */
-        "/* this is string */ " escaped "
+        "/* this is string */ \" escaped "
         def あれれ int
         def define int
         func Hey()->bool
