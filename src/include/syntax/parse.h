@@ -9,7 +9,7 @@ namespace utils {
     namespace syntax {
 
         template <class String, template <class...> class Vec>
-        bool parse_group(wrap::shared_ptr<Element<String, Vec>>& group) {
+        bool parse_group(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& group) {
         }
     }  // namespace syntax
 }  // namespace utils
