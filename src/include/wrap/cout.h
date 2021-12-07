@@ -30,6 +30,8 @@ namespace utils {
                 return WriteWrapper::write(*this, std::forward<T>(t), ss, &lock);
             }
 
+            UtfOut& operator<<(const path_string&);
+
             void write(const path_string&);
 
             UtfOut& operator<<(internal::Pack&& pack);

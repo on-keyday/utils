@@ -79,6 +79,11 @@ namespace utils {
             }
         }
 
+        UtfOut& UtfOut::operator<<(const path_string& p) {
+            write(p);
+            return *this;
+        }
+
         UtfOut& UtfOut::operator<<(internal::Pack&& pack) {
             write(pack.impl.result);
             return *this;
