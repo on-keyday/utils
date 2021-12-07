@@ -127,13 +127,9 @@ namespace utils {
         }
 
         template <class String, template <class...> class Vec>
-        bool parse_group(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& group) {
+        bool parse_group(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group) {
             auto gr = wrap::make_shared<Group<String, Vec>>();
             gr->type = SyntaxType::group;
-            auto e = r.read();
-            if (!e) {
-                return false;
-            }
         }
     }  // namespace syntax
 }  // namespace utils
