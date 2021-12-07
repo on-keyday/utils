@@ -10,11 +10,15 @@ namespace utils {
     namespace tokenize {
         namespace internal {
             template <class String, class T>
-            struct CastHelper;
+            struct CastHelper {
+                static std::nullptr_t cast() {
+                    return nullptr;
+                }
+            };
 
             template <class String>
             struct CastHelper<String, Predef<String>> {
-                Predef<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Predef<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -27,7 +31,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Identifier<String>> {
-                Identifier<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Identifier<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -40,7 +44,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Line<String>> {
-                Line<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Line<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -53,7 +57,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Space<String>> {
-                Space<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Space<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -67,6 +71,7 @@ namespace utils {
 
         template <template <class> class T, class String>
         T<String> cast(wrap::shared_ptr<Token<String>>& ptr) {
+            return internal::CastHelper<String, T<String>>::cast(ptr);
         }
 
     }  // namespace tokenize
