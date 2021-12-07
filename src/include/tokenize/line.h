@@ -61,7 +61,7 @@ namespace utils {
             LineKind line = 0;
             size_t count = 0;
 
-            virtual bool has(const String& str) {
+            virtual bool has(const String& str) const {
                 String cmp;
                 for (size_t i = 0; i < count; i++) {
                     if (any(line & LineKind::cr)) {

@@ -74,6 +74,17 @@ namespace utils {
         struct Space : Token<String> {
             char16_t space = 0;
             size_t count = 0;
+
+            virtual bool has(const String& str) const {
+                String cmp;
+                auto sp = get_space(space);
+                for (size_t i = 0; i < count; i++) {
+                    for (auto i = 0; i < sp.size(); i++) {
+                        cmp.push_back(sp[i]);
+                    }
+                }
+                return cmp == str;
+            }
         };
     }  // namespace tokenize
 }  // namespace utils
