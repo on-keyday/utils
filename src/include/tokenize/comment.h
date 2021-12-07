@@ -1,7 +1,7 @@
 /*license*/
 
 // comment - comment marger
-
+#pragma once
 #include "token.h"
 
 namespace utils {

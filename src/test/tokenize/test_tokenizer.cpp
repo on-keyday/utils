@@ -37,6 +37,15 @@ void test_tokenizer() {
     for (auto p = output; p; p = p->next) {
         cout << p->what() << ":`" << p->to_string() << "`\n";
     }
+
+    result = tokenize::merge(output, tokenize::blcok_comment<std::string>("/*", "*/"),
+                             tokenize::escaped_comment<std::string>("\"", "\\"));
+    assert(result && "expect true but merge is failed");
+
+    cout << "merged:\n";
+    for (auto p = output; p; p = p->next) {
+        cout << p->what() << ":`" << p->to_string() << "`\n";
+    }
 }
 
 int main() {
