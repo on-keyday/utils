@@ -27,6 +27,9 @@ namespace utils {
         struct Identifier : Token<String> {
             String identifier;
 
+            constexpr Identifier()
+                : Token<String>(TokenKind::identifier) {}
+
             String to_string() const override {
                 return identifier;
             }

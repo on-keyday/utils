@@ -97,6 +97,9 @@ namespace utils {
         struct Predef : Token<String> {
             String token;
 
+            constexpr Predef(TokenKind kind)
+                : Token<String>(kind) {}
+
             String to_string() const override {
                 return token;
             }
@@ -110,6 +113,9 @@ namespace utils {
         struct PredefCtx : Token<String> {
             String token;
             size_t layer_ = 0;
+
+            constexpr PredefCtx()
+                : Token<String>(TokenKind::context) {}
 
             String to_string() const override {
                 return token;

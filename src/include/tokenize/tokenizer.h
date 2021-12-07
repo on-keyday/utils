@@ -36,7 +36,6 @@ namespace utils {
                         LineKind kind = LineKind::unknown;
                         if (read_line(input, kind, count)) {
                             auto tmp = wrap::make_shared<Line<String>>();
-                            tmp->kind = TokenKind::line;
                             tmp->line = kind;
                             tmp->count = count;
                             to_next(tmp);
@@ -48,7 +47,6 @@ namespace utils {
                         char16_t space = 0;
                         if (read_space(input, space, count)) {
                             auto tmp = wrap::make_shared<Space<String>>();
-                            tmp->kind = TokenKind::space;
                             tmp->space = space;
                             tmp->count = count;
                             to_next(tmp);
@@ -58,8 +56,7 @@ namespace utils {
                     {
                         String token;
                         if (read_predefined<false>(input, symbol, token)) {
-                            auto tmp = wrap::make_shared<Predef<String>>();
-                            tmp->kind = TokenKind::symbol;
+                            auto tmp = wrap::make_shared<Predef<String>>(TokenKind::symbol);
                             tmp->token = std::move(token);
                             to_next(tmp);
                             continue;
@@ -68,8 +65,7 @@ namespace utils {
                     {
                         String token;
                         if (read_predefined<true>(input, keyword, token, symbol)) {
-                            auto tmp = wrap::make_shared<Predef<String>>();
-                            tmp->kind = TokenKind::keyword;
+                            auto tmp = wrap::make_shared<Predef<String>>(TokenKind::keyword);
                             tmp->token = std::move(token);
                             to_next(tmp);
                             continue;
@@ -80,7 +76,6 @@ namespace utils {
                         size_t layer;
                         if (read_predefined_ctx<true>(input, context_keyword, token, layer, symbol)) {
                             auto tmp = wrap::make_shared<PredefCtx<String>>();
-                            tmp->kind = TokenKind::context;
                             tmp->token = std::move(token);
                             tmp->layer_ = layer;
                             to_next(tmp);
@@ -91,7 +86,6 @@ namespace utils {
                         String identifier;
                         if (read_identifier(input, identifier, symbol)) {
                             auto tmp = wrap::make_shared<Identifier<String>>();
-                            tmp->kind = TokenKind::identifier;
                             tmp->identifier = std::move(identifier);
                             to_next(tmp);
                             continue;

@@ -33,9 +33,17 @@ namespace utils {
 
         template <class String>
         struct Token {
+           protected:
             TokenKind kind = TokenKind::root;
+
+            constexpr Token(TokenKind kind)
+                : kind(kind) {}
+
+           public:
             wrap::shared_ptr<Token<String>> next = nullptr;
             Token<String>* prev = nullptr;
+
+            constexpr Token() {}
 
             const char* what() const {
                 return token_kind(kind);

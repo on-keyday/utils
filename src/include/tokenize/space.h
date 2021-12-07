@@ -75,6 +75,9 @@ namespace utils {
             char16_t space = 0;
             size_t count = 0;
 
+            constexpr Space()
+                : Token<String>(TokenKind::space) {}
+
             String to_string() const override {
                 String cmp;
                 using char_t = std::remove_cvref_t<typename BufferType<String>::char_type>;

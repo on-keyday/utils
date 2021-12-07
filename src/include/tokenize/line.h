@@ -61,6 +61,9 @@ namespace utils {
             LineKind line = LineKind::unknown;
             size_t count = 0;
 
+            constexpr Line()
+                : Token<String>(TokenKind::line) {}
+
             String to_string() const override {
                 String cmp;
                 for (size_t i = 0; i < count; i++) {

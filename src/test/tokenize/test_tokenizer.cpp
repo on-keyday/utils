@@ -1,6 +1,7 @@
 /*license*/
 
 #include "../../include/tokenize/tokenizer.h"
+#include "../../include/tokenize/cast.h"
 
 #include "../../include/wrap/lite/string.h"
 #include "../../include/wrap/cout.h"
