@@ -18,6 +18,7 @@ namespace utils {
                     break;
                 }
                 token.push_back(seq.current());
+                seq.consume();
             }
             return token.size() != 0;
         }
