@@ -16,6 +16,7 @@ void test_tokenizer() {
     char8_t testword[] =
         u8R"(
         def あれれ int
+        def define int
         func Hey()->bool
     )";
 
