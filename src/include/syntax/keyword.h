@@ -1,0 +1,43 @@
+/*license*/
+
+// keyword - define syntax keyword
+
+namespace utils {
+    namespace syntax {
+        enum class KeyWord {
+            id,
+            keyword,
+            symbol,
+            indent,
+            not_space,
+            eof,
+            eol,
+            eos,
+            bos,
+            string,
+            integer,
+            number,
+        };
+
+        constexpr const char* keyword(KeyWord kw) {
+            constexpr char* keyword_str[] = {
+                "ID",        // identifier
+                "KEYWORD",   // any keyword
+                "SYMBOL",    // any symbol
+                "INDENT",    // indent
+                "NOTSPACE",  // anything with out space and line
+                "EOF",       // end of file
+                "EOL",       // end of line
+                "EOS",       // end of segment
+                "BOS",       // begin of segment
+                "STRING",    // string
+                "INTEGER",   // integer
+                "NUMBER",    // real number
+            };
+            auto v = static_cast<size_t>(kw);
+            if (v >= sizeof(keyword_str) / sizeof(keyword_str[0])) {
+                return "";
+            }
+        }
+    }  // namespace syntax
+}  // namespace utils
