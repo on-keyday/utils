@@ -100,8 +100,7 @@ namespace utils {
         }
 
         template <class String, class... Ctx>
-        bool merge(wrap::shared_ptr<Token<String>>& input, Ctx&&... ctx) {
-            const char* errmsg = nullptr;
+        bool merge(const char*& errmsg, wrap::shared_ptr<Token<String>>& input, Ctx&&... ctx) {
             for (auto inout = input; inout; inout = inout->next) {
                 if (!internal::merge_each(errmsg, inout, std::forward<Ctx>(ctx)...)) {
                     return false;
@@ -111,6 +110,12 @@ namespace utils {
                 }
             }
             return true;
+        }
+
+        template <class String, class... Ctx>
+        bool merge(wrap::shared_ptr<Token<String>>& input, Ctx&&... ctx) {
+            const char* errmsg = nullptr;
+            return merge(errmsg, input, std::forward<Ctx>(ctx)...);
         }
 
     }  // namespace tokenize
