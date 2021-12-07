@@ -19,13 +19,17 @@ void test_tokenizer() {
         def define int
         func Hey()->bool
     )";
+    auto& cout = wrap::cout_wrap();
+
+    cout << "base string:\n"
+         << testword << "\n";
 
     Sequencer input(testword);
 
-    auto& cout = wrap::cout_wrap();
-
     auto result = tokenizer.tokenize(input, output);
     assert(result && "expect ture but tokenize is failed");
+
+    cout << "result:\n";
     for (auto p = output; p; p = p->next) {
         cout << p->what() << ":`" << p->to_string() << "`\n";
     }
