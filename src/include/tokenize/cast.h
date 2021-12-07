@@ -26,8 +26,21 @@ namespace utils {
                     if (!ptr) {
                         return nullptr;
                     }
-                    if (ptr->is(TokenKind::keyword) || ptr->is(TokenKind::symbol) || ptr->is(TokenKind::context)) {
+                    if (ptr->is(TokenKind::keyword) || ptr->is(TokenKind::symbol)) {
                         return static_cast<Predef<String>*>(std::addressof(*ptr));
+                    }
+                    return nullptr;
+                }
+            };
+
+            template <class String>
+            struct CastHelper<String, PredefCtx<String>> {
+                static PredefCtx<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                    if (!ptr) {
+                        return nullptr;
+                    }
+                    if (ptr->is(TokenKind::context)) {
+                        return static_cast<PredefCtx<String>*>(std::addressof(*ptr));
                     }
                     return nullptr;
                 }
