@@ -2,6 +2,7 @@
 
 #include "../../include/tokenize/tokenizer.h"
 #include "../../include/tokenize/cast.h"
+#include "../../include/tokenize/merge.h"
 
 #include "../../include/wrap/lite/string.h"
 #include "../../include/wrap/cout.h"
@@ -12,10 +13,12 @@ void test_tokenizer() {
     decltype(tokenizer)::token_t output;
 
     tokenizer.keyword.predef = {"def", "func", "int", "bool"};
-    tokenizer.symbol.predef = {"(", ")", "->"};
+    tokenizer.symbol.predef = {"(", ")", "->", "/*", "*/", "\""};
 
     char8_t testword[] =
         u8R"(
+        /* this is comment */
+        "/* this is string */"
         def あれれ int
         def define int
         func Hey()->bool
