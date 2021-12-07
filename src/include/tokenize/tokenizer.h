@@ -82,7 +82,7 @@ namespace utils {
                             auto tmp = wrap::make_shared<PredefCtx<String>>();
                             tmp->kind = TokenKind::context;
                             tmp->token = std::move(token);
-                            tmp->layer = layer;
+                            tmp->layer_ = layer;
                             to_next(tmp);
                             continue;
                         }

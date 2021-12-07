@@ -68,7 +68,7 @@ namespace utils {
             if (auto matchsize = predef.match(seq, matched)) {
                 seq.consume(matchsize);
                 if (check_after) {
-                    if (internal::is_not_separated(seq, std::forward<Args>(args))) {
+                    if (internal::is_not_separated(seq, std::forward<Args>(args)...)) {
                         seq.backto(matchsize);
                         return false;
                     }
@@ -109,7 +109,7 @@ namespace utils {
         template <class String>
         struct PredefCtx : Token<String> {
             String token;
-            size_t layer = 0;
+            size_t layer_ = 0;
 
             String to_string() const override {
                 return token;
