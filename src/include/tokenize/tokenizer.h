@@ -9,14 +9,18 @@
 #include "predefined.h"
 #include "identifier.h"
 
+#include "../wrap/lite/vector.h"
+
 namespace utils {
     namespace tokenize {
 
-        template <class String, template <class...> class Vec>
+        template <class String, template <class...> class Vec = wrap::vector>
         struct Tokenizer {
             Predefined<String, Vec> keyword;
             Predefined<String, Vec> symbol;
             PredefinedCtx<String, Vec> context_keyword;
+
+            using token_t = wrap::shared_ptr<Token<String>>;
 
             template <class T>
             bool tokenize(Sequencer<T>& input, wrap::shared_ptr<Token<String>>& output) {
