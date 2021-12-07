@@ -11,6 +11,7 @@ namespace utils {
             literal,
             keyword,
             reference,
+            group,
         };
 
         template <class String>
