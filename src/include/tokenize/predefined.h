@@ -57,7 +57,7 @@ namespace utils {
             }
 
             template <class String, class T, class... Args>
-            constexpr bool after_is_not_separated(Sequencer<T>& seq, Args&&... args) {
+            constexpr bool is_not_separated(Sequencer<T>& seq, Args&&... args) {
                 String tmp;
                 return match_line(seq, nullptr) == LineKind::unknown && !match_space(seq) && !or_match(seq, tmp, std::forward<Args>(args)...)
             }
@@ -68,7 +68,7 @@ namespace utils {
             if (auto matchsize = predef.match(seq, matched)) {
                 seq.consume(matchsize);
                 if (check_after) {
-                    if (internal::after_is_not_separated(seq, std::forward<Args>(args))) {
+                    if (internal::is_not_separated(seq, std::forward<Args>(args))) {
                         seq.backto(matchsize);
                         return false;
                     }

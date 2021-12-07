@@ -7,6 +7,7 @@
 #include "line.h"
 #include "space.h"
 #include "predefined.h"
+#include "identifier.h"
 
 namespace utils {
     namespace tokenize {
@@ -80,6 +81,15 @@ namespace utils {
                             tmp->layer = layer;
                             to_next(tmp);
                             continue;
+                        }
+                    }
+                    {
+                        String identifier;
+                        if (read_identifier(input, identifier, symbol)) {
+                            auto tmp = wrap::make_shared<Identifier<String>>();
+                            tmp->kind = TokenKind::identifier;
+                            tmp->identifier = std::move(identifier);
+                            to_next(tmp);
                         }
                     }
                 }
