@@ -17,7 +17,13 @@ namespace utils {
                 if (!e->is(tknz::TokenKind::comment)) {
                     return false;
                 }
-                r.consume_get();
+                auto s = wrap::make_shared<Single<String, Vec>>();
+                s->type = SyntaxType::literal;
+                s->tok = e;
+                e = r.consume_get();
+                if (!e) {
+                    return false;
+                }
                 if (!e->has("\"")) {
                     return false;
                 }
