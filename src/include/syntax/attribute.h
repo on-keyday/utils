@@ -1,6 +1,9 @@
 /*license*/
 
 // attribute - define attribute
+#pragma once
+
+#include "../wrap/lite/enum.h"
 
 namespace utils {
     namespace syntax {
