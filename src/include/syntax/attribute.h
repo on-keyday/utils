@@ -15,6 +15,8 @@ namespace utils {
             adjacent = 0x08,
         };
 
+        DEFINE_ENUM_FLAGOP(Attribute)
+
         BEGIN_ENUM_STRING_MSG(Attribute, attribute)
         ENUM_ERROR_MSG(Attribute::repeat, "*")
         ENUM_ERROR_MSG(Attribute::fatal, "!")

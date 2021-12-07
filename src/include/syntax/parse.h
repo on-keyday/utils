@@ -4,9 +4,16 @@
 #pragma once
 
 #include "element.h"
+#include "../wrap/pack.h"
 
 namespace utils {
     namespace syntax {
+
+        template <class String>
+        struct ParseCtx {
+            Reader<String> r;
+            wrap::internal::Pack err;
+        };
 
         template <class String, template <class...> class Vec>
         bool parse_attribute(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& elm) {
@@ -19,6 +26,8 @@ namespace utils {
                     break;
                 }
                 if (e->has(attribute(Attribute::adjacent))) {
+                    if (any(elm->attr & Attribute::adjacent)) {
+                    }
                 }
             }
             return true;
