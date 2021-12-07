@@ -123,7 +123,9 @@ namespace utils {
                 auto rule = [&](auto& p, auto& last, auto&, auto& abort) {
                     if (internal::is_symbol_or_keyword_and_(p, end)) {
                         if (internal::is_symbol_or_keyword_and_(p->prev, escape)) {
+                            return false;
                         }
+                        return true;
                     }
                     return false;
                 };
