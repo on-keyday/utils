@@ -13,6 +13,7 @@ namespace utils {
             keyword,
             reference,
             group,
+            or_,
         };
 
         template <class String, template <class...> class Vec>
@@ -22,7 +23,8 @@ namespace utils {
         };
 
         template <class String, template <class...> class Vec>
-        struct Single {
+        struct Single : Element<String, Vec> {
+            wrap::shared_ptr<tknz::Token<String>> tok;
         };
 
         template <class String, template <class...> class Vec>
