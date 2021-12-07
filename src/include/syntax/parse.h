@@ -17,8 +17,9 @@ namespace utils {
                 if (!e->is(tknz::TokenKind::comment)) {
                     return false;
                 }
-                r.consume();
+                r.consume_get();
                 if (!e->has("\"")) {
+                    return false;
                 }
             }
         }

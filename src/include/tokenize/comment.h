@@ -28,7 +28,7 @@ namespace utils {
             bool merge_until(String& merged, wrap::shared_ptr<Token<String>>& root, wrap::shared_ptr<Token<String>>& last, F&& f) {
                 auto p = root->next;
                 size_t count = 0;
-                bool abort = false;
+                const char* abort = nullptr;
                 for (; p; p = p->next) {
                     if (f(p, last, merged, abort)) {
                         return true;
@@ -131,6 +131,12 @@ namespace utils {
                         }
                         last = p;
                         return true;
+                    }
+                    else if (p->is(TokenKind::line)) {
+                        if (!allowline) {
+                            abort = "unexpected EOL";
+                            return false;
+                        }
                     }
                     return false;
                 };
