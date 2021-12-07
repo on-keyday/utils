@@ -1,6 +1,6 @@
 /*license*/
 
-// parse - parse method
+// parse - parse method implementation
 #pragma once
 
 #include "element.h"
