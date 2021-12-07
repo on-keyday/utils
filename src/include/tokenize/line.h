@@ -58,7 +58,7 @@ namespace utils {
 
         template <class String>
         struct Line : Token<String> {
-            LineKind line = 0;
+            LineKind line = LineKind::unknown;
             size_t count = 0;
 
             String to_string() const override {
