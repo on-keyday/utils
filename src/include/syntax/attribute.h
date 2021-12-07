@@ -8,6 +8,7 @@
 namespace utils {
     namespace syntax {
         enum class Attribute {
+            none = 0,
             repeat = 0x01,
             fatal = 0x02,
             ifexist = 0x04,
