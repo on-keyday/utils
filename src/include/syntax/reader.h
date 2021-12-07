@@ -16,6 +16,7 @@ namespace utils {
             bool ignore_line = true;
             using tknz::Reader<String>::Reader;
 
+           private:
             bool is_ignore() const override {
                 if (!ignore_line && this->current->is(tknz::TokenKind::line)) {
                     return return false;
@@ -27,6 +28,7 @@ namespace utils {
                 count++;
             }
 
+           public:
             Reader from_current() {
                 Reader ret(this->current);
                 ret.ignore_line = ignore_line;

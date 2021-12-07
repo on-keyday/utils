@@ -18,7 +18,7 @@ namespace utils {
                 : root(v), current(v) {}
 
             void seek_root() {
-                root = current;
+                current = root;
             }
 
            protected:
