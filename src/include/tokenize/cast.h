@@ -64,5 +64,10 @@ namespace utils {
                 }
             };
         }  // namespace internal
-    }      // namespace tokenize
+
+        template <template <class> class T, class String>
+        T<String> cast(wrap::shared_ptr<Token<String>>& ptr) {
+        }
+
+    }  // namespace tokenize
 }  // namespace utils
