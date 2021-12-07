@@ -24,8 +24,7 @@ namespace utils {
         };
 
         template <bool nest, class String>
-        bool merge_until(String& merged, wrap::shared_ptr<Token<String>>& root, wrap::shared_ptr<Token<String>>& lastmerged, wrap::shared_ptr<Token<String>>& lastp, const String& begin, const String& end) {
-            auto prev = root;
+        bool merge_until(String& merged, wrap::shared_ptr<Token<String>>& root, wrap::shared_ptr<Token<String>>& lastp, const String& begin, const String& end) {
             auto kind = root->kind;
             auto p = root->next;
             size_t count = 0;
@@ -37,14 +36,12 @@ namespace utils {
                 }
                 if ((p->is(TokenKind::symbol) || p->is(TokenKind::keyword)) && p->has(end)) {
                     if (count == 0) {
-                        lastmerged = prev;
                         lastp = p;
                         return true;
                     }
                     count--;
                 }
                 merged += p->to_string();
-                prev = p;
             }
             return false;
         }
@@ -61,8 +58,6 @@ namespace utils {
                         p = lastp;
                         return 1;
                     }
-                    auto remove_first = p->next;
-                    auto remove_last = lastmerged;
                     auto comment = = wrap::make_shared<Comment<String>>();
                     comment->comment = std::move(merged);
                     p->next = comment;
