@@ -40,5 +40,9 @@ namespace utils {
             }
             return keyword_str[v];
         }
+
+        bool parse_id() {
+        }
+
     }  // namespace syntax
 }  // namespace utils
