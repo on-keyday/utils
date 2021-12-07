@@ -3,7 +3,11 @@
 // cast - define safe downcast
 #pragma once
 
-#include "tokenizer.h"
+#include "token.h"
+#include "space.h"
+#include "line.h"
+#include "predefined.h"
+#include "identifier.h"
 
 namespace utils {
 
