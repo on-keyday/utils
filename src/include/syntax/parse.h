@@ -12,8 +12,7 @@ namespace utils {
         bool parse_single(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& single) {
             auto e = r.read();
             if (e->has("\"")) {
-                r.conusme();
-                e = r.get();
+                e = r.consume_get();
                 if (!e->is(tknz::TokenKind::comment)) {
                     return false;
                 }
