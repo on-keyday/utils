@@ -29,27 +29,27 @@ namespace utils {
             };
 
             template <class String>
-            int merge_impl(wrap::shared_ptr<Token<String>>& inout, CommentMergeContext<String>& ctx) {
+            int merge_impl(const char*& errmsg, wrap::shared_ptr<Token<String>>& inout, CommentMergeContext<String>& ctx) {
                 if (any(ctx.type & CommentType::block)) {
-                    return make_comment_between(inout, ctx.begin, ctx.end, any(ctx.type & CommentType::nest));
+                    return make_comment_between(errmsg, inout, ctx.begin, ctx.end, any(ctx.type & CommentType::nest));
                 }
                 else if (any(ctx.type & CommentType::oneline)) {
-                    return make_comment_util_line(inout, ctx.begin);
+                    return make_comment_util_line(errmsg, inout, ctx.begin);
                 }
                 else if (any(ctx.type & CommentType::escape)) {
-                    return make_comment_with_escape(inout, ctx.begin, ctx.end, ctx.escape, any(ctx.type & CommentType::allow_line));
+                    return make_comment_with_escape(errmsg, inout, ctx.begin, ctx.end, ctx.escape, any(ctx.type & CommentType::allow_line));
                 }
                 return -1;
             }
 
             template <class String>
-            bool merge_each(wrap::shared_ptr<Token<String>>& inout) {
+            bool merge_each(const char*& errmsg, wrap::shared_ptr<Token<String>>& inout) {
                 return true;
             }
 
             template <class String, class Ctx, class... Ctxs>
-            bool merge_each(wrap::shared_ptr<Token<String>>& inout, Ctx&& ctx, Ctxs&&... other) {
-                auto res = merge_impl(inout, ctx);
+            bool merge_each(const char*& errmsg, wrap::shared_ptr<Token<String>>& inout, Ctx&& ctx, Ctxs&&... other) {
+                auto res = merge_impl(errmsg, inout, ctx);
                 if (res < 0) {
                     return false;
                 }
@@ -101,8 +101,9 @@ namespace utils {
 
         template <class String, class... Ctx>
         bool merge(wrap::shared_ptr<Token<String>>& input, Ctx&&... ctx) {
+            const char* errmsg = nullptr;
             for (auto inout = input; inout; inout = inout->next) {
-                if (!internal::merge_each(inout, std::forward<Ctx>(ctx)...)) {
+                if (!internal::merge_each(errmsg, inout, std::forward<Ctx>(ctx)...)) {
                     return false;
                 }
                 if (!inout) {
