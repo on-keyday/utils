@@ -103,7 +103,7 @@ namespace utils {
         bool merge(wrap::shared_ptr<Token<String>>& input, Ctx&&... ctx) {
             for (auto inout = input; inout; inout = inout->next) {
                 if (!internal::merge_each(inout, std::forward<Ctx>(ctx)...)) {
-                    return true;
+                    return false;
                 }
                 if (!inout) {
                     break;
