@@ -41,6 +41,17 @@ namespace utils {
             bool is_symbol_or_keyword_and_(wrap::shared_ptr<Token<String>>& p, const String& str) {
                 return (p->is(TokenKind::symbol) || p->is(TokenKind::keyword)) && p->has(str);
             }
+
+            template <class String>
+            int make_and_merge_comment(wrap::shared_ptr<Token<String>>& first, wrap::shared_ptr<Token<String>>& last, String& merged) {
+                auto comment = = wrap::make_shared<Comment<String>>();
+                comment->comment = std::move(merged);
+                first->next = comment;
+                comment->next = last;
+                first = last;
+                return 1;
+            }
+
         }  // namespace internal
 
         template <bool nest, class String>
@@ -51,7 +62,7 @@ namespace utils {
                 size_t count = 0;
                 auto kind = p->kind();
                 auto rule = [&](auto& p) {
-                    if constexpr (next) {
+                    if constexpr (nest) {
                         if (p->is(kind) && p->has(begin)) {
                             count++;
                         }
@@ -72,18 +83,16 @@ namespace utils {
                     p = lastp;
                     return 1;
                 }
-                auto comment = = wrap::make_shared<Comment<String>>();
-                comment->comment = std::move(merged);
-                p->next = comment;
-                comment->next = lastp;
-                p = lastp;
+
                 return 1;
             }
             return 0;
         }
 
         template <class String>
-        int make_comment_util_line(String& merged, wrap::shared_ptr<Token<String>>& p, const String& begin) {
+        int make_comment_util_line(wrap::shared_ptr<Token<String>>& p, const String& begin) {
+            if (internal::is_symbol_or_keyword_and_(p, begin)) {
+            }
         }
 
     }  // namespace tokenize
