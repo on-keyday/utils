@@ -87,7 +87,7 @@ namespace utils {
         }  // namespace internal
 
         template <template <class> class T, class String>
-        T<String> cast(wrap::shared_ptr<Token<String>>& ptr) {
+        T<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
             return internal::CastHelper<String, T<String>>::cast(ptr);
         }
 
