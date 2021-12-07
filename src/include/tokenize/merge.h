@@ -56,7 +56,7 @@ namespace utils {
                 if (res == 1) {
                     return true;
                 }
-                return merge_each(inout, std::forward<Ctxs>(other)...);
+                return merge_each(errmsg, inout, std::forward<Ctxs>(other)...);
             }
         }  // namespace internal
 
