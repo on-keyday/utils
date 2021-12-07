@@ -10,13 +10,15 @@ namespace utils {
     namespace syntax {
 
         template <class String>
-        struct ParseCtx {
+        struct ParseContext {
             Reader<String> r;
             wrap::internal::Pack err;
+            bool abort = false;
         };
 
         template <class String, template <class...> class Vec>
-        bool parse_attribute(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& elm) {
+        bool parse_attribute(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& elm) {
+            auto& r = ctx.r;
             if (!elm) {
                 return false;
             }
@@ -27,6 +29,10 @@ namespace utils {
                 }
                 if (e->has(attribute(Attribute::adjacent))) {
                     if (any(elm->attr & Attribute::adjacent)) {
+                        ctx.err << "error: attribute adjacent `" << attribute(Attribute::adjacent)
+                                << " is already exists\n";
+                        ctx.abort = true;
+                        return false;
                     }
                 }
             }
@@ -34,7 +40,8 @@ namespace utils {
         }
 
         template <class String, template <class...> class Vec>
-        bool parse_single(Reader<String>& r, wrap::shared_ptr<Element<String, Vec>>& single) {
+        bool parse_single(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& single) {
+            auto& r = ctx.r;
             auto e = r.read();
             if (!e) {
                 return false;
@@ -50,6 +57,7 @@ namespace utils {
                 single = s;
                 e = r.consume_get();
                 if (!e) {
+                    ctx.err << "unexpected EOF. expect \"";
                     return false;
                 }
                 if (!e->has("\"")) {
