@@ -28,9 +28,13 @@ namespace utils {
             bool merge_until(String& merged, wrap::shared_ptr<Token<String>>& root, wrap::shared_ptr<Token<String>>& last, F&& f) {
                 auto p = root->next;
                 size_t count = 0;
+                bool abort = false;
                 for (; p; p = p->next) {
-                    if (f(p, last, merged)) {
+                    if (f(p, last, merged, abort)) {
                         return true;
+                    }
+                    if (abort) {
+                        return false;
                     }
                     merged += p->to_string();
                 }
@@ -38,7 +42,7 @@ namespace utils {
             }
 
             template <class String>
-            bool is_symbol_or_keyword_and_(wrap::shared_ptr<Token<String>>& p, const String& str) {
+            bool is_symbol_or_keyword_and_(auto&& p, const String& str) {
                 return (p->is(TokenKind::symbol) || p->is(TokenKind::keyword)) && p->has(str);
             }
 
@@ -68,13 +72,13 @@ namespace utils {
 
         }  // namespace internal
 
-        template <bool nest, class String>
-        int make_comment_between(wrap::shared_ptr<Token<String>>& p, const String& begin, const String& end) {
+        template <class String>
+        int make_comment_between(wrap::shared_ptr<Token<String>>& p, const String& begin, const String& end, bool nest = false) {
             if (internal::is_symbol_or_keyword_and_(p, begin)) {
                 size_t count = 0;
                 auto kind = p->kind();
-                auto rule = [&](auto& p, auto& last, auto&) {
-                    if constexpr (nest) {
+                auto rule = [&](auto& p, auto& last, auto&, auto&) {
+                    if (nest) {
                         if (p->is(kind) && p->has(begin)) {
                             count++;
                         }
@@ -96,7 +100,7 @@ namespace utils {
         template <class String>
         int make_comment_util_line(wrap::shared_ptr<Token<String>>& p, const String& begin) {
             if (internal::is_symbol_or_keyword_and_(p, begin)) {
-                auto rule = [&](auto& p, auto& last, auto& merged) {
+                auto rule = [&](auto& p, auto& last, auto& merged, auto&) {
                     if (p->is(TokenKind::line)) {
                         last = p;
                         return true;
@@ -109,6 +113,21 @@ namespace utils {
                     return false;
                 };
                 return internal::merge_impl(p, rule);
+            }
+            return 0;
+        }
+
+        template <class String>
+        int make_comment_with_escape(wrap::shared_ptr<Token<String>>& p, const String& begin, const String& end, const String& escape, bool allowline = false) {
+            if (internal::is_symbol_or_keyword_and_(p, begin)) {
+                auto rule = [&](auto& p, auto& last, auto&, auto& abort) {
+                    if (internal::is_symbol_or_keyword_and_(p, end)) {
+                        if (internal::is_symbol_or_keyword_and_(p->prev, escape)) {
+                        }
+                    }
+                    return false;
+                };
+                return internal::merge_impl();
             }
         }
 
