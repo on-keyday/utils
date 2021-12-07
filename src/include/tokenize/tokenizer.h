@@ -29,6 +29,7 @@ namespace utils {
                 auto current = output;
                 auto to_next = [&](auto& tmp) {
                     current->next = tmp;
+                    tmp->prev = current.get();
                     current = tmp;
                 };
                 while (!input.eos()) {
