@@ -81,6 +81,23 @@ namespace utils {
             };
         }
 
+        template <class String>
+        internal::CommentMergeContext<String> escaped_comment(const String& begin, const String& escape, bool allow_line = false, const String& end = String()) {
+            internal::CommentType type = internal::CommentType::escape;
+            if (allow_line) {
+                type |= internal::CommentType::allow_line;
+            }
+            if (end.size() == 0) {
+                end = begin;
+            }
+            return internal::CommentMergeContext<String>{
+                .type = type,
+                .begin = begin,
+                .end = end,
+                .escape = escape,
+            };
+        }
+
         template <class String, class... Ctx>
         bool merge(wrap::shared_ptr<Token<String>>& input, Ctx&&... ctx) {
             for (auto inout = input; inout; inout = inout->next) {
