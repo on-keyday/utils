@@ -59,7 +59,7 @@ namespace utils {
             template <class String, class T, class... Args>
             constexpr bool is_not_separated(Sequencer<T>& seq, Args&&... args) {
                 String tmp;
-                return match_line(seq, nullptr) == LineKind::unknown && !match_space(seq) && !or_match(seq, tmp, std::forward<Args>(args)...)
+                return match_line(seq, nullptr) == LineKind::unknown && !match_space(seq) && !or_match(seq, tmp, std::forward<Args>(args)...);
             }
         }  // namespace internal
 
