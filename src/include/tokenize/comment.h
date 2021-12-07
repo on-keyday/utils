@@ -129,6 +129,7 @@ namespace utils {
                         if (internal::is_symbol_or_keyword_and_(p->prev, escape)) {
                             return false;
                         }
+                        last = p;
                         return true;
                     }
                     return false;
