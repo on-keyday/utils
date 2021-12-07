@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../wrap/lite/smart_ptr.h"
+#include "../wrap/lite/enum.h"
 
 namespace utils {
     namespace tokenize {
@@ -19,11 +20,26 @@ namespace utils {
             unknown,
         };
 
+        BEGIN_ENUM_STRING_MSG(TokenKind, token_kind)
+        ENUM_STRING_MSG(TokenKind::space, "space")
+        ENUM_STRING_MSG(TokenKind::line, "line")
+        ENUM_STRING_MSG(TokenKind::keyword, "keyword")
+        ENUM_STRING_MSG(TokenKind::context, "context_keyword")
+        ENUM_STRING_MSG(TokenKind::symbol, "symbol")
+        ENUM_STRING_MSG(TokenKind::identifier, "identifier")
+        ENUM_STRING_MSG(TokenKind::comment, "comment")
+        ENUM_STRING_MSG(TokenKind::root, "root")
+        END_ENUM_STRING_MSG("unknown")
+
         template <class String>
         struct Token {
             TokenKind kind = TokenKind::root;
             wrap::shared_ptr<Token<String>> next = nullptr;
             Token<String>* prev = nullptr;
+
+            const char* what() const {
+                return token_kind(kind);
+            }
 
             bool is(TokenKind k) const {
                 return kind == k;

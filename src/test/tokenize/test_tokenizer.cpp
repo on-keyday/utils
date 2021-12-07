@@ -7,7 +7,7 @@ using namespace utils;
 
 void test_tokenizer() {
     tokenize::Tokenizer<wrap::string> tokenizer;
-    decltype(tokenizer)::token_t token;
+    decltype(tokenizer)::token_t output;
 
     tokenizer.keyword.predef = {"def", "func", "int", "bool"};
     tokenizer.symbol.predef = {"(", ")", "->"};
@@ -21,4 +21,5 @@ void test_tokenizer() {
     Sequencer input(testword);
 
     tokenizer.tokenize(input, token);
+    token->to_string();
 }
