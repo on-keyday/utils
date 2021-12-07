@@ -57,6 +57,20 @@ namespace utils {
                 return current;
             }
 
+            token_t& consume_read() {
+                if (!consume()) {
+                    return current;
+                }
+                return read();
+            }
+
+            token_t& consume_get() {
+                if (!consume()) {
+                    return current;
+                }
+                return get();
+            }
+
             token_t& get() {
                 return current;
             }
