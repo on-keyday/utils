@@ -29,9 +29,7 @@ namespace utils {
                 }
                 if (e->has(attribute(Attribute::adjacent))) {
                     if (any(elm->attr & Attribute::adjacent)) {
-                        ctx.err << "error: attribute adjacent `" << attribute(Attribute::adjacent)
-                                << " is already exists\n";
-                        ctx.abort = true;
+                        ctx.err.packln("error: attribute adjacent `", attribute(Attribute::adjacent), " is already exists");
                         return false;
                     }
                 }
@@ -57,10 +55,11 @@ namespace utils {
                 single = s;
                 e = r.consume_get();
                 if (!e) {
-                    ctx.err << "unexpected EOF. expect \"";
+                    ctx.err.packln("unexpected EOF. expect \"");
                     return false;
                 }
                 if (!e->has("\"")) {
+                    ctx.err.packln("expect \" but token is ", e->to_string());
                     return false;
                 }
             }
