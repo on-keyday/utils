@@ -3,6 +3,7 @@
 #include "../../include/tokenize/tokenizer.h"
 
 #include "../../include/wrap/lite/string.h"
+#include "../../include/wrap/cout.h"
 using namespace utils;
 
 void test_tokenizer() {
@@ -20,6 +21,15 @@ void test_tokenizer() {
 
     Sequencer input(testword);
 
-    tokenizer.tokenize(input, token);
-    token->to_string();
+    auto& cout = wrap::cout_wrap();
+
+    auto result = tokenizer.tokenize(input, output);
+    assert(result && "expect ture but tokenize is failed");
+    for (auto p = output; p; p = p->next) {
+        cout << p->what() << ":`" << p->to_string() << "`\n";
+    }
+}
+
+int main() {
+    test_tokenizer();
 }
