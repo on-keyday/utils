@@ -63,6 +63,12 @@ namespace utils {
                     }
                     auto remove_first = p->next;
                     auto remove_last = lastmerged;
+                    auto comment = = wrap::make_shared<Comment<String>>();
+                    comment->comment = std::move(merged);
+                    p->next = comment;
+                    comment->next = lastp;
+                    p = lastp;
+                    return 1;
                 }
             }
             return 0;
