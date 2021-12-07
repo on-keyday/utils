@@ -87,13 +87,14 @@ namespace utils {
             if (allow_line) {
                 type |= internal::CommentType::allow_line;
             }
+            auto tmpend = end;
             if (end.size() == 0) {
-                end = begin;
+                tmpend = begin;
             }
             return internal::CommentMergeContext<String>{
                 .type = type,
                 .begin = begin,
-                .end = end,
+                .end = tmpend,
                 .escape = escape,
             };
         }
