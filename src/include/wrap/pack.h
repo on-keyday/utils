@@ -86,6 +86,10 @@ namespace utils {
                     impl.result += s;
                 }
 
+                void clear() {
+                    impl.result.clear();
+                }
+
                 template <class... Args>
                 Pack(Args&&... args) {
                     pack(std::forward<Args>(args)...);
