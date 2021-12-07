@@ -41,6 +41,16 @@ namespace utils {
                         return false;
                     }
                 }
+                else if (any(ctx.type & CommentType::escape)) {
+                    auto res = make_comment_with_escape(inout, ctx.begin, ctx.end, ctx.escape, any(ctx.type & CommentType::allow_line));
+                    if (res < 0) {
+                        return false;
+                    }
+                }
+                else {
+                    return false;
+                }
+                return true;
             }
         }  // namespace internal
 
