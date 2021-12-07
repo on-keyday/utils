@@ -129,8 +129,9 @@ namespace utils {
                     }
                     return false;
                 };
-                return internal::merge_impl();
+                return internal::merge_impl(p, rule);
             }
+            return 0;
         }
 
     }  // namespace tokenize
