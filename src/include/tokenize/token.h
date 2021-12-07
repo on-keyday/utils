@@ -34,10 +34,10 @@ namespace utils {
         template <class String>
         struct Token {
            protected:
-            TokenKind kind = TokenKind::root;
+            TokenKind kind_ = TokenKind::root;
 
             constexpr Token(TokenKind kind)
-                : kind(kind) {}
+                : kind_(kind) {}
 
            public:
             wrap::shared_ptr<Token<String>> next = nullptr;
@@ -45,8 +45,12 @@ namespace utils {
 
             constexpr Token() {}
 
+            TokenKind kind() const {
+                return kind_;
+            }
+
             const char* what() const {
-                return token_kind(kind);
+                return token_kind(kind_);
             }
 
             bool is(TokenKind k) const {
