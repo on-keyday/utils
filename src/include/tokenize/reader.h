@@ -22,7 +22,7 @@ namespace utils {
             }
 
            protected:
-            static bool default_ignore(token_t& tok) {
+            static bool default_ignore(const token_t& tok) {
                 return tok->is(TokenKind::root) ||
                        tok->is(TokenKind::space) ||
                        tok->is(TokenKind::line) ||
@@ -30,7 +30,7 @@ namespace utils {
                        tok->is(TokenKind::comment);
             }
 
-            virtual bool is_ignore() {
+            virtual bool is_ignore() const {
                 return default_ignore(current);
             }
 
