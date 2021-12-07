@@ -48,7 +48,7 @@ namespace utils {
 
             template <class String>
             int make_and_merge_comment(wrap::shared_ptr<Token<String>>& first, wrap::shared_ptr<Token<String>>& last, String& merged, bool oneline) {
-                auto comment = = wrap::make_shared<Comment<String>>();
+                auto comment = wrap::make_shared<Comment<String>>();
                 comment->comment = std::move(merged);
                 first->next = comment;
                 comment->next = last;
