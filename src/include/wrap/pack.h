@@ -89,6 +89,7 @@ namespace utils {
 
                 Pack&& operator<<(const path_string& s) {
                     impl.result += s;
+                    return std::move(*this);
                 }
 
                 void clear() {

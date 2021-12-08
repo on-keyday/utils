@@ -19,7 +19,7 @@ namespace utils {
             number,
         };
 
-        constexpr char* keyword_str[] = {
+        constexpr const char* keyword_str[] = {
             "ID",        // identifier
             "KEYWORD",   // any keyword
             "SYMBOL",    // any symbol
