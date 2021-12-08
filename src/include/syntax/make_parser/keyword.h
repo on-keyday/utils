@@ -1,6 +1,7 @@
 /*license*/
 
 // keyword - define syntax keyword
+#pragma once
 
 namespace utils {
     namespace syntax {
