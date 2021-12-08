@@ -222,6 +222,7 @@ namespace utils {
                     ctx.err.packln("error: expect identifier but token is `", e->what(), "` (symbol `", e->to_string(), "`)");
                     return false;
                 }
+                segname = e->to_string();
                 e = r.consume_read();
                 if (!e) {
                     ctx.err.packln("error: expect `:=` but token is EOF");
@@ -231,6 +232,8 @@ namespace utils {
                     ctx.err.packln("error: expect `:=` but token is `", e->what(), "` (symbol `", e->to_string(), "`)");
                     return false;
                 }
+                r.consume();
+                return parse_or(ctx, group, false);
             }
 
         }  // namespace internal
