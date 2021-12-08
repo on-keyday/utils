@@ -30,7 +30,7 @@ namespace utils {
                 return default_ignore(current);
             }
 
-            virtual void consume_hook(bool) {}
+            virtual void consume_hook(bool toroot) {}
 
             void consume_impl() {
                 current = current->next;
