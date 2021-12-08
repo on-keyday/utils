@@ -12,7 +12,7 @@ using namespace utils;
 void test_make_parser() {
     char8_t teststr[] =
         u8R"(
-        ROOT:="Hey"  [WHAT*]?!&*
+        ROOT:="Hey"  [WHAT*]?!&* ID STRING
         WHAT:="What" [NAME|"hey"]  "?"
         NAME
         :=
