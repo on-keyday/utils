@@ -12,6 +12,9 @@ namespace utils {
         tknz::Tokenizer<String, Vec> make_tokenizer() {
             tknz::Tokenizer<String, Vec> ret;
             for (auto i = 0; i < sizeof(keyword_str) / sizeof(keyword_str[0]); i++) {
+                String keyword;
+                utf::convert(keyword_str[i], keyword);
+                ret.keyword.predef.push_back(std::move(keyword));
             }
         }
     }  // namespace syntax
