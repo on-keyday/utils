@@ -67,7 +67,7 @@ namespace utils {
                     output.pack("^");
                 }
                 if (!p) {
-                    output.pack("<EOF");
+                    output.pack(" EOF");
                 }
                 output.packln();
             }
