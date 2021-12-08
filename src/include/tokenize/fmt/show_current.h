@@ -26,7 +26,14 @@ namespace utils {
                         beginline = p->next;
                     }
                 }
-                output.pack(std::setw(6), line, "|");
+                auto shift = 0;
+                if (line < 1000) {
+                    shift = 3;
+                }
+                else if (line < 100000) {
+                    shift = 6;
+                }
+                output.pack(std::setw(shift), line, "|");
                 if (!beginline) {
                     output.pack("[EOF]");
                     return;
@@ -47,7 +54,7 @@ namespace utils {
                     output.pack(str);
                 }
                 output.packln();
-                for (auto i = 0; i < currentoffset + 6; i++) {
+                for (auto i = 0; i < currentoffset + shift; i++) {
                     output.pack(" ");
                 }
                 for (auto i = 0; i < currentlen; i++) {
