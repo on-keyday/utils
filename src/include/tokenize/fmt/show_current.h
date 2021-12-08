@@ -41,7 +41,8 @@ namespace utils {
                 size_t offset = 0;
                 size_t currentoffset = 0;
                 size_t currentlen = 0;
-                for (auto p = beginline; p; p = p->next) {
+                auto p = beginline;
+                for (; p; p = p->next) {
                     if (p->is(TokenKind::line)) {
                         break;
                     }
@@ -52,6 +53,11 @@ namespace utils {
                         currentlen = str.size();
                     }
                     output.pack(str);
+                }
+                if (!p) {
+                    currentoffset = offset + 1;
+                    currentlen = 5;
+                    output.pack("[EOF]");
                 }
                 output.packln();
                 for (auto i = 0; i < currentoffset + shift; i++) {
