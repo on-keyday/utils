@@ -151,6 +151,10 @@ namespace utils {
                 base = 16;
                 i = 2;
             }
+            else if (helper::starts_with(pt.str, "0b") || helper::starts_with(pt.str, "0B")) {
+                base = 2;
+                i = 2;
+            }
             int allowed = false;
             check_int_str(pt.str, i, base, allowed);
             if (pt.str.size() == allowed) {
@@ -175,7 +179,7 @@ namespace utils {
             check_int_str(pt.str, i, base, allowed);
             if (pt.str.size() == allowed) {
                 if (pt.sign) {
-                    report(&r, pt.exists(), v, "parser is broken");
+                    report("parser is broken");
                     return -1;
                 }
                 if (pt.afterdot) {
@@ -185,7 +189,7 @@ namespace utils {
                     r.current = pt.dot->get_next();
                 }
                 else {
-                    report(&r, pt.exists(), v, "parser is broken");
+                    report("parser is broken");
                     return -1;
                 }
                 ctx.r.count = pt.stack;
@@ -196,13 +200,13 @@ namespace utils {
             }
             if (base == 16) {
                 if (pt.str[allowed] != 'p' && pt.str[allowed] != 'P') {
-                    report(&r, pt.exists(), v, "invalid hex float format. token is " + pt.str);
+                    report("invalid hex float format. token is " + pt.str);
                     return 0;
                 }
             }
             else {
                 if (pt.str[allowed] != 'e' && pt.str[allowed] != 'E') {
-                    report(&r, pt.exists(), v, "invalid float format. token is " + pt.str);
+                    report("invalid float format. token is " + pt.str);
                     return 0;
                 }
             }
@@ -210,19 +214,19 @@ namespace utils {
             if (pt.str.size() > i) {
                 if (pt.str[i] == '+' || pt.str[i] == '-') {
                     if (!pt.sign) {
-                        report(&r, pt.exists(), v, "parser is broken");
+                        report("parser is broken");
                         return -1;
                     }
                     i++;
                 }
             }
             if (pt.str.size() <= i) {
-                report(&r, pt.exists(), v, "invalid float format. token is " + pt.str);
+                report("invalid float format. token is " + pt.str);
                 return 0;
             }
             check_int_str(pt.str, i, 10, allowed);
             if (pt.str.size() != allowed) {
-                report(&r, pt.exists(), v, "invalid float format. token is " + pt.str);
+                report("invalid float format. token is " + pt.str);
                 return 0;
             }
             if (pt.aftersign) {
