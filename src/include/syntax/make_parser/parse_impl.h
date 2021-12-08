@@ -129,6 +129,7 @@ namespace utils {
                     else {
                         ctx.err.packln(s->tok->to_string());
                     }
+                    return false;
                 }
                 return true;
             }
