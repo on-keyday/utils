@@ -1,6 +1,7 @@
 /*license*/
 
 #include "../../tokenize/tokenizer.h"
+#include "../../tokenize/merge.h"
 #include "keyword.h"
 #include "attribute.h"
 
@@ -24,11 +25,26 @@ namespace utils {
             cvt_push("|", ret.symbol.predef);
             cvt_push("#", ret.symbol.predef);
             cvt_push("\"", ret.symbol.predef);
+            cvt_push("\\", ret.symbol.predef);
             cvt_push(attribute(Attribute::adjacent), ret.symbol.predef);
             cvt_push(attribute(Attribute::fatal), ret.symbol.predef);
             cvt_push(attribute(Attribute::ifexists), ret.symbol.predef);
             cvt_push(attribute(Attribute::repeat), ret.symbol.predef);
             return ret;
+        }
+
+        template <class T, class String, template <class...> class Vec = wrap::vector>
+        bool tokenize_and_merge(Sequencer<T>& input, wrap::shared_ptr<tknz::Token<String>>& output, const char** errmsg = nullptr) {
+            auto tokenizer = make_tokenizer<String, Vec>();
+            auto result = tokenizer.tokenize(input, output);
+            assert(result && "expect true but tokenize failed");
+            const char* err = nullptr;
+            auto res = tknz::merge(err, output, tknz::escaped_comment("\"", "\\"),
+                                   tknz::line_comment("#"));
+            if (errmsg) {
+                *errmsg = err;
+            }
+            return res;
         }
     }  // namespace syntax
 }  // namespace utils
