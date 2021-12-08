@@ -98,6 +98,7 @@ namespace utils {
 
         static bool io_init() {
 #ifdef _WIN32
+            change_console_mode();
             if (_setmode(_fileno(stdin), stdinmode) == -1) {
                 //err = "error:text input mode change failed";
                 return false;
