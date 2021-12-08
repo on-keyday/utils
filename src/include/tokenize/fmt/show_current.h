@@ -57,7 +57,7 @@ namespace utils {
                 if (!p) {
                     currentoffset = offset + 1;
                     currentlen = 1;
-                    output.pack("[EOF]");
+                    //output.pack("[EOF]");
                 }
                 output.packln();
                 for (auto i = 0; i < currentoffset + shift; i++) {
@@ -65,6 +65,9 @@ namespace utils {
                 }
                 for (auto i = 0; i < currentlen; i++) {
                     output.pack("^");
+                }
+                if (!p) {
+                    output.pack("EOF");
                 }
                 output.packln();
             }
