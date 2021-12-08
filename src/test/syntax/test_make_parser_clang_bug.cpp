@@ -14,7 +14,9 @@ void test_make_parser() {
         u8R"(
         ROOT:="Hey"  [WHAT*]?!&*
         WHAT:="What" [NAME|"hey"]  "?"
-        NAME:="your""name"
+        NAME
+        :=
+        "your""name"
         # HEY:= boke
         )";
     Sequencer input(teststr);
