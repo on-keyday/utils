@@ -40,6 +40,8 @@ namespace utils {
         extern int stdoutmode;
         extern int stderrmode;
         extern bool sync_stdio;
+        extern bool out_virtual_terminal;
+        extern bool in_virtual_terminal;
 
         UtfOut& cout_wrap();
         UtfOut& cerr_wrap();

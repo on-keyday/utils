@@ -4,18 +4,22 @@
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
+#include "Windows.h"
 #else
 #define _O_U8TEXT 0
 #endif
 
 namespace utils {
     namespace wrap {
+        static thread::LiteLock gllock;
         static bool initialized = false;
 
         int stdinmode = _O_U8TEXT;
         int stdoutmode = _O_U8TEXT;
         int stderrmode = _O_U8TEXT;
         bool sync_stdio = false;
+        bool out_virtual_terminal = false;
+        bool in_virtual_terminal = false;
 
         static ::FILE* is_std(ostream& out) {
             auto addr = std::addressof(out);
@@ -39,6 +43,58 @@ namespace utils {
             }
             return nullptr;
         }
+
+#ifdef _WIN32
+        static bool change_output_mode(auto handle) {
+            ::DWORD original;
+            if (!GetConsoleMode(handle, &original)) {
+                return false;
+            }
+            ::DWORD require = ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN;
+            if (!SetConsoleMode(handle, original | require)) {
+                require = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+                if (!SetConsoleMode(handle, original | require)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        static bool change_input_mode(auto handle) {
+            ::DWORD original;
+            if (!GetConsoleMode(handle, &original)) {
+                return false;
+            }
+            ::DWORD require = ENABLE_VIRTUAL_TERMINAL_INPUT;
+            if (!SetConsoleMode(handle, original | require)) {
+                return false;
+            }
+            return true;
+        }
+
+        static bool change_console_mode() {
+            auto outhandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
+            auto inhandle = ::GetStdHandle(STD_INPUT_HANDLE);
+            auto errhandle = ::GetStdHandle(STD_ERROR_HANDLE);
+            if (outhandle == INVALID_HANDLE_VALUE || inhandle == INVALID_HANDLE_VALUE ||
+                errhandle == INVALID_HANDLE_VALUE) {
+                return false;
+            }
+            if (out_virtual_terminal) {
+                auto res = change_output_mode(outhandle) && change_output_mode(errhandle);
+                if (!res) {
+                    return false;
+                }
+            }
+            if (in_virtual_terminal) {
+                auto res = change_input_mode(inhandle);
+                if (!res) {
+                    return false;
+                }
+            }
+            return true;
+        }
+#endif
 
         static bool io_init() {
 #ifdef _WIN32
@@ -68,8 +124,12 @@ namespace utils {
         void UtfOut::write(const path_string& p) {
             if (std_handle) {
                 if (!initialized) {
-                    auto result = io_init();
-                    assert(result && "io init failed");
+                    gllock.lock();
+                    if (!initialized) {
+                        auto result = io_init();
+                        assert(result && "io init failed");
+                    }
+                    gllock.unlock();
                 }
                 ::fwrite(p.c_str(), sizeof(path_char), p.size(), std_handle);
                 ::fflush(std_handle);
