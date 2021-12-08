@@ -29,7 +29,7 @@ namespace utils {
         template <class String>
         internal::ParseContext<String> make_parse_context(wrap::shared_ptr<tknz::Token<String>> p) {
             return internal::ParseContext<String>{
-                Reader<String>(std::move(p)),
+                Reader<String>(p),
             };
         }
     }  // namespace syntax
