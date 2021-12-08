@@ -25,5 +25,12 @@ namespace utils {
             }
             return true;
         }
+
+        template <class String>
+        internal::ParseContext<String> make_parse_context(wrap::shared_ptr<tknz::Token<String>> p) {
+            return internal::ParseContext<String>{
+                Reader(std::move(p)),
+            };
+        }
     }  // namespace syntax
 }  // namespace utils
