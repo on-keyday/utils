@@ -76,7 +76,8 @@ namespace utils {
             auto outhandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
             auto inhandle = ::GetStdHandle(STD_INPUT_HANDLE);
             auto errhandle = ::GetStdHandle(STD_ERROR_HANDLE);
-            if (outhandle == INVALID_HANDLE_VALUE || inhandle == INVALID_HANDLE_VALUE ||
+            if (!outhandle || !inhandle || !errhandle ||
+                outhandle == INVALID_HANDLE_VALUE || inhandle == INVALID_HANDLE_VALUE ||
                 errhandle == INVALID_HANDLE_VALUE) {
                 return false;
             }

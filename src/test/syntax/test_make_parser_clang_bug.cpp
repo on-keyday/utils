@@ -10,6 +10,7 @@
 using namespace utils;
 
 void test_make_parser() {
+    wrap::out_virtual_terminal = true;
     char8_t teststr[] =
         u8R"(
         ROOT:="Hey"  [WHAT*]?!&* ID STRING
@@ -30,6 +31,7 @@ void test_make_parser() {
     auto& cout = wrap::cout_wrap();
     cout << ctx.err.pack();
     assert(res && "expect true but parse syntax failed");
+    cout << ctx.err.pack("\x1b]0;google\x07", "\x1B[2J\x1B[H");
 }
 
 int main() {
