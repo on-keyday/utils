@@ -81,6 +81,7 @@ namespace utils {
                 errhandle == INVALID_HANDLE_VALUE) {
                 return false;
             }
+
             if (out_virtual_terminal) {
                 auto res = change_output_mode(outhandle) && change_output_mode(errhandle);
                 if (!res) {
