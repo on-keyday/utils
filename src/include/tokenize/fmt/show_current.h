@@ -34,10 +34,6 @@ namespace utils {
                     shift = 7;
                 }
                 output.pack(std::setw(shift), line, "|");
-                if (!beginline) {
-                    output.pack("[EOF]");
-                    return;
-                }
                 size_t offset = 0;
                 size_t currentoffset = 0;
                 size_t currentlen = 0;

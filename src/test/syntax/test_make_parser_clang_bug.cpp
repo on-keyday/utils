@@ -16,7 +16,7 @@ void test_make_parser() {
         WHAT:="What" [NAME|"hey"]  "?"
         NAME:="your""name"
         # HEY:= boke
-    )";
+        )";
     Sequencer input(teststr);
     wrap::shared_ptr<tokenize::Token<wrap::string>> output;
     auto res = syntax::tokenize_and_merge(input, output);
