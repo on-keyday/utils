@@ -52,7 +52,7 @@ namespace utils {
             }
 
             token_t& read() {
-                if (current && is_ignore()) {
+                while (current && is_ignore()) {
                     consume_impl();
                 }
                 return current;
