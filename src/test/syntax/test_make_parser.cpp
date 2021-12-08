@@ -8,15 +8,16 @@
 using namespace utils;
 
 void test_make_parser() {
-    auto tokenizer = utils::syntax::make_tokenizer<wrap::string>();
-    decltype(tokenizer)::token_t output;
+    wrap::shared_ptr<tokenize::Token<wrap::string>> output;
     char8_t teststr[] =
         u8R"(
         ROOT:="Hey"  [WHAT*]?
         WHAT:="What" [NAME|"hey"]  "?"
         NAME:="your""name"
+        #HEY:= boke
     )";
     Sequencer input(teststr);
-    auto result = tokenizer.tokenize(input, output);
-    assert(result && "expect true but tokenize is failed");
+
+    auto res = syntax::tokenize_and_merge(input, output);
+    assert(res && "expect true but tokenize and merge failed");
 }
