@@ -10,6 +10,8 @@
 
 #include <cctype>
 
+#include "../../helper/strutil.h"
+
 namespace utils {
     namespace syntax {
 
@@ -141,7 +143,7 @@ namespace utils {
                 report("invalid float number format");
                 return 0;
             }
-            if (pt.str.starts_with("0x") || pt.str.starts_with("0X")) {
+            if (helper::starts_with(pt.str, "0x") || helper::starts_with(pt.str, "0X")) {
                 if (pt.str.size() >= 3 && pt.str[2] == '.' && !pt.afterdot) {
                     report("invalid hex float fromat. token is " + pt.str);
                     return 0;
