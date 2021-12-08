@@ -101,6 +101,7 @@ namespace utils {
                         ctx.err.packln("expect \" but token is ", e->to_string());
                         return false;
                     }
+                    r.consume();
                 }
                 else if (e->is(tknz::TokenKind::keyword)) {
                     s = wrap::make_shared<Single<String, Vec>>();
@@ -196,8 +197,6 @@ namespace utils {
                             return false;
                         }
                         if (!parse_attribute(ctx, elm)) {
-                            // when `ctx.err` was `ctx`
-                            // clang compiler frontend crashed
                             ctx.err.packln("note: at parsing []");
                             return false;
                         }
