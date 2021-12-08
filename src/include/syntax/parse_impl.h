@@ -209,6 +209,30 @@ namespace utils {
                 group = gr;
                 return true;
             }
+
+            template <class String, template <class...> class Vec>
+            bool parse_a_line(ParseContext<String>& ctx, String& segname, wrap::shared_ptr<Element<String, Vec>>& group) {
+                auto& r = ctx.r;
+                r.ignore_line = true;
+                auto e = r.read();
+                if (!e) {
+                    return false;
+                }
+                if (!e->is(tknz::TokenKind::identifier)) {
+                    ctx.err.packln("error: expect identifier but token is `", e->what(), "` (symbol `", e->to_string(), "`)");
+                    return false;
+                }
+                e = r.consume_read();
+                if (!e) {
+                    ctx.err.packln("error: expect `:=` but token is EOF");
+                    return false;
+                }
+                if (!e->has(":=")) {
+                    ctx.err.packln("error: expect `:=` but token is `", e->what(), "` (symbol `", e->to_string(), "`)");
+                    return false;
+                }
+            }
+
         }  // namespace internal
     }      // namespace syntax
 }  // namespace utils
