@@ -17,10 +17,6 @@ namespace utils {
             constexpr Reader(token_t& v)
                 : root(v), current(v) {}
 
-            void seek_root() {
-                current = root;
-            }
-
            protected:
             static bool default_ignore(const token_t& tok) {
                 return tok->is(TokenKind::root) ||
@@ -34,14 +30,19 @@ namespace utils {
                 return default_ignore(current);
             }
 
-            virtual void consume_hook() {}
+            virtual void consume_hook(bool) {}
 
             void consume_impl() {
                 current = current->next;
-                consume_hook();
+                consume_hook(false);
             }
 
            public:
+            void seek_root() {
+                current = root;
+                consume_hook(true);
+            }
+
             bool consume() {
                 if (!current) {
                     return false;
