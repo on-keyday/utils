@@ -48,23 +48,23 @@ namespace utils {
         template <class String, template <class...> class Vec>
         void get_floatpoint(Reader<String>& cr, wrap::shared_ptr<Element<String, Vec>>& v, FloatReadPoint<String>& pt) {
             if (!any(v->attr & Attribute::adjacent)) {
-                cr.Read();
+                cr.read();
             }
             while (true) {
-                auto e = cr.Get();
+                auto e = cr.get();
                 if (!e) {
                     break;
                 }
                 if (!pt.dot && !pt.sign && e->has_(".")) {
                     pt.dot = e;
                     pt.str += e->to_string();
-                    cr.Consume();
+                    cr.consume();
                     continue;
                 }
                 if (!pt.sign && (e->has_("+") || e->has_("-"))) {
                     pt.sign = e;
                     pt.str += e->to_string();
-                    cr.Consume();
+                    cr.consume();
                     continue;
                 }
                 if (!e->is_(tknz::TokenKind::identifier)) {
@@ -83,7 +83,7 @@ namespace utils {
                     break;
                 }
                 pt.str += e->to_string();
-                cr.Consume();
+                cr.consume();
             }
             pt.stack = cr.count;
         }
