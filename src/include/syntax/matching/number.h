@@ -155,6 +155,10 @@ namespace utils {
                 base = 2;
                 i = 2;
             }
+            else if (helper::starts_with(pt.str, "0o") || helper::starts_with(pt.str, "0O")) {
+                base = 8;
+                i = 2;
+            }
             int allowed = false;
             check_int_str(pt.str, i, base, allowed);
             if (pt.str.size() == allowed) {
