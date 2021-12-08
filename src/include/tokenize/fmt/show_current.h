@@ -47,7 +47,7 @@ namespace utils {
                     output.pack(str);
                 }
                 output.packln();
-                for (auto i = 0; i < currentoffset + 7; i++) {
+                for (auto i = 0; i < currentoffset + 6; i++) {
                     output.pack(" ");
                 }
                 for (auto i = 0; i < currentlen; i++) {
