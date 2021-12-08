@@ -155,19 +155,19 @@ namespace utils {
             check_int_str(pt.str, i, base, allowed);
             if (pt.str.size() == allowed) {
                 if (!pt.beforedot || pt.dot || pt.sign) {
-                    report(&r, pt.exists(), v, "parser is broken");
+                    report("parser is broken");
                     return -1;
                 }
-                r.current = pt.beforedot->get_next();
-                r.count = pt.stack;
-                if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
+                ctx.r.current = pt.beforedot->get_next();
+                ctx.r.count = pt.stack;
+                /*if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
                     return -1;
-                }
+                }*/
                 return 1;
             }
             if (pt.str[allowed] == '.') {
                 if (!pt.dot) {
-                    report(&r, pt.exists(), v, "parser is broken");
+                    report("parser is broken");
                     return -1;
                 }
                 i = allowed + 1;
@@ -188,10 +188,10 @@ namespace utils {
                     report(&r, pt.exists(), v, "parser is broken");
                     return -1;
                 }
-                r.count = pt.stack;
-                if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
+                ctx.r.count = pt.stack;
+                /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                     return -1;
-                }
+                }*/
                 return 1;
             }
             if (base == 16) {
@@ -235,13 +235,13 @@ namespace utils {
                 r.current = pt.beforedot->get_next();
             }
             else {
-                report(&r, pt.exists(), v, "parser is broken");
+                report("parser is broken");
                 return -1;
             }
-            r.count = pt.stack;
-            if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
+            ctx.r.count = pt.stack;
+            /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                 return -1;
-            }
+            }*/
             return true;
         }
     }  // namespace syntax
