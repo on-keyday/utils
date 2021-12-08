@@ -24,7 +24,13 @@ namespace utils {
                 auto err = [&](auto& name, auto e) {
                     ctx.err.packln("error: attribute `", name, "` (symbol `", attribute(e), "`) is already exists.");
                 };
+                // when below here `auto e = r.read()` is not exist, clang crash at parsing lambda
+                auto e = r.read();
                 auto checK_attr = [&](auto name, auto kind) {
+                    // when `auto e=r.read()` is not exist
+                    // below `e->has(attribute(kind))` must become compile error
+                    // because `e` is not defined,
+                    // but clang is crash.
                     if (e->has(attribute(kind))) {
                         if (any(elm->attr & kind)) {
                             err(name, kind);
@@ -36,29 +42,29 @@ namespace utils {
                     return 0;
                 };
                 while (true) {
-                    auto e = r.read();
+                    e = r.read();
                     if (!e) {
                         break;
                     }
-                    if (auto res = checK_attr("adjacent", Attribute::adjacent)) {
+                    if (auto res = checK_attr("adjacent", Attribute::adjacent); res) {
                         if (res < 0) {
                             return false;
                         }
                         continue;
                     }
-                    else if (res = checK_attr("fatal", Attribute::fatal)) {
+                    else if (res = checK_attr("fatal", Attribute::fatal); res) {
                         if (res < 0) {
                             return false;
                         }
                         continue;
                     }
-                    else if (res = checK_attr("ifexists", Attribute::ifexists)) {
+                    else if (res = checK_attr("ifexists", Attribute::ifexists); res) {
                         if (res < 0) {
                             return false;
                         }
                         continue;
                     }
-                    else if (res = checK_attr("repeat", Attribute::repeat)) {
+                    else if (res = checK_attr("repeat", Attribute::repeat); res) {
                         if (res < 0) {
                             return false;
                         }
@@ -190,7 +196,9 @@ namespace utils {
                             return false;
                         }
                         if (!parse_attribute(ctx, elm)) {
-                            ctx.packln("note: at parsing []");
+                            // when `ctx.err` was `ctx`
+                            // clang compiler frontend crashed
+                            ctx.err.packln("note: at parsing []");
                             return false;
                         }
                     }

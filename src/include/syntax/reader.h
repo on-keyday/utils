@@ -24,7 +24,7 @@ namespace utils {
                 return this->current->has("#") || this->default_ignore(this->current);
             }
 
-            void consume_hook() override {
+            void consume_hook(bool toroot) override {
                 count++;
             }
 

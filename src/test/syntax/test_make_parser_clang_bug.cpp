@@ -19,7 +19,11 @@ void test_make_parser() {
     wrap::shared_ptr<tokenize::Token<wrap::string>> output;
     auto res = syntax::tokenize_and_merge(input, output);
     assert(res && "expect true but tokenize and merge failed");
-    utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>> result;
+    wrap::map<wrap::string, utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>>> result;
     auto ctx = syntax::make_parse_context(output);
     syntax::parse(ctx, result);
+}
+
+int main() {
+    test_make_parser();
 }
