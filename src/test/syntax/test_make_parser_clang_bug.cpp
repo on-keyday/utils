@@ -2,6 +2,7 @@
 
 #include "../../include/syntax/make_parser/parse.h"
 #include "../../include/syntax/make_parser/tokenizer.h"
+#include "../../include/tokenize/fmt/show_current.h"
 
 #include "../../include/wrap/lite/string.h"
 #include "../../include/wrap/lite/map.h"
@@ -23,6 +24,7 @@ void test_make_parser() {
     wrap::map<wrap::string, utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>>> result;
     auto ctx = syntax::make_parse_context(output);
     res = syntax::parse(ctx, result);
+    tokenize::fmt::show_current(ctx.r, ctx.err);
     auto& cout = wrap::cout_wrap();
     cout << ctx.err.pack();
     assert(res && "expect true but parse syntax failed");

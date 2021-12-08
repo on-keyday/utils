@@ -7,6 +7,8 @@
 #include "../../wrap/pack.h"
 #include "../cast.h"
 
+#include <iomanip>
+
 namespace utils {
     namespace tokenize {
         namespace fmt {
@@ -24,7 +26,7 @@ namespace utils {
                         beginline = p->next;
                     }
                 }
-                output.pack(line, "|");
+                output.pack(std::setw(5), line, "|");
                 if (!beginline) {
                     output.pack("[EOF]");
                     return;
@@ -37,11 +39,11 @@ namespace utils {
                         break;
                     }
                     auto str = p->to_string();
+                    offset += str.size();
                     if (p == current) {
                         currentoffset = offset;
                         currentlen = str.size();
                     }
-                    offset += str.size();
                     output.pack(str);
                 }
                 output.packln();
