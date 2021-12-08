@@ -12,13 +12,18 @@ namespace utils {
                 String segname;
                 wrap::shared_ptr<Element<String, Vec>> group;
                 if (!internal::parse_a_line(ctx, segname, group)) {
+                    if (ctx.err.empty()) {
+                        ctx.err.packln("error: unhandled error occured");
+                    }
                     return false;
                 }
                 auto res = result.insert({segname, group});
                 if (!std::get<1>(res)) {
+                    ctx.err.packln("error: element `", segname, "` is already exists");
                     return false;
                 }
             }
+            return true;
         }
     }  // namespace syntax
 }  // namespace utils
