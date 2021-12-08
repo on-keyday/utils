@@ -4,7 +4,7 @@
 #include "../../include/syntax/make_parser/tokenizer.h"
 
 #include "../../include/wrap/lite/string.h"
-
+#include "../../include/wrap/lite/map.h"
 using namespace utils;
 
 void test_make_parser() {
@@ -13,10 +13,13 @@ void test_make_parser() {
         ROOT:="Hey"  [WHAT*]?
         WHAT:="What" [NAME|"hey"]  "?"
         NAME:="your""name"
-        #HEY:= boke
+        # HEY:= boke
     )";
     Sequencer input(teststr);
     wrap::shared_ptr<tokenize::Token<wrap::string>> output;
     auto res = syntax::tokenize_and_merge(input, output);
     assert(res && "expect true but tokenize and merge failed");
+    utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>> result;
+    auto ctx = syntax::make_parse_context(output);
+    syntax::parse(ctx, result);
 }
