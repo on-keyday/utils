@@ -169,6 +169,10 @@ namespace utils {
                 }*/
                 return 1;
             }
+            if (base == 2 || base == 8) {
+                report("expect binary or ocetet integer but token is " + pt.str;);
+                return 0;
+            }
             if (pt.str[allowed] == '.') {
                 if (!pt.dot) {
                     report("parser is broken");
