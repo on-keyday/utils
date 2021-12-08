@@ -36,6 +36,12 @@ namespace utils {
                 ret.count = count;
                 return ret;
             }
+
+            void seek_to(Reader& r) {
+                ignore_line = r.ignore_line;
+                count = r.count;
+                this->current = r.current;
+            }
         };
     }  // namespace syntax
 }  // namespace utils
