@@ -25,7 +25,7 @@ void test_make_parser() {
     assert(res && "expect true but tokenize and merge failed");
     wrap::map<wrap::string, utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>>> result;
     auto ctx = syntax::make_parse_context(output);
-    res = syntax::parse(ctx, result);
+    res = syntax::parse<wrap::string, wrap::vector, wrap::map>(ctx, result);
     tokenize::fmt::show_current(ctx.r, ctx.err);
     auto& cout = wrap::cout_wrap();
     cout << ctx.err.pack();
