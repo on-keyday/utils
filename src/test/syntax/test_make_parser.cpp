@@ -8,7 +8,6 @@
 using namespace utils;
 
 void test_make_parser() {
-    wrap::shared_ptr<tokenize::Token<wrap::string>> output;
     char8_t teststr[] =
         u8R"(
         ROOT:="Hey"  [WHAT*]?
@@ -17,7 +16,7 @@ void test_make_parser() {
         #HEY:= boke
     )";
     Sequencer input(teststr);
-
+    wrap::shared_ptr<tokenize::Token<wrap::string>> output;
     auto res = syntax::tokenize_and_merge(input, output);
     assert(res && "expect true but tokenize and merge failed");
 }
