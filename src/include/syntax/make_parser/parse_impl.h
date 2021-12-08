@@ -242,7 +242,9 @@ namespace utils {
                 }
                 r.consume_read();
                 r.ignore_line = false;
-                return parse_or(ctx, group, false);
+                auto res = parse_or(ctx, group, false);
+                r.ignore_line = true;
+                return res;
             }
 
         }  // namespace internal
