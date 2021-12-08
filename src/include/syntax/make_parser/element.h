@@ -4,7 +4,7 @@
 #pragma once
 
 #include "attribute.h"
-#include "reader.h"
+#include "../reader.h"
 
 namespace utils {
     namespace syntax {
