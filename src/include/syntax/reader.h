@@ -21,7 +21,7 @@ namespace utils {
                 if (!ignore_line && this->current->is(tknz::TokenKind::line)) {
                     return false;
                 }
-                return this->current->has("#") || default_ignore(this->current);
+                return this->current->has("#") || this->default_ignore(this->current);
             }
 
             void consume_hook() override {
