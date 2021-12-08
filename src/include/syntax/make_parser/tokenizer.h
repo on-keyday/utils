@@ -1,5 +1,7 @@
 /*license*/
 
+// tokenizer - custom tokenizer for syntax
+#pragma once
 #include "../../tokenize/tokenizer.h"
 #include "../../tokenize/merge.h"
 #include "keyword.h"

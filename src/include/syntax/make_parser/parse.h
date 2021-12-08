@@ -1,7 +1,7 @@
 /*license*/
 
 // parse - public parse interface
-
+#pragma once
 #include "parse_impl.h"
 
 namespace utils {
