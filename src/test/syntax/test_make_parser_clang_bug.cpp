@@ -24,7 +24,7 @@ void test_make_parser() {
     auto ctx = syntax::make_parse_context(output);
     res = syntax::parse(ctx, result);
     auto& cout = wrap::cout_wrap();
-    cout << ctx.err;
+    cout << ctx.err.pack();
     assert(res && "expect true but parse syntax failed");
 }
 
