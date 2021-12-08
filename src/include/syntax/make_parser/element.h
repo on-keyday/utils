@@ -19,7 +19,7 @@ namespace utils {
         template <class String, template <class...> class Vec>
         struct Element {
             SyntaxType type;
-            Attribute attr;
+            Attribute attr = Attribute::none;
         };
 
         template <class String, template <class...> class Vec>
