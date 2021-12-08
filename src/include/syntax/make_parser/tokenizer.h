@@ -39,8 +39,8 @@ namespace utils {
             auto result = tokenizer.tokenize(input, output);
             assert(result && "expect true but tokenize failed");
             const char* err = nullptr;
-            auto res = tknz::merge(err, output, tknz::escaped_comment("\"", "\\"),
-                                   tknz::line_comment("#"));
+            auto res = tknz::merge(err, output, tknz::escaped_comment<String>("\"", "\\"),
+                                   tknz::line_comment<String>("#"));
             if (errmsg) {
                 *errmsg = err;
             }
