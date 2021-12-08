@@ -76,7 +76,6 @@ namespace utils {
                 if (!e) {
                     return false;
                 }
-                r.ignore_line = false;
                 wrap::shared_ptr<Single<String, Vec>> s;
                 if (e->has("\"")) {
                     e = r.consume_get();
@@ -232,7 +231,8 @@ namespace utils {
                     ctx.err.packln("error: expect `:=` but token is `", e->what(), "` (symbol `", e->to_string(), "`)");
                     return false;
                 }
-                r.consume();
+                r.consume_read();
+                r.ignore_line = false;
                 return parse_or(ctx, group, false);
             }
 
