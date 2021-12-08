@@ -56,7 +56,7 @@ namespace utils {
                 }
                 if (!p) {
                     currentoffset = offset + 1;
-                    currentlen = 5;
+                    currentlen = 1;
                     output.pack("[EOF]");
                 }
                 output.packln();
