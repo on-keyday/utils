@@ -5,6 +5,7 @@
 
 #include "../../include/wrap/lite/string.h"
 #include "../../include/wrap/lite/map.h"
+#include "../../include/wrap/cout.h"
 using namespace utils;
 
 void test_make_parser() {
@@ -22,6 +23,8 @@ void test_make_parser() {
     wrap::map<wrap::string, utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>>> result;
     auto ctx = syntax::make_parse_context(output);
     res = syntax::parse(ctx, result);
+    auto& cout = wrap::cout_wrap();
+    cout << ctx.err;
     assert(res && "expect true but parse syntax failed");
 }
 
