@@ -19,7 +19,7 @@ namespace utils {
            private:
             bool is_ignore() const override {
                 if (!ignore_line && this->current->is(tknz::TokenKind::line)) {
-                    return return false;
+                    return false;
                 }
                 return this->current->has("#") || default_ignore(this->current);
             }
