@@ -37,6 +37,7 @@ namespace utils {
                             return -1;
                         }
                         elm->attr |= kind;
+                        r.consume();
                         return 1;
                     }
                     return 0;
