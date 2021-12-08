@@ -16,7 +16,7 @@ namespace utils {
         }
 
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
-        constexpr bool starts_with(In&& in, Cmp&& cmp, Compare compare = default_compare<In, Cmp>()) {
+        constexpr bool starts_with(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
             Sequencer<typename BufferType<In&>::type> intmp(in);
             return intmp.match(cmp, compare);
         }
