@@ -28,10 +28,10 @@ namespace utils {
                 }
                 auto shift = 0;
                 if (line < 1000) {
-                    shift = 3;
+                    shift = 4;
                 }
                 else if (line < 100000) {
-                    shift = 6;
+                    shift = 7;
                 }
                 output.pack(std::setw(shift), line, "|");
                 if (!beginline) {
