@@ -189,10 +189,10 @@ namespace utils {
                         return -1;
                     }
                     if (pt.afterdot) {
-                        r.current = pt.afterdot->get_next();
+                        r.current = pt.afterdot->next;
                     }
                     else if (pt.dot) {
-                        r.current = pt.dot->get_next();
+                        r.current = pt.dot->next;
                     }
                     else {
                         report("parser is broken");
