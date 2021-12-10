@@ -93,6 +93,10 @@ namespace utils {
                         matcher.context.err.packln("error: unexpected SyntaxType");
                         return MatchState::fatal;
                     }
+                    if (state != MatchState::succeed) {
+                        continue;
+                    }
+                    break;
                 }
             }
         };
