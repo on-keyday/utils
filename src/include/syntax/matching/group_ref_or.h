@@ -143,7 +143,7 @@ namespace utils {
                         assert(c.element && c.element->type == SyntaxType::or_);
                         Or<String, Vec>* or_ = cast<Or<String, Vec>>(c.element);
                         c.index++;
-                        if (c.index > or_->or_list.size()) {
+                        if (c.index >= or_->or_list.size()) {
                             MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
                             load_r(c, res == MatchState::succeed);
                             return res;
