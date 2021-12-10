@@ -155,6 +155,18 @@ namespace utils {
                         context.err.packln("error: reference `", seg, "` not found");
                         return MatchState::fatal;
                     }
+                    push(nullptr, v);
+                    auto e = std::get<1>(*found);
+                    if (e->type == SyntaxType::or_) {
+                        return start_or(e);
+                    }
+                    else if (e->type == SyntaxType::group) {
+                        return start_group(e);
+                    }
+                    else {
+                        context.err.packln("error: unexpected SyntaxType");
+                        return MatchState::fatal;
+                    }
                 }
             };
         }  // namespace internal
