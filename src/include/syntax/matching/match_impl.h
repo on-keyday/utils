@@ -145,6 +145,7 @@ namespace utils {
 
                 MatchState start_ref(element_t& v) {
                     assert(v && v->type == SyntaxType::reference);
+                    Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
                 }
             };
         }  // namespace internal
