@@ -7,7 +7,7 @@
 namespace utils {
     namespace syntax {
         template <class String, template <class...> class Vec, template <class...> class Map>
-        bool parse(internal::ParseContext<String>& ctx, Map<String, wrap::shared_ptr<Element<String, Vec>>>& result) {
+        bool parse(internal::ParseContext<String, Vec>& ctx, Map<String, wrap::shared_ptr<Element<String, Vec>>>& result) {
             while (ctx.r.read()) {
                 String segname;
                 wrap::shared_ptr<Element<String, Vec>> group;
@@ -26,9 +26,9 @@ namespace utils {
             return true;
         }
 
-        template <class String>
-        internal::ParseContext<String> make_parse_context(wrap::shared_ptr<tknz::Token<String>> p) {
-            return internal::ParseContext<String>{
+        template <class String, template <class...> class Vec = wrap::vector>
+        internal::ParseContext<String, Vec> make_parse_context(wrap::shared_ptr<tknz::Token<String>> p) {
+            return internal::ParseContext<String, Vec>{
                 Reader<String>(p),
             };
         }

@@ -9,14 +9,31 @@
 namespace utils {
     namespace syntax {
         namespace internal {
+
             template <class String>
+            bool is_symbol(const String& str) {
+                for (auto& s : str) {
+                    if (s > 0xff || s < 0) {
+                        return false;
+                    }
+                    if (std::isgraph(s) && !std::isalnum(s)) {
+                        continue;
+                    }
+                    return false;
+                }
+                return true;
+            }
+
+            template <class String, template <class...> class Vec>
             struct ParseContext {
                 Reader<String> r;
                 wrap::internal::Pack err;
+                Vec<String> keyword;
+                Vec<String> symbol;
             };
 
             template <class String, template <class...> class Vec>
-            bool parse_attribute(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& elm) {
+            bool parse_attribute(ParseContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& elm) {
                 auto& r = ctx.r;
                 if (!elm) {
                     return false;
@@ -77,7 +94,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            bool parse_single(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& single) {
+            bool parse_single(ParseContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& single) {
                 auto& r = ctx.r;
                 auto e = r.read();
                 if (!e) {
@@ -136,10 +153,10 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            bool parse_group(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group);
+            bool parse_group(ParseContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& group);
 
             template <class String, template <class...> class Vec>
-            bool parse_or(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group, bool endbrace) {
+            bool parse_or(ParseContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& group, bool endbrace) {
                 if (!parse_group(ctx, group)) {
                     return false;
                 }
@@ -183,7 +200,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            bool parse_group(ParseContext<String>& ctx, wrap::shared_ptr<Element<String, Vec>>& group) {
+            bool parse_group(ParseContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& group) {
                 auto gr = wrap::make_shared<Group<String, Vec>>();
                 gr->type = SyntaxType::group;
                 auto& r = ctx.r;
@@ -219,7 +236,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            bool parse_a_line(ParseContext<String>& ctx, String& segname, wrap::shared_ptr<Element<String, Vec>>& group) {
+            bool parse_a_line(ParseContext<String, Vec>& ctx, String& segname, wrap::shared_ptr<Element<String, Vec>>& group) {
                 auto& r = ctx.r;
                 r.ignore_line = true;
                 auto e = r.read();
