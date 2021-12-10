@@ -96,6 +96,46 @@ namespace utils {
                     return MatchState::succeed;
                 }
             }
+
+            template <class String, template <class...> class Vec>
+            MatchState result_match_group(MatchState prev, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
+                StackContext<String, Vec> c = stack.pop();
+                assert(c.element);
+                Group<String, Vec>* group = static_cast<Group<String, Vec>*>(std::addressof(*c.element));
+                auto cr = c.r;
+                if (prev == MatchState::fatal) {
+                    ctx.r = std::move(cr);
+                    current = c.vec;
+                    return MatchState::fatal;
+                }
+                else if (prev == MatchState::succeed) {
+                    cr.seek_to(ctx.r);
+                    ctx.r = std::move(cr);
+                    if (any(group->attr & Attribute::repeat)) {
+                        c.r = ctx.r;
+                        ctx.r = c.r.from_current();
+                        c.index = -1;
+                        stack.push(std::move(c));
+                    }
+                    else {
+                        current = c.vec;
+                    }
+                    return MatchState::succeed;
+                }
+                else {
+                    current = c.vec;
+                    if (any(group->attr & Attribute::fatal)) {
+                        ctx.r = std::move(cr);
+                        return MatchState::fatal;
+                    }
+                    else if (c.on_repeat || any(group->attr & Attribute::ifexists)) {
+                        cr.seek_to(ctx.r);
+                        ctx.r = std::move(cr);
+                        return MatchState::succeed;
+                    }
+                    return MatchState::not_match;
+                }
+            }
         }  // namespace internal
     }      // namespace syntax
 }  // namespace utils
