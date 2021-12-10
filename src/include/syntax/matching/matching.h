@@ -99,7 +99,7 @@ namespace utils {
                         }
                         else if (c.element->type == SyntaxType::reference) {
                             state = matcher.result_ref(state);
-                            if (state == MatchState::succeed) {
+                            if (state == MatchState::no_repeat) {
                                 stack.current().index++;
                             }
                         }

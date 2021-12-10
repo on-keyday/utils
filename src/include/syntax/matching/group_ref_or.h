@@ -200,13 +200,16 @@ namespace utils {
                             store_r(c);
                             auto elm = c.element;
                             stack.push(std::move(c));
-                            return dispatch(elm);
+                            //return dispatch(elm);
                         }
                         return prev;
                     }
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
                         load_r(c, res == MatchState::succeed);
+                        if (c.on_repeat && res == MatchState::succeed) {
+                            return MatchState::no_repeat;
+                        }
                         return res;
                     }
                 }

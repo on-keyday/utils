@@ -8,10 +8,9 @@ void test_syntaxc() {
     utils::syntax::SyntaxC<utils::wrap::string, utils::wrap::vector, utils::wrap::map> test;
 
     auto seq =
-        u8R"(
-        ROOT:=["Hey" | WHAT]*
-        WHAT:="What" 
-    )";
+        u8R"a(
+        ROOT:=ID|"("ROOT ["." ROOT|ROOT*?] ")"
+    )a";
 
     utils::Sequencer input(seq);
 
@@ -23,7 +22,7 @@ void test_syntaxc() {
 
     auto other =
         u8R"(
-        Hey Hey What Hey What What Hey
+        (a i u).(e o)
     )";
 
     utils::Sequencer input2(other);
