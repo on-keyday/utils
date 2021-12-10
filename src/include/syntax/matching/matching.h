@@ -85,7 +85,9 @@ namespace utils {
                     }
                     while (stack.stack.size()) {
                         auto& c = stack.current();
-                        assert(c.element);
+                        if (!c.element) {
+                            return state;
+                        }
                         if (c.element->type == SyntaxType::or_) {
                             state = matcher.result_or(state);
                         }
