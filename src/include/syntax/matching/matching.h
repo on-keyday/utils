@@ -5,6 +5,7 @@
 
 #include "keyword_literal.h"
 #include "group_ref_or.h"
+#include "context.h"
 
 namespace utils {
     namespace syntax {
@@ -15,8 +16,25 @@ namespace utils {
 
             MatchState matching_loop() {
                 internal::Stack<String, Vec>& stack = matcher.stack;
+                MatchState state = MatchState::not_match;
                 while (!stack.end_group()) {
-                    auto& v = *stack.current_vec();
+                    auto& current = stack.current();
+                    wrap::shared_ptr<Element<String, Vec>> v = (*current.vec)[current.index];
+                    if (v->type == SyntaxType::keyword) {
+                        MatchResult<String> result;
+                        state = internal::match_keyword(matcher.context, v, result);
+                        if (state == MatchState::fatal) {
+                            break;
+                        }
+                        else if (state == MatchState::succeed) {
+                            if (any(current.attr & Attribute::repeat)) {
+                                current.on_repeat = true;
+                                continue;
+                            }
+                            current.index++;
+                            continue;
+                        }
+                    }
                 }
             }
         };

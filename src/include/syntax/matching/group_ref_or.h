@@ -46,6 +46,7 @@ namespace utils {
                     context.r = std::move(c.r);
                 }
 
+               public:
                 MatchState judge_by_attribute(Attribute attr, bool on_repeat) {
                     if (any(attr & Attribute::fatal)) {
                         return MatchState::fatal;
@@ -56,6 +57,7 @@ namespace utils {
                     return MatchState::not_match;
                 }
 
+               private:
                 MatchState dispatch(element_t& v) {
                     if (v->type == SyntaxType::or_) {
                         return start_or(v);
