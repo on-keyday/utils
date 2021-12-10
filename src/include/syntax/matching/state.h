@@ -1,6 +1,7 @@
 /*license*/
 
 // state - matching state
+#pragma once
 
 namespace utils {
     namespace syntax {
