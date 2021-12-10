@@ -77,6 +77,19 @@ namespace utils {
                         state = MatchState::fatal;
                     }
                 }
+                while (stack.stack.size()) {
+                    auto& c = stack.current();
+                    assert(c.element);
+                    if (c.element->type == SyntaxType::or_) {
+                        state = matcher.result_or(state);
+                    }
+                    else if (c.element->type == SyntaxType::reference) {
+                        state = matcher.result_ref(state);
+                    }
+                    else if (c.element->type = SyntaxType::group) {
+                        state = matcher.result_group(state);
+                    }
+                }
             }
         };
     }  // namespace syntax
