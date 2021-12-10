@@ -200,7 +200,12 @@ namespace utils {
                     return MatchState::not_match;
                 }
                 if (!e->is(tknz::TokenKind::keyword) && !e->is(tknz::TokenKind::symbol)) {
-                    report("expect keyword but token is ", e->what(), " (symbol `", e->to_string(), "`)");
+                    report("expect keyword or symbol but token is ", e->what(), " (symbol `", e->to_string(), "`)");
+                    return MatchState::not_match;
+                }
+                auto str = value->tok->to_string();
+                if (e->has(str)) {
+                    report("expect ", str, " but token is ", e->what(), " (symbol `", e->to_string(), "`)");
                     return MatchState::not_match;
                 }
                 r.consume();
