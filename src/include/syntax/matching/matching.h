@@ -16,6 +16,7 @@ namespace utils {
             MatchState matching_loop() {
                 internal::Stack<String, Vec>& stack = matcher.stack;
                 while (!stack.end_group()) {
+                    auto& v = *stack.current_vec();
                 }
             }
         };
