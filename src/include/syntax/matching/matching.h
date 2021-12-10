@@ -52,7 +52,7 @@ namespace utils {
                             }
                         }
                         else if (v->type == SyntaxType::literal) {
-                            auto s = invoke_matching(internal::match_literal<String, Vec>);
+                            state = invoke_matching(internal::match_literal<String, Vec>);
                             if (state != MatchState::succeed) {
                                 break;
                             }
