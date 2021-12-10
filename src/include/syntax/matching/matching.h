@@ -8,7 +8,13 @@
 
 namespace utils {
     namespace syntax {
-        struct Match {
+        template <class String, template <class...> class Vec, template <class...> class Map>
+        class Match {
+           private:
+            internal::MatcherHelper<String, Vec, Map> matcher;
+
+            MatchState matching_loop() {
+            }
         };
     }  // namespace syntax
 }  // namespace utils

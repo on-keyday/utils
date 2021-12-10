@@ -13,7 +13,7 @@ namespace utils {
 
             // to coding easily, using class
             template <class String, template <class...> class Vec, template <class...> class Map>
-            struct MatcherWrap {
+            struct MatcherHelper {
                 using element_t = wrap::shared_ptr<Element<String, Vec>>;
                 using vec_t = Vec<element_t>;
                 Stack<String, Vec> stack;

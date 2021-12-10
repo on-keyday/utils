@@ -35,6 +35,14 @@ namespace utils {
                 StackContext<String, Vec>& current() {
                     return stack[stack.size() - 1];
                 }
+
+                Vec<wrap::shared_ptr<Element<String, Vec>>>* current_vec() {
+                    return current().vec;
+                }
+
+                bool end_group() {
+                    return current_vec() == nullptr || current().index >= current_vec()->size();
+                }
             };
         }  // namespace internal
     }      // namespace syntax
