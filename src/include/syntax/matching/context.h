@@ -6,6 +6,8 @@
 
 #include "../../wrap/pack.h"
 
+#include "../make_parser/keyword.h"
+
 namespace utils {
     namespace syntax {
 
@@ -15,6 +17,12 @@ namespace utils {
             wrap::internal::Pack err;
             wrap::shared_ptr<tknz::Token<String>> errat;
             wrap::shared_ptr<Element<String, Vec>> errelement;
+        };
+
+        template <class String>
+        struct MatchResult {
+            String token;
+            KeyWord kind = KeyWord::id;
         };
     }  // namespace syntax
 }  // namespace utils

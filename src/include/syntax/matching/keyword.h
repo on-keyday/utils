@@ -8,16 +8,13 @@
 #include "state.h"
 #include "number.h"
 
+#include <cassert>
+
 namespace utils {
     namespace syntax {
-        template <class String>
-        struct KeywordMatchResult {
-            String token;
-            KeyWord kind = KeyWord::id;
-        };
 
         template <class String, template <class...> class Vec>
-        MatchState match_keyword(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, KeywordMatchResult<String>& result) {
+        MatchState match_keyword(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
             auto report = [&](auto&&... args) {
                 ctx.err.packln("error: ", args...);
                 ctx.errat = r.get();
@@ -27,6 +24,7 @@ namespace utils {
                 report("expect ", expected, " but token is ", e ? e->what() : "EOF", "(symbol `", e ? e->to_string() : "", "`)");
             };
             Single<String, Vec>* value = static_cast<Single<String, Vec>*>(std::addressof(*v));
+            assert(value);
             Reader<String>& r = ctx.r;
             auto is_keyword = [&](KeyWord kwd) {
                 return value->tok->has(keywordv(kwd));

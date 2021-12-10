@@ -18,6 +18,8 @@ namespace utils {
             string,
             integer,
             number,
+            literal_keyword,
+            literal_symbol,
         };
 
         constexpr const char* keyword_str[] = {
@@ -32,7 +34,11 @@ namespace utils {
             "BOS",       // begin of segment
             "STRING",    // string
             "INTEGER",   // integer
-            "NUMBER",    // real number
+            "NUMBER",    // real number.
+
+            // for literal
+            "LITERAL_KEYWORD",  // keyword
+            "LITERAL_SYMBOL",   // symbol
         };
 
         constexpr const char* keywordv(KeyWord kw) {
