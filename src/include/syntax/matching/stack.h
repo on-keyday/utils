@@ -37,7 +37,7 @@ namespace utils {
                 }
 
                 bool end_group() {
-                    return current().vec == nullptr || current().index >= current_vec()->size();
+                    return current().vec == nullptr || current().index >= current().vec->size();
                 }
             };
         }  // namespace internal
