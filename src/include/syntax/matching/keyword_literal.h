@@ -53,6 +53,7 @@ namespace utils {
                 }
                 auto e = r.get();
                 MatchState ret = MatchState::not_match;
+                KeyWord keyword_cache;
                 auto common_begin = [&](KeyWord kwd, auto&& f) {
                     if (is_keyword(kwd)) {
                         if (!e) {
@@ -60,6 +61,7 @@ namespace utils {
                             ret = MatchState::eof;
                             return true;
                         }
+                        keyword_cache = kwd;
                         f();
                         return true;
                     }
@@ -71,7 +73,7 @@ namespace utils {
                             return;
                         }
                         result.token = e->to_string();
-                        result.kind = kind;
+                        result.kind = keyword_cache;
                         ret = MatchState::succeed;
                         r.consume();
                     };
@@ -173,7 +175,7 @@ namespace utils {
                     return MatchState::succeed;
                 }
                 else {
-                    report("unsupported keyword `", v->tok->to_string(), "`");
+                    report("unsupported keyword `", value->tok->to_string(), "`");
                     return MatchState::fatal;
                 }
             }
