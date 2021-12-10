@@ -7,14 +7,14 @@ namespace utils {
     namespace wrap {
 #ifdef _WIN32
 
-        static bool get_warg(int* wargc, wchar_t**& wargv) {
-            return static_cast<bool>((wargv = ::CommandLineToArgvW(::GetCommandLineW(), wargc)));
+        static bool get_warg(int* wargc, wchar_t*** wargv) {
+            return static_cast<bool>((*wargv = ::CommandLineToArgvW(::GetCommandLineW(), wargc)));
         }
         U8Arg::U8Arg(int& argc, char**& argv)
             : argcvalue(argc), argvvalue(argv), argcplace(&argc), argvplace(&argv) {
             int wargc;
             wchar_t** wargv;
-            auto result = get_warg(&wargc, wargv);
+            auto result = get_warg(&wargc, &wargv);
             assert(result);
             replaced.translate(wargv, wargv + wargc);
             ::LocalFree(wargv);
