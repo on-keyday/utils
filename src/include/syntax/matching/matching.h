@@ -20,25 +20,31 @@ namespace utils {
                 while (!stack.end_group()) {
                     auto& current = stack.current();
                     wrap::shared_ptr<Element<String, Vec>> v = (*current.vec)[current.index];
-                    if (v->type == SyntaxType::keyword) {
+                    auto invoke_matching = [&](auto&& f) {
                         MatchResult<String> result;
-                        state = internal::match_keyword(matcher.context, v, result);
+                        state = f(matcher.context, v, result);
                         if (state == MatchState::fatal) {
-                            break;
+                            return state;
                         }
                         else if (state == MatchState::succeed) {
                             if (any(current.attr & Attribute::repeat)) {
                                 current.on_repeat = true;
-                                continue;
+                                return state;
                             }
                             current.index++;
-                            continue;
+                            return state;
                         }
                         else {
                             if (current.on_repeat || any(current.attr & Attribute::ifexists)) {
                                 current.index++;
-                                continue;
+                                return MatchState::succeed;
                             }
+                            return MatchState::not_match;
+                        }
+                    };
+                    if (v->type == SyntaxType::keyword) {
+                        auto s = invoke_matching(internal::match_keyword<String, Vec>);
+                        if (s != MatchState::succeed) {
                             break;
                         }
                     }
