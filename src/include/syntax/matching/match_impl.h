@@ -53,6 +53,23 @@ namespace utils {
                     return MatchState::not_match;
                 }
 
+                MatchState init_or(element_t& v) {
+                    assert(v && v->type == SyntaxType::or_);
+                    Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
+                    assert(or_->or_list);
+                    auto list = or_->or_list[0];
+                    if (list->type == SyntaxType::or_) {
+                        return start_or(v);
+                    }
+                    else if (list->type == SyntaxType::group) {
+                        return start_group(v);
+                    }
+                    else {
+                        context.err.packln("error: unexpected SyntaxType");
+                        return MatchState::fatal;
+                    }
+                }
+
                public:
                 MatchState start_group(element_t& v) {
                     assert(v && v->type == SyntaxType::group);
@@ -91,21 +108,8 @@ namespace utils {
                 }
 
                 MatchState start_or(element_t& v) {
-                    assert(v && v->type == SyntaxType::or_);
-                    Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
                     push(nullptr, v);
-                    assert(or_->or_list);
-                    auto list = or_->or_list[0];
-                    if (list->type == SyntaxType::or_) {
-                        return start_or(v);
-                    }
-                    else if (list->type == SyntaxType::group) {
-                        return start_group(v);
-                    }
-                    else {
-                        context.err.packln("error: unexpected SyntaxType");
-                        return MatchState::fatal;
-                    }
+                    return init_or();
                 }
 
                 MatchState result_or(MatchState prev) {
@@ -113,6 +117,25 @@ namespace utils {
                     if (prev == MatchState::fatal) {
                         load_r(c);
                         return MatchState::fatal;
+                    }
+                    else if (prev == MatchState::succeed) {
+                        context.err.clear();
+                        load_r(c, true);
+                        if (any(c.element->attr & Attribute::repeat)) {
+                            c.index = 0;
+                            c.on_repeat = true;
+                            store_r(c);
+                            stack.push(std::move(c));
+                            return init_or(c.element);
+                        }
+                        return MatchState::succeed;
+                    }
+                    else {
+                        assert(c.element && c.element->type == SyntaxType::or_);
+                        Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
+                        if (c.index >= or_->or_list.size()) {
+                            MatchResult res = judge_by_attribute(or_->attr, c.on_repeat);
+                        }
                     }
                 }
             };
