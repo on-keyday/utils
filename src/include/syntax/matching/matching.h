@@ -29,7 +29,7 @@ namespace utils {
                                 return state;
                             }
                             else if (state == MatchState::succeed) {
-                                if (any(current.attr & Attribute::repeat)) {
+                                if (any(v->attr & Attribute::repeat)) {
                                     current.on_repeat = true;
                                     return state;
                                 }
@@ -37,7 +37,7 @@ namespace utils {
                                 return state;
                             }
                             else {
-                                if (current.on_repeat || any(current.attr & Attribute::ifexists)) {
+                                if (current.on_repeat || any(v->attr & Attribute::ifexists)) {
                                     current.index++;
                                     return MatchState::succeed;
                                 }
