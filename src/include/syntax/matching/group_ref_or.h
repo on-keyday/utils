@@ -152,10 +152,7 @@ namespace utils {
                     }
                 }
 
-                MatchState start_ref(element_t& v) {
-                    assert(v && v->type == SyntaxType::reference);
-                    Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
-                    auto seg = ref->tok->to_string();
+                MatchState start_ref(const String& seg) {
                     auto found = segments.find(seg);
                     if (found != segments.end()) {
                         context.err.packln("error: reference `", seg, "` not found");
@@ -173,6 +170,12 @@ namespace utils {
                         context.err.packln("error: unexpected SyntaxType");
                         return MatchState::fatal;
                     }
+                }
+
+                MatchState start_ref(element_t& v) {
+                    assert(v && v->type == SyntaxType::reference);
+                    Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
+                    return start_ref(ref->tok->to_string());
                 }
 
                 MatchState result_ref(MatchState prev) {

@@ -102,10 +102,14 @@ namespace utils {
                 }
             }
 
-            MatchState matching(const char* root = "ROOT") {
-                if (!root) {
-                    return MatchState::fatal;
+            MatchState matching(const String& root) {
+                String v = root;
+                if (!root.size()) {
+                    utf::convert("ROOT", v);
                 }
+                matcher.stack.stack.clear();
+                matcher.start_ref(v);
+                matching_loop();
             }
         };
     }  // namespace syntax
