@@ -52,19 +52,19 @@ namespace utils {
                     if (!e) {
                         break;
                     }
-                    if (!pt.dot && !pt.sign && e->has_(".")) {
+                    if (!pt.dot && !pt.sign && e->has(".")) {
                         pt.dot = e;
                         pt.str += e->to_string();
                         cr.consume();
                         continue;
                     }
-                    if (!pt.sign && (e->has_("+") || e->has_("-"))) {
+                    if (!pt.sign && (e->has("+") || e->has("-"))) {
                         pt.sign = e;
                         pt.str += e->to_string();
                         cr.consume();
                         continue;
                     }
-                    if (!e->is_(tknz::TokenKind::identifier)) {
+                    if (!e->is(tknz::TokenKind::identifier)) {
                         break;
                     }
                     if (!pt.dot && !pt.sign && !pt.beforedot) {
