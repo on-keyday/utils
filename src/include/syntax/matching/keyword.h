@@ -45,6 +45,10 @@ namespace utils {
                     if (r.get() && r.get()->is(tknz::TokenKind::line)) {
                         r.consume();
                     }
+                    else {
+                        fmterr("indent", r.get());
+                        return MatchState::not_match;
+                    }
                 }
                 else {
                     r.read();
@@ -148,7 +152,7 @@ namespace utils {
             else if (common_begin(KeyWord::number, number(false))) {
                 return ret;
             }
-            else if (common_begin()) {
+            else if (common_begin(KeyWord::indent)) {
             }
         }
     }  // namespace syntax
