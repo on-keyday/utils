@@ -168,6 +168,14 @@ namespace utils {
                         return MatchState::fatal;
                     }
                 }
+
+                MatchState result_ref(MatchState prev) {
+                    StackContext<String, Vec> c = stack.pop();
+                    if (prev == MatchState::fatal) {
+                        load_r(c);
+                        return prev;
+                    }
+                }
             };
         }  // namespace internal
     }      // namespace syntax
