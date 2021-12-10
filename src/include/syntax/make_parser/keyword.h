@@ -35,7 +35,7 @@ namespace utils {
             "NUMBER",    // real number
         };
 
-        constexpr const char* keyword(KeyWord kw) {
+        constexpr const char* keywordv(KeyWord kw) {
             auto v = static_cast<size_t>(kw);
             if (v >= sizeof(keyword_str) / sizeof(keyword_str[0])) {
                 return "";

@@ -47,9 +47,6 @@ namespace utils {
 
         template <class String, template <class...> class Vec>
         void get_floatpoint(Reader<String>& cr, wrap::shared_ptr<Element<String, Vec>>& v, FloatReadPoint<String>& pt) {
-            if (!any(v->attr & Attribute::adjacent)) {
-                cr.read();
-            }
             while (true) {
                 auto e = cr.get();
                 if (!e) {
@@ -124,7 +121,7 @@ namespace utils {
         }
 
         template <class String, template <class...> class Vec>
-        int parse_float(Context<String, Vec>& ctx, std::shared_ptr<Element<String, Vec>>& v) {
+        int parse_float(Context<String, Vec>& ctx, std::shared_ptr<Element<String, Vec>>& v, bool onlyint = false) {
             auto cr = ctx.r.FromCurrent();
             FloatReadPoint<String> pt;
             auto report = [&](const auto& msg) {
@@ -173,8 +170,8 @@ namespace utils {
                 }*/
                 return 1;
             }
-            if (base == 2 || base == 8) {
-                report("expect binary or ocetet integer but token is " + pt.str;);
+            if (base == 2 || base == 8 || onlyint) {
+                report("expect integer but token is " + pt.str;);
                 return 0;
             }
             if (pt.str[allowed] == '.') {
