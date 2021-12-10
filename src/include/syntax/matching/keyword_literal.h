@@ -17,7 +17,7 @@ namespace utils {
             MatchState match_keyword(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
                 auto report = [&](auto&&... args) {
                     ctx.err.packln("error: ", args...);
-                    ctx.errat = r.get();
+                    ctx.errat = ctx.r.get();
                     ctx.errelement = v;
                 };
                 auto fmterr = [](auto expected, auto& e) {
