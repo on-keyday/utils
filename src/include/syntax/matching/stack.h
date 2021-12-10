@@ -10,10 +10,10 @@ namespace utils {
         namespace internal {
             template <class String, template <class...> class Vec>
             struct StackContext {
-                size_t index;
+                size_t index = 0;
                 wrap::shared_ptr<Element<String, Vec>> element;
                 Reader<String> r;
-                Vec<wrap::shared_ptr<Element<String, Vec>>>* vec;
+                Vec<wrap::shared_ptr<Element<String, Vec>>>* vec = nullptr;
                 bool on_repeat = false;
             };
 

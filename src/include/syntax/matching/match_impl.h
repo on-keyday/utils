@@ -28,9 +28,9 @@ namespace utils {
                     context.r = c.r.from_current();
                 }
 
-                void push(vec_t& vec, element_t& v) {
+                void push(vec_t* vec, element_t& v) {
                     StackContext<String, Vec> c;
-                    c.vec = &gr->group;
+                    c.vec = vec;
                     store_r(c);
                     c.element = v;
                     stack.push(std::move(c));
@@ -57,7 +57,7 @@ namespace utils {
                 MatchState start_group(element_t& v) {
                     assert(v && v->type == SyntaxType::group);
                     Group<String, Vec>* gr = cast<Group<String, Vec>>(v);
-                    push(gr->group, v);
+                    push(&gr->group, v);
                     return MatchState::succeed;
                 }
 
@@ -68,6 +68,7 @@ namespace utils {
                         return MatchState::fatal;
                     }
                     else if (prev == MatchState::succeed) {
+                        context.err.clear();
                         load_r(c, true);
                         if (any(c.element->attr & Attribute::repeat)) {
                             c.index = 0;
@@ -76,6 +77,34 @@ namespace utils {
                             stack.push(std::move(c));
                         }
                         return MatchState::succeed;
+                    }
+                    else {
+                        MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
+                        if (res == MatchState::fatal || res == MatchState::not_match) {
+                            load_r(c);
+                        }
+                        else {
+                            load_r(c, true);
+                        }
+                        return res;
+                    }
+                }
+
+                MatchState start_or(element_t& v) {
+                    assert(v && v->type == SyntaxType::or_);
+                    Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
+                    push(nullptr, v);
+                    assert(or_->or_list);
+                    auto list = or_->or_list[0];
+                    if (list->type == SyntaxType::or_) {
+                        return start_or(v);
+                    }
+                    else if (list->type == SyntaxType::group) {
+                        return start_group(v);
+                    }
+                    else {
+                        context.err.packln("error: unexpected SyntaxType");
+                        return MatchState::fatal;
                     }
                 }
             };
