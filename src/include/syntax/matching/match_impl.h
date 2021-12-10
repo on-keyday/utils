@@ -149,7 +149,12 @@ namespace utils {
                 MatchState start_ref(element_t& v) {
                     assert(v && v->type == SyntaxType::reference);
                     Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
-                    ref->tok->to_string();
+                    auto seg = ref->tok->to_string();
+                    auto found = segments.find(seg);
+                    if (found != segments.end()) {
+                        context.err.packln("error: reference `", seg, "` not found");
+                        return MatchState::fatal;
+                    }
                 }
             };
         }  // namespace internal
