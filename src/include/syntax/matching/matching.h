@@ -48,6 +48,24 @@ namespace utils {
                             break;
                         }
                     }
+                    else if (v->type == SyntaxType::literal) {
+                        auto s = invoke_matching(internal::match_literal<String, Vec>);
+                        if (s != MatchState::succeed) {
+                            break;
+                        }
+                    }
+                    else if (v->type == SyntaxType::or_) {
+                        state = matcher.start_or(v);
+                        if (state != MatchState::succeed) {
+                            break;
+                        }
+                    }
+                    else if (v->type == SyntaxType::group) {
+                        state = matcher.start_group(v);
+                    }
+                    else if (v->type == SyntaxType::reference) {
+                        state = matcher.start_ref(v);
+                    }
                 }
             }
         };
