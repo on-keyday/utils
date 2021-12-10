@@ -137,7 +137,7 @@ namespace utils {
                             stack.push(std::move(c));
                             return init_or(elm, 0);
                         }
-                        return MatchState::succeed;
+                        return MatchState::no_repeat;
                     }
                     else {
                         assert(c.element && c.element->type == SyntaxType::or_);

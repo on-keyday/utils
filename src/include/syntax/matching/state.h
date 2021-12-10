@@ -10,6 +10,7 @@ namespace utils {
             not_match,
             eof,
             fatal,
+            no_repeat,
         };
     }  // namespace syntax
 }  // namespace utils

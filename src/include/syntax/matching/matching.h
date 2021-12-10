@@ -90,6 +90,12 @@ namespace utils {
                         }
                         if (c.element->type == SyntaxType::or_) {
                             state = matcher.result_or(state);
+                            if (state == MatchState::no_repeat) {
+                                if (auto elm = stack.current().element; elm && elm->type != SyntaxType::or_) {
+                                    stack.current().index++;
+                                }
+                                state = MatchState::succeed;
+                            }
                         }
                         else if (c.element->type == SyntaxType::reference) {
                             state = matcher.result_ref(state);
