@@ -73,8 +73,8 @@ namespace utils {
 
                 MatchState init_or(element_t& v, size_t index) {
                     assert(v && v->type == SyntaxType::or_);
-                    Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
-                    assert(or_->or_list);
+                    Or<String, Vec>* or_ = cast<Or<String, Vec>>(v);
+                    assert(or_->or_list.size());
                     auto list = or_->or_list[index];
                     return dispatch(v);
                 }
@@ -137,7 +137,7 @@ namespace utils {
                     }
                     else {
                         assert(c.element && c.element->type == SyntaxType::or_);
-                        Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
+                        Or<String, Vec>* or_ = cast<Or<String, Vec>>(c.element);
                         if (c.index >= or_->or_list.size()) {
                             MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
                             load_r(c, res == MatchState::succeed);
@@ -152,7 +152,7 @@ namespace utils {
                     }
                 }
 
-                MatchState start_ref(const String& seg) {
+                MatchState start_ref(const String& seg, element_t v = nullptr) {
                     auto found = segments.find(seg);
                     if (found != segments.end()) {
                         context.err.packln("error: reference `", seg, "` not found");
@@ -175,7 +175,7 @@ namespace utils {
                 MatchState start_ref(element_t& v) {
                     assert(v && v->type == SyntaxType::reference);
                     Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
-                    return start_ref(ref->tok->to_string());
+                    return start_ref(ref->tok->to_string(), v);
                 }
 
                 MatchState result_ref(MatchState prev) {
