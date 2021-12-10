@@ -46,14 +46,14 @@ namespace utils {
                             }
                         };
                         if (v->type == SyntaxType::keyword) {
-                            auto s = invoke_matching(internal::match_keyword<String, Vec>);
-                            if (s != MatchState::succeed) {
+                            state = invoke_matching(internal::match_keyword<String, Vec>);
+                            if (state != MatchState::succeed) {
                                 break;
                             }
                         }
                         else if (v->type == SyntaxType::literal) {
                             auto s = invoke_matching(internal::match_literal<String, Vec>);
-                            if (s != MatchState::succeed) {
+                            if (state != MatchState::succeed) {
                                 break;
                             }
                         }
