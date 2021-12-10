@@ -52,6 +52,10 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
+            MatchState start_match_reference(Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
+            }
+
+            template <class String, template <class...> class Vec>
             MatchState result_match_or(MatchState prev, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
                 StackContext<String, Vec> c = stack.pop();
                 assert(c.element);
