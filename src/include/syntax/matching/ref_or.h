@@ -51,12 +51,21 @@ namespace utils {
                 return dispatch_under(current, ctx, v, stack);
             }
 
-            template <class String, template <class...> class Vec>
-            MatchState start_match_reference(Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
+            template <class String, template <class...> class Vec, template <class...> class Map>
+            MatchState start_match_reference(Map<String, wrap::shared_ptr<Element<String, Vec>>>& segs, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
+                assert(v);
+                Single<String, Vec>* ref = static_cast<Single<String, Vec>*>(std::addressof(*v));
+                auto toref = ref->tok->to_string();
+                auto found = segs.find(toref);
+                if (found == segs.end()) {
+                    ctx.err.packln("error: reference `", toref, "` not found");
+                    return MatchState::fatal;
+                }
+                auto deref = std::get<1>(*found);
             }
 
             template <class String, template <class...> class Vec>
-            MatchState result_match_or(MatchState prev, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
+            MatchState result_match_or(MatchState prev, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, Stack<String, Vec>& stack) {
                 StackContext<String, Vec> c = stack.pop();
                 assert(c.element);
                 Or<String, Vec>* or_ = static_cast<Or<String, Vec>*>(std::addressof(*c.element));
@@ -73,7 +82,7 @@ namespace utils {
                         c.on_repeat = true;
                         c.index = 0;
                         stack.push(std::move(c));
-                        return dispatch_under(current, ctx, v, stack);
+                        return dispatch_under(current, ctx, c.element, stack);
                     }
                     else {
                         current = c.vec;
@@ -102,7 +111,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            MatchState result_match_group(MatchState prev, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
+            MatchState result_match_group(MatchState prev, Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, Stack<String, Vec>& stack) {
                 StackContext<String, Vec> c = stack.pop();
                 assert(c.element);
                 Group<String, Vec>* group = static_cast<Group<String, Vec>*>(std::addressof(*c.element));

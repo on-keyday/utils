@@ -3,6 +3,7 @@
 // stack - or and ref stack
 #pragma once
 #include "../make_parser/element.h"
+#include <cassert>
 
 namespace utils {
     namespace syntax {
@@ -26,9 +27,13 @@ namespace utils {
 
                 StackContext<String, Vec> pop() {
                     assert(stack.size());
-                    auto ret = std::move(stack.back());
+                    auto ret = std::move(current());
                     stack.pop_back();
                     return std::move(ret);
+                }
+
+                StackContext<String, Vec>& current() {
+                    return stack[stack.size() - 1];
                 }
             };
         }  // namespace internal
