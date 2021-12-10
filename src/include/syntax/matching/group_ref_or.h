@@ -149,9 +149,6 @@ namespace utils {
                         if (c.index >= or_->or_list.size()) {
                             MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
                             load_r(c, res == MatchState::succeed);
-                            if (c.on_repeat && res == MatchState::succeed) {
-                                return MatchState::no_repeat;
-                            }
                             return res;
                         }
                         load_r(c);
@@ -210,9 +207,6 @@ namespace utils {
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
                         load_r(c, res == MatchState::succeed);
-                        if (c.on_repeat && res == MatchState::succeed) {
-                            return MatchState::no_repeat;
-                        }
                         return res;
                     }
                 }

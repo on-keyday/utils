@@ -85,31 +85,18 @@ namespace utils {
                     }
                     while (stack.stack.size()) {
                         auto& c = stack.current();
+                        auto prev = state;
                         if (!c.element) {
                             return state;
                         }
                         if (c.element->type == SyntaxType::or_) {
                             state = matcher.result_or(state);
-                            if (state == MatchState::no_repeat) {
-                                if (auto elm = stack.current().element; elm && elm->type != SyntaxType::or_) {
-                                    stack.current().index++;
-                                }
-                                state = MatchState::succeed;
-                            }
                         }
                         else if (c.element->type == SyntaxType::reference) {
                             state = matcher.result_ref(state);
-                            if (state == MatchState::no_repeat) {
-                                stack.current().index++;
-                            }
-                            state = MatchState::succeed;
                         }
                         else if (c.element->type == SyntaxType::group) {
                             state = matcher.result_group(state);
-                            if (state == MatchState::no_repeat) {
-                                stack.current().index++;
-                            }
-                            state = MatchState::succeed;
                         }
                         else {
                             matcher.context.err.packln("error: unexpected SyntaxType");
@@ -117,6 +104,9 @@ namespace utils {
                         }
                         if (state != MatchState::succeed) {
                             continue;
+                        }
+                        if (prev == MatchState::not_match) {
+                            stack.current().index++;
                         }
                         break;
                     }
