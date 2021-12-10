@@ -102,9 +102,14 @@ namespace utils {
                             if (state == MatchState::no_repeat) {
                                 stack.current().index++;
                             }
+                            state = MatchState::succeed;
                         }
                         else if (c.element->type == SyntaxType::group) {
                             state = matcher.result_group(state);
+                            if (state == MatchState::no_repeat) {
+                                stack.current().index++;
+                            }
+                            state = MatchState::succeed;
                         }
                         else {
                             matcher.context.err.packln("error: unexpected SyntaxType");
