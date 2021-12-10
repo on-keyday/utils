@@ -21,6 +21,9 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
+            MatchState start_match_or(Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack);
+
+            template <class String, template <class...> class Vec>
             MatchState dispatch_under(Vec<wrap::shared_ptr<Element<String, Vec>>>*& current, Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, Stack<String, Vec>& stack) {
                 assert(v);
                 Or<String, Vec>* or_ = static_cast<Or<String, Vec>*>(std::addressof(*v));
