@@ -27,6 +27,7 @@ add_executable(channel "src/test/thread/test_channel.cpp")
 add_executable(predefined "src/test/tokenize/test_predefined.cpp")
 add_executable(tokenizer "src/test/tokenize/test_tokenizer.cpp")
 add_executable(make_parser "src/test/syntax/test_make_parser_clang_bug.cpp")
+add_executable(syntaxc "src/test/syntax/test_syntaxc.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils

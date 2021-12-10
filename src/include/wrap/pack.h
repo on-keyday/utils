@@ -92,7 +92,7 @@ namespace utils {
                     return std::move(*this);
                 }
 
-                Pack&& operator<<(const Pack& in) {
+                Pack&& operator<<(Pack&& in) {
                     impl.result += in.impl.result;
                     return std::move(*this);
                 }
