@@ -107,6 +107,14 @@ namespace utils {
                         return MatchState::fatal;
                     }
                 }
+
+                MatchState result_or(MatchState prev) {
+                    StackContext<String, Vec> c = stack.pop();
+                    if (prev == MatchState::fatal) {
+                        load_r(c);
+                        return MatchState::fatal;
+                    }
+                }
             };
         }  // namespace internal
     }      // namespace syntax
