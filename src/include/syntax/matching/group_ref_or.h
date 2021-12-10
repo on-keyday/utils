@@ -90,7 +90,7 @@ namespace utils {
                 MatchState result_group(MatchState prev) {
                     StackContext<String, Vec> c = stack.pop();
                     if (prev == MatchState::fatal) {
-                        load_r(c);
+                        load_r(c, true);
                         return MatchState::fatal;
                     }
                     else if (prev == MatchState::succeed) {
@@ -119,7 +119,7 @@ namespace utils {
                 MatchState result_or(MatchState prev) {
                     StackContext<String, Vec> c = stack.pop();
                     if (prev == MatchState::fatal) {
-                        load_r(c);
+                        load_r(c, true);
                         return MatchState::fatal;
                     }
                     else if (prev == MatchState::succeed) {
@@ -185,7 +185,7 @@ namespace utils {
                 MatchState result_ref(MatchState prev) {
                     StackContext<String, Vec> c = stack.pop();
                     if (prev == MatchState::fatal) {
-                        load_r(c);
+                        load_r(c, true);
                         return prev;
                     }
                     else if (prev == MatchState::succeed) {
