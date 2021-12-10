@@ -119,81 +119,130 @@ namespace utils {
                 allowed = idv.size();
                 return true;
             }
-        }  // namespace internal
 
-        template <class String, template <class...> class Vec>
-        int parse_float(Context<String, Vec>& ctx, std::shared_ptr<Element<String, Vec>>& v, String& token, bool onlyint = false) {
-            auto cr = ctx.r.FromCurrent();
-            internal::FloatReadPoint<String> pt;
-            auto report = [&](const auto& msg) {
-                ctx.err.packln("error:", msg);
-                ctx.errat = pt.exists();
-                ctx.errelement = v;
-            };
-            internal::get_floatpoint(cr, v, pt);
-            if (pt.str.size() == 0) {
-                report("expect number but not");
-                return 0;
-            }
-            token = pt.str;
-            int base = 10;
-            int i = 0;
-            if (pt.dot && !pt.beforedot && !pt.afterdot) {
-                report("invalid float number format");
-                return 0;
-            }
-            if (helper::starts_with(pt.str, "0x") || helper::starts_with(pt.str, "0X")) {
-                if (pt.str.size() >= 3 && pt.str[2] == '.' && !pt.afterdot) {
-                    report("invalid hex float fromat. token is " + pt.str);
+            template <class String, template <class...> class Vec>
+            int parse_float(Context<String, Vec>& ctx, std::shared_ptr<Element<String, Vec>>& v, String& token, bool onlyint = false) {
+                auto cr = ctx.r.FromCurrent();
+                FloatReadPoint<String> pt;
+                auto report = [&](const auto& msg) {
+                    ctx.err.packln("error:", msg);
+                    ctx.errat = pt.exists();
+                    ctx.errelement = v;
+                };
+                get_floatpoint(cr, v, pt);
+                if (pt.str.size() == 0) {
+                    report("expect number but not");
                     return 0;
                 }
-                base = 16;
-                i = 2;
-            }
-            else if (helper::starts_with(pt.str, "0b") || helper::starts_with(pt.str, "0B")) {
-                base = 2;
-                i = 2;
-            }
-            else if (helper::starts_with(pt.str, "0o") || helper::starts_with(pt.str, "0O")) {
-                base = 8;
-                i = 2;
-            }
-            int allowed = false;
-            internal::check_int_str(pt.str, i, base, allowed);
-            if (pt.str.size() == allowed) {
-                if (!pt.beforedot || pt.dot || pt.sign) {
-                    report("parser is broken");
-                    return -1;
+                token = pt.str;
+                int base = 10;
+                int i = 0;
+                if (pt.dot && !pt.beforedot && !pt.afterdot) {
+                    report("invalid float number format");
+                    return 0;
                 }
-                ctx.r.current = pt.beforedot->get_next();
-                ctx.r.count = pt.stack;
-                /*if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
+                if (helper::starts_with(pt.str, "0x") || helper::starts_with(pt.str, "0X")) {
+                    if (pt.str.size() >= 3 && pt.str[2] == '.' && !pt.afterdot) {
+                        report("invalid hex float fromat. token is " + pt.str);
+                        return 0;
+                    }
+                    base = 16;
+                    i = 2;
+                }
+                else if (helper::starts_with(pt.str, "0b") || helper::starts_with(pt.str, "0B")) {
+                    base = 2;
+                    i = 2;
+                }
+                else if (helper::starts_with(pt.str, "0o") || helper::starts_with(pt.str, "0O")) {
+                    base = 8;
+                    i = 2;
+                }
+                int allowed = false;
+                internal::check_int_str(pt.str, i, base, allowed);
+                if (pt.str.size() == allowed) {
+                    if (!pt.beforedot || pt.dot || pt.sign) {
+                        report("parser is broken");
+                        return -1;
+                    }
+                    ctx.r.current = pt.beforedot->get_next();
+                    ctx.r.count = pt.stack;
+                    /*if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
                     return -1;
                 }*/
-                return 1;
-            }
-            if (base == 2 || base == 8 || onlyint) {
-                report("expect integer but token is " + pt.str;);
-                return 0;
-            }
-            if (pt.str[allowed] == '.') {
-                if (!pt.dot) {
-                    report("parser is broken");
+                    return 1;
+                }
+                if (base == 2 || base == 8 || onlyint) {
+                    report("expect integer but token is " + pt.str;);
+                    return 0;
+                }
+                if (pt.str[allowed] == '.') {
+                    if (!pt.dot) {
+                        report("parser is broken");
+                        return -1;
+                    }
+                    i = allowed + 1;
+                }
+                internal::check_int_str(pt.str, i, base, allowed);
+                if (pt.str.size() == allowed) {
+                    if (pt.sign) {
+                        report("parser is broken");
+                        return -1;
+                    }
+                    if (pt.afterdot) {
+                        r.current = pt.afterdot->get_next();
+                    }
+                    else if (pt.dot) {
+                        r.current = pt.dot->get_next();
+                    }
+                    else {
+                        report("parser is broken");
+                        return -1;
+                    }
+                    ctx.r.count = pt.stack;
+                    /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                     return -1;
+                }*/
+                    return 1;
+                }
+                if (base == 16) {
+                    if (pt.str[allowed] != 'p' && pt.str[allowed] != 'P') {
+                        report("invalid hex float format. token is " + pt.str);
+                        return 0;
+                    }
+                }
+                else {
+                    if (pt.str[allowed] != 'e' && pt.str[allowed] != 'E') {
+                        report("invalid float format. token is " + pt.str);
+                        return 0;
+                    }
                 }
                 i = allowed + 1;
-            }
-            internal::check_int_str(pt.str, i, base, allowed);
-            if (pt.str.size() == allowed) {
-                if (pt.sign) {
-                    report("parser is broken");
-                    return -1;
+                if (pt.str.size() > i) {
+                    if (pt.str[i] == '+' || pt.str[i] == '-') {
+                        if (!pt.sign) {
+                            report("parser is broken");
+                            return -1;
+                        }
+                        i++;
+                    }
                 }
-                if (pt.afterdot) {
+                if (pt.str.size() <= i) {
+                    report("invalid float format. token is " + pt.str);
+                    return 0;
+                }
+                internal::check_int_str(pt.str, i, 10, allowed);
+                if (pt.str.size() != allowed) {
+                    report("invalid float format. token is " + pt.str);
+                    return 0;
+                }
+                if (pt.aftersign) {
+                    r.current = pt.aftersign->get_next();
+                }
+                else if (pt.afterdot) {
                     r.current = pt.afterdot->get_next();
                 }
-                else if (pt.dot) {
-                    r.current = pt.dot->get_next();
+                else if (pt.beforedot) {
+                    r.current = pt.beforedot->get_next();
                 }
                 else {
                     report("parser is broken");
@@ -201,59 +250,10 @@ namespace utils {
                 }
                 ctx.r.count = pt.stack;
                 /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
-                    return -1;
-                }*/
-                return 1;
-            }
-            if (base == 16) {
-                if (pt.str[allowed] != 'p' && pt.str[allowed] != 'P') {
-                    report("invalid hex float format. token is " + pt.str);
-                    return 0;
-                }
-            }
-            else {
-                if (pt.str[allowed] != 'e' && pt.str[allowed] != 'E') {
-                    report("invalid float format. token is " + pt.str);
-                    return 0;
-                }
-            }
-            i = allowed + 1;
-            if (pt.str.size() > i) {
-                if (pt.str[i] == '+' || pt.str[i] == '-') {
-                    if (!pt.sign) {
-                        report("parser is broken");
-                        return -1;
-                    }
-                    i++;
-                }
-            }
-            if (pt.str.size() <= i) {
-                report("invalid float format. token is " + pt.str);
-                return 0;
-            }
-            internal::check_int_str(pt.str, i, 10, allowed);
-            if (pt.str.size() != allowed) {
-                report("invalid float format. token is " + pt.str);
-                return 0;
-            }
-            if (pt.aftersign) {
-                r.current = pt.aftersign->get_next();
-            }
-            else if (pt.afterdot) {
-                r.current = pt.afterdot->get_next();
-            }
-            else if (pt.beforedot) {
-                r.current = pt.beforedot->get_next();
-            }
-            else {
-                report("parser is broken");
-                return -1;
-            }
-            ctx.r.count = pt.stack;
-            /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                 return -1;
             }*/
-            return true;
-        }
-    }  // namespace syntax
+                return true;
+            }
+        }  // namespace internal
+    }      // namespace syntax
 }  // namespace utils
