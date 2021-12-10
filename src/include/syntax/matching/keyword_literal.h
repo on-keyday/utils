@@ -20,7 +20,7 @@ namespace utils {
                     ctx.errat = ctx.r.get();
                     ctx.errelement = v;
                 };
-                auto fmterr = [](auto expected, auto& e) {
+                auto fmterr = [&](auto expected, auto& e) {
                     report("expect ", expected, " but token is ", e ? e->what() : "EOF", "(symbol `", e ? e->to_string() : "", "`)");
                 };
                 assert(v);
