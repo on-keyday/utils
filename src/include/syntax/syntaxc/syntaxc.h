@@ -29,7 +29,7 @@ namespace utils {
                     return false;
                 }
                 output.keyword.predef = std::move(ctx.keyword);
-                output.keyword.predef = std::move(ctx.symbol);
+                output.symbol.predef = std::move(ctx.symbol);
                 return true;
             }
 
