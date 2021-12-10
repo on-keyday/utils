@@ -204,7 +204,7 @@ namespace utils {
                     return MatchState::not_match;
                 }
                 auto str = value->tok->to_string();
-                if (e->has(str)) {
+                if (!e->has(str)) {
                     report("expect ", str, " but token is ", e->what(), " (symbol `", e->to_string(), "`)");
                     return MatchState::not_match;
                 }
