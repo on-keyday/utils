@@ -109,6 +109,13 @@ namespace utils {
                     s = wrap::make_shared<Single<String, Vec>>();
                     s->type = SyntaxType::literal;
                     s->tok = e;
+                    auto value = e->to_string();
+                    if (is_symbol(value)) {
+                        ctx.symbol.push_back(std::move(value));
+                    }
+                    else {
+                        ctx.keyword.push_back(std::move(value));
+                    }
                     single = s;
                     e = r.consume_get();
                     if (!e) {
