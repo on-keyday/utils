@@ -153,7 +153,8 @@ namespace utils {
                 return ret;
             }
             else if (common_begin(KeyWord::indent, [&] {
-
+                         report("indent is not implemented");
+                         ret = MatchState::fatal;
                      })) {
                 return ret;
             }
