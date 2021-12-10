@@ -11,7 +11,7 @@ namespace utils {
     namespace syntax {
 
         template <class String, template <class...> class Vec, template <class...> class Map>
-        class Match {
+        struct Match {
             internal::MatcherHelper<String, Vec, Map> matcher;
 
            private:
