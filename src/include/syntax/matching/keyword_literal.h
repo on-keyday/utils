@@ -65,6 +65,7 @@ namespace utils {
                         f();
                         return true;
                     }
+                    return false;
                 };
                 auto filter_tokenkind = [&](tknz::TokenKind kind) {
                     return [&, kind] {

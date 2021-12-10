@@ -31,8 +31,8 @@ void test_syntaxc() {
     decltype(tokenizer)::token_t res;
 
     tokenizer.tokenize(input2, res);
-
-    auto result2 = test.matching(utils::syntax::Reader<utils::wrap::string>{res});
+    utils::syntax::Reader<utils::wrap::string> r{res};
+    auto result2 = test.matching(r);
 
     assert(result2 && "expect true but matching is failed");
 }

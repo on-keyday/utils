@@ -8,11 +8,11 @@
 namespace utils {
     namespace helper {
         template <class T, class U>
-        using compare_type = typename Sequencer<typename BufferType<T&>::type>::compare_type<U>;
+        using compare_type = typename Sequencer<typename BufferType<T&>::type>::template compare_type<U>;
 
         template <class T, class U>
         constexpr auto default_compare() {
-            return Sequencer<typename BufferType<T&>::type>::default_compare<U>();
+            return Sequencer<typename BufferType<T&>::type>::template default_compare<U>();
         }
 
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
