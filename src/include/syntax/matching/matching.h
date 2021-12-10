@@ -88,7 +88,7 @@ namespace utils {
                         else if (c.element->type == SyntaxType::reference) {
                             state = matcher.result_ref(state);
                         }
-                        else if (c.element->type = SyntaxType::group) {
+                        else if (c.element->type == SyntaxType::group) {
                             state = matcher.result_group(state);
                         }
                         else {
