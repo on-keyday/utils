@@ -109,7 +109,7 @@ namespace utils {
                 }
                 matcher.stack.stack.clear();
                 matcher.start_ref(v);
-                matching_loop();
+                return matching_loop();
             }
         };
     }  // namespace syntax
