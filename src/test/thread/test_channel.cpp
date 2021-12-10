@@ -40,7 +40,7 @@ void test_channecl() {
     {
         auto [w, r] = utils::thread::make_chan<int>(5);
         w << 32;
-        int result;
+        int result = 0;
         r >> result;
         assert(result == 32 && "channel is incorrect");
         w << 1;
