@@ -36,7 +36,10 @@ namespace utils {
                         }
                         else {
                             if (current.on_repeat || any(current.attr & Attribute::ifexists)) {
+                                current.index++;
+                                continue;
                             }
+                            break;
                         }
                     }
                 }
