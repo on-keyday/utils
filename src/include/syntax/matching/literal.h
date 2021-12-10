@@ -31,8 +31,10 @@ namespace utils {
                 report("expect keyword but token is ", e->what(), " (symbol `", e->to_string(), "`)");
                 return MatchState::not_match;
             }
+            r.consume();
             result.kind = e->is(tknz::TokenKind::keyword) ? KeyWord::literal_keyword : KeyWord::literal_symbol;
             result.token = e->to_string();
+            return MatchState::succeed;
         }
     }  // namespace syntax
 }  // namespace utils
