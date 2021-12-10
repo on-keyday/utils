@@ -62,9 +62,19 @@ namespace utils {
                     }
                     else if (v->type == SyntaxType::group) {
                         state = matcher.start_group(v);
+                        if (state != MatchState::succeed) {
+                            break;
+                        }
                     }
                     else if (v->type == SyntaxType::reference) {
                         state = matcher.start_ref(v);
+                        if (state != MatchState::succeed) {
+                            break;
+                        }
+                    }
+                    else {
+                        matcher.context.err.packln("error: unexpected SyntaxType");
+                        state = MatchState::fatal;
                     }
                 }
             }
