@@ -91,6 +91,9 @@ namespace utils {
                         }
                         else if (c.element->type == SyntaxType::reference) {
                             state = matcher.result_ref(state);
+                            if (state == MatchState::succeed) {
+                                stack.current().index++;
+                            }
                         }
                         else if (c.element->type == SyntaxType::group) {
                             state = matcher.result_group(state);
