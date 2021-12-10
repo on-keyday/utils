@@ -53,11 +53,11 @@ namespace utils {
                     return MatchState::not_match;
                 }
 
-                MatchState init_or(element_t& v) {
+                MatchState init_or(element_t& v, size_t index) {
                     assert(v && v->type == SyntaxType::or_);
                     Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
                     assert(or_->or_list);
-                    auto list = or_->or_list[0];
+                    auto list = or_->or_list[index];
                     if (list->type == SyntaxType::or_) {
                         return start_or(v);
                     }
@@ -109,7 +109,7 @@ namespace utils {
 
                 MatchState start_or(element_t& v) {
                     push(nullptr, v);
-                    return init_or();
+                    return init_or(v, 0);
                 }
 
                 MatchState result_or(MatchState prev) {
@@ -125,8 +125,9 @@ namespace utils {
                             c.index = 0;
                             c.on_repeat = true;
                             store_r(c);
+                            auto elm = c.element;
                             stack.push(std::move(c));
-                            return init_or(c.element);
+                            return init_or(elm, 0);
                         }
                         return MatchState::succeed;
                     }
@@ -136,6 +137,12 @@ namespace utils {
                         if (c.index >= or_->or_list.size()) {
                             MatchResult res = judge_by_attribute(or_->attr, c.on_repeat);
                         }
+                        load_r(c);
+                        c.index++;
+                        store_r(c);
+                        auto elm = c.element;
+                        stack.push(std::move(c));
+                        return init_or(elm, c.index);
                     }
                 }
             };
