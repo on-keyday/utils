@@ -25,7 +25,7 @@ namespace utils {
                 ctx.errelement = v;
             };
             auto fmterr = [](auto expected, auto& e) {
-                report("expect ", expected, " but token is ", e->what(), "(symbol `", e->to_string(), "`)");
+                report("expect ", expected, " but token is ", e ? e->what() : "EOF", "(symbol `", e ? e->to_string() : "", "`)");
             };
             Single<String, Vec>* value = static_cast<Single<String, Vec>*>(std::addressof(*v));
             Reader<String>& r = ctx.r;
@@ -164,12 +164,19 @@ namespace utils {
                     if (!e || e->is(tknz::TokenKind::line) || e->is(tknz::TokenKind::space)) {
                         break;
                     }
+                    tok += e->to_string();
                 }
                 if (tok.size() == 0) {
                     fmterr("not-space", e);
                     return MatchState::not_match;
                 }
+                result.token = std::move(tok);
+                result.kind = KeyWord::not_space;
                 return MatchState::succeed;
+            }
+            else {
+                report("unsupported keyword `", v->tok->to_string(), "`");
+                return MatchState::fatal;
             }
         }
     }  // namespace syntax
