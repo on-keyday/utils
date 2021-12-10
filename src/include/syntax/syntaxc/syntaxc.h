@@ -23,14 +23,19 @@ namespace utils {
                     return false;
                 }
                 internal::ParseContext<String, Vec> ctx = syntax::make_parse_context<String, Vec>(rbase);
-                wrap::shared_ptr<Element<String, Vec>> result;
-                if (!syntax::parse(ctx, result)) {
+                match.matcher.segments.clear();
+                if (!syntax::parse(ctx, match.matcher.segments)) {
                     ctx.err << match.matcher.context.err.pack();
                     return false;
                 }
                 output.keyword.predef = std::move(ctx.keyword);
                 output.keyword.predef = std::move(ctx.symbol);
                 return true;
+            }
+
+            bool matching(Reader<String>& r, const String& root = String()) {
+                match.matcher.context.r = r;
+                return match.matching(root) == MatchState::succeed;
             }
         };
     }  // namespace syntax

@@ -4,6 +4,9 @@
 #pragma once
 #include "parse_impl.h"
 
+#include "../../wrap/lite/vector.h"
+#include <algorithm>
+
 namespace utils {
     namespace syntax {
         template <class String, template <class...> class Vec, template <class...> class Map>
@@ -26,8 +29,8 @@ namespace utils {
             auto sorter = [](const std::string& a, const std::string& b) {
                 return a.size() > b.size();
             };
-            std::sort(ctx.keywords.begin(), ctx.keywords.end(), sorter);
-            std::sort(ctx.symbols.begin(), ctx.symbols.end(), sorter);
+            std::sort(ctx.keyword.begin(), ctx.keyword.end(), sorter);
+            std::sort(ctx.symbol.begin(), ctx.symbol.end(), sorter);
             return true;
         }
 
