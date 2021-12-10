@@ -236,13 +236,13 @@ namespace utils {
                     return 0;
                 }
                 if (pt.aftersign) {
-                    r.current = pt.aftersign->get_next();
+                    ctx.r.current = pt.aftersign->next;
                 }
                 else if (pt.afterdot) {
-                    r.current = pt.afterdot->get_next();
+                    ctx.r.current = pt.afterdot->next;
                 }
                 else if (pt.beforedot) {
-                    r.current = pt.beforedot->get_next();
+                    ctx.r.current = pt.beforedot->next;
                 }
                 else {
                     report("parser is broken");
