@@ -142,13 +142,13 @@ namespace utils {
                     else {
                         assert(c.element && c.element->type == SyntaxType::or_);
                         Or<String, Vec>* or_ = cast<Or<String, Vec>>(c.element);
-                        if (c.index >= or_->or_list.size()) {
+                        c.index++;
+                        if (c.index > or_->or_list.size()) {
                             MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
                             load_r(c, res == MatchState::succeed);
                             return res;
                         }
                         load_r(c);
-                        c.index++;
                         store_r(c);
                         auto elm = c.element;
                         stack.push(std::move(c));

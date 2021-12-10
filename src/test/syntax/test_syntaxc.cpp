@@ -9,8 +9,8 @@ void test_syntaxc() {
 
     auto seq =
         u8R"(
-        ROOT:=["Hey" | WHAT?]*
-        WHAT:="What"*? 
+        ROOT:=["Hey" | WHAT]*
+        WHAT:="What" 
     )";
 
     utils::Sequencer input(seq);
