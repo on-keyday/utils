@@ -152,7 +152,24 @@ namespace utils {
             else if (common_begin(KeyWord::number, number(false))) {
                 return ret;
             }
-            else if (common_begin(KeyWord::indent)) {
+            else if (common_begin(KeyWord::indent, [&] {
+
+                     })) {
+                return ret;
+            }
+            else if (is_keyword(KeyWord::not_space)) {
+                String tok;
+                while (true) {
+                    e = r.get();
+                    if (!e || e->is(tknz::TokenKind::line) || e->is(tknz::TokenKind::space)) {
+                        break;
+                    }
+                }
+                if (tok.size() == 0) {
+                    fmterr("not-space", e);
+                    return MatchState::not_match;
+                }
+                return MatchState::succeed;
             }
         }
     }  // namespace syntax
