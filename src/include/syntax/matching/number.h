@@ -19,7 +19,7 @@ namespace utils {
             struct FloatReadPoint {
                 using token_t = tknz::Token<String>;
                 String str;
-                wrap::shared_ptr<String> beforedot;
+                wrap::shared_ptr<token_t> beforedot;
                 wrap::shared_ptr<token_t> dot;
                 wrap::shared_ptr<token_t> afterdot;
                 wrap::shared_ptr<token_t> sign;
