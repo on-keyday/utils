@@ -172,7 +172,7 @@ namespace utils {
                     return 1;
                 }
                 if (base == 2 || base == 8 || onlyint) {
-                    report("expect integer but token is " + pt.str;);
+                    report("expect integer but token is " + pt.str);
                     return 0;
                 }
                 if (pt.str[allowed] == '.') {
