@@ -180,6 +180,8 @@ namespace utils {
                         return prev;
                     }
                     else if (prev == MatchState::succeed) {
+                        context.err.clear();
+                        load_r(c, true);
                         if (any(c.element->attr & Attribute::repeat)) {
                             c.index = 0;
                             c.on_repeat = true;
@@ -188,8 +190,12 @@ namespace utils {
                             stack.push(std::move(c));
                             return dispatch(elm);
                         }
+                        return prev;
                     }
                     else {
+                        MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
+                        load_r(c, res == MatchState::succeed);
+                        return res;
                     }
                 }
             };
