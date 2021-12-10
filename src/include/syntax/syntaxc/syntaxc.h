@@ -28,7 +28,8 @@ namespace utils {
                     ctx.err << match.matcher.context.err.pack();
                     return false;
                 }
-
+                output.keyword.predef = std::move(ctx.keyword);
+                output.keyword.predef = std::move(ctx.symbol);
                 return true;
             }
         };
