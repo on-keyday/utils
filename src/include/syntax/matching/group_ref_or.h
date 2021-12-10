@@ -76,7 +76,7 @@ namespace utils {
                     Or<String, Vec>* or_ = cast<Or<String, Vec>>(v);
                     assert(or_->or_list.size());
                     auto list = or_->or_list[index];
-                    return dispatch(v);
+                    return dispatch(list);
                 }
 
                public:
@@ -154,7 +154,7 @@ namespace utils {
 
                 MatchState start_ref(const String& seg, element_t v = nullptr) {
                     auto found = segments.find(seg);
-                    if (found != segments.end()) {
+                    if (found == segments.end()) {
                         context.err.packln("error: reference `", seg, "` not found");
                         return MatchState::fatal;
                     }
