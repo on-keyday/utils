@@ -1,6 +1,6 @@
 /*license*/
 
-// match_impl - implementation of matching
+// group_ref_or - matching `group`, `ref`, `or` element
 #pragma once
 
 #include "stack.h"
