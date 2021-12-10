@@ -198,7 +198,7 @@ namespace utils {
                         return prev;
                     }
                     else {
-                        MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
+                        MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
                         load_r(c, res == MatchState::succeed);
                         return res;
                     }
