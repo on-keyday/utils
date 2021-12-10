@@ -9,6 +9,7 @@ namespace utils {
     namespace syntax {
         template <class String, template <class...> class Vec>
         MatchState match_or(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v) {
+            auto& r = ctx.r;
         }
     }  // namespace syntax
 }  // namespace utils
