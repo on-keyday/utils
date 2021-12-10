@@ -38,6 +38,7 @@ namespace utils {
                             }
                             else {
                                 if (current.on_repeat || any(v->attr & Attribute::ifexists)) {
+                                    current.on_repeat = false;
                                     current.index++;
                                     return MatchState::succeed;
                                 }
