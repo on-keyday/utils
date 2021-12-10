@@ -97,12 +97,7 @@ namespace utils {
                     }
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
-                        if (res == MatchState::fatal || res == MatchState::not_match) {
-                            load_r(c);
-                        }
-                        else {
-                            load_r(c, true);
-                        }
+                        load_r(c, res == MatchState::succeed);
                         return res;
                     }
                 }
@@ -136,12 +131,7 @@ namespace utils {
                         Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
                         if (c.index >= or_->or_list.size()) {
                             MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
-                            if (res == MatchState::fatal || res == MatchState::not_match) {
-                                load_r(c);
-                            }
-                            else {
-                                load_r(c, true);
-                            }
+                            load_r(c, res == MatchState::succeed);
                             return res;
                         }
                         load_r(c);
