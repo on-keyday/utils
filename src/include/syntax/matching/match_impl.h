@@ -10,12 +10,15 @@
 namespace utils {
     namespace syntax {
         namespace internal {
+
+            // to coding easily, using class
             template <class String, template <class...> class Vec, template <class...> class Map>
             struct MatcherWrap {
                 using element_t = wrap::shared_ptr<Element<String, Vec>>;
                 using vec_t = Vec<element_t>;
                 Stack<String, Vec> stack;
                 Context<String, Vec> context;
+                Map<String, element_t> segments;
 
                private:
                 template <class T>
@@ -146,6 +149,7 @@ namespace utils {
                 MatchState start_ref(element_t& v) {
                     assert(v && v->type == SyntaxType::reference);
                     Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
+                    ref->tok->to_string();
                 }
             };
         }  // namespace internal
