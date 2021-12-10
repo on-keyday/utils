@@ -12,9 +12,9 @@ namespace utils {
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         class Match {
-           private:
             internal::MatcherHelper<String, Vec, Map> matcher;
 
+           private:
             MatchState matching_loop() {
                 internal::Stack<String, Vec>& stack = matcher.stack;
                 MatchState state = MatchState::not_match;
@@ -103,6 +103,7 @@ namespace utils {
                 }
             }
 
+           public:
             MatchState matching(const String& root = String()) {
                 String v = root;
                 if (!root.size()) {
