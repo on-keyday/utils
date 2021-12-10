@@ -7,6 +7,7 @@
 #include "../make_parser/keyword.h"
 #include "state.h"
 #include "number.h"
+#include "../../tokenize/cast.h"
 
 namespace utils {
     namespace syntax {
@@ -36,6 +37,14 @@ namespace utils {
                     r.ignore_line = false;
                     r.read();
                     r.ignore_line = true;
+                }
+                else if (is_keyword(KeyWord::indent)) {
+                    r.ignore_line = false;
+                    r.read();
+                    r.ignore_line = true;
+                    if (r.get() && r.get()->is(tknz::TokenKind::line)) {
+                        r.consume();
+                    }
                 }
                 else {
                     r.read();
@@ -138,6 +147,8 @@ namespace utils {
             }
             else if (common_begin(KeyWord::number, number(false))) {
                 return ret;
+            }
+            else if (common_begin()) {
             }
         }
     }  // namespace syntax
