@@ -56,21 +56,25 @@ namespace utils {
                     return MatchState::not_match;
                 }
 
-                MatchState init_or(element_t& v, size_t index) {
-                    assert(v && v->type == SyntaxType::or_);
-                    Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
-                    assert(or_->or_list);
-                    auto list = or_->or_list[index];
-                    if (list->type == SyntaxType::or_) {
+                MatchState dispatch(element_t& v) {
+                    if (v->type == SyntaxType::or_) {
                         return start_or(v);
                     }
-                    else if (list->type == SyntaxType::group) {
+                    else if (v->type == SyntaxType::group) {
                         return start_group(v);
                     }
                     else {
                         context.err.packln("error: unexpected SyntaxType");
                         return MatchState::fatal;
                     }
+                }
+
+                MatchState init_or(element_t& v, size_t index) {
+                    assert(v && v->type == SyntaxType::or_);
+                    Or<String, Vec>* or_ = cast<Group<String, Vec>>(v);
+                    assert(or_->or_list);
+                    auto list = or_->or_list[index];
+                    return dispatch(v);
                 }
 
                public:
@@ -174,6 +178,18 @@ namespace utils {
                     if (prev == MatchState::fatal) {
                         load_r(c);
                         return prev;
+                    }
+                    else if (prev == MatchState::succeed) {
+                        if (any(c.element->attr & Attribute::repeat)) {
+                            c.index = 0;
+                            c.on_repeat = true;
+                            store_r(c);
+                            auto elm = c.element;
+                            stack.push(std::move(c));
+                            return dispatch(elm);
+                        }
+                    }
+                    else {
                     }
                 }
             };
