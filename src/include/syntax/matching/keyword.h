@@ -66,6 +66,9 @@ namespace utils {
             else if (common_begin(KeyWord::symbol, filter_tokenkind(tknz::TokenKind::symbol))) {
                 return ret;
             }
+            else if (common_begin(KeyWord::eol, filter_tokenkind(tknz::TokenKind::line))) {
+                return ret;
+            }
         }
     }  // namespace syntax
 }  // namespace utils
