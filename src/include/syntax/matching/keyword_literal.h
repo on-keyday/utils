@@ -184,7 +184,7 @@ namespace utils {
             MatchState match_literal(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
                 auto report = [&](auto&&... args) {
                     ctx.err.packln("error: ", args...);
-                    ctx.errat = r.get();
+                    ctx.errat = ctx.r.get();
                     ctx.errelement = v;
                 };
                 Single<String, Vec>* value = static_cast<Single<String, Vec>*>(std::addressof(*v));

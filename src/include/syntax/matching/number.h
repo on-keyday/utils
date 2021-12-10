@@ -164,7 +164,7 @@ namespace utils {
                         report("parser is broken");
                         return -1;
                     }
-                    ctx.r.current = pt.beforedot->get_next();
+                    ctx.r.current = pt.beforedot->next;
                     ctx.r.count = pt.stack;
                     /*if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
                     return -1;
