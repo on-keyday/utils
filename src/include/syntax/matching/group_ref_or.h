@@ -124,6 +124,10 @@ namespace utils {
                     }
                     else if (prev == MatchState::succeed) {
                         context.err.clear();
+                        if (c.r.count == context.r.count) {
+                            context.err.packln("error: detect infinity loop. check around `repeat`(*) and `ifexists`(?)");
+                            return MatchState::fatal;
+                        }
                         load_r(c, true);
                         if (any(c.element->attr & Attribute::repeat)) {
                             c.index = 0;
