@@ -9,7 +9,7 @@ void test_syntaxc() {
 
     auto seq =
         u8R"a(
-        ROOT:=ID|"("ROOT ["." ROOT|ROOT*?] ")"
+        ROOT:=ID|"("ROOT ["." ROOT|ROOT*]? ")"
     )a";
 
     utils::Sequencer input(seq);
