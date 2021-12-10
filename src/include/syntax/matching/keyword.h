@@ -69,6 +69,13 @@ namespace utils {
             else if (common_begin(KeyWord::eol, filter_tokenkind(tknz::TokenKind::line))) {
                 return ret;
             }
+            else if (is_keyword(KeyWord::eof)) {
+                if (e) {
+                    report("expect EOF but token is", e->what(), "(symbol `", e->to_string(), "`)");
+                    return ret;
+                }
+                return MatchState::succeed;
+            }
         }
     }  // namespace syntax
 }  // namespace utils
