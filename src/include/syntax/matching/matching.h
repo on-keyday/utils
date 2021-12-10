@@ -102,7 +102,7 @@ namespace utils {
                 }
             }
 
-            MatchState matching(const String& root) {
+            MatchState matching(const String& root = String()) {
                 String v = root;
                 if (!root.size()) {
                     utf::convert("ROOT", v);
