@@ -142,6 +142,10 @@ namespace utils {
                         return init_or(elm, c.index);
                     }
                 }
+
+                MatchState start_ref(element_t& v) {
+                    assert(v && v->type == SyntaxType::reference);
+                }
             };
         }  // namespace internal
     }      // namespace syntax
