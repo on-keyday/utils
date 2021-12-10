@@ -89,6 +89,10 @@ namespace utils {
                     else if (c.element->type = SyntaxType::group) {
                         state = matcher.result_group(state);
                     }
+                    else {
+                        matcher.context.err.packln("error: unexpected SyntaxType");
+                        return MatchState::fatal;
+                    }
                 }
             }
         };
