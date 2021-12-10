@@ -10,13 +10,21 @@
 
 namespace utils {
     namespace syntax {
+        template <class String>
+        struct KeywordMatchResult {
+            String token;
+            KeyWord kind = KeyWord::id;
+        };
 
         template <class String, template <class...> class Vec>
-        MatchState match_keyword(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, String& token) {
+        MatchState match_keyword(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, KeywordMatchResult<String>& result) {
             auto report = [&](auto&&... args) {
                 ctx.err.packln("error: ", args...);
                 ctx.errat = r.get();
                 ctx.errelement = v;
+            };
+            auto fmterr = [](auto expected, auto& e) {
+                report("expect ", expected, " but token is ", e->what(), "(symbol `", e->to_string(), "`)");
             };
             Single<String, Vec>* value = static_cast<Single<String, Vec>*>(std::addressof(*v));
             Reader<String>& r = ctx.r;
@@ -49,12 +57,30 @@ namespace utils {
             auto filter_tokenkind = [&](tknz::TokenKind kind) {
                 return [&, kind] {
                     if (!e->is(kind)) {
-                        report("expect ", tknz::token_kind(kind), " but token is ", e->what(), "(symbol `", e->to_string(), "`)");
+                        fmterr(tknz::token_kind(kind), e);
                         return;
                     }
-                    token = e->to_string();
+                    result.token = e->to_string();
+                    result.kind = kind;
                     ret = MatchState::succeed;
                     r.consume();
+                };
+            };
+            auto number = [&](bool integer) {
+                return [&, integer] {
+                    auto err = parse_float(ctx, v, result.token, integer);
+                    if (err < 0) {
+                        ret = MatchState::fatal;
+                    }
+                    else if (err) {
+                        ret = MatchState::succeed;
+                        if (integer) {
+                            result.kind = KeyWord::integer;
+                        }
+                        else {
+                            result.kind = KeyWord::number;
+                        }
+                    }
                 };
             };
             if (common_begin(KeyWord::id, filter_tokenkind(tknz::TokenKind::identifier))) {
@@ -71,10 +97,47 @@ namespace utils {
             }
             else if (is_keyword(KeyWord::eof)) {
                 if (e) {
-                    report("expect EOF but token is", e->what(), "(symbol `", e->to_string(), "`)");
+                    fmterr("EOF", e);
                     return ret;
                 }
                 return MatchState::succeed;
+            }
+            else if (common_begin(KeyWord::string, [&] {
+                         if (!e->has("\"")) {
+                             fmterr("string", e);
+                             return;
+                         }
+                         e = r.consume_get();
+                         if (!e) {
+                             report("unexpected EOF");
+                             ret = MatchState::eof;
+                             return;
+                         }
+                         if (!e->is(tknz::TokenKind::comment)) {
+                             fmterr("string", e);
+                             return;
+                         }
+                         result.token = e->to_string();
+                         e = r.consume_get();
+                         if (!e) {
+                             report("unexpected EOF");
+                             ret = MatchState::eof;
+                             return;
+                         }
+                         if (!e->has("\"")) {
+                             fmterr("string", e);
+                             return;
+                         }
+                         r.consume();
+                         result.kind = KeyWord::string;
+                     })) {
+                return ret;
+            }
+            else if (common_begin(KeyWord::integer, number(true))) {
+                return ret;
+            }
+            else if (common_begin(KeyWord::number, number(false))) {
+                return ret;
             }
         }
     }  // namespace syntax
