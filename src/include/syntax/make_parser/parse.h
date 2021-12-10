@@ -23,6 +23,11 @@ namespace utils {
                     return false;
                 }
             }
+            auto sorter = [](const std::string& a, const std::string& b) {
+                return a.size() > b.size();
+            };
+            std::sort(ctx.keywords.begin(), ctx.keywords.end(), sorter);
+            std::sort(ctx.symbols.begin(), ctx.symbols.end(), sorter);
             return true;
         }
 
