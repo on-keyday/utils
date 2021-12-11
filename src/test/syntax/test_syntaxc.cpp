@@ -35,14 +35,12 @@ void test_syntaxc() {
 
     auto other =
         u8R"(
-
-
-       {
+        {
            "hello":"world",
            "hey": [null,"string",0.2,3],
            "google":true,
            "gmail":"com\""
-       }
+        }
     )";
 
     utils::Sequencer input2(other);

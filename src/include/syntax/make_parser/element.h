@@ -14,6 +14,7 @@ namespace utils {
             reference,
             group,
             or_,
+            symbolic,
         };
 
         template <class String, template <class...> class Vec>
