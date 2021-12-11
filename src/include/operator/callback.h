@@ -169,6 +169,10 @@ namespace utils {
                 return (*base)(std::forward<Carg>(args)...);
             }
 
+            operator bool() {
+                return base != nullptr;
+            }
+
             ~Callback() {
                 del_cb();
             }
