@@ -17,7 +17,7 @@ void test_syntaxc() {
         u8R"a(
         ROOT:=JSON
         JSON:="{" OBJPARAM*? "}"|STRING
-        OBJPARAM:=STRING ":" JSON
+        OBJPARAM:=STRING ":" JSON ["," OBJPARAM]?
     )a";
 
     utils::Sequencer input(seq);
