@@ -40,6 +40,9 @@ namespace utils {
 
             bool matching(Reader<String>& r, const String& root = String()) {
                 match.matcher.context.r = r;
+                if (!cb) {
+                    cb = [](auto&) {};
+                }
                 return match.matching(cb, root) == MatchState::succeed;
             }
         };
