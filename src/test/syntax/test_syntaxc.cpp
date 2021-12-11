@@ -8,9 +8,11 @@
 void test_syntaxc() {
     auto& cout = utils::wrap::cout_wrap();
     utils::syntax::SyntaxC<utils::wrap::string, utils::wrap::vector, utils::wrap::map> test;
-    test.cb = [&](auto& r) {
+    test.cb = [&](auto& ctx) {
+        auto& r = ctx.result;
         cout << utils::syntax::keywordv(r.kind) << "-";
-        cout << r.token;
+        cout << r.token << "-";
+        cout << ctx.stack.back();
         cout << "\n";
     };
     auto seq =
