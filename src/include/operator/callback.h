@@ -131,7 +131,7 @@ namespace utils {
             template <class T>
             void make_cb(T&& t) {
                 using decay_T = std::remove_cvref_t<std::decay_t<T>>;
-                base = HandlerTraits<Ret>::template new_cb<Handler, Impl<decay_T>>(Impl<decay_T>(std::forward<T>(t)));
+                base = HandlerTraits<Ret>::template new_cb<Handler, Impl<decay_T>>(std::forward<T>(t));
             }
 
             void del_cb() {
