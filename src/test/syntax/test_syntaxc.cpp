@@ -51,7 +51,9 @@ void test_syntaxc() {
 
     const char* err = nullptr;
 
-    utils::tokenize::merge(err, res, utils::tokenize::escaped_comment<utils::wrap::string>("\"", "\\"));
+    auto tmp = utils::tokenize::merge(err, res, utils::tokenize::escaped_comment<utils::wrap::string>("\"", "\\"));
+
+    assert(tmp && "failed to merge");
 
     utils::syntax::Reader<utils::wrap::string> r{res};
     auto result2 = test.matching(r);

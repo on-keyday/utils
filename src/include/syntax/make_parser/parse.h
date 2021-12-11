@@ -11,7 +11,12 @@ namespace utils {
     namespace syntax {
         template <class String, template <class...> class Vec, template <class...> class Map>
         bool parse(internal::ParseContext<String, Vec>& ctx, Map<String, wrap::shared_ptr<Element<String, Vec>>>& result) {
-            ctx.symbol = {"\"", "+", "-", "."};
+            auto arr = {"\"", "+", "-", ".", "\\"};
+            for (auto a : arr) {
+                String tmp;
+                utf::convert(a, tmp);
+                ctx.symbol.push_back(std::move(tmp));
+            }
             while (ctx.r.read()) {
                 String segname;
                 wrap::shared_ptr<Element<String, Vec>> group;
