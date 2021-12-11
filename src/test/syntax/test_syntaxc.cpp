@@ -49,9 +49,9 @@ void test_syntaxc() {
 
     tokenizer.tokenize(input2, res);
 
-    const char* err;
+    const char* err = nullptr;
 
-    utils::tokenize::merge(res, utils::tokenize::escaped_comment<utils::wrap::string>("\"", "\\"));
+    utils::tokenize::merge(err, res, utils::tokenize::escaped_comment<utils::wrap::string>("\"", "\\"));
 
     utils::syntax::Reader<utils::wrap::string> r{res};
     auto result2 = test.matching(r);
