@@ -52,7 +52,7 @@ namespace utils {
             SFINAE_BLOCK_TU_BEGIN(has_new_cb, T::template new_cb<U>())
             template <class... Args>
             static U invoke(Args&&... args) {
-                return T::template new_cb<U>(std::forward<Args>(args));
+                return T::template new_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_ELSE(has_new_cb)
             template <class... Args>
@@ -86,7 +86,7 @@ namespace utils {
             };
 
             template <class V>
-            struct Impl {
+            struct Impl : Base {
                 V t;
 
                 SFINAE_BLOCK_T_BEGIN(is_callable_u, std::declval<T>()(std::declval<Args>()...))
@@ -102,7 +102,7 @@ namespace utils {
 
                 SFINAE_BLOCK_T_BEGIN(is_callable, static_cast<Ret>(std::declval<T>()(std::declval<Args>()...)))
                 static Ret invoke(T& t, Args&&... args) {
-                    return static_cast<Ret>(t(std::forward<Args>(args)));
+                    return static_cast<Ret>(t(std::forward<Args>(args)...));
                 }
 
                 SFINAE_BLOCK_T_ELSE(is_callable)
@@ -117,11 +117,11 @@ namespace utils {
                     : t(std::forward<Arg>(args)...) {}
 
                 Ret operator()(Args&&... args) override {
-                    return is_callable<V>::invoke(t, std::forward<Args>(args));
+                    return is_callable<V>::invoke(t, std::forward<Args>(args)...);
                 }
 
                 Ret operator()(Args&&... args) const override {
-                    return is_callable<const V>::invoke(t, std::forward<Args>(args));
+                    return is_callable<const V>::invoke(t, std::forward<Args>(args)...);
                 }
                 virtual ~Impl() {}
             };
