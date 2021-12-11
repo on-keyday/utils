@@ -6,7 +6,7 @@
 
 void test_syntaxc() {
     utils::syntax::SyntaxC<utils::wrap::string, utils::wrap::vector, utils::wrap::map> test;
-    auto test2 = utils::syntax::make_syntaxc();
+    test.cb = "";
     auto seq =
         u8R"a(
         ROOT:=JSON

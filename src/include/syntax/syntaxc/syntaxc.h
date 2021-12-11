@@ -15,7 +15,10 @@ namespace utils {
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct SyntaxC {
+           private:
             syntax::Match<String, Vec, Map> match;
+
+           public:
             ops::DefaultCallback<MatchState, MatchResult<String>&> cb;
 
             template <class T>
