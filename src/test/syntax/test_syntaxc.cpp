@@ -17,7 +17,7 @@ void test_syntaxc() {
         u8R"a(
         ROOT:=JSON
         JSON:="{" OBJPARAM "}"|"["JSON ["," JSON]*? "]"|NUMBER|STRING|"null"|"true"|"false"
-        OBJPARAM:=STRING ":" JSON ["," OBJPARAM!]?
+        OBJPARAM:=STRING ":" JSON ["," OBJPARAM]?
 
         IDVAR:=ID ":=" NUMBER
         EXPR:= ID "+" NUMBER
@@ -38,6 +38,7 @@ void test_syntaxc() {
        {
            "hello":"world",
            "hey": [null,"string",0.2,3],
+           "google":true
           
        }
     )";
