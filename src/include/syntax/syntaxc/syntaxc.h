@@ -19,7 +19,7 @@ namespace utils {
             syntax::Match<String, Vec, Map> match;
 
            public:
-            ops::DefaultCallback<MatchState, MatchResult<String>&> cb;
+            ops::DefaultCallback<MatchState, MatchContext<String>&> cb;
 
             template <class T>
             bool make_tokenizer(Sequencer<T>& input, tknz::Tokenizer<String, Vec>& output) {
