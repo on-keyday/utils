@@ -6,7 +6,7 @@
 namespace utils {
     namespace syntax {
         void instanciate() {
-            auto e = make_syntaxc();
+            SyntaxC<wrap::string, wrap::vector, wrap::map> instance;
         }
     }  // namespace syntax
 }  // namespace utils
