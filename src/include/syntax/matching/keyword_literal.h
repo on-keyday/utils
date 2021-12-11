@@ -143,6 +143,7 @@ namespace utils {
                              }
                              r.consume();
                              result.kind = KeyWord::string;
+                             ret = MatchState::succeed;
                          })) {
                     return ret;
                 }

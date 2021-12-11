@@ -9,7 +9,9 @@ void test_syntaxc() {
 
     auto seq =
         u8R"a(
-        ROOT:=ID|"("ROOT ["." ROOT|ROOT*]? ")"
+        ROOT:=JSON
+        JSON:="{" OBJPARAM*? "}"|STRING
+        OBJPARAM:=STRING ":" JSON
     )a";
 
     utils::Sequencer input(seq);
@@ -22,7 +24,9 @@ void test_syntaxc() {
 
     auto other =
         u8R"(
-        ((a i u).(e o))
+       {
+           "hello":"world"
+       }
     )";
 
     utils::Sequencer input2(other);
@@ -30,6 +34,9 @@ void test_syntaxc() {
     decltype(tokenizer)::token_t res;
 
     tokenizer.tokenize(input2, res);
+
+    utils::tokenize::merge(res, utils::tokenize::escaped_comment<utils::wrap::string>("\"", "\\"));
+
     utils::syntax::Reader<utils::wrap::string> r{res};
     auto result2 = test.matching(r);
 

@@ -11,6 +11,7 @@ namespace utils {
     namespace syntax {
         template <class String, template <class...> class Vec, template <class...> class Map>
         bool parse(internal::ParseContext<String, Vec>& ctx, Map<String, wrap::shared_ptr<Element<String, Vec>>>& result) {
+            ctx.symbol = {"\"", "+", "-", "."};
             while (ctx.r.read()) {
                 String segname;
                 wrap::shared_ptr<Element<String, Vec>> group;
