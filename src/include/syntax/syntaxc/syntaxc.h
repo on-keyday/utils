@@ -6,12 +6,14 @@
 #include "../make_parser/parse.h"
 #include "../matching/matching.h"
 #include "../make_parser/tokenizer.h"
+#include "../../operator/callback.h"
 
 namespace utils {
     namespace syntax {
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct SyntaxC {
             syntax::Match<String, Vec, Map> match;
+            ops::DefaultCallback<MatchState, MatchResult<String>&> cb;
 
             template <class T>
             bool make_tokenizer(Sequencer<T>& input, tknz::Tokenizer<String, Vec>& output) {

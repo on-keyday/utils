@@ -15,7 +15,8 @@ namespace utils {
             internal::MatcherHelper<String, Vec, Map> matcher;
 
            private:
-            MatchState matching_loop() {
+            template <class F>
+            MatchState matching_loop(F&& cb) {
                 internal::Stack<String, Vec>& stack = matcher.stack;
                 MatchState state = MatchState::not_match;
                 while (true) {
@@ -25,15 +26,18 @@ namespace utils {
                         auto invoke_matching = [&](auto&& f) {
                             MatchResult<String> result;
                             state = f(matcher.context, v, result);
-                            if (state == MatchState::fatal) {
-                                return state;
+                            if (state == MatchState::succeed) {
+                                state = static_cast<MatchState>(cb(result));
                             }
-                            else if (state == MatchState::succeed) {
+                            if (state == MatchState::succeed) {
                                 if (any(v->attr & Attribute::repeat)) {
                                     current.on_repeat = true;
                                     return state;
                                 }
                                 current.index++;
+                                return state;
+                            }
+                            else if (state == MatchState::fatal) {
                                 return state;
                             }
                             else {
@@ -118,14 +122,15 @@ namespace utils {
             }
 
            public:
-            MatchState matching(const String& root = String()) {
+            template <class F>
+            MatchState matching(F&& f, const String& root = String()) {
                 String v = root;
                 if (!root.size()) {
                     utf::convert("ROOT", v);
                 }
                 matcher.stack.stack.clear();
                 matcher.start_ref(v);
-                return matching_loop();
+                return matching_loop(std::forward<F>(f));
             }
         };
     }  // namespace syntax
