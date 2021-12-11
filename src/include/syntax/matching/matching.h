@@ -10,6 +10,12 @@
 namespace utils {
     namespace syntax {
 
+        template <class String, template <class...> class Vec>
+        struct MatchContext {
+            const Vec<String>& stack;
+            MatchResult<String> result;
+        };
+
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct Match {
             internal::MatcherHelper<String, Vec, Map> matcher;
@@ -24,10 +30,10 @@ namespace utils {
                         auto& current = stack.current();
                         wrap::shared_ptr<Element<String, Vec>> v = (*current.vec)[current.index];
                         auto invoke_matching = [&](auto&& f) {
-                            MatchResult<String> result;
-                            state = f(matcher.context, v, result);
+                            MatchContext<String, Vec> tmpctx{matcher.virtual_stack};
+                            state = f(matcher.context, v, tmpctx.result);
                             if (state == MatchState::succeed) {
-                                state = static_cast<MatchState>(cb(result));
+                                state = static_cast<MatchState>(cb(tmpctx));
                             }
                             if (state == MatchState::succeed) {
                                 if (any(v->attr & Attribute::repeat)) {
