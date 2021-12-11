@@ -107,7 +107,7 @@ namespace utils {
                         if (state != MatchState::succeed) {
                             continue;
                         }
-                        if (auto& cu = stack.current(); cu.element && cu.element->type != SyntaxType::or_) {
+                        if (auto& cu = stack.current(); cu.element && cu.element->type == SyntaxType::group) {
                             if (stack.top() + 1 == top) {
                                 stack.current().index++;
                             }
