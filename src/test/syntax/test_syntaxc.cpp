@@ -3,10 +3,16 @@
 #include "../../include/syntax/syntaxc/syntaxc.h"
 
 #include "../../include/syntax/syntaxc/make_syntaxc.h"
+#include "../../include/wrap/cout.h"
 
 void test_syntaxc() {
+    auto& cout = utils::wrap::cout_wrap();
     utils::syntax::SyntaxC<utils::wrap::string, utils::wrap::vector, utils::wrap::map> test;
-    test.cb = "";
+    test.cb = [&](auto& r) {
+        cout << utils::syntax::keywordv(r.kind) << "-";
+        cout << r.token;
+        cout << "\n";
+    };
     auto seq =
         u8R"a(
         ROOT:=JSON

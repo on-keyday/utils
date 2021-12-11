@@ -91,7 +91,7 @@ namespace utils {
 
                 SFINAE_BLOCK_T_BEGIN(is_callable_u, std::declval<T>()(std::declval<Args>()...))
                 static Ret invoke(T& t, Args&&... args) {
-                    t(std::forward<Args>(args));
+                    t(std::forward<Args>(args)...);
                     return HandlerTraits<Ret>::template default_value<Handler>();
                 }
                 SFINAE_BLOCK_T_ELSE(is_callable_u)
