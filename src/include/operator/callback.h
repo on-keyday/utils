@@ -108,9 +108,9 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_END()
 
-                template <class... Args>
-                Impl(Args&&... args)
-                    : t(std::forward<Args>(args)...) {}
+                template <class... Arg>
+                Impl(Arg&&... args)
+                    : t(std::forward<Arg>(args)...) {}
 
                 Ret operator()(Args&&... args) override {
                     return is_callable<V>::invoke(t, std::forward<Args>(args));
