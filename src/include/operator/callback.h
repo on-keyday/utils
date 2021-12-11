@@ -127,11 +127,11 @@ namespace utils {
             template <class T>
             void make_cb(T&& t) {
                 using decay_T = std::decay_t<T>;
-                base = HandlerTraits::new_cb<Handler, Impl<decay_T>>(Impl<decay_T>(std::forward<T>(t)));
+                base = HandlerTraits<Ret>::new_cb<Handler, Impl<decay_T>>(Impl<decay_T>(std::forward<T>(t)));
             }
 
             void del_cb() {
-                HandlerTraits::delete_cb<Handler, Base>(base);
+                HandlerTraits<Ret>::delete_cb<Handler, Base>(base);
                 base = nullptr;
             }
 
