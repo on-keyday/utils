@@ -81,6 +81,7 @@ namespace utils {
                         else {
                             matcher.context.err.packln("error: unexpected SyntaxType");
                             state = MatchState::fatal;
+                            break;
                         }
                     }
                     while (stack.stack.size()) {

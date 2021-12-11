@@ -32,8 +32,12 @@ namespace utils {
                     return std::move(ret);
                 }
 
+                size_t top() {
+                    return stack.size() - 1;
+                }
+
                 StackContext<String, Vec>& current() {
-                    return stack[stack.size() - 1];
+                    return stack[top()];
                 }
 
                 bool end_group() {
