@@ -1,6 +1,7 @@
 /*license*/
 
 // make_syntaxc - make syntaxc implementation
+// need to link libutils
 #pragma once
 #include "syntaxc.h"
 

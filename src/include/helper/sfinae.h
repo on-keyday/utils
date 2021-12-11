@@ -26,12 +26,16 @@ namespace utils {
     }                                            \
     ;                                            \
     template PARAM struct NAME ARG {
-#define SFINAE_BLOCCK_END_BASE() \
-    }                            \
+#define SFINAE_BLOCK_END_BASE() \
+    }                           \
     ;
 
 #define SFINAE_BLOCK_T_BEGIN(NAME, EXPR) SFINAE_BLOCK_BEGIN_BASE(NAME, <class T>, <T>, EXPR, class T)
 #define SFINAE_BLOCK_T_ELSE(NAME) SFINAE_BLOCK_ELSE_BASE(NAME, <class T>, <T SFINAE_HELPER_COMMA false>)
-#define SFINAE_BLOCK_T_END() SFINAE_BLOCCK_END_BASE()
+#define SFINAE_BLOCK_T_END() SFINAE_BLOCK_END_BASE()
+
+#define SFINAE_BLOCK_TU_BEGIN(NAME, EXPR) SFINAE_BLOCK_BEGIN_BASE(NAME, <class T SFINAE_HELPER_COMMA class U>, <T SFINAE_HELPER_COMMA U>, EXPR, class T, class U)
+#define SFINAE_BLOCK_TU_ELSE(NAME) SFINAE_BLOCK_ELSE_BASE(NAME, <class T SFINAE_HELPER_COMMA class U>, <T SFINAE_HELPER_COMMA U SFINAE_HELPER_COMMA false>)
+#define SFINAE_BLOCK_TU_END() SFINAE_BLOCK_END_BASE()
     }  // namespace helper
 }  // namespace utils
