@@ -10,6 +10,9 @@
 
 namespace utils {
     namespace syntax {
+        struct Default {
+        };
+
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct SyntaxC {
             syntax::Match<String, Vec, Map> match;
@@ -37,7 +40,7 @@ namespace utils {
 
             bool matching(Reader<String>& r, const String& root = String()) {
                 match.matcher.context.r = r;
-                return match.matching(root) == MatchState::succeed;
+                return match.matching(cb, root) == MatchState::succeed;
             }
         };
     }  // namespace syntax

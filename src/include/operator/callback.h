@@ -25,16 +25,17 @@ namespace utils {
             }
         };
 
+        template <class Ret>
         struct HandlerTraits {
-            SFINAE_BLOCK_TU_BEGIN(has_default_value, T::template default_value<U>())
-            static U invoke() {
-                return T::template default_value<U>();
+            SFINAE_BLOCK_T_BEGIN(has_default_value, T::default_value())
+            static Ret invoke() {
+                return T::default_value();
             }
-            SFINAE_BLOCK_TU_ELSE(has_default_value)
-            static U invoke() {
-                return DefaultHandler::template default_value<U>();
+            SFINAE_BLOCK_T_ELSE(has_default_value)
+            static Ret invoke() {
+                return DefaultHandler::template default_value<Ret>();
             }
-            SFINAE_BLOCK_TU_END()
+            SFINAE_BLOCK_T_END()
 
             SFINAE_BLOCK_TU_BEGIN(has_delete_cb, T::template delete_cb<U>())
             template <class... Args>
@@ -70,9 +71,9 @@ namespace utils {
                 return has_delete_cb<T, U>::template invoke(std::forward<Args>(args)...);
             }
 
-            template <class T, class U>
-            U default_value() {
-                return has_default_value<T, U>::invoke();
+            template <class T>
+            Ret default_value() {
+                return has_default_value<T>::invoke();
             }
         };
 
@@ -95,11 +96,11 @@ namespace utils {
                 SFINAE_BLOCK_T_BEGIN(is_callable_u, std::declval<T>()(std::declval<Args>()...))
                 static Ret invoke(T& t, Args&&... args) {
                     t(std::forward<Args>(args));
-                    return Handler<Ret>::default_value();
+                    return HandlerTraits<Ret>::template default_value<Handler>();
                 }
                 SFINAE_BLOCK_T_ELSE(is_callable_u)
                 static Ret invoke(T& t, Args&&... args) {
-                    return HandlerTraits::default_value<Handler, Ret>();
+                    return HandlerTraits<Ret>::template default_value<Handler>();
                 }
                 SFINAE_BLOCK_T_END()
                 static Ret invoke(T& t, Args&&... args) {
