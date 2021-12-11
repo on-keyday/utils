@@ -40,12 +40,12 @@ namespace utils {
             SFINAE_BLOCK_TU_BEGIN(has_delete_cb, T::template delete_cb<U>())
             template <class... Args>
             static U invoke(Args&&... args) {
-                return T::template delete_cb<U>(std::forward<Args>(args));
+                return T::template delete_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_ELSE(has_delete_cb)
             template <class... Args>
             static U invoke(Args&&... args) {
-                return DefaultHandler::template delete_cb<U>(std::forward<Args>(args));
+                return DefaultHandler::template delete_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_END()
 
@@ -62,17 +62,17 @@ namespace utils {
             SFINAE_BLOCK_TU_END()
 
             template <class T, class U, class... Args>
-            U* new_cb(Args&&... args) {
+            static U* new_cb(Args&&... args) {
                 return has_new_cb<T, U>::template invoke(std::forward<Args>(args)...);
             }
 
             template <class T, class U, class... Args>
-            U* delete_cb(Args&&... args) {
+            static U* delete_cb(Args&&... args) {
                 return has_delete_cb<T, U>::template invoke(std::forward<Args>(args)...);
             }
 
             template <class T>
-            Ret default_value() {
+            static Ret default_value() {
                 return has_default_value<T>::invoke();
             }
         };
