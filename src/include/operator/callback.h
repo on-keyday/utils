@@ -39,13 +39,13 @@ namespace utils {
 
             SFINAE_BLOCK_TU_BEGIN(has_delete_cb, T::template delete_cb<U>())
             template <class... Args>
-            static U invoke(Args&&... args) {
-                return T::template delete_cb<U>(std::forward<Args>(args)...);
+            static void invoke(Args&&... args) {
+                T::template delete_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_ELSE(has_delete_cb)
             template <class... Args>
-            static U invoke(Args&&... args) {
-                return DefaultHandler::template delete_cb<U>(std::forward<Args>(args)...);
+            static void invoke(Args&&... args) {
+                DefaultHandler::template delete_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_END()
 
