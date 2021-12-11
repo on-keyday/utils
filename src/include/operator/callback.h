@@ -67,8 +67,8 @@ namespace utils {
             }
 
             template <class T, class U, class... Args>
-            static U* delete_cb(Args&&... args) {
-                return has_delete_cb<T, U>::template invoke(std::forward<Args>(args)...);
+            static void delete_cb(Args&&... args) {
+                has_delete_cb<T, U>::template invoke(std::forward<Args>(args)...);
             }
 
             template <class T>
