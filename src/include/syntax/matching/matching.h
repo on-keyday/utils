@@ -129,7 +129,9 @@ namespace utils {
                     utf::convert("ROOT", v);
                 }
                 matcher.stack.stack.clear();
-                matcher.start_ref(v);
+                if (auto e = matcher.start_ref(v); e != MatchState::succeed) {
+                    return e;
+                }
                 return matching_loop(std::forward<F>(f));
             }
         };

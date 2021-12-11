@@ -39,7 +39,7 @@ void test_syntaxc() {
            "hello":"world",
            "hey": [null,"string",0.2,3],
            "google":true,
-           "gmail":"com"
+           "gmail":"com\""
        }
     )";
 
@@ -48,6 +48,8 @@ void test_syntaxc() {
     decltype(tokenizer)::token_t res;
 
     tokenizer.tokenize(input2, res);
+
+    const char* err;
 
     utils::tokenize::merge(res, utils::tokenize::escaped_comment<utils::wrap::string>("\"", "\\"));
 
