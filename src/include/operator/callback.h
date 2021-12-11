@@ -166,5 +166,8 @@ namespace utils {
                 del_cb();
             }
         };
+
+        template <class Ret, class... Args>
+        using DefaultCallback = Callback<Ret, DefaultHandler, Args...>;
     }  // namespace ops
 }  // namespace utils
