@@ -136,6 +136,8 @@ namespace utils {
             }
 
            public:
+            constexpr Callback() {}
+
             template <class T>
             Callback(T&& t) {
                 make_cb(std::forward<T>(t));
@@ -153,14 +155,14 @@ namespace utils {
                 return *this;
             }
 
-            template <class Carg>
+            template <class... Carg>
             Ret operator()(Carg&&... args) {
-                return (*base)(stf::forward<Carg>(args)...);
+                return (*base)(std::forward<Carg>(args)...);
             }
 
-            template <class Carg>
+            template <class... Carg>
             Ret operator()(Carg&&... args) const {
-                return (*base)(stf::forward<Carg>(args)...);
+                return (*base)(std::forward<Carg>(args)...);
             }
 
             ~Callback() {
