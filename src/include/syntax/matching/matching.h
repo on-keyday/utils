@@ -86,6 +86,7 @@ namespace utils {
                     }
                     while (stack.stack.size()) {
                         auto& c = stack.current();
+                        size_t top = stack.top();
                         auto prev = state;
                         if (!c.element) {
                             return state;
@@ -106,8 +107,10 @@ namespace utils {
                         if (state != MatchState::succeed) {
                             continue;
                         }
-                        if (prev == MatchState::not_match) {
-                            stack.current().index++;
+                        if (auto& cu = stack.current(); cu.element && cu.element->type != SyntaxType::or_) {
+                            if (stack.top() + 1 == top) {
+                                stack.current().index++;
+                            }
                         }
                         break;
                     }
