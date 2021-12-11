@@ -15,5 +15,8 @@ namespace utils {
         wrap::shared_ptr<SyntaxC<String, Vec, Map>> make_syntaxc() {
             return wrap::make_shared<SyntaxC<String, Vec, Map>>();
         }
+#if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
+        extern template struct SyntaxC<wrap::string, wrap::vector, wrap::map>;
+#endif
     }  // namespace syntax
 }  // namespace  utils
