@@ -154,12 +154,12 @@ namespace utils {
 
             template <class Carg>
             Ret operator()(Carg&&... args) {
-                return (*base)(stf::forward<Carg>(carg)...);
+                return (*base)(stf::forward<Carg>(args)...);
             }
 
             template <class Carg>
             Ret operator()(Carg&&... args) const {
-                return (*base)(stf::forward<Carg>(carg)...);
+                return (*base)(stf::forward<Carg>(args)...);
             }
 
             ~Callback() {
