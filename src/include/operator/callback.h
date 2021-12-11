@@ -51,12 +51,12 @@ namespace utils {
 
             SFINAE_BLOCK_TU_BEGIN(has_new_cb, T::template new_cb<U>())
             template <class... Args>
-            static U invoke(Args&&... args) {
+            static U* invoke(Args&&... args) {
                 return T::template new_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_ELSE(has_new_cb)
             template <class... Args>
-            static U invoke(Args&&... args) {
+            static U* invoke(Args&&... args) {
                 return DefaultHandler::template new_cb<U>(std::forward<Args>(args));
             }
             SFINAE_BLOCK_TU_END()
@@ -112,9 +112,9 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_END()
 
-                template <class... Arg>
-                Impl(Arg&&... args)
-                    : t(std::forward<Arg>(args)...) {}
+                template <class Arg>
+                Impl(Arg&& arg)
+                    : t(std::forward<Arg>(arg)) {}
 
                 Ret operator()(Args&&... args) override {
                     return is_callable<V>::invoke(t, std::forward<Args>(args)...);
@@ -130,7 +130,7 @@ namespace utils {
             Base* base = nullptr;
             template <class T>
             void make_cb(T&& t) {
-                using decay_T = std::decay_t<T>;
+                using decay_T = std::remove_cvref_t<std::decay_t<T>>;
                 base = HandlerTraits<Ret>::template new_cb<Handler, Impl<decay_T>>(Impl<decay_T>(std::forward<T>(t)));
             }
 
