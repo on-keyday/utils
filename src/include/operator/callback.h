@@ -88,11 +88,7 @@ namespace utils {
             template <class V>
             struct Impl {
                 V t;
-                SFINAE_BLOCK_T_BEGIN(is_callable, static_cast<Ret>(std::declval<T>()(std::declval<Args>()...)))
-                static Ret invoke(T& t, Args&&... args) {
-                    return static_cast<Ret>(t(std::forward<Args>(args)));
-                }
-                SFINAE_BLOCK_T_ELSE(is_callable)
+
                 SFINAE_BLOCK_T_BEGIN(is_callable_u, std::declval<T>()(std::declval<Args>()...))
                 static Ret invoke(T& t, Args&&... args) {
                     t(std::forward<Args>(args));
@@ -103,6 +99,14 @@ namespace utils {
                     return HandlerTraits<Ret>::template default_value<Handler>();
                 }
                 SFINAE_BLOCK_T_END()
+
+                SFINAE_BLOCK_T_BEGIN(is_callable, static_cast<Ret>(std::declval<T>()(std::declval<Args>()...)))
+                static Ret invoke(T& t, Args&&... args) {
+                    return static_cast<Ret>(t(std::forward<Args>(args)));
+                }
+
+                SFINAE_BLOCK_T_ELSE(is_callable)
+
                 static Ret invoke(T& t, Args&&... args) {
                     return is_callable_u<T>::invoke(t, std::forward<Args>(args)...);
                 }
