@@ -159,13 +159,14 @@ namespace utils {
                     }
                 }
 
-                MatchState start_ref(const String& seg, element_t v = nullptr) {
+                MatchState start_ref(const String& seg, element_t v = nullptr, bool on_repeat = false) {
                     auto found = segments.find(seg);
                     if (found == segments.end()) {
                         context.err.packln("error: reference `", seg, "` not found");
                         return MatchState::fatal;
                     }
                     push(nullptr, v);
+                    stack.current().on_repeat = on_repeat;
                     auto e = std::get<1>(*found);
                     if (e->type == SyntaxType::or_) {
                         return start_or(e);
@@ -179,7 +180,7 @@ namespace utils {
                     }
                 }
 
-                MatchState start_ref(element_t& v) {
+                MatchState start_ref(element_t& v, bool on_repeat = false) {
                     assert(v && v->type == SyntaxType::reference);
                     Single<String, Vec>* ref = cast<Single<String, Vec>>(v);
                     return start_ref(ref->tok->to_string(), v);
@@ -195,12 +196,7 @@ namespace utils {
                         context.err.clear();
                         load_r(c, true);
                         if (any(c.element->attr & Attribute::repeat)) {
-                            c.index = 0;
-                            c.on_repeat = true;
-                            store_r(c);
-                            auto elm = c.element;
-                            stack.push(std::move(c));
-                            //return dispatch(elm);
+                            return start_ref(c.element, true);
                         }
                         return prev;
                     }
