@@ -34,13 +34,15 @@ add_library(libutils
   "src/lib/file/platform.cpp"
   "src/lib/file/file_view.cpp"
   "src/lib/wrap/argv.cpp"
-  "src/lib/wrap/cout.cpp")
+  "src/lib/wrap/cout.cpp"
+  "src/lib/syntax/default_syntaxc.cpp")
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
 target_link_libraries(channel libutils)
 target_link_libraries(tokenizer libutils)
 target_link_libraries(make_parser libutils)
+target_link_libraries(syntaxc libutils)
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)
