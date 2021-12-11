@@ -19,6 +19,7 @@ namespace utils {
                 Stack<String, Vec> stack;
                 Context<String, Vec> context;
                 Map<String, element_t> segments;
+                Vec<String> virtual_stack;
 
                private:
                 template <class T>
@@ -164,6 +165,7 @@ namespace utils {
                     }
                     push(nullptr, v);
                     stack.current().on_repeat = on_repeat;
+                    virtual_stack.push_back(seg);
                     auto e = std::get<1>(*found);
                     if (e->type == SyntaxType::or_) {
                         return start_or(e);
@@ -185,6 +187,7 @@ namespace utils {
 
                 MatchState result_ref(MatchState prev) {
                     StackContext<String, Vec> c = stack.pop();
+                    virtual_stack.pop_back();
                     if (prev == MatchState::fatal) {
                         load_r(c, true);
                         return prev;
