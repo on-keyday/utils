@@ -1,12 +1,12 @@
 /*license*/
 
 #include "../../include/syntax/syntaxc/syntaxc.h"
-#include "../../include/wrap/lite/vector.h"
-#include "../../include/wrap/lite/map.h"
+
+#include "../../include/syntax/syntaxc/make_syntaxc.h"
 
 void test_syntaxc() {
     utils::syntax::SyntaxC<utils::wrap::string, utils::wrap::vector, utils::wrap::map> test;
-
+    auto test2 = utils::syntax::make_syntaxc();
     auto seq =
         u8R"a(
         ROOT:=JSON
