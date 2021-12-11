@@ -16,8 +16,11 @@ void test_syntaxc() {
     auto seq =
         u8R"a(
         ROOT:=JSON
-        JSON:="{" OBJPARAM*? "}"|STRING
-        OBJPARAM:=STRING ":" JSON ["," OBJPARAM]?
+        JSON:="{" OBJPARAM "}"|"["JSON ["," JSON]*? "]"|NUMBER|STRING|"null"|"true"|"false"
+        OBJPARAM:=STRING ":" JSON ["," OBJPARAM!]?
+
+        IDVAR:=ID ":=" NUMBER
+        EXPR:= ID "+" NUMBER
     )a";
 
     utils::Sequencer input(seq);
@@ -30,8 +33,12 @@ void test_syntaxc() {
 
     auto other =
         u8R"(
+
+
        {
-           "hello":"world"
+           "hello":"world",
+           "hey": [null,"string",0.2,3],
+          
        }
     )";
 
