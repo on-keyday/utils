@@ -106,7 +106,7 @@ namespace utils {
                     }
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
-                        load_r(c, !any(or_->attr & Attribute::ifexists));
+                        load_r(c, !any(c.element->attr & Attribute::ifexists));
                         return res;
                     }
                 }
@@ -199,7 +199,7 @@ namespace utils {
                     }
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
-                        load_r(c, !any(or_->attr & Attribute::ifexists));
+                        load_r(c, !any(c.element->attr & Attribute::ifexists));
                         return res;
                     }
                 }
