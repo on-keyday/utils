@@ -85,9 +85,9 @@ namespace utils {
                 virtual ~Base() {}
             };
 
-            template <class T>
+            template <class V>
             struct Impl {
-                T t;
+                V t;
                 SFINAE_BLOCK_T_BEGIN(is_callable, static_cast<Ret>(std::declval<T>()(std::declval<Args>()...)))
                 static Ret invoke(T& t, Args&&... args) {
                     return static_cast<Ret>(t(std::forward<Args>(args)));
@@ -113,11 +113,11 @@ namespace utils {
                     : t(std::forward<Args>(args)...) {}
 
                 Ret operator()(Args&&... args) override {
-                    return is_callable<T>::invoke(t, std::forward<Args>(args));
+                    return is_callable<V>::invoke(t, std::forward<Args>(args));
                 }
 
                 Ret operator()(Args&&... args) const override {
-                    return is_callable<const T>::invoke(t, std::forward<Args>(args));
+                    return is_callable<const V>::invoke(t, std::forward<Args>(args));
                 }
                 virtual ~Impl() {}
             };
@@ -127,11 +127,11 @@ namespace utils {
             template <class T>
             void make_cb(T&& t) {
                 using decay_T = std::decay_t<T>;
-                base = HandlerTraits<Ret>::new_cb<Handler, Impl<decay_T>>(Impl<decay_T>(std::forward<T>(t)));
+                base = HandlerTraits<Ret>::template new_cb<Handler, Impl<decay_T>>(Impl<decay_T>(std::forward<T>(t)));
             }
 
             void del_cb() {
-                HandlerTraits<Ret>::delete_cb<Handler, Base>(base);
+                HandlerTraits<Ret>::template delete_cb<Handler, Base>(base);
                 base = nullptr;
             }
 
