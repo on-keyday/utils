@@ -22,7 +22,7 @@ void test_syntaxc() {
 
     auto other =
         u8R"(
-        (a i u).(e o)
+        ((a i u).(e o))
     )";
 
     utils::Sequencer input2(other);
