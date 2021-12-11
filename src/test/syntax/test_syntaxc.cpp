@@ -15,7 +15,7 @@ void test_syntaxc() {
     };
     auto seq =
         u8R"a(
-        ROOT:=IDVAR|EXPR
+        ROOT:=JSON
         JSON:="{" OBJPARAM "}"|"["JSON ["," JSON]*? "]"|NUMBER|STRING|"null"|"true"|"false"
         OBJPARAM:=STRING ":" JSON ["," OBJPARAM]?
 
