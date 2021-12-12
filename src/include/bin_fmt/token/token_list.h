@@ -3,9 +3,9 @@
 // token_list - token list format
 #pragma once
 
-#include "../tokenize/token.h"
-#include "../tokenize/cast.h"
-#include "../endian/writer.h"
+#include "../../tokenize/token.h"
+#include "../../tokenize/cast.h"
+#include "../../endian/writer.h"
 
 namespace utils {
     namespace bin_fmt {
@@ -14,9 +14,12 @@ namespace utils {
             if (!in) {
                 return false;
             }
-            tokenize::TokenKind kind = in.kind();
+            using tokenize::TokenKind;
+            TokenKind kind = in.kind();
             w.write_hton(std::uint8_t(kind));
-            tokenize::cast<>();
+            if (kind == TokenKind::root || kind == TokenKind::unknown) {
+                return true;
+            }
         }
     }  // namespace bin_fmt
 }  // namespace utils
