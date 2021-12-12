@@ -124,16 +124,20 @@ namespace utils {
             std_handle = is_std(this->out);
         }
 
+        void force_init_io() {
+            if (!initialized) {
+                gllock.lock();
+                if (!initialized) {
+                    auto result = io_init();
+                    assert(result && "io init failed");
+                }
+                gllock.unlock();
+            }
+        }
+
         void UtfOut::write(const path_string& p) {
             if (std_handle) {
-                if (!initialized) {
-                    gllock.lock();
-                    if (!initialized) {
-                        auto result = io_init();
-                        assert(result && "io init failed");
-                    }
-                    gllock.unlock();
-                }
+                force_init_io();
                 ::fwrite(p.c_str(), sizeof(path_char), p.size(), std_handle);
                 ::fflush(std_handle);
             }

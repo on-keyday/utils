@@ -45,5 +45,7 @@ namespace utils {
 
         UtfOut& cout_wrap();
         UtfOut& cerr_wrap();
+
+        void force_init_io();
     }  // namespace wrap
 }  // namespace utils
