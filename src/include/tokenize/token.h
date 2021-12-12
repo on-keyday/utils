@@ -5,10 +5,11 @@
 
 #include "../wrap/lite/smart_ptr.h"
 #include "../wrap/lite/enum.h"
+#include <cstdint>
 
 namespace utils {
     namespace tokenize {
-        enum class TokenKind {
+        enum class TokenKind : std::uint8_t {
             space,
             line,
             keyword,

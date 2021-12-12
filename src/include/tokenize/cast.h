@@ -16,14 +16,14 @@ namespace utils {
         namespace internal {
             template <class String, class T>
             struct CastHelper {
-                static std::nullptr_t cast() {
+                static std::nullptr_t cast(auto&) {
                     return nullptr;
                 }
             };
 
             template <class String>
             struct CastHelper<String, Predef<String>> {
-                static Predef<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Predef<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -36,7 +36,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, PredefCtx<String>> {
-                static PredefCtx<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static PredefCtx<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -49,7 +49,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Identifier<String>> {
-                static Identifier<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Identifier<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -62,7 +62,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Line<String>> {
-                static Line<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Line<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -75,7 +75,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Space<String>> {
-                static Space<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Space<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -88,7 +88,7 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Comment<String>> {
-                static Comment<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+                static Comment<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
@@ -102,6 +102,11 @@ namespace utils {
 
         template <template <class> class T, class String>
         T<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
+            return internal::CastHelper<String, T<String>>::cast(ptr);
+        }
+
+        template <template <class> class T, class String>
+        T<String>* cast(Token<String>* ptr) {
             return internal::CastHelper<String, T<String>>::cast(ptr);
         }
 
