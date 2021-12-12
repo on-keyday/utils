@@ -48,6 +48,10 @@ namespace utils {
                 }
                 return match.matching(cb, root) == MatchState::succeed;
             }
+
+            wrap::internal::Pack&& error() {
+                return match.matcher.context.err.pack();
+            }
         };
     }  // namespace syntax
 }  // namespace utils
