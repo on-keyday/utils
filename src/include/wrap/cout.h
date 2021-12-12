@@ -40,6 +40,7 @@ namespace utils {
         extern int stdoutmode;
         extern int stderrmode;
         extern bool sync_stdio;
+        extern bool no_change_mode;
         extern bool out_virtual_terminal;
         extern bool in_virtual_terminal;
 

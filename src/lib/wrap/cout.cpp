@@ -20,6 +20,7 @@ namespace utils {
         bool sync_stdio = false;
         bool out_virtual_terminal = false;
         bool in_virtual_terminal = false;
+        bool no_change_mode=false;
 
         static ::FILE* is_std(ostream& out) {
             auto addr = std::addressof(out);
@@ -101,17 +102,19 @@ namespace utils {
         static bool io_init() {
 #ifdef _WIN32
             change_console_mode();
-            if (_setmode(_fileno(stdin), stdinmode) == -1) {
-                //err = "error:text input mode change failed";
-                return false;
-            }
-            if (_setmode(_fileno(stdout), stdoutmode) == -1) {
-                //err = "error:text output mode change failed\n";
-                return false;
-            }
-            if (_setmode(_fileno(stderr), stderrmode) == -1) {
-                //err = "error:text error mode change failed\n";
-                return false;
+            if(!no_change_mode){
+                if (_setmode(_fileno(stdin), stdinmode) == -1) {
+                    //err = "error:text input mode change failed";
+                    return false;
+                }
+                if (_setmode(_fileno(stdout), stdoutmode) == -1) {
+                    //err = "error:text output mode change failed\n";
+                    return false;
+                }
+                if (_setmode(_fileno(stderr), stderrmode) == -1) {
+                    //err = "error:text error mode change failed\n";
+                    return false;
+                }
             }
 #endif
             std::ios_base::sync_with_stdio(sync_stdio);
