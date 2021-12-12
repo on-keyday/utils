@@ -34,8 +34,28 @@ namespace utils {
                 return BinaryIO::write_num(w, size_t(line->line)) &&
                        BinaryIO::write_num(w, size_t(line->count));
             }
+            else if (kind == TokenKind::space) {
+                Space<String>* space = cast<Space>(&in);
+                assert(space);
+                return BinaryIO::write_num(w, size_t(space->space)) &&
+                       BinaryIO::write_num(w, size_t(space->count));
+            }
+            else if (kind == TokenKind::comment) {
+                Comment<String>* cm = cast<Comment>(&in);
+                assert(cm);
+                return BinaryIO::write_num(w, size_t(cm->oneline)) &&
+                       BinaryIO::write_string(cm->comment);
+            }
             else if (kind == TokenKind::context) {
                 PredefCtx<String>* ck = cast<PredefCtx>(&in);
+                assert(ck);
+                return BinaryIO::write_string(w, ck->token) &&
+                       BinaryIO::write_string(w, ck->layer_);
+            }
+            else {
+                Predef<String>* pd = cast<Predef>(&in);
+                assert(pd);
+                return BinaryIO::write_string(w, pd->token);
             }
         }
     }  // namespace bin_fmt
