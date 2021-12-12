@@ -34,6 +34,9 @@ namespace utils {
                 return BinaryIO::write_num(w, size_t(line->line)) &&
                        BinaryIO::write_num(w, size_t(line->count));
             }
+            else if (kind == TokenKind::context) {
+                PredefCtx<String>* ck = cast<PredefCtx>(&in);
+            }
         }
     }  // namespace bin_fmt
 }  // namespace utils
