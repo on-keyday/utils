@@ -18,7 +18,7 @@ namespace utils {
 
         template <class String, template <class...> class Vec>
         struct OptionResultSet {
-                };
+        };
 
     }  // namespace cmdline
 }  // namespace utils
