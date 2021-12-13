@@ -5,6 +5,7 @@
 
 #include "option.h"
 #include "somevalue_option.h"
+#include "../wrap/lite/smart_ptr.h"
 
 namespace utils {
     namespace cmdline {
@@ -107,5 +108,16 @@ namespace utils {
             };
 
         }  // namespace internal
-    }      // namespace cmdline
+
+        template <template <class, template <class...> class> class T, class String, template <class...> class Vec>
+        T<String, Vec>* cast(wrap::shared_ptr<Option<String, Vec>>& v) {
+            return internal::CastHelper<String, Vec, T<String, Vec>>::cast(v);
+        }
+
+        template <template <class, template <class...> class> class T, class String, template <class...> class Vec>
+        T<String, Vec>* cast(Option<String, Vec>* v) {
+            return internal::CastHelper<String, Vec, T<String, Vec>>::cast(v);
+        }
+
+    }  // namespace cmdline
 }  // namespace utils
