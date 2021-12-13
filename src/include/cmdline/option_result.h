@@ -12,8 +12,13 @@ namespace utils {
 
         template <class String, template <class...> class Vec>
         struct OptionResult {
-            OptionType type_;
+            Option<String, Vec>* base = nullptr;
+            wrap::shared_ptr<Option<String, Vec>> value;
         };
+
+        template <class String, template <class...> class Vec>
+        struct OptionResultSet {
+                };
 
     }  // namespace cmdline
 }  // namespace utils

@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include "../wrap/lite/enum.h"
+
 namespace utils {
     namespace cmdline {
         enum class OptionType {
@@ -21,6 +23,8 @@ namespace utils {
             no_option_like = 0x4,  // `somevalue` type disallow string like `option`
             once_in_cmd = 0x8,     // allow only once to set
         };
+
+        DEFINE_ENUM_FLAGOP(OptionAttribute)
 
         template <class String, template <class...> class Vec>
         struct Option {

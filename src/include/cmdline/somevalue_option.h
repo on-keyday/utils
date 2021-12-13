@@ -13,7 +13,7 @@ namespace utils {
            protected:
             OptionType has_type;
             SomeValueOption(OptionType h)
-                : has_type(h), Option<String>(OptionType::somevalue) {}
+                : has_type(h), Option<String, Vec>(OptionType::somevalue) {}
 
            public:
             Vec<T> values;
