@@ -72,6 +72,40 @@ namespace utils {
                 }
             };
 
+            template <class String, template <class...> class Vec>
+            struct CastHelper<String, Vec, IntSomeValueOption<String, Vec>> {
+                static IntSomeValueOption<String, Vec>* cast(auto& in) {
+                    if (!in) {
+                        return nullptr;
+                    }
+                    if (in->type() != OptionType::somevalue) {
+                        return nullptr;
+                    }
+                    auto sv = static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
+                    if (sv->has_type != OptionType::integer) {
+                        return nullptr;
+                    }
+                    return static_cast<IntSomeValueOption<String, Vec>*>(sv);
+                }
+            };
+
+            template <class String, template <class...> class Vec>
+            struct CastHelper<String, Vec, StringSomeValueOption<String, Vec>> {
+                static StringSomeValueOption<String, Vec>* cast(auto& in) {
+                    if (!in) {
+                        return nullptr;
+                    }
+                    if (in->type() != OptionType::somevalue) {
+                        return nullptr;
+                    }
+                    auto sv = static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
+                    if (sv->has_type != OptionType::string) {
+                        return nullptr;
+                    }
+                    return static_cast<StringSomeValueOption<String, Vec>*>(sv);
+                }
+            };
+
         }  // namespace internal
     }      // namespace cmdline
 }  // namespace utils
