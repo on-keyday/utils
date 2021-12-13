@@ -8,12 +8,17 @@
 namespace utils {
     namespace cmdline {
 
-        template <class T, class String, template <class...> class Vec>
+        template <class String, template <class...> class Vec>
         struct SomeValueOption : Option<String, Vec> {
-           protected:
+            SomeValueOption()
+                : Option<String, Vec>(OptionType::somevalue) {}
             OptionType has_type;
-            SomeValueOption(OptionType h)
-                : has_type(h), Option<String, Vec>(OptionType::somevalue) {}
+        };
+
+        template <class T, class String, template <class...> class Vec>
+        struct SomeValueOptionBase : protected SomeValueOption<String, Vec> {
+           protected:
+            SomeValueOptionBase(OptionType h) {}
 
            public:
             Vec<T> values;
@@ -22,19 +27,19 @@ namespace utils {
         };
 
         template <class String, template <class...> class Vec>
-        struct BoolSomeValueOption : SomeValueOption<std::int64_t, String, Vec> {
+        struct BoolSomeValueOption : SomeValueOptionBase<std::int64_t, String, Vec> {
             BoolSomeValueOption()
                 : SomeValueOption<bool, String, Vec>(OptionType::boolean) {}
         };
 
         template <class String, template <class...> class Vec>
-        struct IntSomeValueOption : SomeValueOption<std::int64_t, String, Vec> {
+        struct IntSomeValueOption : SomeValueOptionBase<std::int64_t, String, Vec> {
             IntSomeValueOption()
                 : SomeValueOption<std::int64_t, String, Vec>(OptionType::integer) {}
         };
 
         template <class String, template <class...> class Vec>
-        struct StringSomeValueOption : SomeValueOption<std::int64_t, String, Vec> {
+        struct StringSomeValueOption : SomeValueOptionBase<std::int64_t, String, Vec> {
             StringSomeValueOption()
                 : SomeValueOption<String, String, Vec>(OptionType::string) {}
         };
