@@ -55,6 +55,23 @@ namespace utils {
                 }
             };
 
+            template <class String, template <class...> class Vec>
+            struct CastHelper<String, Vec, BoolSomeValueOption<String, Vec>> {
+                static BoolSomeValueOption<String, Vec>* cast(auto& in) {
+                    if (!in) {
+                        return nullptr;
+                    }
+                    if (in->type() != OptionType::somevalue) {
+                        return nullptr;
+                    }
+                    auto sv = static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
+                    if (sv->has_type != OptionType::boolean) {
+                        return nullptr;
+                    }
+                    return static_cast<BoolSomeValueOption<String, Vec>*>(sv);
+                }
+            };
+
         }  // namespace internal
     }      // namespace cmdline
 }  // namespace utils
