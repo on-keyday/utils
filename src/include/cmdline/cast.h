@@ -25,6 +25,33 @@ namespace utils {
                     if (in->type() == OptionType::boolean) {
                         return static_cast<BoolOption<String, Vec>*>(std::addressof(*in));
                     }
+                    return nullptr;
+                }
+            };
+
+            template <class String, template <class...> class Vec>
+            struct CastHelper<String, Vec, IntOption<String, Vec>> {
+                static IntOption<String, Vec>* cast(auto& in) {
+                    if (!in) {
+                        return nullptr;
+                    }
+                    if (in->type() == OptionType::integer) {
+                        return static_cast<IntOption<String, Vec>*>(std::addressof(*in));
+                    }
+                    return nullptr;
+                }
+            };
+
+            template <class String, template <class...> class Vec>
+            struct CastHelper<String, Vec, StringOption<String, Vec>> {
+                static StringOption<String, Vec>* cast(auto& in) {
+                    if (!in) {
+                        return nullptr;
+                    }
+                    if (in->type() == OptionType::string) {
+                        return static_cast<StringOption<String, Vec>*>(std::addressof(*in));
+                    }
+                    return nullptr;
                 }
             };
 
