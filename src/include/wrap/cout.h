@@ -36,6 +36,7 @@ namespace utils {
 
             UtfOut& operator<<(internal::Pack&& pack);
         };
+
         extern int stdinmode;
         extern int stdoutmode;
         extern int stderrmode;
