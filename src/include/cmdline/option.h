@@ -21,7 +21,7 @@ namespace utils {
             no_option_like = 0x4,  // `somevalue` type disallow string like `option`
         };
 
-        template <class String>
+        template <class String, template <class...> class Vec>
         struct Option {
            protected:
             OptionType type_;
@@ -37,24 +37,24 @@ namespace utils {
             }
         };
 
-        template <class String>
-        struct BoolOption : Option<String> {
+        template <class String, template <class...> class Vec>
+        struct BoolOption : Option<String, Vec> {
             BoolOption()
-                : Option<String>(OptionType::boolean) {}
-            bool flag = false;
+                : Option<String, Vec>(OptionType::boolean) {}
+            bool value = false;
         };
 
-        template <class String>
-        struct IntOption : Option<String> {
+        template <class String, template <class...> class Vec>
+        struct IntOption : Option<String, Vec> {
             IntOption()
-                : Option<String>(OptionType::integer) {}
+                : Option<String, Vec>(OptionType::integer) {}
             std::int64_t value = 0;
         };
 
-        template <class String>
-        struct StringOption : Option<String> {
+        template <class String, template <class...> class Vec>
+        struct StringOption : Option<String, Vec> {
             StringOption()
-                : Option<String>(OptionType::string) {}
+                : Option<String, Vec>(OptionType::string) {}
             String value;
         };
 

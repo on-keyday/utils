@@ -15,16 +15,5 @@ namespace utils {
             OptionType type_;
         };
 
-        template <class String, template <class...> class Vec>
-        struct IntOptionResult : OptionResult<String, Vec> {
-            IntOption<String>* base = nullptr;
-            std::int64_t value;
-        };
-
-        template <class String, template <class...> class Vec>
-        struct StringOptionResult : OptionResult<String, Vec> {
-            StringOption<String>* base = nullptr;
-            std::int64_t value;
-        };
     }  // namespace cmdline
 }  // namespace utils
