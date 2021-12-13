@@ -19,6 +19,7 @@ namespace utils {
             required = 0x1,        // option must set
             must_assign = 0x2,     // value must set with `=`
             no_option_like = 0x4,  // `somevalue` type disallow string like `option`
+            once_in_cmd = 0x8,     // allow only once to set
         };
 
         template <class String, template <class...> class Vec>
@@ -29,7 +30,6 @@ namespace utils {
                 : type_(t) {}
 
            public:
-            String name;
             OptionAttribute attr = OptionAttribute::none;
 
             OptionType type() {
