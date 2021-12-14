@@ -80,6 +80,8 @@ namespace utils {
                 seq.consume();
                 first = false;
             }
+            if (first) {
+            }
             return true;
         }
 
