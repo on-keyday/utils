@@ -45,9 +45,13 @@ namespace utils {
         template <class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
         constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
             while (!seq.eos()) {
-                if (seq.seek_if(cmp)) {
+                if (seq.seek_if(cmp, compare)) {
+                    return true;
                 }
+                result.push_back(seq.current());
+                seq.consume();
             }
+            return false;
         }
 
     }  // namespace helper
