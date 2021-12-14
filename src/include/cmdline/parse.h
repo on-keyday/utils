@@ -82,10 +82,13 @@ namespace utils {
 
         enum class ParseFlag {
             none,
-            two_prefix_longname = 0x1,  // `--` is long name
-            allow_assign = 0x2,         // allow `=` operator
-            adjacent_value = 0x4,       // -oValue is allowed (default `-oValue` become o,V,a,l,u,e option)
-
+            two_prefix_longname = 0x1,      // option begin with `--` is long name
+            allow_assign = 0x2,             // allow `=` operator
+            adjacent_value = 0x4,           // `-oValue` become `o` option with value `Value` (default `-oValue` become o,V,a,l,u,e option)
+            ignore_after_two_prefix = 0x8,  // after `--` is not option
+            one_prefix_longname = 0x10,     // option begin with `-` is long name
+            ignore_not_found = 0x20,        // ignore if option is not found
+            parse_all = 0x40,               // parse all arg
         };
 
         DEFINE_ENUM_FLAGOP(ParseFlag)

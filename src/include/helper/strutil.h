@@ -42,6 +42,27 @@ namespace utils {
             return starts_with(in, begin, compare1) && ends_with(in, end, compare2);
         }
 
+        template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
+        constexpr size_t find(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
+            Sequencer<typename BufferType<In&>::type> intmp(in);
+            Buffer<typename BufferType<Cmp&>::type> cmptmp(cmp);
+            while (!intmp.eos()) {
+                if (intmp.remain() < cmptmp.size()) {
+                    return ~0;
+                }
+                if (intmp.match(cmp, compare)) {
+                    return intmp.rptr;
+                }
+                intmp.consume();
+            }
+            return ~0;
+        }
+
+        template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
+        constexpr bool contains(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
+            return find(in, cmp) != ~0;
+        }
+
         template <bool consume = true, class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
         constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
             while (!seq.eos()) {
