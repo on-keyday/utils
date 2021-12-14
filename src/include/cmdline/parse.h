@@ -32,6 +32,12 @@ namespace utils {
             ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
                 auto v = wrap::make_shared<BoolOption<String, Vec>>();
                 v->value = boopt->value;
+                result.value = v;
+                if (any(option.attr & OptionAttribute::must_assign)) {
+                    if (!assign) {
+                        return ParseError::none;
+                    }
+                }
                 if (assign) {
                     if (helper::equal(*assign, "true")) {
                         v->value = true;
@@ -67,17 +73,22 @@ namespace utils {
                     return ParseError::not_one_opt;
                 }
             }
-            if (any(option.attr & OptionAttribute::must_assign)) {
-                if (!assign) {
-                    return ParseError::not_assigned;
-                }
-            }
             OptionResult<String, Vec> optres;
             optres.base = std::addressof(option);
             if (BoolOption<String, Vec>* boopt = cast<BoolOption>(&option)) {
                 return internal::parse_booloption(boopt, index, argc, argv, optres, assign);
             }
         }
+
+        enum class ParseFlag {
+            none,
+            two_prefix_longname = 0x1,  // `--` is long name
+            allow_assign = 0x2,         // allow `=` operator
+            adjacent_value = 0x4,       // -oValue is allowed (default `-oValue` become o,V,a,l,u,e option)
+
+        };
+
+        DEFINE_ENUM_FLAGOP(ParseFlag)
 
     }  // namespace cmdline
 }  // namespace utils
