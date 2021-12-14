@@ -32,11 +32,12 @@ namespace utils {
         };
         // clang-format on
 
-        template <class Result, class T>
+        template <bool onlyint = false, class Result, class T>
         constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix, bool* is_float) {
             if (radix < 2 || radix > 36) {
                 return false;
             }
+            bool first = true;
             bool dot = false;
             bool exp = false;
             while (!seq.eos()) {
@@ -44,13 +45,31 @@ namespace utils {
                 if (e < 0 || e > 0xff) {
                     break;
                 }
-                if (radix == 10 || radix == 16) {
-                    if (!dot && e == '.') {
-                        dot = true;
-                        result.push_back('.');
-                        continue;
-                    }
-                    if (radix == 10 && !exp && (e == 'e' || e == 'E')) {
+                if constexpr (!onlyint) {
+                    if (radix == 10 || radix == 16) {
+                        if (!dot && e == '.') {
+                            dot = true;
+                            result.push_back('.');
+                            seq.consume();
+                            continue;
+                        }
+                        if (!exp &&
+                            ((radix == 10 && (e == 'e' || e == 'E')) ||
+                             (radix == 16 && (e == 'p' || e == 'P')))) {
+                            if (first) {
+                                return false;
+                            }
+                            dot = true;
+                            exp = true;
+                            result.push_back(e);
+                            seq.consume();
+                            if (seq.current() == '+' || seq.current() == '-') {
+                                result.push_back(seq.current());
+                                seq.consume();
+                            }
+                            radix = 10;
+                            first = true;
+                        }
                     }
                 }
                 auto n = number_transform[e];
@@ -59,6 +78,7 @@ namespace utils {
                 }
                 result.push_back(e);
                 seq.consume();
+                first = false;
             }
             return true;
         }
