@@ -64,6 +64,39 @@ namespace utils {
                     result *= radix;
                 }
             };
+
+            // experimental
+            template <class T>
+            struct PushBackParserFloat {
+                bool unsurpport = false;
+                int radix;
+                T result1 = 0;
+                T result2 = 0;
+                bool afterdot = false;
+                template <class C>
+                constexpr void push_back(C in) {
+                    if (in == '.') {
+                        afterdot = true;
+                    }
+                    else if (in == 'p' || in == 'P') {
+                        unsurpport = true;
+                        return;
+                    }
+                    else if (radix == 10 && (in == 'e' || in == 'E')) {
+                        unsurpport = true;
+                        return;
+                    }
+                    auto c = number_transform[in];
+                    if (!afterdot) {
+                        result1 += c;
+                        result1 *= radix;
+                    }
+                    else {
+                        result2 += c;
+                        result2 *= radix;
+                    }
+                }
+            };
         }  // namespace internal
 
         enum class NumError {
@@ -218,14 +251,30 @@ namespace utils {
             return true;
         }
 
+        // experimental
         template <class T, class U>
         NumErr parse_float(Sequencer<T>& seq, U& result, int radix = 10) {
             static_assert(std::is_floating_point_v<U>, "expect floating point type");
+            if (radix != 10 && radix != 16) {
+                return NumError::invalid;
+            }
+            bool minus = false;
             if (seq.current() == '+') {
                 seq.consume();
             }
             else if (std::is_signed_v<U> && seq.current() == '-') {
                 seq.consume();
+                minus = true;
+            }
+            internal::PushBackParserFloat<U> parser;
+            parser.radix = radix;
+            bool is_flaot = false;
+            auto e = read_number(parser, seq, radix, &is_flaot);
+            if (!e) {
+                return e;
+            }
+            if (parser.unsurpport) {
+                return NumError::invalid;
             }
         }
     }  // namespace number

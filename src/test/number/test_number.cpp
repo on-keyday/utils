@@ -7,8 +7,15 @@ constexpr bool test_is_number() {
     return utils::number::is_number("3", 16, 0, &is_float);
 }
 
+constexpr int test_parse_integer() {
+    int test = 0;
+    utils::number::parse_integer("-92013827", test);
+    return test;
+}
+
 void test_number() {
     constexpr bool result1 = test_is_number();
+    constexpr auto result2 = test_parse_integer();
 }
 
 int main() {
