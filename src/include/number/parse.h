@@ -38,7 +38,7 @@ namespace utils {
         };
 
         template <class Result, class T>
-        constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix, bool* is_float = nullptr) {
+        constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr) {
             if (radix < 2 || radix > 36) {
                 return false;
             }
