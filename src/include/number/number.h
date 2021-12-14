@@ -94,8 +94,8 @@ namespace utils {
                     }
                     else {
                         result2 += c;
+                        result2 *= radix;
                         divrad *= radix;
-                        result2 /= divrad;
                     }
                 }
             };
@@ -278,7 +278,7 @@ namespace utils {
             if (parser.unsurpport) {
                 return NumError::invalid;
             }
-            result = parser.result1 / radix + parser.result2 * radix;
+            result = parser.result1 / radix + parser.result2 / parser.divrad;
             return true;
         }
 
