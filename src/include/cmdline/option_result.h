@@ -19,6 +19,10 @@ namespace utils {
         template <class String, template <class...> class Vec, template <class...> class MultiMap>
         struct OptionResultSet {
             MultiMap<String, OptionResult<String, Vec>> result;
+
+            bool exists(const String& name) {
+                return result.find(name) != result.end();
+            }
         };
 
     }  // namespace cmdline
