@@ -138,7 +138,7 @@ namespace utils {
         }
 
         template <class String>
-        constexpr NumErr is_number(String&& v, int radix = 10, int offset = 0, bool* is_float = nullptr) {
+        constexpr NumErr is_number(String&& v, int radix = 10, size_t offset = 0, bool* is_float = nullptr) {
             Sequencer<buffer_t<String&>> seq(v);
             internal::NopPushBacker nop;
             seq.seek(offset);
@@ -150,7 +150,7 @@ namespace utils {
         }
 
         template <class String>
-        constexpr NumErr is_float_number(String&& v, int radix = 10, int offset = 0) {
+        constexpr NumErr is_float_number(String&& v, int radix = 10, size_t offset = 0) {
             if (radix != 10 && radix != 16) {
                 return false;
             }
@@ -163,12 +163,33 @@ namespace utils {
         }
 
         template <class String>
-        constexpr NumErr is_integer(String&& v, int radix = 10, int offset = 0) {
+        constexpr NumErr is_integer(String&& v, int radix = 10, size_t offset = 0) {
             return is_number(v, radix, offset);
         }
 
-        template <class String, class T>
-        NumErr parse_integer(String&& v, T& result) {
+        template <class T, class U>
+        NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10) {
+            if (seq.current() == '+') {
+                seq.consume();
+            }
+            else if (std::is_signed_v<U> && seq.current() == '-') {
+                seq.consume();
+            }
+            internal::PushBackParser<U> parser;
+            parser.radix = radix;
+            auto err = read_number(parser, seq, radix);
+            if (!err) {
+                return err;
+            }
+            if (parser.overflow) {
+                return NumError::overflow;
+            }
+            result = parser.result;
+            return true;
+        }
+
+        template <class T, class U>
+        NumErr parse_integer(T&& seq, U& result, int radix = 10, size_t offset = 0) {
         }
     }  // namespace number
 }  // namespace utils
