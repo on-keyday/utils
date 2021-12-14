@@ -37,5 +37,20 @@ namespace utils {
             return intmp.seek_if(cmp, compare) && intmp.eos();
         }
 
+        template <class T>
+        struct Sized {
+            T* ptr;
+            size_t size_;
+            constexpr Sized(T* t, size_t sz)
+                : ptr(t), size_(sz) {}
+
+            constexpr T& operator[](size_t pos) const {
+                return ptr[pos];
+            }
+
+            size_t size() const {
+                return size_;
+            }
+        };
     }  // namespace helper
 }  // namespace utils
