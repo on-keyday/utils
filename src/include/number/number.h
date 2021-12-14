@@ -197,6 +197,11 @@ namespace utils {
             if (!e) {
                 return e;
             }
+            if (!seq.eos()) {
+                return false;
+            }
+            result = tmpres;
+            return true;
         }
     }  // namespace number
 }  // namespace utils
