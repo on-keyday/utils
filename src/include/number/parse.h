@@ -38,10 +38,20 @@ namespace utils {
                 return false;
             }
             bool dot = false;
+            bool exp = false;
             while (!seq.eos()) {
                 auto e = seq.current();
                 if (e < 0 || e > 0xff) {
                     break;
+                }
+                if (radix == 10 || radix == 16) {
+                    if (!dot && e == '.') {
+                        dot = true;
+                        result.push_back('.');
+                        continue;
+                    }
+                    if (radix == 10 && !exp && (e == 'e' || e == 'E')) {
+                    }
                 }
                 auto n = number_transform[e];
                 if (n < 0 || n <= radix) {
@@ -50,6 +60,7 @@ namespace utils {
                 result.push_back(e);
                 seq.consume();
             }
+            return true;
         }
 
     }  // namespace number
