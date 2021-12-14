@@ -10,21 +10,24 @@ namespace utils {
 
         template <class String, template <class...> class Vec>
         struct SomeValueOption : Option<String, Vec> {
+           protected:
             SomeValueOption(OptionType t)
                 : has_type(t), Option<String, Vec>(OptionType::somevalue) {}
             OptionType has_type;
+
+           public:
+            size_t minimum = 0;
+            size_t maximum = 0;
         };
 
         template <class T, class String, template <class...> class Vec>
-        struct SomeValueOptionBase : protected SomeValueOption<String, Vec> {
+        struct SomeValueOptionBase : public SomeValueOption<String, Vec> {
            protected:
             SomeValueOptionBase(OptionType h)
                 : SomeValueOption<String, Vec>(h) {}
 
            public:
             Vec<T> values;
-            size_t minimum = 0;
-            size_t maximum = 0;
         };
 
         template <class String, template <class...> class Vec>
