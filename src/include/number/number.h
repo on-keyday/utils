@@ -73,7 +73,7 @@ namespace utils {
                 T result1 = 0;
                 T result2 = 0;
                 T divrad = 1;
-                int plus = 0;  // XXX: i don't know why this is works
+                int plus = 0;
                 bool afterdot = false;
                 template <class C>
                 constexpr void push_back(C in) {
@@ -97,7 +97,7 @@ namespace utils {
                         result2 += c;
                         result2 *= radix;
                         divrad *= radix;
-                        plus = 1;
+                        plus = 1;  // XXX: i don't know why this is works
                     }
                 }
             };
