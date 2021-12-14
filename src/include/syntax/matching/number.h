@@ -170,18 +170,18 @@ namespace utils {
                     report("expect integer but token is " + pt.str);
                     return 0;
                 }
-                auto e = number::is_float_number(v, base, i);
+                auto e = number::is_float_number(pt.str, base, i);
                 if (e) {
                     ctx.r.current = pt.exists()->next;
                     ctx.r.count = pt.stack;
                     return 1;
                 }
                 if (e == number::NumError::invalid) {
-                    report("invalid float format. token is ", pt.str);
+                    report("invalid float format. token is " + pt.str);
                     return -1;
                 }
                 else {
-                    report("expect number but token is ", pt.str);
+                    report("expect number but token is " + pt.str);
                     return 0;
                 }
                 /*

@@ -72,6 +72,7 @@ namespace utils {
                 int radix;
                 T result1 = 0;
                 T result2 = 0;
+                T divrad = 1;
                 bool afterdot = false;
                 template <class C>
                 constexpr void push_back(C in) {
@@ -93,7 +94,8 @@ namespace utils {
                     }
                     else {
                         result2 += c;
-                        result2 *= radix;
+                        divrad *= radix;
+                        result2 /= divrad;
                     }
                 }
             };
@@ -253,7 +255,7 @@ namespace utils {
 
         // experimental
         template <class T, class U>
-        NumErr parse_float(Sequencer<T>& seq, U& result, int radix = 10) {
+        constexpr NumErr parse_float(Sequencer<T>& seq, U& result, int radix = 10) {
             static_assert(std::is_floating_point_v<U>, "expect floating point type");
             if (radix != 10 && radix != 16) {
                 return NumError::invalid;
@@ -276,6 +278,27 @@ namespace utils {
             if (parser.unsurpport) {
                 return NumError::invalid;
             }
+            result = parser.result1 / radix + parser.result2 * radix;
+            return true;
         }
+
+        template <class String, class T>
+        constexpr NumErr parse_float(String&& v, T& result, int radix = 10, size_t offset = 0, bool expect_eof = true) {
+            Sequencer<buffer_t<String&>> seq(v);
+            seq.seek(offset);
+            T tmpres = 0;
+            auto e = parse_float(seq, tmpres, radix);
+            if (!e) {
+                return e;
+            }
+            if (expect_eof) {
+                if (!seq.eos()) {
+                    return NumError::not_eof;
+                }
+            }
+            result = tmpres;
+            return true;
+        }
+
     }  // namespace number
 }  // namespace utils
