@@ -37,6 +37,7 @@ namespace utils {
             if (radix < 2 || radix > 36) {
                 return false;
             }
+            bool zerosize = true;
             bool first = true;
             bool dot = false;
             bool exp = false;
@@ -79,6 +80,7 @@ namespace utils {
                 result.push_back(e);
                 seq.consume();
                 first = false;
+                zerosize = false;
             }
             if (first) {
             }
