@@ -30,7 +30,7 @@ namespace utils {
         struct SizedView {
             T* ptr;
             size_t size_;
-            constexpr Sized(T* t, size_t sz)
+            constexpr SizedView(T* t, size_t sz)
                 : ptr(t), size_(sz) {}
 
             constexpr T& operator[](size_t pos) const {
