@@ -3,6 +3,7 @@
 // view - utility view
 #pragma once
 #include "../core/buffer.h"
+#include "../endian/endian.h"
 
 namespace utils {
     namespace helper {
@@ -24,15 +25,26 @@ namespace utils {
         template <class T, class Char>
         struct EndianView {
             Buffer<T> buf;
-            bool revendian = false;
+            bool reverse = false;
 
             using char_type = typename Buffer<T>::char_type;
 
             static_assert(sizeof(char_type) == 1, "expect sizeof(char_type) is 1");
 
-            Char operator[](size_t sz) {
-                if (buf.size() % sizeof(Char)) {
+            Char operator[](size_t pos) const {
+                if (pos >= size()) {
                     return Char();
+                }
+                std::uint8_t tmp[sizeof(Char)] = {0};
+                auto idx = pos * sizeof(Char);
+                for (size_t i = 0; i < sizeof(Char); i++) {
+                    tmp[i] = buf.at(idx + i);
+                }
+                if (reverse) {
+                    return endian::internal::reverse_endian<Char>(tmp);
+                }
+                else {
+                    return endian::internal::copy_as_is<Char>(tmp);
                 }
             }
 

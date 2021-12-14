@@ -15,7 +15,7 @@ namespace utils {
             not_assigned,
             bool_not_true_or_false,
         };
-
+        /*
         template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
         struct ParseContext {
             int& index;
@@ -25,7 +25,8 @@ namespace utils {
             Option<String, Vec>& option;
             OptionResultSet<String, Vec, MultiMap>& result;
             String* assign = nullptr
-        };
+        };*/
+
         namespace internal {
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
@@ -71,18 +72,10 @@ namespace utils {
                     return ParseError::not_assigned;
                 }
             }
-            ParseContext<Char, OptName, String, Vec, MultiMap> context{
-                index,
-                argc,
-                argv,
-                name,
-                option,
-                result,
-                assign,
-            };
             OptionResult<String, Vec> optres;
             optres.base = std::addressof(option);
             if (BoolOption<String, Vec>* boopt = cast<BoolOption>(&option)) {
+                return internal::parse_booloption(boopt, index, argc, argv, optres, assign);
             }
         }
 
