@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include <limits>
+
 #include "../core/sequencer.h"
 
 #include "../wrap/lite/enum.h"
@@ -33,15 +35,41 @@ namespace utils {
         };
         // clang-format on
 
-        struct NopPushBacker {
+        namespace internal {
+
+            struct NopPushBacker {
+                template <class T>
+                constexpr void push_back(T&&) {}
+            };
+
             template <class T>
-            constexpr void push_back(T&&) {}
-        };
+            struct PushBackParser {
+                bool overflow = false;
+                int radix = 10;
+                T result = 0;
+
+                template <class C>
+                constexpr void push_back(C in) {
+                    if (overflow) {
+                        return;
+                    }
+                    auto c = number_transform[in];
+                    result += c;
+                    constexpr T maxi = (std::numeric_limits<T>::max)();
+                    if (!(result < maxi / radix)) {
+                        overflow = true;
+                        return;
+                    }
+                    result *= radix;
+                }
+            };
+        }  // namespace internal
 
         enum class NumError {
             none,
             not_match,
             invalid,
+            overflow,
         };
 
         using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
@@ -112,7 +140,7 @@ namespace utils {
         template <class String>
         constexpr NumErr is_number(String&& v, int radix = 10, int offset = 0, bool* is_float = nullptr) {
             Sequencer<buffer_t<String&>> seq(v);
-            NopPushBacker nop;
+            internal::NopPushBacker nop;
             seq.seek(offset);
             auto e = read_number(nop, seq, radix, is_float);
             if (!e) {
@@ -139,5 +167,8 @@ namespace utils {
             return is_number(v, radix, offset);
         }
 
+        template <class String, class T>
+        NumErr parse_integer(String&& v, T& result) {
+        }
     }  // namespace number
 }  // namespace utils
