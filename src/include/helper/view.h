@@ -9,7 +9,7 @@ namespace utils {
     namespace helper {
         template <class T>
         struct ReverseView {
-            Buffer<T> buf;
+            Buffer<typename BufferType<T>::type> buf;
 
             using char_type = typename Buffer<T>::char_type;
 
@@ -24,7 +24,7 @@ namespace utils {
 
         template <class T, class Char>
         struct EndianView {
-            Buffer<T> buf;
+            Buffer<typename BufferType<T>::type> buf;
             bool reverse = false;
 
             using char_type = typename Buffer<T>::char_type;
