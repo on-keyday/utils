@@ -11,13 +11,17 @@ namespace utils {
         struct ReverseView {
             Buffer<typename BufferType<T>::type> buf;
 
+            template <class... In>
+            constexpr ReverseView(In&&... in)
+                : buf(std::forward<In>(in)...) {}
+
             using char_type = typename Buffer<T>::char_type;
 
-            char_type operator[](size_t pos) const {
+            constexpr char_type operator[](size_t pos) const {
                 return buf.at(buf.size() - pos - 1);
             }
 
-            size_t size() {
+            constexpr size_t size() const {
                 return buf.size();
             }
         };
@@ -31,7 +35,7 @@ namespace utils {
 
             static_assert(sizeof(char_type) == 1, "expect sizeof(char_type) is 1");
 
-            Char operator[](size_t pos) const {
+            constexpr Char operator[](size_t pos) const {
                 if (pos >= size()) {
                     return Char();
                 }
@@ -48,7 +52,7 @@ namespace utils {
                 }
             }
 
-            size_t size() const {
+            constexpr size_t size() const {
                 auto sz = buf.size();
                 if (sz % sizeof(Char)) {
                     return 0;

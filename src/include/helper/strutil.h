@@ -5,6 +5,8 @@
 
 #include "../core/sequencer.h"
 
+#include "view.h"
+
 namespace utils {
     namespace helper {
         template <class T, class U>
@@ -19,6 +21,14 @@ namespace utils {
         constexpr bool starts_with(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
             Sequencer<typename BufferType<In&>::type> intmp(in);
             return intmp.match(cmp, compare);
+        }
+
+        template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
+        constexpr bool ends_with(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
+            using reverse_type = ReverseView<typename BufferType<In&>::type>;
+            Sequencer<reverse_type> intmp(reverse_type{in});
+            ReverseView<typename BufferType<Cmp&>::type> cmptmp{cmp};
+            return intmp.match(cmptmp, compare);
         }
 
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
