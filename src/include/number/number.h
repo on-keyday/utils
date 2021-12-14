@@ -188,8 +188,9 @@ namespace utils {
             return true;
         }
 
-        template <class T, class U>
-        NumErr parse_integer(T&& seq, U& result, int radix = 10, size_t offset = 0) {
+        template <class String, class T>
+        NumErr parse_integer(String&& v, T& result, int radix = 10, size_t offset = 0) {
+            Sequencer<buffer_t<String&>> seq(v);
         }
     }  // namespace number
 }  // namespace utils
