@@ -4,8 +4,9 @@
 #pragma once
 
 #include <cstdint>
-
 #include <limits>
+
+#include <charconv>
 
 #include "../core/sequencer.h"
 
@@ -161,7 +162,7 @@ namespace utils {
                 return false;
             }
             bool is_float = false;
-            auto e = is_number(v, radix, offset, &is_float);
+            auto e = is_number(v, radix, offset, &is_float, expect_eof);
             if (!e) {
                 return e;
             }
@@ -174,15 +175,17 @@ namespace utils {
         }
 
         template <class T, class U>
-        NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10) {
+        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10) {
+            internal::PushBackParser<U> parser;
+            parser.radix = radix;
+            bool minus = false;
             if (seq.current() == '+') {
                 seq.consume();
             }
             else if (std::is_signed_v<U> && seq.current() == '-') {
                 seq.consume();
+                minus = true;
             }
-            internal::PushBackParser<U> parser;
-            parser.radix = radix;
             auto err = read_number(parser, seq, radix);
             if (!err) {
                 return err;
@@ -190,12 +193,15 @@ namespace utils {
             if (parser.overflow) {
                 return NumError::overflow;
             }
-            result = parser.result;
+            result = parser.result / parser.radix;
+            if (minus) {
+                result = -result;
+            }
             return true;
         }
 
         template <class String, class T>
-        NumErr parse_integer(String&& v, T& result, int radix = 10, size_t offset = 0, bool expect_eof = true) {
+        constexpr NumErr parse_integer(String&& v, T& result, int radix = 10, size_t offset = 0, bool expect_eof = true) {
             Sequencer<buffer_t<String&>> seq(v);
             seq.seek(offset);
             T tmpres = 0;
@@ -210,6 +216,17 @@ namespace utils {
             }
             result = tmpres;
             return true;
+        }
+
+        template <class T, class U>
+        NumErr parse_float(Sequencer<T>& seq, U& result, int radix = 10) {
+            static_assert(std::is_floating_point_v<U>, "expect floating point type");
+            if (seq.current() == '+') {
+                seq.consume();
+            }
+            else if (std::is_signed_v<U> && seq.current() == '-') {
+                seq.consume();
+            }
         }
     }  // namespace number
 }  // namespace utils
