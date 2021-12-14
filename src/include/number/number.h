@@ -191,6 +191,12 @@ namespace utils {
         template <class String, class T>
         NumErr parse_integer(String&& v, T& result, int radix = 10, size_t offset = 0) {
             Sequencer<buffer_t<String&>> seq(v);
+            seq.seek(offset);
+            T tmpres = 0;
+            auto e = parse_integer(seq, tmpres, radix);
+            if (!e) {
+                return e;
+            }
         }
     }  // namespace number
 }  // namespace utils
