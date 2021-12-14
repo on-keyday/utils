@@ -66,18 +66,13 @@ namespace utils {
                             dot = true;
                             result.push_back('.');
                             seq.consume();
-                            if (radix == 16) {
-                                first = true;
-                            }
                             continue;
                         }
                         if (!exp &&
                             ((radix == 10 && (e == 'e' || e == 'E')) ||
                              (radix == 16 && (e == 'p' || e == 'P')))) {
                             if (first) {
-                                if (radix != 16 || !dot) {
-                                    return NumError::invalid;
-                                }
+                                return NumError::invalid;
                             }
                             dot = true;
                             exp = true;
@@ -115,24 +110,32 @@ namespace utils {
         }
 
         template <class String>
-        constexpr bool is_number(String&& v, int radix = 10, int offset = 0, bool* is_float = nullptr) {
+        constexpr NumErr is_number(String&& v, int radix = 10, int offset = 0, bool* is_float = nullptr) {
             Sequencer<buffer_t<String&>> seq(v);
             NopPushBacker nop;
             seq.seek(offset);
-            return read_number(nop, seq, radix, is_float) && seq.eos();
+            auto e = read_number(nop, seq, radix, is_float);
+            if (!e) {
+                return e;
+            }
+            return seq.eos();
         }
 
         template <class String>
-        constexpr bool is_float_number(String&& v, int radix = 10, int offset = 0) {
+        constexpr NumErr is_float_number(String&& v, int radix = 10, int offset = 0) {
             if (radix != 10 && radix != 16) {
                 return false;
             }
             bool is_float = false;
-            return is_number(v, radix, offset, &is_float) && is_float;
+            auto e = is_number(v, radix, offset, &is_float);
+            if (!e) {
+                return e;
+            }
+            return is_float;
         }
 
         template <class String>
-        constexpr bool is_integer(String&& v, int radix = 10, int offset = 0) {
+        constexpr NumErr is_integer(String&& v, int radix = 10, int offset = 0) {
             return is_number(v, radix, offset);
         }
 

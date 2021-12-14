@@ -4,7 +4,7 @@
 
 constexpr bool test_is_number() {
     bool is_float;
-    return utils::number::is_number("0.2f", 16, 0, &is_float);
+    return utils::number::is_number("3", 16, 0, &is_float);
 }
 
 void test_number() {
