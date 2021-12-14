@@ -82,7 +82,8 @@ namespace utils {
                 first = false;
                 zerosize = false;
             }
-            if (first) {
+            if (first && !zerosize) {
+                return false;
             }
             return true;
         }
