@@ -193,7 +193,7 @@ namespace utils {
             if (parser.overflow) {
                 return NumError::overflow;
             }
-            result = parser.result / parser.radix;
+            result = parser.result / radix;
             if (minus) {
                 result = -result;
             }
