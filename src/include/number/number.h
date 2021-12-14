@@ -282,6 +282,9 @@ namespace utils {
                 return NumError::invalid;
             }
             result = parser.result1 / radix + parser.result2 / parser.divrad + parser.plus;
+            if (minus) {
+                result = -result;
+            }
             return true;
         }
 
