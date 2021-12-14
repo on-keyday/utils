@@ -77,7 +77,7 @@ namespace utils {
                     }
                 }
                 auto n = number_transform[e];
-                if (n < 0 || n <= radix) {
+                if (n < 0 || n >= radix) {
                     break;
                 }
                 result.push_back(e);
