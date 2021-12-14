@@ -55,6 +55,9 @@ namespace utils {
                             dot = true;
                             result.push_back('.');
                             seq.consume();
+                            if (radix == 16) {
+                                first = true;
+                            }
                             continue;
                         }
                         if (!exp &&
