@@ -44,7 +44,7 @@ namespace utils {
             };
 
             template <class T>
-            struct PushBackParser {
+            struct PushBackParserInt {
                 bool overflow = false;
                 int radix = 10;
                 T result = 0;
@@ -176,7 +176,7 @@ namespace utils {
 
         template <class T, class U>
         constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10) {
-            internal::PushBackParser<U> parser;
+            internal::PushBackParserInt<U> parser;
             parser.radix = radix;
             bool minus = false;
             if (seq.current() == '+') {
