@@ -3,7 +3,7 @@
 #include "../../include/helper/strutil.h"
 
 constexpr bool test_endswith() {
-    return utils::helper::ends_with("Hey Jude", "Jude");
+    return utils::helper::ends_with("Hey Jude", " Jude");
 }
 
 void test_strutils() {
