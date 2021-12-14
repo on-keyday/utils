@@ -42,7 +42,6 @@ namespace utils {
             if (radix < 2 || radix > 36) {
                 return false;
             }
-            bool zerosize = true;
             bool first = true;
             bool dot = false;
             bool exp = false;
@@ -85,9 +84,8 @@ namespace utils {
                 result.push_back(e);
                 seq.consume();
                 first = false;
-                zerosize = false;
             }
-            if (first && !zerosize) {
+            if (first) {
                 return false;
             }
             if (is_float) {
@@ -96,7 +94,11 @@ namespace utils {
             return true;
         }
 
-        constexpr bool is_number() {
+        template <class String>
+        constexpr bool is_number(String&& v, int radix = 10, bool* is_float = nullptr) {
+            Sequencer<buffer_t<String&>> seq(v);
+            NopPushBacker nop;
+            return read_number(nop, seq, radix, is_float) && seq.eos();
         }
 
     }  // namespace number
