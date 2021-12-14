@@ -37,20 +37,10 @@ namespace utils {
             return intmp.seek_if(cmp, compare) && intmp.eos();
         }
 
-        template <class T>
-        struct Sized {
-            T* ptr;
-            size_t size_;
-            constexpr Sized(T* t, size_t sz)
-                : ptr(t), size_(sz) {}
+        template <class In, class Begin, class End, class Compare1 = compare_type<In, Begin>, class Compare2 = compare_type<In, End>>
+        constexpr bool sandwiched(In&& in, Begin&& begin, End&& end, Compare1&& compare1 = default_compare<In, Begin>(), Compare2&& compare2 = default_compare<In, End>()) {
+            return starts_with(in, begin, compare1) && ends_with(in, end, compare2);
+        }
 
-            constexpr T& operator[](size_t pos) const {
-                return ptr[pos];
-            }
-
-            size_t size() const {
-                return size_;
-            }
-        };
     }  // namespace helper
 }  // namespace utils
