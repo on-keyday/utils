@@ -16,9 +16,9 @@ namespace utils {
             wrap::shared_ptr<Option<String, Vec>> value;
         };
 
-        template <class String, template <class...> class Vec, template <class...> class Map>
+        template <class String, template <class...> class Vec, template <class...> class MultiMap>
         struct OptionResultSet {
-            Map<String, OptionResult<String, Vec>> result;
+            MultiMap<String, OptionResult<String, Vec>> result;
         };
 
     }  // namespace cmdline
