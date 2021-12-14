@@ -100,10 +100,24 @@ namespace utils {
         }
 
         template <class String>
-        constexpr bool is_number(String&& v, int radix = 10, bool* is_float = nullptr) {
+        constexpr bool is_number(String&& v, int radix = 10, int offset = 0, bool* is_float = nullptr) {
             Sequencer<buffer_t<String&>> seq(v);
             NopPushBacker nop;
             return read_number(nop, seq, radix, is_float) && seq.eos();
+        }
+
+        template <class String>
+        constexpr bool is_float_number(String&& v, int radix = 10, int offset = 0) {
+            if (radix != 10 && radix != 16) {
+                return false;
+            }
+            bool is_float = false;
+            return is_number(v, radix, offset, &is_float) && is_float;
+        }
+
+        template <class String>
+        constexpr bool is_integer(String&& v, int radix = 10, int offset = 0) {
+            return is_number(v, radix, offset);
         }
 
     }  // namespace number
