@@ -70,6 +70,7 @@ namespace utils {
             not_match,
             invalid,
             overflow,
+            not_eof,
         };
 
         using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
@@ -138,7 +139,7 @@ namespace utils {
         }
 
         template <class String>
-        constexpr NumErr is_number(String&& v, int radix = 10, size_t offset = 0, bool* is_float = nullptr) {
+        constexpr NumErr is_number(String&& v, int radix = 10, size_t offset = 0, bool* is_float = nullptr, bool expect_eof = true) {
             Sequencer<buffer_t<String&>> seq(v);
             internal::NopPushBacker nop;
             seq.seek(offset);
@@ -146,11 +147,16 @@ namespace utils {
             if (!e) {
                 return e;
             }
-            return seq.eos();
+            if (expect_eof) {
+                if (!seq.eos()) {
+                    return NumError::not_eof;
+                }
+            }
+            return true;
         }
 
         template <class String>
-        constexpr NumErr is_float_number(String&& v, int radix = 10, size_t offset = 0) {
+        constexpr NumErr is_float_number(String&& v, int radix = 10, size_t offset = 0, bool expect_eof = true) {
             if (radix != 10 && radix != 16) {
                 return false;
             }
@@ -163,8 +169,8 @@ namespace utils {
         }
 
         template <class String>
-        constexpr NumErr is_integer(String&& v, int radix = 10, size_t offset = 0) {
-            return is_number(v, radix, offset);
+        constexpr NumErr is_integer(String&& v, int radix = 10, size_t offset = 0, bool expect_eof = true) {
+            return is_number(v, radix, offset, nullptr, expect_eof);
         }
 
         template <class T, class U>
@@ -189,7 +195,7 @@ namespace utils {
         }
 
         template <class String, class T>
-        NumErr parse_integer(String&& v, T& result, int radix = 10, size_t offset = 0) {
+        NumErr parse_integer(String&& v, T& result, int radix = 10, size_t offset = 0, bool expect_eof = true) {
             Sequencer<buffer_t<String&>> seq(v);
             seq.seek(offset);
             T tmpres = 0;
@@ -197,8 +203,10 @@ namespace utils {
             if (!e) {
                 return e;
             }
-            if (!seq.eos()) {
-                return false;
+            if (expect_eof) {
+                if (!seq.eos()) {
+                    return NumError::not_eof;
+                }
             }
             result = tmpres;
             return true;
