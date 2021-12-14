@@ -73,12 +73,12 @@ namespace utils {
                 T result1 = 0;
                 T result2 = 0;
                 T divrad = 1;
+                int plus = 0;
                 bool afterdot = false;
                 template <class C>
                 constexpr void push_back(C in) {
                     if (in == '.') {
                         afterdot = true;
-                        return;
                     }
                     else if (in == 'p' || in == 'P') {
                         unsurpport = true;
@@ -97,6 +97,7 @@ namespace utils {
                         result2 += c;
                         result2 *= radix;
                         divrad *= radix;
+                        plus = 1;
                     }
                 }
             };
@@ -279,7 +280,7 @@ namespace utils {
             if (parser.unsurpport) {
                 return NumError::invalid;
             }
-            result = parser.result1 / radix + parser.result2 / parser.divrad;
+            result = parser.result1 / radix + parser.result2 / parser.divrad + parser.plus;
             return true;
         }
 

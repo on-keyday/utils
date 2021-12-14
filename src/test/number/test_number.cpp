@@ -15,14 +15,14 @@ constexpr int test_parse_integer() {
 
 constexpr double test_parse_float() {
     double test = 0;
-    utils::number::parse_float("3.14", test);
+    utils::number::parse_float("0.0", test);
     return test;
 }
 
 void test_number() {
     constexpr bool result1 = test_is_number();
     constexpr auto result2 = test_parse_integer();
-    auto result3 = test_parse_float();
+    constexpr auto result3 = test_parse_float();
 }
 
 int main() {
