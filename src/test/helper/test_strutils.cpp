@@ -8,4 +8,5 @@ constexpr bool test_endswith() {
 
 void test_strutils() {
     constexpr bool result1 = test_endswith();
+    constexpr bool result2 = utils::helper::sandwiched("(hello)", "(", ")");
 }
