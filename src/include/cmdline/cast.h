@@ -57,6 +57,19 @@ namespace utils {
             };
 
             template <class String, template <class...> class Vec>
+            struct CastHelper<String, Vec, SomeValueOption<String, Vec>> {
+                static SomeValueOption<String, Vec>* cast(auto& in) {
+                    if (!in) {
+                        return nullptr;
+                    }
+                    if (in->type() != OptionType::somevalue) {
+                        return nullptr;
+                    }
+                    return static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
+                }
+            };
+
+            template <class String, template <class...> class Vec>
             struct CastHelper<String, Vec, BoolSomeValueOption<String, Vec>> {
                 static BoolSomeValueOption<String, Vec>* cast(auto& in) {
                     if (!in) {
@@ -66,7 +79,7 @@ namespace utils {
                         return nullptr;
                     }
                     auto sv = static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
-                    if (sv->has_type != OptionType::boolean) {
+                    if (sv->has_type() != OptionType::boolean) {
                         return nullptr;
                     }
                     return static_cast<BoolSomeValueOption<String, Vec>*>(sv);
@@ -83,7 +96,7 @@ namespace utils {
                         return nullptr;
                     }
                     auto sv = static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
-                    if (sv->has_type != OptionType::integer) {
+                    if (sv->has_type() != OptionType::integer) {
                         return nullptr;
                     }
                     return static_cast<IntSomeValueOption<String, Vec>*>(sv);
@@ -100,7 +113,7 @@ namespace utils {
                         return nullptr;
                     }
                     auto sv = static_cast<SomeValueOption<String, Vec>*>(std::addressof(*in));
-                    if (sv->has_type != OptionType::string) {
+                    if (sv->has_type() != OptionType::string) {
                         return nullptr;
                     }
                     return static_cast<StringSomeValueOption<String, Vec>*>(sv);

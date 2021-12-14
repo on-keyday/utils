@@ -12,10 +12,14 @@ namespace utils {
         struct SomeValueOption : Option<String, Vec> {
            protected:
             SomeValueOption(OptionType t)
-                : has_type(t), Option<String, Vec>(OptionType::somevalue) {}
-            OptionType has_type;
+                : has_type_(t), Option<String, Vec>(OptionType::somevalue) {}
+            OptionType has_type_;
 
            public:
+            OptionType has_type() {
+                return has_type;
+            }
+
             size_t minimum = 0;
             size_t maximum = 0;
         };
