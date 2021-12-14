@@ -20,7 +20,7 @@ namespace utils {
         };
 
         namespace internal {
-            constexpr Endian native_impl() {
+            inline Endian native_impl() {
                 int base = 1;
                 const char* ptr = reinterpret_cast<const char*>(&base);
                 if (ptr[0]) {
