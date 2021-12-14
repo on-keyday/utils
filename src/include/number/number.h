@@ -64,7 +64,9 @@ namespace utils {
                             ((radix == 10 && (e == 'e' || e == 'E')) ||
                              (radix == 16 && (e == 'p' || e == 'P')))) {
                             if (first) {
-                                return false;
+                                if (radix != 16 || !dot) {
+                                    return false;
+                                }
                             }
                             dot = true;
                             exp = true;
