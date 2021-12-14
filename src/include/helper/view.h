@@ -14,7 +14,7 @@ namespace utils {
             using char_type = typename Buffer<T>::char_type;
 
             char_type operator[](size_t pos) const {
-                return buf.at(size() - pos - 1);
+                return buf.at(buf.size() - pos - 1);
             }
 
             size_t size() {
