@@ -102,4 +102,7 @@ namespace utils {
         using char_type = typename Buffer<type>::char_type;
     };
 
+    template <class T>
+    using buffer_t = typename BufferType<T>::type;
+
 }  // namespace utils

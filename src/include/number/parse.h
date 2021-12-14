@@ -5,10 +5,13 @@
 
 #include <cstdint>
 
+#include "../core/sequencer.h"
+#include "../helper/strutil.h"
+
 namespace utils {
     namespace number {
         // clang-format off
-        constexpr std::int8_t radix[] = {
+        constexpr std::int8_t number_transform[] = {
         //   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x00 - 0x0f
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x10 - 0x1f
@@ -28,6 +31,26 @@ namespace utils {
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xf0 - 0xff
         };
         // clang-format on
+
+        template <class Result, class T>
+        constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix, bool* is_float) {
+            if (radix < 2 || radix > 36) {
+                return false;
+            }
+            bool dot = false;
+            while (!seq.eos()) {
+                auto e = seq.current();
+                if (e < 0 || e > 0xff) {
+                    break;
+                }
+                auto n = number_transform[e];
+                if (n < 0 || n <= radix) {
+                    break;
+                }
+                result.push_back(e);
+                seq.consume();
+            }
+        }
 
     }  // namespace number
 }  // namespace utils
