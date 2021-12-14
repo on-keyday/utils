@@ -8,6 +8,8 @@
 
 #include <charconv>
 
+#include <cmath>
+
 #include "../core/sequencer.h"
 
 #include "../wrap/lite/enum.h"
@@ -68,13 +70,14 @@ namespace utils {
             // experimental
             template <class T>
             struct PushBackParserFloat {
-                bool unsurpport = false;
                 int radix;
                 T result1 = 0;
                 T result2 = 0;
                 T divrad = 1;
+                T exp = 0;
                 int plus = 0;
                 bool afterdot = false;
+                bool has_exp = false;
                 template <class C>
                 constexpr void push_back(C in) {
                     if (in == '.') {
@@ -82,11 +85,15 @@ namespace utils {
                         // fallthrough (explicit not returning)
                     }
                     else if (in == 'p' || in == 'P') {
-                        unsurpport = true;
+                        has_exp = true;
                         return;
                     }
                     else if (radix == 10 && (in == 'e' || in == 'E')) {
-                        unsurpport = true;
+                        has_exp = true;
+                        return;
+                    }
+                    else if (in == '+' || in == '-') {
+                        exp = in == '-' ? T(-0) : T(+0);
                         return;
                     }
                     auto c = number_transform[in];
@@ -94,14 +101,27 @@ namespace utils {
                         result1 += c;
                         result1 *= radix;
                     }
-                    else {
+                    else if (!has_exp) {
                         result2 += c;
                         result2 *= radix;
                         divrad *= radix;
                         plus = 1;  // XXX: i don't know why this is works
                     }
+                    else {
+                        exp += c;
+                        exp *= 10;
+                    }
                 }
             };
+
+            // copied from other
+            template <class T>
+            constexpr T spow(T base, T exp) noexcept {
+                //static_assert(exp >= 0, "Exponent must not be negative");
+                return exp <= 0   ? 1
+                       : exp == 1 ? base
+                                  : base * spow(base, exp - 1);
+            }
         }  // namespace internal
 
         enum class NumError {
@@ -278,10 +298,10 @@ namespace utils {
             if (!e) {
                 return e;
             }
-            if (parser.unsurpport) {
-                return NumError::invalid;
-            }
             result = parser.result1 / radix + parser.result2 / parser.divrad + parser.plus;
+            if (parser.has_exp) {
+                result = internal::spow(result, parser.exp / 10);
+            }
             if (minus) {
                 result = -result;
             }
