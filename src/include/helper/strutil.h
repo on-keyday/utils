@@ -42,10 +42,14 @@ namespace utils {
             return starts_with(in, begin, compare1) && ends_with(in, end, compare2);
         }
 
+        // very simple search
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
         constexpr size_t find(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
             Sequencer<typename BufferType<In&>::type> intmp(in);
             Buffer<typename BufferType<Cmp&>::type> cmptmp(cmp);
+            if (cmptmp.size() == 0) {
+                return ~0;
+            }
             while (!intmp.eos()) {
                 if (intmp.remain() < cmptmp.size()) {
                     return ~0;
