@@ -15,7 +15,7 @@ constexpr int test_parse_integer() {
 
 constexpr double test_parse_float() {
     double test = 0;
-    utils::number::parse_float("0.0", test);
+    utils::number::parse_float("3.141516", test);
     return test;
 }
 
