@@ -7,6 +7,8 @@
 
 #include "../core/sequencer.h"
 
+#include "../wrap/lite/enum.h"
+
 namespace utils {
     namespace number {
         // clang-format off
@@ -36,11 +38,20 @@ namespace utils {
             constexpr void push_back(T&&) {}
         };
 
+        enum class NumError {
+            none,
+            not_match,
+            invalid,
+        };
+
+        using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
+
         template <class Result, class T>
-        constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr) {
+        constexpr NumErr read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr) {
             if (radix < 2 || radix > 36) {
-                return false;
+                return NumError::invalid;
             }
+            bool zerosize = true;
             bool first = true;
             bool dot = false;
             bool exp = false;
@@ -65,7 +76,7 @@ namespace utils {
                              (radix == 16 && (e == 'p' || e == 'P')))) {
                             if (first) {
                                 if (radix != 16 || !dot) {
-                                    return false;
+                                    return NumError::invalid;
                                 }
                             }
                             dot = true;
@@ -89,9 +100,13 @@ namespace utils {
                 result.push_back(e);
                 seq.consume();
                 first = false;
+                zerosize = false;
             }
             if (first) {
-                return false;
+                if (zerosize) {
+                    return NumError::not_match;
+                }
+                return NumError::invalid;
             }
             if (is_float) {
                 *is_float = dot || exp;
@@ -103,6 +118,7 @@ namespace utils {
         constexpr bool is_number(String&& v, int radix = 10, int offset = 0, bool* is_float = nullptr) {
             Sequencer<buffer_t<String&>> seq(v);
             NopPushBacker nop;
+            seq.seek(offset);
             return read_number(nop, seq, radix, is_float) && seq.eos();
         }
 

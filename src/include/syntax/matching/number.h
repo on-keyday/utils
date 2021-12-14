@@ -12,6 +12,8 @@
 
 #include "../../helper/strutil.h"
 
+#include "../../number/number.h"
+
 namespace utils {
     namespace syntax {
         namespace internal {
@@ -134,6 +136,7 @@ namespace utils {
                     report("expect number but not");
                     return 0;
                 }
+
                 token = pt.str;
                 int base = 10;
                 int i = 0;
@@ -157,6 +160,23 @@ namespace utils {
                     base = 8;
                     i = 2;
                 }
+                if (number::is_integer(pt.str, base, i)) {
+                    pt.exists();
+                    ctx.r.current = pt.exists()->next;
+                    ctx.r.count = pt.stack;
+                    return 1;
+                }
+                if (base == 2 || base == 8 || onlyint) {
+                    report("expect integer but token is " + pt.str);
+                    return 0;
+                }
+                if (number::is_float_number(v, base, i)) {
+                    ctx.r.current = pt.exists()->next;
+                    ctx.r.count = pt.stack;
+                    return 1;
+                }
+                return report("expect number but not");
+                /*
                 int allowed = false;
                 internal::check_int_str(pt.str, i, base, allowed);
                 if (pt.str.size() == allowed) {
@@ -168,7 +188,7 @@ namespace utils {
                     ctx.r.count = pt.stack;
                     /*if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
                     return -1;
-                }*/
+                }*
                     return 1;
                 }
                 if (base == 2 || base == 8 || onlyint) {
@@ -201,7 +221,7 @@ namespace utils {
                     ctx.r.count = pt.stack;
                     /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                     return -1;
-                }*/
+                }*
                     return 1;
                 }
                 if (base == 16) {
