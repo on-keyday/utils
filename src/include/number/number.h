@@ -79,6 +79,7 @@ namespace utils {
                 constexpr void push_back(C in) {
                     if (in == '.') {
                         afterdot = true;
+                        // fallthrough (explicit not returning)
                     }
                     else if (in == 'p' || in == 'P') {
                         unsurpport = true;
