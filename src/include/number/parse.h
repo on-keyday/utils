@@ -32,8 +32,13 @@ namespace utils {
         };
         // clang-format on
 
-        template <bool onlyint = false, class Result, class T>
-        constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix, bool* is_float) {
+        struct NopPushBacker {
+            template <class T>
+            constexpr void push_back(T&&) {}
+        };
+
+        template <class Result, class T>
+        constexpr bool read_number(Result& result, Sequencer<T>& seq, int radix, bool* is_float = nullptr) {
             if (radix < 2 || radix > 36) {
                 return false;
             }
@@ -46,7 +51,7 @@ namespace utils {
                 if (e < 0 || e > 0xff) {
                     break;
                 }
-                if constexpr (!onlyint) {
+                if (is_float) {
                     if (radix == 10 || radix == 16) {
                         if (!dot && e == '.') {
                             dot = true;
@@ -85,7 +90,13 @@ namespace utils {
             if (first && !zerosize) {
                 return false;
             }
+            if (is_float) {
+                *is_float = dot || exp;
+            }
             return true;
+        }
+
+        constexpr bool is_number() {
         }
 
     }  // namespace number
