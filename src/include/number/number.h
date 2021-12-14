@@ -78,6 +78,7 @@ namespace utils {
                             }
                             radix = 10;
                             first = true;
+                            continue;
                         }
                     }
                 }

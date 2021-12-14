@@ -8,7 +8,7 @@ constexpr bool test_is_number() {
 }
 
 void test_number() {
-    constexpr bool result1 = test_is_number();
+    bool result1 = test_is_number();
 }
 
 int main() {
