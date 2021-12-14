@@ -5,25 +5,86 @@
 
 #include "cast.h"
 #include "option_result.h"
+#include "../helper/strutil.h"
 
 namespace utils {
     namespace cmdline {
         enum class ParseError {
             none,
             not_one_opt,
+            not_assigned,
+            bool_not_true_or_false,
         };
 
-        struct OptionParser {
-            template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
-            ParseError parse_one(int& index, int argc, Char** argv, const OptName& name,
-                                 Option<String, Vec>& option,
-                                 OptionResultSet<String, Vec, MultiMap>& result) {
-                if (any(option.attr & OptionAttribute::once_in_cmd)) {
-                    if (result.exists(name)) {
-                        return ParseError::not_one_opt;
+        template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
+        struct ParseContext {
+            int& index;
+            int argc;
+            Char** argv;
+            const OptName& name;
+            Option<String, Vec>& option;
+            OptionResultSet<String, Vec, MultiMap>& result;
+            String* assign = nullptr
+        };
+        namespace internal {
+            template <class Char, class String, template <class...> class Vec>
+            ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
+                auto v = wrap::make_shared<BoolOption<String, Vec>>();
+                v->value = boopt->value;
+                if (assign) {
+                    if (helper::equal(*assign, "true")) {
+                        v->value = true;
+                    }
+                    else if (helper::equal(*assign, "false")) {
+                        v->value = false;
+                    }
+                    else {
+                        return ParseError::bool_not_true_or_false;
                     }
                 }
+                else {
+                    if (index + 1 < argc) {
+                        if (helper::equal(argv[index + 1], "true")) {
+                            v->value = true;
+                            index++;
+                        }
+                        else if (helper::equal(argv[index + 1], "false")) {
+                            v->value = false;
+                            index++;
+                        }
+                    }
+                }
+                return ParseError::none;
             }
-        };
+        }  // namespace internal
+        template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
+        ParseError parse_one(int& index, int argc, Char** argv, const OptName& name,
+                             Option<String, Vec>& option,
+                             OptionResultSet<String, Vec, MultiMap>& result, String* assign = nullptr) {
+            if (any(option.attr & OptionAttribute::once_in_cmd)) {
+                if (result.exists(name)) {
+                    return ParseError::not_one_opt;
+                }
+            }
+            if (any(option.attr & OptionAttribute::must_assign)) {
+                if (!assign) {
+                    return ParseError::not_assigned;
+                }
+            }
+            ParseContext<Char, OptName, String, Vec, MultiMap> context{
+                index,
+                argc,
+                argv,
+                name,
+                option,
+                result,
+                assign,
+            };
+            OptionResult<String, Vec> optres;
+            optres.base = std::addressof(option);
+            if (BoolOption<String, Vec>* boopt = cast<BoolOption>(&option)) {
+            }
+        }
+
     }  // namespace cmdline
 }  // namespace utils

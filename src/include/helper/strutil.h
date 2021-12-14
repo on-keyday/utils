@@ -5,9 +5,6 @@
 
 #include "../core/sequencer.h"
 
-#include "../wrap/lite/string.h"
-#include "../wrap/lite/vector.h"
-
 namespace utils {
     namespace helper {
         template <class T, class U>
@@ -24,5 +21,11 @@ namespace utils {
             return intmp.match(cmp, compare);
         }
 
-        }  // namespace helper
+        template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
+        constexpr bool equal(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
+            Sequencer<typename BufferType<In&>::type> intmp(in);
+            return intmp.seek_if(cmp, compare) && intmp.eos();
+        }
+
+    }  // namespace helper
 }  // namespace utils
