@@ -12,6 +12,7 @@
 #include "optvalue.h"
 #include "../helper/strutil.h"
 #include "../utf/convert.h"
+#include "../wrap/lite/enum.h"
 
 namespace utils {
     namespace cmdline {
@@ -26,6 +27,8 @@ namespace utils {
             parse_all = 0x40,               // parse all arg
             failure_opt_as_arg = 0x80,      // failed to parse arg is argument
         };
+
+        DEFINE_ENUM_FLAGOP(ParseFlag)
 
         enum class ParseError {
             none,
