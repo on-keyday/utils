@@ -41,6 +41,7 @@ namespace utils {
                 virtual void* raw() = 0;
                 virtual const void* raw() const = 0;
                 virtual interface* copy() const = 0;
+                virtual ~interface() {}
             };
 
             template <class T>
@@ -68,12 +69,31 @@ namespace utils {
                 return Alloc::template new_value<implement<std::decay_t<T>>>(std::forward<T>(value));
             }
 
+            template <class T>
+            static void del_iface(interface* v) {
+                Alloc::delete_value(v);
+            }
+
             interface* iface = nullptr;
 
            public:
+            constexpr OptValue() {}
+            constexpr OptValue(std::nullptr_t) {}
+
             template <class T>
             OptValue(T&& value) {
                 iface = make_iface(std::forward<T>(value));
+            }
+
+            OptValue(const OptValue& v) {
+                if (v.iface) {
+                    iface = v.iface->copy();
+                }
+            }
+
+            OptValue(OptValue&& v) {
+                iface = v.iface;
+                v.iface = nullptr;
             }
 
             Type* type() const {
@@ -94,6 +114,10 @@ namespace utils {
                     return reinterpret_cast<const T*>(iface->raw());
                 }
                 return nullptr;
+            }
+
+            ~OptValue() {
+                del_iface(iface);
             }
         };
 
