@@ -71,6 +71,9 @@ namespace utils {
                         if (option_t opt; desc.find(opt)) {
                         }
                     }
+                    if (parse_all()) {
+                        continue;
+                    }
                 }
                 else if (helper::starts_with(argv[index], "-")) {
                 }
