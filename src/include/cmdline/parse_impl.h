@@ -117,24 +117,6 @@ namespace utils {
                         index++;
                     }
                 });
-                /*auto v = wrap::make_shared<StringOption<String, Vec>>();
-                v->value = stropt->value;
-                result.value = v;
-                bool need_val = any(booopt->attr & OptionAttribute::need_value);
-
-                if (assign) {
-                    v->value = String();
-                    utf::convert(*assign, v->value);
-                }
-                else if (index + 1 < argc) {
-                    v->value = String();
-                    utf::convert(argv[index + 1], v->value);
-                    index++;
-                }
-                else if (need_val) {
-                    return ParseError::need_value;
-                }
-                return ParseError::none;*/
             }
         }  // namespace internal
 
