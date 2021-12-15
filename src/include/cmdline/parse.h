@@ -46,6 +46,8 @@ namespace utils {
                          ParseFlag flag, Vec<String>* arg = nullptr) {
             using option_t = wrap::shared_ptr<Option<String>>;
             bool nooption = false;
+            ParseError ret = ParseError::none;
+            bool fatal = false;
             auto parse_all = [&] {
                 if (any(flag & ParseFlag::parse_all) && arg) {
                     arg->push_back(utf::convert<String>(argv[index]));
@@ -68,6 +70,9 @@ namespace utils {
                 else {
                     desc.find(optname, opt);
                 }
+                if (opt) {
+                    //unimplemented
+                }
             };
             for (; index < argc; index++) {
                 if (nooption || argv[index][0] != '-') {
@@ -87,16 +92,46 @@ namespace utils {
                         if (found_option(2)) {
                             continue;
                         }
-                    }
-                    if (parse_all()) {
-                        continue;
+                        if (fatal) {
+                            return ret;
+                        }
                     }
                     if (any(flag & ParseFlag::ignore_not_found)) {
+                        continue;
+                    }
+                    if (parse_all()) {
                         continue;
                     }
                     return ParseError::not_found;
                 }
                 else {
+                    if (any(flag & ParseFlag::one_prefix_longname)) {
+                        if (found_option(1)) {
+                            continue;
+                        }
+                        if (fatal) {
+                            return ret;
+                        }
+                        if (any(flag & ParseFlag::ignore_not_found)) {
+                            continue;
+                        }
+                        return ParseError::not_found;
+                    }
+                    if (any(flag & ParseFlag::adjacent_value)) {
+                        option_t opt;
+                        desc.find(helper::CharView<Char>(argv[index][1]).c_str(), opt);
+                        if (opt) {
+                            //unimplemented
+                            continue;
+                        }
+                        if (any(flag & ParseFlag::ignore_not_found)) {
+                            continue;
+                        }
+                        return ParseError::not_found;
+                    }
+                    if (parse_all()) {
+                        continue;
+                    }
                 }
             }
         }
