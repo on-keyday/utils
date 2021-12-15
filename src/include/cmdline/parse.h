@@ -64,6 +64,7 @@ namespace utils {
                 return ParseError::none;
             }
         }  // namespace internal
+
         template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
         ParseError parse_one(int& index, int argc, Char** argv, const OptName& name,
                              Option<String, Vec>& option,
@@ -76,7 +77,10 @@ namespace utils {
             OptionResult<String, Vec> optres;
             optres.base = std::addressof(option);
             if (BoolOption<String, Vec>* boopt = cast<BoolOption>(&option)) {
-                return internal::parse_booloption(boopt, index, argc, argv, optres, assign);
+                auto e = internal::parse_booloption(boopt, index, argc, argv, optres, assign);
+                if (e != ParseError::none) {
+                    return e;
+                }
             }
         }
 

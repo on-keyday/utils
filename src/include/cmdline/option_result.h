@@ -20,6 +20,10 @@ namespace utils {
         struct OptionResultSet {
             MultiMap<String, OptionResult<String, Vec>> result;
 
+            void emplace(const String& v, OptionResult<String, Vec>&& in) {
+                result.emplace(v, std::move(in));
+            }
+
             bool exists(const String& name) {
                 return result.find(name) != result.end();
             }
