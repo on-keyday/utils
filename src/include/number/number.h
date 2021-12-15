@@ -78,6 +78,7 @@ namespace utils {
                 int plus = 0;
                 bool afterdot = false;
                 bool has_exp = false;
+                bool minus_exp = false;
                 template <class C>
                 constexpr void push_back(C in) {
                     if (in == '.') {
@@ -93,7 +94,7 @@ namespace utils {
                         return;
                     }
                     else if (in == '+' || in == '-') {
-                        exp = in == '-' ? T(-0) : T(+0);
+                        minus_exp = in == '-';
                         return;
                     }
                     auto c = number_transform[in];
@@ -117,7 +118,6 @@ namespace utils {
             // copied from other
             template <class T>
             constexpr T spow(T base, T exp) noexcept {
-                //static_assert(exp >= 0, "Exponent must not be negative");
                 return exp <= 0   ? 1
                        : exp == 1 ? base
                                   : base * spow(base, exp - 1);
@@ -301,6 +301,9 @@ namespace utils {
             result = parser.result1 / radix + parser.result2 / parser.divrad + parser.plus;
             if (parser.has_exp) {
                 result = internal::spow(result, parser.exp / 10);
+                if (parser.minus_exp) {
+                    result = 1 / result;
+                }
             }
             if (minus) {
                 result = -result;

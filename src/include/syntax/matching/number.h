@@ -194,7 +194,7 @@ namespace utils {
                     }
                     ctx.r.current = pt.beforedot->next;
                     ctx.r.count = pt.stack;
-                    /*if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
+                    *if (!callback(pt.exists(), r, pt.str, MatchingType::integer)) {
                     return -1;
                 }*
                     return 1;
@@ -227,7 +227,7 @@ namespace utils {
                         return -1;
                     }
                     ctx.r.count = pt.stack;
-                    /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
+                    *if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                     return -1;
                 }*
                     return 1;
@@ -277,7 +277,7 @@ namespace utils {
                     return -1;
                 }
                 ctx.r.count = pt.stack;
-                /*if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
+                *if (!callback(pt.exists(), r, pt.str, MatchingType::number)) {
                 return -1;
             }*/
                 return true;
