@@ -26,6 +26,7 @@ namespace utils {
             need_value,
             bool_not_true_or_false,
             int_not_number,
+            require_more_argument,
         };
 
         template <class String>
@@ -104,7 +105,7 @@ namespace utils {
                         return parse_num(str);
                     }
                     else {
-                        if (parse_num(argv[index + 1]) == ParseError::none) {
+                        if (parse_num(str) == ParseError::none) {
                             index++;
                         }
                         else if (need_val) {
@@ -160,11 +161,18 @@ namespace utils {
                             return e;
                         }
                     }
-                    else if (need_val) {
-                        return ParseError::need_value;
+                    else {
+                        if (count <= opt->minimum) {
+                            return ParseError::require_more_argument;
+                        }
                     }
+                    count++;
                 }
                 return ParseError::none;
+            }
+
+            template <class Char, class String, template <class...> class Vec>
+            ParseError parse_somevalue_stringoption(StringSomeValueOption<String, Vec>* stropt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
             }
 
         }  // namespace internal
