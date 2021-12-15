@@ -43,12 +43,12 @@ namespace utils {
                     }
                 }
                 if (assign) {
-                    if (auto e = f(v, *assign, true, need_val); e != ParseError::none) {
+                    if (auto e = f(v, *assign, false, need_val); e != ParseError::none) {
                         return e;
                     }
                 }
                 else if (index + 1 < argc) {
-                    if (auto e = f(v, argv[index + 1], false, need_val); e != ParseError::none) {
+                    if (auto e = f(v, argv[index + 1], true, need_val); e != ParseError::none) {
                         return e;
                     }
                 }
@@ -60,68 +60,53 @@ namespace utils {
 
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
-                return parse_option_common(booopt, index, argc, argv, assign, [&](auto& v, auto& str, bool is_as, bool need_val) {
+                return parse_option_common(booopt, index, argc, argv, assign, [&](auto& v, auto& str, bool increment, bool need_val) {
                     if (helper::equal(str, "true")) {
                         v->value = true;
                     }
                     else if (helper::equal(str, "false")) {
                         v->value = false;
                     }
-                    else if (!is_as) {
+                    else if (increment) {
                         return ParseError::none;
                     }
                     else {
                         return ParseError::bool_not_true_or_false;
                     }
-                    if (!is_as) {
+                    if (increment) {
                         index++;
                     }
                 });
-                /*auto v = wrap::make_shared<BoolOption<String, Vec>>();
-                v->value = boopt->value;
-                result.value = v;
-                bool need_val = any(booopt->attr & OptionAttribute::need_value);
-                if (any(booopt->attr & OptionAttribute::must_assign)) {
-                    if (!assign) {
-                        if (need_val) {
-                            return ParseError::need_value;
-                        }
-                        return ParseError::none;
-                    }
-                }
-                if (assign) {
-                    if (helper::equal(*assign, "true")) {
-                        v->value = true;
-                    }
-                    else if (helper::equal(*assign, "false")) {
-                        v->value = false;
-                    }
-                    else {
-                        return ParseError::bool_not_true_or_false;
-                    }
-                }
-                else if (index + 1 < argc) {
-                    if (helper::equal(argv[index + 1], "true")) {
-                        v->value = true;
-                        index++;
-                    }
-                    else if (helper::equal(argv[index + 1], "false")) {
-                        v->value = false;
-                        index++;
-                    }
-                    else if (need_val) {
-                        return ParseError::need_value;
-                    }
-                }
-                else if (need_val) {
-                    return ParseError::need_value;
-                }
-                return ParseError::none;*/
             }
 
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_intoption(IntOption<String, Vec>* intopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
-                auto v = wrap::make_shared<IntOption<String, Vec>>();
+                return parse_option_common(intopt, index, argc, argv, assign, [&](auto& v, auto& str, bool increment, bool need_val) {
+                    auto parse_num = [&](auto& value) {
+                        int radix = 10;
+                        size_t offset = 0;
+                        if (auto e = number::has_prefix(value)) {
+                            radix = e;
+                            offset = 2;
+                        }
+                        if (!number::parse_integer(value, v->value, radix, offset)) {
+                            return ParseError::int_not_number;
+                        }
+                        return ParseError::none;
+                    };
+                    if (!increment) {
+                        return parse_num(str);
+                    }
+                    else {
+                        if (parse_num(argv[index + 1]) == ParseError::none) {
+                            index++;
+                        }
+                        else if (need_val) {
+                            return ParseError::need_value;
+                        }
+                    }
+                });
+                /*auto v = wrap::make_shared<IntOption<String, Vec>>();
                 v->value = intopt->value;
                 result.value = v;
                 bool need_val = any(booopt->attr & OptionAttribute::need_value);
@@ -133,18 +118,7 @@ namespace utils {
                         return ParseError::none;
                     }
                 }
-                auto parse_num = [&](auto& value) {
-                    int radix = 10;
-                    size_t offset = 0;
-                    if (auto e = number::has_prefix(value)) {
-                        radix = e;
-                        offset = 2;
-                    }
-                    if (!number::parse_integer(value, v->value, radix, offset)) {
-                        return ParseError::int_not_number;
-                    }
-                    return ParseError::none;
-                };
+               
                 if (assign) {
                     return parse_num();
                 }
@@ -158,7 +132,7 @@ namespace utils {
                 }
                 else if (need_val) {
                     return ParseError::need_value;
-                }
+                }*/
             }
 
             template <class Char, class String, template <class...> class Vec>
