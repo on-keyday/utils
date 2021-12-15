@@ -14,6 +14,7 @@
 #include "../helper/strutil.h"
 #include "../number/number.h"
 #include "../number/prefix.h"
+#include "../utf/convert.h"
 
 namespace utils {
     namespace cmdline {
@@ -122,16 +123,18 @@ namespace utils {
                 if (any(intopt->attr & OptionAttribute::must_assign)) {
                     if (!assign) {
                         if (need_val) {
-                            return ParseError::bool_not_true_or_false;
+                            return ParseError::need_value;
                         }
                         return ParseError::none;
                     }
                 }
                 if (assign) {
-                    v->value = *assign;
+                    v->value = String();
+                    utf::convert(*assign, v->value);
                 }
                 else if (index + 1 < argc) {
-                    v->value = argv[index + 1];
+                    v->value = String();
+                    utf::convert(argv[index + 1], v->value);
                     index++;
                 }
                 else if (need_val) {
