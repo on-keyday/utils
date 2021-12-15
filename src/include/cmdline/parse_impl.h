@@ -146,19 +146,23 @@ namespace utils {
                         return ParseError::none;
                     }
                 }
-                v->minimum;
-                if (assign) {
-                    if (auto e = f(v, *assign, false, need_val); e != ParseError::none) {
-                        return e;
+                auto first = assign;
+                size_t count = 0;
+                while (count < opt->maximum) {
+                    if (first) {
+                        if (auto e = f(v, *first, false, need_val); e != ParseError::none) {
+                            return e;
+                        }
+                        first = nullptr;
                     }
-                }
-                else if (index + 1 < argc) {
-                    if (auto e = f(v, argv[index + 1], true, need_val); e != ParseError::none) {
-                        return e;
+                    else if (index + 1 < argc) {
+                        if (auto e = f(v, argv[index + 1], true, need_val); e != ParseError::none) {
+                            return e;
+                        }
                     }
-                }
-                else if (need_val) {
-                    return ParseError::need_value;
+                    else if (need_val) {
+                        return ParseError::need_value;
+                    }
                 }
                 return ParseError::none;
             }
