@@ -51,7 +51,6 @@ namespace utils {
                     if (auto e = f(v, argv[index + 1], false, need_val); e != ParseError::none) {
                         return e;
                     }
-                    index++;
                 }
                 else if (need_val) {
                     return ParseError::need_value;
@@ -62,7 +61,21 @@ namespace utils {
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
                 return parse_option_common(booopt, index, argc, argv, assign, [](auto& v, auto& str, bool is_as, bool need_val) {
-
+                    if (helper::equal(str, "true")) {
+                        v->value = true;
+                    }
+                    else if (helper::equal(str, "false")) {
+                        v->value = false;
+                    }
+                    else if (!is_as) {
+                        return ParseError::none;
+                    }
+                    else {
+                        return ParseError::bool_not_true_or_false;
+                    }
+                    if (!is_as) {
+                        index++;
+                    }
                 });
                 /*auto v = wrap::make_shared<BoolOption<String, Vec>>();
                 v->value = boopt->value;
