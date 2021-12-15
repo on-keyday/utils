@@ -26,7 +26,9 @@ namespace utils {
         };
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        int parse(int& index, int& col, int argc, Char** argv, OptionDesc<String, Vec, Map>& desc,
+        int parse(int& index, int& col, int argc, Char** argv,
+                  OptionDesc<String, Vec, Map>& desc,
+                  OptionSet<String, Vec, Map>& result,
                   ParseFlag flag, Vec<String>* arg = nullptr) {
             bool nooption = false;
             for (; index < argc; index++) {

@@ -140,8 +140,21 @@ namespace utils {
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionDesc {
-            Vec<wrap::shared_ptr<Option<String>>> vec;
-            Map<String, Option<String>> desc;
+            using option_t = wrap::shared_ptr<Option<String>>;
+            Vec<option_t> vec;
+            Map<String, option_t> desc;
+        };
+
+        template <class String>
+        struct OptionResult {
+            using option_t = wrap::shared_ptr<Option<String>>;
+            option_t base;
+            OptValue<> value;
+        };
+
+        template <class String, template <class...> class Vec, template <class...> class Map>
+        struct OptionSet {
+            Map<String, OptValue<>> result;
         };
 
     }  // namespace cmdline
