@@ -117,6 +117,10 @@ namespace utils {
                 return nullptr;
             }
 
+            operator bool() {
+                return iface != nullptr;
+            }
+
             ~OptValue() {
                 del_iface(iface);
             }
@@ -163,6 +167,18 @@ namespace utils {
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet {
             Map<String, OptValue<>> result;
+
+            void emplace(auto& name, OptValue<>*& opt) {
+                opt = &result[name]
+            }
+
+            bool find(auto& name, OptValue<>*& opt) {
+                if (auto found = result.find(name); found != result.end()) {
+                    opt = &std::get<1>(*found);
+                    return true;
+                }
+                return false;
+            }
         };
 
     }  // namespace cmdline
