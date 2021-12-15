@@ -24,6 +24,7 @@ namespace utils {
             one_prefix_longname = 0x10,     // option begin with `-` is long name
             ignore_not_found = 0x20,        // ignore if option is not found
             parse_all = 0x40,               // parse all arg
+            failure_opt_as_arg = 0x80,      // failed to parse arg is argument
         };
 
         enum class ParseError {
@@ -48,10 +49,18 @@ namespace utils {
             bool nooption = false;
             ParseError ret = ParseError::none;
             bool fatal = false;
-            auto parse_all = [&] {
-                if (any(flag & ParseFlag::parse_all) && arg) {
-                    arg->push_back(utf::convert<String>(argv[index]));
-                    return true;
+            auto parse_all = [&](bool failed) {
+                if (failed) {
+                    if (any(flag & ParseFlag::failure_opt_as_arg)) {
+                        arg->push_back(utf::convert<String>(argv[index]));
+                        return true;
+                    }
+                }
+                else {
+                    if (any(flag & ParseFlag::parse_all) && arg) {
+                        arg->push_back(utf::convert<String>(argv[index]));
+                        return true;
+                    }
                 }
                 return false;
             };
@@ -76,7 +85,7 @@ namespace utils {
             };
             for (; index < argc; index++) {
                 if (nooption || argv[index][0] != '-') {
-                    if (parse_all()) {
+                    if (parse_all(false)) {
                         continue;
                     }
                     return ParseError::suspend_parse;
@@ -99,7 +108,7 @@ namespace utils {
                     if (any(flag & ParseFlag::ignore_not_found)) {
                         continue;
                     }
-                    if (parse_all()) {
+                    if (parse_all(true)) {
                         continue;
                     }
                     return ParseError::not_found;
@@ -115,6 +124,9 @@ namespace utils {
                         if (any(flag & ParseFlag::ignore_not_found)) {
                             continue;
                         }
+                        if (parse_all(true)) {
+                            continue;
+                        }
                         return ParseError::not_found;
                     }
                     if (any(flag & ParseFlag::adjacent_value)) {
@@ -127,10 +139,12 @@ namespace utils {
                         if (any(flag & ParseFlag::ignore_not_found)) {
                             continue;
                         }
+                        if (parse_all(true)) {
+                            continue;
+                        }
                         return ParseError::not_found;
                     }
-                    if (parse_all()) {
-                        continue;
+                    for (int i = 1; argv[index][i]; i++) {
                     }
                 }
             }
