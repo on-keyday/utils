@@ -1,3 +1,11 @@
+/*
+    utils - utility library
+    Copyright (c) 2021 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+
 #include "../../include/wrap/cout.h"
 #include <cstdio>
 #include <iostream>
@@ -20,7 +28,7 @@ namespace utils {
         bool sync_stdio = false;
         bool out_virtual_terminal = false;
         bool in_virtual_terminal = false;
-        bool no_change_mode=false;
+        bool no_change_mode = false;
 
         static ::FILE* is_std(ostream& out) {
             auto addr = std::addressof(out);
@@ -102,7 +110,7 @@ namespace utils {
         static bool io_init() {
 #ifdef _WIN32
             change_console_mode();
-            if(!no_change_mode){
+            if (!no_change_mode) {
                 if (_setmode(_fileno(stdin), stdinmode) == -1) {
                     //err = "error:text input mode change failed";
                     return false;
