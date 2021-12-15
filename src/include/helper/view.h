@@ -53,7 +53,7 @@ namespace utils {
             T c;
             size_t size_;
 
-            constexpr CharView(T t, size_t sz)
+            constexpr CharView(T t, size_t sz = 1)
                 : c(t), size_(sz) {}
 
             constexpr T operator[](size_t pos) const {

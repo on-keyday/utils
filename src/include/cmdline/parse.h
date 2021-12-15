@@ -92,7 +92,7 @@ namespace utils {
                     }
                 }
                 else if (helper::starts_with(argv[index], "-")) {
-                }
+                                }
             }
         }
 
