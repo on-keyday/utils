@@ -41,5 +41,12 @@ namespace utils {
             return convert<mask_failure>(seq, out);
         }
 
+        template <class String, bool mask_failure = false, class T>
+        constexpr String convert(T&& in) {
+            String result;
+            convert<mask_failure>(in, result);
+            return result;
+        }
+
     }  // namespace utf
 }  // namespace utils

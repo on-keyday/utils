@@ -11,6 +11,7 @@
 
 #include "optvalue.h"
 #include "../helper/strutil.h"
+#include "../utf/convert.h"
 
 namespace utils {
     namespace cmdline {
@@ -25,17 +26,38 @@ namespace utils {
             parse_all = 0x40,               // parse all arg
         };
 
+        enum class ParseError {
+            none,
+            suspend_parse,
+            not_one_opt,
+            not_assigned,
+            option_like_value,
+            need_value,
+            bool_not_true_or_false,
+            int_not_number,
+            require_more_argument,
+        };
+
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        int parse(int& index, int& col, int argc, Char** argv,
-                  OptionDesc<String, Vec, Map>& desc,
-                  OptionSet<String, Vec, Map>& result,
-                  ParseFlag flag, Vec<String>* arg = nullptr) {
+        ParseError parse(int& index, int& col, int argc, Char** argv,
+                         OptionDesc<String, Vec, Map>& desc,
+                         OptionSet<String, Vec, Map>& result,
+                         ParseFlag flag, Vec<String>* arg = nullptr) {
             bool nooption = false;
             for (; index < argc; index++) {
+                if (nooption) {
+                    if (any(flag & ParseFlag::parse_all) && arg) {
+                        String v;
+                        utf::convert();
+                        arg->push_back();
+                    }
+                }
                 if (helper::equal(argv[index], "--")) {
                     if (any(flag & ParseFlag::ignore_after_two_prefix)) {
                         nooption = true;
                         continue;
+                    }
+                    if (any(flag & ParseFlag::parse_all)) {
                     }
                 }
                 else if (helper::starts_with(argv[index], "--")) {
