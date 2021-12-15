@@ -36,6 +36,7 @@ namespace utils {
             bool_not_true_or_false,
             int_not_number,
             require_more_argument,
+            not_found,
         };
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
@@ -83,16 +84,20 @@ namespace utils {
                 }
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
-                        if (found_option()) {
+                        if (found_option(2)) {
                             continue;
                         }
                     }
                     if (parse_all()) {
                         continue;
                     }
+                    if (any(flag & ParseFlag::ignore_not_found)) {
+                        continue;
+                    }
+                    return ParseError::not_found;
                 }
                 else if (helper::starts_with(argv[index], "-")) {
-                                }
+                }
             }
         }
 
