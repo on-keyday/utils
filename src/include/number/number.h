@@ -6,10 +6,6 @@
 #include <cstdint>
 #include <limits>
 
-#include <charconv>
-
-#include <cmath>
-
 #include "../core/sequencer.h"
 
 #include "../wrap/lite/enum.h"
