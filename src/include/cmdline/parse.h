@@ -43,25 +43,33 @@ namespace utils {
                          OptionDesc<String, Vec, Map>& desc,
                          OptionSet<String, Vec, Map>& result,
                          ParseFlag flag, Vec<String>* arg = nullptr) {
+            using option_t = wrap::shared_ptr<Option<String>>;
             bool nooption = false;
+            auto parse_all = [&] {
+                if (any(flag & ParseFlag::parse_all) && arg) {
+                    arg->push_back(utf::convert<String>(argv[index]));
+                    return true;
+                }
+                return false;
+            };
             for (; index < argc; index++) {
                 if (nooption) {
-                    if (any(flag & ParseFlag::parse_all) && arg) {
-                        String v;
-                        utf::convert();
-                        arg->push_back();
+                    if (parse_all()) {
+                        continue;
                     }
+                    return ParseError::suspend_parse;
                 }
                 if (helper::equal(argv[index], "--")) {
                     if (any(flag & ParseFlag::ignore_after_two_prefix)) {
                         nooption = true;
                         continue;
                     }
-                    if (any(flag & ParseFlag::parse_all)) {
-                    }
                 }
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
+                        auto cmdname = argv[index] + 2;
+                        if (option_t opt; desc.find(opt)) {
+                        }
                     }
                 }
                 else if (helper::starts_with(argv[index], "-")) {

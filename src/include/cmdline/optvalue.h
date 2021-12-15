@@ -143,6 +143,14 @@ namespace utils {
             using option_t = wrap::shared_ptr<Option<String>>;
             Vec<option_t> vec;
             Map<String, option_t> desc;
+
+            bool find(option_t& opt) {
+                if (auto found = desc.find(); found != desc.end()) {
+                    opt = std::get<1>(*found);
+                    return true;
+                }
+                return false;
+            }
         };
 
         template <class String>
