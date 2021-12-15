@@ -87,16 +87,18 @@ namespace utils {
                         return ParseError::none;
                     }
                 }
-                if (assign) {
+                auto parse_num = [](auto& value) {
                     int radix = 10;
                     size_t offset = 0;
-                    if (auto e = number::has_prefix(*assign)) {
+                    if (auto e = number::has_prefix(value)) {
                         radix = e;
                         offset = 2;
                     }
-                    if (!number::parse_integer(*assign, v->value, radix, offset)) {
+                    if (!number::parse_integer(value, v->value, radix, offset)) {
                         return ParseError::int_not_number;
                     }
+                };
+                if (assign) {
                 }
             }
         }  // namespace internal
