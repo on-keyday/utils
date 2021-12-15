@@ -10,6 +10,7 @@
 #pragma once
 
 #include <type_traits>
+#include "../wrap/lite/smart_ptr.h"
 
 namespace utils {
     namespace cmdline {
@@ -121,8 +122,26 @@ namespace utils {
             }
         };
 
+        enum class OptFlag {
+            none = 0,
+            required = 0x1,        // option must set
+            must_assign = 0x2,     // value must set with `=`
+            no_option_like = 0x4,  // `somevalue` type disallow string like `option`
+            once_in_cmd = 0x8,     // allow only once to set
+            need_value = 0x10,
+        };
+
+        template <class String>
         struct Option {
             OptValue<> defvalue;
+            String help;
+            OptFlag flag = OptFlag::none;
+        };
+
+        template <class String, template <class...> class Vec, template <class...> class Map>
+        struct OptionDesc {
+            Vec<wrap::shared_ptr<Option<String>>> vec;
+            Map<String, Option<String>> desc;
         };
 
     }  // namespace cmdline

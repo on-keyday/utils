@@ -8,3 +8,42 @@
 
 // parse - parse option
 #pragma once
+
+#include "optvalue.h"
+#include "../helper/strutil.h"
+
+namespace utils {
+    namespace cmdline {
+        enum class ParseFlag {
+            none,
+            two_prefix_longname = 0x1,      // option begin with `--` is long name
+            allow_assign = 0x2,             // allow `=` operator
+            adjacent_value = 0x4,           // `-oValue` become `o` option with value `Value` (default `-oValue` become o,V,a,l,u,e option)
+            ignore_after_two_prefix = 0x8,  // after `--` is not option
+            one_prefix_longname = 0x10,     // option begin with `-` is long name
+            ignore_not_found = 0x20,        // ignore if option is not found
+            parse_all = 0x40,               // parse all arg
+        };
+
+        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+        int parse(int& index, int& col, int argc, Char** argv, OptionDesc<String, Vec, Map>& desc,
+                  ParseFlag flag, Vec<String>* arg = nullptr) {
+            bool nooption = false;
+            for (; index < argc; index++) {
+                if (helper::equal(argv[index], "--")) {
+                    if (any(flag & ParseFlag::ignore_after_two_prefix)) {
+                        nooption = true;
+                        continue;
+                    }
+                }
+                else if (helper::starts_with(argv[index], "--")) {
+                    if (any(flag & ParseFlag::two_prefix_longname)) {
+                    }
+                }
+                else if (helper::starts_with(argv[index], "-")) {
+                }
+            }
+        }
+
+    }  // namespace cmdline
+}  // namespace utils
