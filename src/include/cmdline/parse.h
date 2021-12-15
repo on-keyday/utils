@@ -46,7 +46,7 @@ namespace utils {
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
         ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
                              OptionSet<String, Vec, Map>& result,
-                             ParseFlag flag) {
+                             ParseFlag flag, String* assign) {
         }
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
@@ -77,11 +77,12 @@ namespace utils {
             auto found_option = [&](int offset) {
                 auto optname = argv[index] + offset;
                 option_t opt;
-                String name, value;
+                String name, value, *ptr = nullptr;
                 if (has_assign) {
                     auto seq = utils::make_ref_seq(optname);
                     if (helper::read_until(name, seq, "=")) {
                         value = utf::convert<String>(argv[index] + seq.rptr + offset);
+                        ptr = &value;
                     }
                     desc.find(name, opt);
                 }
@@ -89,8 +90,9 @@ namespace utils {
                     desc.find(optname, opt);
                 }
                 if (opt) {
-                    //unimplemented
+                    return parse_one(index, argc, argv, opt, result, flag, ptr);
                 }
+                return ParseError::not_found;
             };
             for (; index < argc; index++) {
                 if (nooption || argv[index][0] != '-') {
