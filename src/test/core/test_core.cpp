@@ -31,6 +31,7 @@ void test_core() {
     utils::Sequencer<std::string> strbuf("string buffer");
     bool result = strbuf.match("string buffer");
     assert(result && "result must be true");
+    auto ref = utils::make_ref_seq(buffer);
 }
 
 int main() {

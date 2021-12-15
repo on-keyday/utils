@@ -15,7 +15,7 @@ namespace utils {
     namespace helper {
         template <class T>
         struct ReverseView {
-            Buffer<typename BufferType<T>::type> buf;
+            Buffer<buffer_t<T>> buf;
 
             template <class... In>
             constexpr ReverseView(In&&... in)

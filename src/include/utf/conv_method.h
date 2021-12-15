@@ -78,7 +78,7 @@ namespace utils {
 
         template <class T, class C = char32_t>
         constexpr bool utf8_to_utf32(T&& input, C& output) {
-            Sequencer<typename BufferType<T&>::type> seq(input);
+            Sequencer<buffer_t<T&>> seq(input);
             return utf8_to_utf32(seq, output);
         }
 
@@ -115,7 +115,7 @@ namespace utils {
 
         template <class T, class C = char32_t>
         constexpr bool utf16_to_utf32(T&& input, C& output) {
-            Sequencer<typename BufferType<T&>::type> seq(input);
+            Sequencer<buffer_t<T&>> seq(input);
             return utf16_to_utf32(seq, output);
         }
 

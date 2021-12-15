@@ -16,7 +16,7 @@ namespace utils {
     namespace endian {
         template <class T, class Char>
         struct EndianView {
-            Buffer<typename BufferType<T>::type> buf;
+            Buffer<buffer_t<T>> buf;
             bool reverse = false;
 
             using char_type = typename Buffer<T>::char_type;

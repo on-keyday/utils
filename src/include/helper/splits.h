@@ -74,7 +74,7 @@ namespace utils {
         template <class String = wrap::string, template <class...> class Vec = wrap::vector, class T, class Sep>
         Vec<String> split(T&& input, Sep&& sep, size_t n = ~0, bool igafter = false) {
             Vec<String> result;
-            Sequencer<typename BufferType<T&>::type> intmp(input);
+            Sequencer<buffer_t<T&>> intmp(input);
             split(result, intmp, sep, n, igafter);
             return result;
         }
@@ -82,7 +82,7 @@ namespace utils {
         template <class String = wrap::string, template <class...> class Vec = wrap::vector, class T>
         Vec<String> lines(T&& input, bool needtk = false) {
             Vec<String> result;
-            Sequencer<typename BufferType<T&>::type> intmp(input);
+            Sequencer<buffer_t<T&>> intmp(input);
             lines(result, intmp, needtk);
             return result;
         }

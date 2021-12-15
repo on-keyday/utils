@@ -32,8 +32,8 @@ namespace utils {
         }  // namespace internal
 
         template <bool mask_failure = false, class T>
-        constexpr internal::UtfFromObj<typename BufferType<T&>::type, mask_failure> from(T&& t) {
-            return internal::UtfFromObj<typename BufferType<T&>::type, mask_failure>(std::forward<T>(t));
+        constexpr internal::UtfFromObj<buffer_t<T&>, mask_failure> from(T&& t) {
+            return internal::UtfFromObj<buffer_t<T&>, mask_failure>(std::forward<T>(t));
         }
 
     }  // namespace ops

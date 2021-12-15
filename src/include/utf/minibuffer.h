@@ -25,7 +25,7 @@ namespace utils {
 
             template <class T>
             constexpr Minibuffer(T&& t) {
-                Buffer<typename BufferType<T&>::type> buf(t);
+                Buffer<buffer_t<T&>> buf(t);
                 for (auto i = 0; i < buf.size(); i++) {
                     push_back(buf.at(i));
                 }
@@ -63,7 +63,7 @@ namespace utils {
 
             template <class T>
             constexpr bool operator==(T&& obj) const {
-                Buffer<typename BufferType<T&>::type> buf(obj);
+                Buffer<buffer_t<T&>> buf(obj);
                 if (buf.size() != size()) {
                     return false;
                 }

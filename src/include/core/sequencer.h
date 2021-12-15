@@ -142,4 +142,9 @@ namespace utils {
     template <class Buf>
     Sequencer(Buf&&) -> Sequencer<Buf>;
 
+    template <class String>
+    Sequencer<buffer_t<String&>> make_ref_seq(String&& v) {
+        return Sequencer<buffer_t<String&>>{v};
+    }
+
 }  // namespace utils

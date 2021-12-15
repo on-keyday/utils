@@ -16,8 +16,8 @@ namespace utils {
 
         template <bool mask_failure = false, class T, class U>
         constexpr bool convert_one(T&& in, U& out) {
-            Sequencer<typename BufferType<T&>::type> seq(in);
-            return internal::convert_impl<mask_failure, typename BufferType<T&>::type, U>(seq, out);
+            Sequencer<buffer_t<T&>> seq(in);
+            return internal::convert_impl<mask_failure, buffer_t<T&>, U>(seq, out);
         }
 
         template <bool mask_failure = false, class T, class U>
@@ -37,7 +37,7 @@ namespace utils {
 
         template <bool mask_failure = false, class T, class U>
         constexpr bool convert(T&& in, U& out) {
-            Sequencer<typename BufferType<T&>::type> seq(in);
+            Sequencer<buffer_t<T&>> seq(in);
             return convert<mask_failure>(seq, out);
         }
 
