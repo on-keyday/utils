@@ -60,7 +60,7 @@ namespace utils {
 
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
-                return parse_option_common(booopt, index, argc, argv, assign, [](auto& v, auto& str, bool is_as, bool need_val) {
+                return parse_option_common(booopt, index, argc, argv, assign, [&](auto& v, auto& str, bool is_as, bool need_val) {
                     if (helper::equal(str, "true")) {
                         v->value = true;
                     }
