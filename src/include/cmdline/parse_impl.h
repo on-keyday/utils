@@ -80,7 +80,7 @@ namespace utils {
                 if (any(intopt->attr & OptionAttribute::must_assign)) {
                     if (!assign) {
                         if (need_val) {
-                            return ParseError::bool_not_true_or_false;
+                            return ParseError::need_value;
                         }
                         return ParseError::none;
                     }
@@ -114,7 +114,30 @@ namespace utils {
             }
 
             template <class Char, class String, template <class...> class Vec>
-            ParseError parse_stringoption(IntOption<String, Vec>* intopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
+            ParseError parse_stringoption(StringOption<String, Vec>* stropt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
+                auto v = wrap::make_shared<StringOption<String, Vec>>();
+                v->value = intopt->value;
+                result.value = v;
+                bool need_val = any(booopt->attr & OptionAttribute::need_value);
+                if (any(intopt->attr & OptionAttribute::must_assign)) {
+                    if (!assign) {
+                        if (need_val) {
+                            return ParseError::bool_not_true_or_false;
+                        }
+                        return ParseError::none;
+                    }
+                }
+                if (assign) {
+                    v->value = *assign;
+                }
+                else if (index + 1 < argc) {
+                    v->value = argv[index + 1];
+                    index++;
+                }
+                else if (need_val) {
+                    return ParseError::need_value;
+                }
+                return ParseError::none;
             }
         }  // namespace internal
 
