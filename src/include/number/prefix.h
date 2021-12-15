@@ -6,7 +6,7 @@
 */
 
 
-// prefix - number prefix
+// prefix - number with prefix
 #pragma once
 
 #include "../helper/strutil.h"

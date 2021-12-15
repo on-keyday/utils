@@ -28,9 +28,43 @@ namespace utils {
         };
 
         namespace internal {
+            template <class Char, class Opt, class Result, class String, class F>
+            ParseError parse_option_common(Opt* opt, int& index, int argc, Char** argv, String* assign, F&& f) {
+                auto v = wrap::make_shared<Opt>();
+                v->value = opt->value;
+                result.value = v;
+                bool need_val = any(opt->attr & OptionAttribute::need_value);
+                if (any(intopt->attr & OptionAttribute::must_assign)) {
+                    if (!assign) {
+                        if (need_val) {
+                            return ParseError::need_value;
+                        }
+                        return ParseError::none;
+                    }
+                }
+                if (assign) {
+                    if (auto e = f(v, *assign, true, need_val); e != ParseError::none) {
+                        return e;
+                    }
+                }
+                else if (index + 1 < argc) {
+                    if (auto e = f(v, argv[index + 1], false, need_val); e != ParseError::none) {
+                        return e;
+                    }
+                    index++;
+                }
+                else if (need_val) {
+                    return ParseError::need_value;
+                }
+                return ParseError::none;
+            }
+
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_booloption(BoolOption<String, Vec>* booopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
-                auto v = wrap::make_shared<BoolOption<String, Vec>>();
+                return parse_option_common(booopt, index, argc, argv, assign, [](auto& v, auto& str, bool is_as, bool need_val) {
+
+                });
+                /*auto v = wrap::make_shared<BoolOption<String, Vec>>();
                 v->value = boopt->value;
                 result.value = v;
                 bool need_val = any(booopt->attr & OptionAttribute::need_value);
@@ -69,7 +103,7 @@ namespace utils {
                 else if (need_val) {
                     return ParseError::need_value;
                 }
-                return ParseError::none;
+                return ParseError::none;*/
             }
 
             template <class Char, class String, template <class...> class Vec>
@@ -117,17 +151,10 @@ namespace utils {
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_stringoption(StringOption<String, Vec>* stropt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
                 auto v = wrap::make_shared<StringOption<String, Vec>>();
-                v->value = intopt->value;
+                v->value = stropt->value;
                 result.value = v;
                 bool need_val = any(booopt->attr & OptionAttribute::need_value);
-                if (any(intopt->attr & OptionAttribute::must_assign)) {
-                    if (!assign) {
-                        if (need_val) {
-                            return ParseError::need_value;
-                        }
-                        return ParseError::none;
-                    }
-                }
+
                 if (assign) {
                     v->value = String();
                     utf::convert(*assign, v->value);
