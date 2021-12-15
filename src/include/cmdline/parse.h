@@ -47,6 +47,12 @@ namespace utils {
         ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
                              OptionSet<String, Vec, Map>& result,
                              ParseFlag flag, String* assign) {
+            Option<String>& option = *opt;
+            OptValue<>& def = option.defvalue;
+            OptionResult<String> toset;
+            toset.base = opt;
+            if (def.type() == type<bool>()) {
+            }
         }
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
