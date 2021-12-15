@@ -52,6 +52,7 @@ namespace utils {
                 }
                 return false;
             };
+            bool has_assign = any(flag & ParseFlag::allow_assign);
             for (; index < argc; index++) {
                 if (nooption) {
                     if (parse_all()) {
@@ -67,8 +68,15 @@ namespace utils {
                 }
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
-                        auto cmdname = argv[index] + 2;
-                        if (option_t opt; desc.find(opt)) {
+                        auto optname = argv[index] + 2;
+                        if (has_assign) {
+                            String name, value;
+                            auto seq = utils::make_ref_seq(optname);
+                            if (helper::read_until(name, seq, "=")) {
+                                value = utf::convert<String>(argv[index] + seq.rptr + 2);
+                            }
+                        }
+                        if (option_t opt; desc.find(optname, opt)) {
                         }
                     }
                     if (parse_all()) {

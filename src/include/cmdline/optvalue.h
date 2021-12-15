@@ -144,8 +144,8 @@ namespace utils {
             Vec<option_t> vec;
             Map<String, option_t> desc;
 
-            bool find(option_t& opt) {
-                if (auto found = desc.find(); found != desc.end()) {
+            bool find(auto& name, option_t& opt) {
+                if (auto found = desc.find(name); found != desc.end()) {
                     opt = std::get<1>(*found);
                     return true;
                 }
