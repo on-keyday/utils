@@ -106,38 +106,18 @@ namespace utils {
                         }
                     }
                 });
-                /*auto v = wrap::make_shared<IntOption<String, Vec>>();
-                v->value = intopt->value;
-                result.value = v;
-                bool need_val = any(booopt->attr & OptionAttribute::need_value);
-                if (any(intopt->attr & OptionAttribute::must_assign)) {
-                    if (!assign) {
-                        if (need_val) {
-                            return ParseError::need_value;
-                        }
-                        return ParseError::none;
-                    }
-                }
-               
-                if (assign) {
-                    return parse_num();
-                }
-                else if (index + 1 < argc) {
-                    if (parse_num(argv[index + 1]) == ParseError::none) {
-                        index++;
-                    }
-                    else if (need_val) {
-                        return ParseError::need_value;
-                    }
-                }
-                else if (need_val) {
-                    return ParseError::need_value;
-                }*/
             }
 
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_stringoption(StringOption<String, Vec>* stropt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
-                auto v = wrap::make_shared<StringOption<String, Vec>>();
+                return parse_option_common(stropt, index, argc, argv, assign, [&](auto& v, auto& str, bool increment, bool need_val) {
+                    v->value = String();
+                    utf::convert(*assign, v->value);
+                    if (increment) {
+                        index++;
+                    }
+                });
+                /*auto v = wrap::make_shared<StringOption<String, Vec>>();
                 v->value = stropt->value;
                 result.value = v;
                 bool need_val = any(booopt->attr & OptionAttribute::need_value);
@@ -154,7 +134,7 @@ namespace utils {
                 else if (need_val) {
                     return ParseError::need_value;
                 }
-                return ParseError::none;
+                return ParseError::none;*/
             }
         }  // namespace internal
 
