@@ -22,10 +22,16 @@ namespace utils {
             none,
             not_one_opt,
             not_assigned,
+            option_like_value,
             need_value,
             bool_not_true_or_false,
             int_not_number,
         };
+
+        template <class String>
+        bool is_option_like(String&& str) {
+            return helper::starts_with("-");
+        }
 
         namespace internal {
             template <class Char, class Opt, class Result, class String, class F>
@@ -111,8 +117,15 @@ namespace utils {
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_stringoption(StringOption<String, Vec>* stropt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
                 return parse_option_common(stropt, index, argc, argv, assign, [&](auto& v, auto& str, bool increment, bool need_val) {
+                    if (increment) {
+                        if (any(stropt->attr & OptionAttribute::no_option_like)) {
+                            if (is_option_like(str)) {
+                                return ParseError::option_like_value;
+                            }
+                        }
+                    }
                     v->value = String();
-                    utf::convert(*assign, v->value);
+                    utf::convert(str, v->value);
                     if (increment) {
                         index++;
                     }
@@ -122,7 +135,7 @@ namespace utils {
             template <class Char, class Opt, class Result, class String, class F>
             ParseError parse_somevalue_common(Opt* opt, int& index, int argc, Char** argv, String* assign, F&& f) {
                 auto v = wrap::make_shared<Opt>();
-                v->value = opt->value;
+                v->values = opt->values;
                 result.value = v;
                 bool need_val = any(opt->attr & OptionAttribute::need_value);
                 if (any(intopt->attr & OptionAttribute::must_assign)) {
@@ -133,6 +146,7 @@ namespace utils {
                         return ParseError::none;
                     }
                 }
+                v->minimum;
                 if (assign) {
                     if (auto e = f(v, *assign, false, need_val); e != ParseError::none) {
                         return e;
