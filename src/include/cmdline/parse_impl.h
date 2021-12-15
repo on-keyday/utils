@@ -118,6 +118,11 @@ namespace utils {
                     }
                 });
             }
+
+            template <class Char, class Opt, class Result, class String, class F>
+            ParseError parse_somevalue_common(Opt* opt, int& index, int argc, Char** argv, String* assign, F&& f) {
+            }
+
         }  // namespace internal
 
         template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
