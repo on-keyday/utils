@@ -52,23 +52,21 @@ namespace utils {
                         return ParseError::bool_not_true_or_false;
                     }
                 }
-                else {
-                    if (index + 1 < argc) {
-                        if (helper::equal(argv[index + 1], "true")) {
-                            v->value = true;
-                            index++;
-                        }
-                        else if (helper::equal(argv[index + 1], "false")) {
-                            v->value = false;
-                            index++;
-                        }
-                        else if (need_val) {
-                            return ParseError::need_value;
-                        }
+                else if (index + 1 < argc) {
+                    if (helper::equal(argv[index + 1], "true")) {
+                        v->value = true;
+                        index++;
+                    }
+                    else if (helper::equal(argv[index + 1], "false")) {
+                        v->value = false;
+                        index++;
                     }
                     else if (need_val) {
                         return ParseError::need_value;
                     }
+                }
+                else if (need_val) {
+                    return ParseError::need_value;
                 }
                 return ParseError::none;
             }
@@ -87,7 +85,7 @@ namespace utils {
                         return ParseError::none;
                     }
                 }
-                auto parse_num = [](auto& value) {
+                auto parse_num = [&](auto& value) {
                     int radix = 10;
                     size_t offset = 0;
                     if (auto e = number::has_prefix(value)) {
@@ -97,9 +95,26 @@ namespace utils {
                     if (!number::parse_integer(value, v->value, radix, offset)) {
                         return ParseError::int_not_number;
                     }
+                    return ParseError::none;
                 };
                 if (assign) {
+                    return parse_num();
                 }
+                else if (index + 1 < argc) {
+                    if (parse_num(argv[index + 1]) == ParseError::none) {
+                        index++;
+                    }
+                    else if (need_val) {
+                        return ParseError::need_value;
+                    }
+                }
+                else if (need_val) {
+                    return ParseError::need_value;
+                }
+            }
+
+            template <class Char, class String, template <class...> class Vec>
+            ParseError parse_stringoption(IntOption<String, Vec>* intopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
             }
         }  // namespace internal
 
