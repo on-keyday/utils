@@ -37,7 +37,7 @@ namespace utils {
         struct OptValue {
            private:
             struct interface {
-                virtual Type* type() const = 0;
+                virtual const Type* type() const = 0;
                 virtual void* raw() = 0;
                 virtual const void* raw() const = 0;
                 virtual interface* copy() const = 0;
@@ -48,8 +48,8 @@ namespace utils {
             struct implement : interface {
                 T value;
 
-                Type* type() const override {
-                    return type<T>();
+                const Type* type() const override {
+                    return cmdline::type<T>();
                 }
 
                 void* raw() override {
@@ -96,13 +96,13 @@ namespace utils {
                 v.iface = nullptr;
             }
 
-            Type* type() const {
+            const Type* type() const {
                 return iface ? iface->type() : nullptr;
             }
 
             template <class T>
             T* value() {
-                if (type<T>() == type()) {
+                if (cmdline::type<T>() == type()) {
                     return reinterpret_cast<T*>(iface->raw());
                 }
                 return nullptr;
@@ -119,6 +119,10 @@ namespace utils {
             ~OptValue() {
                 del_iface(iface);
             }
+        };
+
+        struct Option {
+            OptValue<> defvalue;
         };
 
     }  // namespace cmdline
