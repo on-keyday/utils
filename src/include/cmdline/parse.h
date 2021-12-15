@@ -70,7 +70,7 @@ namespace utils {
                 }
             };
             for (; index < argc; index++) {
-                if (nooption) {
+                if (nooption || argv[index][0] != '-') {
                     if (parse_all()) {
                         continue;
                     }
@@ -96,7 +96,7 @@ namespace utils {
                     }
                     return ParseError::not_found;
                 }
-                else if (helper::starts_with(argv[index], "-")) {
+                else {
                 }
             }
         }
