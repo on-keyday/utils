@@ -22,6 +22,7 @@ namespace utils {
             must_assign = 0x2,     // value must set with `=`
             no_option_like = 0x4,  // `somevalue` type disallow string like `option`
             once_in_cmd = 0x8,     // allow only once to set
+            need_value = 0x10,
         };
 
         DEFINE_ENUM_FLAGOP(OptionAttribute)

@@ -14,6 +14,7 @@ namespace utils {
             not_one_opt,
             not_assigned,
             bool_not_true_or_false,
+            int_not_number,
         };
         /*
         template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
@@ -33,8 +34,12 @@ namespace utils {
                 auto v = wrap::make_shared<BoolOption<String, Vec>>();
                 v->value = boopt->value;
                 result.value = v;
-                if (any(option.attr & OptionAttribute::must_assign)) {
+                bool need_val = any(booopt->attr & OptionAttribute::need_value);
+                if (any(booopt->attr & OptionAttribute::must_assign)) {
                     if (!assign) {
+                        if (need_val) {
+                            return ParseError::bool_not_true_or_false;
+                        }
                         return ParseError::none;
                     }
                 }
@@ -59,9 +64,27 @@ namespace utils {
                             v->value = false;
                             index++;
                         }
+                        else if (need_val) {
+                            return ParseError::bool_not_true_or_false;
+                        }
+                    }
+                    else if (need_val) {
+                        return ParseError::bool_not_true_or_false;
                     }
                 }
                 return ParseError::none;
+            }
+
+            template <class Char, class String, template <class...> class Vec>
+            ParseError parse_intoption(IntOption<String, Vec>* intopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
+                auto v = wrap::make_shared<BoolOption<String, Vec>>();
+                v->value = intopt->value;
+                result.value = v;
+                if (any(intopt->attr & OptionAttribute::must_assign)) {
+                    if (!assign) {
+                        return ParseError::none;
+                    }
+                }
             }
         }  // namespace internal
 
@@ -82,6 +105,8 @@ namespace utils {
                     return e;
                 }
             }
+            result.emplace(name, std::move(optres));
+            return ParseError::none;
         }
 
         enum class ParseFlag {
