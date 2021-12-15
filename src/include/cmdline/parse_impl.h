@@ -121,6 +121,32 @@ namespace utils {
 
             template <class Char, class Opt, class Result, class String, class F>
             ParseError parse_somevalue_common(Opt* opt, int& index, int argc, Char** argv, String* assign, F&& f) {
+                auto v = wrap::make_shared<Opt>();
+                v->value = opt->value;
+                result.value = v;
+                bool need_val = any(opt->attr & OptionAttribute::need_value);
+                if (any(intopt->attr & OptionAttribute::must_assign)) {
+                    if (!assign) {
+                        if (need_val) {
+                            return ParseError::need_value;
+                        }
+                        return ParseError::none;
+                    }
+                }
+                if (assign) {
+                    if (auto e = f(v, *assign, false, need_val); e != ParseError::none) {
+                        return e;
+                    }
+                }
+                else if (index + 1 < argc) {
+                    if (auto e = f(v, argv[index + 1], true, need_val); e != ParseError::none) {
+                        return e;
+                    }
+                }
+                else if (need_val) {
+                    return ParseError::need_value;
+                }
+                return ParseError::none;
             }
 
         }  // namespace internal
