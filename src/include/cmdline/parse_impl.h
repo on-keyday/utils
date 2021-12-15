@@ -173,6 +173,20 @@ namespace utils {
 
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_somevalue_stringoption(StringSomeValueOption<String, Vec>* stropt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
+                return parse_option_common(stropt, index, argc, argv, assign, [&](auto& v, auto& str, bool increment, bool need_val) {
+                    if (increment) {
+                        if (any(stropt->attr & OptionAttribute::no_option_like)) {
+                            if (is_option_like(str)) {
+                                return ParseError::option_like_value;
+                            }
+                        }
+                    }
+                    v->value = String();
+                    utf::convert(str, v->value);
+                    if (increment) {
+                        index++;
+                    }
+                });
             }
 
         }  // namespace internal
