@@ -6,13 +6,14 @@
 */
 
 
-// parse - option parse
+// parse_impl - option parse implementation
 #pragma once
 
 #include "cast.h"
 #include "option_result.h"
 #include "../helper/strutil.h"
 #include "../number/number.h"
+#include "../number/prefix.h"
 
 namespace utils {
     namespace cmdline {
@@ -66,7 +67,7 @@ namespace utils {
                         }
                     }
                     else if (need_val) {
-                        return ParseError::bool_not_true_or_false;
+                        return ParseError::need_value;
                     }
                 }
                 return ParseError::none;
@@ -87,6 +88,15 @@ namespace utils {
                     }
                 }
                 if (assign) {
+                    int radix = 10;
+                    size_t offset = 0;
+                    if (auto e = number::has_prefix(*assign)) {
+                        radix = e;
+                        offset = 2;
+                    }
+                    if (!number::parse_integer(*assign, v->value, radix, offset)) {
+                        return ParseError::int_not_number;
+                    }
                 }
             }
         }  // namespace internal
