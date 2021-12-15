@@ -44,7 +44,13 @@ namespace utils {
         };
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        ParseError parse(int& index, int& col, int argc, Char** argv,
+        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
+                             OptionSet<String, Vec, Map>& result,
+                             ParseFlag flag) {
+        }
+
+        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+        ParseError parse(int& index, int argc, Char** argv,
                          OptionDesc<String, Vec, Map>& desc,
                          OptionSet<String, Vec, Map>& result,
                          ParseFlag flag, Vec<String>* arg = nullptr) {
