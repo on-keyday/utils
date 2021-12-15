@@ -53,6 +53,21 @@ namespace utils {
                 return false;
             };
             bool has_assign = any(flag & ParseFlag::allow_assign);
+            auto find_option = [&](int offset) {
+                auto optname = argv[index] + offset;
+                option_t opt;
+                String name, value;
+                if (has_assign) {
+                    auto seq = utils::make_ref_seq(optname);
+                    if (helper::read_until(name, seq, "=")) {
+                        value = utf::convert<String>(argv[index] + seq.rptr + offset);
+                    }
+                    desc.find(name, opt);
+                }
+                else {
+                    desc.find(optname, opt);
+                }
+            };
             for (; index < argc; index++) {
                 if (nooption) {
                     if (parse_all()) {
@@ -68,19 +83,6 @@ namespace utils {
                 }
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
-                        auto optname = argv[index] + 2;
-                        option_t opt;
-                        String name, value;
-                        if (has_assign) {
-                            auto seq = utils::make_ref_seq(optname);
-                            if (helper::read_until(name, seq, "=")) {
-                                value = utf::convert<String>(argv[index] + seq.rptr + 2);
-                            }
-                            desc.find(name, opt);
-                        }
-                        else {
-                            desc.find(optname, opt);
-                        }
                     }
                     if (parse_all()) {
                         continue;
