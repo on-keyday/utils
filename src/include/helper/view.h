@@ -43,7 +43,24 @@ namespace utils {
                 return ptr[pos];
             }
 
-            size_t size() const {
+            constexpr size_t size() const {
+                return size_;
+            }
+        };
+
+        template <class T>
+        struct CharView {
+            T c;
+            size_t size_;
+
+            constexpr CharView(T t, size_t sz)
+                : c(t), size_(sz) {}
+
+            constexpr T operator[](size_t pos) const {
+                return c;
+            }
+
+            constexpr size_t size() const {
                 return size_;
             }
         };

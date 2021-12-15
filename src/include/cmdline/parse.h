@@ -53,7 +53,7 @@ namespace utils {
                 return false;
             };
             bool has_assign = any(flag & ParseFlag::allow_assign);
-            auto find_option = [&](int offset) {
+            auto found_option = [&](int offset) {
                 auto optname = argv[index] + offset;
                 option_t opt;
                 String name, value;
@@ -83,6 +83,9 @@ namespace utils {
                 }
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
+                        if (found_option()) {
+                            continue;
+                        }
                     }
                     if (parse_all()) {
                         continue;
