@@ -87,6 +87,14 @@ namespace utils {
                 }
                 return nullptr;
             }
+
+            template <class T>
+            const T* value() const {
+                if (type<T>() == type()) {
+                    return reinterpret_cast<const T*>(iface->raw());
+                }
+                return nullptr;
+            }
         };
 
     }  // namespace cmdline
