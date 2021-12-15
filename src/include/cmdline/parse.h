@@ -69,14 +69,17 @@ namespace utils {
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
                         auto optname = argv[index] + 2;
+                        option_t opt;
+                        String name, value;
                         if (has_assign) {
-                            String name, value;
                             auto seq = utils::make_ref_seq(optname);
                             if (helper::read_until(name, seq, "=")) {
                                 value = utf::convert<String>(argv[index] + seq.rptr + 2);
                             }
+                            desc.find(name, opt);
                         }
-                        if (option_t opt; desc.find(optname, opt)) {
+                        else {
+                            desc.find(optname, opt);
                         }
                     }
                     if (parse_all()) {
