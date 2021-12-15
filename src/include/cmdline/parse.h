@@ -13,6 +13,7 @@
 #include "../helper/strutil.h"
 #include "../utf/convert.h"
 #include "../wrap/lite/enum.h"
+#include <cassert>
 
 namespace utils {
     namespace cmdline {
@@ -55,11 +56,17 @@ namespace utils {
                 if (any(option.flag & OptFlag::once_in_cmd)) {
                     return ParseError::not_one_opt;
                 }
+                if (target.type() != type<Vec<String>>()) {
+                    auto tmpp = target->template value<String>();
+                    assert(tmpp);
+                    auto tmp = std::move(*tmpp);
+                    *target = Vec<String>{std::move(tmp)};
+                }
             }
             else {
+                result.emplace(name, target);
             }
-            if (def.type() == type<bool>()) {
-            }
+            assert(target);
         }
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
