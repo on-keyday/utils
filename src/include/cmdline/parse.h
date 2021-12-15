@@ -144,7 +144,21 @@ namespace utils {
                         }
                         return ParseError::not_found;
                     }
-                    for (int i = 1; argv[index][i]; i++) {
+                    auto current = index;
+                    for (int i = 1; argv[current][i]; i++) {
+                        option_t opt;
+                        desc.find(helper::CharView<Char>(argv[current][1]).c_str(), opt);
+                        if (opt) {
+                            //unimplemented
+                            continue;
+                        }
+                        if (any(flag & ParseFlag::ignore_not_found)) {
+                            continue;
+                        }
+                        if (parse_all(true)) {
+                            continue;
+                        }
+                        return ParseError::not_found;
                     }
                 }
             }
