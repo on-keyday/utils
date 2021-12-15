@@ -80,6 +80,7 @@ namespace utils {
                 auto v = wrap::make_shared<BoolOption<String, Vec>>();
                 v->value = intopt->value;
                 result.value = v;
+                bool need_val = any(booopt->attr & OptionAttribute::need_value);
                 if (any(intopt->attr & OptionAttribute::must_assign)) {
                     if (!assign) {
                         return ParseError::none;
