@@ -12,6 +12,7 @@
 #include "cast.h"
 #include "option_result.h"
 #include "../helper/strutil.h"
+#include "../number/number.h"
 
 namespace utils {
     namespace cmdline {
@@ -19,20 +20,10 @@ namespace utils {
             none,
             not_one_opt,
             not_assigned,
+            need_value,
             bool_not_true_or_false,
             int_not_number,
         };
-        /*
-        template <class Char, class OptName, class String, template <class...> class Vec, template <class...> class MultiMap>
-        struct ParseContext {
-            int& index;
-            int argc;
-            Char** argv;
-            const OptName& name;
-            Option<String, Vec>& option;
-            OptionResultSet<String, Vec, MultiMap>& result;
-            String* assign = nullptr
-        };*/
 
         namespace internal {
             template <class Char, class String, template <class...> class Vec>
@@ -44,7 +35,7 @@ namespace utils {
                 if (any(booopt->attr & OptionAttribute::must_assign)) {
                     if (!assign) {
                         if (need_val) {
-                            return ParseError::bool_not_true_or_false;
+                            return ParseError::need_value;
                         }
                         return ParseError::none;
                     }
@@ -71,7 +62,7 @@ namespace utils {
                             index++;
                         }
                         else if (need_val) {
-                            return ParseError::bool_not_true_or_false;
+                            return ParseError::need_value;
                         }
                     }
                     else if (need_val) {
@@ -83,14 +74,19 @@ namespace utils {
 
             template <class Char, class String, template <class...> class Vec>
             ParseError parse_intoption(IntOption<String, Vec>* intopt, int& index, int argc, Char** argv, OptionResult<String, Vec>& result, String* assign) {
-                auto v = wrap::make_shared<BoolOption<String, Vec>>();
+                auto v = wrap::make_shared<IntOption<String, Vec>>();
                 v->value = intopt->value;
                 result.value = v;
                 bool need_val = any(booopt->attr & OptionAttribute::need_value);
                 if (any(intopt->attr & OptionAttribute::must_assign)) {
                     if (!assign) {
+                        if (need_val) {
+                            return ParseError::bool_not_true_or_false;
+                        }
                         return ParseError::none;
                     }
+                }
+                if (assign) {
                 }
             }
         }  // namespace internal

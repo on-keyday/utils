@@ -61,7 +61,7 @@ namespace utils {
                     auto c = number_transform[in];
                     result += c;
                     constexpr T maxi = (std::numeric_limits<T>::max)();
-                    if (!(result < maxi / radix)) {
+                    if (!(result <= maxi / radix)) {
                         overflow = true;
                         return;
                     }
