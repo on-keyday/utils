@@ -92,9 +92,22 @@ namespace utils {
                 }
             }
 
-            OptValue(OptValue&& v) {
+            OptValue(OptValue&& v) noexcept {
                 iface = v.iface;
                 v.iface = nullptr;
+            }
+
+            OptValue& operator=(const OptValue& v) noexcept {
+                del_iface(iface);
+                iface = v.iface->copy();
+                return *this;
+            }
+
+            OptValue& operator=(OptValue&& v) noexcept {
+                del_iface(iface);
+                iface = v.iface;
+                v.iface = nullptr;
+                return *this;
             }
 
             const Type* type() const {

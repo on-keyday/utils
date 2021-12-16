@@ -44,28 +44,10 @@ namespace utils {
             not_found,
         };
 
-        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
-                             auto& name,
-                             OptionSet<String, Vec, Map>& result,
-                             ParseFlag flag, String* assign) {
-            Option<String>& option = *opt;
-            OptValue<>& def = option.defvalue;
-            OptValue<>* target = nullptr;
-            if (result.find(name, target)) {
-                if (any(option.flag & OptFlag::once_in_cmd)) {
-                    return ParseError::not_one_opt;
-                }
-                if (target->type() != type<Vec<OptValue<>>>()) {
-                    auto tmp = std::move(*target);
-                    *target = Vec<OptValue<>>{std::move(tmp)};
-                }
-            }
-            else {
-                result.emplace(name, target);
-            }
-            assert(target);
-            if (auto b = def.value<bool>()) {
+        namespace internal {
+            template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+            ParseError parse_bool(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
+                                  ParseFlag flag, String* assign, bool* b, OptValue<>* target) {
                 String cmp;
                 bool result;
                 bool need_less = false;
@@ -92,10 +74,36 @@ namespace utils {
                     vec->push_back(result);
                 }
                 else {
-                    *target = result;
+                    *target = std::move(result);
+                }
+                return ParseError::none;
+            }
+        }  // namespace internal
+
+        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
+                             auto& name,
+                             OptionSet<String, Vec, Map>& result,
+                             ParseFlag flag, String* assign) {
+            Option<String>& option = *opt;
+            OptValue<>& def = option.defvalue;
+            OptValue<>* target = nullptr;
+            if (result.find(name, target)) {
+                if (any(option.flag & OptFlag::once_in_cmd)) {
+                    return ParseError::not_one_opt;
+                }
+                if (target->type() != type<Vec<OptValue<>>>()) {
+                    auto tmp = std::move(*target);
+                    *target = Vec<OptValue<>>{std::move(tmp)};
                 }
             }
-            else if (auto i = def.value<int>()) {
+            else {
+                result.emplace(name, target);
+            }
+            assert(target);
+            if (auto b = def.value<bool>()) {
+            }
+            else if (auto i = def.value<std::int64_t>()) {
             }
         }
 
