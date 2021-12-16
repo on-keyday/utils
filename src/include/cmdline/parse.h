@@ -56,11 +56,9 @@ namespace utils {
                 if (any(option.flag & OptFlag::once_in_cmd)) {
                     return ParseError::not_one_opt;
                 }
-                if (target.type() != type<Vec<String>>()) {
-                    auto tmpp = target->template value<String>();
-                    assert(tmpp);
-                    auto tmp = std::move(*tmpp);
-                    *target = Vec<String>{std::move(tmp)};
+                if (target->type() != type<Vec<OptValue<>>>()) {
+                    auto tmp = std::move(*target);
+                    *target = Vec<OptValue<>>{std::move(tmp)};
                 }
             }
             else {
@@ -69,21 +67,32 @@ namespace utils {
             assert(target);
             if (auto b = def.value<bool>()) {
                 String cmp;
+                bool result;
+                bool need_less = false;
                 if (assign) {
                     cmp = std::move(*assign);
                 }
                 else {
                     cmp = utf::convert<String>(argv[index + 1]);
+                    need_less = true;
                 }
-                if (helper::equal(*assign, "true")) {
-                    *b = true;
+                if (helper::equal(cmp, "true") || helper::equal(cmp, "false")) {
+                    result = cmp[0] == 't';
                 }
-                else if (helper::equal(*assign, "false")) {
-                    *b = false;
+                else if (need_less) {
+                    result = *b;
                 }
                 else {
                     return ParseError::bool_not_true_or_false;
                 }
+                if (auto vec = target->template value<Vec<OptValue<>>>()) {
+                    vec->push_back(result);
+                }
+                else {
+                    *target = result;
+                }
+            }
+            else if (auto i = def.value<int>()) {
             }
         }
 
