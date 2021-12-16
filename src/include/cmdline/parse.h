@@ -65,6 +65,9 @@ namespace utils {
                     }
                 }
                 else if (need_less) {
+                    if (any(opt->flag & OptFlag::need_value)) {
+                        return ParseError::need_value;
+                    }
                     result = *b;
                 }
                 else {
