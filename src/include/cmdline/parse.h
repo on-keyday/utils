@@ -78,6 +78,9 @@ namespace utils {
                 }
                 if (helper::equal(cmp, "true") || helper::equal(cmp, "false")) {
                     result = cmp[0] == 't';
+                    if (need_less) {
+                        index++;
+                    }
                 }
                 else if (need_less) {
                     result = *b;
