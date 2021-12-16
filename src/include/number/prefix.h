@@ -26,5 +26,6 @@ namespace utils {
             }
             return 0;
         }
+
     }  // namespace number
 }  // namespace utils

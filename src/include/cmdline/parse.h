@@ -67,6 +67,24 @@ namespace utils {
                 result.emplace(name, target);
             }
             assert(target);
+            if (auto b = def.value<bool>()) {
+                String cmp;
+                if (assign) {
+                    cmp = std::move(*assign);
+                }
+                else {
+                    cmp = utf::convert<String>(argv[index + 1]);
+                }
+                if (helper::equal(*assign, "true")) {
+                    *b = true;
+                }
+                else if (helper::equal(*assign, "false")) {
+                    *b = false;
+                }
+                else {
+                    return ParseError::bool_not_true_or_false;
+                }
+            }
         }
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
