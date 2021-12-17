@@ -133,7 +133,7 @@ namespace utils {
                         if (count < b->minimum) {
                             return ParseError::require_more_argument;
                         }
-                        for (auto i = count; count < b->size(); count++) {
+                        for (auto i = count; count < b->defval.size(); count++) {
                             v->push_back(b->defval[count]);
                         }
                         break;
