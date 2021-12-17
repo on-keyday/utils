@@ -43,9 +43,11 @@ namespace utils {
         VecOption<Vec, T> multivalue(size_t maximum, size_t miniimum = ~0, Vec<T>&& def = Vec<T>{}) {
             VecOption<Vec, T> ret;
             ret.defval.resize(maximum);
+            ret.minimum = miniimum;
             for (size_t i = 0; i < maximum; i++) {
-                ret.defval;
+                ret.defval[i] = std::move(def[i]);
             }
+            return ret;
         };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
