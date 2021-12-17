@@ -103,7 +103,10 @@ namespace utils {
                 }
                 else if (auto v = target->template value<Value>()) {
                     auto tmp = std::move(*v);
-                    *target = Vec<OptValue<>>({std::move(tmp), std::move(result)});
+                    Vec<OptValue<>> to_set;
+                    to_set.push_back(std::move(tmp));
+                    to_set.push_back(std::move(result));
+                    *target = std::move(to_set);
                 }
                 else {
                     *target = std::move(result);
@@ -144,7 +147,10 @@ namespace utils {
                 }
                 else if (auto v = target->template value<Vec<Value>>()) {
                     auto tmp = std::move(*v);
-                    *target = Vec<OptValue<>>({std::move(tmp), std::move(value)});
+                    Vec<OptValue<>> to_set;
+                    to_set.push_back(std::move(tmp));
+                    to_set.push_back(std::move(value));
+                    *target = std::move(to_set);
                 }
                 else {
                     *target = std::move(value);
