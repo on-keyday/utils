@@ -54,7 +54,7 @@ namespace utils {
                 String cmp;
                 Value result;
                 bool need_less = false;
-                if (any(opt->flag & OptFlag::must_assign) && !assign) {
+                if (!on_loop && any(opt->flag & OptFlag::must_assign) && !assign) {
                     if (any(opt->flag & OptFlag::need_value)) {
                         return ParseError::need_value;
                     }
