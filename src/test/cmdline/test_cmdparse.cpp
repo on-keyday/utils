@@ -13,9 +13,16 @@
 
 void test_parse() {
     using namespace utils;
-    utils::wrap::ArgvVector<> argv;
+    utils::wrap::ArgvVector<> arg;
     auto v = {"--str=value", "--int=92", "--bool=true"};
-    argv.translate(v);
+    arg.translate(v);
+    char** argv;
+    int argc;
+    arg.arg(argc, argv);
 
     utils::cmdline::OptionDesc<wrap::string, wrap::vector, wrap::map> desc;
+    utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
+    int index = 0;
+    utils::cmdline::parse(index, argc, argv, desc, result,
+                          cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname);
 }

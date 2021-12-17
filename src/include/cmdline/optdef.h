@@ -28,7 +28,7 @@ namespace utils {
 
         template <class String>
         struct Option {
-            String longname;
+            String mainname;
             OptValue<> defvalue;
             String help;
             OptFlag flag = OptFlag::none;
@@ -75,6 +75,7 @@ namespace utils {
                     }
                 }
                 auto opt = wrap::make_shared<Option<String>>();
+                opt->mainname = alias[0];
                 opt->defvalue = std::move(defvalue);
                 opt->flag = flag;
                 opt->help = utf::convert<String>(help);
