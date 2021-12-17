@@ -28,6 +28,7 @@ namespace utils {
 
         template <class String>
         struct Option {
+            String longname;
             OptValue<> defvalue;
             String help;
             OptFlag flag = OptFlag::none;
@@ -62,6 +63,9 @@ namespace utils {
             template <class Str, class Help = Str>
             OptionDesc& operator()(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
                 auto alias = helper::split<Str, Vec>(utf::convert<String>(name), ",");
+                if (alias.size() == 0) {
+                    return *this;
+                }
                 for (auto& n : alias) {
                     if (helper::equal(n, "")) {
                         return *this;
@@ -85,6 +89,7 @@ namespace utils {
             bool find(auto& name, option_t& opt) {
                 if (auto found = desc.find(name); found != desc.end()) {
                     auto idx = std::get<1>(*found);
+                    assert(idx < vec.size());
                     opt = vec[idx];
                     return true;
                 }
