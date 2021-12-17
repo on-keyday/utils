@@ -48,6 +48,10 @@ namespace utils {
             struct implement : interface {
                 T value;
 
+                template <class V>
+                implement(V&& v)
+                    : value(std::forward<V>(v)) {}
+
                 const Type* type() const override {
                     return cmdline::type<T>();
                 }
