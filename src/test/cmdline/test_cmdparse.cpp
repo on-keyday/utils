@@ -31,3 +31,7 @@ void test_parse() {
     utils::cmdline::parse(index, argc, argv, desc, result,
                           cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname);
 }
+
+int main() {
+    test_parse();
+}
