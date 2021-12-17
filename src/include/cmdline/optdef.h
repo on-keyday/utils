@@ -40,17 +40,6 @@ namespace utils {
             size_t minimum = 0;
         };
 
-        template <template <class...> class Vec, class T>
-        VecOption<Vec, T> multivalue(size_t maximum, size_t miniimum = ~0, Vec<T>&& def = Vec<T>{}) {
-            VecOption<Vec, T> ret;
-            ret.defval.resize(maximum);
-            ret.minimum = miniimum;
-            for (size_t i = 0; i < maximum; i++) {
-                ret.defval[i] = std::move(def[i]);
-            }
-            return ret;
-        };
-
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionDesc {
             using option_t = wrap::shared_ptr<Option<String>>;

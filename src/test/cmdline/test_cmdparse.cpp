@@ -21,6 +21,7 @@ void test_parse() {
     arg.arg(argc, argv);
 
     utils::cmdline::OptionDesc<wrap::string, wrap::vector, wrap::map> desc;
+    desc("str", wrap::string(), "help str", cmdline::OptFlag::must_assign);
     utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
     int index = 0;
     utils::cmdline::parse(index, argc, argv, desc, result,
