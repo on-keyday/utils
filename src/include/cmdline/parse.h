@@ -403,6 +403,7 @@ namespace utils {
                     }
                 }
             }
+            return ParseError::none;
         }
 
     }  // namespace cmdline
