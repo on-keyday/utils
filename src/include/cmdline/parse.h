@@ -67,7 +67,8 @@ namespace utils {
                         cmp = std::move(*assign);
                     }
                     else {
-                        if (index + 1 < argc) {
+                        if (index + 1 < argc ||
+                            (any(opt->flag & OptFlag::no_option_like) && helper::starts_with(argv[index + 1], "-"))) {
                             if (on_loop) {
                                 return ParseError::invalid_value;
                             }
