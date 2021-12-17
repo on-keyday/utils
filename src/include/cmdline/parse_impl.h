@@ -127,7 +127,8 @@ namespace utils {
                     if (b->defval.size() >= count) {
                         break;
                     }
-                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, ptr, &b->defval[count], &value, std::forward<F>(set_value), true);
+                    auto& ref = b->defval[count];
+                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, ptr, &ref, &value, std::forward<F>(set_value), true);
                     if (e == ParseError::invalid_value) {
                         if (count < b->minimum) {
                             return ParseError::require_more_argument;
