@@ -40,11 +40,10 @@ namespace utils {
             not_assigned,
             option_like_value,
             need_value,
-            bool_not_true_or_false,
-            int_not_number,
             require_more_argument,
             not_found,
             invalid_value,
+            unexpected_type,
         };
 
         namespace internal {
@@ -266,6 +265,7 @@ namespace utils {
             else if (auto sv = def.template value<Vec<String>>()) {
                 return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, target);
             }
+            return ParseError::unexpected_type;
         }
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
