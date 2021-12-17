@@ -260,6 +260,12 @@ namespace utils {
             else if (auto bv = def.template value<Vec<bool>>()) {
                 return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, target);
             }
+            else if (auto iv = def.template value<Vec<std::int64_t>>()) {
+                return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, target);
+            }
+            else if (auto sv = def.template value<Vec<String>>()) {
+                return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, target);
+            }
         }
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
