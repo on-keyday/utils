@@ -13,6 +13,8 @@
 #include "../helper/strutil.h"
 #include "../utf/convert.h"
 #include "../wrap/lite/enum.h"
+#include "../number/number.h"
+#include "../number/prefix.h"
 #include <cassert>
 
 namespace utils {
@@ -99,6 +101,25 @@ namespace utils {
                 return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
                     if (helper::equal("true") || helper::equal("false")) {
                         result = value[0] == 't';
+                        return true;
+                    }
+                    return false;
+                });
+            }
+
+            template <template <class...> class Vec, class String, class Char>
+            ParseError parse_int(int& index, int argc, Char** argv,
+                                 wrap::shared_ptr<Option<String>>& opt,
+                                 ParseFlag flag, String* assign, std::int64_t* b,
+                                 OptValue<>* target) {
+                return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
+                    size_t offset = 0;
+                    int radix = 10;
+                    if (auto e = number::has_prefix(value)) {
+                        radix = e;
+                        offset = 2;
+                    }
+                    if (number::parse_integer(value, result, radix, offset)) {
                         return true;
                     }
                     return false;
