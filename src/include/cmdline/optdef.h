@@ -23,7 +23,7 @@ namespace utils {
             must_assign = 0x2,     // value must set with `=`
             no_option_like = 0x4,  // `somevalue` type disallow string like `option`
             once_in_cmd = 0x8,     // allow only once to set
-            need_value = 0x10,
+            need_value = 0x10,     // need value
         };
 
         template <class String>
@@ -60,6 +60,9 @@ namespace utils {
             OptionDesc& operator()(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
                 auto alias = helper::split<Str, Vec>(utf::convert<String>(name), ",");
                 for (auto& n : alias) {
+                    if (n == Str()) {
+                        return *this;
+                    }
                     if (desc.find(n) != desc.end()) {
                         return *this;
                     }
