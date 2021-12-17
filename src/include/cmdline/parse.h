@@ -96,13 +96,23 @@ namespace utils {
                     }
                 }
             SET:
-                if (auto vec = target->template value<Vec<OptValue<>>>()) {
+                if (auto v = target->template value<Vec<Value>>()) {
+                    v->push_back(std::move(result));
+                }
+                else if (auto vec = target->template value<Vec<OptValue<>>>()) {
                     vec->push_back(result);
                 }
                 else {
                     *target = std::move(result);
                 }
                 return ParseError::none;
+            }
+
+            template <template <class...> class Vec, class String, class Char, class Value, class F>
+            ParseError parse_vec_value(int& index, int argc, Char** argv,
+                                       wrap::shared_ptr<Option<String>>& opt,
+                                       ParseFlag flag, String* assign, Value* b,
+                                       OptValue<>* target, F&& set_value) {
             }
 
             template <template <class...> class Vec, class String, class Char>
