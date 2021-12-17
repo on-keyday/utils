@@ -36,5 +36,10 @@ namespace utils {
         std::int64_t int_option(Int i) {
             return static_cast<std::int64_t>(i);
         }
+
+        template <class Bool = bool>
+        bool bool_option(Bool b) {
+            return static_cast<bool>(b);
+        }
     }  // namespace cmdline
 }  // namespace utils
