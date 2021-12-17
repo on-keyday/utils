@@ -116,6 +116,7 @@ namespace utils {
                                        OptValue<>* target, F&& set_value) {
                 auto ptr = assign;
                 OptValue<> value = Vec<Value>{};
+                Vec<Value>* v = value.template value<Vec<Value>>();
                 for (size_t count = 0;; count++) {
                     if (b->size() >= count) {
                         break;
