@@ -63,7 +63,6 @@ namespace utils {
             using option_t = wrap::shared_ptr<Option<String>>;
             bool nooption = false;
             ParseError ret = ParseError::none;
-            bool fatal = false;
             auto parse_all = [&](bool failed) {
                 if (failed) {
                     if (any(flag & ParseFlag::ignore_not_found)) {
@@ -100,7 +99,6 @@ namespace utils {
                 }
                 if (opt) {
                     auto ret = parse_one(index, argc, argv, opt, result, flag, ptr);
-                    fatal = ret != ParseError::none;
                     return ret;
                 }
                 return ParseError::not_found;
@@ -157,6 +155,8 @@ namespace utils {
                             String* ptr = nullptr;
                             String value;
                             if (argv[index][2]) {
+                                if (has_assign && argv[index][2] == '=') {
+                                }
                                 value = utf::convert<String>(argv[index] + 2);
                                 ptr = &value;
                             }
