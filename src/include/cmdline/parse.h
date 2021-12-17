@@ -66,6 +66,13 @@ namespace utils {
                         cmp = std::move(*assign);
                     }
                     else {
+                        if (index + 1 < argc) {
+                            if (any(opt->flag & OptFlag::need_value)) {
+                                return ParseError::need_value;
+                            }
+                            result = *b;
+                            goto SET;
+                        }
                         cmp = utf::convert<String>(argv[index + 1]);
                         need_less = true;
                     }
@@ -84,6 +91,7 @@ namespace utils {
                         return ParseError::bool_not_true_or_false;
                     }
                 }
+            SET:
                 if (auto vec = target->template value<Vec<OptValue<>>>()) {
                     vec->push_back(result);
                 }
