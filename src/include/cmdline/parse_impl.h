@@ -173,7 +173,7 @@ namespace utils {
                                   wrap::shared_ptr<Option<String>>& opt,
                                   ParseFlag flag, String* assign, bool* b,
                                   OptValue<>* target) {
-                return parse_value(index, argc, argv, opt, flag, assign, b, target, judge_bool());
+                return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_bool());
             }
 
             auto judge_int() {
@@ -196,7 +196,7 @@ namespace utils {
                                  wrap::shared_ptr<Option<String>>& opt,
                                  ParseFlag flag, String* assign, std::int64_t* b,
                                  OptValue<>* target) {
-                return parse_value(index, argc, argv, opt, flag, assign, b, target, judge_int());
+                return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_int());
             }
 
             auto judge_string() {
@@ -211,7 +211,7 @@ namespace utils {
                                     wrap::shared_ptr<Option<String>>& opt,
                                     ParseFlag flag, String* assign, String* b,
                                     OptValue<>* target) {
-                return parse_value(index, argc, argv, opt, flag, assign, b, target, judge_string());
+                return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_string());
             }
 
             template <template <class...> class Vec, class String, class Char>
