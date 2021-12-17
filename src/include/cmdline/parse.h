@@ -121,7 +121,7 @@ namespace utils {
                     if (b->size() >= count) {
                         break;
                     }
-                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, assign, &(*b)[count], &value, std::forward<F>(set_value), true);
+                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, ptr, &(*b)[count], &value, std::forward<F>(set_value), true);
                     if (e == ParseError::invalid_value) {
                         if (count < opt->minimum) {
                             return ParseError::require_more_argument;
@@ -129,12 +129,20 @@ namespace utils {
                         for (auto i = count; count < b->size(); count++) {
                             v->push_back((*b)[count]);
                         }
+                        break;
                     }
                     else if (e != ParseError::none) {
                         return e;
                     }
                     ptr = nullptr;
                 }
+                if (auto vec = target->template value<Vec<OptValue<>>>()) {
+                    vec->push_back(value);
+                }
+                else {
+                    *target = std::move(value);
+                }
+                return ParseError::none;
             }
 
             template <template <class...> class Vec, class String, class Char>
