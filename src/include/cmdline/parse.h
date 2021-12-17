@@ -124,7 +124,14 @@ namespace utils {
                     auto e = parse_value<Vec>(index, argc, argv, opt, flag, assign, &(*b)[count], &value, std::forward<F>(set_value), true);
                     if (e == ParseError::invalid_value) {
                         if (count < opt->minimum) {
+                            return ParseError::require_more_argument;
                         }
+                        for (auto i = count; count < b->size(); count++) {
+                            v->push_back((*b)[count]);
+                        }
+                    }
+                    else if (e != ParseError::none) {
+                        return e;
                     }
                     ptr = nullptr;
                 }
