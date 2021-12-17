@@ -24,7 +24,8 @@ void test_parse() {
     utils::cmdline::OptionDesc<wrap::string, wrap::vector, wrap::map> desc;
     desc
         .set("str", cmdline::str_option(""), "help str", cmdline::OptFlag::must_assign)
-        .set("int", cmdline::int_option(0), "", cmdline::OptFlag::must_assign);
+        .set("int", cmdline::int_option(0), "", cmdline::OptFlag::must_assign)
+        .set("bool", cmdline::bool_option(false), "help str2", cmdline::OptFlag::must_assign);
     utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
     int index = 0;
     utils::cmdline::parse(index, argc, argv, desc, result,
