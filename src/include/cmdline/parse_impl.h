@@ -218,7 +218,7 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_bool(int& index, int argc, Char** argv,
                                       wrap::shared_ptr<Option<String>>& opt,
-                                      ParseFlag flag, String* assign, VecOption<Vec, bool>* b,
+                                      ParseFlag flag, String* assign, VecOption<Vec, std::uint8_t>* b,
                                       OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_bool());
             }

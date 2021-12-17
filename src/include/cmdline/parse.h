@@ -43,7 +43,7 @@ namespace utils {
             else if (auto s = def.template value<String>()) {
                 return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, target);
             }
-            else if (auto bv = def.template value<VecOption<Vec, bool>>()) {
+            else if (auto bv = def.template value<VecOption<Vec, std::uint8_t>>()) {
                 return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, target);
             }
             else if (auto iv = def.template value<VecOption<Vec, std::int64_t>>()) {
