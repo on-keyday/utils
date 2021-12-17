@@ -26,5 +26,10 @@ namespace utils {
             }
             return ret;
         }
+
+        template <class String = wrap::string, class T>
+        String stroption(T&& v) {
+            return utf::convert<String>(v);
+        }
     }  // namespace cmdline
 }  // namespace utils
