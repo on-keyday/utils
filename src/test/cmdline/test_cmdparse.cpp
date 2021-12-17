@@ -33,8 +33,7 @@ void test_parse() {
         result;
     int index = 0;
     auto res = utils::cmdline::parse(index, argc, argv, desc, result,
-                                     cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname |
-                                         cmdline::ParseFlag::adjacent_value | cmdline::ParseFlag::one_prefix_longname);
+                                     cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname | cmdline::ParseFlag::one_prefix_longname);
     assert(res == cmdline::ParseError::none && "expect none but assertion failed");
 }
 

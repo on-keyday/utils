@@ -28,6 +28,9 @@ namespace utils {
             ignore_not_found = 0x20,        // ignore if option is not found
             parse_all = 0x40,               // parse all arg
             failure_opt_as_arg = 0x80,      // failed to parse arg is argument
+
+            // one_prefix_longname and adjacent_value are not settable at the same time
+            // one_prefix_longname has priority
         };
 
         DEFINE_ENUM_FLAGOP(ParseFlag)
