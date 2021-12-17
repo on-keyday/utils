@@ -255,7 +255,10 @@ namespace utils {
                 return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, target);
             }
             else if (auto s = def.template value<String>()) {
-                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, i, target);
+                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, target);
+            }
+            else if (auto bv = def.template value<Vec<bool>>()) {
+                return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, target);
             }
         }
 
