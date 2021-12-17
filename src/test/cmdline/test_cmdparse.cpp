@@ -15,7 +15,7 @@
 void test_parse() {
     using namespace utils;
     utils::wrap::ArgvVector<> arg;
-    auto v = {"--str=value", "--int=92", "--bool=true"};
+    auto v = {"--str=value", "--int=92", "--bool"};
     arg.translate(v);
     char** argv;
     int argc;
@@ -25,7 +25,7 @@ void test_parse() {
     desc
         .set("str", cmdline::str_option(""), "help str", cmdline::OptFlag::must_assign)
         .set("int", cmdline::int_option(0), "", cmdline::OptFlag::must_assign)
-        .set("bool", cmdline::bool_option(false), "help str2", cmdline::OptFlag::must_assign);
+        .set("bool", cmdline::bool_option(true), "help str2", cmdline::OptFlag::must_assign);
     utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
     int index = 0;
     utils::cmdline::parse(index, argc, argv, desc, result,
