@@ -8,6 +8,7 @@
 
 #include "../../include/wrap/argv.h"
 #include "../../include/cmdline/parse.h"
+#include "../../include/cmdline/make_opt.h"
 
 #include "../../include/wrap/lite/lite.h"
 
@@ -21,7 +22,9 @@ void test_parse() {
     arg.arg(argc, argv);
 
     utils::cmdline::OptionDesc<wrap::string, wrap::vector, wrap::map> desc;
-    desc("str", wrap::string(), "help str", cmdline::OptFlag::must_assign);
+    desc
+        .set("str", cmdline::str_option(""), "help str", cmdline::OptFlag::must_assign)
+        .set("int", cmdline::int_option(0), "", cmdline::OptFlag::must_assign);
     utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
     int index = 0;
     utils::cmdline::parse(index, argc, argv, desc, result,
