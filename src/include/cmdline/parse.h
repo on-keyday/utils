@@ -361,8 +361,11 @@ namespace utils {
                     }
                     if (any(flag & ParseFlag::adjacent_value)) {
                         option_t opt;
-                        desc.find(helper::CharView<Char>(argv[index][1]).c_str(), opt);
+                        auto view = helper::CharView<Char>(argv[index][1]);
+                        desc.find(view.c_str(), opt);
                         if (opt) {
+                            argv[index][2];
+                            parse_one(index, argc, argv, opt, view.c_str(), result, flag, nullptr);
                             //unimplemented
                             continue;
                         }
