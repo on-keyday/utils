@@ -367,10 +367,7 @@ namespace utils {
                             String* ptr = nullptr;
                             String value;
                             if (argv[index][2]) {
-                                int offset = 2;
-                                if (argv[index][2] == '=') {
-                                }
-                                value = utf::convert<String>(argv[index] + offset);
+                                value = utf::convert<String>(argv[index] + 2);
                                 ptr = &value;
                             }
                             if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, ptr); e != ParseError::none) {
