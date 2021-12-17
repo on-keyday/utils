@@ -138,15 +138,11 @@ namespace utils {
                         else if (e != ParseError::not_found) {
                             return e;
                         }
-                        if (any(flag & ParseFlag::adjacent_value)) {
-                            goto ADJACENT;
-                        }
                         if (parse_all(true)) {
                             continue;
                         }
                         return ParseError::not_found;
                     }
-                ADJACENT:
                     if (any(flag & ParseFlag::adjacent_value)) {
                         option_t opt;
                         auto view = helper::CharView<Char>(argv[index][1]);
@@ -155,9 +151,14 @@ namespace utils {
                             String* ptr = nullptr;
                             String value;
                             if (argv[index][2]) {
+                                int offset = 2;
                                 if (has_assign && argv[index][2] == '=') {
+                                    offset = 3;
+                                    if (!argv[index][3]) {
+                                        return ParseError::wrong_assign;
+                                    }
                                 }
-                                value = utf::convert<String>(argv[index] + 2);
+                                value = utf::convert<String>(argv[index] + 3);
                                 ptr = &value;
                             }
                             if (auto e = parse_one(index, argc, argv, opt, result, flag, ptr); e != ParseError::none) {

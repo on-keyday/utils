@@ -43,6 +43,7 @@ namespace utils {
             not_found,
             invalid_value,
             unexpected_type,
+            wrong_assign,
         };
 
         namespace internal {
