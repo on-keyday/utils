@@ -66,6 +66,9 @@ namespace utils {
             bool fatal = false;
             auto parse_all = [&](bool failed) {
                 if (failed) {
+                    if (any(flag & ParseFlag::ignore_not_found)) {
+                        return true;
+                    }
                     if (any(flag & ParseFlag::failure_opt_as_arg)) {
                         arg->push_back(utf::convert<String>(argv[index]));
                         return true;
@@ -124,9 +127,6 @@ namespace utils {
                             return e;
                         }
                     }
-                    if (any(flag & ParseFlag::ignore_not_found)) {
-                        continue;
-                    }
                     if (parse_all(true)) {
                         continue;
                     }
@@ -142,9 +142,6 @@ namespace utils {
                         }
                         if (any(flag & ParseFlag::adjacent_value)) {
                             goto ADJACENT;
-                        }
-                        if (any(flag & ParseFlag::ignore_not_found)) {
-                            continue;
                         }
                         if (parse_all(true)) {
                             continue;
@@ -168,9 +165,6 @@ namespace utils {
                             }
                             continue;
                         }
-                        if (any(flag & ParseFlag::ignore_not_found)) {
-                            continue;
-                        }
                         if (parse_all(true)) {
                             continue;
                         }
@@ -184,9 +178,6 @@ namespace utils {
                             if (auto e = parse_one(index, argc, argv, opt, result, flag, static_cast<String*>(nullptr)); e != ParseError::none) {
                                 return e;
                             }
-                            continue;
-                        }
-                        if (any(flag & ParseFlag::ignore_not_found)) {
                             continue;
                         }
                         if (parse_all(true)) {
