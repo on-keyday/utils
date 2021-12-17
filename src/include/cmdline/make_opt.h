@@ -17,7 +17,7 @@
 namespace utils {
     namespace cmdline {
         template <class T, template <class...> class Vec = wrap::vector>
-        VecOption<Vec, T> multivalue(size_t maximum, size_t miniimum = ~0, Vec<T>&& def = Vec<T>{}) {
+        VecOption<Vec, T> multi_option(size_t maximum, size_t miniimum = ~0, Vec<T>&& def = Vec<T>{}) {
             VecOption<Vec, T> ret;
             ret.defval.resize(maximum);
             ret.minimum = miniimum;
@@ -28,8 +28,13 @@ namespace utils {
         }
 
         template <class String = wrap::string, class T>
-        String stroption(T&& v) {
+        String str_option(T&& v) {
             return utf::convert<String>(v);
+        }
+
+        template <class Int = std::int64_t>
+        std::int64_t int_option(Int i) {
+            return static_cast<std::int64_t>(i);
         }
     }  // namespace cmdline
 }  // namespace utils
