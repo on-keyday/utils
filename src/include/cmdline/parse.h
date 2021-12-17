@@ -129,7 +129,7 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_string(int& index, int argc, Char** argv,
                                     wrap::shared_ptr<Option<String>>& opt,
-                                    ParseFlag flag, String* assign, std::int64_t* b,
+                                    ParseFlag flag, String* assign, String* b,
                                     OptValue<>* target) {
                 return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
                     result = value;
