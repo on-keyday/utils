@@ -97,7 +97,7 @@ namespace utils {
                     desc.find(optname, opt);
                 }
                 if (opt) {
-                    return parse_one(index, argc, argv, opt, result, flag, ptr);
+                    fatal = parse_one(index, argc, argv, opt, result, flag, ptr) != ParseError::none;
                 }
                 return true;
             };
