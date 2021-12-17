@@ -51,7 +51,7 @@ namespace utils {
            public:
             template <class Str, class Help = Str>
             OptionDesc& set(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
-                auto alias = helper::split<Str, Vec>(utf::convert<String>(name), ",");
+                auto alias = helper::split<String, Vec>(utf::convert<String>(name), ",");
                 if (alias.size() == 0) {
                     return *this;
                 }

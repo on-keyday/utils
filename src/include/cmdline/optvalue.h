@@ -97,13 +97,13 @@ namespace utils {
             }
 
             OptValue& operator=(const OptValue& v) noexcept {
-                del_iface(iface);
+                this->del_iface(iface);
                 iface = v.iface->copy();
                 return *this;
             }
 
             OptValue& operator=(OptValue&& v) noexcept {
-                del_iface(iface);
+                this->del_iface(iface);
                 iface = v.iface;
                 v.iface = nullptr;
                 return *this;
