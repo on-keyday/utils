@@ -13,6 +13,7 @@
 #include "../utf/convert.h"
 #include "../wrap/lite/smart_ptr.h"
 #include "../helper/strutil.h"
+#include "../helper/splits.h"
 
 namespace utils {
     namespace cmdline {
@@ -33,15 +34,32 @@ namespace utils {
             size_t minimum = 0;
         };
 
+        template <template <class...> class Vec, class T>
+        struct VecOption {
+            Vec<T> defval;
+            size_t minimum = 0;
+        };
+
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionDesc {
             using option_t = wrap::shared_ptr<Option<String>>;
             Vec<option_t> vec;
             Map<String, option_t> desc;
 
-            template <class Str>
-            OptionDesc& operator()(Str&& name, OptValue<> defaultv) {
-                name = utf::convert<String>(name);
+            template <class Str, class Help = Str>
+            OptionDesc& operator()(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
+                auto alias = helper::split<Str, Vec>(utf::convert<String>(name), ",");
+                for (auto& n : alias) {
+                    if (desc.find(n) != desc.end()) {
+                        return *this;
+                    }
+                }
+                Option<String> opt;
+                opt.defvalue = std::move(defvalue);
+                opt.flag = flag;
+                opt.help = utf::convert<String>(help);
+                for (auto& n : alias) {
+                }
             }
 
             bool find(auto& name, option_t& opt) {
@@ -49,7 +67,6 @@ namespace utils {
                     opt = std::get<1>(*found);
                     return true;
                 }
-                helper::read_until();
                 return false;
             }
         };

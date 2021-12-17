@@ -101,6 +101,10 @@ namespace utils {
                 else if (auto vec = target->template value<Vec<OptValue<>>>()) {
                     vec->push_back(result);
                 }
+                else if (auto v = target->template value<Value>()) {
+                    auto tmp = std::move(*v);
+                    *target = Vec<OptValue<>>({std::move(tmp), std::move(result)});
+                }
                 else {
                     *target = std::move(result);
                 }
@@ -110,23 +114,23 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char, class Value, class F>
             ParseError parse_vec_value(int& index, int argc, Char** argv,
                                        wrap::shared_ptr<Option<String>>& opt,
-                                       ParseFlag flag, String* assign, Vec<Value>* b,
+                                       ParseFlag flag, String* assign, VecOption<Vec, Value>* b,
                                        OptValue<>* target, F&& set_value) {
                 auto ptr = assign;
                 OptValue<> value = Vec<Value>{};
                 Vec<Value>* v = value.template value<Vec<Value>>();
                 assert(v);
                 for (size_t count = 0;; count++) {
-                    if (b->size() >= count) {
+                    if (b->defval.size() >= count) {
                         break;
                     }
-                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, ptr, &(*b)[count], &value, std::forward<F>(set_value), true);
+                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, ptr, &b->defval[count], &value, std::forward<F>(set_value), true);
                     if (e == ParseError::invalid_value) {
-                        if (count < opt->minimum) {
+                        if (count < b->minimum) {
                             return ParseError::require_more_argument;
                         }
                         for (auto i = count; count < b->size(); count++) {
-                            v->push_back((*b)[count]);
+                            v->push_back(b->defval[count]);
                         }
                         break;
                     }
@@ -137,6 +141,10 @@ namespace utils {
                 }
                 if (auto vec = target->template value<Vec<OptValue<>>>()) {
                     vec->push_back(std::move(value));
+                }
+                else if (auto v = target->template value<Vec<Value>>()) {
+                    auto tmp = std::move(*v);
+                    *target = Vec<OptValue<>>({std::move(tmp), std::move(value)});
                 }
                 else {
                     *target = std::move(value);
@@ -203,7 +211,7 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_bool(int& index, int argc, Char** argv,
                                       wrap::shared_ptr<Option<String>>& opt,
-                                      ParseFlag flag, String* assign, Vec<bool>* b,
+                                      ParseFlag flag, String* assign, VecOption<Vec, bool>* b,
                                       OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_bool());
             }
@@ -211,7 +219,7 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_int(int& index, int argc, Char** argv,
                                      wrap::shared_ptr<Option<String>>& opt,
-                                     ParseFlag flag, String* assign, Vec<std::int64_t>* b,
+                                     ParseFlag flag, String* assign, VecOption<Vec, std::int64_t>* b,
                                      OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_int());
             }
@@ -219,7 +227,7 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_string(int& index, int argc, Char** argv,
                                         wrap::shared_ptr<Option<String>>& opt,
-                                        ParseFlag flag, String* assign, Vec<String>* b,
+                                        ParseFlag flag, String* assign, VecOption<Vec, String>* b,
                                         OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_string());
             }
