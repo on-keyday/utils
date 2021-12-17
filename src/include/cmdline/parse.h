@@ -364,8 +364,15 @@ namespace utils {
                         auto view = helper::CharView<Char>(argv[index][1]);
                         desc.find(view.c_str(), opt);
                         if (opt) {
-                            argv[index][2];
-                            parse_one(index, argc, argv, opt, view.c_str(), result, flag, nullptr);
+                            String* ptr = nullptr;
+                            String value;
+                            if (argv[index][2]) {
+                                value = utf::convert<String>(argv[index] + 2);
+                                ptr = &value;
+                            }
+                            if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, ptr); e != ParseError::none) {
+                                return e;
+                            }
                             //unimplemented
                             continue;
                         }
