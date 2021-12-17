@@ -31,7 +31,7 @@ namespace utils {
                 }
             }
             else {
-                result.emplace(name, target);
+                result.emplace(option.mainname, target);
             }
             assert(target);
             if (auto b = def.template value<bool>()) {
