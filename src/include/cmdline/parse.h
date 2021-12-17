@@ -114,6 +114,7 @@ namespace utils {
                                        ParseFlag flag, String* assign, Value* b,
                                        OptValue<>* target, F&& set_value) {
                 OptValue<> vec = Vec<Value>{};
+                auto ptr = assign;
             }
 
             template <template <class...> class Vec, class String, class Char>

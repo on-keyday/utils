@@ -153,6 +153,8 @@ namespace utils {
             OptValue<> defvalue;
             String help;
             OptFlag flag = OptFlag::none;
+            size_t minimum = 0;
+            size_t maximum = 0;
         };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
