@@ -117,6 +117,7 @@ namespace utils {
                 auto ptr = assign;
                 OptValue<> value = Vec<Value>{};
                 Vec<Value>* v = value.template value<Vec<Value>>();
+                assert(v);
                 for (size_t count = 0;; count++) {
                     if (b->size() >= count) {
                         break;
@@ -137,7 +138,7 @@ namespace utils {
                     ptr = nullptr;
                 }
                 if (auto vec = target->template value<Vec<OptValue<>>>()) {
-                    vec->push_back(value);
+                    vec->push_back(std::move(value));
                 }
                 else {
                     *target = std::move(value);
@@ -145,26 +146,26 @@ namespace utils {
                 return ParseError::none;
             }
 
-            template <template <class...> class Vec, class String, class Char>
-            ParseError parse_bool(int& index, int argc, Char** argv,
-                                  wrap::shared_ptr<Option<String>>& opt,
-                                  ParseFlag flag, String* assign, bool* b,
-                                  OptValue<>* target) {
-                return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
+            auto judge_bool() {
+                return [](auto& result, auto& value) {
                     if (helper::equal("true") || helper::equal("false")) {
                         result = value[0] == 't';
                         return true;
                     }
                     return false;
-                });
+                };
             }
 
             template <template <class...> class Vec, class String, class Char>
-            ParseError parse_int(int& index, int argc, Char** argv,
-                                 wrap::shared_ptr<Option<String>>& opt,
-                                 ParseFlag flag, String* assign, std::int64_t* b,
-                                 OptValue<>* target) {
-                return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
+            ParseError parse_bool(int& index, int argc, Char** argv,
+                                  wrap::shared_ptr<Option<String>>& opt,
+                                  ParseFlag flag, String* assign, bool* b,
+                                  OptValue<>* target) {
+                return parse_value(index, argc, argv, opt, flag, assign, b, target, judge_bool());
+            }
+
+            auto judge_int() {
+                return [](auto& result, auto& value) {
                     size_t offset = 0;
                     int radix = 10;
                     if (auto e = number::has_prefix(value)) {
@@ -175,7 +176,22 @@ namespace utils {
                         return true;
                     }
                     return false;
-                });
+                };
+            }
+
+            template <template <class...> class Vec, class String, class Char>
+            ParseError parse_int(int& index, int argc, Char** argv,
+                                 wrap::shared_ptr<Option<String>>& opt,
+                                 ParseFlag flag, String* assign, std::int64_t* b,
+                                 OptValue<>* target) {
+                return parse_value(index, argc, argv, opt, flag, assign, b, target, judge_int());
+            }
+
+            auto judge_string() {
+                return [](auto& result, auto& value) {
+                    result = value;
+                    return true;
+                };
             }
 
             template <template <class...> class Vec, class String, class Char>
@@ -183,10 +199,7 @@ namespace utils {
                                     wrap::shared_ptr<Option<String>>& opt,
                                     ParseFlag flag, String* assign, String* b,
                                     OptValue<>* target) {
-                return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
-                    result = value;
-                    return true;
-                });
+                return parse_value(index, argc, argv, opt, flag, assign, b, target, judge_string());
             }
         }  // namespace internal
 
