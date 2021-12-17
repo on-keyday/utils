@@ -158,7 +158,7 @@ namespace utils {
                                         return ParseError::wrong_assign;
                                     }
                                 }
-                                value = utf::convert<String>(argv[index] + 3);
+                                value = utf::convert<String>(argv[index] + offset);
                                 ptr = &value;
                             }
                             if (auto e = parse_one(index, argc, argv, opt, result, flag, ptr); e != ParseError::none) {
