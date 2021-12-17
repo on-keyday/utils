@@ -311,7 +311,7 @@ namespace utils {
                 if (opt) {
                     return parse_one(index, argc, argv, opt, result, flag, ptr);
                 }
-                return ParseError::not_found;
+                return true;
             };
             for (; index < argc; index++) {
                 if (nooption || argv[index][0] != '-') {
@@ -367,7 +367,10 @@ namespace utils {
                             String* ptr = nullptr;
                             String value;
                             if (argv[index][2]) {
-                                value = utf::convert<String>(argv[index] + 2);
+                                int offset = 2;
+                                if (argv[index][2] == '=') {
+                                }
+                                value = utf::convert<String>(argv[index] + offset);
                                 ptr = &value;
                             }
                             if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, ptr); e != ParseError::none) {
