@@ -69,7 +69,6 @@ namespace utils {
                 return Alloc::template new_value<implement<std::decay_t<T>>>(std::forward<T>(value));
             }
 
-            template <class T>
             static void del_iface(interface* v) {
                 Alloc::delete_value(v);
             }
@@ -97,13 +96,13 @@ namespace utils {
             }
 
             OptValue& operator=(const OptValue& v) noexcept {
-                this->del_iface(iface);
+                del_iface(iface);
                 iface = v.iface->copy();
                 return *this;
             }
 
             OptValue& operator=(OptValue&& v) noexcept {
-                this->del_iface(iface);
+                del_iface(iface);
                 iface = v.iface;
                 v.iface = nullptr;
                 return *this;

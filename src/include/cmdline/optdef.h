@@ -14,6 +14,7 @@
 #include "../wrap/lite/smart_ptr.h"
 #include "../helper/strutil.h"
 #include "../helper/splits.h"
+#include "../wrap/lite/enum.h"
 
 namespace utils {
     namespace cmdline {
@@ -25,6 +26,8 @@ namespace utils {
             once_in_cmd = 0x8,     // allow only once to set
             need_value = 0x10,     // need value
         };
+
+        DEFINE_ENUM_FLAGOP(OptFlag)
 
         template <class String>
         struct Option {
