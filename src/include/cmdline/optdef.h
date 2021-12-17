@@ -12,6 +12,7 @@
 #include "optvalue.h"
 #include "../utf/convert.h"
 #include "../wrap/lite/smart_ptr.h"
+#include "../helper/strutil.h"
 
 namespace utils {
     namespace cmdline {
@@ -39,8 +40,8 @@ namespace utils {
             Map<String, option_t> desc;
 
             template <class Str>
-            OptionDesc& operator()(Str&& name, OptValue<>) {
-                utf::convert<String>(name);
+            OptionDesc& operator()(Str&& name, OptValue<> defaultv) {
+                name = utf::convert<String>(name);
             }
 
             bool find(auto& name, option_t& opt) {
@@ -48,6 +49,7 @@ namespace utils {
                     opt = std::get<1>(*found);
                     return true;
                 }
+                helper::read_until();
                 return false;
             }
         };
