@@ -119,7 +119,10 @@ namespace utils {
                     if (b->size() >= count) {
                         break;
                     }
-                    parse_value(index, argc, argv, opt, flag, assign, &(*b)[count], target, std::forward<F>(set_value), true);
+                    auto e = parse_value<Vec>(index, argc, argv, opt, flag, assign, &(*b)[count], &value, std::forward<F>(set_value), true);
+                    if (e == ParseError::invalid_value) {
+                    }
+                    ptr = nullptr;
                 }
             }
 
