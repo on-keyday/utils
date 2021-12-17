@@ -45,33 +45,42 @@ namespace utils {
         };
 
         namespace internal {
-            template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-            ParseError parse_bool(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
-                                  ParseFlag flag, String* assign, bool* b, OptValue<>* target) {
+            template <template <class...> class Vec, class String, class Char, class Value, class F>
+            ParseError parse_value(int& index, int argc, Char** argv,
+                                   wrap::shared_ptr<Option<String>>& opt,
+                                   ParseFlag flag, String* assign, Value* b,
+                                   OptValue<>* target, F&& set_value) {
                 String cmp;
-                bool result;
+                Value result;
                 bool need_less = false;
-                if (assign) {
-                    cmp = std::move(*assign);
-                }
-                else {
-                    cmp = utf::convert<String>(argv[index + 1]);
-                    need_less = true;
-                }
-                if (helper::equal(cmp, "true") || helper::equal(cmp, "false")) {
-                    result = cmp[0] == 't';
-                    if (need_less) {
-                        index++;
-                    }
-                }
-                else if (need_less) {
+                if (any(opt->flag & OptFlag::must_assign) && !assign) {
                     if (any(opt->flag & OptFlag::need_value)) {
                         return ParseError::need_value;
                     }
                     result = *b;
                 }
                 else {
-                    return ParseError::bool_not_true_or_false;
+                    if (assign) {
+                        cmp = std::move(*assign);
+                    }
+                    else {
+                        cmp = utf::convert<String>(argv[index + 1]);
+                        need_less = true;
+                    }
+                    if (set_value(result, cmp)) {
+                        if (need_less) {
+                            index++;
+                        }
+                    }
+                    else if (need_less) {
+                        if (any(opt->flag & OptFlag::need_value)) {
+                            return ParseError::need_value;
+                        }
+                        result = *b;
+                    }
+                    else {
+                        return ParseError::bool_not_true_or_false;
+                    }
                 }
                 if (auto vec = target->template value<Vec<OptValue<>>>()) {
                     vec->push_back(result);
@@ -79,7 +88,17 @@ namespace utils {
                 else {
                     *target = std::move(result);
                 }
-                return ParseError::none;
+                +return ParseError::none;
+            }
+
+            template <template <class...> class Vec, class String, class Char>
+            ParseError parse_bool(int& index, int argc, Char** argv,
+                                  wrap::shared_ptr<Option<String>>& opt,
+                                  ParseFlag flag, String* assign, bool* b,
+                                  OptValue<>* target) {
+                return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
+
+                });
             }
         }  // namespace internal
 
