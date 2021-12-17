@@ -373,7 +373,6 @@ namespace utils {
                             if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, ptr); e != ParseError::none) {
                                 return e;
                             }
-                            //unimplemented
                             continue;
                         }
                         if (any(flag & ParseFlag::ignore_not_found)) {
@@ -389,7 +388,9 @@ namespace utils {
                         option_t opt;
                         desc.find(helper::CharView<Char>(argv[current][1]).c_str(), opt);
                         if (opt) {
-                            //unimplemented
+                            if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, nullptr); e != ParseError::none) {
+                                return e;
+                            }
                             continue;
                         }
                         if (any(flag & ParseFlag::ignore_not_found)) {
