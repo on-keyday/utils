@@ -44,13 +44,13 @@ namespace utils {
             else if (auto s = def.template value<String>()) {
                 return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, target);
             }
-            else if (auto bv = def.template value<Vec<bool>>()) {
+            else if (auto bv = def.template value<VecOption<Vec, bool>>()) {
                 return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, target);
             }
-            else if (auto iv = def.template value<Vec<std::int64_t>>()) {
+            else if (auto iv = def.template value<VecOption<Vec, std::int64_t>>()) {
                 return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, target);
             }
-            else if (auto sv = def.template value<Vec<String>>()) {
+            else if (auto sv = def.template value<VecOption<Vec, String>>()) {
                 return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, target);
             }
             return ParseError::unexpected_type;
