@@ -102,7 +102,7 @@ namespace utils {
             Map<String, OptValue<>> result;
 
             void emplace(auto& name, OptValue<>*& opt) {
-                opt = &result[name]
+                opt = &result[name];
             }
 
             bool find(auto& name, OptValue<>*& opt) {
