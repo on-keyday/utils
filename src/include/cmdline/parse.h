@@ -97,7 +97,11 @@ namespace utils {
                                   ParseFlag flag, String* assign, bool* b,
                                   OptValue<>* target) {
                 return parse_value(index, argc, argv, opt, flag, assign, b, target, [](auto& result, auto& value) {
-
+                    if (helper::equal("true") || helper::equal("false")) {
+                        result = value[0] == 't';
+                        return true;
+                    }
+                    return false;
                 });
             }
         }  // namespace internal
