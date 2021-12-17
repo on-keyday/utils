@@ -31,7 +31,6 @@ namespace utils {
             OptValue<> defvalue;
             String help;
             OptFlag flag = OptFlag::none;
-            size_t minimum = 0;
         };
 
         template <template <class...> class Vec, class T>
@@ -54,12 +53,15 @@ namespace utils {
                         return *this;
                     }
                 }
-                Option<String> opt;
-                opt.defvalue = std::move(defvalue);
-                opt.flag = flag;
-                opt.help = utf::convert<String>(help);
+                auto opt = wrap::make_shared<Option<String>>();
+                opt->defvalue = std::move(defvalue);
+                opt->flag = flag;
+                opt->help = utf::convert<String>(help);
+                vec.push_back(opt);
                 for (auto& n : alias) {
+                    desc.emplace(n, opt);
                 }
+                return *this;
             }
 
             bool find(auto& name, option_t& opt) {
