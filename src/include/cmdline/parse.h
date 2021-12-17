@@ -111,10 +111,16 @@ namespace utils {
             template <template <class...> class Vec, class String, class Char, class Value, class F>
             ParseError parse_vec_value(int& index, int argc, Char** argv,
                                        wrap::shared_ptr<Option<String>>& opt,
-                                       ParseFlag flag, String* assign, Value* b,
+                                       ParseFlag flag, String* assign, Vec<Value>* b,
                                        OptValue<>* target, F&& set_value) {
-                OptValue<> vec = Vec<Value>{};
                 auto ptr = assign;
+                Vec<Value> vec;
+                for (size_t count = 0;; count++) {
+                    if (b->size() >= count) {
+                        break;
+                    }
+                    parse_value(index, argc, argv, opt, flag, assign, &(*b)[count], target, std::forward<F>(set_value), true);
+                }
             }
 
             template <template <class...> class Vec, class String, class Char>
