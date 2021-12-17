@@ -98,7 +98,7 @@ namespace utils {
                 else {
                     *target = std::move(result);
                 }
-                +return ParseError::none;
+                return ParseError::none;
             }
 
             template <template <class...> class Vec, class String, class Char>
