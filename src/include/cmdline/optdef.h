@@ -53,14 +53,17 @@ namespace utils {
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionDesc {
             using option_t = wrap::shared_ptr<Option<String>>;
-            Vec<option_t> vec;
-            Map<String, option_t> desc;
 
+           private:
+            Vec<option_t> vec;
+            Map<String, size_t> desc;
+
+           public:
             template <class Str, class Help = Str>
             OptionDesc& operator()(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
                 auto alias = helper::split<Str, Vec>(utf::convert<String>(name), ",");
                 for (auto& n : alias) {
-                    if (n == Str()) {
+                    if (helper::equal(n, "")) {
                         return *this;
                     }
                     if (desc.find(n) != desc.end()) {
@@ -72,15 +75,17 @@ namespace utils {
                 opt->flag = flag;
                 opt->help = utf::convert<String>(help);
                 vec.push_back(opt);
+                auto idx = vec.size() - 1;
                 for (auto& n : alias) {
-                    desc.emplace(n, opt);
+                    desc.emplace(n, idx);
                 }
                 return *this;
             }
 
             bool find(auto& name, option_t& opt) {
                 if (auto found = desc.find(name); found != desc.end()) {
-                    opt = std::get<1>(*found);
+                    auto idx = std::get<1>(*found);
+                    opt = vec[idx];
                     return true;
                 }
                 return false;
