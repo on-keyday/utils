@@ -25,6 +25,6 @@ namespace utils {
                 ret.defval[i] = std::move(def[i]);
             }
             return ret;
-        };
+        }
     }  // namespace cmdline
 }  // namespace utils
