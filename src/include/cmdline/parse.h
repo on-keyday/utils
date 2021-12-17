@@ -140,6 +140,9 @@ namespace utils {
                         else if (e != ParseError::not_found) {
                             return e;
                         }
+                        if (any(flag & ParseFlag::adjacent_value)) {
+                            goto ADJACENT;
+                        }
                         if (any(flag & ParseFlag::ignore_not_found)) {
                             continue;
                         }
@@ -148,6 +151,7 @@ namespace utils {
                         }
                         return ParseError::not_found;
                     }
+                ADJACENT:
                     if (any(flag & ParseFlag::adjacent_value)) {
                         option_t opt;
                         auto view = helper::CharView<Char>(argv[index][1]);
