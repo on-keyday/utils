@@ -114,7 +114,7 @@ namespace utils {
                                        ParseFlag flag, String* assign, Vec<Value>* b,
                                        OptValue<>* target, F&& set_value) {
                 auto ptr = assign;
-                Vec<Value> vec;
+                OptValue<> value = Vec<Value>{};
                 for (size_t count = 0;; count++) {
                     if (b->size() >= count) {
                         break;
