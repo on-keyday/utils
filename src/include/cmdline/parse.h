@@ -113,6 +113,7 @@ namespace utils {
                                        wrap::shared_ptr<Option<String>>& opt,
                                        ParseFlag flag, String* assign, Value* b,
                                        OptValue<>* target, F&& set_value) {
+                OptValue<> vec = Vec<Value>{};
             }
 
             template <template <class...> class Vec, class String, class Char>
