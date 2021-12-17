@@ -44,6 +44,7 @@ namespace utils {
             int_not_number,
             require_more_argument,
             not_found,
+            invalid_value,
         };
 
         namespace internal {
@@ -51,7 +52,7 @@ namespace utils {
             ParseError parse_value(int& index, int argc, Char** argv,
                                    wrap::shared_ptr<Option<String>>& opt,
                                    ParseFlag flag, String* assign, Value* b,
-                                   OptValue<>* target, F&& set_value) {
+                                   OptValue<>* target, F&& set_value, bool on_loop = false) {
                 String cmp;
                 Value result;
                 bool need_less = false;
@@ -67,6 +68,9 @@ namespace utils {
                     }
                     else {
                         if (index + 1 < argc) {
+                            if (on_loop) {
+                                return ParseError::invalid_value;
+                            }
                             if (any(opt->flag & OptFlag::need_value)) {
                                 return ParseError::need_value;
                             }
@@ -81,14 +85,14 @@ namespace utils {
                             index++;
                         }
                     }
-                    else if (need_less) {
+                    else if (need_less && !on_loop) {
                         if (any(opt->flag & OptFlag::need_value)) {
                             return ParseError::need_value;
                         }
                         result = *b;
                     }
                     else {
-                        return ParseError::bool_not_true_or_false;
+                        return ParseError::invalid_value;
                     }
                 }
             SET:
