@@ -15,7 +15,7 @@
 void test_parse() {
     using namespace utils;
     utils::wrap::ArgvVector<> arg;
-    auto v = {"--str=value", "--int=92", "--bool"};
+    auto v = {"--str=value", "--int=92", "--bool", "--int"};
     arg.translate(v);
     char** argv;
     int argc;
