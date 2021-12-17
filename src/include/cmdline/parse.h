@@ -96,9 +96,11 @@ namespace utils {
                     desc.find(optname, opt);
                 }
                 if (opt) {
-                    fatal = parse_one(index, argc, argv, opt, result, flag, ptr) != ParseError::none;
+                    auto ret = parse_one(index, argc, argv, opt, result, flag, ptr);
+                    fatal = ret != ParseError::none;
+                    return ret;
                 }
-                return true;
+                return ParseError::not_found;
             };
             for (; index < argc; index++) {
                 if (nooption || argv[index][0] != '-') {
@@ -115,11 +117,11 @@ namespace utils {
                 }
                 else if (helper::starts_with(argv[index], "--")) {
                     if (any(flag & ParseFlag::two_prefix_longname)) {
-                        if (found_option(2)) {
+                        if (auto e = found_option(2); e == ParseError::none) {
                             continue;
                         }
-                        if (fatal) {
-                            return ret;
+                        else if (e != ParseError::not_found) {
+                            return e;
                         }
                     }
                     if (any(flag & ParseFlag::ignore_not_found)) {
@@ -132,11 +134,11 @@ namespace utils {
                 }
                 else {
                     if (any(flag & ParseFlag::one_prefix_longname)) {
-                        if (found_option(1)) {
+                        if (auto e = found_option(1); e == ParseError::none) {
                             continue;
                         }
-                        if (fatal) {
-                            return ret;
+                        else if (e != ParseError::not_found) {
+                            return e;
                         }
                         if (any(flag & ParseFlag::ignore_not_found)) {
                             continue;
