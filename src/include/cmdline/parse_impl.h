@@ -160,7 +160,7 @@ namespace utils {
 
             auto judge_bool() {
                 return [](auto& result, auto& value) {
-                    if (helper::equal("true") || helper::equal("false")) {
+                    if (helper::equal(value, "true") || helper::equal(value, "false")) {
                         result = value[0] == 't';
                         return true;
                     }
