@@ -59,7 +59,7 @@ namespace utils {
             template <class Int = int>
             void arg(Int& argc, Char**& argv) {
                 argv_.clear();
-                for (size_t i = 0; i < argv_.size(); i++) {
+                for (size_t i = 0; i < holder_.size(); i++) {
                     argv_.push_back(const_cast<Char*>(holder_[i].c_str()));
                 }
                 argv_.push_back(nullptr);
