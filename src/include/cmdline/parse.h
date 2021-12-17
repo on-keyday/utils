@@ -175,7 +175,7 @@ namespace utils {
                         option_t opt;
                         desc.find(helper::CharView<Char>(argv[current][1]).c_str(), opt);
                         if (opt) {
-                            if (auto e = parse_one(index, argc, argv, opt, result, flag, nullptr); e != ParseError::none) {
+                            if (auto e = parse_one(index, argc, argv, opt, result, flag, static_cast<String*>(nullptr)); e != ParseError::none) {
                                 return e;
                             }
                             continue;
