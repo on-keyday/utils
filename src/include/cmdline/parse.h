@@ -249,8 +249,13 @@ namespace utils {
             }
             assert(target);
             if (auto b = def.value<bool>()) {
+                return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, target);
             }
             else if (auto i = def.value<std::int64_t>()) {
+                return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, target);
+            }
+            else if (auto s = def.value<String>()) {
+                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, i, target);
             }
         }
 
