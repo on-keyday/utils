@@ -157,7 +157,7 @@ namespace utils {
                                 value = utf::convert<String>(argv[index] + 2);
                                 ptr = &value;
                             }
-                            if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, ptr); e != ParseError::none) {
+                            if (auto e = parse_one(index, argc, argv, opt, result, flag, ptr); e != ParseError::none) {
                                 return e;
                             }
                             continue;
@@ -175,7 +175,7 @@ namespace utils {
                         option_t opt;
                         desc.find(helper::CharView<Char>(argv[current][1]).c_str(), opt);
                         if (opt) {
-                            if (auto e = parse_one(index, argc, argv, opt, view.c_str(), result, flag, nullptr); e != ParseError::none) {
+                            if (auto e = parse_one(index, argc, argv, opt, result, flag, nullptr); e != ParseError::none) {
                                 return e;
                             }
                             continue;
