@@ -15,7 +15,8 @@
 void test_parse() {
     using namespace utils;
     utils::wrap::ArgvVector<> arg;
-    auto v = {"--str=value", "--int=92", "--bool", "--int"};
+    auto v = {"--str=value", "--int=92", "--bool", "--int",
+              "--bool2"};
     arg.translate(v);
     char** argv;
     int argc;
@@ -25,11 +26,14 @@ void test_parse() {
     desc
         .set("str", cmdline::str_option(""), "help str", cmdline::OptFlag::must_assign)
         .set("int", cmdline::int_option(0), "", cmdline::OptFlag::must_assign)
-        .set("bool", cmdline::bool_option(true), "help str2", cmdline::OptFlag::must_assign);
-    utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
+        .set("bool", cmdline::bool_option(true), "help str2", cmdline::OptFlag::must_assign)
+        .set("bool2", cmdline::bool_option(true), "help", cmdline::OptFlag::none);
+    utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map>
+        result;
     int index = 0;
-    utils::cmdline::parse(index, argc, argv, desc, result,
-                          cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname);
+    auto res = utils::cmdline::parse(index, argc, argv, desc, result,
+                                     cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname);
+    assert(res == cmdline::ParseError::none && "expect none but assertion failed");
 }
 
 int main() {
