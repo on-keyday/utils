@@ -111,6 +111,7 @@ namespace utils {
            private:
             Map<String, OptionResult<String, Vec>> result;
 
+           public:
             void emplace(wrap::shared_ptr<Option<String, Vec>> option, OptionResult<String, Vec>*& res) {
                 res = &result[option->mainname];
                 res->base = std::move(option);
