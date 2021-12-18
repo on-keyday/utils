@@ -16,6 +16,8 @@
 
 #include "../wrap/lite/enum.h"
 
+#include "../helper/view.h"
+
 namespace utils {
     namespace number {
         // clang-format off
@@ -41,11 +43,6 @@ namespace utils {
         // clang-format on
 
         namespace internal {
-
-            struct NopPushBacker {
-                template <class T>
-                constexpr void push_back(T&&) {}
-            };
 
             template <class T>
             struct PushBackParserInt {
@@ -202,9 +199,8 @@ namespace utils {
         template <class String>
         constexpr NumErr is_number(String&& v, int radix = 10, size_t offset = 0, bool* is_float = nullptr, bool expect_eof = true) {
             Sequencer<buffer_t<String&>> seq(v);
-            internal::NopPushBacker nop;
             seq.seek(offset);
-            auto e = read_number(nop, seq, radix, is_float);
+            auto e = read_number(helper::nop, seq, radix, is_float);
             if (!e) {
                 return e;
             }

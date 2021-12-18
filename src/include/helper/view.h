@@ -9,7 +9,6 @@
 // view - utility view
 #pragma once
 #include "../core/buffer.h"
-#include "../endian/endian.h"
 
 namespace utils {
     namespace helper {
@@ -68,5 +67,13 @@ namespace utils {
                 return c;
             }
         };
+
+        struct NopPushBacker {
+            template <class T>
+            constexpr void push_back(T&&) {}
+        };
+
+        constexpr NopPushBacker nop = {};
+
     }  // namespace helper
 }  // namespace utils
