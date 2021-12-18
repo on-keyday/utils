@@ -76,46 +76,63 @@ namespace utils {
 
             template <class Sep = const char*>
             String option_help(Sep sepflag = ", ", Sep sephelp = ": ", size_t indent = 0, size_t tablen = 4) {
-                auto set_desc = [&](auto& opt, auto& result) {
-                    for (size_t i = 0; i < opt->alias.size(); i++) {
-                        if (i != 0) {
-                            helper::append(result, sepflag);
-                        }
-                        auto& v = opt->alias[i];
-                        if (v.size() == 1) {
-                            helper::append(result, "-");
-                        }
-                        else {
-                            helper::append(result, "--");
-                        }
-                        helper::append(result, v);
-                        bool need_val = any(opt->flag & OptFlag::need_value);
-                        bool must_as = any(opt->flag & OptFlag::must_assign);
-                        if (auto v = opt->defvalue.template value<bool>()) {
-                            if (need_val) {
-                                if (must_as) {
-                                    helper::append(result, "=");
-                                }
-                                else {
-                                    helper::append(result, " ");
-                                }
-                                helper::append(result, *v ? "true" : "false");
-                            }
-                        }
-                        else {
+                auto write_a_option = [&](auto& result, auto& v, auto& opt) {
+                    if (v.size() == 1) {
+                        helper::append(result, "-");
+                    }
+                    else {
+                        helper::append(result, "--");
+                    }
+                    helper::append(result, v);
+                    bool need_val = any(opt->flag & OptFlag::need_value);
+                    bool must_as = any(opt->flag & OptFlag::must_assign);
+                    if (auto v = opt->defvalue.template value<bool>()) {
+                        if (need_val) {
                             if (must_as) {
                                 helper::append(result, "=");
                             }
                             else {
                                 helper::append(result, " ");
                             }
-                            if (opt->valdesc.size()) {
-                                helper::append(result, opt->valdesc);
-                            }
-                            else {
-                                helper::append(result, "VALUE");
-                            }
+                            helper::append(result, *v ? "true" : "false");
                         }
+                    }
+                    else {
+                        if (must_as) {
+                            helper::append(result, "=");
+                        }
+                        else {
+                            helper::append(result, " ");
+                        }
+                        if (opt->valdesc.size()) {
+                            helper::append(result, opt->valdesc);
+                        }
+                        else {
+                            helper::append(result, "VALUE");
+                        }
+                    }
+                };
+                auto set_desc = [&](auto& opt, auto& result) {
+                    size_t count;
+                    for (size_t i = 0; i < opt->alias.size(); i++) {
+                        if (v.size() != 1) {
+                            continue;
+                        }
+                        if (count != 0) {
+                            helper::append(result, sepflag);
+                        }
+                        auto& v = opt->alias[i];
+                        write_a_option(result, v, opt);
+                    }
+                    for (size_t i = 0; i < opt->alias.size(); i++) {
+                        if (v.size() == 1) {
+                            continue;
+                        }
+                        if (count != 0) {
+                            helper::append(result, sepflag);
+                        }
+                        auto& v = opt->alias[i];
+                        write_a_option(result, v, opt);
                     }
                 };
                 String result;
