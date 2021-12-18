@@ -64,6 +64,7 @@ namespace utils {
                 helper::append(result, "\n");
                 helper::append(result, helper::CharView(' ', indent + tablen));
                 helper::append(result, cmdname);
+                helper::append(result, " ");
                 helper::append(result, cmdusage);
                 helper::append(result, "\n");
                 helper::append(result, helper::CharView(' ', indent));
