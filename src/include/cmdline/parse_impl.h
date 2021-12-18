@@ -128,7 +128,7 @@ namespace utils {
                 Vec<Value>* v = value.template value<Vec<Value>>();
                 assert(v);
                 for (size_t count = 0;; count++) {
-                    if (b->defval.size() >= count) {
+                    if (b->defval.size() <= count) {
                         break;
                     }
                     auto& ref = b->defval[count];
