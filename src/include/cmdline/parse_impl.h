@@ -18,36 +18,6 @@
 
 namespace utils {
     namespace cmdline {
-        enum class ParseFlag {
-            none,
-            two_prefix_longname = 0x1,      // option begin with `--` is long name
-            allow_assign = 0x2,             // allow `=` operator
-            adjacent_value = 0x4,           // `-oValue` become `o` option with value `Value` (default `-oValue` become o,V,a,l,u,e option)
-            ignore_after_two_prefix = 0x8,  // after `--` is not option
-            one_prefix_longname = 0x10,     // option begin with `-` is long name
-            ignore_not_found = 0x20,        // ignore if option is not found
-            parse_all = 0x40,               // parse all arg
-            failure_opt_as_arg = 0x80,      // failed to parse arg is argument
-
-            // one_prefix_longname and adjacent_value are not settable at the same time
-            // one_prefix_longname has priority
-        };
-
-        DEFINE_ENUM_FLAGOP(ParseFlag)
-
-        enum class ParseError {
-            none,
-            suspend_parse,
-            not_one_opt,
-            not_assigned,
-            option_like_value,
-            need_value,
-            require_more_argument,
-            not_found,
-            invalid_value,
-            unexpected_type,
-            wrong_assign,
-        };
 
         namespace internal {
             template <template <class...> class Vec, class String, class Char, class Value, class F>

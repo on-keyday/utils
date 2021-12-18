@@ -25,9 +25,9 @@ namespace utils {
                 if (any(option.flag & OptFlag::once_in_cmd)) {
                     return ParseError::not_one_opt;
                 }
-                if (target->value.type() != type<Vec<OptValue<>>>()) {
-                    auto tmp = std::move(target->value);
-                    target->value = Vec<OptValue<>>{std::move(tmp)};
+                if (target->value_.type() != type<Vec<OptValue<>>>()) {
+                    auto tmp = std::move(target->value_);
+                    target->value_ = Vec<OptValue<>>{std::move(tmp)};
                 }
             }
             else {
@@ -35,22 +35,22 @@ namespace utils {
             }
             assert(target);
             if (auto b = def.template value<bool>()) {
-                return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, &target->value);
+                return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, &target->value_);
             }
             else if (auto i = def.template value<std::int64_t>()) {
-                return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, &target->value);
+                return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, &target->value_);
             }
             else if (auto s = def.template value<String>()) {
-                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, &target->value);
+                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, &target->value_);
             }
             else if (auto bv = def.template value<VecOption<Vec, std::uint8_t>>()) {
-                return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, &target->value);
+                return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, &target->value_);
             }
             else if (auto iv = def.template value<VecOption<Vec, std::int64_t>>()) {
-                return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, &target->value);
+                return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, &target->value_);
             }
             else if (auto sv = def.template value<VecOption<Vec, String>>()) {
-                return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, &target->value);
+                return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, &target->value_);
             }
             return ParseError::unexpected_type;
         }

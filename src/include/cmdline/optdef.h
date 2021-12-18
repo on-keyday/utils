@@ -96,7 +96,7 @@ namespace utils {
         struct OptionResult {
             using option_t = wrap::shared_ptr<Option<String, Vec>>;
             option_t base;
-            OptValue<> value;
+            OptValue<> value_;
 
             size_t count() const {
                 if (auto vec = value.template value<Vec<OptValue<>>>()) {
@@ -104,14 +104,65 @@ namespace utils {
                 }
                 return 1;
             }
+
+            template <class T>
+            T* value() {
+                if (auto v = value.template value<T>()) {
+                    return v;
+                }
+                return nullptr;
+            }
         };
+
+        enum class ParseFlag {
+            none,
+            two_prefix_longname = 0x1,      // option begin with `--` is long name
+            allow_assign = 0x2,             // allow `=` operator
+            adjacent_value = 0x4,           // `-oValue` become `o` option with value `Value` (default `-oValue` become o,V,a,l,u,e option)
+            ignore_after_two_prefix = 0x8,  // after `--` is not option
+            one_prefix_longname = 0x10,     // option begin with `-` is long name
+            ignore_not_found = 0x20,        // ignore if option is not found
+            parse_all = 0x40,               // parse all arg
+            failure_opt_as_arg = 0x80,      // failed to parse arg is argument
+
+            // one_prefix_longname and adjacent_value are not settable at the same time
+            // one_prefix_longname has priority
+        };
+
+        DEFINE_ENUM_FLAGOP(ParseFlag)
+
+        enum class ParseError {
+            none,
+            suspend_parse,
+            not_one_opt,
+            not_assigned,
+            option_like_value,
+            need_value,
+            require_more_argument,
+            not_found,
+            invalid_value,
+            unexpected_type,
+            wrong_assign,
+        };
+
+        template <class String, template <class...> class Vec, template <class...> class Map>
+        struct OptionSet;
+
+        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String, Vec>>& opt,
+                             OptionSet<String, Vec, Map>& result,
+                             ParseFlag flag, String* assign);
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet {
            private:
             Map<String, OptionResult<String, Vec>> result;
 
-           public:
+            template <class Str, class Char, template <class...> class Maps, template <class...> class Vecs>
+            friend ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<Str, Vecs>>& opt,
+                                        OptionSet<Str, Vecs, Maps>& result,
+                                        ParseFlag flag, Str* assign);
+
             void emplace(wrap::shared_ptr<Option<String, Vec>> option, OptionResult<String, Vec>*& res) {
                 res = &result[option->mainname];
                 res->base = std::move(option);
