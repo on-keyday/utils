@@ -15,19 +15,19 @@ namespace utils {
     namespace cmdline {
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String>>& opt,
+        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String, Vec>>& opt,
                              OptionSet<String, Vec, Map>& result,
                              ParseFlag flag, String* assign) {
-            Option<String>& option = *opt;
+            Option<String, Vec>& option = *opt;
             OptValue<>& def = option.defvalue;
-            OptValue<>* target = nullptr;
+            OptionResult<String, Vec>* target = nullptr;
             if (result.find(option.mainname, target)) {
                 if (any(option.flag & OptFlag::once_in_cmd)) {
                     return ParseError::not_one_opt;
                 }
-                if (target->type() != type<Vec<OptValue<>>>()) {
-                    auto tmp = std::move(*target);
-                    *target = Vec<OptValue<>>{std::move(tmp)};
+                if (target->value.type() != type<Vec<OptValue<>>>()) {
+                    auto tmp = std::move(target->value);
+                    target->value = Vec<OptValue<>>{std::move(tmp)};
                 }
             }
             else {
@@ -35,22 +35,22 @@ namespace utils {
             }
             assert(target);
             if (auto b = def.template value<bool>()) {
-                return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, target);
+                return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, &target->value);
             }
             else if (auto i = def.template value<std::int64_t>()) {
-                return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, target);
+                return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, &target->value);
             }
             else if (auto s = def.template value<String>()) {
-                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, target);
+                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, &target->value);
             }
             else if (auto bv = def.template value<VecOption<Vec, std::uint8_t>>()) {
-                return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, target);
+                return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, &target->value);
             }
             else if (auto iv = def.template value<VecOption<Vec, std::int64_t>>()) {
-                return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, target);
+                return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, &target->value);
             }
             else if (auto sv = def.template value<VecOption<Vec, String>>()) {
-                return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, target);
+                return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, &target->value);
             }
             return ParseError::unexpected_type;
         }
@@ -60,7 +60,7 @@ namespace utils {
                          OptionDesc<String, Vec, Map>& desc,
                          OptionSet<String, Vec, Map>& result,
                          ParseFlag flag, Vec<String>* arg = nullptr) {
-            using option_t = wrap::shared_ptr<Option<String>>;
+            using option_t = wrap::shared_ptr<Option<String, Vec>>;
             bool nooption = false;
             ParseError ret = ParseError::none;
             auto parse_all = [&](bool failed) {

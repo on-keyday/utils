@@ -29,12 +29,13 @@ namespace utils {
 
         DEFINE_ENUM_FLAGOP(OptFlag)
 
-        template <class String>
+        template <class String, template <class...> class Vec>
         struct Option {
             String mainname;
             OptValue<> defvalue;
             String help;
             OptFlag flag = OptFlag::none;
+            Vec<String> alias;
         };
 
         template <template <class...> class Vec, class T>
@@ -45,7 +46,7 @@ namespace utils {
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionDesc {
-            using option_t = wrap::shared_ptr<Option<String>>;
+            using option_t = wrap::shared_ptr<Option<String, Vec>>;
 
            private:
             Vec<option_t> vec;
@@ -66,7 +67,7 @@ namespace utils {
                         return *this;
                     }
                 }
-                auto opt = wrap::make_shared<Option<String>>();
+                auto opt = wrap::make_shared<Option<String, Vec>>();
                 opt->mainname = alias[0];
                 opt->defvalue = std::move(defvalue);
                 opt->flag = flag;
@@ -76,6 +77,7 @@ namespace utils {
                 for (auto& n : alias) {
                     desc.emplace(n, idx);
                 }
+                opt->alias = std::move(alias);
                 return *this;
             }
 
@@ -90,22 +92,22 @@ namespace utils {
             }
         };
 
-        template <class String>
+        template <class String, template <class...> class Vec>
         struct OptionResult {
-            using option_t = wrap::shared_ptr<Option<String>>;
+            using option_t = wrap::shared_ptr<Option<String, Vec>>;
             option_t base;
             OptValue<> value;
         };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet {
-            Map<String, OptValue<>> result;
+            Map<String, OptionResult<String, Vec>> result;
 
-            void emplace(auto& name, OptValue<>*& opt) {
+            void emplace(auto& name, OptionResult<String, Vec>*& opt) {
                 opt = &result[name];
             }
 
-            bool find(auto& name, OptValue<>*& opt) {
+            bool find(auto& name, OptionResult<String, Vec>*& opt) {
                 if (auto found = result.find(name); found != result.end()) {
                     opt = &std::get<1>(*found);
                     return true;

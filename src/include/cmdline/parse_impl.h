@@ -52,7 +52,7 @@ namespace utils {
         namespace internal {
             template <template <class...> class Vec, class String, class Char, class Value, class F>
             ParseError parse_value(int& index, int argc, Char** argv,
-                                   wrap::shared_ptr<Option<String>>& opt,
+                                   wrap::shared_ptr<Option<String, Vec>>& opt,
                                    ParseFlag flag, String* assign, Value* b,
                                    OptValue<>* target, F&& set_value, bool on_loop = false) {
                 String cmp;
@@ -120,7 +120,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char, class Value, class F>
             ParseError parse_vec_value(int& index, int argc, Char** argv,
-                                       wrap::shared_ptr<Option<String>>& opt,
+                                       wrap::shared_ptr<Option<String, Vec>>& opt,
                                        ParseFlag flag, String* assign, VecOption<Vec, Value>* b,
                                        OptValue<>* target, F&& set_value) {
                 auto ptr = assign;
@@ -175,7 +175,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_bool(int& index, int argc, Char** argv,
-                                  wrap::shared_ptr<Option<String>>& opt,
+                                  wrap::shared_ptr<Option<String, Vec>>& opt,
                                   ParseFlag flag, String* assign, bool* b,
                                   OptValue<>* target) {
                 return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_bool());
@@ -198,7 +198,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_int(int& index, int argc, Char** argv,
-                                 wrap::shared_ptr<Option<String>>& opt,
+                                 wrap::shared_ptr<Option<String, Vec>>& opt,
                                  ParseFlag flag, String* assign, std::int64_t* b,
                                  OptValue<>* target) {
                 return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_int());
@@ -213,7 +213,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_string(int& index, int argc, Char** argv,
-                                    wrap::shared_ptr<Option<String>>& opt,
+                                    wrap::shared_ptr<Option<String, Vec>>& opt,
                                     ParseFlag flag, String* assign, String* b,
                                     OptValue<>* target) {
                 return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_string());
@@ -221,7 +221,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_bool(int& index, int argc, Char** argv,
-                                      wrap::shared_ptr<Option<String>>& opt,
+                                      wrap::shared_ptr<Option<String, Vec>>& opt,
                                       ParseFlag flag, String* assign, VecOption<Vec, std::uint8_t>* b,
                                       OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_bool());
@@ -229,7 +229,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_int(int& index, int argc, Char** argv,
-                                     wrap::shared_ptr<Option<String>>& opt,
+                                     wrap::shared_ptr<Option<String, Vec>>& opt,
                                      ParseFlag flag, String* assign, VecOption<Vec, std::int64_t>* b,
                                      OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_int());
@@ -237,7 +237,7 @@ namespace utils {
 
             template <template <class...> class Vec, class String, class Char>
             ParseError parse_vec_string(int& index, int argc, Char** argv,
-                                        wrap::shared_ptr<Option<String>>& opt,
+                                        wrap::shared_ptr<Option<String, Vec>>& opt,
                                         ParseFlag flag, String* assign, VecOption<Vec, String>* b,
                                         OptValue<>* target) {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_string());
