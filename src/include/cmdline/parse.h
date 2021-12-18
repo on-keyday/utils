@@ -101,8 +101,7 @@ namespace utils {
                     desc.find(optname, opt);
                 }
                 if (opt) {
-                    auto ret = parse_one(index, argc, argv, opt, result, flag, ptr);
-                    return ret;
+                    return parse_one(index, argc, argv, opt, result, flag, ptr);
                 }
                 return ParseError::not_found;
             };
