@@ -53,6 +53,9 @@ namespace utils {
             Map<String, size_t> desc;
 
            public:
+            String help() {
+            }
+
             template <class Str, class Help = Str>
             OptionDesc& set(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
                 auto alias = helper::split<String, Vec>(utf::convert<String>(name), ",");
@@ -175,6 +178,8 @@ namespace utils {
                 }
                 return false;
             }
+
+           public:
         };
     }  // namespace cmdline
 

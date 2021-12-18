@@ -38,7 +38,6 @@ namespace utils {
            private:
             struct interface {
                 virtual const Type* type() const = 0;
-                virtual void* raw() = 0;
                 virtual const void* raw() const = 0;
                 virtual interface* copy() const = 0;
                 virtual ~interface() {}
@@ -56,9 +55,6 @@ namespace utils {
                     return cmdline::type<T>();
                 }
 
-                void* raw() override {
-                    return reinterpret_cast<void*>(std::addressof(value));
-                }
                 const void* raw() const override {
                     return reinterpret_cast<const void*>(std::addressof(value));
                 }
@@ -119,7 +115,7 @@ namespace utils {
             template <class T>
             T* value() {
                 if (cmdline::type<T>() == type()) {
-                    return reinterpret_cast<T*>(iface->raw());
+                    return reinterpret_cast<T*>(const_cast<void*>(iface->raw()));
                 }
                 return nullptr;
             }

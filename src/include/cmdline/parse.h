@@ -27,7 +27,9 @@ namespace utils {
                 }
                 if (target->value_.type() != type<Vec<OptValue<>>>()) {
                     auto tmp = std::move(target->value_);
-                    target->value_ = Vec<OptValue<>>{std::move(tmp)};
+                    Vec<OptValue<>> vec;
+                    vec.push_back(std::move(tmp));
+                    target->value_ = std::move(vec);
                 }
             }
             else {
