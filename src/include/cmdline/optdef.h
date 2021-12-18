@@ -56,13 +56,20 @@ namespace utils {
 
            public:
             template <class Sep = const char*, class CmdName = Sep>
-            String help(Sep usage = "Usage:", CmdName cmdname = "command",
+            String help(CmdName cmdusage = "command [option]", Sep usage = "Usage:", Sep option = "Option:",
                         Sep sepflag = ", ", Sep sephelp = ": ", size_t indent = 0, size_t tablen = 4) {
                 String result;
+                helper::append(result, helper::CharView(' ', indent));
                 helper::append(result, usage);
                 helper::append(result, "\n");
+                helper::append(result, helper::CharView(' ', indent + tablen));
+                helper::append(result, cmdusage);
+                helper::append(result, "\n");
                 helper::append(result, helper::CharView(' ', indent));
-                helper::append(result, option_help(sepflag, sephelp, indent + tablen, tablen));
+                helper::append(result, option);
+                helper::append(result, "\n");
+                helper::append(result, option_help(sepflag, sephelp, indent, tablen));
+                return result;
             }
 
             template <class Sep = const char*>
