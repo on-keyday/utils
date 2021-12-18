@@ -115,23 +115,23 @@ namespace utils {
                 auto set_desc = [&](auto& opt, auto& result) {
                     size_t count;
                     for (size_t i = 0; i < opt->alias.size(); i++) {
+                        auto& v = opt->alias[i];
                         if (v.size() != 1) {
                             continue;
                         }
                         if (count != 0) {
                             helper::append(result, sepflag);
                         }
-                        auto& v = opt->alias[i];
                         write_a_option(result, v, opt);
                     }
                     for (size_t i = 0; i < opt->alias.size(); i++) {
+                        auto& v = opt->alias[i];
                         if (v.size() == 1) {
                             continue;
                         }
                         if (count != 0) {
                             helper::append(result, sepflag);
                         }
-                        auto& v = opt->alias[i];
                         write_a_option(result, v, opt);
                     }
                 };
