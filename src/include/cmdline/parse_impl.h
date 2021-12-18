@@ -169,10 +169,10 @@ namespace utils {
                 };
             }
 
-            template <template <class...> class Vec, class String, class Char>
+            template <template <class...> class Vec, class String, class Char, class Int>
             ParseError parse_int(int& index, int argc, Char** argv,
                                  wrap::shared_ptr<Option<String, Vec>>& opt,
-                                 ParseFlag flag, String* assign, std::int64_t* b,
+                                 ParseFlag flag, String* assign, Int* b,
                                  OptValue<>* target) {
                 return parse_value<Vec>(index, argc, argv, opt, flag, assign, b, target, judge_int());
             }
