@@ -97,10 +97,18 @@ namespace utils {
             using option_t = wrap::shared_ptr<Option<String, Vec>>;
             option_t base;
             OptValue<> value;
+
+            size_t count() const {
+                if (auto vec = value.template value<Vec<OptValue<>>>()) {
+                    return vec->size();
+                }
+                return 1;
+            }
         };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet {
+           private:
             Map<String, OptionResult<String, Vec>> result;
 
             void emplace(wrap::shared_ptr<Option<String, Vec>> option, OptionResult<String, Vec>*& res) {
