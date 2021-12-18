@@ -103,8 +103,9 @@ namespace utils {
         struct OptionSet {
             Map<String, OptionResult<String, Vec>> result;
 
-            void emplace(auto& name, OptionResult<String, Vec>*& opt) {
-                opt = &result[name];
+            void emplace(wrap::shared_ptr<Option<String, Vec>> option, OptionResult<String, Vec>*& res) {
+                res = &result[option->mainname];
+                res->base = std::move(option);
             }
 
             bool find(auto& name, OptionResult<String, Vec>*& opt) {
