@@ -75,11 +75,14 @@ namespace utils {
 
         constexpr NopPushBacker nop = {};
 
+        template <class Buf = NopPushBacker>
         struct CountPushBacker {
+            Buf buf;
             size_t count = 0;
             template <class T>
-            constexpr void push_back(T&&) const {
+            constexpr void push_back(T&& t) {
                 count++;
+                buf.push_back(std::forward<T>(t));
             }
         };
 
