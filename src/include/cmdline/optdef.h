@@ -253,7 +253,6 @@ namespace utils {
             invalid_value,
             wrong_value,
             unexpected_type,
-            wrong_assign,
         };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
