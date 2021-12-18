@@ -56,7 +56,7 @@ namespace utils {
 
            public:
             template <class Sep = const char*>
-            String help(Sep sepflag = ", ", Sep sephelp = ":", size_t indent = 0, size_t tablen = 4) {
+            String help(Sep sepflag = ", ", Sep sephelp = ": ", size_t indent = 0, size_t tablen = 4) {
                 auto set_desc = [&](auto& opt, auto& result) {
                     for (size_t i = 0; i < opt->alias.size(); i++) {
                         if (i != 0) {
