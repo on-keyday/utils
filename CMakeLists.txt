@@ -45,6 +45,7 @@ target_link_libraries(channel libutils)
 target_link_libraries(tokenizer libutils)
 target_link_libraries(make_parser libutils)
 target_link_libraries(syntaxc libutils)
+target_link_libraries(cmdparse libutils)
 
 #if(WIN32)
 #target_link_libraries(netiface libssl libcrypto ws2_32)

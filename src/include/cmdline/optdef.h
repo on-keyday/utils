@@ -35,6 +35,7 @@ namespace utils {
             String mainname;
             OptValue<> defvalue;
             String help;
+            String valdesc;
             OptFlag flag = OptFlag::none;
             Vec<String> alias;
         };
@@ -55,11 +56,11 @@ namespace utils {
 
            public:
             template <class Sep = const char*>
-            String help(Sep sep = ", ", size_t indent = 0, size_t tablen = 4) {
+            String help(Sep sepflag = ", ", Sep sephelp = ":", size_t indent = 0, size_t tablen = 4) {
                 auto set_desc = [&](auto& opt, auto& result) {
                     for (size_t i = 0; i < opt->alias.size(); i++) {
                         if (i != 0) {
-                            helper::append(result, sep);
+                            helper::append(result, sepflag);
                         }
                         auto& v = opt->alias[i];
                         if (v.size() == 1) {
@@ -69,6 +70,39 @@ namespace utils {
                             helper::append(result, "--");
                         }
                         helper::append(result, v);
+                        bool need_val = any(opt->flag & OptFlag::need_value);
+                        bool must_as = any(opt->flag & OptFlag::must_assign);
+                        if (auto v = opt->defvalue.template value<bool>()) {
+                            if (need_val) {
+                                if (must_as) {
+                                    helper::append(result, "=");
+                                }
+                                else {
+                                    helper::append(result, " ");
+                                }
+                                helper::append(result, *v ? "true" : "false");
+                            }
+                        }
+                        else {
+                            if (must_as) {
+                                helper::append(result, "=");
+                            }
+                            else {
+                                helper::append(result, " ");
+                            }
+                            if (!need_val) {
+                                helper::append(result, "[");
+                            }
+                            if (opt->valdesc.size()) {
+                                helper::append(result, opt->valdesc);
+                            }
+                            else {
+                                helper::append(result, "VALUE");
+                            }
+                            if (!need_val) {
+                                helper::append(result, "]");
+                            }
+                        }
                     }
                 };
                 String result;
@@ -86,7 +120,7 @@ namespace utils {
                     set_desc(opt, pb);
                     auto remain = maxlen + 1 - pb.count;
                     helper::append(result, helper::CharView(' ', remain));
-                    helper::append(result, ":");
+                    helper::append(result, sephelp);
                     helper::append(result, opt->help);
                     helper::append(result, "\n");
                 }

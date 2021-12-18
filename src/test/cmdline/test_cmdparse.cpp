@@ -12,6 +12,8 @@
 
 #include "../../include/wrap/lite/lite.h"
 
+#include "../../include/wrap/cout.h"
+
 void test_parse() {
     using namespace utils;
     utils::wrap::ArgvVector<> arg;
@@ -26,7 +28,7 @@ void test_parse() {
     utils::cmdline::OptionDesc<wrap::string, wrap::vector, wrap::map> desc;
     desc
         .set("str", cmdline::str_option(""), "help str", cmdline::OptFlag::must_assign)
-        .set("int", cmdline::int_option(0), "", cmdline::OptFlag::must_assign)
+        .set("int", cmdline::int_option(0), "sss", cmdline::OptFlag::must_assign)
         .set("bool", cmdline::bool_option(true), "help str2", cmdline::OptFlag::must_assign)
         .set("bool2", cmdline::bool_option(true), "help", cmdline::OptFlag::none)
         .set("str2", cmdline::str_option("index.html"), "help str", cmdline::OptFlag::need_value | cmdline::OptFlag::no_option_like)
@@ -36,6 +38,9 @@ void test_parse() {
     auto res = utils::cmdline::parse(index, argc, argv, desc, result,
                                      cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname | cmdline::ParseFlag::one_prefix_longname);
     assert(res == cmdline::ParseError::none && "expect none but assertion failed");
+
+    auto& cout = wrap::cout_wrap();
+    cout << desc.help();
 }
 
 int main() {
