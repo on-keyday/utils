@@ -95,9 +95,6 @@ namespace utils {
                 if (has_assign) {
                     auto seq = utils::make_ref_seq(optname);
                     if (helper::read_until(name, seq, "=")) {
-                        if (seq.eos()) {
-                            return ParseError::wrong_assign;
-                        }
                         value = utf::convert<String>(argv[index] + seq.rptr + offset);
                         ptr = &value;
                     }
@@ -162,9 +159,6 @@ namespace utils {
                                 int offset = 2;
                                 if (has_assign && argv[index][2] == '=') {
                                     offset = 3;
-                                    if (!argv[index][3]) {
-                                        return ParseError::wrong_assign;
-                                    }
                                 }
                                 value = utf::convert<String>(argv[index] + offset);
                                 ptr = &value;
