@@ -251,7 +251,7 @@ namespace utils {
             require_more_argument,
             not_found,
             invalid_value,
-            wrong_value,
+            wrong_assign,
             unexpected_type,
         };
 

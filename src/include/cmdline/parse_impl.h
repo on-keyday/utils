@@ -59,7 +59,7 @@ namespace utils {
                         }
                     }
                     else if (assign) {
-                        return ParseError::wrong_value;
+                        return ParseError::wrong_assign;
                     }
                     else if (need_less && !on_loop) {
                         if (any(opt->flag & OptFlag::need_value)) {
