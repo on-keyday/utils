@@ -55,8 +55,18 @@ namespace utils {
             Map<String, size_t> desc;
 
            public:
+            template <class Sep = const char*, class CmdName = Sep>
+            String help(Sep usage = "Usage:", CmdName cmdname = "command",
+                        Sep sepflag = ", ", Sep sephelp = ": ", size_t indent = 0, size_t tablen = 4) {
+                String result;
+                helper::append(result, usage);
+                helper::append(result, "\n");
+                helper::append(result, helper::CharView(' ', indent));
+                helper::append(result, option_help(sepflag, sephelp, indent + tablen, tablen));
+            }
+
             template <class Sep = const char*>
-            String help(Sep sepflag = ", ", Sep sephelp = ": ", size_t indent = 0, size_t tablen = 4) {
+            String option_help(Sep sepflag = ", ", Sep sephelp = ": ", size_t indent = 0, size_t tablen = 4) {
                 auto set_desc = [&](auto& opt, auto& result) {
                     for (size_t i = 0; i < opt->alias.size(); i++) {
                         if (i != 0) {
