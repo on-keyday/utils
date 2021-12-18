@@ -13,49 +13,50 @@
 
 namespace utils {
     namespace cmdline {
-
-        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String, Vec>>& opt,
-                             OptionSet<String, Vec, Map>& result,
-                             ParseFlag flag, String* assign) {
-            Option<String, Vec>& option = *opt;
-            OptValue<>& def = option.defvalue;
-            OptionResult<String, Vec>* target = nullptr;
-            if (result.find(option.mainname, target)) {
-                if (any(option.flag & OptFlag::once_in_cmd)) {
-                    return ParseError::not_one_opt;
+        namespace internal {
+            template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+            ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String, Vec>>& opt,
+                                 OptionSet<String, Vec, Map>& result,
+                                 ParseFlag flag, String* assign) {
+                Option<String, Vec>& option = *opt;
+                OptValue<>& def = option.defvalue;
+                OptionResult<String, Vec>* target = nullptr;
+                if (result.find(option.mainname, target)) {
+                    if (any(option.flag & OptFlag::once_in_cmd)) {
+                        return ParseError::not_one_opt;
+                    }
+                    if (target->value_.type() != type<Vec<OptValue<>>>()) {
+                        auto tmp = std::move(target->value_);
+                        Vec<OptValue<>> vec;
+                        vec.push_back(std::move(tmp));
+                        target->value_ = std::move(vec);
+                    }
                 }
-                if (target->value_.type() != type<Vec<OptValue<>>>()) {
-                    auto tmp = std::move(target->value_);
-                    Vec<OptValue<>> vec;
-                    vec.push_back(std::move(tmp));
-                    target->value_ = std::move(vec);
+                else {
+                    result.emplace(opt, target);
                 }
+                assert(target);
+                if (auto b = def.template value<bool>()) {
+                    return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, &target->value_);
+                }
+                else if (auto i = def.template value<std::int64_t>()) {
+                    return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, &target->value_);
+                }
+                else if (auto s = def.template value<String>()) {
+                    return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, &target->value_);
+                }
+                else if (auto bv = def.template value<VecOption<Vec, std::uint8_t>>()) {
+                    return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, &target->value_);
+                }
+                else if (auto iv = def.template value<VecOption<Vec, std::int64_t>>()) {
+                    return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, &target->value_);
+                }
+                else if (auto sv = def.template value<VecOption<Vec, String>>()) {
+                    return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, &target->value_);
+                }
+                return ParseError::unexpected_type;
             }
-            else {
-                result.emplace(opt, target);
-            }
-            assert(target);
-            if (auto b = def.template value<bool>()) {
-                return internal::parse_bool<Vec>(index, argc, argv, opt, flag, assign, b, &target->value_);
-            }
-            else if (auto i = def.template value<std::int64_t>()) {
-                return internal::parse_int<Vec>(index, argc, argv, opt, flag, assign, i, &target->value_);
-            }
-            else if (auto s = def.template value<String>()) {
-                return internal::parse_string<Vec>(index, argc, argv, opt, flag, assign, s, &target->value_);
-            }
-            else if (auto bv = def.template value<VecOption<Vec, std::uint8_t>>()) {
-                return internal::parse_vec_bool(index, argc, argv, opt, flag, assign, bv, &target->value_);
-            }
-            else if (auto iv = def.template value<VecOption<Vec, std::int64_t>>()) {
-                return internal::parse_vec_int(index, argc, argv, opt, flag, assign, iv, &target->value_);
-            }
-            else if (auto sv = def.template value<VecOption<Vec, String>>()) {
-                return internal::parse_vec_string(index, argc, argv, opt, flag, assign, sv, &target->value_);
-            }
-            return ParseError::unexpected_type;
-        }
+        }  // namespace internal
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec>
         ParseError parse(int& index, int argc, Char** argv,
@@ -85,7 +86,10 @@ namespace utils {
             };
             bool has_assign = any(flag & ParseFlag::allow_assign);
             auto found_option = [&](int offset) {
-                auto optname = argv[index] + offset;
+                String optname = utf::convert<String>(argv[index] + offset);
+                if (optname.size() == 1) {
+                    return ParseError::not_found;
+                }
                 option_t opt;
                 String name, value, *ptr = nullptr;
                 if (has_assign) {
@@ -103,7 +107,7 @@ namespace utils {
                     desc.find(optname, opt);
                 }
                 if (opt) {
-                    return parse_one(index, argc, argv, opt, result, flag, ptr);
+                    return internal::parse_one(index, argc, argv, opt, result, flag, ptr);
                 }
                 return ParseError::not_found;
             };
@@ -165,7 +169,7 @@ namespace utils {
                                 value = utf::convert<String>(argv[index] + offset);
                                 ptr = &value;
                             }
-                            if (auto e = parse_one(index, argc, argv, opt, result, flag, ptr); e != ParseError::none) {
+                            if (auto e = internal::parse_one(index, argc, argv, opt, result, flag, ptr); e != ParseError::none) {
                                 return e;
                             }
                             continue;
@@ -180,7 +184,7 @@ namespace utils {
                         option_t opt;
                         desc.find(helper::CharView<Char>(argv[current][1]).c_str(), opt);
                         if (opt) {
-                            if (auto e = parse_one(index, argc, argv, opt, result, flag, static_cast<String*>(nullptr)); e != ParseError::none) {
+                            if (auto e = internal::parse_one(index, argc, argv, opt, result, flag, static_cast<String*>(nullptr)); e != ParseError::none) {
                                 return e;
                             }
                             continue;

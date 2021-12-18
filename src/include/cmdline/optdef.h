@@ -23,7 +23,7 @@ namespace utils {
             none = 0,
             required = 0x1,        // option must set
             must_assign = 0x2,     // value must set with `=`
-            no_option_like = 0x4,  // `somevalue` type disallow string like `option`
+            no_option_like = 0x4,  // disallow string begin with `-`
             once_in_cmd = 0x8,     // allow only once to set
             need_value = 0x10,     // need value
         };
@@ -221,6 +221,8 @@ namespace utils {
         };
 
         enum class ParseFlag {
+            // the word `longname` means option name which length is not 1
+
             none,
             two_prefix_longname = 0x1,      // option begin with `--` is long name
             allow_assign = 0x2,             // allow `=` operator
@@ -230,6 +232,8 @@ namespace utils {
             ignore_not_found = 0x20,        // ignore if option is not found
             parse_all = 0x40,               // parse all arg
             failure_opt_as_arg = 0x80,      // failed to parse arg is argument
+
+            optget_mode = two_prefix_longname | ignore_after_two_prefix | parse_all | allow_assign,
 
             // one_prefix_longname and adjacent_value are not settable at the same time
             // one_prefix_longname has priority
