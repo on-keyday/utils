@@ -89,6 +89,9 @@ namespace utils {
                 if (has_assign) {
                     auto seq = utils::make_ref_seq(optname);
                     if (helper::read_until(name, seq, "=")) {
+                        if (seq.eos()) {
+                            return ParseError::wrong_assign;
+                        }
                         value = utf::convert<String>(argv[index] + seq.rptr + offset);
                         ptr = &value;
                     }
