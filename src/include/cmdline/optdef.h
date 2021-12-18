@@ -113,7 +113,7 @@ namespace utils {
                     }
                 };
                 auto set_desc = [&](auto& opt, auto& result) {
-                    size_t count;
+                    size_t count = 0;
                     for (size_t i = 0; i < opt->alias.size(); i++) {
                         auto& v = opt->alias[i];
                         if (v.size() != 1) {
@@ -123,6 +123,7 @@ namespace utils {
                             helper::append(result, sepflag);
                         }
                         write_a_option(result, v, opt);
+                        count++;
                     }
                     for (size_t i = 0; i < opt->alias.size(); i++) {
                         auto& v = opt->alias[i];
@@ -133,6 +134,7 @@ namespace utils {
                             helper::append(result, sepflag);
                         }
                         write_a_option(result, v, opt);
+                        count++;
                     }
                 };
                 String result;
