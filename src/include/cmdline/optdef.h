@@ -54,6 +54,9 @@ namespace utils {
 
            public:
             String help() {
+                String result;
+                for (option_t& opt : vec) {
+                }
             }
 
             template <class Str, class Help = Str>
