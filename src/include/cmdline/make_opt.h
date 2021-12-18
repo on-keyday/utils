@@ -21,7 +21,7 @@ namespace utils {
             VecOption<Vec, T> ret;
             ret.defval.resize(maximum);
             ret.minimum = miniimum;
-            for (size_t i = 0; i < maximum; i++) {
+            for (size_t i = 0; i < maximum && i < def.size(); i++) {
                 ret.defval[i] = std::move(def[i]);
             }
             return ret;
