@@ -14,12 +14,9 @@
 
 #include "../../include/wrap/cout.h"
 
-void test_parse() {
+utils::cmdline::ParseError test_parse(std::initializer_list<const char*> v) {
     using namespace utils;
     utils::wrap::ArgvVector<> arg;
-    auto v = {"--str=value", "--int=92", "--bool", "--int",
-              "--bool2", "--str2", "value", "-int=3",
-              "--multi", "val1", "val2"};
     arg.translate(v);
     char** argv;
     int argc;
@@ -35,14 +32,16 @@ void test_parse() {
         .set("multi", cmdline::multi_option<wrap::string>(3, 2), "help", cmdline::OptFlag::no_option_like);
     utils::cmdline::OptionSet<wrap::string, wrap::vector, wrap::map> result;
     int index = 0;
-    auto res = utils::cmdline::parse(index, argc, argv, desc, result,
-                                     cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname | cmdline::ParseFlag::one_prefix_longname);
-    assert(res == cmdline::ParseError::none && "expect none but assertion failed");
-
-    auto& cout = wrap::cout_wrap();
-    cout << desc.help();
+    return utils::cmdline::parse(index, argc, argv, desc, result,
+                                 cmdline::ParseFlag::allow_assign | cmdline::ParseFlag::two_prefix_longname | cmdline::ParseFlag::one_prefix_longname);
 }
 
 int main() {
-    test_parse();
+    using namespace utils;
+    auto res = test_parse({"--str=value", "--int=92", "--bool", "--int",
+                           "--bool2", "--str2", "value", "-int=3",
+                           "--multi", "val1", "val2"});
+    assert(res == cmdline::ParseError::none && "expect none but assertion failed");
+    res = test_parse({"-int=3en"});
+    assert(res == cmdline::ParseError::wrong_assign && "expect wrong_assign but assertion failed");
 }
