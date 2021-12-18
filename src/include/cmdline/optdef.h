@@ -257,11 +257,12 @@ namespace utils {
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet;
-
-        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
-        ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String, Vec>>& opt,
-                             OptionSet<String, Vec, Map>& result,
-                             ParseFlag flag, String* assign);
+        namespace internal {
+            template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+            ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<String, Vec>>& opt,
+                                 OptionSet<String, Vec, Map>& result,
+                                 ParseFlag flag, String* assign);
+        }
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet {
@@ -269,9 +270,9 @@ namespace utils {
             Map<String, OptionResult<String, Vec>> result;
 
             template <class Str, class Char, template <class...> class Maps, template <class...> class Vecs>
-            friend ParseError parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<Str, Vecs>>& opt,
-                                        OptionSet<Str, Vecs, Maps>& result,
-                                        ParseFlag flag, Str* assign);
+            friend ParseError internal::parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<Str, Vecs>>& opt,
+                                                  OptionSet<Str, Vecs, Maps>& result,
+                                                  ParseFlag flag, Str* assign);
 
             void emplace(wrap::shared_ptr<Option<String, Vec>> option, OptionResult<String, Vec>*& res) {
                 res = &result[option->mainname];
