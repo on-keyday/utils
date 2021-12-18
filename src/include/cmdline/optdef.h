@@ -15,6 +15,7 @@
 #include "../helper/strutil.h"
 #include "../helper/splits.h"
 #include "../wrap/lite/enum.h"
+#include "../helper/appender.h"
 
 namespace utils {
     namespace cmdline {
@@ -56,6 +57,15 @@ namespace utils {
             String help() {
                 String result;
                 for (option_t& opt : vec) {
+                    for (auto& v : opt->alias) {
+                        if (v.size() == 1) {
+                            helper::append(result, "-");
+                        }
+                        else {
+                            helper::append(result, "--");
+                        }
+                        helper::append(result, v);
+                    }
                 }
             }
 
