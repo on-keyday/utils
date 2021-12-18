@@ -84,13 +84,14 @@ namespace utils {
                             }
                         }
                         else {
+                            auto is_str = (bool)opt->defvalue.template value<String>();
                             if (must_as) {
                                 helper::append(result, "=");
                             }
                             else {
                                 helper::append(result, " ");
                             }
-                            if (!need_val) {
+                            if (!is_str && !need_val) {
                                 helper::append(result, "[");
                             }
                             if (opt->valdesc.size()) {
@@ -99,7 +100,7 @@ namespace utils {
                             else {
                                 helper::append(result, "VALUE");
                             }
-                            if (!need_val) {
+                            if (!is_str && !need_val) {
                                 helper::append(result, "]");
                             }
                         }
