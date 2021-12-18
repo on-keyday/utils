@@ -147,4 +147,9 @@ namespace utils {
         return Sequencer<buffer_t<String&>>{v};
     }
 
+    template <class String>
+    Sequencer<std::decay_t<String>> make_cpy_seq(const String& v) {
+        return Sequencer<std::decay_t<String>>{v};
+    }
+
 }  // namespace utils
