@@ -70,9 +70,6 @@ namespace utils {
                         }
                         helper::append(result, v);
                     }
-                    if (maxlen) {
-                        helper::append(result, helper::CharView(' ', maxlen));
-                    }
                 };
                 String result;
                 size_t maxlen = 0;
@@ -82,6 +79,9 @@ namespace utils {
                     if (counter.count > maxlen) {
                         maxlen = counter.count;
                     }
+                }
+                for (option_t& opt : vec) {
+                    helper::CountPushBacker<String&> pb{result};
                 }
             }
 
