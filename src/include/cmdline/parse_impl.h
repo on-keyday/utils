@@ -216,5 +216,6 @@ namespace utils {
                 return parse_vec_value(index, argc, argv, opt, flag, assign, b, target, judge_string());
             }
         }  // namespace internal
-    }      // namespace cmdline
+
+    }  // namespace cmdline
 }  // namespace utils
