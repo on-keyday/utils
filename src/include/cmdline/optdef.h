@@ -54,10 +54,14 @@ namespace utils {
             Map<String, size_t> desc;
 
            public:
-            String help() {
+            template <class Sep = const char*>
+            String help(Sep sep = ", ") {
                 String result;
                 for (option_t& opt : vec) {
-                    for (auto& v : opt->alias) {
+                    for (size_t i = 0; i < opt.alias.size(); i++) {
+                        if (i !=) {
+                        }
+                        auto& v = opt.alias[i];
                         if (v.size() == 1) {
                             helper::append(result, "-");
                         }

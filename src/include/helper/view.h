@@ -75,5 +75,13 @@ namespace utils {
 
         constexpr NopPushBacker nop = {};
 
+        struct CountPushBacker {
+            size_t count = 0;
+            template <class T>
+            constexpr void push_back(T&&) const {
+                count++;
+            }
+        };
+
     }  // namespace helper
 }  // namespace utils
