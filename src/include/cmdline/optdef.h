@@ -55,13 +55,13 @@ namespace utils {
 
            public:
             template <class Sep = const char*>
-            String help(Sep sep = ", ") {
-                auto set_desc = [&](auto& opt, auto& result, size_t maxlen = 0) {
-                    for (size_t i = 0; i < opt.alias.size(); i++) {
+            String help(Sep sep = ", ", size_t indent = 0, size_t tablen = 4) {
+                auto set_desc = [&](auto& opt, auto& result) {
+                    for (size_t i = 0; i < opt->alias.size(); i++) {
                         if (i != 0) {
                             helper::append(result, sep);
                         }
-                        auto& v = opt.alias[i];
+                        auto& v = opt->alias[i];
                         if (v.size() == 1) {
                             helper::append(result, "-");
                         }
@@ -82,7 +82,15 @@ namespace utils {
                 }
                 for (option_t& opt : vec) {
                     helper::CountPushBacker<String&> pb{result};
+                    helper::append(result, helper::CharView(' ', indent + tablen));
+                    set_desc(opt, pb);
+                    auto remain = maxlen + 1 - pb.count;
+                    helper::append(result, helper::CharView(' ', remain));
+                    helper::append(result, ":");
+                    helper::append(result, opt->help);
+                    helper::append(result, "\n");
                 }
+                return result;
             }
 
             template <class Str, class Help = Str>
