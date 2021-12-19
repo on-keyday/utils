@@ -17,8 +17,14 @@ namespace utils {
             struct TCPImpl;
         };
 
+        struct TCPConn {};
+
         struct TCPResult {
             constexpr TCPResult() {}
+
+            wrap::shared_ptr<TCPConn> connect();
+
+            bool failed();
 
            private:
             internal::TCPImpl* impl = nullptr;
