@@ -23,6 +23,8 @@ namespace utils {
             Address();
             ~Address();
 
+            void* get_rawaddr();
+
            private:
             internal::AddressImpl* impl = nullptr;
         };
