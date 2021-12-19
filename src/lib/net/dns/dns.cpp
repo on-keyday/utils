@@ -105,12 +105,12 @@ namespace utils {
             delete impl;
         }
 
-        DnsResult::DnsResult(DnsResult&& in) {
+        DnsResult::DnsResult(DnsResult&& in) noexcept {
             impl = in.impl;
             in.impl = nullptr;
         }
 
-        DnsResult& DnsResult::operator=(DnsResult&& in) {
+        DnsResult& DnsResult::operator=(DnsResult&& in) noexcept {
             delete impl;
             impl = in.impl;
             in.impl = nullptr;
@@ -163,10 +163,8 @@ namespace utils {
             }
             auto host_ = utf::convert<wrap::path_string>(host);
             auto port_ = utf::convert<wrap::path_string>(port);
-            ::timeval timeout{
-                .tv_sec = timeout_sec,
-                .tv_usec = 0,
-            };
+            ::timeval timeout{0};
+            timeout.tv_sec = timeout_sec;
             auto v = ::GetAddrInfoExW(host_.c_str(), port_.c_str(), NS_DNS, nullptr,
                                       &hint, &impl->result, &timeout, &impl->overlapped, nullptr, &impl->cancel);
             if (v != NO_ERROR && v != WSA_IO_PENDING) {

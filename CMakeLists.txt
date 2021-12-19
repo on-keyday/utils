@@ -37,7 +37,8 @@ add_library(libutils
   "src/lib/file/file_view.cpp"
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
-  "src/lib/syntax/default_syntaxc.cpp")
+  "src/lib/syntax/default_syntaxc.cpp"
+  "src/lib/net/dns/dns.cpp")
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
