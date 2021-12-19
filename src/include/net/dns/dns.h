@@ -9,6 +9,8 @@
 // dns - dns query
 #pragma once
 
+#include "../../wrap/lite/smart_ptr.h"
+
 namespace utils {
     namespace net {
         namespace internal {
@@ -17,6 +19,10 @@ namespace utils {
         }  // namespace internal
 
         struct Address {
+            friend struct DnsResult;
+            Address();
+            ~Address();
+
            private:
             internal::AddressImpl* impl = nullptr;
         };
@@ -28,15 +34,17 @@ namespace utils {
 
             DnsResult(const DnsResult&) = delete;
 
-            DnsResult(DnsResult&&);
+            DnsResult(DnsResult&&) noexcept;
 
             DnsResult& operator=(const DnsResult&) = delete;
 
-            DnsResult& operator=(DnsResult&&);
+            DnsResult& operator=(DnsResult&&) noexcept;
 
             ~DnsResult();
 
-            Address* get_address();
+            wrap::shared_ptr<Address> get_address();
+
+            bool failed();
 
             void cancel();
 

@@ -19,16 +19,45 @@ namespace utils {
         namespace internal {
 #ifdef _WIN32
             using addrinfo = ::addrinfoexW;
+            static void freeaddrinfo(addrinfo* info) {
+                FreeAddrInfoExW(info);
+            }
 #else
             using addrinfo = ::addrinfo;
 #endif
+            struct AddressImpl {
+                addrinfo* result = nullptr;
+
+                ~AddressImpl() {
+                    freeaddrinfo(result);
+                }
+            };
+
             struct DnsResultImpl {
                 addrinfo* result;
+                bool failed;
 #ifdef _WIN32
                 ::OVERLAPPED overlapped;
                 ::HANDLE cancel = nullptr;
                 bool running = true;
+
 #endif
+
+                bool complete_query() {
+#ifdef _WIN32
+                    auto res = ::GetAddrInfoExOverlappedResult(&overlapped);
+                    if (res != WSAEINPROGRESS) {
+                        running = false;
+                        ::ResetEvent(overlapped.hEvent);
+                        if (res != NO_ERROR) {
+                            failed = true;
+                            return false;
+                        }
+                        return true;
+                    }
+#endif
+                    return false;
+                }
 
                 void cancel_impl() {
                     if (running) {
@@ -45,7 +74,7 @@ namespace utils {
                         ::CloseHandle(overlapped.hEvent);
                     }
                     if (result) {
-                        FreeAddrInfoExW(result);
+                        freeaddrinfo(result);
                     }
 #endif
                 }
@@ -64,12 +93,41 @@ namespace utils {
 #else
         static void format_error(wrap::string& errmsg, int err = 0) {}
 #endif
+        Address::Address() {
+            impl = new internal::AddressImpl();
+        }
+
+        Address::~Address() {
+            delete impl;
+        }
+
         DnsResult::~DnsResult() {
             delete impl;
         }
 
+        DnsResult::DnsResult(DnsResult&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+
         DnsResult& DnsResult::operator=(DnsResult&& in) {
-            in.impl;
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
+        }
+
+        wrap::shared_ptr<Address> DnsResult::get_address() {
+            if (!impl) {
+                return nullptr;
+            }
+            if (impl->complete_query()) {
+                auto addr = wrap::make_shared<Address>();
+                addr->impl->result = impl->result;
+                impl->result = nullptr;
+                return addr;
+            }
+            return nullptr;
         }
 
         DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
@@ -101,7 +159,6 @@ namespace utils {
 #else
             assert(false && "unimplemented");
 #endif
-
             return result;
         }
     }  // namespace net
