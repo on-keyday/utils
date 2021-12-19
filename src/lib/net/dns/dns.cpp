@@ -12,6 +12,8 @@
 #include "../../../include/wrap/lite/string.h"
 #include "../../../include/utf/convert.h"
 
+#include <cassert>
+
 namespace utils {
     namespace net {
         namespace internal {
@@ -25,12 +27,49 @@ namespace utils {
 #ifdef _WIN32
                 ::OVERLAPPED overlapped;
                 ::HANDLE cancel = nullptr;
+                bool running = true;
 #endif
+
+                void cancel_impl() {
+                    if (running) {
+                        ::GetAddrInfoExCancel(&cancel);
+                        running = false;
+                    }
+                }
+
+                ~DnsResultImpl() {
+                    cancel_impl();
+#ifdef _WIN32
+                    if (overlapped.hEvent != nullptr) {
+                        ::ResetEvent(overlapped.hEvent);
+                        ::CloseHandle(overlapped.hEvent);
+                    }
+                    if (result) {
+                        FreeAddrInfoExW(result);
+                    }
+#endif
+                }
             };
         }  // namespace internal
 
+#ifdef _WIN32
+        static void format_error(wrap::string& errmsg, int err = ::WSAGetLastError()) {
+            wchar_t* ptr = nullptr;
+            auto result = ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err, 0, (LPWSTR)&ptr, 0, nullptr);
+            errmsg.clear();
+            errmsg = std::to_string(err) + ":";
+            errmsg += utf::convert<wrap::string>(ptr);
+            ::LocalFree(ptr);
+        }
+#else
+        static void format_error(wrap::string& errmsg, int err = 0) {}
+#endif
         DnsResult::~DnsResult() {
             delete impl;
+        }
+
+        DnsResult& DnsResult::operator=(DnsResult&& in) {
+            in.impl;
         }
 
         DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
@@ -54,9 +93,16 @@ namespace utils {
                 .tv_sec = timeout_sec,
                 .tv_usec = 0,
             };
-            ::GetAddrInfoExW(host_.c_str(), port_.c_str(), NS_DNS, nullptr,
-                             &hint, &impl->result, &timeout, &impl->overlapped, nullptr, &impl->cancel);
+            auto v = ::GetAddrInfoExW(host_.c_str(), port_.c_str(), NS_DNS, nullptr,
+                                      &hint, &impl->result, &timeout, &impl->overlapped, nullptr, &impl->cancel);
+            if (v != NO_ERROR && v != WSA_IO_PENDING) {
+                return DnsResult();
+            }
+#else
+            assert(false && "unimplemented");
 #endif
+
+            return result;
         }
     }  // namespace net
 }  // namespace utils

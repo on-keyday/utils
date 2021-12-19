@@ -26,9 +26,19 @@ namespace utils {
                                        int address_family, int socket_type, int protocol, int flags);
             constexpr DnsResult() {}
 
+            DnsResult(const DnsResult&) = delete;
+
+            DnsResult(DnsResult&&);
+
+            DnsResult& operator=(const DnsResult&) = delete;
+
+            DnsResult& operator=(DnsResult&&);
+
             ~DnsResult();
 
             Address* get_address();
+
+            void cancel();
 
            private:
             internal::DnsResultImpl* impl = nullptr;
