@@ -117,6 +117,22 @@ namespace utils {
             return *this;
         }
 
+        bool DnsResult::failed() {
+            if (!impl) {
+                return true;
+            }
+            if (impl->failed) {
+                return true;
+            }
+            return false;
+        }
+
+        void DnsResult::cancel() {
+            if (impl) {
+                impl->cancel_impl();
+            }
+        }
+
         wrap::shared_ptr<Address> DnsResult::get_address() {
             if (!impl) {
                 return nullptr;
