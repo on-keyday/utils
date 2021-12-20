@@ -128,6 +128,12 @@ namespace utils {
                 return false;
             }
             ::SSL_set_bio(impl->ssl, impl->tmpbio, impl->tmpbio);
+            impl->tmpbio = nullptr;
+            if (alpn) {
+                if (::SSL_set_alpn_protos(impl->ssl, (const unsigned char*)alpn, ::strlen(alpn)) != 0) {
+                    return false;
+                }
+            }
             impl->io = std::move(io);
             return true;
         }
@@ -142,6 +148,7 @@ namespace utils {
             if (!common_setup(result.impl, std::move(io), cert, alpn, selfcert, selfprivate)) {
                 return SSLResult();
             }
+            ::SSL_connect(result.impl->ssl);
         }
 #endif
     }  // namespace net
