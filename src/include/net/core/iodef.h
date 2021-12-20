@@ -23,6 +23,7 @@ namespace utils {
             running,
             complete,
             failed,
+            invalid_argument,
         };
 
         struct WriteInfo {

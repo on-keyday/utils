@@ -32,11 +32,73 @@ namespace utils {
                     }
                 }
 
+                bool is_closed() const {
+                    return sock == invalid_socket;
+                }
+
                 ~TCPImpl() {
                     close();
                 }
             };
         }  // namespace internal
+
+        bool is_blocking() {
+#ifdef _WIN32
+            auto err = ::WSAGetLastError();
+#else
+            auto err = errno;
+#endif
+            if (err == WSAEWOULDBLOCK) {
+                return true;
+            }
+            return false;
+        }
+
+        State TCPConn::read(char* ptr, size_t size, size_t* red) {
+            if (!impl || impl->is_closed()) {
+                return State::failed;
+            }
+            if (!ptr || !size) {
+                return State::invalid_argument;
+            }
+            if (size > (std::numeric_limits<int>::max)()) {
+                size = (std::numeric_limits<int>::max)();
+            }
+            auto res = ::recv(impl->sock, ptr, int(size), 0);
+            if (res < 0) {
+                if (is_blocking()) {
+                    return State::running;
+                }
+                return State::failed;
+            }
+            if (red) {
+                *red = size_t(res);
+            }
+            return State::complete;
+        }
+
+        State TCPConn::write(const char* ptr, size_t size) {
+            if (!impl || impl->is_closed()) {
+                return State::failed;
+            }
+            if (!ptr || !size || size > (std::numeric_limits<int>::max)()) {
+                return State::invalid_argument;
+            }
+            int res = ::send(impl->sock, ptr, int(size), 0);
+            if (res < 0) {
+                if (is_blocking()) {
+                    return State::running;
+                }
+                return State::failed;
+            }
+            return State::complete;
+        }
+
+        void TCPConn::close() {
+            if (impl) {
+                impl->close();
+            }
+        }
 
         State connecting(::SOCKET& sock) {
             ::timeval timeout = {0};
@@ -63,10 +125,7 @@ namespace utils {
         }
 
         wrap::shared_ptr<TCPConn> TCPResult::connect() {
-            if (!impl) {
-                return nullptr;
-            }
-            if (impl->sock == internal::invalid_socket) {
+            if (!impl || impl->is_closed()) {
                 return nullptr;
             }
             auto make_conn = [&]() {
@@ -86,7 +145,7 @@ namespace utils {
         }
 
         bool TCPResult::failed() {
-            return !impl || impl->sock == internal::invalid_socket;
+            return !impl || impl->is_closed();
         }
 
         TCPResult::~TCPResult() {
