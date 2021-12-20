@@ -91,27 +91,45 @@ namespace utils {
             return {};
         }
 #else
+        bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn,
+                          const char* selfcert, const char* selfprivate) {
+            impl->ctx = ::SSL_CTX_new(::TLS_method());
+            if (!impl->ctx) {
+                return false;
+            }
+            ::SSL_CTX_set_options(impl->ctx, SSL_OP_NO_SSLv2);
+            if (cert) {
+                if (!::SSL_CTX_load_verify_locations(impl->ctx, cert, nullptr)) {
+                    return false;
+                }
+            }
+            if (selfcert) {
+                if (!selfprivate) {
+                    selfprivate = selfcert;
+                }
+                if (::SSL_CTX_use_certificate_file(impl->ctx, selfcert, SSL_FILETYPE_PEM) != 1) {
+                    return false;
+                }
+                if (::SSL_CTX_use_PrivateKey_file(impl->ctx, selfprivate, SSL_FILETYPE_PEM) != 1) {
+                    return false;
+                }
+                if (!::SSL_CTX_check_private_key(impl->ctx)) {
+                    return false;
+                }
+            }
+            if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
+                return false;
+            }
+        }
 
         SSLResult open(IO&& io, const char* cert, const char* alpn,
                        const char* selfcert, const char* selfprivate) {
             if (io.is_null() || !cert) {
                 return SSLResult();
             }
-            SSLResult ret;
-            ret.impl = new internal::SSLImpl();
-            auto impl = ret.impl;
-            impl->ctx = ::SSL_CTX_new(TLS_method());
-            if (!impl->ctx) {
-                return SSLResult();
-            }
-            ::SSL_CTX_set_options(impl->ctx, SSL_OP_NO_SSLv2);
-            if (!::SSL_CTX_load_verify_locations(impl->ctx, cert, nullptr)) {
-                return SSLResult();
-            }
-            if (selfcert && !selfprivate) {
-                selfprivate = selfcert;
-            }
-            if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
+            SSLResult result;
+            result.impl = new internal::SSLImpl();
+            if (!common_setup(result.impl, std::move(io), cert, alpn, selfcert, selfprivate)) {
                 return SSLResult();
             }
         }
