@@ -22,7 +22,7 @@ namespace utils {
         };
 
         struct SSLResult {
-            friend SSLResult open(IO&& io, const char* cert, const char* alpn,
+            friend SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                                   const char* selfcert, const char* selfprivate);
             constexpr SSLResult() {}
 
@@ -30,7 +30,7 @@ namespace utils {
             internal::SSLImpl* impl = nullptr;
         };
 
-        SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr,
+        SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                        const char* selfcert = nullptr, const char* selfprivate = nullptr);
     }  // namespace net
 }  // namespace utils

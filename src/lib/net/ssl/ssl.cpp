@@ -91,7 +91,7 @@ namespace utils {
             return {};
         }
 #else
-        bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn,
+        bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
             impl->ctx = ::SSL_CTX_new(::TLS_method());
             if (!impl->ctx) {
@@ -134,18 +134,22 @@ namespace utils {
                     return false;
                 }
             }
+            if (host) {
+                ::SSL_set_tlsext_host_name(impl->ssl, host);
+                auto param = SSL_get0_param(impl->ssl);
+            }
             impl->io = std::move(io);
             return true;
         }
 
-        SSLResult open(IO&& io, const char* cert, const char* alpn,
+        SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                        const char* selfcert, const char* selfprivate) {
             if (io.is_null() || !cert) {
                 return SSLResult();
             }
             SSLResult result;
             result.impl = new internal::SSLImpl();
-            if (!common_setup(result.impl, std::move(io), cert, alpn, selfcert, selfprivate)) {
+            if (!common_setup(result.impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
                 return SSLResult();
             }
             ::SSL_connect(result.impl->ssl);
