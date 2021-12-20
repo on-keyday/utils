@@ -44,6 +44,7 @@ namespace utils {
                 IOMode io_mode = IOMode::idle;
                 size_t io_progress = 0;
                 bool connected = false;
+                bool is_server = false;
                 State do_IO();
 
                 void clear();

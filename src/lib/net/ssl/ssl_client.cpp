@@ -40,7 +40,12 @@ namespace utils {
         static State connecting(internal::SSLImpl* impl) {
         BEGIN:
             if (impl->iostate == State::complete) {
-                auto res = ::SSL_connect(impl->ssl);
+                int res = 0;
+                if (impl->is_server) {
+                }
+                else {
+                }
+                res = ::SSL_connect(impl->ssl);
                 if (res > 0) {
                     impl->connected = true;
                     impl->iostate = State::complete;

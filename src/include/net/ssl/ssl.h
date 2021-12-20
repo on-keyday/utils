@@ -58,8 +58,15 @@ namespace utils {
             internal::SSLImpl* impl = nullptr;
         };
 
+        struct SSLServer {
+            SSLResult accept();
+
+           private:
+            internal::SSLImpl* impl = nullptr;
+        };
+
         SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                        const char* selfcert = nullptr, const char* selfprivate = nullptr);
-        SSLResult setup();
+        SSLServer setup();
     }  // namespace net
 }  // namespace utils
