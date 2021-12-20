@@ -108,6 +108,9 @@ namespace utils {
             if (!::SSL_CTX_load_verify_locations(impl->ctx, cert, nullptr)) {
                 return SSLResult();
             }
+            if (selfcert && !selfprivate) {
+                selfprivate = selfcert;
+            }
         }
 #endif
     }  // namespace net
