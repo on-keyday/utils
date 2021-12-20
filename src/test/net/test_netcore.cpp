@@ -32,7 +32,7 @@ void test_netcore() {
         Sleep(10);
         sock = result.connect();
     }
-    auto sslres = utils::net::open(std::move(sock), "../src/test/net/cacert.pem");
+    auto sslres = utils::net::open(std::move(sock), "./src/test/net/cacert.pem");
     auto ssl = sslres.connect();
     while (!ssl) {
         if (sslres.failed()) {
