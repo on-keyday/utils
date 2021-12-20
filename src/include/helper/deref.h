@@ -18,6 +18,9 @@ namespace utils {
             SFINAE_BLOCK_T_BEGIN(derefable, *std::declval<T>())
             using type = decltype(std::addressof(*std::declval<T&>()));
             static auto deref(T& t) {
+                if (!t) {
+                    return type(nullptr);
+                }
                 return std::addressof(*t);
             }
             SFINAE_BLOCK_T_ELSE(derefable)
@@ -34,8 +37,8 @@ namespace utils {
         }
 
         template <class T>
-        auto deref(T* t) {
-            return internal::derefable<T*>::deref(t);
+        T* deref(T* t) {
+            return t;
         }
 
     }  // namespace helper
