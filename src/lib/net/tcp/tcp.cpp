@@ -225,7 +225,15 @@ namespace utils {
             ::sockaddr_storage st;
             int size = sizeof(st);
             auto acsock = ::accept(impl->sock, reinterpret_cast<::sockaddr*>(&st), &size);
+            if (acsock < 0 || acsock == internal::invalid_socket) {
+                return nullptr;
+            }
             auto addr = internal::from_sockaddr_st(reinterpret_cast<void*>(&st), size);
+            auto conn = wrap::make_shared<TCPConn>();
+            conn->impl->addr = std::move(addr);
+            conn->impl->sock = acsock;
+            conn->impl->connected = true;
+            return conn;
         }
 
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {

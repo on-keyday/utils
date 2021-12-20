@@ -20,6 +20,7 @@ namespace utils {
 
         struct TCPConn {
             friend struct TCPResult;
+            friend struct TCPServer;
             constexpr TCPConn() {}
 
             State write(const char* ptr, size_t size);
