@@ -236,6 +236,18 @@ namespace utils {
             return conn;
         }
 
+        TCPServer::TCPServer(TCPServer&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+
+        TCPServer& TCPServer::operator=(TCPServer&& in) {
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
+        }
+
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {
             if (!addr) {
                 return TCPServer();

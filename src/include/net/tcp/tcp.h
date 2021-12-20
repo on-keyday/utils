@@ -50,11 +50,15 @@ namespace utils {
         };
 
         struct TCPServer {
+            constexpr TCPServer() {}
             friend TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver);
 
             wrap::shared_ptr<TCPConn> accept();
 
             bool wait(long sec);
+
+            TCPServer(TCPServer&&);
+            TCPServer& operator=(TCPServer&&);
 
            private:
             internal::TCPImpl* impl = nullptr;
