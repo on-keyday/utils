@@ -40,7 +40,8 @@ add_library(libutils
   "src/lib/wrap/cout.cpp"
   "src/lib/syntax/default_syntaxc.cpp"
   "src/lib/net/dns/dns.cpp"
-  "src/lib/net/tcp/tcp.cpp")
+  "src/lib/net/tcp/tcp.cpp"
+  "src/lib/net/ssl/ssl.cpp")
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)

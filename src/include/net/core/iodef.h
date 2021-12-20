@@ -77,11 +77,11 @@ namespace utils {
         template <size_t inbufsize = 1024, class String, class T>
         constexpr State read(String& buf, T& io) {
             while (true) {
-                char buf[inbufsize];
+                char inbuf[inbufsize];
                 size_t red = 0;
-                State st = read(io, buf, inbufsize, &red);
+                State st = read(io, inbuf, inbufsize, &red);
                 if (st == State::complete) {
-                    helper::append(buf, helper::SizedView(buf, red));
+                    helper::append(buf, helper::SizedView(inbuf, red));
                     if (red >= inbufsize) {
                         continue;
                     }
