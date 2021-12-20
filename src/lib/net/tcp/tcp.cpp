@@ -112,22 +112,32 @@ namespace utils {
             }
         }
 
-        State wait_connect(::SOCKET& sock) {
+        State wait_connect(::SOCKET& sock, bool server = false) {
             ::timeval timeout = {0};
             ::fd_set baseset = {0}, sucset = {0}, errset = {0};
             FD_ZERO(&baseset);
             FD_SET(sock, &baseset);
             memcpy(&sucset, &baseset, sizeof(::fd_set));
             memcpy(&errset, &baseset, sizeof(::fd_set));
-            auto res = ::select(sock + 1, nullptr, &sucset, &errset, &timeout);
+            int res = 0;
+            if (server) {
+                res = ::select(sock + 1, &sucset, nullptr, &errset, &timeout);
+            }
+            else {
+                res = ::select(sock + 1, nullptr, &sucset, &errset, &timeout);
+            }
             if (res < 0) {
-                ::closesocket(sock);
-                sock = internal::invalid_socket;
+                if (!server) {
+                    ::closesocket(sock);
+                    sock = internal::invalid_socket;
+                }
                 return State::failed;
             }
             if (FD_ISSET(sock, &errset)) {
-                ::closesocket(sock);
-                sock = internal::invalid_socket;
+                if (!server) {
+                    ::closesocket(sock);
+                    sock = internal::invalid_socket;
+                }
                 return State::failed;
             }
             if (FD_ISSET(sock, &sucset)) {
@@ -202,6 +212,10 @@ namespace utils {
         }
 
         wrap::shared_ptr<TCPConn> TCPServer::accept() {
+            auto e = wait_connect(impl->sock, true);
+            if (e != State::complete) {
+                return nullptr;
+            }
         }
 
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {
@@ -250,6 +264,11 @@ namespace utils {
             }
             TCPServer result;
             result.impl = new internal::TCPImpl();
+            result.impl->sock = sock;
+            result.impl->selected = p;
+            result.impl->connected = true;
+            result.impl->addr = std::move(addr);
+            return result;
         }
 
     }  // namespace net

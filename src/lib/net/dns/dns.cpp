@@ -29,9 +29,14 @@ namespace utils {
 #endif
             struct AddressImpl {
                 addrinfo* result = nullptr;
+                bool from_sockaddr = false;
 
                 ~AddressImpl() {
-                    freeaddrinfo(result);
+                    if (from_sockaddr) {
+                    }
+                    else {
+                        freeaddrinfo(result);
+                    }
                 }
             };
 
