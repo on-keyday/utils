@@ -44,8 +44,9 @@ void test_netcore() {
     auto msg = "GET / HTTP/1.1\r\nHost: google.com\r\n";
     ssl->write(msg, strlen(msg));
     utils::wrap::string str;
-    Sleep(10);
-    utils::net::read(str, *ssl);
+    while (utils::net::read(str, *ssl) == utils::net::State::running) {
+        Sleep(100);
+    }
     auto& cout = utils::wrap::cout_wrap();
     cout << str;
 }
