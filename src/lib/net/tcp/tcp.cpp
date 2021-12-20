@@ -42,7 +42,7 @@ namespace utils {
             };
         }  // namespace internal
 
-        bool is_blocking() {
+        static bool is_blocking() {
 #ifdef _WIN32
             auto err = ::WSAGetLastError();
 #else

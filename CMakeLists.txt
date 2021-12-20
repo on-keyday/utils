@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(netiface)
 
 if(WIN32)
+include_directories("D:/OpenSSL/build-x64-debug/include")
 link_directories("D:/OpenSSL/build-x64-debug/lib")
 else()
 # find_package(OPENSSL REQUIRED)
@@ -38,7 +39,8 @@ add_library(libutils
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
   "src/lib/syntax/default_syntaxc.cpp"
-  "src/lib/net/dns/dns.cpp")
+  "src/lib/net/dns/dns.cpp"
+  "src/lib/net/tcp/tcp.cpp")
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)

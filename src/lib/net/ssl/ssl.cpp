@@ -148,6 +148,11 @@ namespace utils {
             return true;
         }
 
+        bool need_io(::SSL* ssl) {
+            auto errcode = ::SSL_get_error(ssl, -1);
+            return errcode == SSL_ERROR_WANT_READ || errcode == SSL_ERROR_WANT_WRITE || errcode == SSL_ERROR_SYSCALL;
+        }
+
         SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                        const char* selfcert, const char* selfprivate) {
             if (io.is_null() || !cert) {
@@ -159,12 +164,15 @@ namespace utils {
                 return SSLResult();
             }
             auto res = ::SSL_connect(result.impl->ssl);
-            if (res == 1) {
+            if (res > 0) {
                 result.impl->connected = true;
                 return result;
             }
             else if (res == 0) {
                 return SSLResult();
+            }
+            else {
+                if ()
             }
         }
 #endif

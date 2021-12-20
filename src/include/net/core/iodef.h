@@ -147,6 +147,7 @@ namespace utils {
                 delete iface;
                 iface = io.iface;
                 io.iface = nullptr;
+                return *this;
             }
 
             State write(const char* byte, size_t size) {
