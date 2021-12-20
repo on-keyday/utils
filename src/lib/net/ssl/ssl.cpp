@@ -121,6 +121,23 @@ namespace utils {
             return {};
         }
 
+        State SSLConn::write(const char* ptr, size_t size) {
+            return State::undefined;
+        }
+        State SSLConn::read(char* ptr, size_t size, size_t* red) {
+            return State::undefined;
+        }
+
+        State SSLConn::close(bool force) {
+            return State::undefined;
+        }
+
+        bool SSLResult::failed() {
+            return false;
+        }
+
+        SSLConn::~SSLConn() {}
+
 #else
         bool need_io(::SSL* ssl) {
             auto errcode = ::SSL_get_error(ssl, -1);
@@ -231,7 +248,7 @@ namespace utils {
             return impl->iostate;
         }
 
-        State SSLConn::close(bool force = false) {
+        State SSLConn::close(bool force) {
             if (!impl) {
                 return State::failed;
             }
