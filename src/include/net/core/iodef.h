@@ -70,7 +70,7 @@ namespace utils {
         }
 
         template <class T>
-        constexpr State read(T& t, const char* byte, size_t size, size_t* red) {
+        constexpr State read(T& t, char* byte, size_t size, size_t* red) {
             return internal::readable<T>::read(t, byte, size, red);
         }
 
