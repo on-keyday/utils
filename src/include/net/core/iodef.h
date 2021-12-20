@@ -102,6 +102,10 @@ namespace utils {
             template <class T>
             struct implement : interface {
                 T t;
+                template <class V>
+                implement(V&& v)
+                    : t(std::forward<V>(v)) {}
+
                 State write(const char* byte, size_t size) override {
                     auto v = helper::deref(t);
                     if (!v) {
