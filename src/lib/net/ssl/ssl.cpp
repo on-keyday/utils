@@ -145,7 +145,7 @@ namespace utils {
 
         State SSLConn::write(const char* ptr, size_t size) {
             if (impl->io_mode == internal::IOMode::idle) {
-                impl->io_mode = internal::IOMode::read;
+                impl->io_mode = internal::IOMode::write;
             }
             else if (impl->io_mode == internal::IOMode::read) {
                 return State::invalid_argument;
@@ -169,6 +169,7 @@ namespace utils {
                 if (impl->iostate == State::complete) {
                     if (impl->io_progress == size) {
                         impl->io_progress = 0;
+                        impl->io_mode = internal::IOMode::idle;
                         return State::complete;
                     }
                     goto BEGIN;
@@ -178,6 +179,39 @@ namespace utils {
         }
 
         State SSLConn::read(char* ptr, size_t size, size_t* red) {
+            if (impl->io_mode == internal::IOMode::idle) {
+                impl->io_mode = internal::IOMode::read;
+            }
+            else if (impl->io_mode == internal::IOMode::write) {
+                return State::invalid_argument;
+            }
+        BEGIN:
+            if (impl->iostate == State::complete) {
+                size_t w = 0;
+                auto res = ::SSL_read_ex(impl->ssl, ptr, size, &w);
+                if (!res) {
+                    if (!need_io(impl->ssl)) {
+                        impl->iostate = State::failed;
+                        return State::failed;
+                    }
+                }
+                else {
+                    impl->io_mode = internal::IOMode::idle;
+                    return State::complete;
+                }
+            }
+            if (impl->iostate == State::running) {
+                impl->iostate = impl->do_IO();
+                if (impl->iostate == State::complete) {
+                    if (impl->io_progress == size) {
+                        impl->io_progress = 0;
+
+                        return State::complete;
+                    }
+                    goto BEGIN;
+                }
+            }
+            return impl->iostate;
         }
 
         void SSLConn::close() {
