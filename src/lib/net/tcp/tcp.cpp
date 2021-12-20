@@ -112,7 +112,7 @@ namespace utils {
             }
         }
 
-        static State connecting(::SOCKET& sock) {
+        State wait_connect(::SOCKET& sock) {
             ::timeval timeout = {0};
             ::fd_set baseset = {0}, sucset = {0}, errset = {0};
             FD_ZERO(&baseset);
@@ -149,7 +149,7 @@ namespace utils {
             if (impl->connected) {
                 return make_conn();
             }
-            auto state = connecting(impl->sock);
+            auto state = wait_connect(impl->sock);
             if (state == State::complete) {
                 return make_conn();
             }
@@ -183,7 +183,7 @@ namespace utils {
                 if (result == 0) {
                     break;
                 }
-                state = connecting(sock);
+                state = wait_connect(sock);
                 if (state == State::failed) {
                     continue;
                 }
@@ -199,6 +199,57 @@ namespace utils {
             result.impl->addr = std::move(addr);
             result.impl->selected = p;
             return result;
+        }
+
+        wrap::shared_ptr<TCPConn> TCPServer::accept() {
+        }
+
+        TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {
+            if (!addr) {
+                return TCPServer();
+            }
+            auto info = reinterpret_cast<internal::addrinfo*>(addr->get_rawaddr());
+            auto p = info;
+            State state = State::failed;
+            SOCKET sock = internal::invalid_socket;
+            for (; p; p = info->ai_next) {
+                auto sock = ::socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+                if (sock < 0 || sock == internal::invalid_socket) {
+                    continue;
+                }
+                ::u_long nonblock = 1;
+                u_long flag = 1;
+                if (::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag)) < 0) {
+                    ::closesocket(sock);
+                    continue;
+                }
+                ::ioctlsocket(sock, FIONBIO, &nonblock);
+                if (ipver == 4) {
+                    p->ai_addr->sa_family = AF_INET;
+                }
+                else {
+                    if (ipver == 6) {
+                        flag = 0;
+                    }
+                    if (::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&flag, sizeof(flag)) < 0) {
+                        ::closesocket(sock);
+                        continue;
+                    }
+                }
+                auto res = ::bind(sock, p->ai_addr, p->ai_addrlen);
+                if (res < 0) {
+                    ::closesocket(sock);
+                    continue;
+                }
+                res = ::listen(sock, 5);
+                if (res < 0) {
+                    ::closesocket(sock);
+                    continue;
+                }
+                break;
+            }
+            TCPServer result;
+            result.impl = new internal::TCPImpl();
         }
 
     }  // namespace net

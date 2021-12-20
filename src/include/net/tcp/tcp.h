@@ -49,13 +49,16 @@ namespace utils {
         };
 
         struct TCPServer {
-            friend TCPServer setup(wrap::shared_ptr<Address>&& addr);
+            friend TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver);
+
+            wrap::shared_ptr<TCPConn> accept();
 
            private:
+            internal::TCPImpl* impl = nullptr;
         };
 
         TCPResult open(wrap::shared_ptr<Address>&& addr);
 
-        TCPServer setup(wrap::shared_ptr<Address>&& addr);
+        TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver = 0);
     }  // namespace net
 }  // namespace utils
