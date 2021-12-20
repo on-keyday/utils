@@ -7,6 +7,7 @@
 
 
 #include "../../../include/net/core/platform.h"
+#include "../../../include/net/core/init_net.h"
 #include "../../../include/net/dns/dns.h"
 
 #include "../../../include/wrap/lite/string.h"
@@ -178,6 +179,7 @@ namespace utils {
 
         DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
                             int address_family, int socket_type, int protocol, int flags) {
+            network();
             internal::addrinfo hint = {0};
             hint.ai_family = address_family;
             hint.ai_socktype = socket_type;

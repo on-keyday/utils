@@ -22,5 +22,6 @@ namespace utils {
         };
 
         Init& network();
+
     }  // namespace net
 }  // namespace utils

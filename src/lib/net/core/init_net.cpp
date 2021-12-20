@@ -39,8 +39,6 @@ namespace utils {
             return init;
         }
 
-        Init& placeholder = network();
-
         Init::Init() {
             internal::init();
         }

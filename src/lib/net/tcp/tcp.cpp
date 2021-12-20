@@ -9,6 +9,7 @@
 #include "../../../include/net/tcp/tcp.h"
 
 #include "../../../include/net/core/platform.h"
+#include "../../../include/net/core/init_net.h"
 
 namespace utils {
     namespace net {
@@ -177,6 +178,7 @@ namespace utils {
         }
 
         TCPResult open(wrap::shared_ptr<Address>&& addr) {
+            network();
             if (!addr) {
                 return TCPResult();
             }
@@ -256,6 +258,7 @@ namespace utils {
         }
 
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {
+            network();
             if (!addr) {
                 return TCPServer();
             }
