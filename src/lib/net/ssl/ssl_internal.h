@@ -57,6 +57,7 @@ namespace utils {
         bool need_io(::SSL*);
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate);
+        State connecting(internal::SSLImpl* impl);
 #endif
     }  // namespace net
 }  // namespace utils

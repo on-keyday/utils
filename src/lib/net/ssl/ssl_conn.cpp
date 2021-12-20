@@ -37,43 +37,6 @@ namespace utils {
 
         SSLConn::~SSLConn() {}
 #else
-        static State connecting(internal::SSLImpl* impl) {
-        BEGIN:
-            if (impl->iostate == State::complete) {
-                int res = 0;
-                if (impl->is_server) {
-                    res = ::SSL_accept(impl->ssl);
-                }
-                else {
-                    res = ::SSL_connect(impl->ssl);
-                }
-                if (res > 0) {
-                    impl->connected = true;
-                    impl->iostate = State::complete;
-                    return State::complete;
-                }
-                else if (res == 0) {
-                    impl->iostate = State::failed;
-                    return State::failed;
-                }
-                else {
-                    if (need_io(impl->ssl)) {
-                        impl->iostate = State::running;
-                    }
-                    else {
-                        impl->iostate = State::failed;
-                        return State::failed;
-                    }
-                }
-            }
-            if (impl->iostate == State::running) {
-                impl->iostate = impl->do_IO();
-                if (impl->iostate == State::complete) {
-                    goto BEGIN;
-                }
-            }
-            return impl->iostate;
-        }
 
         State SSLConn::write(const char* ptr, size_t size) {
             if (!impl) {
