@@ -26,6 +26,10 @@ namespace utils {
                                   const char* selfcert, const char* selfprivate);
             constexpr SSLResult() {}
 
+            SSLResult(SSLResult&&);
+
+            SSLResult& operator=(SSLResult&&);
+
             std::shared_ptr<SSLConn> connect();
 
            private:
