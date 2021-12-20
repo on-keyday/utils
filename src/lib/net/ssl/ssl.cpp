@@ -32,6 +32,7 @@ namespace utils {
                 wrap::string buffer;
                 SSLIOPhase iophase = SSLIOPhase::read_from_ssl;
                 State iostate = State::complete;
+                size_t io_progress = 0;
                 bool connected = false;
                 State do_IO() {
                     if (iophase == SSLIOPhase::read_from_ssl) {
@@ -135,6 +136,40 @@ namespace utils {
             return impl->iostate;
         }
 
+        State SSLConn::write(const char* ptr, size_t size) {
+        BEGIN:
+            if (impl->iostate == State::complete) {
+                size_t w = 0;
+                auto res = ::SSL_write_ex(impl->ssl, ptr, size, &w);
+                if (!res) {
+                    if (!need_io(impl->ssl)) {
+                        impl->iostate = State::failed;
+                        return State::failed;
+                    }
+                }
+                else {
+                    impl->io_progress += w;
+                }
+            }
+            if (impl->iostate == State::running) {
+                impl->iostate = impl->do_IO();
+                if (impl->iostate == State::complete) {
+                    if (impl->io_progress == size) {
+                        impl->io_progress = 0;
+                        return State::complete;
+                    }
+                    goto BEGIN;
+                }
+            }
+            return impl->iostate;
+        }
+
+        State SSLConn::read(char* ptr, size_t size, size_t* red) {
+        }
+
+        void SSLConn::close() {
+        }
+
         wrap::shared_ptr<SSLConn> SSLResult::connect() {
             if (!impl) {
                 return nullptr;
@@ -146,6 +181,7 @@ namespace utils {
                 auto conn = wrap::make_shared<SSLConn>();
                 conn->impl = impl;
                 impl = nullptr;
+                return conn;
             }
             return nullptr;
         }

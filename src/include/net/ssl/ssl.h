@@ -23,6 +23,12 @@ namespace utils {
         struct SSLConn {
             friend struct SSLResult;
 
+            constexpr SSLConn() {}
+
+            State write(const char* ptr, size_t size);
+            State read(char* ptr, size_t size, size_t* red);
+            void close();
+
            private:
             internal::SSLImpl* impl = nullptr;
         };
