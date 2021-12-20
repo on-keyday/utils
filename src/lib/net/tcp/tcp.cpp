@@ -218,6 +218,9 @@ namespace utils {
         }
 
         wrap::shared_ptr<TCPConn> TCPServer::accept() {
+            if (!impl) {
+                return nullptr;
+            }
             auto e = wait_connect(impl->sock, true);
             if (e != State::complete) {
                 return nullptr;
@@ -246,6 +249,10 @@ namespace utils {
             impl = in.impl;
             in.impl = nullptr;
             return *this;
+        }
+
+        TCPServer::~TCPServer() {
+            delete impl;
         }
 
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {

@@ -63,6 +63,8 @@ namespace utils {
             TCPServer(const TCPServer&) = delete;
             TCPServer& operator=(const TCPServer&) = delete;
 
+            ~TCPServer();
+
            private:
             internal::TCPImpl* impl = nullptr;
         };

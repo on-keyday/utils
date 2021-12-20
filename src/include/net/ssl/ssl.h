@@ -59,7 +59,7 @@ namespace utils {
         };
 
         struct SSLServer {
-            SSLResult accept();
+            SSLResult accept(IO&& io);
 
            private:
             internal::SSLImpl* impl = nullptr;
