@@ -160,7 +160,7 @@ namespace utils {
                 }
                 return iface->write(byte, size);
             }
-            State read(const char* byte, size_t size, size_t* red) {
+            State read(char* byte, size_t size, size_t* red) {
                 if (!iface) {
                     return State::undefined;
                 }
