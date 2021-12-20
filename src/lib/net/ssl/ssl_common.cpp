@@ -95,6 +95,22 @@ namespace utils {
             return errcode == SSL_ERROR_WANT_READ || errcode == SSL_ERROR_WANT_WRITE || errcode == SSL_ERROR_SYSCALL;
         }
 
+        bool setup_ssl(internal::SSLImpl* impl) {
+            if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
+                return false;
+            }
+            impl->ssl = ::SSL_new(impl->ctx);
+            if (!impl->ssl) {
+                ::BIO_free_all(impl->bio);
+                impl->bio = nullptr;
+                impl->tmpbio = nullptr;
+                return false;
+            }
+            ::SSL_set_bio(impl->ssl, impl->tmpbio, impl->tmpbio);
+            impl->tmpbio = nullptr;
+            return true;
+        }
+
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {
@@ -123,18 +139,12 @@ namespace utils {
                     return false;
                 }
             }
-            if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
-                return false;
+            if (!io.is_null()) {
+                if (!setup_ssl(impl)) {
+                    return false;
+                }
+                impl->io = std::move(io);
             }
-            impl->ssl = ::SSL_new(impl->ctx);
-            if (!impl->ssl) {
-                ::BIO_free_all(impl->bio);
-                impl->bio = nullptr;
-                impl->tmpbio = nullptr;
-                return false;
-            }
-            ::SSL_set_bio(impl->ssl, impl->tmpbio, impl->tmpbio);
-            impl->tmpbio = nullptr;
             if (alpn) {
                 if (::SSL_set_alpn_protos(impl->ssl, (const unsigned char*)alpn, ::strlen(alpn)) != 0) {
                     return false;
@@ -147,7 +157,6 @@ namespace utils {
                     return false;
                 }
             }
-            impl->io = std::move(io);
             return true;
         }
 

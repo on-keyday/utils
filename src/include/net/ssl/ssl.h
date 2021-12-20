@@ -34,10 +34,12 @@ namespace utils {
            private:
             internal::SSLImpl* impl = nullptr;
         };
+        struct SSLServer;
 
         struct SSLResult {
             friend SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                                   const char* selfcert, const char* selfprivate);
+            friend SSLServer;
             constexpr SSLResult() {}
 
             SSLResult(SSLResult&&);
@@ -59,6 +61,7 @@ namespace utils {
         };
 
         struct SSLServer {
+            friend SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert);
             SSLResult accept(IO&& io);
 
            private:
@@ -67,6 +70,6 @@ namespace utils {
 
         SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                        const char* selfcert = nullptr, const char* selfprivate = nullptr);
-        SSLServer setup();
+        SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr);
     }  // namespace net
 }  // namespace utils

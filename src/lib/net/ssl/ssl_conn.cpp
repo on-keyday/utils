@@ -184,6 +184,34 @@ namespace utils {
             }
             return result;
         }
+
+        SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr) {
+            SSLServer server;
+            server.impl = new internal::SSLImpl();
+            server.impl->is_server = true;
+            if (!common_setup(server.impl, nullptr, cert, nullptr, nullptr, selfcert, selfprivate)) {
+                return SSLServer();
+            }
+            return server;
+        }
+
+        SSLResult SSLServer::accept(IO&& io) {
+            SSLResult result;
+            result.impl = new internal::SSLImpl();
+            if (!setup_ssl(impl)) {
+                return SSLResult();
+            }
+            result.impl->bio = impl->bio;
+            impl->bio = nullptr;
+            result.impl->ssl = impl->ssl;
+            impl->ssl = nullptr;
+            result.impl->is_server = true;
+            auto state = connecting(result.impl);
+            if (state != State::complete && state != State::running) {
+                return SSLResult();
+            }
+            return result;
+        }
 #endif
     }  // namespace net
 }  // namespace utils
