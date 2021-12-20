@@ -24,6 +24,7 @@ namespace utils {
         struct SSLResult {
             friend SSLResult open(IO&& io, const char* cert, const char* alpn,
                                   const char* selfcert, const char* selfprivate);
+            constexpr SSLResult() {}
 
            private:
             internal::SSLImpl* impl = nullptr;
