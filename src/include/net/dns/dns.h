@@ -17,6 +17,7 @@ namespace utils {
             //NOTE: using pimple pattern to remove platform dependency from header
             struct DnsResultImpl;
             struct AddressImpl;
+            wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len);
         }  // namespace internal
 
         struct Address {
@@ -57,6 +58,6 @@ namespace utils {
 
         DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
                             int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
-        wrap::shared_ptr<Address> from_sockaddr_st(void* st);
+
     }  // namespace net
 }  // namespace utils

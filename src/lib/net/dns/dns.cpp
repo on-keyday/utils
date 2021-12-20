@@ -86,6 +86,10 @@ namespace utils {
 #endif
                 }
             };
+
+            wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len) {
+                auto storage = reinterpret_cast<::sockaddr_storage*>(st);
+            }
         }  // namespace internal
 
 #ifdef _WIN32
@@ -190,7 +194,5 @@ namespace utils {
             return result;
         }
 
-        wrap::shared_ptr<Address> from_sockaddr_st(void* st) {
-        }
     }  // namespace net
 }  // namespace utils

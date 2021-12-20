@@ -225,6 +225,7 @@ namespace utils {
             ::sockaddr_storage st;
             int size = sizeof(st);
             auto acsock = ::accept(impl->sock, reinterpret_cast<::sockaddr*>(&st), &size);
+            auto addr = internal::from_sockaddr_st(reinterpret_cast<void*>(&st), size);
         }
 
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {
