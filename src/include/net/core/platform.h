@@ -55,3 +55,19 @@ typedef int SOCKET;
 #include <openssl/err.h>
 #include <openssl/bio.h>
 #endif
+
+namespace utils {
+    namespace net {
+        namespace internal {
+#ifdef _WIN32
+            using addrinfo = ::addrinfoexW;
+
+#else
+            using addrinfo = ::addrinfo;
+
+#endif
+            void freeaddrinfo(addrinfo* info);
+        }  // namespace internal
+
+    }  // namespace net
+}  // namespace utils

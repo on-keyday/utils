@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../dns/dns.h"
+#include "../core/iodef.h"
 
 namespace utils {
     namespace net {
@@ -17,7 +18,22 @@ namespace utils {
             struct TCPImpl;
         };
 
-        struct TCPConn {};
+        struct TCPConn {
+            constexpr TCPConn() {}
+
+            TCPConn(TCPConn&&);
+            TCPConn& operator=(TCPConn&&);
+
+            TCPConn(const TCPConn&) = delete;
+            TCPConn& operator=(const TCPConn&) = delete;
+
+            State write(const char* ptr, size_t size);
+            State read(char* ptr, size_t size, size_t* red);
+            void close();
+
+           private:
+            internal::TCPImpl* impl = nullptr;
+        };
 
         struct TCPResult {
             constexpr TCPResult() {}
@@ -26,8 +42,13 @@ namespace utils {
 
             bool failed();
 
+            ~TCPResult();
+
            private:
             internal::TCPImpl* impl = nullptr;
+        };
+
+        struct TCPServer {
         };
 
         TCPResult open(wrap::shared_ptr<Address>&& addr);

@@ -17,13 +17,15 @@
 namespace utils {
     namespace net {
         namespace internal {
+
 #ifdef _WIN32
-            using addrinfo = ::addrinfoexW;
-            static void freeaddrinfo(addrinfo* info) {
+            void freeaddrinfo(addrinfo* info) {
                 FreeAddrInfoExW(info);
             }
 #else
-            using addrinfo = ::addrinfo;
+            void freeaddrinfo(addrinfo* info) {
+                ::freeaddrinfo(info);
+            }
 #endif
             struct AddressImpl {
                 addrinfo* result = nullptr;

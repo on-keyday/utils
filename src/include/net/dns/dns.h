@@ -14,6 +14,7 @@
 namespace utils {
     namespace net {
         namespace internal {
+            //NOTE: using pimple pattern to remove platform dependency from header
             struct DnsResultImpl;
             struct AddressImpl;
         }  // namespace internal
