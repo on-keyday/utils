@@ -26,6 +26,7 @@ namespace utils {
                 idle,
                 read,
                 write,
+                close,
             };
 
             struct SSLImpl {
@@ -91,6 +92,21 @@ namespace utils {
                     }
                     return State::complete;
                 }
+
+                void clear() {
+                    connected = false;
+                    ::SSL_free(ssl);
+                    ssl = nullptr;
+                    ::BIO_free(bio);
+                    bio = nullptr;
+                    io = nullptr;
+                    buffer.clear();
+                }
+
+                ~SSLImpl() {
+                    clear();
+                    ::SSL_CTX_free(ctx);
+                }
 #endif
             };
         }  // namespace internal
@@ -144,10 +160,13 @@ namespace utils {
         }
 
         State SSLConn::write(const char* ptr, size_t size) {
+            if (!impl) {
+                return State::failed;
+            }
             if (impl->io_mode == internal::IOMode::idle) {
                 impl->io_mode = internal::IOMode::write;
             }
-            else if (impl->io_mode == internal::IOMode::read) {
+            else if (impl->io_mode != internal::IOMode::write) {
                 return State::invalid_argument;
             }
         BEGIN:
@@ -179,10 +198,13 @@ namespace utils {
         }
 
         State SSLConn::read(char* ptr, size_t size, size_t* red) {
+            if (!impl) {
+                return State::failed;
+            }
             if (impl->io_mode == internal::IOMode::idle) {
                 impl->io_mode = internal::IOMode::read;
             }
-            else if (impl->io_mode == internal::IOMode::write) {
+            else if (impl->io_mode != internal::IOMode::read) {
                 return State::invalid_argument;
             }
         BEGIN:
@@ -209,7 +231,36 @@ namespace utils {
             return impl->iostate;
         }
 
-        void SSLConn::close() {
+        State SSLConn::close(bool force = false) {
+            if (!impl) {
+                return State::failed;
+            }
+            impl->io_mode = internal::IOMode::close;
+            if (!force && impl->connected) {
+            BEGIN:
+                auto res = ::SSL_shutdown(impl->ssl);
+                if (res < 0) {
+                    if (need_io(impl->ssl)) {
+                        auto err = impl->do_IO();
+                        if (err == State::running) {
+                            return State::running;
+                        }
+                        else if (err == State::complete) {
+                            goto BEGIN;
+                        }
+                    }
+                }
+                else if (res == 0) {
+                    goto BEGIN;
+                }
+            }
+            impl->clear();
+            return State::complete;
+        }
+
+        SSLConn::~SSLConn() {
+            close();
+            delete impl;
         }
 
         wrap::shared_ptr<SSLConn> SSLResult::connect() {

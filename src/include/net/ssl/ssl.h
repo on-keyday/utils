@@ -27,7 +27,9 @@ namespace utils {
 
             State write(const char* ptr, size_t size);
             State read(char* ptr, size_t size, size_t* red);
-            void close();
+            State close(bool force = false);
+
+            ~SSLConn();
 
            private:
             internal::SSLImpl* impl = nullptr;
