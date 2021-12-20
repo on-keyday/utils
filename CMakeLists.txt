@@ -42,7 +42,7 @@ add_library(libutils
   "src/lib/net/dns/dns.cpp"
   "src/lib/net/tcp/tcp.cpp"
   "src/lib/net/ssl/ssl_common.cpp"
-  "src/lib/net/ssl/ssl_client.cpp")
+  "src/lib/net/ssl/ssl_conn.cpp")
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
