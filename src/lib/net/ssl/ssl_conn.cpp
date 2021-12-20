@@ -195,6 +195,18 @@ namespace utils {
             return server;
         }
 
+        SSLServer::SSLServer(SSLServer&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+
+        SSLServer& SSLServer::operator=(SSLServer&& in) {
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
+        }
+
         SSLResult SSLServer::accept(IO&& io) {
             SSLResult result;
             result.impl = new internal::SSLImpl();

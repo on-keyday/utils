@@ -64,6 +64,12 @@ namespace utils {
             friend SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert);
             SSLResult accept(IO&& io);
 
+            constexpr SSLServer() {}
+
+            SSLServer(SSLServer&&);
+
+            SSLServer& operator=(SSLServer&&);
+
            private:
             internal::SSLImpl* impl = nullptr;
         };
