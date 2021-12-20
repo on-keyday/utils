@@ -22,6 +22,12 @@ namespace utils {
                 write_to_ssl,
             };
 
+            enum class IOMode {
+                idle,
+                read,
+                write,
+            };
+
             struct SSLImpl {
 #ifdef USE_OPENSSL
                 ::SSL* ssl = nullptr;
@@ -32,6 +38,7 @@ namespace utils {
                 wrap::string buffer;
                 SSLIOPhase iophase = SSLIOPhase::read_from_ssl;
                 State iostate = State::complete;
+                IOMode io_mode = IOMode::idle;
                 size_t io_progress = 0;
                 bool connected = false;
                 State do_IO() {
@@ -137,6 +144,12 @@ namespace utils {
         }
 
         State SSLConn::write(const char* ptr, size_t size) {
+            if (impl->io_mode == internal::IOMode::idle) {
+                impl->io_mode = internal::IOMode::read;
+            }
+            else if (impl->io_mode == internal::IOMode::read) {
+                return State::invalid_argument;
+            }
         BEGIN:
             if (impl->iostate == State::complete) {
                 size_t w = 0;
