@@ -111,6 +111,9 @@ namespace utils {
             if (selfcert && !selfprivate) {
                 selfprivate = selfcert;
             }
+            if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
+                return SSLResult();
+            }
         }
 #endif
     }  // namespace net
