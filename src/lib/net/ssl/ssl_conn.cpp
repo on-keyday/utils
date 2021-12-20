@@ -175,6 +175,18 @@ namespace utils {
                        impl->iostate != State::running;
         }
 
+        SSLResult::SSLResult(SSLResult&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+
+        SSLResult& SSLResult::operator=(SSLResult&& in) {
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
+        }
+
         SSLResult::~SSLResult() {
             delete impl;
         }
