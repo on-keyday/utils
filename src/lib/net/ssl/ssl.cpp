@@ -203,11 +203,6 @@ namespace utils {
             if (impl->iostate == State::running) {
                 impl->iostate = impl->do_IO();
                 if (impl->iostate == State::complete) {
-                    if (impl->io_progress == size) {
-                        impl->io_progress = 0;
-
-                        return State::complete;
-                    }
                     goto BEGIN;
                 }
             }
