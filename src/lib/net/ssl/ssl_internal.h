@@ -51,8 +51,10 @@ namespace utils {
 #endif
             };
         }  // namespace internal
+#ifdef USE_OPENSSL
         bool need_io(::SSL*);
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate);
+#endif
     }  // namespace net
 }  // namespace utils
