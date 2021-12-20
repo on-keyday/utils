@@ -19,6 +19,7 @@ namespace utils {
         };
 
         struct TCPConn {
+            friend struct TCPResult;
             constexpr TCPConn() {}
 
             TCPConn(TCPConn&&);
@@ -53,6 +54,6 @@ namespace utils {
 
         TCPResult open(wrap::shared_ptr<Address>&& addr);
 
-        TCPResult accept(wrap::shared_ptr<Address>&& addr);
+        TCPServer setup(wrap::shared_ptr<Address>&& addr);
     }  // namespace net
 }  // namespace utils
