@@ -15,7 +15,6 @@ namespace utils {
         struct Init {
            private:
             Init();
-            ~Init();
             friend Init& network();
 
            public:

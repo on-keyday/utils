@@ -30,6 +30,7 @@ namespace utils {
             };
             InitImpl& init() {
                 static InitImpl net;
+                return net;
             }
         }  // namespace internal
 
