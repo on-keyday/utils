@@ -31,6 +31,7 @@ add_executable(make_parser "src/test/syntax/test_make_parser_clang_bug.cpp")
 add_executable(syntaxc "src/test/syntax/test_syntaxc.cpp")
 add_executable(number "src/test/number/test_number.cpp")
 add_executable(cmdparse "src/test/cmdline/test_cmdparse.cpp")
+add_executable(netcore "src/test/net/test_netcore.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
@@ -52,11 +53,11 @@ target_link_libraries(make_parser libutils)
 target_link_libraries(syntaxc libutils)
 target_link_libraries(cmdparse libutils)
 
-#if(WIN32)
-#target_link_libraries(netiface libssl libcrypto ws2_32)
-#else()
-#target_link_libraries(netiface libssl.so libcrypto.so Threads::Threads)
-#endif()
+if(WIN32)
+target_link_libraries(netcore libssl libcrypto ws2_32)
+else()
+target_link_libraries(netcore libssl.so libcrypto.so Threads::Threads)
+endif()
 
 
 
