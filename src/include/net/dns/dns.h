@@ -59,7 +59,7 @@ namespace utils {
             internal::DnsResultImpl* impl = nullptr;
         };
 
-        DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
+        DnsResult query_dns(const char* host, const char* port, time_t timeout_sec = 60,
                             int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
 
     }  // namespace net
