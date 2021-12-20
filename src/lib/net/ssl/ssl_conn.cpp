@@ -36,6 +36,17 @@ namespace utils {
         }
 
         SSLConn::~SSLConn() {}
+
+        SSLResult SSLServer::accept(IO&& io) {
+            return SSLResult();
+        }
+
+        SSLServer::SSLServer(SSLServer&&) {
+        }
+
+        SSLServer& SSLServer::operator=(SSLServer&&) {
+            return *this;
+        }
 #else
 
         State SSLConn::write(const char* ptr, size_t size) {
@@ -185,7 +196,7 @@ namespace utils {
             return result;
         }
 
-        SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr) {
+        SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert) {
             SSLServer server;
             server.impl = new internal::SSLImpl();
             server.impl->is_server = true;
