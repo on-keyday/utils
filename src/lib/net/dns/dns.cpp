@@ -33,6 +33,11 @@ namespace utils {
 
                 ~AddressImpl() {
                     if (from_sockaddr) {
+                        if (!result) {
+                            return;
+                        }
+                        delete reinterpret_cast<::sockaddr_storage*>(result->ai_addr);
+                        delete result;
                     }
                     else {
                         freeaddrinfo(result);
@@ -89,6 +94,13 @@ namespace utils {
 
             wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len) {
                 auto storage = reinterpret_cast<::sockaddr_storage*>(st);
+                auto info = new addrinfo();
+                info->ai_addrlen = len;
+                info->ai_addr = reinterpret_cast<::sockaddr*>(new ::sockaddr_storage(std::move(*storage)));
+                auto addr = wrap::make_shared<Address>();
+                addr->impl->from_sockaddr = true;
+                addr->impl->result = info;
+                return addr;
             }
         }  // namespace internal
 
