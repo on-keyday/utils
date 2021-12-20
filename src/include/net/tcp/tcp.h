@@ -53,6 +53,8 @@ namespace utils {
 
             wrap::shared_ptr<TCPConn> accept();
 
+            bool wait();
+
            private:
             internal::TCPImpl* impl = nullptr;
         };

@@ -189,5 +189,8 @@ namespace utils {
 #endif
             return result;
         }
+
+        wrap::shared_ptr<Address> from_sockaddr_st(void* st) {
+        }
     }  // namespace net
 }  // namespace utils

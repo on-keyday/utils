@@ -112,13 +112,15 @@ namespace utils {
             }
         }
 
-        State wait_connect(::SOCKET& sock, bool server = false) {
+        State wait_connect(::SOCKET& sock, bool server = false, long sec = 0) {
             ::timeval timeout = {0};
             ::fd_set baseset = {0}, sucset = {0}, errset = {0};
             FD_ZERO(&baseset);
             FD_SET(sock, &baseset);
             memcpy(&sucset, &baseset, sizeof(::fd_set));
             memcpy(&errset, &baseset, sizeof(::fd_set));
+            timeout.tv_usec = 1;
+            timeout.tv_sec = sec;
             int res = 0;
             if (server) {
                 res = ::select(sock + 1, &sucset, nullptr, &errset, &timeout);
@@ -211,11 +213,18 @@ namespace utils {
             return result;
         }
 
+        bool TCPServer::wait() {
+            return wait_connect(impl->sock, true, 60) == State::complete;
+        }
+
         wrap::shared_ptr<TCPConn> TCPServer::accept() {
             auto e = wait_connect(impl->sock, true);
             if (e != State::complete) {
                 return nullptr;
             }
+            ::sockaddr_storage st;
+            int size = sizeof(st);
+            auto acsock = ::accept(impl->sock, reinterpret_cast<::sockaddr*>(&st), &size);
         }
 
         TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver) {
