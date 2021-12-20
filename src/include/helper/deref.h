@@ -27,5 +27,16 @@ namespace utils {
             }
             SFINAE_BLOCK_T_END()
         }  // namespace internal
-    }      // namespace helper
+
+        template <class T>
+        auto deref(T& t) {
+            return internal::derefable<T>::deref(t);
+        }
+
+        template <class T>
+        auto deref(T* t) {
+            return internal::derefable<T*>::deref(t);
+        }
+
+    }  // namespace helper
 }  // namespace utils
