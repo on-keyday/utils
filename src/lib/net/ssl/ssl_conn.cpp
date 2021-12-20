@@ -72,6 +72,7 @@ namespace utils {
                 else {
                     impl->io_progress += w;
                 }
+                impl->iostate = State::running;
             }
             if (impl->iostate == State::running) {
                 impl->iostate = impl->do_IO();
@@ -111,6 +112,7 @@ namespace utils {
                     impl->io_mode = internal::IOMode::idle;
                     return State::complete;
                 }
+                impl->iostate = State::running;
             }
             if (impl->iostate == State::running) {
                 impl->iostate = impl->do_IO();
