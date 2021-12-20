@@ -110,6 +110,9 @@ namespace utils {
                 }
                 else {
                     impl->io_mode = internal::IOMode::idle;
+                    if (red) {
+                        *red = w;
+                    }
                     return State::complete;
                 }
                 impl->iostate = State::running;
