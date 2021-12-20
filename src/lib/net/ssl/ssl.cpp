@@ -104,6 +104,7 @@ namespace utils {
         }
 
         static State connecting(internal::SSLImpl* impl) {
+        BEGIN:
             if (impl->iostate == State::complete) {
                 auto res = ::SSL_connect(impl->ssl);
                 if (res > 0) {
@@ -127,11 +128,25 @@ namespace utils {
             }
             if (impl->iostate == State::running) {
                 impl->iostate = impl->do_IO();
+                if (impl->iostate == State::complete) {
+                    goto BEGIN;
+                }
             }
             return impl->iostate;
         }
 
-        std::shared_ptr<SSLConn> SSLResult::connect() {
+        wrap::shared_ptr<SSLConn> SSLResult::connect() {
+            if (!impl) {
+                return nullptr;
+            }
+            if (failed()) {
+                return nullptr;
+            }
+            if (connecting(impl) == State::complete) {
+                auto conn = wrap::make_shared<SSLConn>();
+                conn->impl = impl;
+                impl = nullptr;
+            }
             return nullptr;
         }
 

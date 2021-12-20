@@ -12,6 +12,8 @@
 
 #include "../core/iodef.h"
 
+#include "../../wrap/lite/smart_ptr.h"
+
 namespace utils {
     namespace net {
         namespace internal {
@@ -19,6 +21,10 @@ namespace utils {
         }
 
         struct SSLConn {
+            friend struct SSLResult;
+
+           private:
+            internal::SSLImpl* impl = nullptr;
         };
 
         struct SSLResult {
@@ -30,7 +36,7 @@ namespace utils {
 
             SSLResult& operator=(SSLResult&&);
 
-            std::shared_ptr<SSLConn> connect();
+            wrap::shared_ptr<SSLConn> connect();
 
             bool failed();
 
