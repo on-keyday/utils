@@ -213,8 +213,8 @@ namespace utils {
             return result;
         }
 
-        bool TCPServer::wait() {
-            return wait_connect(impl->sock, true, 60) == State::complete;
+        bool TCPServer::wait(long sec = 60) {
+            return wait_connect(impl->sock, true, sec) == State::complete;
         }
 
         wrap::shared_ptr<TCPConn> TCPServer::accept() {

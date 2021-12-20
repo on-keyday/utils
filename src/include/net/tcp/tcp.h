@@ -53,7 +53,7 @@ namespace utils {
 
             wrap::shared_ptr<TCPConn> accept();
 
-            bool wait();
+            bool wait(long sec);
 
            private:
             internal::TCPImpl* impl = nullptr;
