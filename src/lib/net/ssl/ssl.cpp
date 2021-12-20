@@ -135,6 +135,12 @@ namespace utils {
             return nullptr;
         }
 
+        bool SSLResult::failed() {
+            return !impl ||
+                   impl->iostate != State::complete &&
+                       impl->iostate != State::running;
+        }
+
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {

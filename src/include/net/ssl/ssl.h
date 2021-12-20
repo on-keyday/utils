@@ -32,6 +32,8 @@ namespace utils {
 
             std::shared_ptr<SSLConn> connect();
 
+            bool failed();
+
            private:
             internal::SSLImpl* impl = nullptr;
         };
