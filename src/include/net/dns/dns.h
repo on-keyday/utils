@@ -17,7 +17,7 @@ namespace utils {
             //NOTE: using pimple pattern to remove platform dependency from header
             struct DnsResultImpl;
             struct AddressImpl;
-            wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len);
+
         }  // namespace internal
 
         struct Address {
@@ -30,6 +30,10 @@ namespace utils {
            private:
             internal::AddressImpl* impl = nullptr;
         };
+
+        namespace internal {
+            wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len);
+        }
 
         struct DnsResult {
             friend DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
