@@ -137,6 +137,9 @@ namespace utils {
             if (host) {
                 ::SSL_set_tlsext_host_name(impl->ssl, host);
                 auto param = SSL_get0_param(impl->ssl);
+                if (!X509_VERIFY_PARAM_add1_host(param, host, ::strlen(host))) {
+                    return false;
+                }
             }
             impl->io = std::move(io);
             return true;
