@@ -8,6 +8,8 @@
 
 #include "../../include/net/tcp/tcp.h"
 #include "../../include/net/ssl/ssl.h"
+#include "../../include/wrap/lite/string.h"
+#include "../../include/wrap/cout.h"
 
 #include <windows.h>
 
@@ -30,7 +32,22 @@ void test_netcore() {
         Sleep(10);
         sock = result.connect();
     }
-    utils::net::open(std::move(sock), "../src/test/net/cacert.pem");
+    auto sslres = utils::net::open(std::move(sock), "../src/test/net/cacert.pem");
+    auto ssl = sslres.connect();
+    while (!ssl) {
+        if (sslres.failed()) {
+            assert(false && "connect ssl failed");
+        }
+        Sleep(10);
+        ssl = sslres.connect();
+    }
+    auto msg = "GET / HTTP/1.1\r\nHost: google.com\r\n";
+    ssl->write(msg, strlen(msg));
+    utils::wrap::string str;
+    Sleep(10);
+    utils::net::read(str, *ssl);
+    auto& cout = utils::wrap::cout_wrap();
+    cout << str;
 }
 
 int main() {
