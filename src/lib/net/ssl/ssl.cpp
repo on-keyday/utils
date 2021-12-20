@@ -31,6 +31,7 @@ namespace utils {
                 IO io;
                 wrap::string buffer;
                 SSLIOPhase iophase = SSLIOPhase::read_from_ssl;
+                bool connected = false;
                 State do_IO() {
                     if (iophase == SSLIOPhase::read_from_ssl) {
                         while (true) {
@@ -93,9 +94,11 @@ namespace utils {
 #else
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
-            impl->ctx = ::SSL_CTX_new(::TLS_method());
             if (!impl->ctx) {
-                return false;
+                impl->ctx = ::SSL_CTX_new(::TLS_method());
+                if (!impl->ctx) {
+                    return false;
+                }
             }
             ::SSL_CTX_set_options(impl->ctx, SSL_OP_NO_SSLv2);
             if (cert) {
@@ -155,7 +158,14 @@ namespace utils {
             if (!common_setup(result.impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
                 return SSLResult();
             }
-            ::SSL_connect(result.impl->ssl);
+            auto res = ::SSL_connect(result.impl->ssl);
+            if (res == 1) {
+                result.impl->connected = true;
+                return result;
+            }
+            else if (res == 0) {
+                return SSLResult();
+            }
         }
 #endif
     }  // namespace net
