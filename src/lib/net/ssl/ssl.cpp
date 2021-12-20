@@ -120,6 +120,16 @@ namespace utils {
             if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
                 return false;
             }
+            impl->ssl = ::SSL_new(impl->ctx);
+            if (!impl->ssl) {
+                ::BIO_free_all(impl->bio);
+                impl->bio = nullptr;
+                impl->tmpbio = nullptr;
+                return false;
+            }
+            ::SSL_set_bio(impl->ssl, impl->tmpbio, impl->tmpbio);
+            impl->io = std::move(io);
+            return true;
         }
 
         SSLResult open(IO&& io, const char* cert, const char* alpn,
