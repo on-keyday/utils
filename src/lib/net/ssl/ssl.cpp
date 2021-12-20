@@ -94,11 +94,20 @@ namespace utils {
 
         SSLResult open(IO&& io, const char* cert, const char* alpn,
                        const char* selfcert, const char* selfprivate) {
-            if (io.is_null()) {
+            if (io.is_null() || !cert) {
                 return SSLResult();
             }
             SSLResult ret;
             ret.impl = new internal::SSLImpl();
+            auto impl = ret.impl;
+            impl->ctx = ::SSL_CTX_new(TLS_method());
+            if (!impl->ctx) {
+                return SSLResult();
+            }
+            ::SSL_CTX_set_options(impl->ctx, SSL_OP_NO_SSLv2);
+            if (!::SSL_CTX_load_verify_locations(impl->ctx, cert, nullptr)) {
+                return SSLResult();
+            }
         }
 #endif
     }  // namespace net
