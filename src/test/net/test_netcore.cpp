@@ -41,8 +41,10 @@ void test_netcore() {
         Sleep(10);
         ssl = sslres.connect();
     }
-    auto msg = "GET / HTTP/1.1\r\nHost: google.com\r\n";
-    ssl->write(msg, strlen(msg));
+    auto msg = "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n";
+    while (ssl->write(msg, strlen(msg)) == utils::net::State::running) {
+        Sleep(100);
+    }
     utils::wrap::string str;
     while (utils::net::read(str, *ssl) == utils::net::State::running) {
         Sleep(100);
