@@ -47,7 +47,7 @@ typedef int SOCKET;
 #endif
 
 #ifndef USE_OPENSSL
-#define USE_OPENSSL 0
+#define USE_OPENSSL 1
 #endif
 
 #if USE_OPENSSL

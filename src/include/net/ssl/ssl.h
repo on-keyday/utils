@@ -22,10 +22,14 @@ namespace utils {
         };
 
         struct SSLResult {
+            friend SSLResult open(IO&& io, const char* cert, const char* alpn,
+                                  const char* selfcert, const char* selfprivate);
+
            private:
             internal::SSLImpl* impl = nullptr;
         };
 
-        SSLResult open(IO&& io);
+        SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr,
+                       const char* selfcert = nullptr, const char* selfprivate = nullptr);
     }  // namespace net
 }  // namespace utils

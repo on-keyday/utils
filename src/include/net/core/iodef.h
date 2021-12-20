@@ -15,6 +15,10 @@
 
 #include "../../helper/deref.h"
 
+#include "../../helper/appender.h"
+
+#include "../../helper/view.h"
+
 #include "../../wrap/lite/string.h"
 
 namespace utils {
@@ -70,30 +74,51 @@ namespace utils {
             return internal::readable<T>::read(t, byte, size, red);
         }
 
+        template <size_t inbufsize = 1024, class String, class T>
+        constexpr State read(String& buf, T& io) {
+            while (true) {
+                char buf[inbufsize];
+                size_t red = 0;
+                State st = read(io, buf, inbufsize, &red);
+                if (st == State::complete) {
+                    helper::append(buf, helper::SizedView(buf, red));
+                    if (red >= inbufsize) {
+                        continue;
+                    }
+                }
+                return st;
+            }
+        }
+
         struct IO {
            private:
             struct interface {
                 virtual State write(const char* byte, size_t size) = 0;
                 virtual State read(const char* byte, size_t size, size_t* red) = 0;
+                virtual bool is_null() const = 0;
                 virtual ~interface() {}
             };
 
             template <class T>
             struct implement : interface {
                 T t;
-                State write(const char* byte, size_t size) {
+                State write(const char* byte, size_t size) override {
                     auto v = helper::deref(t);
                     if (!v) {
                         return State::undefined;
                     }
                     return v->write(byte, size);
                 }
-                State read(const char* byte, size_t size, size_t* red) {
+                State read(const char* byte, size_t size, size_t* red) override {
                     auto v = helper::deref(t);
                     if (!v) {
                         return State::undefined;
                     }
                     return v->read(byte, size, red);
+                }
+
+                bool is_null() const override {
+                    return helper::deref(t) == nullptr;
                 }
             };
 
@@ -108,6 +133,10 @@ namespace utils {
             IO(T&& t) {
                 make_iface(std::forward<T>(t));
             }
+
+            constexpr IO() {}
+
+            constexpr IO(std::nullptr_t) {}
 
             IO(IO&& io) {
                 iface = io.iface;
@@ -131,6 +160,10 @@ namespace utils {
                     return State::undefined;
                 }
                 return iface->read(byte, size, red);
+            }
+
+            bool is_null() const {
+                return !iface || iface->is_null();
             }
 
             ~IO() {
