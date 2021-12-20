@@ -44,6 +44,10 @@ namespace utils {
 
             SSLResult& operator=(SSLResult&&);
 
+            SSLResult(const SSLResult&) = delete;
+
+            SSLResult& operator=(const SSLResult&) = delete;
+
             wrap::shared_ptr<SSLConn> connect();
 
             bool failed();
