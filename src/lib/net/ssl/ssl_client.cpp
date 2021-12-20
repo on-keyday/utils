@@ -42,10 +42,11 @@ namespace utils {
             if (impl->iostate == State::complete) {
                 int res = 0;
                 if (impl->is_server) {
+                    res = ::SSL_accept(impl->ssl);
                 }
                 else {
+                    res = ::SSL_connect(impl->ssl);
                 }
-                res = ::SSL_connect(impl->ssl);
                 if (res > 0) {
                     impl->connected = true;
                     impl->iostate = State::complete;
