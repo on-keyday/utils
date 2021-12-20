@@ -187,7 +187,7 @@ namespace utils {
             State state = State::failed;
             SOCKET sock = internal::invalid_socket;
             for (; p; p = info->ai_next) {
-                auto sock = ::socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+                sock = ::socket(p->ai_family, p->ai_socktype, p->ai_protocol);
                 if (sock < 0 || sock == internal::invalid_socket) {
                     continue;
                 }
