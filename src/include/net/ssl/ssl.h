@@ -52,6 +52,8 @@ namespace utils {
 
             bool failed();
 
+            ~SSLResult();
+
            private:
             internal::SSLImpl* impl = nullptr;
         };

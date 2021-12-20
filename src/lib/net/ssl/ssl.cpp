@@ -302,6 +302,10 @@ namespace utils {
                        impl->iostate != State::running;
         }
 
+        SSLResult::~SSLResult() {
+            delete impl;
+        }
+
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {
