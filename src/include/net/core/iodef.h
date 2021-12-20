@@ -75,6 +75,7 @@ namespace utils {
             struct interface {
                 virtual State write(const char* byte, size_t size) = 0;
                 virtual State read(const char* byte, size_t size, size_t* red) = 0;
+                virtual ~interface() {}
             };
 
             template <class T>
@@ -103,7 +104,18 @@ namespace utils {
             }
 
            public:
+            template <class T>
+            IO(T&& t) {
+                make_iface(std::forward<T>(t));
+            }
+
             IO(IO&& io) {
+                iface = io.iface;
+                io.iface = nullptr;
+            }
+
+            IO& operator=(IO&& io) {
+                delete iface;
                 iface = io.iface;
                 io.iface = nullptr;
             }
@@ -119,6 +131,10 @@ namespace utils {
                     return State::undefined;
                 }
                 return iface->read(byte, size, red);
+            }
+
+            ~IO() {
+                delete iface;
             }
         };
 

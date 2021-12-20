@@ -10,15 +10,22 @@
 // depends on OpenSSL
 #pragma once
 
+#include "../core/iodef.h"
+
 namespace utils {
     namespace net {
         namespace internal {
             struct SSLImpl;
         }
 
-        struct SSLResult {
+        struct SSLConn {
         };
 
-        SSLResult open();
+        struct SSLResult {
+           private:
+            internal::SSLImpl* impl = nullptr;
+        };
+
+        SSLResult open(IO&& io);
     }  // namespace net
 }  // namespace utils
