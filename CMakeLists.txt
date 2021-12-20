@@ -52,6 +52,7 @@ target_link_libraries(tokenizer libutils)
 target_link_libraries(make_parser libutils)
 target_link_libraries(syntaxc libutils)
 target_link_libraries(cmdparse libutils)
+target_link_libraries(netcore libutils)
 
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)
