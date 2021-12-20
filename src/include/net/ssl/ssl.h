@@ -60,5 +60,6 @@ namespace utils {
 
         SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                        const char* selfcert = nullptr, const char* selfprivate = nullptr);
+        SSLResult setup();
     }  // namespace net
 }  // namespace utils
