@@ -103,6 +103,13 @@ namespace utils {
             delete impl;
         }
 
+        void* Address::get_rawaddr() {
+            if (!impl) {
+                return nullptr;
+            }
+            return reinterpret_cast<void*>(impl->result);
+        }
+
         DnsResult::~DnsResult() {
             delete impl;
         }
