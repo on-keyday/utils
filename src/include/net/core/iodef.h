@@ -13,6 +13,8 @@
 
 #include "../../helper/sfinae.h"
 
+#include "../../helper/deref.h"
+
 #include "../../wrap/lite/string.h"
 
 namespace utils {
@@ -67,6 +69,58 @@ namespace utils {
         constexpr State read(T& t, const char* byte, size_t size, size_t* red) {
             return internal::readable<T>::read(t, byte, size, red);
         }
+
+        struct IO {
+           private:
+            struct interface {
+                virtual State write(const char* byte, size_t size) = 0;
+                virtual State read(const char* byte, size_t size, size_t* red) = 0;
+            };
+
+            template <class T>
+            struct implement : interface {
+                T t;
+                State write(const char* byte, size_t size) {
+                    auto v = helper::deref(t);
+                    if (!v) {
+                        return State::undefined;
+                    }
+                    return v->write(byte, size);
+                }
+                State read(const char* byte, size_t size, size_t* red) {
+                    auto v = helper::deref(t);
+                    if (!v) {
+                        return State::undefined;
+                    }
+                    return v->read(byte, size, red);
+                }
+            };
+
+            interface* iface = nullptr;
+            template <class T>
+            void make_iface(T&& t) {
+                iface = new implement<std::decay_t<T>>(std::forward<T>(t));
+            }
+
+           public:
+            IO(IO&& io) {
+                iface = io.iface;
+                io.iface = nullptr;
+            }
+
+            State write(const char* byte, size_t size) {
+                if (!iface) {
+                    return State::undefined;
+                }
+                return iface->write(byte, size);
+            }
+            State read(const char* byte, size_t size, size_t* red) {
+                if (!iface) {
+                    return State::undefined;
+                }
+                return iface->read(byte, size, red);
+            }
+        };
 
     }  // namespace net
 }  // namespace utils
