@@ -49,6 +49,9 @@ namespace utils {
         };
 
         struct TCPServer {
+            friend TCPServer setup(wrap::shared_ptr<Address>&& addr);
+
+           private:
         };
 
         TCPResult open(wrap::shared_ptr<Address>&& addr);
