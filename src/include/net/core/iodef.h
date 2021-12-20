@@ -94,7 +94,7 @@ namespace utils {
            private:
             struct interface {
                 virtual State write(const char* byte, size_t size) = 0;
-                virtual State read(const char* byte, size_t size, size_t* red) = 0;
+                virtual State read(char* byte, size_t size, size_t* red) = 0;
                 virtual bool is_null() const = 0;
                 virtual ~interface() {}
             };
@@ -113,7 +113,7 @@ namespace utils {
                     }
                     return v->write(byte, size);
                 }
-                State read(const char* byte, size_t size, size_t* red) override {
+                State read(char* byte, size_t size, size_t* red) override {
                     auto v = helper::deref(t);
                     if (!v) {
                         return State::undefined;
