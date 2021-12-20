@@ -31,6 +31,7 @@ namespace utils {
                 IO io;
                 wrap::string buffer;
                 SSLIOPhase iophase = SSLIOPhase::read_from_ssl;
+                State iostate = State::complete;
                 bool connected = false;
                 State do_IO() {
                     if (iophase == SSLIOPhase::read_from_ssl) {
@@ -87,11 +88,53 @@ namespace utils {
         }  // namespace internal
 
 #ifndef USE_OPENSSL
+        std::shared_ptr<SSLConn> SSLResult::connect() {
+            return nullptr;
+        }
+
         SSLResult open(IO&& io) {
             IO _ = std::move(io);
             return {};
         }
+
 #else
+        bool need_io(::SSL* ssl) {
+            auto errcode = ::SSL_get_error(ssl, -1);
+            return errcode == SSL_ERROR_WANT_READ || errcode == SSL_ERROR_WANT_WRITE || errcode == SSL_ERROR_SYSCALL;
+        }
+
+        static State connecting(internal::SSLImpl* impl) {
+            if (impl->iostate == State::complete) {
+                auto res = ::SSL_connect(impl->ssl);
+                if (res > 0) {
+                    impl->connected = true;
+                    impl->iostate = State::complete;
+                    return State::complete;
+                }
+                else if (res == 0) {
+                    impl->iostate = State::failed;
+                    return State::failed;
+                }
+                else {
+                    if (need_io(impl->ssl)) {
+                        impl->iostate = State::running;
+                    }
+                    else {
+                        impl->iostate = State::failed;
+                        return State::failed;
+                    }
+                }
+            }
+            if (impl->iostate == State::running) {
+                impl->iostate = impl->do_IO();
+            }
+            return impl->iostate;
+        }
+
+        std::shared_ptr<SSLConn> SSLResult::connect() {
+            return nullptr;
+        }
+
         bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {
@@ -148,11 +191,6 @@ namespace utils {
             return true;
         }
 
-        bool need_io(::SSL* ssl) {
-            auto errcode = ::SSL_get_error(ssl, -1);
-            return errcode == SSL_ERROR_WANT_READ || errcode == SSL_ERROR_WANT_WRITE || errcode == SSL_ERROR_SYSCALL;
-        }
-
         SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                        const char* selfcert, const char* selfprivate) {
             if (io.is_null() || !cert) {
@@ -163,17 +201,11 @@ namespace utils {
             if (!common_setup(result.impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
                 return SSLResult();
             }
-            auto res = ::SSL_connect(result.impl->ssl);
-            if (res > 0) {
-                result.impl->connected = true;
-                return result;
-            }
-            else if (res == 0) {
+            auto state = connecting(result.impl);
+            if (state != State::complete && state != State::running) {
                 return SSLResult();
             }
-            else {
-                if ()
-            }
+            return result;
         }
 #endif
     }  // namespace net

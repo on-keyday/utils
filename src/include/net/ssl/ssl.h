@@ -26,6 +26,8 @@ namespace utils {
                                   const char* selfcert, const char* selfprivate);
             constexpr SSLResult() {}
 
+            std::shared_ptr<SSLConn> connect();
+
            private:
             internal::SSLImpl* impl = nullptr;
         };

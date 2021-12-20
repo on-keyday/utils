@@ -34,6 +34,10 @@ namespace utils {
             friend TCPResult open(wrap::shared_ptr<Address>&& addr);
             constexpr TCPResult() {}
 
+            TCPResult(TCPResult&&);
+
+            TCPResult& operator=(TCPResult&&);
+
             wrap::shared_ptr<TCPConn> connect();
 
             bool failed();

@@ -54,6 +54,18 @@ namespace utils {
             return false;
         }
 
+        TCPResult::TCPResult(TCPResult&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+
+        TCPResult& TCPResult::operator=(TCPResult&& in) {
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
+        }
+
         State TCPConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl || impl->is_closed()) {
                 return State::failed;
@@ -100,7 +112,7 @@ namespace utils {
             }
         }
 
-        State connecting(::SOCKET& sock) {
+        static State connecting(::SOCKET& sock) {
             ::timeval timeout = {0};
             ::fd_set baseset = {0}, sucset = {0}, errset = {0};
             FD_ZERO(&baseset);
