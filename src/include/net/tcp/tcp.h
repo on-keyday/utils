@@ -22,12 +22,6 @@ namespace utils {
             friend struct TCPResult;
             constexpr TCPConn() {}
 
-            TCPConn(TCPConn&&);
-            TCPConn& operator=(TCPConn&&);
-
-            TCPConn(const TCPConn&) = delete;
-            TCPConn& operator=(const TCPConn&) = delete;
-
             State write(const char* ptr, size_t size);
             State read(char* ptr, size_t size, size_t* red);
             void close();
@@ -37,6 +31,7 @@ namespace utils {
         };
 
         struct TCPResult {
+            friend TCPResult open(wrap::shared_ptr<Address>&& addr);
             constexpr TCPResult() {}
 
             wrap::shared_ptr<TCPConn> connect();
