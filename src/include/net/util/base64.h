@@ -86,6 +86,7 @@ namespace utils {
             template <class T, class Out>
             constexpr bool decode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
                 if (seq.current() < 0 || seq.current() > 0xff) {
+                    break;
                 }
             }
         }  // namespace base64
