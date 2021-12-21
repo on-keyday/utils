@@ -65,18 +65,19 @@ namespace utils {
 #undef DEFINE_READ
 #define DEFINE_READ_SEQ(FUNC, SUFFIX)                                                                      \
     template <class T, class Result, size_t size = sizeof(T), size_t offset = 0, bool filldefault = false> \
-    constexpr bool read_##SUFFIX(Result& buf, size_t toread, char fill = 0) {                              \
+    constexpr size_t read_##SUFFIX(Result& buf, size_t toread, char fill = 0) {                            \
         if (seq.remain() < size * toread) {                                                                \
             if constexpr (!filldefault) {                                                                  \
                 return false;                                                                              \
             }                                                                                              \
         }                                                                                                  \
+        size_t ret = 0;                                                                                    \
         for (size_t i = 0; i < toread; i++) {                                                              \
             T t;                                                                                           \
-            FUNC<T, size, offset, filldefault>(t, fill);                                                   \
+            ret += FUNC<T, size, offset, filldefault>(t, fill);                                            \
             buf.push_back(t);                                                                              \
         }                                                                                                  \
-        return true;                                                                                       \
+        return ret;                                                                                        \
     }
 
             DEFINE_READ_SEQ(read, seq)
@@ -85,6 +86,6 @@ namespace utils {
             DEFINE_READ_SEQ(read_ntoh, seq_ntoh)
 
 #undef DEFINE_READ_SEQ
-        };
-    }  // namespace endian
+        };  // namespace utils
+    }       // namespace endian
 }  // namespace utils
