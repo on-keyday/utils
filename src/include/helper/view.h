@@ -86,5 +86,22 @@ namespace utils {
             }
         };
 
+        template <class Buf, size_t size_>
+        struct FixedPushBacker {
+            Buf buffer;
+            size_t count;
+            template <class T>
+            constexpr void push_back(T&& t) {
+                if (count >= size_) {
+                    return;
+                }
+                buffer[count] = t;
+            }
+
+            constexpr size_t size() const {
+                return size_;
+            }
+        };
+
     }  // namespace helper
 }  // namespace utils
