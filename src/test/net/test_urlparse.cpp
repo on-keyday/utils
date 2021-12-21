@@ -10,7 +10,7 @@
 
 void test_urlparse() {
     utils::net::URI url;
-    utils::net::rough_uri_parse("google.com", url);
+    utils::net::rough_uri_parse("google.com", url, true);
     assert(url.host == "google.com" && "expect google.com but not");
     url = {};
     utils::net::rough_uri_parse("https://on-keyday:pass@gmail.com:443/?a=b#tag", url);
