@@ -34,6 +34,7 @@ void test_urlparse() {
     utils::net::rough_uri_parse(R"(javascript:alert("hogehoge"))", url);
     assert(url.scheme == "javascript");
     assert(url.has_dobule_slash == false);
+    assert(url.other == R"(alert("hogehoge"))");
 }
 
 int main() {
