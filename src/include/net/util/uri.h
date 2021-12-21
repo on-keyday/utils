@@ -160,11 +160,13 @@ namespace utils {
             if (has_scheme) {
                 helper::read_until(parsed.scheme, seq, ":");
             }
-            parsed.has_dobule_slash = seq.seek_if("//");
-            if (!parsed.has_dobule_slash) {
-                no_host = true;
-                has_user = false;
-                unknown_data = true;
+            if (!no_host) {
+                parsed.has_dobule_slash = seq.seek_if("//");
+                if (!parsed.has_dobule_slash) {
+                    no_host = true;
+                    has_user = false;
+                    unknown_data = true;
+                }
             }
             if (has_user) {
                 internal::parse_user(unknown_data, seq, parsed);
