@@ -89,8 +89,8 @@ namespace utils {
 
         template <class Buf, size_t size_>
         struct FixedPushBacker {
-            Buf buffer;
-            size_t count;
+            Buf buf;
+            size_t count = 0;
 
             constexpr FixedPushBacker() {}
 
@@ -99,7 +99,7 @@ namespace utils {
                 if (count >= size_) {
                     return;
                 }
-                buffer[count] = t;
+                buf[count] = t;
             }
 
             constexpr size_t size() const {
