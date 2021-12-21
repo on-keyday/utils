@@ -33,6 +33,7 @@ add_executable(number "src/test/number/test_number.cpp")
 add_executable(cmdparse "src/test/cmdline/test_cmdparse.cpp")
 add_executable(netcore "src/test/net/test_netcore.cpp")
 add_executable(urlparse "src/test/net/test_urlparse.cpp")
+add_executable(base64 "src/test/net/test_base64.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils

@@ -78,7 +78,6 @@ namespace utils {
 
         template <class Buf = NopPushBacker>
         struct CountPushBacker {
-            constexpr CountPushBacker() {}
             Buf buf;
             size_t count = 0;
             template <class T>

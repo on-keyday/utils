@@ -8,7 +8,7 @@
 
 #include "../../include/net/util/base64.h"
 
-constexpr auto test_encode() {
+auto test_encode() {
     utils::helper::FixedPushBacker<char[64], 64> buf;
     utils::net::base64::encode("hello", buf);
     return buf;
@@ -16,7 +16,7 @@ constexpr auto test_encode() {
 
 void test_base64() {
     using namespace utils::net;
-    constexpr auto result = test_encode();
+    auto result = test_encode();
 }
 
 int main() {
