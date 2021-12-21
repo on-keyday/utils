@@ -136,7 +136,7 @@ namespace utils {
             if (helper::starts_with(str, "/") && !helper::starts_with("//")) {
                 no_host = true;
             }
-            if (helper::contains(str, "@")) {
+            if (!no_host && helper::contains(str, "@")) {
                 has_user = true;
             }
             while (!seq.eos()) {
