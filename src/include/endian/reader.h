@@ -36,11 +36,12 @@ namespace utils {
                 char redbuf[sizeof(T)] = {0};
                 T* ptr = reinterpret_cast<T*>(redbuf);
                 size_t i = offset;
+                size_t ret = 0;
                 for (; i < size && !seq.eos(); i++) {
                     redbuf[i] = seq.current();
                     seq.consume();
+                    ret++;
                 }
-                size_t ret = i - offset;
                 for (; i < size; i++) {
                     redbuf[i] = fill;
                 }
