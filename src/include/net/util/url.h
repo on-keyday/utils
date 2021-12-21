@@ -26,6 +26,7 @@ namespace utils {
             wrap::string query;
             wrap::string tag;
             wrap::string other;
+            bool has_dobule_slash = false;
         };
 
         namespace internal {
@@ -155,7 +156,7 @@ namespace utils {
             if (has_scheme) {
                 helper::read_until(parsed.scheme, seq, ":");
             }
-            seq.seek_if("//");
+            parsed.has_dobule_slash = seq.seek_if("//");
             if (has_user) {
                 internal::parse_user(unknown_data, seq, parsed);
             }
