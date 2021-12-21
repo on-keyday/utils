@@ -133,7 +133,7 @@ namespace utils {
             bool has_scheme = false;
             bool unknown_data = false;
             bool no_host = false;
-            if (helper::starts_with(str, "/") && !helper::starts_with("//")) {
+            if (helper::starts_with(str, "/") && !helper::starts_with(str, "//")) {
                 no_host = true;
             }
             if (!no_host && helper::contains(str, "@")) {
