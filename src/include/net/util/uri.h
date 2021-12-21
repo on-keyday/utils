@@ -132,6 +132,10 @@ namespace utils {
             bool has_user = false;
             bool has_scheme = false;
             bool unknown_data = false;
+            bool no_host = false;
+            if (helper::starts_with(str, "/") && !helper::starts_with("//")) {
+                no_host = true;
+            }
             if (helper::contains(str, "@")) {
                 has_user = true;
             }
@@ -160,7 +164,7 @@ namespace utils {
             if (has_user) {
                 internal::parse_user(unknown_data, seq, parsed);
             }
-            if (!unknown_data) {
+            if (!no_host && !unknown_data) {
                 internal::parse_host(unknown_data, seq, parsed);
             }
             if (!unknown_data) {
