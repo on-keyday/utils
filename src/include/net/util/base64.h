@@ -10,6 +10,8 @@
 #pragma once
 
 #include "../../core/sequencer.h"
+#include "../../helper/view.h"
+#include "../../endian/reader.h"
 
 namespace utils {
     namespace net {
@@ -35,7 +37,13 @@ namespace utils {
             }
 
             template <class T, class Out>
-            bool encode(Sequencer<T>& seq, Out& out) {
+            bool encode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
+                static_assert(sizeof(typename BufferType<T>::char_type) == 1, "expect 1 byte sequence");
+                helper::CountPushBacker<Out&> cb{out};
+                endian::Reader<buffer_t<std::remove_reference_t<T>&>> r{seq.buf};
+
+                std::uint32_t num;
+                r.read_ntoh<std::uint32_t, 4, 1>(num);
             }
         }  // namespace base64
     }      // namespace net
