@@ -143,12 +143,12 @@ namespace utils {
     Sequencer(Buf&&) -> Sequencer<Buf>;
 
     template <class String>
-    Sequencer<buffer_t<String&>> make_ref_seq(String&& v) {
+    constexpr Sequencer<buffer_t<String&>> make_ref_seq(String&& v) {
         return Sequencer<buffer_t<String&>>{v};
     }
 
     template <class String>
-    Sequencer<std::decay_t<String>> make_cpy_seq(const String& v) {
+    constexpr Sequencer<std::decay_t<String>> make_cpy_seq(const String& v) {
         return Sequencer<std::decay_t<String>>{v};
     }
 
