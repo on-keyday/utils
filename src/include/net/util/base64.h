@@ -52,6 +52,10 @@ namespace utils {
                         cb.push_back(get_char(buf[i]));
                     }
                 }
+                while (!no_padding && cb.count % 4) {
+                    cb.push_back('=');
+                }
+                return true;
             }
         }  // namespace base64
     }      // namespace net
