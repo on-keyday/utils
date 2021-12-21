@@ -50,7 +50,7 @@ namespace utils {
 
 #define DEFINE_READ(FUNC, SUFFIX)                                                            \
     template <class T, size_t size = sizeof(T), size_t offset = 0, bool filldefault = false> \
-    constexpr size_t read_##SUFFIX(T& t, char fill = 0;) {                                   \
+    constexpr size_t read_##SUFFIX(T& t, char fill = 0) {                                    \
         auto ret = read<T, size, offset, filldefault>(t, fill);                              \
         if (ret == ~0) {                                                                     \
             return false;                                                                    \

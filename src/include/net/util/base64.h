@@ -37,13 +37,21 @@ namespace utils {
             }
 
             template <class T, class Out>
-            bool encode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
+            constexpr bool encode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
                 static_assert(sizeof(typename BufferType<T>::char_type) == 1, "expect 1 byte sequence");
                 helper::CountPushBacker<Out&> cb{out};
                 endian::Reader<buffer_t<std::remove_reference_t<T>&>> r{seq.buf};
-
-                std::uint32_t num;
-                r.read_ntoh<std::uint32_t, 4, 1>(num);
+                while (!seq.eos()) {
+                    std::uint32_t num;
+                    auto red = r.template read_ntoh<std::uint32_t, 4, 1, true>(num);
+                    if (!red) {
+                        break;
+                    }
+                    std::uint8_t buf[] = {std::uint8_t((num >> 18) & 0x3f), std::uint8_t((num >> 12) & 0x3f), std::uint8_t((num >> 6) & 0x3f), std::uint8_t(num & 0x3f)};
+                    for (auto i = 0; i < red + 1; i++) {
+                        cb.push_back(get_char(buf[i]));
+                    }
+                }
             }
         }  // namespace base64
     }      // namespace net
