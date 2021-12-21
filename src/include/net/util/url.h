@@ -69,6 +69,9 @@ namespace utils {
             void parse_host(bool& unknown_data, Sequencer<T>& seq, URL& parsed) {
                 bool at_first = false;
                 bool on_port = false;
+                if (seq.seek_if("[")) {
+                    helper::read_until(parsed.host, seq, "]");
+                }
                 while (!seq.eos()) {
                     if (seq.current() == '/') {
                         if (at_first) {
@@ -94,10 +97,33 @@ namespace utils {
                     unknown_data = true;
                 }
             }
+            template <class T>
+            void parse_path(bool& unknown_data, Sequencer<T>& seq, URL& parsed) {
+                bool on_query = false;
+                bool on_tag = false;
+                while (!seq.eos()) {
+                    if (seq.current() == '?') {
+                        on_query = true;
+                    }
+                    else if (seq.current() == '#') {
+                        on_tag = true;
+                    }
+                    if (on_tag) {
+                        parsed.tag.push_back(seq.current());
+                    }
+                    else if (on_query) {
+                        parsed.query.push_back(seq.current());
+                    }
+                    else {
+                        parsed.path.push_back(seq.current());
+                    }
+                    seq.consume();
+                }
+            }
         }  // namespace internal
 
         template <class String>
-        bool parse_url(String&& str, URL& parsed) {
+        bool parse_url_rough(String&& str, URL& parsed) {
             auto seq = make_ref_seq(str);
             wrap::string current;
             bool has_user = false;
@@ -133,6 +159,15 @@ namespace utils {
             }
             if (!unknown_data) {
                 internal::parse_host(unknown_data, seq, parsed);
+            }
+            if (!unknown_data) {
+                internal::parse_path(unknown_data, seq, parsed);
+            }
+            if (unknown_data) {
+                while (!seq.eos()) {
+                    parsed.other.push_back(seq.current());
+                    seq.consume();
+                }
             }
         }
 
