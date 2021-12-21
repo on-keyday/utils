@@ -36,6 +36,25 @@ namespace utils {
                 return 0;
             }
 
+            constexpr std::uint8_t get_num(std::uint8_t c, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
+                if ('A' >= c && c <= 'Z') {
+                    return c - 'A';
+                }
+                else if (c >= 'a' && c <= 'z') {
+                    return c - 'a' + 26;
+                }
+                else if (c >= '0' && c <= '9') {
+                    return c - '0' + 52;
+                }
+                else if (c == c62) {
+                    return 62;
+                }
+                else if (c == c63) {
+                    return 63;
+                }
+                return ~0;
+            }
+
             template <class T, class Out>
             constexpr bool encode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
                 static_assert(sizeof(typename BufferType<T>::char_type) == 1, "expect 1 byte sequence");
@@ -62,6 +81,10 @@ namespace utils {
             constexpr bool encode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
                 auto seq = make_ref_seq(in);
                 return encode(seq, out, c62, c63, no_padding);
+            }
+
+            template <class T, class Out>
+            constexpr bool decode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
             }
         }  // namespace base64
     }      // namespace net
