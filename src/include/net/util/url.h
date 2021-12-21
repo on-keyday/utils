@@ -59,6 +59,7 @@ namespace utils {
                         }
                     }
                     seq.consume();
+                    at_first = false;
                 }
                 if (at_first) {
                     unknown_data = true;
@@ -92,6 +93,7 @@ namespace utils {
                         }
                     }
                     seq.consume();
+                    at_first = false;
                 }
                 if (at_first) {
                     unknown_data = true;
