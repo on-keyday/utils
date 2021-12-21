@@ -40,7 +40,7 @@ namespace utils {
                     redbuf[i] = seq.current();
                     seq.consume();
                 }
-                size_t ret = i;
+                size_t ret = i - offset;
                 for (; i < size; i++) {
                     redbuf[i] = fill;
                 }
