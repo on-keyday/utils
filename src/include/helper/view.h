@@ -69,6 +69,7 @@ namespace utils {
         };
 
         struct NopPushBacker {
+            constexpr NopPushBacker() {}
             template <class T>
             constexpr void push_back(T&&) const {}
         };
@@ -77,6 +78,7 @@ namespace utils {
 
         template <class Buf = NopPushBacker>
         struct CountPushBacker {
+            constexpr CountPushBacker() {}
             Buf buf;
             size_t count = 0;
             template <class T>
@@ -90,6 +92,9 @@ namespace utils {
         struct FixedPushBacker {
             Buf buffer;
             size_t count;
+
+            constexpr FixedPushBacker() {}
+
             template <class T>
             constexpr void push_back(T&& t) {
                 if (count >= size_) {

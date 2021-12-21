@@ -10,10 +10,13 @@
 
 constexpr auto test_encode() {
     utils::helper::FixedPushBacker<char[64], 64> buf;
+    utils::net::base64::encode("hello", buf);
+    return buf;
 }
 
 void test_base64() {
     using namespace utils::net;
+    constexpr auto result = test_encode();
 }
 
 int main() {
