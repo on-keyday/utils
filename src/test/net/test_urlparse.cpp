@@ -13,11 +13,12 @@ void test_urlparse() {
     utils::net::rough_url_parse("google.com", url);
     assert(url.host == "google.com" && "expect google.com but not");
     url = {};
-    utils::net::rough_url_parse("https://on-keyday:pass@gmail.com/?a=b", url);
+    utils::net::rough_url_parse("https://on-keyday:pass@gmail.com:443/?a=b", url);
     assert(url.scheme == "https");
     assert(url.user == "on-keyday");
     assert(url.password == "pass");
     assert(url.host == "gmail.com");
+    assert(url.port == "443");
     assert(url.path == "/");
     assert(url.query == "?a=b");
 }
