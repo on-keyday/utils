@@ -41,7 +41,7 @@ namespace utils {
                 static_assert(sizeof(typename BufferType<T>::char_type) == 1, "expect 1 byte sequence");
                 helper::CountPushBacker<Out&> cb{out};
                 endian::Reader<buffer_t<std::remove_reference_t<T>&>> r{seq.buf};
-                while (!seq.eos()) {
+                while (!r.seq.eos()) {
                     std::uint32_t num;
                     auto red = r.template read_ntoh<std::uint32_t, 4, 1, true>(num);
                     if (!red) {
