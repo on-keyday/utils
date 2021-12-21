@@ -89,7 +89,7 @@ namespace utils {
 
         template <class Buf, size_t size_>
         struct FixedPushBacker {
-            Buf buf;
+            Buf buf{};
             size_t count = 0;
 
             constexpr FixedPushBacker() {}
