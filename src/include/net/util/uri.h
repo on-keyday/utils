@@ -126,7 +126,7 @@ namespace utils {
         }  // namespace internal
 
         template <class String>
-        void rough_uri_parse(String&& str, URI& parsed) {
+        void rough_uri_parse(String&& str, URI& parsed, bool allow_only_host = false) {
             auto seq = make_ref_seq(str);
             wrap::string current;
             bool has_user = false;
@@ -162,7 +162,7 @@ namespace utils {
             }
             if (!no_host) {
                 parsed.has_dobule_slash = seq.seek_if("//");
-                if (!parsed.has_dobule_slash) {
+                if (!parsed.has_dobule_slash && !allow_only_host) {
                     no_host = true;
                     has_user = false;
                     unknown_data = true;
