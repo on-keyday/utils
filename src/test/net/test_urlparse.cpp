@@ -29,7 +29,7 @@ void test_urlparse() {
     assert(url.scheme == "file");
     assert(url.has_dobule_slash == true);
     assert(url.host == "");
-    assert(url.path == "D:/Minitools/Utils/test.txt");
+    assert(url.path == "/D:/Minitools/Utils/test.txt");
 }
 
 int main() {
