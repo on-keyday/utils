@@ -57,6 +57,12 @@ namespace utils {
                 }
                 return true;
             }
+
+            template <class In, class Out>
+            constexpr bool encode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
+                auto seq = make_ref_seq(in);
+                return encode(seq, out, c62, c63, no_padding);
+            }
         }  // namespace base64
     }      // namespace net
 }  // namespace utils
