@@ -55,7 +55,7 @@ namespace utils {
                             parsed.password.push_back(seq.current());
                         }
                         else {
-                            parsed.user.password.push_bacck(seq.current());
+                            parsed.password.push_back(seq.current());
                         }
                     }
                     seq.consume();
