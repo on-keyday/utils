@@ -6,14 +6,14 @@
 */
 
 
-#include "../../include/net/util/url.h"
+#include "../../include/net/util/uri.h"
 
 void test_urlparse() {
-    utils::net::URL url;
-    utils::net::rough_url_parse("google.com", url);
+    utils::net::URI url;
+    utils::net::rough_uri_parse("google.com", url);
     assert(url.host == "google.com" && "expect google.com but not");
     url = {};
-    utils::net::rough_url_parse("https://on-keyday:pass@gmail.com:443/?a=b#tag", url);
+    utils::net::rough_uri_parse("https://on-keyday:pass@gmail.com:443/?a=b#tag", url);
     assert(url.scheme == "https");
     assert(url.has_dobule_slash == true);
     assert(url.user == "on-keyday");

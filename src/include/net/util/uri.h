@@ -16,7 +16,7 @@
 
 namespace utils {
     namespace net {
-        struct URL {
+        struct URI {
             wrap::string scheme;
             wrap::string user;
             wrap::string password;
@@ -31,7 +31,7 @@ namespace utils {
 
         namespace internal {
             template <class T>
-            void parse_user(bool& unknown_data, Sequencer<T>& seq, URL& parsed) {
+            void parse_user(bool& unknown_data, Sequencer<T>& seq, URI& parsed) {
                 bool at_first = true;
                 bool on_password = false;
                 while (!seq.eos()) {
@@ -68,7 +68,7 @@ namespace utils {
             }
 
             template <class T>
-            void parse_host(bool& unknown_data, Sequencer<T>& seq, URL& parsed) {
+            void parse_host(bool& unknown_data, Sequencer<T>& seq, URI& parsed) {
                 bool at_first = false;
                 bool on_port = false;
                 if (seq.seek_if("[")) {
@@ -101,7 +101,7 @@ namespace utils {
                 }
             }
             template <class T>
-            void parse_path(bool& unknown_data, Sequencer<T>& seq, URL& parsed) {
+            void parse_path(bool& unknown_data, Sequencer<T>& seq, URI& parsed) {
                 bool on_query = false;
                 bool on_tag = false;
                 while (!seq.eos()) {
@@ -126,7 +126,7 @@ namespace utils {
         }  // namespace internal
 
         template <class String>
-        void rough_uri_parse(String&& str, URL& parsed) {
+        void rough_uri_parse(String&& str, URI& parsed) {
             auto seq = make_ref_seq(str);
             wrap::string current;
             bool has_user = false;
