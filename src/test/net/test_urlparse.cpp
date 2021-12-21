@@ -25,11 +25,14 @@ void test_urlparse() {
     assert(url.tag == "#tag");
     assert(url.other == "");
     url = {};
-    utils::net::rough_url_parse("file:///D:/Minitools/Utils/test.txt", url);
+    utils::net::rough_uri_parse("file:///D:/Minitools/Utils/test.txt", url);
     assert(url.scheme == "file");
     assert(url.has_dobule_slash == true);
     assert(url.host == "");
     assert(url.path == "/D:/Minitools/Utils/test.txt");
+    utils::net::rough_uri_parse(R"(javascript:alert("hogehoge"))", url);
+    assert(url.scheme == "javascript");
+    assert(url.has_dobule_slash == false);
 }
 
 int main() {

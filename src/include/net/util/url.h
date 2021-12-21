@@ -126,7 +126,7 @@ namespace utils {
         }  // namespace internal
 
         template <class String>
-        void rough_url_parse(String&& str, URL& parsed) {
+        void rough_uri_parse(String&& str, URL& parsed) {
             auto seq = make_ref_seq(str);
             wrap::string current;
             bool has_user = false;
