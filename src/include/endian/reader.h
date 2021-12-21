@@ -46,7 +46,7 @@ namespace utils {
                     redbuf[i] = fill;
                 }
                 t = *ptr;
-                return i;
+                return ret;
             }
 
 #define DEFINE_READ(FUNC, SUFFIX)                                                            \
@@ -54,7 +54,7 @@ namespace utils {
     constexpr size_t read_##SUFFIX(T& t, char fill = 0) {                                    \
         auto ret = read<T, size, offset, filldefault>(t, fill);                              \
         if (ret == ~0) {                                                                     \
-            return false;                                                                    \
+            return ~0;                                                                       \
         }                                                                                    \
         t = FUNC(&t);                                                                        \
         return ret;                                                                          \
