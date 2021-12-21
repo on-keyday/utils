@@ -15,6 +15,7 @@ void test_urlparse() {
     url = {};
     utils::net::rough_url_parse("https://on-keyday:pass@gmail.com:443/?a=b#tag", url);
     assert(url.scheme == "https");
+    assert(url.has_dobule_slash == true);
     assert(url.user == "on-keyday");
     assert(url.password == "pass");
     assert(url.host == "gmail.com");
