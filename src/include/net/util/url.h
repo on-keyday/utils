@@ -123,7 +123,7 @@ namespace utils {
         }  // namespace internal
 
         template <class String>
-        bool parse_url_rough(String&& str, URL& parsed) {
+        bool rough_url_parse(String&& str, URL& parsed) {
             auto seq = make_ref_seq(str);
             wrap::string current;
             bool has_user = false;
