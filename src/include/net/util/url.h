@@ -128,7 +128,7 @@ namespace utils {
             wrap::string current;
             bool has_user = false;
             bool has_scheme = false;
-            bool unknown_data = true;
+            bool unknown_data = false;
             if (helper::contains(str, "@")) {
                 has_user = true;
             }
