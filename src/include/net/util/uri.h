@@ -6,8 +6,7 @@
 */
 
 
-// url - parse url data
-
+// uri - parse uri
 #pragma once
 
 #include "../../core/sequencer.h"
