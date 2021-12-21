@@ -100,6 +100,7 @@ namespace utils {
                     return;
                 }
                 buf[count] = t;
+                count++;
             }
 
             constexpr size_t size() const {
