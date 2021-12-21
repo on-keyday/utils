@@ -24,6 +24,12 @@ void test_urlparse() {
     assert(url.query == "?a=b");
     assert(url.tag == "#tag");
     assert(url.other == "");
+    url = {};
+    utils::net::rough_url_parse("file:///D:/Minitools/Utils/test.txt", url);
+    assert(url.scheme == "file");
+    assert(url.has_dobule_slash == true);
+    assert(url.host == "");
+    assert(url.path == "D:/Minitools/Utils/test.txt");
 }
 
 int main() {
