@@ -11,7 +11,7 @@
 #include "../../include/helper/strutil.h"
 
 void test_sha1() {
-    utils::helper::FixedPushBacker<char[20], 20> result;
+    utils::helper::FixedPushBacker<char[21], 21> result;
     utils::helper::FixedPushBacker<char[35], 34> encoded;
     utils::net::sha1::make_hash("The quick brown fox jumps over the lazy dog", result);
     utils::net::base64::encode(result.buf, encoded);
