@@ -18,7 +18,7 @@ namespace utils {
     namespace net {
         namespace sha1 {
             namespace internal {
-                void calc_hash(std::uint32_t* h, const std::uint8_t* bits) {
+                constexpr void calc_hash(std::uint32_t* h, const std::uint8_t* bits) {
                     auto rol = [](unsigned int word, auto shift) {
                         return (word << shift) | (word >> (sizeof(word) * 8 - shift));
                     };
@@ -64,7 +64,7 @@ namespace utils {
             }  // namespace internal
 
             template <class T, class Out>
-            bool make_hash(Sequencer<T>& t, Out& out) {
+            constexpr bool make_hash(Sequencer<T>& t, Out& out) {
                 std::uint32_t hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
                 endian::Reader<std::remove_reference_t<T>&> r{t.buf};
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
@@ -109,7 +109,7 @@ namespace utils {
             }
 
             template <class In, class Out>
-            bool make_hash(In&& in, Out& out) {
+            constexpr bool make_hash(In&& in, Out& out) {
                 auto seq = make_ref_seq(in);
                 return make_hash(seq, out);
             }
