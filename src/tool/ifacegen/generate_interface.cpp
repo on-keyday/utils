@@ -97,8 +97,13 @@ namespace ifacegen {
 
 #pragma once
 #include<helper/deref.h>
-
 )");
+        for (auto& h : data.headernames) {
+            hlp::append(str, "#include");
+            hlp::append(str, h);
+            hlp::append(str, "\n");
+        }
+        hlp::append(str, "\n");
         if (data.pkgname.size()) {
             hlp::append(str, "namespace ");
             hlp::append(str, data.pkgname);
