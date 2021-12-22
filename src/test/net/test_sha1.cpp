@@ -16,6 +16,11 @@ void test_sha1() {
     utils::net::sha1::make_hash("The quick brown fox jumps over the lazy dog", result);
     utils::net::base64::encode(result.buf, encoded);
     assert(utils::helper::equal(encoded.buf, "L9ThxnotKPzthJ7hu3bnORuT6xI="));
+    result = {};
+    encoded = {};
+    utils::net::sha1::make_hash("", result);
+    utils::net::base64::encode(result.buf, encoded);
+    assert(utils::helper::equal(encoded.buf, "2jmj7l5rSw0yVb/vlWAYkK/YBwk="));
 }
 
 int main() {
