@@ -55,11 +55,11 @@ namespace utils {
                 return ~0;
             }
 
-            template <class T, class Out>
-            constexpr bool encode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
-                static_assert(sizeof(typename BufferType<T>::char_type) == 1, "expect 1 byte sequence");
+            template <class In, class Out>
+            constexpr bool encode(In&& buf, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
+                static_assert(sizeof(typename BufferType<In&>::char_type) == 1, "expect 1 byte sequence");
                 helper::CountPushBacker<Out&> cb{out};
-                endian::Reader<buffer_t<std::remove_reference_t<T>&>> r{seq.buf};
+                endian::Reader<buffer_t<In&>> r{buf};
                 while (!r.seq.eos()) {
                     std::uint32_t num;
                     auto red = r.template read_ntoh<std::uint32_t, 4, 1, true>(num);
@@ -77,17 +77,42 @@ namespace utils {
                 return true;
             }
 
+            /*
             template <class In, class Out>
             constexpr bool encode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
                 auto seq = make_ref_seq(in);
                 return encode(seq, out, c62, c63, no_padding);
-            }
+            }*/
 
             template <class T, class Out>
-            constexpr bool decode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
-                if (seq.current() < 0 || seq.current() > 0xff) {
-                    break;
+            constexpr bool decode(Sequencer<T>&& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
+                bool end = false;
+                while (!seq.eos() && !end) {
+                    size_t redsize = 0;
+                    std::uint8_t buf[4] = {0};
+                    std::int32_t rep;
+                    while (redsize < 4 && !seq.eos()) {
+                        if (seq.current() < 0 || seq.current() > 0xff) {
+                            end = true;
+                            break;
+                        }
+                        auto n = get_num(seq.current(), c62, c63);
+                        if (n == ~0) {
+                            end = true;
+                            break;
+                        }
+                        buf[redsize] = n;
+                        rep = ((n << 6) * (3 - redsize));
+                        redsize++;
+                    }
+                    rep = endian::from_network(rep);
+                    rep >>= 8;
+                    char* rep_ptr = reinterpret_cast<char*>(&rep);
+                    for (auto i = 0; i < redsize - 1; i++) {
+                        out.push_back(rep_ptr[i]);
+                    }
                 }
+                return true;
             }
         }  // namespace base64
 
