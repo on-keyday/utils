@@ -38,6 +38,9 @@ namespace ifacegen {
         }
         if (result.top() == func_def) {
             if (result.result.kind == us::KeyWord::eos) {
+                if (state.iface.type.ref != RefKind::none) {
+                    state.data.has_ref_ret = true;
+                }
                 state.data.ifaces[state.current_iface].push_back(std::move(state.iface));
                 state.iface = {};
                 return true;
