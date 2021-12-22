@@ -42,6 +42,23 @@ namespace utils {
         };
         // clang-format on
 
+        constexpr std::uint8_t to_num_char(std::uint8_t n, bool upper = false) {
+            if (n <= 9) {
+                return '0' + n;
+            }
+            else if (n >= 10 && n <= 36) {
+                if (upper) {
+                    return 'A' + (n - 10);
+                }
+                else {
+                    return 'a' + (n - 10);
+                }
+            }
+            else {
+                return 0xff;
+            }
+        }
+
         namespace internal {
 
             template <class T>
