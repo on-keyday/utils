@@ -15,7 +15,7 @@ package utils::net
 # identifier(param type) rettype
 
 interface Hey {
-    const hey(name &const std::string) *int
-    const hey(name *const char) *int
-    is_boy() bool
+    hey(name &const std::string) std::string
+    hey(name *const char) std::string
+    const is_boy() bool = false
 }

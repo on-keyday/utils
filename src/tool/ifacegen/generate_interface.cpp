@@ -94,6 +94,7 @@ namespace ifacegen {
     template<class T>
     struct implement : interface {
         T t_holder_;
+
         template<class... Args>
         implement(Args&&...args)
             :t(std::forward<Args>(args)...){}
