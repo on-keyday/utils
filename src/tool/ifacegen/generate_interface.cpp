@@ -82,7 +82,9 @@ namespace ifacegen {
                 render_cpp_function(func, str);
                 hlp::append(str, "= 0;\n    ");
             }
-            hlp::append(str, R"(};
+            hlp::append(str, R"(
+        virtual ~interface(){}
+    };
     
     template<class T>
     struct implement : interface {
