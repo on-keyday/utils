@@ -136,7 +136,9 @@ namespace ifacegen {
                 hlp::append(str, ";\n        }\n\n    ");
             }
             hlp::append(str, R"(};
+
     interface* iface = nullptr;
+
    public:
     template<class T>
     )");
