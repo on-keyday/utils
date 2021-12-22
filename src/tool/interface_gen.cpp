@@ -26,7 +26,12 @@ int main(int argc, char** argv) {
     utils::wrap::vector<wrap::string> arg;
     auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
     if (err != ParseError::none) {
-        cerr << error_message(err) << "\n";
+        cerr << "error: " << argv[index] << ": " << error_message(err) << "\n";
         return -1;
+    }
+    auto in = result.is_set("input-file");
+    auto out = result.is_set("output-file");
+    if (!in || !out) {
+        cerr << "error: need --input-file and --output-file";
     }
 }
