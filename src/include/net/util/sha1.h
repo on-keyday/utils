@@ -63,8 +63,8 @@ namespace utils {
                 }
             }  // namespace internal
 
-            template <class T>
-            bool make_hash(Sequencer<T>& t) {
+            template <class T, class Out>
+            bool make_hash(Sequencer<T>& t, Out& out) {
                 std::uint32_t hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
                 endian::Reader<std::remove_reference_t<T>&> r{t.buf};
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
@@ -97,9 +97,15 @@ namespace utils {
                     Buffer b;
                     std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
                     ptr[7] = endian::from_network(&total);
-                    ctx.calc(c.bits);
-                    ctx.intotal = true;
+                    internal::calc_hash(hash, b.buf);
                 }
+                for (auto h : hash) {
+                    auto be = endian::to_network(&h);
+                    for (auto k = 0; k < 4; k++) {
+                        out.push_back(reinterpret_cast<char*>(&be)[k]);
+                    }
+                }
+                return true;
             }
         }  // namespace sha1
 
