@@ -37,7 +37,7 @@ namespace utils {
             }
 
             constexpr std::uint8_t get_num(std::uint8_t c, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
-                if ('A' >= c && c <= 'Z') {
+                if (c >= 'A' && c <= 'Z') {
                     return c - 'A';
                 }
                 else if (c >= 'a' && c <= 'z') {
