@@ -16,6 +16,8 @@
 int main(int argc, char** argv) {
     using namespace utils;
     using namespace utils::cmdline;
+    auto& cout = wrap::cout_wrap();
+    auto& cerr = wrap::cerr_wrap();
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value)
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value);
@@ -24,6 +26,7 @@ int main(int argc, char** argv) {
     utils::wrap::vector<wrap::string> arg;
     auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
     if (err != ParseError::none) {
+        cerr << error_message(err) << "\n";
         return -1;
     }
 }
