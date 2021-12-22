@@ -85,7 +85,9 @@ int main(int argc, char** argv) {
         auto res = token.tokenize(sv, tok);
         assert(res && "ifacegen: fatal error: can't tokenize");
         const char* errmsg = nullptr;
-        if (!tokenize::merge(errmsg, tok, tokenize::escaped_comment<wrap::string>("\"", "\\"))) {
+        if (!tokenize::merge(errmsg, tok,
+                             tokenize::line_comment<wrap::string>("#"),
+                             tokenize::escaped_comment<wrap::string>("\"", "\\"))) {
             cerr << "ifacegen: error: " << errmsg;
             return -1;
         }
