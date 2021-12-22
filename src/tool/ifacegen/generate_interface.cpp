@@ -62,8 +62,13 @@ namespace ifacegen {
             }
             if (arg.type.ref == RefKind::rval) {
                 hlp::append(str, "std::forward<");
+                render_cpp_noref_type(arg.type, str);
+                hlp::append(str, ">(");
             }
             hlp::append(str, arg.name);
+            if (arg.type.ref == RefKind::rval) {
+                hlp::append(str, ")");
+            }
         }
         hlp::append(str, ")");
     }
