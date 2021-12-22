@@ -29,9 +29,11 @@ namespace ifacegen {
                 if (!res.second) {
                     return false;
                 }
+                return true;
             }
             if (result.result.kind == us::KeyWord::eos) {
                 state.current_iface = "";
+                return true;
             }
         }
         if (result.top() == func_def) {
