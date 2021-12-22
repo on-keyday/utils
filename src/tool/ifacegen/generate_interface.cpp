@@ -133,6 +133,17 @@ namespace ifacegen {
     }
     
     )");
+            hlp::append(str, iface.first);
+            hlp::append(str, "& operator=(");
+            hlp::append(str, iface.first);
+            hlp::append(str, R"(&& in) {
+        delete iface;
+        iface=in.iface;
+        in.iface=nullptr;
+        return *this;
+    }
+
+    )");
         }
     }
 
