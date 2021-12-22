@@ -73,7 +73,12 @@ namespace ifacegen {
         hlp::append(str, ")");
     }
 
-    void render_cpp_default_value(Interface& func, utw::string& str) {
+    void render_cpp_default_value(Interface& func, utw::string& str, bool need_ret) {
+        auto ret_w = [&] {
+            if (need_ret) {
+                hlp::append(str, "return ");
+            }
+        };
         if (func.default_result.size()) {
             if (func.default_result == "panic") {
                 hlp::append(str, "throw std::bad_function_call()");
@@ -149,8 +154,7 @@ namespace ifacegen {
                 hlp::append(str, "            ");
                 hlp::append(str, "if (!t_ptr_) {\n");
                 hlp::append(str, "                ");
-                hlp::append(str, "return ");
-                render_cpp_default_value(func, str);
+                render_cpp_default_value(func, str, true);
                 hlp::append(str, ";\n");
                 hlp::append(str, "            }\n");
                 hlp::append(str, "            ");
@@ -208,7 +212,7 @@ namespace ifacegen {
         return iface?iface->)");
                 render_cpp_call(func, str);
                 hlp::append(str, ":");
-                render_cpp_default_value(func, str);
+                render_cpp_default_value(func, str, false);
                 hlp::append(str, R"(;
     }
 
