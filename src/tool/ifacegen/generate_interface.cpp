@@ -160,11 +160,11 @@ namespace ifacegen {
    public:
     constexpr )");
             hlp::append(str, iface.first);
-            hlp::append(str, "(){}\n\n");
-            hlp::append(str, "    constexpr ");
+            hlp::append(str, "(){}\n\n    constexpr ");
             hlp::append(str, iface.first);
-            hlp::append(str, "(){}\n\n");
-            hlp::append(str, R"(template <class T>
+            hlp::append(str, "(){}\n");
+            hlp::append(str, R"(
+    template <class T>
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T&& t) {
