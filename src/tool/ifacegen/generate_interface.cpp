@@ -12,7 +12,7 @@
 namespace ifacegen {
     namespace hlp = utils::helper;
 
-    void render_cpp_type(Type& type, utw::string& str) {
+    void render_cpp_noref_type(Type& type, utw::string& str) {
         if (type.is_const) {
             hlp::append(str, "const ");
         }
@@ -20,6 +20,10 @@ namespace ifacegen {
         for (size_t i = 0; i < type.pointer; i++) {
             hlp::append(str, "*");
         }
+    }
+
+    void render_cpp_type(Type& type, utw::string& str) {
+        render_cpp_noref_type(type, str);
         if (type.ref == RefKind::lval) {
             hlp::append(str, "&");
         }
@@ -55,6 +59,9 @@ namespace ifacegen {
         for (auto& arg : func.args) {
             if (!is_first) {
                 hlp::append(str, ", ");
+            }
+            if (arg.type.ref == RefKind::rval) {
+                hlp::append(str, "std::forward<");
             }
             hlp::append(str, arg.name);
         }
