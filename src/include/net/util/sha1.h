@@ -18,7 +18,7 @@ namespace utils {
     namespace net {
         namespace sha1 {
             namespace internal {
-                void calc_hash(std::uint32_t* h, const char* bits) {
+                void calc_hash(std::uint32_t* h, const std::uint8_t* bits) {
                     auto rol = [](unsigned int word, auto shift) {
                         return (word << shift) | (word >> (sizeof(word) * 8 - shift));
                     };
@@ -65,11 +65,33 @@ namespace utils {
 
             template <class T>
             bool make_hash(Sequencer<T>& t) {
-                unsigned int hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
+                std::uint32_t hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
                 endian::Reader<std::remove_reference_t<T>&> r{t.buf};
-                helper::FixedPushBacker<std::uint8_t[64], 0> b;
-                auto red = r.read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
-                std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
+                using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
+                size_t total = 0;
+                while (!t.eos()) {
+                    Buffer b;
+                    auto red = r.read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
+                    total += red * 8;
+                    std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
+                    if (red < 64) {
+                        b.buf[red] = 0x80;
+                        ctx.intotal = true;
+                        if (red < 56) {
+                            c.ints[7] = translate_byte_net_and_host<unsigned long long>(&ctx.total);
+                            internal::calc_hash(hash, b.buf);
+                        }
+                        else {
+                            internal::calc_hash(hash, b.buf);
+                            ::memset(b.buf, 0, 64);
+                            ptr[7] = translate_byte_net_and_host<unsigned long long>(&ctx.total);
+                            internal::calc_hash(hash, b.buf);
+                        }
+                    }
+                    else {
+                        internal::calc_hash(hash, b.buf);
+                    }
+                }
             }
         }  // namespace sha1
 
