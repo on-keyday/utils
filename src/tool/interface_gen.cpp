@@ -20,14 +20,20 @@ int main(int argc, char** argv) {
     auto& cerr = wrap::cerr_wrap();
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value)
-        .set("input-file,i", str_option(""), "set input file", OptFlag::need_value);
+        .set("input-file,i", str_option(""), "set input file", OptFlag::need_value)
+        .set("help,h", bool_option(true), "show help", OptFlag::none);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
     auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
     if (err != ParseError::none) {
-        cerr << "error: " << argv[index] << ": " << error_message(err) << "\n";
+        cerr << "error: " << argv[index] << ": " << error_message(err) << "\n"
+             << "try `ifacegen -h` for more info\n";
         return -1;
+    }
+    if (result.is_set("help")) {
+        cout << desc.help(argv[0]);
+        return 1;
     }
     auto in = result.is_set("input-file");
     auto out = result.is_set("output-file");
