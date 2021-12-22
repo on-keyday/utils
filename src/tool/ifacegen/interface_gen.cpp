@@ -43,9 +43,7 @@ int main(int argc, char** argv) {
     auto in = result.is_set("input-file");
     auto out = result.is_set("output-file");
     if (!in || !out) {
-        if (result.is_set("verbose")) {
-            cerr << "ifacegen: error: need --input-file and --output-file option\n";
-        }
+        cerr << "ifacegen: error: need --input-file and --output-file option\n";
         return -1;
     }
     auto& infile = *in->value<wrap::string>();
@@ -63,7 +61,9 @@ int main(int argc, char** argv) {
     )def";
     tokenize::Tokenizer<wrap::string> token;
     stxc->cb = [&](auto& ctx) {
-        cout << ctx.stack.back() << ":" << ctx.result.token << "\n";
+        if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
+            cout << ctx.stack.back() << ":" << ctx.result.token << "\n";
+        }
     };
     {
         auto seq = make_ref_seq(def);
