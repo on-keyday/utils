@@ -159,8 +159,8 @@ namespace utils {
                 return result;
             }
 
-            template <class Str, class Help = Str, class ValDesc = Str>
-            OptionDesc& set(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag, ValDesc&& valdesc = Str()) {
+            template <class Str, class Help = const char*, class ValDesc = const char*>
+            OptionDesc& set(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag, ValDesc&& valdesc = "") {
                 auto alias = helper::split<String, Vec>(utf::convert<String>(name), ",");
                 if (alias.size() == 0) {
                     return *this;
