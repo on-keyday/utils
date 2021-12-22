@@ -25,7 +25,7 @@ void test_base64() {
     using namespace utils::net;
     auto result = test_encode("hello");
     auto result2 = test_decode(result.buf);
-    assert(utils::helper::equal(result2, "hello"));
+    assert(utils::helper::equal(result2.buf, "hello"));
 }
 
 int main() {
