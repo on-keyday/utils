@@ -46,6 +46,10 @@ namespace ifacegen {
             for (auto& func : iface.second) {
                 hlp::append(str, "virtual ");
                 render_cpp_type(func.type, str);
+                hlp::append(str, func.funcname);
+                hlp::append(str, "(");
+                for (auto& arg : func.args) {
+                }
             }
         }
     }
