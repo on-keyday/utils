@@ -78,13 +78,13 @@ namespace utils {
                         b.buf[red] = 0x80;
                         ctx.intotal = true;
                         if (red < 56) {
-                            c.ints[7] = translate_byte_net_and_host<unsigned long long>(&ctx.total);
+                            c.ints[7] = endian::from_network(&total);
                             internal::calc_hash(hash, b.buf);
                         }
                         else {
                             internal::calc_hash(hash, b.buf);
                             ::memset(b.buf, 0, 64);
-                            ptr[7] = translate_byte_net_and_host<unsigned long long>(&ctx.total);
+                            ptr[7] = endian::from_network(&total);
                             internal::calc_hash(hash, b.buf);
                         }
                     }
