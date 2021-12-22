@@ -17,7 +17,9 @@ constexpr auto test_encode() {
 
 void test_urlencode() {
     constexpr auto result = test_encode();
-    //assert(utils::helper::equal(result.buf, "https://ja.wikipedia.org/wiki/%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%9A%E3%83%BC%E3%82%B8"));
+    constexpr auto sz = result.count;
+    constexpr char cmp[] = "https://ja.wikipedia.org/wiki/%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%9A%E3%83%BC%E3%82%B8";
+    assert(utils::helper::equal(result.buf, cmp) && "why failed?");
 }
 
 int main() {

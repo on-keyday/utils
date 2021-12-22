@@ -23,6 +23,29 @@ namespace utils {
             return Sequencer<buffer_t<T&>>::template default_compare<U>();
         }
 
+        template <class T>
+        constexpr T to_upper(T c) {
+            if (c >= 'a' && c <= 'z') {
+                c = c - 'a' + 'A';
+            }
+            return c;
+        };
+
+        template <class T>
+        constexpr T to_lower(T c) {
+            if (c >= 'A' && c <= 'Z') {
+                c = c - 'A' + 'a';
+            }
+            return c;
+        };
+
+        template <class T, class U>
+        constexpr auto ignore_case() {
+            return [](typename BufferType<T&>::char_type a, typename BufferType<U&>::char_type b) {
+                return to_upper(a) == to_upper(b);
+            };
+        }
+
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
         constexpr bool starts_with(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
             Sequencer<buffer_t<In&>> intmp(in);
