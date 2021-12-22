@@ -98,6 +98,10 @@ namespace ifacegen {
                 hlp::append(str, "            ");
                 hlp::append(str, "return t_ptr_->");
                 hlp::append(str, func.funcname);
+                hlp::append(str, "(");
+                bool is_first = false;
+                for (auto& arg : func.args) {
+                }
             }
             hlp::append(str, "};\n");
         }
