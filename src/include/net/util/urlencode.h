@@ -38,6 +38,23 @@ namespace utils {
                     }
                     seq.consume();
                 }
+                return true;
+            }
+
+            template <class T, class Out, class F = void (*)(std::uint8_t)>
+            constexpr bool decode(Sequencer<T>& seq, Out& out) {
+                while (!seq.eos()) {
+                    if (seq.current() == '%') {
+                        seq.consume();
+                        auto n = seq.current();
+                        seq.consume();
+                        auto s = seq.current();
+                        seq.consume();
+                        if (n < 0 || n > 0xff || s < 0 || s > 0xff) {
+                            return false;
+                        }
+                    }
+                }
             }
         }  // namespace urlenc
     }      // namespace net
