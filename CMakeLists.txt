@@ -39,7 +39,8 @@ add_executable(sha1 "src/test/net/test_sha1.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
-                        "src/tool/ifacegen/read_interface.cpp")
+                        "src/tool/ifacegen/read_interface.cpp"
+                        "src/tool/ifacegen/generate_interface.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
