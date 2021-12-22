@@ -34,6 +34,7 @@ namespace ifacegen {
         utw::string funcname;
         utw::vector<Arg> args;
         bool is_const = false;
+        utw::string default_result;
     };
 
     struct FileData {

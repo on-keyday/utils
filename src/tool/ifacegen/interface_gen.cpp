@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         ROOT:=PACKAGE? INTERFACE*?
         PACKAGE:="package" ID!
         INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]! EOS
-        FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE]! EOS
+        FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
         VARDEF:=ID TYPE

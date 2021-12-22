@@ -47,7 +47,12 @@ namespace ifacegen {
                 return true;
             }
             if (result.result.kind == us::KeyWord::id) {
-                state.iface.funcname = result.token();
+                if (state.iface.funcname.size()) {
+                    state.iface.default_result = result.token();
+                }
+                else {
+                    state.iface.funcname = result.token();
+                }
                 return true;
             }
         }
