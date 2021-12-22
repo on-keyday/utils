@@ -66,20 +66,20 @@ namespace utils {
             template <class T, class Out>
             constexpr bool make_hash(Sequencer<T>& t, Out& out) {
                 std::uint32_t hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
-                endian::Reader<std::remove_reference_t<T>&> r{t.buf};
+                endian::Reader<buffer_t<std::remove_reference_t<T>&>> r{t.buf};
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
                 size_t total = 0;
                 bool intotal = false;
                 while (!t.eos()) {
                     Buffer b;
-                    auto red = r.read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
+                    auto red = r.template read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
                     total += red * 8;
                     std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
                     if (red < 64) {
                         b.buf[red] = 0x80;
                         intotal = true;
                         if (red < 56) {
-                            c.ints[7] = endian::from_network(&total);
+                            ptr[7] = endian::from_network(&total);
                             internal::calc_hash(hash, b.buf);
                         }
                         else {
