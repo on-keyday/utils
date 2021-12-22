@@ -30,10 +30,12 @@ namespace ifacegen {
         }
         if (result.top() == func_def) {
             if (result.result.token == "const") {
-                state.consted = true;
+                state.iface.is_const = true;
                 return true;
             }
             if (result.result.kind == us::KeyWord::id) {
+                state.iface.funcname = result.result.token;
+                return true;
             }
         }
     }
