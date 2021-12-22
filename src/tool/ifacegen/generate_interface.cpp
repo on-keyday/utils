@@ -172,6 +172,7 @@ namespace ifacegen {
                 }
                 hlp::append(str, R"(;
     }
+
 )");
             }
             hlp::append(str, "};\n\n");
