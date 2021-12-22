@@ -111,9 +111,13 @@ namespace utils {
             }
 
             template <class In, class Out>
-            constexpr bool decode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool consume_padding = true) {
+            constexpr bool decode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool consume_padding = true, bool expect_eos = true) {
                 auto seq = make_ref_seq(in);
-                return decode(seq, out, c62, c63, consume_padding) && seq.eos();
+                auto res = decode(seq, out, c62, c63, consume_padding);
+                if (res && expect_eos) {
+                    return seq.eos();
+                }
+                return res;
             }
         }  // namespace base64
 
