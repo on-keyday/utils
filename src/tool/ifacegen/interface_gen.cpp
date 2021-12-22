@@ -43,7 +43,9 @@ int main(int argc, char** argv) {
     auto in = result.is_set("input-file");
     auto out = result.is_set("output-file");
     if (!in || !out) {
-        cerr << "ifacegen: error: need --input-file and --output-file option\n";
+        if (result.is_set("verbose")) {
+            cerr << "ifacegen: error: need --input-file and --output-file option\n";
+        }
         return -1;
     }
     auto& infile = *in->value<wrap::string>();
