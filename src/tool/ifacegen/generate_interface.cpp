@@ -42,15 +42,36 @@ namespace ifacegen {
             hlp::append(str, R"(
    private:
     struct interface {
-        )");
+    )");
             for (auto& func : iface.second) {
-                hlp::append(str, "virtual ");
+                hlp::append(str, "    virtual ");
                 render_cpp_type(func.type, str);
                 hlp::append(str, func.funcname);
                 hlp::append(str, "(");
+                bool is_first = true;
                 for (auto& arg : func.args) {
+                    if (!is_first) {
+                        hlp::append(str, ", ");
+                    }
+                    render_cpp_type(arg.type, str);
+                    hlp::append(str, arg.name);
+                    is_first = false;
                 }
+                hlp::append(str, ") ");
+                if (func.is_const) {
+                    hlp::append(str, "const ");
+                }
+                hlp::append(str, "= 0;\n    ");
             }
+            hlp::append(str, R"(};
+    
+    template<class T>
+    struct implement{
+        T t;
+        template<class... Args>
+        implement(Args&&...args)
+            :t(std::forward<Args>(args)...){}
+    )");
         }
     }
 
