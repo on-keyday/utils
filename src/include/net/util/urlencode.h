@@ -16,11 +16,12 @@ namespace utils {
         namespace urlenc {
 
             constexpr auto default_noescape() {
-                return [](auto e) {
+                return [](auto) {
                     return false;
                 };
             }
 
+            // same filter as same name function in javascript
             constexpr auto encodeURIComponent() {
                 return [](std::uint8_t c) {
                     return c >= 'A' && c <= 'Z' ||
@@ -34,8 +35,9 @@ namespace utils {
                 };
             }
 
+            // same filter as same name function in javascript
             constexpr auto encodeURI() {
-                return [=](std::uint8_t c) {
+                return [](std::uint8_t c) {
                     constexpr auto encodeURIComponent_ = encodeURIComponent();
                     return encodeURIComponent_(c) ||
                            c == ';' || c == ',' ||
@@ -66,7 +68,17 @@ namespace utils {
                 return true;
             }
 
-            template <class T, class Out, class F = void (*)(std::uint8_t)>
+            template <class In, class Out, class F = void (*)(std::uint8_t)>
+            constexpr bool encode(In&& in, Out& out, F&& no_escape = default_noescape(), bool upper = false, bool expect_eos = true) {
+                auto seq = make_ref_seq(in);
+                auto res = encode(seq, out, no_escape, upper);
+                if (res && expect_eos) {
+                    return seq.eos();
+                }
+                return res;
+            }
+
+            template <class T, class Out>
             constexpr bool decode(Sequencer<T>& seq, Out& out) {
                 while (!seq.eos()) {
                     if (seq.current() == '%') {
@@ -92,6 +104,17 @@ namespace utils {
                 }
                 return true;
             }
+
+            template <class In, class Out>
+            constexpr bool decode(In&& in, Out& out, bool expect_eos = true) {
+                auto seq = make_ref_seq(in);
+                auto res = decode(seq, out);
+                if (res && expect_eos) {
+                    return seq.eos();
+                }
+                return res;
+            }
         }  // namespace urlenc
-    }      // namespace net
+
+    }  // namespace net
 }  // namespace utils
