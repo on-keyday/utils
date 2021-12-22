@@ -93,7 +93,8 @@ namespace ifacegen {
                 else {
                     hlp::append(str, "{}");
                 }
-                hlp::append(str, ";");
+                hlp::append(str, ";\n");
+                hlp::append(str, "            }\n");
             }
             hlp::append(str, "};\n");
         }
