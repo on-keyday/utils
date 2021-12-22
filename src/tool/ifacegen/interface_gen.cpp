@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
+    token.symbol.predef.push_back("#");
     decltype(token)::token_t tok;
     {
         file::View view;
