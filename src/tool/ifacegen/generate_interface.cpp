@@ -20,6 +20,12 @@ namespace ifacegen {
         for (size_t i = 0; i < type.pointer; i++) {
             hlp::append(str, "*");
         }
+        if (type.ref == RefKind::lval) {
+            hlp::append(str, "&");
+        }
+        else if (type.ref == RefKind::rval) {
+            hlp::append(str, "&&");
+        }
         hlp::append(str, " ");
     }
 
