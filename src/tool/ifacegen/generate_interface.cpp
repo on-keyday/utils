@@ -143,6 +143,10 @@ namespace ifacegen {
         return *this;
     }
 
+    operator bool() const {
+        return iface != nullptr;
+    }
+
     )");
         }
     }
