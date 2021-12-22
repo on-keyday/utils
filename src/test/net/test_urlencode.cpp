@@ -26,9 +26,9 @@ void test_urlencode() {
     constexpr char cmp[] = "https://ja.wikipedia.org/wiki/%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%9A%E3%83%BC%E3%82%B8";
     static_assert(utils::helper::equal(result.buf, cmp, utils::helper::ignore_case()) && "why failed?");
     auto result2 = test_decode();
-    constexpr auto sz = result2.count;
+    /*constexpr auto sz = result2.count;
     constexpr char8_t cmp2[] = u8"https://ja.wikipedia.org/wiki/メインページ";
-    static_assert(utils::helper::equal(result2.buf, cmp2), "why failed?");
+    static_assert(utils::helper::equal(result2.buf, cmp2), "why failed?");*/
 }
 
 int main() {

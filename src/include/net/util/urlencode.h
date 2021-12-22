@@ -94,7 +94,7 @@ namespace utils {
                         }
                         auto v1 = number::number_transform[n];
                         auto v2 = number::number_transform[s];
-                        if (n < 0x0 || n > 0xf || s < 0x0 || s > 0xf) {
+                        if (v1 < 0x0 || v1 > 0xf || v2 < 0x0 || v2 > 0xf) {
                             return false;
                         }
                         out.push_back(std::uint8_t(v1 << 4 | v2));
