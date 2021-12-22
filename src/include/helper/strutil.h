@@ -39,9 +39,8 @@ namespace utils {
             return c;
         };
 
-        template <class T, class U>
         constexpr auto ignore_case() {
-            return [](typename BufferType<T&>::char_type a, typename BufferType<U&>::char_type b) {
+            return [](auto a, auto b) {
                 return to_upper(a) == to_upper(b);
             };
         }
