@@ -78,7 +78,7 @@ namespace utils {
             }
 
             template <class T, class Out>
-            constexpr bool decode(Sequencer<T>&& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
+            constexpr bool decode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
                 bool end = false;
                 while (!seq.eos() && !end) {
                     size_t redsize = 0;
