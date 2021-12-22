@@ -95,6 +95,9 @@ namespace ifacegen {
                 }
                 hlp::append(str, ";\n");
                 hlp::append(str, "            }\n");
+                hlp::append(str, "            ");
+                hlp::append(str, "return t_ptr_->");
+                hlp::append(str, func.funcname);
             }
             hlp::append(str, "};\n");
         }
