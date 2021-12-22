@@ -43,4 +43,5 @@ int main(int argc, char** argv) {
     }
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();
+    cout << "process end\n";
 }
