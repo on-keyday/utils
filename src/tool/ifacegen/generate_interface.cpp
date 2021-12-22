@@ -78,7 +78,16 @@ namespace ifacegen {
             hlp::append(str, func.default_result);
         }
         else {
-            hlp::append(str, "{}");
+            if (func.type.ref != RefKind::none) {
+                hlp::append(str, "throw std::bad_function_call()");
+            }
+            else if (func.type.pointer) {
+                hlp::append(str, "nullptr");
+            }
+            else {
+                hlp::append(str, func.type.prim);
+                hlp::append(str, "{}");
+            }
         }
     }
 
