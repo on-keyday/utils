@@ -21,7 +21,7 @@ namespace utils {
                 if (num < 26) {
                     return 'A' + num;
                 }
-                else if (num >= 26 && num <= 52) {
+                else if (num >= 26 && num < 52) {
                     return 'a' + (num - 26);
                 }
                 else if (num >= 52 && num < 62) {
