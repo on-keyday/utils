@@ -48,7 +48,6 @@ int main(int argc, char** argv) {
     }
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();
-    cout << "process end\n";
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
         ROOT:=PACKAGE? INTERFACE*?
@@ -98,4 +97,5 @@ int main(int argc, char** argv) {
             cerr << "ifacegen: " << stxc->error();
         }
     }
+    cout << "process end\n";
 }
