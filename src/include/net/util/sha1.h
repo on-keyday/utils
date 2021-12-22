@@ -69,6 +69,7 @@ namespace utils {
                 endian::Reader<std::remove_reference_t<T>&> r{t.buf};
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
                 size_t total = 0;
+                bool intotal = false;
                 while (!t.eos()) {
                     Buffer b;
                     auto red = r.read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
@@ -76,7 +77,7 @@ namespace utils {
                     std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
                     if (red < 64) {
                         b.buf[red] = 0x80;
-                        ctx.intotal = true;
+                        intotal = true;
                         if (red < 56) {
                             c.ints[7] = endian::from_network(&total);
                             internal::calc_hash(hash, b.buf);
@@ -91,6 +92,13 @@ namespace utils {
                     else {
                         internal::calc_hash(hash, b.buf);
                     }
+                }
+                if (!intotal) {
+                    Buffer b;
+                    std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
+                    ptr[7] = endian::from_network(&total);
+                    ctx.calc(c.bits);
+                    ctx.intotal = true;
                 }
             }
         }  // namespace sha1
