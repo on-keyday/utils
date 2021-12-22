@@ -22,6 +22,7 @@ namespace utils {
             }
 
             // same filter as same name function in javascript
+            // see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
             constexpr auto encodeURIComponent() {
                 return [](std::uint8_t c) {
                     return c >= 'A' && c <= 'Z' ||
@@ -36,6 +37,7 @@ namespace utils {
             }
 
             // same filter as same name function in javascript
+            // see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI
             constexpr auto encodeURI() {
                 return [](std::uint8_t c) {
                     constexpr auto encodeURIComponent_ = encodeURIComponent();
@@ -59,7 +61,7 @@ namespace utils {
                     }
                     else {
                         auto n = std::uint8_t(seq.current());
-                        out.push_bacK('%');
+                        out.push_back('%');
                         out.push_back(number::to_num_char((n & 0xf0) >> 4, upper));
                         out.push_back(number::to_num_char((n & 0x0f), upper));
                     }
