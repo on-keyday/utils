@@ -147,7 +147,11 @@ namespace ifacegen {
         return iface != nullptr;
     }
 
-    )");
+)");
+            for (auto& func : iface.second) {
+                hlp::append(str, "    ");
+                render_cpp_function(func, str);
+            }
         }
     }
 
