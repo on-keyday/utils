@@ -19,12 +19,12 @@ namespace ifacegen {
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == package_def && result.result.kind == us::KeyWord::id) {
-            state.data.pkgname = result.result.token;
+            state.data.pkgname = result.token();
             return true;
         }
         if (result.top() == interface_def) {
             if (result.result.kind == us::KeyWord::id) {
-                state.current_iface = result.result.token;
+                state.current_iface = result.token();
                 auto res = state.data.ifaces.insert({state.current_iface, {}});
                 if (!res.second) {
                     return false;
@@ -40,30 +40,30 @@ namespace ifacegen {
                 state.iface = {};
                 return true;
             }
-            if (result.result.token == "const") {
+            if (result.token() == "const") {
                 state.iface.is_const = true;
                 return true;
             }
             if (result.result.kind == us::KeyWord::id) {
-                state.iface.funcname = result.result.token;
+                state.iface.funcname = result.token();
                 return true;
             }
         }
         if (result.top() == param_def) {
             if (result.result.kind == us::KeyWord::id) {
                 state.iface.args.push_back({});
-                state.iface.args.back().name = result.result.token;
+                state.iface.args.back().name = result.token();
             }
         }
         auto set_type = [&](auto& type) {
-            if (result.result.token == "const") {
+            if (result.token() == "const") {
                 type.is_const = true;
             }
-            else if (result.result.token == "*") {
+            else if (result.token() == "*") {
                 type.pointer++;
             }
             else {
-                type.prim = result.result.token;
+                type.prim = result.token();
             }
         };
         if (result.top() == type_def || result.top() == pointer_) {
