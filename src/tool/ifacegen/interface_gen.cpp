@@ -105,5 +105,9 @@ int main(int argc, char** argv) {
             cerr << "ifacegen: " << stxc->error();
         }
     }
+    cout << "generated:\n";
+    wrap::string got;
+    ifacegen::generate(state.data, got, ifacegen::Language::cpp);
+    cout << got;
     cout << "process end\n";
 }
