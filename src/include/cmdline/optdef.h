@@ -159,8 +159,8 @@ namespace utils {
                 return result;
             }
 
-            template <class Str, class Help = Str>
-            OptionDesc& set(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag) {
+            template <class Str, class Help = Str, class ValDesc = Str>
+            OptionDesc& set(Str&& name, OptValue<> defvalue, Help&& help, OptFlag flag, ValDesc&& valdesc = Str()) {
                 auto alias = helper::split<String, Vec>(utf::convert<String>(name), ",");
                 if (alias.size() == 0) {
                     return *this;
@@ -178,6 +178,7 @@ namespace utils {
                 opt->defvalue = std::move(defvalue);
                 opt->flag = flag;
                 opt->help = utf::convert<String>(help);
+                opt->valdesc = utf::convert<String>(valdesc);
                 vec.push_back(opt);
                 auto idx = vec.size() - 1;
                 for (auto& n : alias) {
