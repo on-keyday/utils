@@ -89,6 +89,7 @@ namespace ifacegen {
         template<class... Args>
         implement(Args&&...args)
             :t(std::forward<Args>(args)...){}
+
     )");
             for (auto& func : iface.second) {
                 hlp::append(str, "    ");
@@ -111,7 +112,7 @@ namespace ifacegen {
                 hlp::append(str, "            ");
                 hlp::append(str, "return t_ptr_->");
                 render_cpp_call(func, str);
-                hlp::append(str, "\n    }\n    ");
+                hlp::append(str, "\n        }\n\n    ");
             }
             hlp::append(str, R"(};
     interface* iface = nullptr;
