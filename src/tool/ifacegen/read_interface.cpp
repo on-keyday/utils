@@ -31,11 +31,13 @@ namespace ifacegen {
                 }
             }
             if (result.result.kind == us::KeyWord::eos) {
+                state.current_iface = "";
             }
         }
         if (result.top() == func_def) {
             if (result.result.kind == us::KeyWord::eos) {
                 state.data.ifaces[state.current_iface].push_back(std::move(state.iface));
+                state.iface = {};
                 return true;
             }
             if (result.result.token == "const") {
@@ -72,5 +74,6 @@ namespace ifacegen {
                 set_type(state.iface.type);
             }
         }
+        return true;
     }
 }  // namespace ifacegen

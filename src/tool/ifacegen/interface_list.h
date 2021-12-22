@@ -41,7 +41,6 @@ namespace ifacegen {
         FileData data;
         utw::string current_iface;
         Interface iface;
-        Type* type = nullptr;
     };
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
