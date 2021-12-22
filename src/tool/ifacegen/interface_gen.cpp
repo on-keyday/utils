@@ -17,6 +17,8 @@
 
 #include "../../include/file/file_view.h"
 
+#include "interface_list.h"
+
 int main(int argc, char** argv) {
     using namespace utils;
     using namespace utils::cmdline;
@@ -60,10 +62,15 @@ int main(int argc, char** argv) {
         TYPE:=POINTER? "const"? ID
     )def";
     tokenize::Tokenizer<wrap::string> token;
+    ifacegen::State state;
     stxc->cb = [&](auto& ctx) {
         if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
             cout << ctx.stack.back() << ":" << syntax::keywordv(ctx.result.kind) << ":" << ctx.result.token << "\n";
         }
+        if (!ifacegen::read_callback(ctx, state)) {
+            return syntax::MatchState::fatal;
+        }
+        return syntax::MatchState::succeed;
     };
     {
         auto seq = make_ref_seq(def);
