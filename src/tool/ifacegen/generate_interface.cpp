@@ -106,6 +106,7 @@ namespace ifacegen {
                     }
                     hlp::append(str, arg.name);
                 }
+                hlp::append(str, ");\n");
             }
             hlp::append(str, "};\n");
         }
