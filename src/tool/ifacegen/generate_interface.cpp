@@ -75,7 +75,12 @@ namespace ifacegen {
 
     void render_cpp_default_value(Interface& func, utw::string& str) {
         if (func.default_result.size()) {
-            hlp::append(str, func.default_result);
+            if (func.default_result == "panic") {
+                hlp::append(str, "throw std::bad_function_call()");
+            }
+            else {
+                hlp::append(str, func.default_result);
+            }
         }
         else {
             if (func.type.ref != RefKind::none) {

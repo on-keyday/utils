@@ -19,3 +19,7 @@ interface Hey {
     hey(name *const char) std::string
     const is_boy() bool = false
 }
+
+interface Stringer {
+    string() std::string
+}
