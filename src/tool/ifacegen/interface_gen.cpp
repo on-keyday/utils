@@ -25,6 +25,7 @@ int main(int argc, char** argv) {
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
+        .set("varbose,v", bool_option(true), "verbose log", OptFlag::none)
         .set("help,h", bool_option(true), "show help", OptFlag::none);
     int index = 1;
     DefaultSet result;
