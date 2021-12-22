@@ -109,7 +109,8 @@ namespace ifacegen {
                 hlp::append(str, ");\n    ");
             }
             hlp::append(str, R"(};
-    interface* iface = nullptr;)");
+    interface* iface = nullptr;
+   public:)");
         }
     }
 
