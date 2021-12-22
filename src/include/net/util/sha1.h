@@ -70,6 +70,7 @@ namespace utils {
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
                 size_t total = 0;
                 bool intotal = false;
+                r.seq.rptr = t.rptr;
                 while (!r.seq.eos()) {
                     Buffer b;
                     auto red = r.template read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
