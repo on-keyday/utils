@@ -64,7 +64,7 @@ namespace ifacegen {
     )");
             for (auto& func : iface.second) {
                 hlp::append(str, "    virtual ");
-
+                render_cpp_function(func, str);
                 hlp::append(str, "= 0;\n    ");
             }
             hlp::append(str, R"(};
@@ -76,9 +76,18 @@ namespace ifacegen {
         implement(Args&&...args)
             :t(std::forward<Args>(args)...){}
     )");
+            for (auto& func : iface.second) {
+                hlp::append(str, "    ");
+                render_cpp_function(func, str);
+                hlp::append(str, "override {\n");
+            }
         }
     }
 
     bool generate(FileData& data, utw::string& str, Language lang) {
+        if (lang == Language::cpp) {
+            return generate_cpp(data, str);
+        }
+        return false;
     }
 }  // namespace ifacegen
