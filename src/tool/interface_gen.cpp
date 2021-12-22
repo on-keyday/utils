@@ -32,6 +32,6 @@ int main(int argc, char** argv) {
     auto in = result.is_set("input-file");
     auto out = result.is_set("output-file");
     if (!in || !out) {
-        cerr << "error: need --input-file and --output-file";
+        cerr << "error: need --input-file and --output-file option\n";
     }
 }

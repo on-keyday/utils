@@ -62,6 +62,8 @@ target_link_libraries(syntaxc libutils)
 target_link_libraries(cmdparse libutils)
 target_link_libraries(netcore libutils)
 
+target_link_libraries(ifacegen libutils)
+
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)
 else()
