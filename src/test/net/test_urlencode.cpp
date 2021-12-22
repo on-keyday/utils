@@ -15,6 +15,12 @@ constexpr auto test_encode() {
     return buf;
 }
 
+constexpr auto test_decode() {
+    utils::helper::FixedPushBacker<char[120], 119> buf;
+    utils::net::urlenc::decode("https://ja.wikipedia.org/wiki/%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%9A%E3%83%BC%E3%82%B8", buf);
+    return buf;
+}
+
 void test_urlencode() {
     constexpr auto result = test_encode();
     constexpr auto sz = result.count;
