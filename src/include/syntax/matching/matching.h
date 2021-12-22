@@ -23,6 +23,15 @@ namespace utils {
             const String& top() const {
                 return stack[stack.size() - 1];
             }
+
+            bool under(const String& v) const {
+                for (auto i = stack.size() - 1; i != -1; i--) {
+                    if (stack[i] == v) {
+                        return true;
+                    }
+                }
+                return false;
+            }
         };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
