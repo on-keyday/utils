@@ -6,6 +6,9 @@
 */
 
 
-namespace ifacegen {
+#include "interface_list.h"
 
-}
+namespace ifacegen {
+    bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
+    }
+}  // namespace ifacegen

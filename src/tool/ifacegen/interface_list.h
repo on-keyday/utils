@@ -9,6 +9,7 @@
 #pragma once
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/syntax/make_parser/keyword.h"
+#include "../../include/syntax/matching/matching.h"
 
 namespace ifacegen {
     namespace utw = utils::wrap;
@@ -36,4 +37,6 @@ namespace ifacegen {
         utils::syntax::KeyWord prevv = utils::syntax::KeyWord::bos;
         utw::string prevtoken;
     };
+
+    bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
 }  // namespace ifacegen

@@ -3,7 +3,16 @@
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 
+# test - ifacegen test
+
 package utils::net
+
+# iface
+# const identifier(param type) rettype
+# convert to c++
+# rettype identifier(type param) const 
+# convert to golang
+# identifier(param type) rettype
 
 interface Hey {
     const Hey(name std::string) *int
