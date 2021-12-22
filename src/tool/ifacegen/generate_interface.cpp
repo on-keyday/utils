@@ -168,7 +168,11 @@ namespace ifacegen {
             hlp::append(str, "};\n");
         }
         if (data.pkgname.size()) {
+            hlp::append(str, "} // namespace");
+            hlp::append(str, data.pkgname);
+            hlp::append(str, "\n");
         }
+        return true;
     }
 
     bool generate(FileData& data, utw::string& str, Language lang) {
