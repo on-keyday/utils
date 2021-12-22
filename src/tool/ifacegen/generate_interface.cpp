@@ -82,6 +82,7 @@ namespace ifacegen {
                 hlp::append(str, "override {\n");
                 hlp::append(str, "            ");
             }
+            hlp::append(str, "};\n");
         }
     }
 
