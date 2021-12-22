@@ -57,6 +57,19 @@ int main(int argc, char** argv) {
     if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
         verbose = true;
     }
+    ifacegen::State state;
+    if (auto h = result.is_set("header")) {
+        if (auto s = h->value<wrap::string>()) {
+            state.data.headernames.push_back(*s);
+        }
+        else if (auto vs = h->value<wrap::vector<OptValue<>>>()) {
+            for (auto& s : *vs) {
+                if (auto v = s.value<wrap::string>()) {
+                    state.data.headernames.push_back(*v);
+                }
+            }
+        }
+    }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
         ROOT:=PACKAGE? INTERFACE*?
@@ -69,7 +82,7 @@ int main(int argc, char** argv) {
         TYPE:=["&&"|"&"]? POINTER? "const"? ID
     )def";
     tokenize::Tokenizer<wrap::string> token;
-    ifacegen::State state;
+
     stxc->cb = [&](auto& ctx) {
         if (verbose) {
             cout << ctx.stack.back() << ":" << syntax::keywordv(ctx.result.kind) << ":" << ctx.result.token << "\n";
