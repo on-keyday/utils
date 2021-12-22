@@ -81,17 +81,17 @@ namespace utils {
                         intotal = true;
                         if (red < 56) {
                             ptr[7] = endian::to_network(&total);
-                            internal::calc_hash(hash, b.buf);
+                            internal::calc_sha1(hash, b.buf);
                         }
                         else {
-                            internal::calc_hash(hash, b.buf);
+                            internal::calc_sha1(hash, b.buf);
                             ::memset(b.buf, 0, 64);
                             ptr[7] = endian::to_network(&total);
-                            internal::calc_hash(hash, b.buf);
+                            internal::calc_sha1(hash, b.buf);
                         }
                     }
                     else {
-                        internal::calc_hash(hash, b.buf);
+                        internal::calc_sha1(hash, b.buf);
                     }
                 }
                 if (!intotal) {
@@ -99,7 +99,7 @@ namespace utils {
                     std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
                     b.buf[0] = 0x80;
                     ptr[7] = endian::to_network(&total);
-                    internal::calc_hash(hash, b.buf);
+                    internal::calc_sha1(hash, b.buf);
                 }
                 for (auto h : hash) {
                     auto be = endian::to_network(&h);

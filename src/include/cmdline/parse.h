@@ -58,11 +58,11 @@ namespace utils {
             }
         }  // namespace internal
 
-        template <class String, class Char, template <class...> class Map, template <class...> class Vec>
+        template <class String, class Char, template <class...> class Map, template <class...> class Vec, class Arg = Vec<String>>
         ParseError parse(int& index, int argc, Char** argv,
                          OptionDesc<String, Vec, Map>& desc,
                          OptionSet<String, Vec, Map>& result,
-                         ParseFlag flag, Vec<String>* arg = nullptr) {
+                         ParseFlag flag, Arg* arg = nullptr) {
             using option_t = wrap::shared_ptr<Option<String, Vec>>;
             bool nooption = false;
             ParseError ret = ParseError::none;

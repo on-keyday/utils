@@ -13,6 +13,7 @@
 
 #include "../wrap/lite/string.h"
 #include "../wrap/lite/vector.h"
+#include "../wrap/lite/map.h"
 
 namespace utils {
     namespace cmdline {
@@ -41,5 +42,9 @@ namespace utils {
         bool bool_option(Bool b) {
             return static_cast<bool>(b);
         }
+
+        using DefaultDesc = OptionDesc<wrap::string, wrap::vector, wrap::map>;
+        using DefaultSet = OptionSet<wrap::string, wrap::vector, wrap::map>;
+
     }  // namespace cmdline
 }  // namespace utils

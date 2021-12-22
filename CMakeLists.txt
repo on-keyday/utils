@@ -37,6 +37,9 @@ add_executable(base64 "src/test/net/test_base64.cpp")
 add_executable(urlencode "src/test/net/test_urlencode.cpp")
 add_executable(sha1 "src/test/net/test_sha1.cpp")
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
+add_executable(ifacegen "src/tool/interface_gen.cpp")
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
   "src/lib/file/platform.cpp"
