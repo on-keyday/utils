@@ -40,4 +40,6 @@ int main(int argc, char** argv) {
     if (!in || !out) {
         cerr << "error: need --input-file and --output-file option\n";
     }
+    auto& infile = *in->value<wrap::string>();
+    auto& outfile = *out->value<wrap::string>();
 }
