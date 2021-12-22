@@ -121,7 +121,18 @@ namespace ifacegen {
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T&& t) {
         iface=new implement<std::decay_t<T>>(std::forward<T>(t))
-    })a");
+    }
+    
+    )a");
+            hlp::append(str, iface.first);
+            hlp::append(str, "(");
+            hlp::append(str, iface.first);
+            hlp::append(str, R"(&& in) {
+        iface=in.iface;
+        in.iface=nullptr;
+    }
+    
+    )");
         }
     }
 
