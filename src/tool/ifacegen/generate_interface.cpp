@@ -109,7 +109,7 @@ namespace ifacegen {
 
         template<class... Args>
         implement(Args&&...args)
-            :t(std::forward<Args>(args)...){}
+            :t_holder_(std::forward<Args>(args)...){}
 
     )");
             for (auto& func : iface.second) {
@@ -144,7 +144,7 @@ namespace ifacegen {
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T&& t) {
-        iface=new implement<std::decay_t<T>>(std::forward<T>(t))
+        iface=new implement<std::decay_t<T>>(std::forward<T>(t));
     }
     
     )a");
