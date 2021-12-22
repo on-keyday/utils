@@ -117,7 +117,7 @@ namespace ifacegen {
                 render_cpp_function(func, str);
                 hlp::append(str, "override {\n");
                 hlp::append(str, "            ");
-                hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_)\n");
+                hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_);\n");
                 hlp::append(str, "            ");
                 hlp::append(str, "if (!t_ptr_) {\n");
                 hlp::append(str, "                ");
