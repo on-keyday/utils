@@ -70,7 +70,7 @@ namespace utils {
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
                 size_t total = 0;
                 bool intotal = false;
-                while (!t.eos()) {
+                while (!r.seq.eos()) {
                     Buffer b;
                     auto red = r.template read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
                     total += red * 8;
@@ -105,6 +105,7 @@ namespace utils {
                         out.push_back(reinterpret_cast<char*>(&be)[k]);
                     }
                 }
+                t.rptr = r.seq.rptr;
                 return true;
             }
 
