@@ -52,7 +52,7 @@ namespace ifacegen {
             }
             hlp::append(str, arg.name);
         }
-        hlp::append(str, ");");
+        hlp::append(str, ")");
     }
 
     bool generate_cpp(FileData& data, utw::string& str) {
@@ -99,7 +99,7 @@ namespace ifacegen {
                 render_cpp_function(func, str);
                 hlp::append(str, "override {\n");
                 hlp::append(str, "            ");
-                hlp::append(str, "auto t_ptr_ = utils::deref(this->t_holder_)\n");
+                hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_)\n");
                 hlp::append(str, "            ");
                 hlp::append(str, "if (!t_ptr_) {\n");
                 hlp::append(str, "                ");
@@ -115,7 +115,7 @@ namespace ifacegen {
                 hlp::append(str, "            ");
                 hlp::append(str, "return t_ptr_->");
                 render_cpp_call(func, str);
-                hlp::append(str, "\n        }\n\n    ");
+                hlp::append(str, ";\n        }\n\n    ");
             }
             hlp::append(str, R"(};
     interface* iface = nullptr;
@@ -155,7 +155,7 @@ namespace ifacegen {
             for (auto& func : iface.second) {
                 hlp::append(str, "    ");
                 render_cpp_function(func, str);
-                hlp::append(str, R"( {
+                hlp::append(str, R"({
         return iface?iface->)");
                 render_cpp_call(func, str);
                 hlp::append(str, ":");
@@ -169,10 +169,10 @@ namespace ifacegen {
     }
 )");
             }
-            hlp::append(str, "};\n");
+            hlp::append(str, "};\n\n");
         }
         if (data.pkgname.size()) {
-            hlp::append(str, "} // namespace");
+            hlp::append(str, "} // namespace ");
             hlp::append(str, data.pkgname);
             hlp::append(str, "\n");
         }
