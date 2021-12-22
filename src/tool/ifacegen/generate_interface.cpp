@@ -111,6 +111,9 @@ namespace ifacegen {
 #pragma once
 #include<helper/deref.h>
 )");
+        if (data.has_ref_ret) {
+            hlp::append(str, "#include<functional>\n");
+        }
         for (auto& h : data.headernames) {
             hlp::append(str, "#include");
             hlp::append(str, h);
