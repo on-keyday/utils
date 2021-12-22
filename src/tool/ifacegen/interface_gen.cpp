@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     tokenize::Tokenizer<wrap::string> token;
     stxc->cb = [&](auto& ctx) {
         if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
-            cout << ctx.stack.back() << ":" << ctx.result.token << "\n";
+            cout << ctx.stack.back() << ":" << syntax::keywordv(ctx.result.kind) << ":" << ctx.result.token << "\n";
         }
     };
     {
