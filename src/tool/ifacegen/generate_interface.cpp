@@ -151,7 +151,23 @@ namespace ifacegen {
             for (auto& func : iface.second) {
                 hlp::append(str, "    ");
                 render_cpp_function(func, str);
+                hlp::append(str, R"( {
+        return iface?iface->)");
+                render_cpp_call(func, str);
+                hlp::append(str, ":");
+                if (func.default_result.size()) {
+                    hlp::append(str, func.default_result);
+                }
+                else {
+                    hlp::append(str, "{}");
+                }
+                hlp::append(str, R"(;
+    }
+)");
             }
+            hlp::append(str, "};\n");
+        }
+        if (data.pkgname.size()) {
         }
     }
 
