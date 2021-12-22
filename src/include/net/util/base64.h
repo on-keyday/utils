@@ -90,7 +90,7 @@ namespace utils {
                             break;
                         }
                         auto n = get_num(seq.current(), c62, c63);
-                        if (n == ~0) {
+                        if (n == 0xff) {
                             end = true;
                             break;
                         }
