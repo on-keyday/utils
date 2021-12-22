@@ -83,7 +83,7 @@ namespace utils {
                 while (!seq.eos() && !end) {
                     size_t redsize = 0;
                     std::uint8_t buf[4] = {0};
-                    std::int32_t rep = 0;
+                    std::uint32_t rep = 0;
                     while (redsize < 4 && !seq.eos()) {
                         if (seq.current() < 0 || seq.current() > 0xff) {
                             end = true;
@@ -99,9 +99,9 @@ namespace utils {
                         redsize++;
                         seq.consume();
                     }
-                    rep = endian::from_network(&rep);
-                    rep >>= 8;
                     char* rep_ptr = reinterpret_cast<char*>(&rep);
+                    rep = endian::to_network_us<std::uint32_t>(rep_ptr);
+                    //rep >>= 8;
                     for (auto i = 0; i < redsize - 1; i++) {
                         out.push_back(rep_ptr[i]);
                     }
