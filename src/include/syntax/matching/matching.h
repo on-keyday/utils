@@ -20,6 +20,11 @@ namespace utils {
         struct MatchContext {
             const Vec<String>& stack;
             MatchResult<String> result;
+
+            const String& token() const {
+                return result.token;
+            }
+
             const String& top() const {
                 return stack[stack.size() - 1];
             }
