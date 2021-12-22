@@ -86,7 +86,14 @@ namespace ifacegen {
                 hlp::append(str, "            ");
                 hlp::append(str, "if (!t_ptr_) {\n");
                 hlp::append(str, "                ");
-                hlp::append(str, "return {}");
+                hlp::append(str, "return ");
+                if (func.default_result.size()) {
+                    hlp::append(str, func.default_result);
+                }
+                else {
+                    hlp::append(str, "{}");
+                }
+                hlp::append(str, ";");
             }
             hlp::append(str, "};\n");
         }
