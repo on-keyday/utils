@@ -34,10 +34,12 @@ namespace ifacegen {
     };
 
     struct State {
-        utils::syntax::KeyWord prevv = utils::syntax::KeyWord::bos;
+        utils::syntax::KeyWord prevkind = utils::syntax::KeyWord::bos;
         utw::string prevtoken;
         FileData data;
         utw::string current_iface;
+        bool consted = false;
+        Interface iface;
     };
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);

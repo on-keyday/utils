@@ -23,10 +23,17 @@ namespace ifacegen {
         }
         if (state.prevtoken == "interface") {
             state.current_iface = result.result.token;
+            auto res = state.data.ifaces.insert({state.current_iface, {}});
+            if (!res.second) {
+                return false;
+            }
         }
         if (result.top() == func_def) {
+            if (result.result.token == "const") {
+                state.consted = true;
+                return true;
+            }
             if (result.result.kind == us::KeyWord::id) {
-                return state.data.ifaces.insert({result.result.token, {}}).second;
             }
         }
     }

@@ -197,6 +197,10 @@ namespace utils {
                 };
                 Single<String, Vec>* value = static_cast<Single<String, Vec>*>(std::addressof(*v));
                 assert(value);
+                if (value->type == KeyWord::bos || value->type == KeyWord::eos) {
+                    result.kind = value->type;
+                    return MatchState::succeed;
+                }
                 Reader<String>& r = ctx.r;
                 if (!any(value->attr & Attribute::adjacent)) {
                     r.read();
