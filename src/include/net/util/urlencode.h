@@ -21,6 +21,31 @@ namespace utils {
                 };
             }
 
+            constexpr auto encodeURIComponent() {
+                return [](std::uint8_t c) {
+                    return c >= 'A' && c <= 'Z' ||
+                           c >= 'a' && c <= 'z' ||
+                           c >= '0' && c <= '9' ||
+                           c == '_' ||
+                           c == '-' || c == '.' ||
+                           c == '!' || c == '~' ||
+                           c == '*' || c == '\'' ||
+                           c == '(' || c == ')';
+                };
+            }
+
+            constexpr auto encodeURI() {
+                return [=](std::uint8_t c) {
+                    constexpr auto encodeURIComponent_ = encodeURIComponent();
+                    return encodeURIComponent_(c) ||
+                           c == ';' || c == ',' ||
+                           c == '/' || c == '?' ||
+                           c == ':' || c == '@' ||
+                           c == '&' || c == '=' ||
+                           c == '+';
+                };
+            }
+
             template <class T, class Out, class F = void (*)(std::uint8_t)>
             constexpr bool encode(Sequencer<T>& seq, Out& out, F&& no_escape = default_noescape(), bool upper = false) {
                 while (!seq.eos()) {
