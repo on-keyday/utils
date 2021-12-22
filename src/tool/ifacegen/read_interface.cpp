@@ -45,7 +45,19 @@ namespace ifacegen {
             }
         }
         if (result.top() == type_def) {
+            auto set_type = [&](auto& type) {
+                if (result.result.token == "*") {
+                    type.pointer++;
+                }
+                else {
+                    type.prim = result.result.token;
+                }
+            };
             if (result.under(param_def)) {
+                set_type(state.iface.args.back().type);
+            }
+            else {
+                set_type(state.iface.type);
             }
         }
     }

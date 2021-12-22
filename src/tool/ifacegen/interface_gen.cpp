@@ -53,10 +53,10 @@ int main(int argc, char** argv) {
         ROOT:=PACKAGE? INTERFACE*?
         PACKAGE:="package" ID!
         INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]!
-        FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE]! 
+        FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE]! EOS
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
-        VARDEF:=ID TYPE EOS
+        VARDEF:=ID TYPE
         TYPE:=POINTER? "const"? ID
     )def";
     tokenize::Tokenizer<wrap::string> token;
