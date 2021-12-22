@@ -97,6 +97,7 @@ namespace utils {
                 if (!intotal) {
                     Buffer b;
                     std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
+                    b.buf[0] = 0x80;
                     ptr[7] = endian::to_network(&total);
                     internal::calc_hash(hash, b.buf);
                 }
