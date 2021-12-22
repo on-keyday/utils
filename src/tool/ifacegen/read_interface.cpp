@@ -12,6 +12,7 @@ namespace ifacegen {
     constexpr auto package_def = "PACKAGE";
     constexpr auto interface_def = "INTERFACE";
     constexpr auto func_def = "FUNCDEF";
+    constexpr auto param_def = "FUNCLIST";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -36,6 +37,12 @@ namespace ifacegen {
             if (result.result.kind == us::KeyWord::id) {
                 state.iface.funcname = result.result.token;
                 return true;
+            }
+        }
+        if (result.top() == param_def) {
+            if (result.result.kind == us::KeyWord::id) {
+                state.iface.args.push_back({});
+                state.iface.args.back().name = result.result.token;
             }
         }
     }

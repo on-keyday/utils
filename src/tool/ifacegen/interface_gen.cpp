@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE]! 
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
-        VARDEF:=ID TYPE
+        VARDEF:=ID TYPE EOS
         TYPE:=POINTER? "const"? ID
     )def";
     tokenize::Tokenizer<wrap::string> token;

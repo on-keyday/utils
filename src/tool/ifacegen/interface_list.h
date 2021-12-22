@@ -14,15 +14,18 @@
 namespace ifacegen {
     namespace utw = utils::wrap;
 
+    struct Type {
+        size_t pointer = 0;
+        utw::string prim;
+    };
+
     struct Arg {
         utw::string name;
-        size_t pointer = 0;
-        utw::string type;
+        Type type;
     };
 
     struct Interface {
-        utw::string rettype;
-        size_t pointer = 0;
+        Type type;
         utw::string funcname;
         utw::vector<Arg> args;
         bool is_const = false;
