@@ -78,7 +78,7 @@ namespace utils {
             }
 
             template <class T, class Out>
-            constexpr bool decode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
+            constexpr bool decode(Sequencer<T>& seq, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool consume_padding = true) {
                 bool end = false;
                 while (!seq.eos() && !end) {
                     size_t redsize = 0;
@@ -104,13 +104,16 @@ namespace utils {
                         out.push_back(rep_ptr[i]);
                     }
                 }
+                while (consume_padding && seq.current() == '=') {
+                    seq.consume();
+                }
                 return true;
             }
 
             template <class In, class Out>
-            constexpr bool decode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
+            constexpr bool decode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool consume_padding = true) {
                 auto seq = make_ref_seq(in);
-                return decode(seq, out, c62, c63) && seq.eos();
+                return decode(seq, out, c62, c63, consume_padding) && seq.eos();
             }
         }  // namespace base64
 
