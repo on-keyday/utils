@@ -107,6 +107,12 @@ namespace utils {
                 }
                 return true;
             }
+
+            template <class In, class Out>
+            bool make_hash(In&& in, Out& out) {
+                auto seq = make_ref_seq(in);
+                return make_hash(seq, out);
+            }
         }  // namespace sha1
 
     }  // namespace net
