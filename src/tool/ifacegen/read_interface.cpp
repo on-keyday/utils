@@ -69,6 +69,12 @@ namespace ifacegen {
             else if (result.token() == "*") {
                 type.pointer++;
             }
+            else if (result.token() == "&&") {
+                type.ref = RefKind::rval;
+            }
+            else if (result.token() == "&") {
+                type.ref = RefKind::lval;
+            }
             else {
                 type.prim = result.token();
             }

@@ -18,7 +18,14 @@ namespace ifacegen {
         cpp,
     };
 
+    enum class RefKind {
+        none,
+        rval,
+        lval,
+    };
+
     struct Type {
+        RefKind ref = RefKind::none;
         bool is_const = false;
         size_t pointer = 0;
         utw::string prim;
