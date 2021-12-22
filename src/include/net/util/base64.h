@@ -97,6 +97,7 @@ namespace utils {
                         buf[redsize] = n;
                         rep = ((n << 6) * (3 - redsize));
                         redsize++;
+                        seq.consume();
                     }
                     rep = endian::from_network(&rep);
                     rep >>= 8;
