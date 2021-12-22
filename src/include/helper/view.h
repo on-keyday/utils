@@ -104,7 +104,7 @@ namespace utils {
             }
 
             constexpr size_t size() const {
-                return size_;
+                return count;
             }
         };
 

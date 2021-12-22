@@ -14,9 +14,16 @@ auto test_encode() {
     return buf;
 }
 
+auto test_decode(auto& in) {
+    utils::helper::FixedPushBacker<char[5], 5> buf;
+    utils::net::base64::decode(in, buf);
+    return buf;
+}
+
 void test_base64() {
     using namespace utils::net;
     auto result = test_encode();
+    auto result2 = test_decode(result);
 }
 
 int main() {
