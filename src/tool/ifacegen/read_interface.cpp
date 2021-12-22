@@ -12,17 +12,16 @@ namespace ifacegen {
     constexpr auto package_def = "PACKAGE";
     constexpr auto interface_def = "INTERFACE";
     constexpr auto func_def = "FUNCDEF";
-    constexpr auto param_def = "FUNCLIST";
+    constexpr auto param_def = "VARDEF";
+    constexpr auto type_def = "TYPE";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
-        if (result.result.token == "package") {
-            return true;
-        }
         if (result.top() == package_def && result.result.kind == us::KeyWord::id) {
             state.data.pkgname = result.result.token;
+            return true;
         }
-        if (state.prevtoken == "interface") {
+        if (result.top() == interface_def && result.result.kind == us::KeyWord::id) {
             state.current_iface = result.result.token;
             auto res = state.data.ifaces.insert({state.current_iface, {}});
             if (!res.second) {
@@ -43,6 +42,10 @@ namespace ifacegen {
             if (result.result.kind == us::KeyWord::id) {
                 state.iface.args.push_back({});
                 state.iface.args.back().name = result.result.token;
+            }
+        }
+        if (result.top() == type_def) {
+            if (result.under(param_def)) {
             }
         }
     }
