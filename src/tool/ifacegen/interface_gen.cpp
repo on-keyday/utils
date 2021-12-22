@@ -19,6 +19,8 @@
 
 #include "interface_list.h"
 
+#include <fstream>
+
 int main(int argc, char** argv) {
     using namespace utils;
     using namespace utils::cmdline;
@@ -116,5 +118,14 @@ int main(int argc, char** argv) {
         ifacegen::generate(state.data, got, ifacegen::Language::cpp);
         cout << got;
     }
-    cout << "process end\n";
+    {
+        std::ofstream fs(outfile);
+        if (!fs.is_open()) {
+            cerr << "ifacegen: error:file `" << outfile << "` couldn't open\n";
+            return -1;
+        }
+    }
+    if (verbose) {
+        cout << "process end\n";
+    }
 }
