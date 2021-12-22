@@ -83,7 +83,7 @@ namespace utils {
                 while (!seq.eos() && !end) {
                     size_t redsize = 0;
                     std::uint8_t buf[4] = {0};
-                    std::int32_t rep;
+                    std::int32_t rep = 0;
                     while (redsize < 4 && !seq.eos()) {
                         if (seq.current() < 0 || seq.current() > 0xff) {
                             end = true;
