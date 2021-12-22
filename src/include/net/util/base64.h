@@ -98,7 +98,7 @@ namespace utils {
                         rep = ((n << 6) * (3 - redsize));
                         redsize++;
                     }
-                    rep = endian::from_network(rep);
+                    rep = endian::from_network(&rep);
                     rep >>= 8;
                     char* rep_ptr = reinterpret_cast<char*>(&rep);
                     for (auto i = 0; i < redsize - 1; i++) {

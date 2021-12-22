@@ -23,7 +23,7 @@ auto test_decode(auto& in) {
 void test_base64() {
     using namespace utils::net;
     auto result = test_encode();
-    auto result2 = test_decode(result);
+    auto result2 = test_decode(result.buf);
 }
 
 int main() {
