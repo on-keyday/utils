@@ -84,6 +84,7 @@ namespace ifacegen {
                 hlp::append(str, "throw std::bad_function_call()");
             }
             else {
+                ret_w();
                 hlp::append(str, func.default_result);
             }
         }
@@ -92,9 +93,11 @@ namespace ifacegen {
                 hlp::append(str, "throw std::bad_function_call()");
             }
             else if (func.type.pointer) {
+                ret_w();
                 hlp::append(str, "nullptr");
             }
             else {
+                ret_w();
                 hlp::append(str, func.type.prim);
                 hlp::append(str, "{}");
             }
