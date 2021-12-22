@@ -162,7 +162,7 @@ namespace ifacegen {
             hlp::append(str, iface.first);
             hlp::append(str, "(){}\n\n    constexpr ");
             hlp::append(str, iface.first);
-            hlp::append(str, "(){}\n");
+            hlp::append(str, "(std::nullptr_t){}\n");
             hlp::append(str, R"(
     template <class T>
     )");
