@@ -14,6 +14,10 @@
 namespace ifacegen {
     namespace utw = utils::wrap;
 
+    enum class Language {
+        cpp,
+    };
+
     struct Type {
         bool is_const = false;
         size_t pointer = 0;
