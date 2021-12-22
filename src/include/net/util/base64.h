@@ -99,9 +99,9 @@ namespace utils {
                         redsize++;
                         seq.consume();
                     }
-                    char* rep_ptr = reinterpret_cast<char*>(&rep);
+                    std::uint8_t* rep_ptr = reinterpret_cast<std::uint8_t*>(&rep);
                     rep = endian::to_network_us<std::uint32_t>(rep_ptr);
-                    //rep >>= 8;
+                    rep >>= 8;
                     for (auto i = 0; i < redsize - 1; i++) {
                         out.push_back(rep_ptr[i]);
                     }
