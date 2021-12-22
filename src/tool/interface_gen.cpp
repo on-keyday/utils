@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
         VARDEF:=ID POINTER? ID
     )def";
     tokenize::Tokenizer<wrap::string> token;
-    stxc->cb = [](auto& ctx) {
-
+    stxc->cb = [&](auto& ctx) {
+        cout << ctx.stack.back() << ":" << ctx.result.token << "\n";
     };
     {
         auto seq = make_ref_seq(def);
