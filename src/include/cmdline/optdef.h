@@ -206,7 +206,7 @@ namespace utils {
             OptValue<> value_;
 
             size_t count() const {
-                if (auto vec = value.template value<Vec<OptValue<>>>()) {
+                if (auto vec = value_.template value<Vec<OptValue<>>>()) {
                     return vec->size();
                 }
                 return 1;
@@ -214,7 +214,7 @@ namespace utils {
 
             template <class T>
             T* value() {
-                if (auto v = value.template value<T>()) {
+                if (auto v = value_.template value<T>()) {
                     return v;
                 }
                 return nullptr;
