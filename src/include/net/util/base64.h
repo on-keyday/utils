@@ -95,7 +95,7 @@ namespace utils {
                             break;
                         }
                         buf[redsize] = n;
-                        rep = ((n << 6) * (3 - redsize));
+                        rep += ((n << 6) * (3 - redsize));
                         redsize++;
                         seq.consume();
                     }
