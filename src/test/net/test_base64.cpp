@@ -7,6 +7,7 @@
 
 
 #include "../../include/net/util/base64.h"
+#include "../../include/helper/strutil.h"
 
 auto test_encode(auto& in) {
     utils::helper::FixedPushBacker<char[120], 119> buf;
@@ -24,6 +25,7 @@ void test_base64() {
     using namespace utils::net;
     auto result = test_encode("hello");
     auto result2 = test_decode(result.buf);
+    assert(utils::helper::equal(result2, "hello"));
 }
 
 int main() {
