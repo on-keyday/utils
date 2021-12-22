@@ -158,7 +158,14 @@ namespace ifacegen {
     interface* iface = nullptr;
 
    public:
-    template<class T>
+    constexpr )");
+            hlp::append(str, iface.first);
+            hlp::append(str, "(){}\n\n");
+            hlp::append(str, "    constexpr ");
+            hlp::append(str, iface.first);
+            hlp::append(str, "(){}\n\n");
+            hlp::append(str, R"(
+    template <class T>
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T&& t) {

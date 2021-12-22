@@ -5,7 +5,7 @@
 
 # test - ifacegen test
 
-package utils::net
+package test
 
 # iface
 # const identifier(param type) rettype
