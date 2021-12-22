@@ -11,6 +11,8 @@
 #include "../include/cmdline/make_opt.h"
 #include "../include/cmdline/parse.h"
 
+#include "../include/wrap/cout.h"
+
 int main(int argc, char** argv) {
     using namespace utils;
     using namespace utils::cmdline;
@@ -20,5 +22,8 @@ int main(int argc, char** argv) {
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
-    parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
+    auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
+    if (err != ParseError::none) {
+        return -1;
+    }
 }

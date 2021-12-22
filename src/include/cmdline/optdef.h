@@ -255,6 +255,20 @@ namespace utils {
             unexpected_type,
         };
 
+        BEGIN_ENUM_ERROR_MSG(ParseError)
+        ENUM_ERROR_MSG(ParseError::none, "no error")
+        ENUM_ERROR_MSG(ParseError::suspend_parse, "suspend parse.\nreport bug to developer")
+        ENUM_ERROR_MSG(ParseError::not_one_opt, "expected once in this cmdline, but not")
+        ENUM_ERROR_MSG(ParseError::not_assigned, "expect value by assign operator '='")
+        ENUM_ERROR_MSG(ParseError::option_like_value, "value begin with '-' is not allowed")
+        ENUM_ERROR_MSG(ParseError::need_value, "this option require value")
+        ENUM_ERROR_MSG(ParseError::require_more_argument, "this option require more argument")
+        ENUM_ERROR_MSG(ParseError::not_found, "option not found")
+        ENUM_ERROR_MSG(ParseError::invalid_value, "invalid value for this option")
+        ENUM_ERROR_MSG(ParseError::wrong_assign, "wrong assign value")
+        ENUM_ERROR_MSG(ParseError::unexpected_type, "unexpected type\nreport bug to developer")
+        END_ENUM_ERROR_MSG
+
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet;
         namespace internal {
