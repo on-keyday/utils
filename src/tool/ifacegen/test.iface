@@ -1,0 +1,7 @@
+package utils::net
+
+interface Hey {
+    int* Hey(name std::string) const
+    int* Hey(name *const char) const
+    bool is_boy()
+}

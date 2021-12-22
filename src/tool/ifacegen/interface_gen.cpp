@@ -53,10 +53,10 @@ int main(int argc, char** argv) {
         ROOT:=PACKAGE? INTERFACE*?
         PACKAGE:="package" ID!
         INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]!
-        FUNCDEF:=ID POINTER? [ID "(" FUNCLIST? ")"]!
+        FUNCDEF:=ID POINTER? [ID "(" FUNCLIST? ")" "const"?]!
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
-        VARDEF:=ID POINTER? ID
+        VARDEF:=ID POINTER? "const"? ID
     )def";
     tokenize::Tokenizer<wrap::string> token;
     stxc->cb = [&](auto& ctx) {
