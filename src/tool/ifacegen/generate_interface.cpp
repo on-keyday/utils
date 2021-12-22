@@ -62,6 +62,7 @@ namespace ifacegen {
 #pragma once
 #include<helper/sfinae.h>
 #include<helper/deref.h>
+
 )");
         if (data.pkgname.size()) {
             hlp::append(str, "namespace ");
@@ -69,9 +70,9 @@ namespace ifacegen {
             hlp::append(str, " {\n");
         }
         for (auto& iface : data.ifaces) {
-            hlp::append(str, "    struct ");
+            hlp::append(str, "struct ");
             hlp::append(str, iface.first);
-            hlp::append(str, " {\n");
+            hlp::append(str, " {");
             hlp::append(str, R"(
    private:
     struct interface {
