@@ -21,7 +21,7 @@ namespace utils {
     namespace cmdline {
         enum class OptFlag {
             none = 0,
-            required = 0x1,        // option must set
+            required = 0x1,        // option must set (not works)
             must_assign = 0x2,     // value must set with `=`
             no_option_like = 0x4,  // disallow string begin with `-`
             once_in_cmd = 0x8,     // allow only once to set
@@ -302,6 +302,13 @@ namespace utils {
             }
 
            public:
+            OptionResult<String, Vec>* is_set(const String& name) {
+                OptionResult<String, Vec>* f;
+                if (find(name, f)) {
+                    return f;
+                }
+                return nullptr;
+            }
         };
     }  // namespace cmdline
 
