@@ -111,11 +111,10 @@ int main(int argc, char** argv) {
             cerr << "ifacegen: " << stxc->error();
         }
     }
+    wrap::string got;
+    ifacegen::generate(state.data, got, ifacegen::Language::cpp);
     if (verbose) {
         cout << "generated:\n";
-        wrap::string got;
-
-        ifacegen::generate(state.data, got, ifacegen::Language::cpp);
         cout << got;
     }
     {
@@ -124,6 +123,7 @@ int main(int argc, char** argv) {
             cerr << "ifacegen: error:file `" << outfile << "` couldn't open\n";
             return -1;
         }
+        fs << got;
     }
     if (verbose) {
         cout << "process end\n";
