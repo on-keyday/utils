@@ -53,8 +53,19 @@ namespace utils {
                         if (n < 0 || n > 0xff || s < 0 || s > 0xff) {
                             return false;
                         }
+                        auto v1 = number::number_transform[n];
+                        auto v2 = number::number_transform[s];
+                        if (n < 0x0 || n > 0xf || s < 0x0 || s > 0xf) {
+                            return false;
+                        }
+                        out.push_back(std::uint8_t(v1 << 4 | v2));
+                    }
+                    else {
+                        out.push_back(seq.current());
+                        seq.consume();
                     }
                 }
+                return true;
             }
         }  // namespace urlenc
     }      // namespace net
