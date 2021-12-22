@@ -15,6 +15,7 @@ namespace ifacegen {
     namespace utw = utils::wrap;
 
     struct Type {
+        bool is_const = false;
         size_t pointer = 0;
         utw::string prim;
     };
@@ -37,13 +38,12 @@ namespace ifacegen {
     };
 
     struct State {
-        utils::syntax::KeyWord prevkind = utils::syntax::KeyWord::bos;
-        utw::string prevtoken;
         FileData data;
         utw::string current_iface;
-        bool consted = false;
         Interface iface;
+        Type* type = nullptr;
     };
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
+
 }  // namespace ifacegen

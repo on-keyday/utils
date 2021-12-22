@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     constexpr auto def = R"def(
         ROOT:=PACKAGE? INTERFACE*?
         PACKAGE:="package" ID!
-        INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]!
+        INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE]! EOS
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?

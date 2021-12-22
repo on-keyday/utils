@@ -14,6 +14,7 @@ namespace ifacegen {
     constexpr auto func_def = "FUNCDEF";
     constexpr auto param_def = "VARDEF";
     constexpr auto type_def = "TYPE";
+    constexpr auto pointer_ = "POINTER";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -21,14 +22,22 @@ namespace ifacegen {
             state.data.pkgname = result.result.token;
             return true;
         }
-        if (result.top() == interface_def && result.result.kind == us::KeyWord::id) {
-            state.current_iface = result.result.token;
-            auto res = state.data.ifaces.insert({state.current_iface, {}});
-            if (!res.second) {
-                return false;
+        if (result.top() == interface_def) {
+            if (result.result.kind == us::KeyWord::id) {
+                state.current_iface = result.result.token;
+                auto res = state.data.ifaces.insert({state.current_iface, {}});
+                if (!res.second) {
+                    return false;
+                }
+            }
+            if (result.result.kind == us::KeyWord::eos) {
             }
         }
         if (result.top() == func_def) {
+            if (result.result.kind == us::KeyWord::eos) {
+                state.data.ifaces[state.current_iface].push_back(std::move(state.iface));
+                return true;
+            }
             if (result.result.token == "const") {
                 state.iface.is_const = true;
                 return true;
@@ -44,15 +53,18 @@ namespace ifacegen {
                 state.iface.args.back().name = result.result.token;
             }
         }
-        if (result.top() == type_def) {
-            auto set_type = [&](auto& type) {
-                if (result.result.token == "*") {
-                    type.pointer++;
-                }
-                else {
-                    type.prim = result.result.token;
-                }
-            };
+        auto set_type = [&](auto& type) {
+            if (result.result.token == "const") {
+                type.is_const = true;
+            }
+            else if (result.result.token == "*") {
+                type.pointer++;
+            }
+            else {
+                type.prim = result.result.token;
+            }
+        };
+        if (result.top() == type_def || result.top() == pointer_) {
             if (result.under(param_def)) {
                 set_type(state.iface.args.back().type);
             }
