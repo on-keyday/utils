@@ -52,6 +52,9 @@ namespace ifacegen {
             if (result.result.kind == us::KeyWord::id) {
                 if (state.iface.funcname.size()) {
                     state.iface.default_result = result.token();
+                    if (state.iface.default_result == "panic") {
+                        state.data.has_ref_ret = true;
+                    }
                 }
                 else {
                     state.iface.funcname = result.token();
