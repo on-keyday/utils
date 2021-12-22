@@ -16,8 +16,6 @@
 
 namespace utils {
     namespace syntax {
-        struct Default {
-        };
 
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct SyntaxC {

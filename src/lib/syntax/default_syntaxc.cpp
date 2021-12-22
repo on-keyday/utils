@@ -29,6 +29,7 @@ namespace utils {
 
             utils::syntax::Reader<utils::wrap::string> r{res};
             instance.matching(r);
+            instance.error();
         }
     }  // namespace syntax
 }  // namespace utils

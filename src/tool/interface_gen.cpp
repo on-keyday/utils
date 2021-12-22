@@ -11,7 +11,11 @@
 #include "../include/cmdline/make_opt.h"
 #include "../include/cmdline/parse.h"
 
+#include "../include/syntax/syntaxc/make_syntaxc.h"
+
 #include "../include/wrap/cout.h"
+
+#include "../include/file/file_view.h"
 
 int main(int argc, char** argv) {
     using namespace utils;
@@ -27,7 +31,7 @@ int main(int argc, char** argv) {
     utils::wrap::vector<wrap::string> arg;
     auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
     if (err != ParseError::none) {
-        cerr << "error: " << argv[index] << ": " << error_message(err) << "\n"
+        cerr << "ifacegen: error: " << argv[index] << ": " << error_message(err) << "\n"
              << "try `ifacegen -h` for more info\n";
         return -1;
     }
@@ -38,10 +42,54 @@ int main(int argc, char** argv) {
     auto in = result.is_set("input-file");
     auto out = result.is_set("output-file");
     if (!in || !out) {
-        cerr << "error: need --input-file and --output-file option\n";
+        cerr << "ifacegen: error: need --input-file and --output-file option\n";
         return -1;
     }
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();
     cout << "process end\n";
+    auto stxc = syntax::make_syntaxc();
+    constexpr auto def = R"def(
+        ROOT:=PACKAGE? INTERFACE*?
+        PACKAGE:="package" ID!
+        INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]!
+        FUNCDEF:=ID POINTER? [ID "(" FUNCLIST? ")"]!
+        POINTER:="*"*
+        FUNCLIST:=VARDEF ["," FUNCLIST! ]?
+        VARDEF:=ID POINTER? ID
+    )def";
+    tokenize::Tokenizer<wrap::string> token;
+    stxc->cb = [](auto& ctx) {
+
+    };
+    {
+        auto seq = make_ref_seq(def);
+        if (!stxc->make_tokenizer(seq, token)) {
+            cerr << "ifacegen: " << stxc->error();
+            return -1;
+        }
+    }
+    decltype(token)::token_t tok;
+    {
+        file::View view;
+        if (!view.open(infile)) {
+            cerr << "ifacegen: error: file `" << infile << "` couldn't open\n";
+            return -1;
+        }
+        auto sv = make_ref_seq(view);
+
+        auto res = token.tokenize(sv, tok);
+        assert(res && "ifacegen: fatal error: can't tokenize");
+        const char* errmsg = nullptr;
+        if (!tokenize::merge(errmsg, tok, tokenize::escaped_comment<wrap::string>("\"", "\\"))) {
+            cerr << "ifacegen: error: " << errmsg;
+            return -1;
+        }
+    }
+    {
+        auto r = syntax::Reader<wrap::string>(tok);
+        if (!stxc->matching(r)) {
+            cerr << "ifacegen: " << stxc->error();
+        }
+    }
 }
