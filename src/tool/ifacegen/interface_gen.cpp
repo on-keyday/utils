@@ -50,6 +50,10 @@ int main(int argc, char** argv) {
     }
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();
+    bool verbose = false;
+    if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
+        verbose = true;
+    }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
         ROOT:=PACKAGE? INTERFACE*?
@@ -64,7 +68,7 @@ int main(int argc, char** argv) {
     tokenize::Tokenizer<wrap::string> token;
     ifacegen::State state;
     stxc->cb = [&](auto& ctx) {
-        if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
+        if (verbose) {
             cout << ctx.stack.back() << ":" << syntax::keywordv(ctx.result.kind) << ":" << ctx.result.token << "\n";
         }
         if (!ifacegen::read_callback(ctx, state)) {
@@ -105,9 +109,12 @@ int main(int argc, char** argv) {
             cerr << "ifacegen: " << stxc->error();
         }
     }
-    cout << "generated:\n";
-    wrap::string got;
-    ifacegen::generate(state.data, got, ifacegen::Language::cpp);
-    cout << got;
+    if (verbose) {
+        cout << "generated:\n";
+        wrap::string got;
+
+        ifacegen::generate(state.data, got, ifacegen::Language::cpp);
+        cout << got;
+    }
     cout << "process end\n";
 }
