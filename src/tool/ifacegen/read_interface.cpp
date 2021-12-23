@@ -70,6 +70,9 @@ namespace ifacegen {
         }
         auto set_type = [&](auto& type) {
             if (result.token() == "const") {
+                if (type.is_const) {
+                    return false;
+                }
                 type.is_const = true;
             }
             else if (result.token() == "*") {
@@ -84,13 +87,14 @@ namespace ifacegen {
             else {
                 type.prim = result.token();
             }
+            return true;
         };
         if (result.top() == type_def || result.top() == pointer_) {
             if (result.under(param_def)) {
-                set_type(state.iface.args.back().type);
+                return set_type(state.iface.args.back().type);
             }
             else {
-                set_type(state.iface.type);
+                return set_type(state.iface.type);
             }
         }
         return true;
