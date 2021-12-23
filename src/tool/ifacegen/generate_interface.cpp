@@ -252,7 +252,7 @@ namespace ifacegen {
         if (iface->type__()!=typeid(T)) {
             return nullptr;
         }
-        return const_cast<T*>(reinterpret_cast<const T*>(iface->raw__()));
+        return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));
     })");
                 }
                 else {
