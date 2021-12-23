@@ -176,7 +176,7 @@ namespace utils {
                     auto current = index;
                     for (int i = 1; argv[current][i]; i++) {
                         option_t opt;
-                        desc.find(helper::CharView<Char>(argv[current][1]).c_str(), opt);
+                        desc.find(helper::CharView<Char>(argv[current][i]).c_str(), opt);
                         if (opt) {
                             if (auto e = internal::parse_one(index, argc, argv, opt, result, flag, static_cast<String*>(nullptr)); e != ParseError::none) {
                                 return e;
