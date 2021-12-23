@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
     wrap::string got;
     ifacegen::generate(state.data, got, ifacegen::Language::cpp, expand);
     if (verbose) {
-        cout << "generated:\n";
+        cout << "generated code:\n";
         cout << got;
     }
     {
@@ -147,5 +147,5 @@ int main(int argc, char** argv) {
         }
         fs << got;
     }
-    cout << "process end\n";
+    cout << "generated\n";
 }
