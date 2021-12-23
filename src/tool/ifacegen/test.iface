@@ -11,11 +11,12 @@ package test # `package` will be namespace
 # const identifier(param type) rettype
 # convert to c++
 # rettype identifier(type param) const 
-# convert to golang
+# convert to golang (unimplemented)
 # identifier(param type) rettype
 
-# bug: type_assert, raw__ and type__ is implicit used if `decltype` appered
-#      so type_assert, raw__ and type__ function is not usable
+# warning: type_assert, raw__ and type__ is implicit used if `decltype` appered
+#          copy__ , implicit used if `copy` appered 
+#          so type_assert, raw__, type__, copy__ function is not usable
 
 interface Hey {
     hey(name &const std::string) std::string 
@@ -30,7 +31,7 @@ interface Hey {
 }
 
 interface Stringer {
-    String() std::string = panic # `panic` is special value that generate throw std::bad_function_call()
+    String() std::string = panic # `panic` is special value that generate `throw std::bad_function_call()`
 }
 
 # alias expand using statement or expand directry 

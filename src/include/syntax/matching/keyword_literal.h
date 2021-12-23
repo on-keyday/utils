@@ -127,6 +127,7 @@ namespace utils {
                         fmterr("EOF", e);
                         return ret;
                     }
+                    result.kind = KeyWord::eof;
                     return MatchState::succeed;
                 }
                 else if (common_begin(KeyWord::string, [&] {
