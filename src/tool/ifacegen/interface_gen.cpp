@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
-        ROOT:=PACKAGE? [INTERFACE|ALIAS]*?
+        ROOT:=PACKAGE? [INTERFACE|ALIAS]*? EOF
         PACKAGE:="package" ID!
         ALIAS:= "alias" ID UNTILEOL
         INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]! EOS

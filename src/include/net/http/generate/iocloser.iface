@@ -1,0 +1,14 @@
+#    utils - utility library
+#    Copyright (c) 2021 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+
+# iocloser - iocloser interface
+
+package utils::net
+
+interface IOCloser {
+    write(ptr *const char,size size_t) State
+    read(ptr *char,size size_t,red *size_t) State
+    close(force bool) State
+}
