@@ -130,6 +130,7 @@ int main(int argc, char** argv) {
         auto r = syntax::Reader<wrap::string>(tok);
         if (!stxc->matching(r)) {
             cerr << "ifacegen: " << stxc->error();
+            return -1;
         }
     }
     wrap::string got;
