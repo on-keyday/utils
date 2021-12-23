@@ -101,11 +101,14 @@ namespace ifacegen {
         }
         if (result.top() == alias_def) {
             if (result.result.kind == us::KeyWord::id) {
-                state.alias.name = result.token();
+                state.current_alias = result.token();
+                if (!state.data.aliases.insert({state.current_alias, {}}).second) {
+                    return false;
+                }
             }
             if (result.result.kind == us::KeyWord::until_eol) {
-                state.alias.expand = result.token();
-                state.data.aliases.push_back(std::move(state.alias));
+                state.data.aliases[state.current_alias] = result.token();
+                state.current_alias.clear();
             }
         }
         return true;
