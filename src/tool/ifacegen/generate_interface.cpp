@@ -347,7 +347,7 @@ namespace ifacegen {
         return *this;
     }
 
-    )");
+)");
                 }
                 else {
                     hlp::append(str, "    ");
