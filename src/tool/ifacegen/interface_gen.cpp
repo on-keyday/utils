@@ -31,7 +31,8 @@ int main(int argc, char** argv) {
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
         .set("verbose,v", bool_option(true), "verbose log", OptFlag::none)
         .set("help,h", bool_option(true), "show help", OptFlag::none)
-        .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename");
+        .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename")
+        .set("expand,e", bool_option(true), "expand alias", OptFlag::none);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -54,8 +55,12 @@ int main(int argc, char** argv) {
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();
     bool verbose = false;
+    bool expand = false;
     if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
         verbose = true;
+    }
+    if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
+        expand = true;
     }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
@@ -128,7 +133,7 @@ int main(int argc, char** argv) {
         }
     }
     wrap::string got;
-    ifacegen::generate(state.data, got, ifacegen::Language::cpp);
+    ifacegen::generate(state.data, got, ifacegen::Language::cpp, expand);
     if (verbose) {
         cout << "generated:\n";
         cout << got;

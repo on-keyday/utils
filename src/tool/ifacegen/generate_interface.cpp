@@ -310,9 +310,9 @@ namespace ifacegen {
         return true;
     }
 
-    bool generate(FileData& data, utw::string& str, Language lang) {
+    bool generate(FileData& data, utw::string& str, Language lang, bool expand_alias) {
         if (lang == Language::cpp) {
-            return generate_cpp(data, str);
+            return generate_cpp(data, str, expand_alias);
         }
         return false;
     }

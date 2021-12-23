@@ -60,5 +60,5 @@ namespace ifacegen {
     };
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
-    bool generate(FileData& data, utw::string& str, Language lang);
+    bool generate(FileData& data, utw::string& str, Language lang, bool expand_alias);
 }  // namespace ifacegen
