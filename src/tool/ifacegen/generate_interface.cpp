@@ -326,7 +326,14 @@ namespace ifacegen {
         if (!iface) {
             return nullptr;
         }
-        if (iface->type__()!=typeid(T)) {
+        if (iface->type__()!=)");
+                    if (has_other_typeinfo) {
+                        hlp::append(str, data.typeid_func);
+                    }
+                    else {
+                        hlp::append(str, "typeid(T)");
+                    }
+                    hlp::append(str, R"() {
             return nullptr;
         }
         return reinterpret_cast<const T*>(iface->raw__());
