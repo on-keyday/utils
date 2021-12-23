@@ -147,7 +147,5 @@ int main(int argc, char** argv) {
         }
         fs << got;
     }
-    if (verbose) {
-        cout << "process end\n";
-    }
+    cout << "process end\n";
 }
