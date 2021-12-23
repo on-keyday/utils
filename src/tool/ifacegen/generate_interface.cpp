@@ -261,7 +261,7 @@ namespace ifacegen {
 
     ~)");
             hlp::append(str, iface.first);
-            hlp::append(str, R"() {
+            hlp::append(str, R"(() {
         delete iface;
     }
 
