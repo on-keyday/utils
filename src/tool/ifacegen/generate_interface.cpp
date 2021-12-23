@@ -254,6 +254,7 @@ namespace ifacegen {
         }
         return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));
     }
+
 )");
                 }
                 else {
