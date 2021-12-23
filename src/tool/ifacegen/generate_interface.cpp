@@ -12,6 +12,9 @@
 namespace ifacegen {
     namespace hlp = utils::helper;
 
+    constexpr auto decltype_func = "decltype";
+    constexpr auto copy_func = "copy";
+
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, utw::string>* alias) {
         if (alias) {
             auto found = alias->find(prim);
@@ -179,10 +182,13 @@ namespace ifacegen {
             hlp::append(str, R"(interface {
     )");
             for (auto& func : iface.second) {
-                if (func.funcname == "decltype") {
+                if (func.funcname == decltype_func) {
                     hlp::append(str, R"(    virtual const void* raw__() const = 0;
         virtual const std::type_info& type__() const = 0;
     )");
+                }
+                else if (func.funcname == copy_func) {
+                    hlp::append(str, "    virtual interface* copy__() const = 0;\n    ");
                 }
                 else {
                     hlp::append(str, "    virtual ");
@@ -204,7 +210,7 @@ namespace ifacegen {
 
     )");
             for (auto& func : iface.second) {
-                if (func.funcname == "decltype") {
+                if (func.funcname == decltype_func) {
                     hlp::append(str,
                                 R"(    const void* raw__() const override {   
             return reinterpret_cast<const void*>(std::addressof(t_holder_));
@@ -213,6 +219,14 @@ namespace ifacegen {
         const std::type_info& type__() const override {
             return typeid(T);
         }
+
+    )");
+                }
+                else if (func.funcname == copy_func) {
+                    hlp::append(str, R"(    interface* copy__() const override {
+            return new implements<T>(t_holder_);
+        }
+
     )");
                 }
                 else {
