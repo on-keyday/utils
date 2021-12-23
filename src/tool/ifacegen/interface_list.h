@@ -60,6 +60,14 @@ namespace ifacegen {
         std::string current_alias;
     };
 
+    enum class GenFlag {
+        none = 0,
+        expand_alias = 0x1,
+        no_vtable = 0x2,  // for windows
+    };
+
+    DEFINE_ENUM_FLAGOP(GenFlag)
+
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
-    bool generate(FileData& data, utw::string& str, Language lang, bool expand_alias);
+    bool generate(FileData& data, utw::string& str, Language lang, GenFlag flag);
 }  // namespace ifacegen
