@@ -70,10 +70,7 @@ namespace ifacegen {
             }
         }
         auto set_type = [&](auto& type) {
-            if (result.top() == type_prim) {
-                type.prim += result.token();
-            }
-            else if (result.token() == "const") {
+            if (result.token() == "const") {
                 if (type.is_const) {
                     return false;
                 }
@@ -87,6 +84,9 @@ namespace ifacegen {
             }
             else if (result.token() == "&") {
                 type.ref = RefKind::lval;
+            }
+            else {
+                type.prim = result.token();
             }
             return true;
         };

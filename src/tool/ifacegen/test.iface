@@ -34,5 +34,5 @@ interface Stringer {
 }
 
 interface Writer {
-    Write(ptr *const char,size size_t) std::pair<size_t,bool>
+    Write(ptr *const char,size size_t) size_t
 }

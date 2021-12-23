@@ -79,8 +79,7 @@ int main(int argc, char** argv) {
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
         VARDEF:=ID TYPE
-        TYPE:=["&&"|"&"]? POINTER? "const"? TYPEPRIM
-        TYPEPRIM:=ID [","& ID&!]?
+        TYPE:=["&&"|"&"]? POINTER? "const"? ID
     )def";
 
     tokenize::Tokenizer<wrap::string> token;

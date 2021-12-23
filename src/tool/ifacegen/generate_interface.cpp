@@ -69,6 +69,7 @@ namespace ifacegen {
             if (arg.type.ref == RefKind::rval) {
                 hlp::append(str, ")");
             }
+            is_first = false;
         }
         hlp::append(str, ")");
     }
