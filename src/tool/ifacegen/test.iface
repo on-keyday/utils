@@ -47,6 +47,6 @@ interface Reader {
 }
 
 interface Any {
-    copy() type
+    copy() type # `copy` is special value that generate copy assign operator and copy constructor 
     decltype() type
 }
