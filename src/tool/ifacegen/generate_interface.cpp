@@ -308,7 +308,7 @@ namespace ifacegen {
     }
 
     )");
-            hlp::append(str, R"(operator bool() const {
+            hlp::append(str, R"(explicit operator bool() const {
         return iface != nullptr;
     }
 
