@@ -126,6 +126,13 @@ namespace ifacegen {
             hlp::append(str, data.pkgname);
             hlp::append(str, " {\n");
         }
+        for (auto& alias : data.aliases) {
+            hlp::append(str, "using ");
+            hlp::append(str, alias.name);
+            hlp::append(str, " = ");
+            hlp::append(str, alias.expand);
+            hlp::append(str, ";\n");
+        }
         for (auto& iface : data.ifaces) {
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
