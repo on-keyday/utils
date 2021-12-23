@@ -103,7 +103,7 @@ namespace ifacegen {
             if (result.result.kind == us::KeyWord::id) {
                 state.alias.name = result.token();
             }
-            if (result.result.kind == us::KeyWord::not_space) {
+            if (result.result.kind == us::KeyWord::until_eol) {
                 state.alias.expand = result.token();
                 state.data.aliases.push_back(std::move(state.alias));
             }
