@@ -136,7 +136,7 @@ namespace ifacegen {
             hlp::append(str, h);
             hlp::append(str, "\n");
         }
-        if (any(flag & GenFlag::no_vtable)) {
+        if (!any(flag & GenFlag::no_vtable)) {
             hlp::append(str, R"(#ifndef NOVTABLE__
 #ifdef _WIN32
 #define NOVTABLE__ __declspec(novtable)
