@@ -55,12 +55,12 @@ int main(int argc, char** argv) {
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();
     bool verbose = false;
-    bool expand = false;
+    ifacegen::GenFlag flag = {};
     if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
         verbose = true;
     }
     if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
-        expand = true;
+        flag |= ifacegen::GenFlag::expand_alias;
     }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
         }
     }
     wrap::string got;
-    ifacegen::generate(state.data, got, ifacegen::Language::cpp, expand);
+    ifacegen::generate(state.data, got, ifacegen::Language::cpp, flag);
     if (verbose) {
         cout << "generated code:\n";
         cout << got;
