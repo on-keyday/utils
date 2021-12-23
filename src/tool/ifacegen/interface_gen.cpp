@@ -80,6 +80,12 @@ int main(int argc, char** argv) {
             }
         }
     }
+    if (auto h = result.is_set("no-rtti")) {
+        if (auto s = h->value<wrap::vector<wrap::string>>()) {
+            state.data.typeid_type = s->at(0);
+            state.data.typeid_func = s->at(1);
+        }
+    }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
         ROOT:=PACKAGE? [INTERFACE|ALIAS]*?
