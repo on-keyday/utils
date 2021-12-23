@@ -5,7 +5,7 @@
 
 # test - ifacegen test
 
-package test
+package test # `package` will be namespace
 
 # iface
 # const identifier(param type) rettype
@@ -14,13 +14,20 @@ package test
 # convert to golang
 # identifier(param type) rettype
 
+# bug: type_assert, raw__ and type__ is implicit used if `decltype` appered
+#      so type_assert, raw__ and type__ function is not usable
+
 interface Hey {
-    hey(name &const std::string) std::string
+    hey(name &const std::string) std::string 
     hey(name *const char) std::string
-    const is_boy() bool = false
-    decltype() type
+    const is_boy() bool = false # set default value. if not set, 
+                                # default is below 
+                                # value type: type{}
+                                # pointer type: nullptr
+                                # reference type: throw std::bad_function_call()
+    decltype() type # `decltype` is special value that generate type_assert template function 
 }
 
 interface Stringer {
-    String() std::string = panic
+    String() std::string = panic # `panic` is special value that generate throw std::bad_function_call()
 }
