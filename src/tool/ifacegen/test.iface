@@ -45,3 +45,8 @@ interface Writer {
 interface Reader {
     Read(ptr *char,size size_t) IOResult
 }
+
+interface Any {
+    copy() type
+    decltype() type
+}

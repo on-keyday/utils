@@ -131,6 +131,7 @@ namespace ifacegen {
 #include<helper/deref.h>
 )");
 
+        auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         if (data.has_ref_ret) {
             hlp::append(str, "#include<functional>\n");
         }
@@ -184,7 +185,14 @@ namespace ifacegen {
             for (auto& func : iface.second) {
                 if (func.funcname == decltype_func) {
                     hlp::append(str, R"(    virtual const void* raw__() const = 0;
-        virtual const std::type_info& type__() const = 0;
+        virtual )");
+                    if (has_other_typeinfo) {
+                        hlp::append(str, data.typeid_type);
+                    }
+                    else {
+                        hlp::append(str, "const std::type_info&");
+                    }
+                    hlp::append(str, R"( type__() const = 0;
     )");
                 }
                 else if (func.funcname == copy_func) {
@@ -216,8 +224,22 @@ namespace ifacegen {
             return reinterpret_cast<const void*>(std::addressof(t_holder_));
         }
         
-        const std::type_info& type__() const override {
-            return typeid(T);
+        )");
+                    if (has_other_typeinfo) {
+                        hlp::append(str, data.typeid_type);
+                    }
+                    else {
+                        hlp::append(str, "const std::type_info&");
+                    }
+                    hlp::append(str, R"( type__() const override {
+            return )");
+                    if (has_other_typeinfo) {
+                        hlp::append(str, data.typeid_func);
+                    }
+                    else {
+                        hlp::append(str, "typeid(T)");
+                    }
+                    hlp::append(str, R"(;
         }
 
     )");
@@ -315,11 +337,18 @@ namespace ifacegen {
         if (!iface) {
             return nullptr;
         }
-        if (iface->type__()!=typeid(T)) {
-            return nullptr;
-        }
-        return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));
-    }
+        if (iface->type__()!=)");
+                    if (has_other_typeinfo) {
+                        hlp::append(str, data.typeid_func);
+                    }
+                    else {
+                        hlp::append(str, "typeid(T)");
+                    }
+                    hlp::append(str, R"() {
+                        return nullptr;
+                }
+                return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));
+            }
 
 )");
                 }

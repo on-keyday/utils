@@ -51,6 +51,8 @@ namespace ifacegen {
         utw::vector<utw::string> headernames;
         utw::map<utw::string, utw::string> aliases;
         bool has_ref_ret = false;
+        utw::string typeid_func;
+        utw::string typeid_type;
     };
 
     struct State {
