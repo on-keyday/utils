@@ -165,8 +165,8 @@ namespace ifacegen {
     )");
             for (auto& func : iface.second) {
                 if (func.funcname == "decltype") {
-                    hlp::append(str, R"(    virtual const void* raw__() = 0;
-        virtual const std::type_info& type__() = 0;
+                    hlp::append(str, R"(    virtual const void* raw__() const = 0;
+        virtual const std::type_info& type__() const = 0;
     )");
                 }
                 else {

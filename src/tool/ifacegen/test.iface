@@ -42,5 +42,5 @@ interface Writer {
 }
 
 interface Reader {
-    Read(ptr *char) IOResult
+    Read(ptr *char,size size_t) IOResult
 }
