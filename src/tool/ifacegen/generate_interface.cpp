@@ -154,7 +154,8 @@ namespace ifacegen {
         else {
             alias = &data.aliases;
         }
-        for (auto& iface : data.ifaces) {
+        for (auto& def : data.defvec) {
+            auto& iface = *data.ifaces.find(def);
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
             hlp::append(str, " {");

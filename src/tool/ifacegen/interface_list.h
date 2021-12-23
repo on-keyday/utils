@@ -47,6 +47,7 @@ namespace ifacegen {
     struct FileData {
         utw::string pkgname;
         utw::map<utw::string, utw::vector<Interface>> ifaces;
+        utw::vector<utw::string> defvec;
         utw::vector<utw::string> headernames;
         utw::map<utw::string, utw::string> aliases;
         bool has_ref_ret = false;

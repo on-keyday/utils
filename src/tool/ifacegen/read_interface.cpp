@@ -33,6 +33,7 @@ namespace ifacegen {
                 if (!res.second) {
                     return false;
                 }
+                state.data.defvec.push_back(state.current_iface);
                 return true;
             }
             if (result.result.kind == us::KeyWord::eos) {
