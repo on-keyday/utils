@@ -32,7 +32,8 @@ int main(int argc, char** argv) {
         .set("verbose,v", bool_option(true), "verbose log", OptFlag::once_in_cmd)
         .set("help,h", bool_option(true), "show help", OptFlag::none)
         .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename")
-        .set("expand,e", bool_option(true), "expand alias", OptFlag::once_in_cmd);
+        .set("expand,e", bool_option(true), "expand alias", OptFlag::once_in_cmd)
+        .set("no-vtable,V", bool_option(true), "add no vtable (for windows)", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
