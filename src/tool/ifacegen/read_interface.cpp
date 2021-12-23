@@ -15,6 +15,7 @@ namespace ifacegen {
     constexpr auto param_def = "VARDEF";
     constexpr auto type_def = "TYPE";
     constexpr auto pointer_ = "POINTER";
+    constexpr auto type_prim = "TYPEPRIM";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -69,7 +70,10 @@ namespace ifacegen {
             }
         }
         auto set_type = [&](auto& type) {
-            if (result.token() == "const") {
+            if (result.top() == type_prim) {
+                type.prim += result.token();
+            }
+            else if (result.token() == "const") {
                 if (type.is_const) {
                     return false;
                 }
@@ -84,12 +88,9 @@ namespace ifacegen {
             else if (result.token() == "&") {
                 type.ref = RefKind::lval;
             }
-            else {
-                type.prim = result.token();
-            }
             return true;
         };
-        if (result.top() == type_def || result.top() == pointer_) {
+        if (result.top() == type_def || result.top() == pointer_ || result.top() == type_prim) {
             if (result.under(param_def)) {
                 return set_type(state.iface.args.back().type);
             }
