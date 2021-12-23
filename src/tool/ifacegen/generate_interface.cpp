@@ -135,7 +135,7 @@ namespace ifacegen {
     )");
             for (auto& func : iface.second) {
                 if (func.funcname == "decltype") {
-                    hlp::append(str, R"(    virtual void* raw__() = 0;
+                    hlp::append(str, R"(    virtual const void* raw__() = 0;
         virtual const std::type_info& type__() = 0;
     )");
                 }
@@ -161,8 +161,8 @@ namespace ifacegen {
             for (auto& func : iface.second) {
                 if (func.funcname == "decltype") {
                     hlp::append(str,
-                                R"(    void* raw__() const override {   
-            return reinterpret_cast<void*>(std::addressof(t_holder_));
+                                R"(    const void* raw__() const override {   
+            return reinterpret_cast<const void*>(std::addressof(t_holder_));
         }
         
         const std::type_info& type__() const override {
@@ -232,17 +232,42 @@ namespace ifacegen {
 
 )");
             for (auto& func : iface.second) {
-                hlp::append(str, "    ");
-                render_cpp_function(func, str);
-                hlp::append(str, R"({
+                if (func.funcname == "decltype") {
+                    hlp::append(str, R"(    template<class T>
+    const T* type_assert() const {
+        if (!iface) {
+            return nullptr;
+        }
+        if (iface->type__()!=typeid(T)) {
+            return nullptr;
+        }
+        return reinterpret_cast<const T*>(iface->raw__());
+    }
+    
+    template<class T>
+    T* type_assert() {
+        if (!iface) {
+            return nullptr;
+        }
+        if (iface->type__()!=typeid(T)) {
+            return nullptr;
+        }
+        return const_cast<T*>(reinterpret_cast<const T*>(iface->raw__()));
+    })");
+                }
+                else {
+                    hlp::append(str, "    ");
+                    render_cpp_function(func, str);
+                    hlp::append(str, R"({
         return iface?iface->)");
-                render_cpp_call(func, str);
-                hlp::append(str, ":");
-                render_cpp_default_value(func, str, false);
-                hlp::append(str, R"(;
+                    render_cpp_call(func, str);
+                    hlp::append(str, ":");
+                    render_cpp_default_value(func, str, false);
+                    hlp::append(str, R"(;
     }
 
 )");
+                }
             }
             hlp::append(str, "};\n\n");
         }
