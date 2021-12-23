@@ -296,7 +296,7 @@ namespace ifacegen {
         delete iface;
     }
 
-    )");
+)");
             for (auto& func : iface.second) {
                 if (func.funcname == decltype_func) {
                     hlp::append(str, R"(    template<class T>
@@ -324,6 +324,7 @@ namespace ifacegen {
 )");
                 }
                 else if (func.funcname == copy_func) {
+                    hlp::append(str, "    ");
                     hlp::append(str, iface.first);
                     hlp::append(str, "(const ");
                     hlp::append(str, iface.first);
