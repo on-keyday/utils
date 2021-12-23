@@ -285,7 +285,8 @@ namespace ifacegen {
         return *this;
     }
 
-    operator bool() const {
+    )");
+            hlp::append(str, R"(operator bool() const {
         return iface != nullptr;
     }
 
@@ -297,7 +298,7 @@ namespace ifacegen {
 
     )");
             for (auto& func : iface.second) {
-                if (func.funcname == "decltype") {
+                if (func.funcname == decltype_func) {
                     hlp::append(str, R"(    template<class T>
     const T* type_assert() const {
         if (!iface) {
@@ -321,6 +322,31 @@ namespace ifacegen {
     }
 
 )");
+                }
+                else if (func.funcname == copy_func) {
+                    hlp::append(str, iface.first);
+                    hlp::append(str, "(const ");
+                    hlp::append(str, iface.first);
+                    hlp::append(str, R"(& in) {
+        if(in.iface){
+            iface=in.iface->copy__();
+        }
+    }
+    
+    )");
+                    hlp::append(str, iface.first);
+                    hlp::append(str, "& operator=(const ");
+                    hlp::append(str, iface.first);
+                    hlp::append(str, R"(& in) {
+        delete iface;
+        iface=nullptr;
+        if(in.iface){
+            iface=in.iface->copy__();
+        }
+        return *this;
+    }
+
+    )");
                 }
                 else {
                     hlp::append(str, "    ");
