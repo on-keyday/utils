@@ -27,7 +27,6 @@ interface Hey {
                                 # reference type: throw std::bad_function_call()
     decltype() type # `decltype` is special value that generate type_assert template function 
                     # ignore return type and argument
-    copy() type
 }
 
 interface Stringer {
