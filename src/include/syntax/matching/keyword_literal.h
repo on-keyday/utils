@@ -181,6 +181,7 @@ namespace utils {
                             break;
                         }
                         tok += e->to_string();
+                        r.consume();
                     }
                     if (tok.size() == 0) {
                         fmterr("not-space", e);
