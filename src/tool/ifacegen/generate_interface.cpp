@@ -128,10 +128,12 @@ namespace ifacegen {
 #include<helper/deref.h>
 )");
         if (any(flag & GenFlag::no_vtable)) {
-            hlp::append(str, R"(#ifdef _WIN32
+            hlp::append(str, R"(#ifndef NOVTABLE__
+#ifdef _WIN32
 #define NOVTABLE__ __declspec(novtable)
 #else
 #define NOVTABLE__
+#endif
 #endif
 )");
         }
