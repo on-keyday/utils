@@ -18,8 +18,9 @@ interface Hey {
     hey(name &const std::string) std::string
     hey(name *const char) std::string
     const is_boy() bool = false
+    decltype() type
 }
 
 interface Stringer {
-    string() std::string = panic
+    String() std::string = panic
 }

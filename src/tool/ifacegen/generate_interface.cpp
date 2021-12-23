@@ -134,9 +134,16 @@ namespace ifacegen {
     struct interface {
     )");
             for (auto& func : iface.second) {
-                hlp::append(str, "    virtual ");
-                render_cpp_function(func, str);
-                hlp::append(str, "= 0;\n    ");
+                if (func.funcname == "decltype") {
+                    hlp::append(str, R"(    virtual void* raw__() = 0;
+        virtual const std::type_info& type__() = 0;
+    )");
+                }
+                else {
+                    hlp::append(str, "    virtual ");
+                    render_cpp_function(func, str);
+                    hlp::append(str, "= 0;\n    ");
+                }
             }
             hlp::append(str, R"(
         virtual ~interface(){}
@@ -152,21 +159,34 @@ namespace ifacegen {
 
     )");
             for (auto& func : iface.second) {
-                hlp::append(str, "    ");
-                render_cpp_function(func, str);
-                hlp::append(str, "override {\n");
-                hlp::append(str, "            ");
-                hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_);\n");
-                hlp::append(str, "            ");
-                hlp::append(str, "if (!t_ptr_) {\n");
-                hlp::append(str, "                ");
-                render_cpp_default_value(func, str, true);
-                hlp::append(str, ";\n");
-                hlp::append(str, "            }\n");
-                hlp::append(str, "            ");
-                hlp::append(str, "return t_ptr_->");
-                render_cpp_call(func, str);
-                hlp::append(str, ";\n        }\n\n    ");
+                if (func.funcname == "decltype") {
+                    hlp::append(str,
+                                R"(    void* raw__() const override {   
+            return reinterpret_cast<void*>(std::addressof(t_holder_));
+        }
+        
+        const std::type_info& type__() const override {
+            return typeid(T);
+        }
+    )");
+                }
+                else {
+                    hlp::append(str, "    ");
+                    render_cpp_function(func, str);
+                    hlp::append(str, "override {\n");
+                    hlp::append(str, "            ");
+                    hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_);\n");
+                    hlp::append(str, "            ");
+                    hlp::append(str, "if (!t_ptr_) {\n");
+                    hlp::append(str, "                ");
+                    render_cpp_default_value(func, str, true);
+                    hlp::append(str, ";\n");
+                    hlp::append(str, "            }\n");
+                    hlp::append(str, "            ");
+                    hlp::append(str, "return t_ptr_->");
+                    render_cpp_call(func, str);
+                    hlp::append(str, ";\n        }\n\n    ");
+                }
             }
             hlp::append(str, R"(};
 
