@@ -63,6 +63,9 @@ int main(int argc, char** argv) {
     if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::expand_alias;
     }
+    if (auto v = result.is_set("no-vtable"); v && *v->value<bool>()) {
+        flag |= ifacegen::GenFlag::no_vtable;
+    }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
         if (auto s = h->value<wrap::string>()) {
