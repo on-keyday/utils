@@ -27,6 +27,8 @@ namespace ifacegen {
         if (result.top() == interface_def) {
             if (result.result.kind == us::KeyWord::id) {
                 state.current_iface = result.token();
+                /*state.data.ifaceimpl.push_back({});
+                auto idx = state.data.ifaceimpl.size() - 1;*/
                 auto res = state.data.ifaces.insert({state.current_iface, {}});
                 if (!res.second) {
                     return false;
