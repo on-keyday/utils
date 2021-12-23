@@ -259,7 +259,13 @@ namespace ifacegen {
         return iface != nullptr;
     }
 
-)");
+    ~)");
+            hlp::append(str, iface.first);
+            hlp::append(str, R"() {
+        delete iface;
+    }
+
+    )");
             for (auto& func : iface.second) {
                 if (func.funcname == "decltype") {
                     hlp::append(str, R"(    template<class T>
