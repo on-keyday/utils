@@ -26,8 +26,13 @@ interface Hey {
                                 # pointer type: nullptr
                                 # reference type: throw std::bad_function_call()
     decltype() type # `decltype` is special value that generate type_assert template function 
+                    # ignore return type and argument
 }
 
 interface Stringer {
     String() std::string = panic # `panic` is special value that generate throw std::bad_function_call()
+}
+
+interface Writer {
+    Write(ptr *const char,size size_t) size_t
 }
