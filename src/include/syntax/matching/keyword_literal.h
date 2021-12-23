@@ -191,6 +191,24 @@ namespace utils {
                     result.kind = KeyWord::not_space;
                     return MatchState::succeed;
                 }
+                else if (is_keyword(KeyWord::until_eol)) {
+                    String tok;
+                    while (true) {
+                        e = r.get();
+                        if (!e || e->is(tknz::TokenKind::line)) {
+                            break;
+                        }
+                        tok += e->to_string();
+                        r.consume();
+                    }
+                    if (tok.size() == 0) {
+                        fmterr("not-eol", e);
+                        return MatchState::not_match;
+                    }
+                    result.token = std::move(tok);
+                    result.kind = KeyWord::until_eol;
+                    return MatchState::succeed;
+                }
                 else {
                     report("unsupported keyword `", value->tok->to_string(), "`");
                     return MatchState::fatal;

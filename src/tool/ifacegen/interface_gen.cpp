@@ -72,8 +72,9 @@ int main(int argc, char** argv) {
     }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
-        ROOT:=PACKAGE? INTERFACE*?
+        ROOT:=PACKAGE? [INTERFACE|ALIAS]*?
         PACKAGE:="package" ID!
+        ALIAS:= "alias" ID NOTSPACE
         INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*

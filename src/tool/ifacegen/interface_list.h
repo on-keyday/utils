@@ -44,10 +44,16 @@ namespace ifacegen {
         utw::string default_result;
     };
 
+    struct Alias {
+        utw::string name;
+        utw::string expand;
+    };
+
     struct FileData {
         utw::string pkgname;
         utw::map<utw::string, utw::vector<Interface>> ifaces;
         utw::vector<utw::string> headernames;
+        utw::vector<Alias> aliases;
         bool has_ref_ret = false;
     };
 
@@ -55,6 +61,7 @@ namespace ifacegen {
         FileData data;
         utw::string current_iface;
         Interface iface;
+        Alias alias;
     };
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);

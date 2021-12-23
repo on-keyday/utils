@@ -26,6 +26,7 @@ namespace utils {
             number,
             literal_keyword,
             literal_symbol,
+            until_eol,
         };
 
         constexpr const char* keyword_str[] = {
@@ -33,7 +34,7 @@ namespace utils {
             "KEYWORD",   // any keyword
             "SYMBOL",    // any symbol
             "INDENT",    // indent
-            "NOTSPACE",  // anything with out space and line
+            "NOTSPACE",  // anything without space and line
             "EOF",       // end of file
             "EOL",       // end of line
             "EOS",       // end of segment
@@ -45,6 +46,7 @@ namespace utils {
             // for literal
             "LITERAL_KEYWORD",  // keyword
             "LITERAL_SYMBOL",   // symbol
+            "UNTILEOL",         // until eol
         };
 
         constexpr const char* keywordv(KeyWord kw) {

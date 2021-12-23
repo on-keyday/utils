@@ -16,6 +16,7 @@ namespace ifacegen {
     constexpr auto type_def = "TYPE";
     constexpr auto pointer_ = "POINTER";
     constexpr auto type_prim = "TYPEPRIM";
+    constexpr auto alias_def = "ALIAS";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -96,6 +97,15 @@ namespace ifacegen {
             }
             else {
                 return set_type(state.iface.type);
+            }
+        }
+        if (result.top() == alias_def) {
+            if (result.result.kind == us::KeyWord::id) {
+                state.alias.name = result.token();
+            }
+            if (result.result.kind == us::KeyWord::not_space) {
+                state.alias.expand = result.token();
+                state.data.aliases.push_back(std::move(state.alias));
             }
         }
         return true;
