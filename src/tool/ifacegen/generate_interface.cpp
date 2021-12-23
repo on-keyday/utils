@@ -127,6 +127,15 @@ namespace ifacegen {
 #pragma once
 #include<helper/deref.h>
 )");
+
+        if (data.has_ref_ret) {
+            hlp::append(str, "#include<functional>\n");
+        }
+        for (auto& h : data.headernames) {
+            hlp::append(str, "#include");
+            hlp::append(str, h);
+            hlp::append(str, "\n");
+        }
         if (any(flag & GenFlag::no_vtable)) {
             hlp::append(str, R"(#ifndef NOVTABLE__
 #ifdef _WIN32
@@ -136,14 +145,6 @@ namespace ifacegen {
 #endif
 #endif
 )");
-        }
-        if (data.has_ref_ret) {
-            hlp::append(str, "#include<functional>\n");
-        }
-        for (auto& h : data.headernames) {
-            hlp::append(str, "#include");
-            hlp::append(str, h);
-            hlp::append(str, "\n");
         }
         hlp::append(str, "\n");
         if (data.pkgname.size()) {
