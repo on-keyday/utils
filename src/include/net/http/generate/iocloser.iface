@@ -7,8 +7,10 @@
 
 package utils::net
 
+import "../../core/iodef.h"
+
 interface IOCloser {
-    write(ptr *const char,size size_t) State
-    read(ptr *char,size size_t,red *size_t) State
-    close(force bool) State
+    write(ptr *const char,size size_t) State = State::undefined
+    read(ptr *char,size size_t,red *size_t) State = State::undefined
+    close(force bool) State = State::undefined
 }
