@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     constexpr auto def = R"def(
         ROOT:=PACKAGE? [INTERFACE|ALIAS]*?
         PACKAGE:="package" ID!
-        ALIAS:= "alias" ID NOTSPACE
+        ALIAS:= "alias" ID UNTILEOL
         INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*

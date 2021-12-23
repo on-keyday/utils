@@ -33,7 +33,7 @@ interface Stringer {
     String() std::string = panic # `panic` is special value that generate throw std::bad_function_call()
 }
 
-alias WriteResult std::pair<>
+alias WriteResult std::pair<size_t,bool>
 
 interface Writer {
     Write(ptr *const char,size size_t) size_t
