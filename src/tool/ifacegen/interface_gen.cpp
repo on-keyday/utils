@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
         .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename")
         .set("expand,e", bool_option(true), "expand alias", OptFlag::once_in_cmd)
         .set("no-vtable,V", bool_option(true), "add __declspec(novtable) (for windows)", OptFlag::once_in_cmd)
-        .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T)`", OptFlag::once_in_cmd, "type func");
+        .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T)`", OptFlag::once_in_cmd, "type func")
+        .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -66,6 +67,9 @@ int main(int argc, char** argv) {
     }
     if (auto v = result.is_set("no-vtable"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::no_vtable;
+    }
+    if (auto v = result.is_set("license"); v && *v->value<bool>()) {
+        flag |= ifacegen::GenFlag::add_license;
     }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
