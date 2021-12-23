@@ -136,7 +136,7 @@ namespace ifacegen {
             hlp::append(str, h);
             hlp::append(str, "\n");
         }
-        if (!any(flag & GenFlag::no_vtable)) {
+        if (any(flag & GenFlag::no_vtable)) {
             hlp::append(str, R"(#ifndef NOVTABLE__
 #ifdef _WIN32
 #define NOVTABLE__ __declspec(novtable)
@@ -153,7 +153,7 @@ namespace ifacegen {
             hlp::append(str, " {\n");
         }
         utw::map<utw::string, utw::string>* alias = nullptr;
-        if (any(flag & GenFlag::expand_alias)) {
+        if (!any(flag & GenFlag::expand_alias)) {
             for (auto& alias : data.aliases) {
                 hlp::append(str, "using ");
                 hlp::append(str, alias.first);
