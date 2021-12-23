@@ -195,11 +195,11 @@ namespace ifacegen {
     };
     
     template<class T>
-    struct implement : interface {
+    struct implements : interface {
         T t_holder_;
 
         template<class... Args>
-        implement(Args&&...args)
+        implements(Args&&...args)
             :t_holder_(std::forward<Args>(args)...){}
 
     )");
@@ -248,7 +248,7 @@ namespace ifacegen {
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T&& t) {
-        iface=new implement<std::decay_t<T>>(std::forward<T>(t));
+        iface=new implements<std::decay_t<T>>(std::forward<T>(t));
     }
     
     )a");
