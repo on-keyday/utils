@@ -17,6 +17,7 @@ namespace ifacegen {
     constexpr auto pointer_ = "POINTER";
     constexpr auto type_prim = "TYPEPRIM";
     constexpr auto alias_def = "ALIAS";
+    constexpr auto import_def = "IMPORT";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -112,6 +113,11 @@ namespace ifacegen {
             if (result.result.kind == us::KeyWord::until_eol) {
                 state.data.aliases[state.current_alias] = result.token();
                 state.current_alias.clear();
+            }
+        }
+        if (result.top() == import_def) {
+            if (result.result.kind == us::KeyWord::until_eol) {
+                state.data.headernames.push_back(result.token());
             }
         }
         return true;
