@@ -90,5 +90,15 @@ namespace utils {
             }
         }
 
+        enum class NumError {
+            none,
+            not_match,
+            invalid,
+            overflow,
+            not_eof,
+        };
+
+        using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
+
     }  // namespace number
 }  // namespace utils

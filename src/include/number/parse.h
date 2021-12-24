@@ -104,16 +104,6 @@ namespace utils {
             }
         }  // namespace internal
 
-        enum class NumError {
-            none,
-            not_match,
-            invalid,
-            overflow,
-            not_eof,
-        };
-
-        using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
-
         template <class Result, class T>
         constexpr NumErr read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr) {
             if (radix < 2 || radix > 36) {

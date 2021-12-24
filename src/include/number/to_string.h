@@ -11,10 +11,29 @@
 
 #include <limits>
 
+#include "char_range.h"
+
 namespace utils {
     namespace number {
         template <class T>
-        T radix_mod_zero() {
+        constexpr T radix_mod_zero(std::uint32_t m) {
+            constexpr auto mx = (std::numeric_limits<T>::max)();
+            return mx - (mx % m);
+        }
+
+        template <class Result, class T>
+        constexpr NumErr to_string(Result& result, T in, int radix, bool upper = false) {
+            if (radix < 2 || radix > 36) {
+                return NumError::invalid;
+            }
+            auto modulo = radix_mod_zero(radix);
+            bool first = false;
+            while (modulo) {
+                auto d = in % modulo;
+                if (d || !first) {
+                    to_num_char(d, upper);
+                }
+            }
         }
 
     }  // namespace number
