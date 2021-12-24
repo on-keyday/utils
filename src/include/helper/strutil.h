@@ -13,37 +13,10 @@
 
 #include "view.h"
 
+#include "compare_type.h"
+
 namespace utils {
     namespace helper {
-        template <class T, class U>
-        using compare_type = typename Sequencer<buffer_t<T&>>::template compare_type<U>;
-
-        template <class T, class U>
-        constexpr auto default_compare() {
-            return Sequencer<buffer_t<T&>>::template default_compare<U>();
-        }
-
-        template <class T>
-        constexpr T to_upper(T c) {
-            if (c >= 'a' && c <= 'z') {
-                c = c - 'a' + 'A';
-            }
-            return c;
-        };
-
-        template <class T>
-        constexpr T to_lower(T c) {
-            if (c >= 'A' && c <= 'Z') {
-                c = c - 'A' + 'a';
-            }
-            return c;
-        };
-
-        constexpr auto ignore_case() {
-            return [](auto a, auto b) {
-                return to_upper(a) == to_upper(b);
-            };
-        }
 
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
         constexpr bool starts_with(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
@@ -93,72 +66,6 @@ namespace utils {
         template <class In, class Cmp, class Compare = compare_type<In, Cmp>>
         constexpr bool contains(In&& in, Cmp&& cmp, Compare&& compare = default_compare<In, Cmp>()) {
             return find(in, cmp) != ~0;
-        }
-
-        template <bool consume = true, class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
-        constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
-            while (!seq.eos()) {
-                if (auto n = seq.match_n(cmp, compare)) {
-                    if (consume) {
-                        seq.consume(n);
-                    }
-                    return true;
-                }
-                result.push_back(seq.current());
-                seq.consume();
-            }
-            return false;
-        }
-
-        constexpr auto no_check() {
-            return [](auto) {
-                return true;
-            };
-        }
-
-        template <class Result, class T, class Func>
-        constexpr bool read_if(Result& result, Sequencer<T>& seq, Func&& cmp) {
-            while (!seq.eos()) {
-                if (cmp(seq.current())) {
-                    result.push_back(seq.current());
-                    seq.consume();
-                    continue;
-                }
-                break;
-            }
-            return true;
-        }
-
-        template <class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
-        constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
-            while (!seq.eos()) {
-                if (auto n = seq.match_n(cmp, compare)) {
-                    for (size_t i = 0; i < n; i++) {
-                        result.push_back(seq.current());
-                        seq.consume();
-                    }
-                    continue;
-                }
-                break;
-            }
-            return true;
-        }
-
-        template <bool consume = true, class T>
-        constexpr size_t match_eol(Sequencer<T>& seq) {
-            if (seq.match("\r\n")) {
-                if constexpr (consume) {
-                    seq.consume(2);
-                }
-                return 2;
-            }
-            else if (seq.current() == '\n' || seq.current() == '\r') {
-                if constexpr (consume) {
-                    seq.consume(1);
-                }
-                return 1;
-            }
-            return 0;
         }
 
     }  // namespace helper
