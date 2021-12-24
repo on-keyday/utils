@@ -9,7 +9,7 @@
 // urlencode - url encoding
 #pragma once
 #include "../../core/sequencer.h"
-#include "../../number/number.h"
+#include "../../number/parse.h"
 
 namespace utils {
     namespace net {

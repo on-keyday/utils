@@ -35,17 +35,17 @@ namespace utils {
         // clang-format on
 
         template <class C>
-        bool is_in_byte_range(C&& c) {
+        constexpr bool is_in_byte_range(C&& c) {
             return c >= 0 && c <= 0xff;
         }
 
         template <class C>
-        bool is_in_ascii_range(C&& c) {
+        constexpr bool is_in_ascii_range(C&& c) {
             return c >= 0 && c <= 0x7f;
         }
 
         template <class C>
-        bool is_in_visible_range(C&& c) {
+        constexpr bool is_in_visible_range(C&& c) {
             return c >= 0x21 && c <= 0x7e;
         }
 

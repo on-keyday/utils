@@ -18,7 +18,7 @@
 
 #include "../../helper/strutil.h"
 
-#include "../../number/number.h"
+#include "../../number/parse.h"
 
 namespace utils {
     namespace syntax {

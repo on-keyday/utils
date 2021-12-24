@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/number/number.h"
+#include "../../include/number/parse.h"
 
 constexpr bool test_is_number() {
     bool is_float;

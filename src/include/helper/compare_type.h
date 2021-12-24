@@ -22,17 +22,17 @@ namespace utils {
         }
 
         template <class T>
-        constexpr T to_upper(T&& c) {
+        constexpr std::remove_cvref_t<T> to_upper(T&& c) {
             if (c >= 'a' && c <= 'z') {
-                c = c - 'a' + 'A';
+                return c - 'a' + 'A';
             }
             return c;
         };
 
         template <class T>
-        constexpr T to_lower(T&& c) {
+        constexpr std::remove_cvref_t<T> to_lower(T&& c) {
             if (c >= 'A' && c <= 'Z') {
-                c = c - 'A' + 'a';
+                return c - 'A' + 'a';
             }
             return c;
         };
