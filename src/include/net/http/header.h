@@ -130,7 +130,7 @@ namespace utils {
         bool is_valid_header(String&& header) {
             auto seq = make_ref_seq(header);
             if (!helper::read_while<true>(helper::nop, seq, [](auto&& c) {
-                    if (!number::is_in_byte_range(c)) {
+                    if (!number::is_in_visible_range(c)) {
                         return false;
                     }
                 })) {
