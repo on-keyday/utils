@@ -16,6 +16,9 @@ namespace utils {
 
         template <class T, class In>
         T* iface_cast(In* in) {
+            if (!in) {
+                return nullptr;
+            }
             return in->template type_assert<T>();
         }
 
