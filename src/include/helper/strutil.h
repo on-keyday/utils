@@ -110,6 +110,25 @@ namespace utils {
             return false;
         }
 
+        constexpr auto no_check() {
+            return [](auto) {
+                return true;
+            };
+        }
+
+        template <class Result, class T, class Func>
+        constexpr bool read_if(Result& result, Sequencer<T>& seq, Func&& cmp) {
+            while (!seq.eos()) {
+                if (cmp(seq.current())) {
+                    result.push_back(seq.current());
+                    seq.consume();
+                    continue;
+                }
+                break;
+            }
+            return true;
+        }
+
         template <class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
         constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
             while (!seq.eos()) {
