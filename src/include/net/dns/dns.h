@@ -15,7 +15,7 @@ namespace utils {
     namespace net {
         struct Address;
         namespace internal {
-            //NOTE: using pimple pattern to remove platform dependency from header
+            //NOTE: using pimpl pattern to remove platform dependency from header
             struct DnsResultImpl;
             struct AddressImpl;
             wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len);
