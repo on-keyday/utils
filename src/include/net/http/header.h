@@ -126,6 +126,14 @@ namespace utils {
             return header_parse_common<String>(seq, result);
         }
 
+        bool is_valid_header_char(std::uint8_t c) {
+            return number::is_alnum(c) ||
+                   // #$%&'*+-.^_`|~!
+                   c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
+                   c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
+                   c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
+        }
+
         template <class String>
         bool is_valid_header(String&& header) {
             auto seq = make_ref_seq(header);

@@ -69,6 +69,10 @@ namespace utils {
             return is_radix_char(c, 2);
         }
 
+        constexpr bool is_alnum(std::uint8_t c) {
+            return is_radix_char(c, 37);
+        }
+
         constexpr std::uint8_t to_num_char(std::uint8_t n, bool upper = false) {
             if (n <= 9) {
                 return '0' + n;
