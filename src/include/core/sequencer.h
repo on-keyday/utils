@@ -93,6 +93,18 @@ namespace utils {
             return false;
         }
 
+        template <class Char>
+        constexpr bool consume_if(Char c) {
+            if (eos()) {
+                return false;
+            }
+            if (c != buf.at(rptr)) {
+                return false;
+            }
+            rptr++;
+            return true;
+        }
+
         constexpr char_type current(std::int64_t offset = 0) const {
             if (!buf.in_range(rptr + offset)) {
                 return char_type();

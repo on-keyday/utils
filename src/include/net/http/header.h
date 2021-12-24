@@ -46,8 +46,13 @@ namespace utils {
             return true;
         }
 
-        template <class String, class T, class Result, class Path, class Version>
-        bool request_header(Sequencer<T>& seq, String& method, Path& path, Version& ver, Result& result) {
+        template <class String, class T, class Result, class Method, class Path, class Version>
+        bool request_header(Sequencer<T>& seq, Method& method, Path& path, Version& ver, Result& result) {
+            if (!helper::read_while<true>(method, seq, [](auto v) {
+                    return v != ' ';
+                })) {
+                return false;
+            }
         }
     }  // namespace net
 }  // namespace utils
