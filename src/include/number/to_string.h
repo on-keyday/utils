@@ -26,8 +26,8 @@ namespace utils {
             if (radix < 2 || radix > 36) {
                 return NumError::invalid;
             }
-            auto modulo = radix_mod_zero(radix);
-            bool first = false;
+            auto modulo = radix_mod_zero<T>(radix);
+            bool first = true;
             bool sign = false;
             std::make_unsigned_t<T> calc;
             if (in < 0) {
