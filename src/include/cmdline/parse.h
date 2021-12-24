@@ -10,6 +10,7 @@
 #pragma once
 
 #include "parse_impl.h"
+#include "../helper/readutil.h"
 
 namespace utils {
     namespace cmdline {

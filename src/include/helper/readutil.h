@@ -10,6 +10,7 @@
 #pragma once
 
 #include "compare_type.h"
+#include "../core/sequencer.h"
 
 namespace utils {
     namespace helper {

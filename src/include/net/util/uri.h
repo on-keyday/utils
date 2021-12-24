@@ -12,6 +12,7 @@
 #include "../../core/sequencer.h"
 #include "../../helper/strutil.h"
 #include "../../wrap/lite/string.h"
+#include "../../helper/readutil.h"
 
 namespace utils {
     namespace net {
