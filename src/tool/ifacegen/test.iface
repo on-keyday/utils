@@ -14,6 +14,7 @@ package test # `package` will be namespace
 # convert to golang (unimplemented)
 # identifier(param type) rettype
 
+
 # warning: type_assert, raw__ and type__ is implicit used if `decltype` appered
 #          copy__ , implicit used if `copy` appered 
 #          so type_assert, raw__, type__, copy__ function is not usable
