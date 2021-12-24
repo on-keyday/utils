@@ -17,6 +17,9 @@ namespace utils {
         template <class String, class T, class Result>
         bool header_parse_common(Sequencer<T>& seq, Result& result) {
             while (!seq.eos()) {
+                if (helper::match_eol(seq)) {
+                    break;
+                }
                 String key, value;
                 if (!helper::read_while<true>(key, seq, [](auto v) {
                         return v != ':';
@@ -34,6 +37,7 @@ namespace utils {
                     })) {
                     return false;
                 }
+                result.emplace(std::move(key), std::move(value));
                 if (!helper::match_eol(seq)) {
                     return false;
                 }
