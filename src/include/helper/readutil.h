@@ -29,15 +29,20 @@ namespace utils {
             return false;
         }
 
-        template <class Result, class T, class Func>
+        template <bool no_zero = false, class Result, class T, class Func>
         constexpr bool read_while(Result& result, Sequencer<T>& seq, Func&& cmp) {
+            bool first = true;
             while (!seq.eos()) {
                 if (cmp(seq.current())) {
                     result.push_back(seq.current());
                     seq.consume();
+                    first = false;
                     continue;
                 }
                 break;
+            }
+            if constexpr (no_zero) {
+                return first != true;
             }
             return true;
         }

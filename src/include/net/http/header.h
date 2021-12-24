@@ -10,7 +10,7 @@
 #pragma once
 
 #include "../../helper/readutil.h"
-#include "../../helper/view.h"
+#include "../../helper/pushbacker.h"
 
 namespace utils {
     namespace net {
@@ -24,7 +24,12 @@ namespace utils {
                 if (!seq.seek_if(":")) {
                     return false;
                 }
-                helper::read_while(helper::nop)
+                helper::read_while(helper::nop, seq, [](auto v) {
+                    return v == ' ';
+                });
+                helper::read_while(value, seq, [](auto v) {
+                    return v != '\r' && v != '\n';
+                });
             }
         }
     }  // namespace net
