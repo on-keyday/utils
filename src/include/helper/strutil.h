@@ -74,9 +74,14 @@ namespace utils {
             bool first = true;
             while (!seq.eos()) {
                 if (!validate(seq.current())) {
+                    return false;
                 }
                 first = false;
             }
+            if constexpr (no_zero) {
+                return first == false;
+            }
+            return true;
         }
 
     }  // namespace helper
