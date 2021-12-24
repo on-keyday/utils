@@ -10,8 +10,10 @@
 #pragma once
 
 #include "../../helper/readutil.h"
+#include "../../helper/strutil.h"
 #include "../../helper/pushbacker.h"
 #include "../../number/number.h"
+#include "../../helper/appender.h"
 
 namespace utils {
     namespace net {
@@ -122,6 +124,36 @@ namespace utils {
                 return false;
             }
             return header_parse_common<String>(seq, result);
+        }
+
+        template <class String>
+        bool is_valid_header(String&& header) {
+            auto seq = make_ref_seq(header);
+            if (!helper::read_while<true>(helper::nop, seq, [](auto&& c) {
+                    if (!number::is_in_byte_range(c)) {
+                        return false;
+                    }
+                })) {
+                return false;
+            }
+            return seq.eos();
+        }
+
+        template <class String, class Header, class Validate>
+        bool render_header_common(String& str, Header&& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false) {
+            for (auto&& keyval : header) {
+                if (!validate(keyval)) {
+                    if (!ignore_invalid) {
+                        return false;
+                    }
+                    continue;
+                }
+                helper::append(str, std::get<0>(keyval));
+                helper::append(str, ": ");
+                helper::append(str, std::get<1>(keyval));
+                helper::append(str, "\r\n");
+            }
+            helper::append(str, "\r\n");
         }
     }  // namespace net
 }  // namespace utils

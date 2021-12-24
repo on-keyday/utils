@@ -22,7 +22,7 @@ namespace utils {
         }
 
         template <class T>
-        constexpr T to_upper(T c) {
+        constexpr T to_upper(T&& c) {
             if (c >= 'a' && c <= 'z') {
                 c = c - 'a' + 'A';
             }
@@ -30,7 +30,7 @@ namespace utils {
         };
 
         template <class T>
-        constexpr T to_lower(T c) {
+        constexpr T to_lower(T&& c) {
             if (c >= 'A' && c <= 'Z') {
                 c = c - 'A' + 'a';
             }
@@ -38,7 +38,7 @@ namespace utils {
         };
 
         constexpr auto ignore_case() {
-            return [](auto a, auto b) {
+            return [](auto&& a, auto&& b) {
                 return to_upper(a) == to_upper(b);
             };
         }
