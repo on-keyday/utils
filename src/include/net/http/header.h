@@ -15,6 +15,17 @@
 
 namespace utils {
     namespace net {
+        struct StausCode {
+            std::uint16_t code;
+            void push_back(auto v) {
+                number::internal::PushBackParserInt<std::uint16_t&> tmp(code);
+                tmp.push_back(v);
+            }
+            operator std::uint16_t() {
+                return code;
+            }
+        };
+
         template <class String, class T, class Result>
         bool header_parse_common(Sequencer<T>& seq, Result& result) {
             while (true) {

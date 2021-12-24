@@ -57,6 +57,17 @@ namespace utils {
         constexpr bool read_all(Result& result, Sequencer<T>& seq) {
             return read_if(result, seq, no_check());
         }
+        template <class Result, class T>
+        constexpr bool read_n(Result& result, Sequencer<T>& seq, size_t n) {
+            if (seq.remain() < n) {
+                return false;
+            }
+            for (size_t i = 0; i < n; i++) {
+                result.push_back(seq.current());
+                seq.consume();
+            }
+            return true;
+        }
 
         template <class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
         constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
