@@ -96,8 +96,8 @@ namespace utils {
             if (!seq.consume_if(' ')) {
                 return false;
             }
-            if (!helper::read_while<true>(status, seq, [](auto v) {
-                    return v != ' ';
+            if (!helper::read_while(status, seq, []() {
+
                 })) {
                 return false;
             }

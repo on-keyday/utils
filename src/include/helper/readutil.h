@@ -57,12 +57,16 @@ namespace utils {
         constexpr bool read_all(Result& result, Sequencer<T>& seq) {
             return read_if(result, seq, no_check());
         }
-        template <class Result, class T>
-        constexpr bool read_n(Result& result, Sequencer<T>& seq, size_t n) {
+
+        template <class Result, class T, class Func = decltype(no_check())>
+        constexpr bool read_n(Result& result, Sequencer<T>& seq, size_t n, Func&& func = no_check()) {
             if (seq.remain() < n) {
                 return false;
             }
             for (size_t i = 0; i < n; i++) {
+                if (!func(seq.cuurent())) {
+                    return false;
+                }
                 result.push_back(seq.current());
                 seq.consume();
             }
