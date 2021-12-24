@@ -12,7 +12,7 @@
 #include "../core/iodef.h"
 
 namespace utils::net {
-    struct IOCloser {
+    struct IOClose {
        private:
         struct interface__ {
             virtual State write(const char* ptr, size_t size) = 0;
@@ -58,24 +58,24 @@ namespace utils::net {
         interface__* iface = nullptr;
 
        public:
-        constexpr IOCloser() {}
+        constexpr IOClose() {}
 
-        constexpr IOCloser(std::nullptr_t) {}
+        constexpr IOClose(std::nullptr_t) {}
 
         template <class T>
-        IOCloser(T&& t) {
+        IOClose(T&& t) {
             if (!utils::helper::deref(t)) {
                 return;
             }
             iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
         }
 
-        IOCloser(IOCloser&& in) {
+        IOClose(IOClose&& in) {
             iface = in.iface;
             in.iface = nullptr;
         }
 
-        IOCloser& operator=(IOCloser&& in) {
+        IOClose& operator=(IOClose&& in) {
             delete iface;
             iface = in.iface;
             in.iface = nullptr;
@@ -86,7 +86,7 @@ namespace utils::net {
             return iface != nullptr;
         }
 
-        ~IOCloser() {
+        ~IOClose() {
             delete iface;
         }
 
