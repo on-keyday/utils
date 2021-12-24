@@ -36,6 +36,7 @@ add_executable(urlparse "src/test/net/test_urlparse.cpp")
 add_executable(base64 "src/test/net/test_base64.cpp")
 add_executable(urlencode "src/test/net/test_urlencode.cpp")
 add_executable(sha1 "src/test/net/test_sha1.cpp")
+add_executable(to_string "src/test/number/test_to_string.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"

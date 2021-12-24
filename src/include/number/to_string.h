@@ -44,7 +44,7 @@ namespace utils {
             while (calc) {
                 auto d = calc / modulo;
                 calc %= modulo;
-                modulo /= radix;
+                modulo -= radix;
                 if (d || !first) {
                     result.push_back(to_num_char(d, upper));
                     first = false;
