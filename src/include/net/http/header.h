@@ -11,12 +11,13 @@
 
 #include "../../helper/readutil.h"
 #include "../../helper/pushbacker.h"
+#include "../../number/number.h"
 
 namespace utils {
     namespace net {
         template <class String, class T, class Result>
         bool header_parse_common(Sequencer<T>& seq, Result& result) {
-            while (!seq.eos()) {
+            while (true) {
                 if (helper::match_eol(seq)) {
                     break;
                 }
@@ -42,6 +43,11 @@ namespace utils {
                     return false;
                 }
             }
+            return true;
+        }
+
+        template <class String, class T, class Result, class Path, class Version>
+        bool request_header(Sequencer<T>& seq, String& method, Path& path, Version& ver, Result& result) {
         }
     }  // namespace net
 }  // namespace utils
