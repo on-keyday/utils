@@ -6,7 +6,7 @@
 # iocloser - iocloser interface
 
 # generate command
-# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\""
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V
 
 package utils::net
 

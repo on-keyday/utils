@@ -11,10 +11,18 @@
 #include "../../helper/deref.h"
 #include "../core/iodef.h"
 
+#ifndef NOVTABLE__
+#ifdef _WIN32
+#define NOVTABLE__ __declspec(novtable)
+#else
+#define NOVTABLE__
+#endif
+#endif
+
 namespace utils::net {
     struct IOClose {
        private:
-        struct interface__ {
+        struct NOVTABLE__ interface__ {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
             virtual State close(bool force) = 0;
@@ -105,7 +113,7 @@ namespace utils::net {
 
     struct IO {
        private:
-        struct interface__ {
+        struct NOVTABLE__ interface__ {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
 
