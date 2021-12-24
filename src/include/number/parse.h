@@ -14,8 +14,6 @@
 
 #include "../core/sequencer.h"
 
-#include "../wrap/lite/enum.h"
-
 #include "../helper/pushbacker.h"
 
 #include "char_range.h"

@@ -28,23 +28,24 @@ namespace utils {
             }
             auto modulo = radix_mod_zero(radix);
             bool first = false;
-            auto calc = in;
-            bool plus = false;
-            if (calc < 0) {
-                if (calc == (std::numeric_limits<T>::min)()) {
-                    calc += 1;
-                    plus = true;
-                }
-                calc = -calc;
+            bool sign = false;
+            std::make_unsigned_t<T> calc;
+            if (in < 0) {
+                calc = -in;
+                result.push_back('-');
             }
-            while (modulo) {
+            else {
+                calc = in;
+            }
+            if (calc == 0) {
+                result.push_back('0');
+                return true;
+            }
+            while (calc) {
                 auto d = calc / modulo;
-                calc = calc % modulo;
+                calc %= modulo;
+                modulo /= radix;
                 if (d || !first) {
-                    if (calc == 0 && plus) {
-                        if (d + 1 >= radix) {
-                        }
-                    }
                     result.push_back(to_num_char(d, upper));
                     first = false;
                 }

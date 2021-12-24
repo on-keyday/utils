@@ -9,6 +9,7 @@
 // char_range - define char range
 #pragma once
 #include <cstdint>
+#include "../wrap/lite/enum.h"
 
 namespace utils {
     namespace number {
