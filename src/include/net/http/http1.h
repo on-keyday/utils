@@ -9,9 +9,25 @@
 // http1 - http1.1 protocol
 #pragma once
 
+#include "../../wrap/lite/smart_ptr.h"
+#include "../generate/iocloser.h"
+
 namespace utils {
     namespace net {
+        namespace internal {
+            struct HeaderImpl;
+        }
+
         struct Header {
+            constexpr Header() {}
+
+           private:
+            internal::HeaderImpl* impl = nullptr;
         };
+
+        struct HttpResponse {
+        };
+
+        HttpResponse request(IOClose& io, );
     }  // namespace net
 }  // namespace utils

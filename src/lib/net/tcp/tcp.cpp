@@ -107,10 +107,11 @@ namespace utils {
             return State::complete;
         }
 
-        void TCPConn::close() {
+        State TCPConn::close(bool) {
             if (impl) {
                 impl->close();
             }
+            return State::complete;
         }
 
         State wait_connect(::SOCKET& sock, bool server = false, long sec = 0) {
