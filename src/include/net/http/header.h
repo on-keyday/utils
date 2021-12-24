@@ -98,7 +98,14 @@ namespace utils {
             if (!seq.consume_if(' ')) {
                 return false;
             }
-            if (!helper::read_n(status, seq, 3, [](auto v) {
+            bool f = true;
+            if (!helper::read_n(status, seq, 3, [&](auto v) {
+                    if (f) {
+                        if (v == '0') {
+                            return false;
+                        }
+                        f = false;
+                    }
                     return number::is_digit(v);
                 })) {
                 return false;
