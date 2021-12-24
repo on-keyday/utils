@@ -21,8 +21,8 @@ constexpr auto test_to_string_num(int i) {
 void test_to_string() {
     constexpr auto result = test_to_string_num(10);
     static_assert(utils::helper::equal(result.buf, "10"), "expect 10 but assetion failed");
-    auto result2 = test_to_string_num(12394);
-    //static_assert(utils::helper::equal(result.buf, "12394"), "expect 12394 but assetion failed");
+    constexpr auto result2 = test_to_string_num(-12394);
+    static_assert(utils::helper::equal(result2.buf, "-12394"), "expect 12394 but assetion failed");
 }
 
 int main() {
