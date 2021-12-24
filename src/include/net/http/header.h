@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../../helper/readutil.h"
+#include "../../helper/view.h"
 
 namespace utils {
     namespace net {
@@ -17,7 +18,13 @@ namespace utils {
         bool header_parse_common(Sequencer<T>& seq, Result& result) {
             while (!seq.eos()) {
                 String key, value;
-                helper::read_if();
+                helper::read_while(key, seq, [](auto v) {
+                    return v != ':';
+                });
+                if (!seq.seek_if(":")) {
+                    return false;
+                }
+                helper::read_while(helper::nop)
             }
         }
     }  // namespace net
