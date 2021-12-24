@@ -287,7 +287,14 @@ namespace ifacegen {
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T&& t) {
-        iface=new implements<std::decay_t<T>>(std::forward<T>(t));
+        )a");
+            if (any(flag & GenFlag::not_accept_null)) {
+                hlp::append(str, R"(if(!utils::helper::deref(t)){
+            return;
+        }
+        )");
+            }
+            hlp::append(str, R"a(iface=new implements<std::decay_t<T>>(std::forward<T>(t));
     }
     
     )a");

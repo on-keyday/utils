@@ -11,6 +11,7 @@
 
 namespace utils {
     namespace net {
-
-    }
+        struct Header {
+        };
+    }  // namespace net
 }  // namespace utils

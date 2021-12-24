@@ -35,7 +35,8 @@ int main(int argc, char** argv) {
         .set("expand,e", bool_option(true), "expand alias", OptFlag::once_in_cmd)
         .set("no-vtable,V", bool_option(true), "add __declspec(novtable) (for windows)", OptFlag::once_in_cmd)
         .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T)`", OptFlag::once_in_cmd, "type func")
-        .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd);
+        .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd)
+        .set("not-accept-null,n", bool_option(true), "not accept nullptr-object", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -72,6 +73,9 @@ int main(int argc, char** argv) {
     }
     if (auto v = result.is_set("license"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::add_license;
+    }
+    if (auto v = result.is_set("not-accept-null"); v && *v->value<bool>()) {
+        flag |= ifacegen::GenFlag::not_accept_null;
     }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
