@@ -9,7 +9,7 @@
 // header - parse http1 header
 #pragma once
 
-#include "../../helper/strutil.h"
+#include "../../helper/readutil.h"
 
 namespace utils {
     namespace net {
@@ -17,7 +17,7 @@ namespace utils {
         bool header_parse_common(Sequencer<T>& seq, Result& result) {
             while (!seq.eos()) {
                 String key, value;
-                helper::read_until()
+                helper::read_if();
             }
         }
     }  // namespace net

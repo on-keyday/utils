@@ -30,7 +30,7 @@ namespace utils {
         }
 
         template <class Result, class T, class Func>
-        constexpr bool read_if(Result& result, Sequencer<T>& seq, Func&& cmp) {
+        constexpr bool read_while(Result& result, Sequencer<T>& seq, Func&& cmp) {
             while (!seq.eos()) {
                 if (cmp(seq.current())) {
                     result.push_back(seq.current());
