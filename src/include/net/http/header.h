@@ -21,8 +21,7 @@ namespace utils {
                 number::internal::PushBackParserInt<std::uint16_t> tmp;
                 tmp.result = code;
                 tmp.push_back(v);
-                if (!tmp.overflow) {
-                }
+                code = tmp.result;
             }
             operator std::uint16_t() {
                 return code;
@@ -100,7 +99,7 @@ namespace utils {
                 return false;
             }
             if (!helper::read_n(status, seq, 3, [](auto v) {
-
+                    return number::is_digit(v);
                 })) {
                 return false;
             }
