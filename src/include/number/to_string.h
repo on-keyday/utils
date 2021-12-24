@@ -50,7 +50,7 @@ namespace utils {
                 return true;
             }
             auto modulo = mx;
-            auto minus = 0;
+            std::make_unsigned_t<T> minus = 0;
             while (modulo) {
                 auto d = (calc - minus) / modulo;
                 minus += modulo * d;
