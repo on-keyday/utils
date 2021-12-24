@@ -12,7 +12,7 @@
 #include "../../helper/readutil.h"
 #include "../../helper/strutil.h"
 #include "../../helper/pushbacker.h"
-#include "../../number/number.h"
+#include "../../number/parse.h"
 #include "../../helper/appender.h"
 
 namespace utils {
