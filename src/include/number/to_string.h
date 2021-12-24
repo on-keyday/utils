@@ -53,5 +53,12 @@ namespace utils {
             return true;
         }
 
+        template <class Result, class T>
+        constexpr Result to_string(T in, int radix = 10, bool upper = false) {
+            Result result;
+            to_string(result, in, radix, upper);
+            return result;
+        }
+
     }  // namespace number
 }  // namespace utils
