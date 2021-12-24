@@ -15,11 +15,14 @@
 
 namespace utils {
     namespace net {
-        struct StausCode {
-            std::uint16_t code;
+        struct StatusCode {
+            std::uint16_t code = 0;
             void push_back(auto v) {
-                number::internal::PushBackParserInt<std::uint16_t&> tmp(code);
+                number::internal::PushBackParserInt<std::uint16_t> tmp;
+                tmp.result = code;
                 tmp.push_back(v);
+                if (!tmp.overflow) {
+                }
             }
             operator std::uint16_t() {
                 return code;
@@ -96,7 +99,7 @@ namespace utils {
             if (!seq.consume_if(' ')) {
                 return false;
             }
-            if (!helper::read_while(status, seq, []() {
+            if (!helper::read_n(status, seq, 3, [](auto v) {
 
                 })) {
                 return false;

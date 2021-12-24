@@ -42,6 +42,26 @@ namespace utils {
         };
         // clang-format on
 
+        constexpr bool is_radix_char(std::uint8_t c, size_t radix) {
+            return number_transform[c] < radix;
+        }
+
+        constexpr bool is_digit(std::uint8_t c) {
+            return is_radix_char(c, 10);
+        }
+
+        constexpr bool is_hex(std::uint8_t c) {
+            return is_radix_char(c, 16);
+        }
+
+        constexpr bool is_oct(std::uint8_t c) {
+            return is_radix_char(c, 8);
+        }
+
+        constexpr bool is_bin(std::uint8_t c) {
+            return is_radix_char(c, 2);
+        }
+
         constexpr std::uint8_t to_num_char(std::uint8_t n, bool upper = false) {
             if (n <= 9) {
                 return '0' + n;
@@ -63,9 +83,9 @@ namespace utils {
 
             template <class T>
             struct PushBackParserInt {
+                T result = 0;
                 bool overflow = false;
                 int radix = 10;
-                T result = 0;
 
                 template <class C>
                 constexpr void push_back(C in) {
