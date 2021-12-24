@@ -12,7 +12,7 @@
 #pragma once
 
 #include "../../endian/reader.h"
-#include "../../helper/view.h"
+#include "../../helper/pushbacker.h"
 
 namespace utils {
     namespace net {

@@ -8,6 +8,7 @@
 
 #include "../../include/net/util/base64.h"
 #include "../../include/helper/strutil.h"
+#include "../../include/helper/pushbacker.h"
 
 auto test_encode(auto& in) {
     utils::helper::FixedPushBacker<char[120], 119> buf;

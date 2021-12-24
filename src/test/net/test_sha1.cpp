@@ -9,6 +9,7 @@
 #include "../../include/net/util/sha1.h"
 #include "../../include/net/util/base64.h"
 #include "../../include/helper/strutil.h"
+#include "../../include/helper/pushbacker.h"
 
 void test_sha1() {
     utils::helper::FixedPushBacker<char[21], 21> result;
