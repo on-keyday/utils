@@ -69,6 +69,7 @@ namespace ifacegen {
         no_vtable = 0x2,  // for windows
         add_license = 0x4,
         not_accept_null = 0x8,
+        use_dyn_cast = 0x10,
     };
 
     DEFINE_ENUM_FLAGOP(GenFlag)

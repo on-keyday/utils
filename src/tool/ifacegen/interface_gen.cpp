@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
         .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T)`", OptFlag::once_in_cmd, "type func")
         .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd)
         .set("not-accept-null,n", bool_option(true), "not accept nullptr-object", OptFlag::once_in_cmd)
-        .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd);
+        .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd)
+        .set("use-dynamic-cast,d", bool_option(true), "use dynamic cast for type assert", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -77,6 +78,9 @@ int main(int argc, char** argv) {
     }
     if (auto v = result.is_set("not-accept-null"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::not_accept_null;
+    }
+    if (auto v = result.is_set("use-dynamic-cast"); v && *v->value<bool>()) {
+        flag |= ifacegen::GenFlag::use_dyn_cast;
     }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
