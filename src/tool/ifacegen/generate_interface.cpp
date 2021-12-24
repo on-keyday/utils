@@ -350,7 +350,7 @@ namespace ifacegen {
         }
         )");
                     if (use_dycast) {
-                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T>>(iface)){
+                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T>*>(iface)){
             return std::addressof(ptr->t_holder_);
         }
         return nullptr;)");
@@ -373,13 +373,13 @@ namespace ifacegen {
     
 )");
                     hlp::append(str, R"(    template<class T>
-    const T* type_assert() const {
+    T* type_assert() {
         if (!iface) {
             return nullptr;
         }
         )");
                     if (use_dycast) {
-                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T>>(iface)){
+                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T>*>(iface)){
             return std::addressof(ptr->t_holder_);
         }
         return nullptr;)");
