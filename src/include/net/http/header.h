@@ -169,7 +169,7 @@ namespace utils {
                 };
             }
 
-            template <class String, class Header, class Validate>
+            template <class String, class Header, class Validate = decltype(helper::no_check())>
             bool render_header_common(String& str, Header&& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false) {
                 for (auto&& keyval : header) {
                     if (!validate(keyval)) {
@@ -185,6 +185,23 @@ namespace utils {
                 }
                 helper::append(str, "\r\n");
             }
+
+            template <class String, class Method, class Path, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
+            bool render_request(String& str, Method&& method, Path&& path, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
+                                Prerender&& prerender = helper::no_check()) {
+                if (helper::contains(method, " ") || helper::contains(path, " ")) {
+                    return false;
+                }
+                helper::append(str, method);
+                helper::append(str, " ");
+                helper::append(str, path);
+                helper::append(str, " ");
+                helper::append(str, "HTTP/1.1\r\n");
+                prerender(str);
+                return render_header_common(str, header, validate, ignore_invalid);
+            }
+
         }  // namespace header
-    }      // namespace net
+
+    }  // namespace net
 }  // namespace utils
