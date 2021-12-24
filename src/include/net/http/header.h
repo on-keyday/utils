@@ -193,10 +193,17 @@ namespace utils {
             }
 
             template <class String, class Status, class Phrase, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
-            bool render_response(String& str, Status&& method, Phrase&&, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
+            bool render_response(String& str, Status&& status, Phrase&&, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
                                  Prerender&& prerender = helper::no_check()) {
+                if (status < 100 && status > 999) {
+                    return false;
+                }
                 helper::append(str, " HTTP/1.1\r\n");
-                helper::append(str, method);
+                std::uint8_t codebuf[4] = "000";
+                codebuf[0] += (status / 100);
+                codebuf[1] += (status % 100 / 10);
+                codebuf[1] += (status % 100 % 10);
+                helper::append(str, status);
                 helper::append(str, " ");
                 helper::append(str, );
                 prerender(str);
