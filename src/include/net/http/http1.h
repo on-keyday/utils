@@ -19,7 +19,7 @@ namespace utils {
         }
 
         struct Header {
-            constexpr Header() {}
+            Header();
 
            private:
             internal::HeaderImpl* impl = nullptr;
@@ -28,6 +28,6 @@ namespace utils {
         struct HttpResponse {
         };
 
-        HttpResponse request(IOClose& io, );
+        HttpResponse request(IOClose& io, const char* method, Header& header);
     }  // namespace net
 }  // namespace utils
