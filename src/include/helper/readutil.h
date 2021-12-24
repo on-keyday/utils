@@ -104,5 +104,6 @@ namespace utils {
             }
             return 0;
         }
+
     }  // namespace helper
 }  // namespace utils

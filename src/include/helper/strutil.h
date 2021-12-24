@@ -68,5 +68,16 @@ namespace utils {
             return find(in, cmp) != ~0;
         }
 
+        template <bool no_zero = false, class String, class Validate>
+        bool is_valid(String&& str, Validate&& validate) {
+            auto seq = make_ref_seq(str);
+            bool first = true;
+            while (!seq.eos()) {
+                if (!validate(seq.current())) {
+                }
+                first = false;
+            }
+        }
+
     }  // namespace helper
 }  // namespace utils
