@@ -139,7 +139,7 @@ namespace utils {
                     return false;
                 }
             }
-            if (!io) {
+            if (io) {
                 if (!setup_ssl(impl)) {
                     return false;
                 }
