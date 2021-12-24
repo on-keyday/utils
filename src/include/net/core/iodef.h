@@ -89,7 +89,7 @@ namespace utils {
                 return st;
             }
         }
-
+        /*
         struct IO {
            private:
             struct interface {
@@ -174,7 +174,6 @@ namespace utils {
             ~IO() {
                 delete iface;
             }
-        };
-
+        };*/
     }  // namespace net
 }  // namespace utils

@@ -14,6 +14,8 @@
 
 #include "../../wrap/lite/smart_ptr.h"
 
+#include "../generate/iocloser.h"
+
 namespace utils {
     namespace net {
         namespace internal {

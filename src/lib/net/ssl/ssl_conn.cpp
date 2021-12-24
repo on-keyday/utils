@@ -198,7 +198,7 @@ namespace utils {
 
         SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                        const char* selfcert, const char* selfprivate) {
-            if (io.is_null() || !cert) {
+            if (!io || !cert) {
                 return SSLResult();
             }
             SSLResult result;

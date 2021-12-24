@@ -188,7 +188,7 @@ namespace ifacegen {
             if (any(flag & GenFlag::no_vtable)) {
                 hlp::append(str, "NOVTABLE__ ");
             }
-            hlp::append(str, R"(interface {
+            hlp::append(str, R"(interface__ {
     )");
             for (auto& func : iface.second) {
                 if (func.funcname == decltype_func) {
@@ -213,15 +213,15 @@ namespace ifacegen {
                 }
             }
             hlp::append(str, R"(
-        virtual ~interface(){}
+        virtual ~interface__(){}
     };
     
     template<class T>
-    struct implements : interface {
+    struct implements__ : interface__ {
         T t_holder_;
 
         template<class... Args>
-        implements(Args&&...args)
+        implements__(Args&&...args)
             :t_holder_(std::forward<Args>(args)...){}
 
     )");
@@ -253,8 +253,8 @@ namespace ifacegen {
     )");
                 }
                 else if (func.funcname == copy_func) {
-                    hlp::append(str, R"(    interface* copy__() const override {
-            return new implements<T>(t_holder_);
+                    hlp::append(str, R"(    interface__* copy__() const override {
+            return new implements__<T>(t_holder_);
         }
 
     )");
@@ -279,7 +279,7 @@ namespace ifacegen {
             }
             hlp::append(str, R"(};
 
-    interface* iface = nullptr;
+    interface__* iface = nullptr;
 
    public:
     constexpr )");
@@ -299,7 +299,7 @@ namespace ifacegen {
         }
         )");
             }
-            hlp::append(str, R"a(iface=new implements<std::decay_t<T>>(std::forward<T>(t));
+            hlp::append(str, R"a(iface=new implements__<std::decay_t<T>>(std::forward<T>(t));
     }
     
     )a");

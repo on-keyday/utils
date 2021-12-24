@@ -14,6 +14,8 @@
 
 #include "../../../include/wrap/lite/string.h"
 
+#include "../../../include/net/generate/iocloser.h"
+
 namespace utils {
     namespace net {
         namespace internal {

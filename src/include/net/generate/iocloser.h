@@ -14,20 +14,20 @@
 namespace utils::net {
     struct IOCloser {
        private:
-        struct interface {
+        struct interface__ {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
             virtual State close(bool force) = 0;
 
-            virtual ~interface() {}
+            virtual ~interface__() {}
         };
 
         template <class T>
-        struct implements : interface {
+        struct implements__ : interface__ {
             T t_holder_;
 
             template <class... Args>
-            implements(Args&&... args)
+            implements__(Args&&... args)
                 : t_holder_(std::forward<Args>(args)...) {}
 
             State write(const char* ptr, size_t size) override {
@@ -55,7 +55,7 @@ namespace utils::net {
             }
         };
 
-        interface* iface = nullptr;
+        interface__* iface = nullptr;
 
        public:
         constexpr IOCloser() {}
@@ -67,7 +67,7 @@ namespace utils::net {
             if (!utils::helper::deref(t)) {
                 return;
             }
-            iface = new implements<std::decay_t<T>>(std::forward<T>(t));
+            iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
         }
 
         IOCloser(IOCloser&& in) {
@@ -105,19 +105,19 @@ namespace utils::net {
 
     struct IO {
        private:
-        struct interface {
+        struct interface__ {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
 
-            virtual ~interface() {}
+            virtual ~interface__() {}
         };
 
         template <class T>
-        struct implements : interface {
+        struct implements__ : interface__ {
             T t_holder_;
 
             template <class... Args>
-            implements(Args&&... args)
+            implements__(Args&&... args)
                 : t_holder_(std::forward<Args>(args)...) {}
 
             State write(const char* ptr, size_t size) override {
@@ -137,7 +137,7 @@ namespace utils::net {
             }
         };
 
-        interface* iface = nullptr;
+        interface__* iface = nullptr;
 
        public:
         constexpr IO() {}
@@ -149,7 +149,7 @@ namespace utils::net {
             if (!utils::helper::deref(t)) {
                 return;
             }
-            iface = new implements<std::decay_t<T>>(std::forward<T>(t));
+            iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
         }
 
         IO(IO&& in) {
