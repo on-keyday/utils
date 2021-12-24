@@ -18,18 +18,25 @@ namespace utils {
         bool header_parse_common(Sequencer<T>& seq, Result& result) {
             while (!seq.eos()) {
                 String key, value;
-                helper::read_while(key, seq, [](auto v) {
-                    return v != ':';
-                });
+                if (!helper::read_while<true>(key, seq, [](auto v) {
+                        return v != ':';
+                    })) {
+                    return false;
+                }
                 if (!seq.seek_if(":")) {
                     return false;
                 }
                 helper::read_while(helper::nop, seq, [](auto v) {
                     return v == ' ';
                 });
-                helper::read_while(value, seq, [](auto v) {
-                    return v != '\r' && v != '\n';
-                });
+                if (!helper::read_while<true>(value, seq, [](auto v) {
+                        return v != '\r' && v != '\n';
+                    })) {
+                    return false;
+                }
+                if (!helper::match_eol(seq)) {
+                    return false;
+                }
             }
         }
     }  // namespace net
