@@ -27,7 +27,7 @@ namespace utils {
                     })) {
                     return false;
                 }
-                if (!seq.seek_if(":")) {
+                if (!seq.consume_if(':')) {
                     return false;
                 }
                 helper::read_while(helper::nop, seq, [](auto v) {
@@ -53,6 +53,55 @@ namespace utils {
                 })) {
                 return false;
             }
+            if (!seq.consume_if(' ')) {
+                return false;
+            }
+            if (!helper::read_while<true>(path, seq, [](auto v) {
+                    return v != ' ';
+                })) {
+                return false;
+            }
+            if (!seq.consume_if(' ')) {
+                return false;
+            }
+            if (!helper::read_while<true>(ver, seq, [](auto v) {
+                    return v != '\r' && v != '\n';
+                })) {
+                return false;
+            }
+            if (!helper::match_eol(seq)) {
+                return false;
+            }
+            return header_parse_common(seq, result);
+        }
+
+        template <class String, class T, class Result, class Version, class Status, class Phrase>
+        bool response_header(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase, Result& result) {
+            if (!helper::read_while<true>(ver, seq, [](auto v) {
+                    return v != ' ';
+                })) {
+                return false;
+            }
+            if (!seq.consume_if(' ')) {
+                return false;
+            }
+            if (!helper::read_while<true>(status, seq, [](auto v) {
+                    return v != ' ';
+                })) {
+                return false;
+            }
+            if (!seq.consume_if(' ')) {
+                return false;
+            }
+            if (!helper::read_while<true>(phrase, seq, [](auto v) {
+                    return v != 'r' && v != '\n';
+                })) {
+                return false;
+            }
+            if (!helper::match_eol(seq)) {
+                return false;
+            }
+            return header_parse_common<String>(seq, result);
         }
     }  // namespace net
 }  // namespace utils
