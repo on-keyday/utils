@@ -13,31 +13,19 @@
 
 namespace utils {
     namespace helper {
-        namespace internal {
 
-            template <class T, class In>
-            struct iface_caster {
-                static T cast(In& in) {
-                    auto res = in.template type_assert<T>();
-                    if (!res) {
-                        throw std::bad_cast();
-                    }
-                    return *res;
-                }
-            };
-
-            template <class T, class In>
-            struct iface_caster<T*, In> {
-                static T* cast(In& in) {
-                    return in.template type_assert<T>();
-                }
-            };
-
-        }  // namespace internal
+        template <class T, class In>
+        T* iface_cast(In* in) {
+            return in->template type_assert<T>();
+        }
 
         template <class T, class In>
         T iface_cast(In& in) {
-            return internal::iface_caster<T, In>::cast(in);
+            auto res = in.template type_assert<T>();
+            if (!res) {
+                throw std::bad_cast();
+            }
+            return *res;
         }
 
     }  // namespace helper
