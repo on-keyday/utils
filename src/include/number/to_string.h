@@ -28,10 +28,25 @@ namespace utils {
             }
             auto modulo = radix_mod_zero(radix);
             bool first = false;
+            auto calc = in;
+            bool plus = false;
+            if (calc < 0) {
+                if (calc == (std::numeric_limits<T>::min)()) {
+                    calc += 1;
+                    plus = true;
+                }
+                calc = -calc;
+            }
             while (modulo) {
-                auto d = in % modulo;
+                auto d = calc / modulo;
+                calc = calc % modulo;
                 if (d || !first) {
-                    to_num_char(d, upper);
+                    if (calc == 0 && plus) {
+                        if (d + 1 >= radix) {
+                        }
+                    }
+                    result.push_back(to_num_char(d, upper));
+                    first = false;
                 }
             }
         }
