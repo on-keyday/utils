@@ -36,7 +36,8 @@ int main(int argc, char** argv) {
         .set("no-vtable,V", bool_option(true), "add __declspec(novtable) (for windows)", OptFlag::once_in_cmd)
         .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T)`", OptFlag::once_in_cmd, "type func")
         .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd)
-        .set("not-accept-null,n", bool_option(true), "not accept nullptr-object", OptFlag::once_in_cmd);
+        .set("not-accept-null,n", bool_option(true), "not accept nullptr-object", OptFlag::once_in_cmd)
+        .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -88,6 +89,11 @@ int main(int argc, char** argv) {
                     state.data.headernames.push_back(*v);
                 }
             }
+        }
+    }
+    if (auto h = result.is_set("helper-deref")) {
+        if (auto s = h->value<wrap::string>()) {
+            state.data.helper_deref = *s;
         }
     }
     if (auto h = result.is_set("no-rtti")) {

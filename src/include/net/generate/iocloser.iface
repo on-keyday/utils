@@ -7,10 +7,15 @@
 
 package utils::net
 
-import "../../core/iodef.h"
+import "../core/iodef.h"
 
 interface IOCloser {
     write(ptr *const char,size size_t) State = State::undefined
     read(ptr *char,size size_t,red *size_t) State = State::undefined
     close(force bool) State = State::undefined
+}
+
+interface IO {
+    write(ptr *const char,size size_t) State = State::undefined
+    read(ptr *char,size size_t,red *size_t) State = State::undefined
 }

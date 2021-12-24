@@ -11,18 +11,10 @@
 #include "../../helper/deref.h"
 #include "../core/iodef.h"
 
-#ifndef NOVTABLE__
-#ifdef _WIN32
-#define NOVTABLE__ __declspec(novtable)
-#else
-#define NOVTABLE__
-#endif
-#endif
-
 namespace utils::net {
     struct IOCloser {
        private:
-        struct NOVTABLE__ interface {
+        struct interface {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
             virtual State close(bool force) = 0;
@@ -72,6 +64,9 @@ namespace utils::net {
 
         template <class T>
         IOCloser(T&& t) {
+            if (!utils::helper::deref(t)) {
+                return;
+            }
             iface = new implements<std::decay_t<T>>(std::forward<T>(t));
         }
 
@@ -105,6 +100,84 @@ namespace utils::net {
 
         State close(bool force) {
             return iface ? iface->close(force) : State::undefined;
+        }
+    };
+
+    struct IO {
+       private:
+        struct interface {
+            virtual State write(const char* ptr, size_t size) = 0;
+            virtual State read(char* ptr, size_t size, size_t* red) = 0;
+
+            virtual ~interface() {}
+        };
+
+        template <class T>
+        struct implements : interface {
+            T t_holder_;
+
+            template <class... Args>
+            implements(Args&&... args)
+                : t_holder_(std::forward<Args>(args)...) {}
+
+            State write(const char* ptr, size_t size) override {
+                auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                if (!t_ptr_) {
+                    return State::undefined;
+                }
+                return t_ptr_->write(ptr, size);
+            }
+
+            State read(char* ptr, size_t size, size_t* red) override {
+                auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                if (!t_ptr_) {
+                    return State::undefined;
+                }
+                return t_ptr_->read(ptr, size, red);
+            }
+        };
+
+        interface* iface = nullptr;
+
+       public:
+        constexpr IO() {}
+
+        constexpr IO(std::nullptr_t) {}
+
+        template <class T>
+        IO(T&& t) {
+            if (!utils::helper::deref(t)) {
+                return;
+            }
+            iface = new implements<std::decay_t<T>>(std::forward<T>(t));
+        }
+
+        IO(IO&& in) {
+            iface = in.iface;
+            in.iface = nullptr;
+        }
+
+        IO& operator=(IO&& in) {
+            delete iface;
+            iface = in.iface;
+            in.iface = nullptr;
+            return *this;
+        }
+
+        explicit operator bool() const {
+            return iface != nullptr;
+        }
+
+        ~IO() {
+            delete iface;
+        }
+
+        State write(const char* ptr, size_t size) {
+            return iface ? iface->write(ptr, size) : State::undefined;
+        }
+
+        State read(char* ptr, size_t size, size_t* red) {
+            return iface ? iface->read(ptr, size, red) : State::undefined;
         }
     };
 

@@ -53,6 +53,7 @@ namespace ifacegen {
         bool has_ref_ret = false;
         utw::string typeid_func;
         utw::string typeid_type;
+        utw::string helper_deref;
     };
 
     struct State {
