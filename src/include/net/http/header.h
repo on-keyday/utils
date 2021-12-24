@@ -137,30 +137,22 @@ namespace utils {
 
             template <class String>
             constexpr bool is_valid_key(String&& header) {
-                auto seq = make_ref_seq(header);
-                if (!helper::read_while<true>(helper::nop, seq, [](auto&& c) {
-                        if (!number::is_in_visible_range(c)) {
-                            return false;
-                        }
-                        if (!is_valid_header_char(c)) {
-                            return false;
-                        }
-                        return true;
-                    })) {
-                    return false;
-                }
-                return seq.eos();
+                return helper::is_valid<true>(header, [](auto&& c) {
+                    if (!number::is_in_visible_range(c)) {
+                        return false;
+                    }
+                    if (!is_valid_header_char(c)) {
+                        return false;
+                    }
+                    return true;
+                });
             }
 
             template <class String>
             constexpr bool is_valid_value(String&& header) {
-                auto seq = make_ref_seq(header);
-                if (!helper::read_while<true>(helper::nop, seq, [](auto&& c) {
-                        return number::is_in_visible_range(c);
-                    })) {
-                    return false;
-                }
-                return seq.eos();
+                return helper::is_valid<true>(header, [](auto&& c) {
+                    return number::is_in_visible_range(c);
+                });
             }
 
             constexpr auto default_validator() {
@@ -206,7 +198,7 @@ namespace utils {
                 helper::append(str, " HTTP/1.1\r\n");
                 helper::append(str, method);
                 helper::append(str, " ");
-                helper::append(str, path);
+                helper::append(str, );
                 prerender(str);
                 return render_header_common(str, header, validate, ignore_invalid);
             }
