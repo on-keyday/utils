@@ -15,10 +15,18 @@
 
 namespace utils {
     namespace number {
+
         template <class T>
-        constexpr T radix_mod_zero(std::uint32_t m) {
-            constexpr auto mx = (std::numeric_limits<T>::max)();
-            return mx - (mx % m);
+        constexpr T radix_base_max(std::uint32_t radix) {
+            auto mx = (std::numeric_limits<T>::max)();
+            size_t count = 0;
+            T t = 1;
+            mx /= radix;
+            while (mx) {
+                mx /= radix;
+                t *= radix;
+            }
+            return t;
         }
 
         template <class Result, class T>
@@ -26,7 +34,7 @@ namespace utils {
             if (radix < 2 || radix > 36) {
                 return NumError::invalid;
             }
-            auto modulo = radix_mod_zero<T>(radix);
+            auto mx = radix_base_max<T>(radix);
             bool first = true;
             bool sign = false;
             std::make_unsigned_t<T> calc;
@@ -41,10 +49,12 @@ namespace utils {
                 result.push_back('0');
                 return true;
             }
-            while (calc) {
-                auto d = calc / modulo;
-                calc %= modulo;
-                modulo -= radix;
+            auto modulo = mx;
+            auto minus = 0;
+            while (modulo) {
+                auto d = (calc - minus) / modulo;
+                minus += modulo * d;
+                modulo /= radix;
                 if (d || !first) {
                     result.push_back(to_num_char(d, upper));
                     first = false;

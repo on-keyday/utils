@@ -10,6 +10,8 @@
 
 #include "../../include/helper/pushbacker.h"
 
+#include "../../include/helper/strutil.h"
+
 constexpr auto test_to_string_num(int i) {
     utils::helper::FixedPushBacker<char[66], 65> buf;
     utils::number::to_string(buf, i);
@@ -17,7 +19,10 @@ constexpr auto test_to_string_num(int i) {
 }
 
 void test_to_string() {
-    auto result = test_to_string_num(10);
+    constexpr auto result = test_to_string_num(10);
+    static_assert(utils::helper::equal(result.buf, "10"), "expect 10 but assetion failed");
+    auto result2 = test_to_string_num(12394);
+    //static_assert(utils::helper::equal(result.buf, "12394"), "expect 12394 but assetion failed");
 }
 
 int main() {
