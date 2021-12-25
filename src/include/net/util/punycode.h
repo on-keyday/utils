@@ -65,7 +65,13 @@ namespace utils {
                     if (!encode_digit(result, encnum)) {
                         return false;
                     }
+                    q = (q - t) / (base_ - t);
+                    k += base_;
                 }
+                if (!encode_digit(result, q)) {
+                    return false;
+                }
+                return true;
             }
 
             template <class Result, class T>
@@ -124,6 +130,9 @@ namespace utils {
                         }
                     }
                     else if (c == n) {
+                        if (!encode_int(result, bias, delta)) {
+                            return number::NumError::overflow;
+                        }
                     }
                 }
             }
