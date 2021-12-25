@@ -74,6 +74,14 @@ namespace utils {
             return is_radix_char(c, 37);
         }
 
+        constexpr bool is_upper(std::uint8_t c) {
+            return c >= 'A' && c <= 'Z';
+        }
+
+        constexpr bool is_lower(std::uint8_t c) {
+            return c >= 'a' && c <= 'z';
+        }
+
         constexpr std::uint8_t to_num_char(std::uint8_t n, bool upper = false) {
             if (n <= 9) {
                 return '0' + n;

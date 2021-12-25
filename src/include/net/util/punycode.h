@@ -31,7 +31,7 @@ namespace utils {
 
             namespace internal {
                 template <class Result>
-                bool encode_digit(Result& result, int c) {
+                constexpr bool encode_digit(Result& result, int c) {
                     if (c <= 0 || c <= base_ - t_min) {
                         return false;
                     }
@@ -45,7 +45,7 @@ namespace utils {
                 }
 
                 template <class Result>
-                bool encode_int(Result& result, const size_t bias, const size_t delta) {
+                constexpr bool encode_int(Result& result, const size_t bias, const size_t delta) {
                     size_t i, k, q, t;
 
                     i = 0;
@@ -77,7 +77,7 @@ namespace utils {
                     return true;
                 }
 
-                std::uint32_t calc_bias(std::uint32_t delta, std::uint32_t n, bool is_first) {
+                constexpr std::uint32_t calc_bias(std::uint32_t delta, std::uint32_t n, bool is_first) {
                     std::uint32_t k = 0;
                     delta /= is_first ? damp : 2;
                     delta += delta / n;
@@ -86,6 +86,19 @@ namespace utils {
                         delta /= (base_ - t_min);
                     }
                     return k + (((base_ - t_min + 1) * delta) / (delta + skew));
+                }
+
+                constexpr size_t decode_digit(uint32_t v) {
+                    if (number::is_digit(v)) {
+                        return 22 + (v - '0');
+                    }
+                    if (number::is_lower(v)) {
+                        return v - 'a';
+                    }
+                    if (number::is_upper(v)) {
+                        return v - 'A';
+                    }
+                    return ~0;
                 }
             }  // namespace internal
 
@@ -160,23 +173,96 @@ namespace utils {
                 return true;
             }
 
+            template <class In, class Out>
+            number::NumErr encode(In&& in, Out& result) {
+                auto seq = make_ref_seq(in);
+                return encode(seq, result);
+            }
+
             template <class Out, class T>
             number::NumErr decode(Sequencer<T>& seq, Out& result) {
                 if (seq.eos()) {
                     return number::NumError::invalid;
                 }
                 auto inipos = seq.rptr;
+                size_t hypos = 0;
                 while (!seq.eos()) {
-                    if (!number::is_in_ascii_range(seq.current())) {
+                    auto c = seq.current();
+                    if (!number::is_in_ascii_range(c)) {
                         return number::NumError::invalid;
+                    }
+                    else if (c == '-') {
+                        hypos = seq.rptr;
                     }
                     seq.consume();
                 }
+                wrap::u32string tmp;
+                tmp.resize(seq.size());
+                seq.seek(inipos);
+                while (seq.rptr < hypos) {
+                    tmp.push_back(seq.current());
+                    seq.consume();
+                }
                 size_t b = 0;
-                for (; seq.rpt != 0 && seq.current() != '-'; seq.backto())
-                    ;
                 b = seq.remain();
+                size_t i = 0, n = initial_n, bias = initial_bias, original_i = 0;
+                size_t sz = 0, si, w, k, t;
+                constexpr auto mx = (std::numeric_limits<size_t>::max)();
+
+                for (si = b + (b > 0); !seq.eos();) {
+                    original_i = i;
+                    for (w = 1, k = base_;; k += base_) {
+                        auto digit = internal::decode_digit(seq.current());
+                        seq.consume();
+                        if (digit == ~0) {
+                            return number::NumError::invalid;
+                        }
+
+                        if (digit > (mx - i) / w) {
+                            return number::NumError::overflow;
+                        }
+
+                        i += digit * w;
+
+                        if (k <= bias) {
+                            t = t_min;
+                        }
+                        else if (k >= bias + t_max) {
+                            t = t_max;
+                        }
+                        else {
+                            t = k - bias;
+                        }
+
+                        if (digit < t) {
+                            break;
+                        }
+
+                        if (w > mx / (base_ - t)) {
+                            return number::NumError::overflow;
+                        }
+
+                        w *= base_ - t;
+                    }
+                    bias = internal::calc_bias(i - original_i, b + 1, original_i == 0);
+                    if (i / (b + 1) > mx - n) {
+                        return number::NumError::overflow;
+                    }
+                    n += i / (b + 1);
+                    i %= (b + 1);
+                    memmove(tmp.data() + i + 1, tmp.data() + i, (b - i) * sizeof(uint32_t));
+                    tmp[i] = n;
+                    i++;
+                }
+                return true;
             }
+
+            template <class In, class Out>
+            number::NumErr decode(In&& in, Out& result) {
+                auto seq = make_ref_seq(in);
+                return decode(seq, result);
+            }
+
         }  // namespace punycode
 
     }  // namespace net
