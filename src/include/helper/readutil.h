@@ -105,5 +105,20 @@ namespace utils {
             return 0;
         }
 
+        template <bool no_zero = false, class T, class Result, class Func>
+        constexpr bool append_if(Result& result, Sequencer<T>& seq, Func&& func) {
+            if constexpr (no_zero) {
+                if (seq.eos()) {
+                    return false;
+                }
+            }
+            while (!seq.eos()) {
+                if (func(seq.current())) {
+                    result.push_back(seq.current());
+                }
+            }
+            return true;
+        }
+
     }  // namespace helper
 }  // namespace utils

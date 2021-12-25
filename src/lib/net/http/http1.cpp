@@ -21,6 +21,7 @@ namespace utils {
         namespace internal {
             struct HeaderImpl {
                 wrap::vector<std::pair<wrap::string, wrap::string>> order;
+                wrap::string body;
 
                 void emplace(auto&& key, auto&& value) {
                     order.emplace_back(std::move(key), std::move(value));
@@ -61,11 +62,31 @@ namespace utils {
             delete impl;
         }
 
-        HttpResponse request(IOClose&& io, const char* method, const char* path, Header&& header) {
-            if (!io || !method || !path) {
+        HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
+            if (!io || !host || !method || !path) {
                 return HttpResponse{};
             }
             if (!header.impl) {
+                return HttpResponse{};
+            }
+            constexpr auto validator = h1header::default_validator();
+            wrap::string buf;
+            auto res = h1header::render_request(
+                buf, method, path, *header.impl,
+                [&](auto&& keyval) {
+                    if (helper::equal(std::get<0>(keyval), "Host", helper::ignore_case())) {
+                        return false;
+                    }
+                    if (helper::equal(std::get<0>(keyval), "Content-Length", helper::ignore_case())) {
+                        return false;
+                    }
+                    return validator(keyval);
+                },
+                false,
+                [&](auto& str) {
+                    helper::append(str, "Host: ");
+                });
+            if (!res) {
                 return HttpResponse{};
             }
         }

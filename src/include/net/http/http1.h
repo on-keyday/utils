@@ -27,7 +27,7 @@ namespace utils {
         };
 
         struct Header {
-            friend HttpResponse request(IOClose&& io, const char* method, const char* path, Header&& header);
+            friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             Header();
             ~Header();
 
@@ -35,6 +35,6 @@ namespace utils {
             internal::HeaderImpl* impl = nullptr;
         };
 
-        HttpResponse request(IOClose&& io, const char* method, const char* path, Header&& header);
+        HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
     }  // namespace net
 }  // namespace utils

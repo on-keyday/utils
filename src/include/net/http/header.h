@@ -17,7 +17,7 @@
 
 namespace utils {
     namespace net {
-        namespace header {
+        namespace h1header {
             struct StatusCode {
                 std::uint16_t code = 0;
                 void push_back(auto v) {
@@ -210,7 +210,7 @@ namespace utils {
                 return render_header_common(str, header, validate, ignore_invalid);
             }
 
-        }  // namespace header
+        }  // namespace h1header
 
     }  // namespace net
 }  // namespace utils
