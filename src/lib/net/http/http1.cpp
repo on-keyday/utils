@@ -21,6 +21,10 @@ namespace utils {
             struct HeaderImpl {
                 wrap::vector<std::pair<wrap::string, wrap::string>> order;
 
+                void emplace(auto&& key, auto&& value) {
+                    order.emplace_back(std::move(key), std::move(value));
+                }
+
                 wrap::string* find(auto& key, size_t idx = 0) {
                     size_t count = 0;
                     auto found = std::find_if(order.begin(), order.end(), [&](auto& v) {
