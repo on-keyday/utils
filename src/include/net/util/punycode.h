@@ -13,6 +13,7 @@
 #include "../../helper/appender.h"
 #include "../../number/char_range.h"
 #include "../../wrap/lite/string.h"
+#include "../../utf/view.h"
 #include <limits>
 
 namespace utils {
@@ -176,7 +177,8 @@ namespace utils {
 
             template <class In, class Out>
             number::NumErr encode(In&& in, Out& result) {
-                auto seq = make_ref_seq(in);
+                utf::U32View<buffer_t<In&>> view(in);
+                auto seq = make_ref_seq(view);
                 return encode(seq, result);
             }
 
