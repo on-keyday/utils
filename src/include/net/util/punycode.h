@@ -149,7 +149,7 @@ namespace utils {
                         return number::NumError::overflow;
                     }
                     delta += (m - n) * (h + 1);
-                    n = m + 1;
+                    n = m;
                     seq.seek(inipos);
                     while (!seq.eos()) {
                         auto c = seq.current();
@@ -169,6 +169,7 @@ namespace utils {
                         }
                         seq.consume();
                     }
+                    n++;
                 }
                 return true;
             }
