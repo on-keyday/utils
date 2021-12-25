@@ -115,14 +115,16 @@ namespace utils {
                 size_t m, n;
                 size_t si = 0, di = 0;
                 wrap::string tmp;
+                bool has_ascii = false;
                 if (!helper::append_if(tmp, helper::nop, seq, [&](auto&& v) {
                         if (number::is_in_ascii_range(v)) {
+                            has_ascii = true;
                             return true;
                         }
                         di++;
                         return false;
                     })) {
-                    if (di != 0) {
+                    if (has_ascii) {
                         helper::append(result, tmp);
                         result.push_back('-');
                     }
