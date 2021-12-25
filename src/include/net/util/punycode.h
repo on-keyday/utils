@@ -79,6 +79,11 @@ namespace utils {
                 std::uint32_t calc_bias(std::uint32_t delta, std::uint32_t n, bool is_first) {
                     std::uint32_t k = 0;
                     delta /= is_first ? damp : 2;
+                    delta += delta / n;
+                    constexpr auto delta_max = ((base_ - t_min) * t_max) / 2;
+                    for (k = 0; delta > delta_max; k += base_) {
+                        delta /= (base_ - t_min);
+                    }
                 }
             }  // namespace internal
 
