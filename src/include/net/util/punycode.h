@@ -172,6 +172,8 @@ namespace utils {
                     }
                     seq.consume();
                 }
+                for (; seq.current() != '-'; seq.backto())
+                    ;
             }
         }  // namespace punycode
 
