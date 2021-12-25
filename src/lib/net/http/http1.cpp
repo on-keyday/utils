@@ -25,6 +25,14 @@ namespace utils {
                     order.emplace_back(std::move(key), std::move(value));
                 }
 
+                auto begin() {
+                    return order.begin();
+                }
+
+                auto end() {
+                    return order.end();
+                }
+
                 wrap::string* find(auto& key, size_t idx = 0) {
                     size_t count = 0;
                     auto found = std::find_if(order.begin(), order.end(), [&](auto& v) {
