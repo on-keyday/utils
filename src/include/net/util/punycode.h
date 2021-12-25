@@ -95,6 +95,7 @@ namespace utils {
                 if (seq.eos()) {
                     return number::NumError::invalid;
                 }
+                auto inipos = seq.rptr;
                 size_t point = 0;
                 size_t b, h;
                 size_t delta, bias;
@@ -122,8 +123,8 @@ namespace utils {
                 constexpr auto mx = (std::numeric_limits<size_t>::max)();
                 delta = 0;
                 m = mx;
-                for (; h < seq.size(); delta++) {
-                    seq.seek(0);
+                for (; h < seq.size() - inipos; delta++) {
+                    seq.seek(inipos);
                     for (!seq.eos()) {
                         auto c = seq.current();
                         if (c >= n && c < m) {
@@ -136,7 +137,7 @@ namespace utils {
                     }
                     delta += (m - n) * (h + 1);
                     n = m;
-                    seq.seek(0);
+                    seq.seek(inipos);
                     while (!seq.eos()) {
                         auto c = seq.current();
                         if (c < n) {
@@ -161,6 +162,12 @@ namespace utils {
 
             template <class Out, class T>
             number::NumErr decode(Sequencer<T>& seq, Out& result) {
+                if (seq.eos()) {
+                    return number::NumError::invalid;
+                }
+                auto inipos = seq.rptr;
+                while () {
+                }
             }
         }  // namespace punycode
 
