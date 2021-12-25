@@ -49,6 +49,7 @@ namespace utils {
                 }
                 n = initial_n;
                 bias = initial_bias;
+                m = (std::numeric_limits<size_t>::max)();
                 delta = 0;
                 seq.seek(0);
                 for (!seq.eos()) {
