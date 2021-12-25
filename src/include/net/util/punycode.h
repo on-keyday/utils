@@ -26,53 +26,61 @@ namespace utils {
             constexpr std::uint32_t t_min = 1;
             constexpr std::uint32_t t_max = 1;
             constexpr std::uint32_t base_ = 36;
+            constexpr std::uint32_t damp = 700;
 
-            template <class Result>
-            bool encode_digit(Result& result, int c) {
-                if (c <= 0 || c <= base_ - t_min) {
-                    return false;
-                }
-                if (c > 25) {
-                    result.push_back(c + 22);
-                }
-                else {
-                    result.push_back(c + 'a');
-                }
-                return true;
-            }
-
-            template <class Result>
-            bool encode_int(Result& result, const size_t bias, const size_t delta) {
-                size_t i, k, q, t;
-
-                i = 0;
-                k = base_;
-                q = delta;
-                while (true) {
-                    if (k <= bias) {
-                        t = t_min;
-                    }
-                    else if (k >= bias + t_max) {
-                        t = t_max;
-                    }
-                    else {
-                        t = k - bias;
-                    }
-                    if (q < t) {
-                        break;
-                    }
-                    auto encnum = t + (q - t) % (base_ - t);
-                    if (!encode_digit(result, encnum)) {
+            namespace internal {
+                template <class Result>
+                bool encode_digit(Result& result, int c) {
+                    if (c <= 0 || c <= base_ - t_min) {
                         return false;
                     }
-                    q = (q - t) / (base_ - t);
-                    k += base_;
+                    if (c > 25) {
+                        result.push_back(c + 22);
+                    }
+                    else {
+                        result.push_back(c + 'a');
+                    }
+                    return true;
                 }
-                if (!encode_digit(result, q)) {
-                    return false;
+
+                template <class Result>
+                bool encode_int(Result& result, const size_t bias, const size_t delta) {
+                    size_t i, k, q, t;
+
+                    i = 0;
+                    k = base_;
+                    q = delta;
+                    while (true) {
+                        if (k <= bias) {
+                            t = t_min;
+                        }
+                        else if (k >= bias + t_max) {
+                            t = t_max;
+                        }
+                        else {
+                            t = k - bias;
+                        }
+                        if (q < t) {
+                            break;
+                        }
+                        auto encnum = t + (q - t) % (base_ - t);
+                        if (!encode_digit(result, encnum)) {
+                            return false;
+                        }
+                        q = (q - t) / (base_ - t);
+                        k += base_;
+                    }
+                    if (!encode_digit(result, q)) {
+                        return false;
+                    }
+                    return true;
                 }
-                return true;
-            }
+
+                std::uint32_t calc_bias(std::uint32_t delta, std::uint32_t n, bool is_first) {
+                    std::uint32_t k = 0;
+                    delta /= is_first ? damp : 2;
+                }
+            }  // namespace internal
 
             template <class Result, class T>
             number::NumErr encode(Result& result, Sequencer<T>& seq) {
@@ -130,7 +138,7 @@ namespace utils {
                         }
                     }
                     else if (c == n) {
-                        if (!encode_int(result, bias, delta)) {
+                        if (!internal::encode_int(result, bias, delta)) {
                             return number::NumError::overflow;
                         }
                     }
