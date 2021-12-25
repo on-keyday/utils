@@ -19,18 +19,22 @@ namespace utils {
             struct HttpResponseImpl;
         }  // namespace internal
 
+        struct HttpResponse {
+            constexpr HttpResponse() {}
+
+           private:
+            internal::HttpResponseImpl* impl = nullptr;
+        };
+
         struct Header {
+            friend HttpResponse request(IOClose&& io, const char* method, const char* path, Header&& header);
             Header();
+            ~Header();
 
            private:
             internal::HeaderImpl* impl = nullptr;
         };
 
-        struct HttpResponse {
-           private:
-            internal::HttpResponseImpl* impl = nullptr;
-        };
-
-        HttpResponse request(IOClose&& io, const char* method, Header&& header);
+        HttpResponse request(IOClose&& io, const char* method, const char* path, Header&& header);
     }  // namespace net
 }  // namespace utils

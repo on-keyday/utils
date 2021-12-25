@@ -7,6 +7,7 @@
 
 
 #include "../../../include/net/http/http1.h"
+#include "../../../include/net/http/header.h"
 #include "../../../include/wrap/lite/string.h"
 #include "../../../include/wrap/lite/map.h"
 #include "../../../include/wrap/lite/vector.h"
@@ -52,7 +53,21 @@ namespace utils {
             };
         }  // namespace internal
 
-        HttpResponse request(IOClose&& io, const char* method, Header& header) {
+        Header::Header() {
+            impl = new internal::HeaderImpl();
+        }
+
+        Header::~Header() {
+            delete impl;
+        }
+
+        HttpResponse request(IOClose&& io, const char* method, const char* path, Header&& header) {
+            if (!io || !method || !path) {
+                return HttpResponse{};
+            }
+            if (!header.impl) {
+                return HttpResponse{};
+            }
         }
 
     }  // namespace net
