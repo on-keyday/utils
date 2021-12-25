@@ -122,37 +122,39 @@ namespace utils {
                 constexpr auto mx = (std::numeric_limits<size_t>::max)();
                 delta = 0;
                 m = mx;
-                seq.seek(0);
-                for (!seq.eos()) {
-                    auto c = seq.current();
-                    if (c >= n && c < m) {
-                        m = c;
-                    }
-                    seq.consume();
-                }
-                if ((m - n) > (mx - delta) / (h + 1)) {
-                    return number::NumError::overflow;
-                }
-                delta += (m - n) * (h + 1);
-                n = m;
-                seq.seek(0);
-                while (!seq.eos()) {
-                    auto c = seq.current();
-                    if (c < n) {
-                        delta++;
-                        if (delta == 0) {
-                            return number::NumError::overflow;
+                for (; h < seq.size(); delta++) {
+                    seq.seek(0);
+                    for (!seq.eos()) {
+                        auto c = seq.current();
+                        if (c >= n && c < m) {
+                            m = c;
                         }
+                        seq.consume();
                     }
-                    else if (c == n) {
-                        if (!internal::encode_int(result, bias, delta)) {
-                            return number::NumError::overflow;
+                    if ((m - n) > (mx - delta) / (h + 1)) {
+                        return number::NumError::overflow;
+                    }
+                    delta += (m - n) * (h + 1);
+                    n = m;
+                    seq.seek(0);
+                    while (!seq.eos()) {
+                        auto c = seq.current();
+                        if (c < n) {
+                            delta++;
+                            if (delta == 0) {
+                                return number::NumError::overflow;
+                            }
                         }
-                        bias = internal::calc_bias(delta, h + 1, h == b);
-                        delta = 0;
-                        h++;
+                        else if (c == n) {
+                            if (!internal::encode_int(result, bias, delta)) {
+                                return number::NumError::overflow;
+                            }
+                            bias = internal::calc_bias(delta, h + 1, h == b);
+                            delta = 0;
+                            h++;
+                        }
+                        seq.consume();
                     }
-                    seq.consume();
                 }
             }
         }  // namespace punycode
