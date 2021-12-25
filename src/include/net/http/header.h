@@ -202,7 +202,7 @@ namespace utils {
                 std::uint8_t codebuf[4] = "000";
                 codebuf[0] += (status / 100);
                 codebuf[1] += (status % 100 / 10);
-                codebuf[1] += (status % 100 % 10);
+                codebuf[2] += (status % 100 % 10);
                 helper::append(str, status);
                 helper::append(str, " ");
                 helper::append(str, );

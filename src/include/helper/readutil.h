@@ -48,7 +48,7 @@ namespace utils {
         }
 
         constexpr auto no_check() {
-            return [](auto&&) -> bool {
+            return [](auto&&...) -> bool {
                 return true;
             };
         }
