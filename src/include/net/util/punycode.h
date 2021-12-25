@@ -166,7 +166,11 @@ namespace utils {
                     return number::NumError::invalid;
                 }
                 auto inipos = seq.rptr;
-                while () {
+                while (!seq.eos()) {
+                    if (!number::is_in_ascii_range(seq.current())) {
+                        return number::NumError::invalid;
+                    }
+                    seq.consume();
                 }
             }
         }  // namespace punycode
