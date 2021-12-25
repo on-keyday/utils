@@ -115,7 +115,7 @@ namespace utils {
                 size_t m, n;
                 size_t si = 0, di = 0;
                 wrap::string tmp;
-                if (!helper::append_if(tmp, seq, [&](auto&& v) {
+                if (!helper::append_if(tmp, helper::nop, seq, [&](auto&& v) {
                         if (number::is_in_ascii_range(v)) {
                             return true;
                         }
@@ -138,7 +138,7 @@ namespace utils {
                 m = mx;
                 for (; h < seq.size() - inipos; delta++) {
                     seq.seek(inipos);
-                    for (!seq.eos()) {
+                    while (!seq.eos()) {
                         auto c = seq.current();
                         if (c >= n && c < m) {
                             m = c;
