@@ -245,7 +245,7 @@ namespace utils {
                             return number::NumError::overflow;
                         }
 
-                        w *= base_ - t;
+                        w *= (base_ - t);
                     }
                     bias = internal::calc_bias(i - original_i, b + 1, original_i == 0);
                     if (i / (b + 1) > mx - n) {
@@ -253,7 +253,8 @@ namespace utils {
                     }
                     n += i / (b + 1);
                     i %= (b + 1);
-                    tmp.insert(i, 1, char32_t(n));
+                    memmove(tmp.data() + i + 1, tmp.data() + i, (b - i) * sizeof(std::uint32_t));
+                    tmp[i] = n;
                     i++;
                 }
                 return true;
