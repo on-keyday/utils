@@ -32,7 +32,7 @@ namespace utils {
             namespace internal {
                 template <class Result>
                 constexpr bool encode_digit(Result& result, int c) {
-                    if (c <= 0 || c > base_ - t_min) {
+                    if (c < 0 || c > base_ - t_min) {
                         return false;
                     }
                     if (c > 25) {
