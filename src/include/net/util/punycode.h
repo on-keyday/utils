@@ -136,9 +136,10 @@ namespace utils {
                 bias = initial_bias;
                 constexpr auto mx = (std::numeric_limits<size_t>::max)();
                 delta = 0;
-                m = mx;
+
                 for (; h < seq.size() - inipos; delta++) {
                     seq.seek(inipos);
+                    m = mx;
                     while (!seq.eos()) {
                         auto c = seq.current();
                         if (c >= n && c < m) {
