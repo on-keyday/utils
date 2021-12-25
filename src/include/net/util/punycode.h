@@ -27,6 +27,7 @@ namespace utils {
             constexpr std::uint32_t t_max = 1;
             constexpr std::uint32_t base_ = 36;
             constexpr std::uint32_t damp = 700;
+            constexpr std::uint32_t skew = 38;
 
             namespace internal {
                 template <class Result>
@@ -84,6 +85,7 @@ namespace utils {
                     for (k = 0; delta > delta_max; k += base_) {
                         delta /= (base_ - t_min);
                     }
+                    return k + (((base_ - t_min + 1) * delta) / (delta + skew));
                 }
             }  // namespace internal
 
