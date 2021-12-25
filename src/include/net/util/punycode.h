@@ -91,7 +91,7 @@ namespace utils {
 
                 constexpr size_t decode_digit(uint32_t v) {
                     if (number::is_digit(v)) {
-                        return 22 + (v - '0');
+                        return 26 + (v - '0');
                     }
                     if (number::is_lower(v)) {
                         return v - 'a';
