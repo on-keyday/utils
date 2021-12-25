@@ -152,6 +152,7 @@ namespace utils {
                         delta = 0;
                         h++;
                     }
+                    seq.consume();
                 }
             }
         }  // namespace punycode
