@@ -172,8 +172,10 @@ namespace utils {
                     }
                     seq.consume();
                 }
-                for (; seq.current() != '-'; seq.backto())
+                size_t b = 0;
+                for (; seq.rpt != 0 && seq.current() != '-'; seq.backto())
                     ;
+                b = seq.remain();
             }
         }  // namespace punycode
 
