@@ -13,7 +13,7 @@
 void test_punycode() {
     utils::helper::FixedPushBacker<char[100], 99> buf;
     utils::net::punycode::encode(U"ウィキペディア", buf);
-    assert(utils::helper::equal(buf.buf, "xn--cckbak0byl6e"));
+    assert(utils::helper::equal(buf.buf, "cckbak0byl6e"));
 }
 
 int main() {
