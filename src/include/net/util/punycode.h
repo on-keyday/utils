@@ -200,7 +200,7 @@ namespace utils {
                     seq.consume();
                 }
                 wrap::u32string tmp;
-                tmp.resize(seq.size());
+                tmp.resize(seq.size() + 3);
                 seq.seek(inipos);
                 while (seq.rptr < hypos) {
                     tmp.push_back(seq.current());
