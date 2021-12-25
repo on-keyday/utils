@@ -122,7 +122,6 @@ namespace utils {
                         di++;
                         return false;
                     })) {
-                    helper::append(result, "xn--");
                     helper::append(result, tmp);
                     result.push_back('-');
                 }
