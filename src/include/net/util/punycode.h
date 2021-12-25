@@ -24,7 +24,7 @@ namespace utils {
             constexpr std::uint32_t initial_n = 128;
             constexpr std::uint32_t initial_bias = 72;
             constexpr std::uint32_t t_min = 1;
-            constexpr std::uint32_t t_max = 1;
+            constexpr std::uint32_t t_max = 26;
             constexpr std::uint32_t base_ = 36;
             constexpr std::uint32_t damp = 700;
             constexpr std::uint32_t skew = 38;
@@ -71,9 +71,9 @@ namespace utils {
                         q = (q - t) / (base_ - t);
                         k += base_;
                     }
-                    /*if (!encode_digit(result, q)) {
+                    if (!encode_digit(result, q)) {
                         return false;
-                    }*/
+                    }
                     return true;
                 }
 
@@ -169,7 +169,6 @@ namespace utils {
                         }
                         seq.consume();
                     }
-                    n++;
                 }
                 return true;
             }
