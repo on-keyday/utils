@@ -105,19 +105,19 @@ namespace utils {
             return 0;
         }
 
-        template <bool no_zero = false, class T, class Result, class Func>
-        constexpr bool append_if(Result& result, Sequencer<T>& seq, Func&& func) {
-            if constexpr (no_zero) {
-                if (seq.eos()) {
-                    return false;
-                }
-            }
+        template <class T, class Result, class Else, class Func>
+        constexpr bool append_if(Result& result, Else& els, Sequencer<T>& seq, Func&& func) {
+            bool allmatch = true;
             while (!seq.eos()) {
                 if (func(seq.current())) {
                     result.push_back(seq.current());
                 }
+                else {
+                    els.push_back(seq.current());
+                    allmatch = false;
+                }
             }
-            return true;
+            return allmatch;
         }
 
     }  // namespace helper
