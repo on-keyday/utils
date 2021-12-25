@@ -253,7 +253,7 @@ namespace utils {
                     }
                     n += i / (b + 1);
                     i %= (b + 1);
-                    tmp.insert(i, n);
+                    tmp.insert(i, 1, char32_t(n));
                     i++;
                 }
                 return true;
