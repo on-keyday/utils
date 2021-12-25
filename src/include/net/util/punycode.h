@@ -89,8 +89,8 @@ namespace utils {
                 }
             }  // namespace internal
 
-            template <class Result, class T>
-            number::NumErr encode(Result& result, Sequencer<T>& seq) {
+            template <class Out, class T>
+            number::NumErr encode(Sequencer<T>& seq, Out& result) {
                 static_assert(sizeof(typename Sequencer<T>::char_type) == 4, "need UTF-32 string");
                 if (seq.eos()) {
                     return number::NumError::invalid;
@@ -157,6 +157,10 @@ namespace utils {
                     }
                 }
                 return true;
+            }
+
+            template <class Out, class T>
+            number::NumErr decode(Sequencer<T>& seq, Out& result) {
             }
         }  // namespace punycode
 
