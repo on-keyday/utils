@@ -109,7 +109,6 @@ namespace utils {
                     return number::NumError::invalid;
                 }
                 auto inipos = seq.rptr;
-                size_t point = 0;
                 size_t b, h;
                 size_t delta, bias;
                 size_t m, n;
@@ -136,7 +135,6 @@ namespace utils {
                 bias = initial_bias;
                 constexpr auto mx = (std::numeric_limits<size_t>::max)();
                 delta = 0;
-
                 for (; h < seq.size() - inipos; delta++) {
                     seq.seek(inipos);
                     m = mx;
@@ -151,7 +149,7 @@ namespace utils {
                         return number::NumError::overflow;
                     }
                     delta += (m - n) * (h + 1);
-                    n = m;
+                    n = m + 1;
                     seq.seek(inipos);
                     while (!seq.eos()) {
                         auto c = seq.current();
