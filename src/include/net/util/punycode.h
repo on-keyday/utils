@@ -211,8 +211,8 @@ namespace utils {
                 size_t i = 0, n = initial_n, bias = initial_bias, original_i = 0;
                 size_t sz = 0, si, w, k, t;
                 constexpr auto mx = (std::numeric_limits<size_t>::max)();
-
-                for (si = b + (b > 0); !seq.eos();) {
+                size_t out = b;
+                for (si = b > 0 ? b + 1 : 0; !seq.eos(); out++) {
                     original_i = i;
                     for (w = 1, k = base_;; k += base_) {
                         auto digit = internal::decode_digit(seq.current());
@@ -247,12 +247,12 @@ namespace utils {
 
                         w *= (base_ - t);
                     }
-                    bias = internal::calc_bias(i - original_i, b + 1, original_i == 0);
-                    if (i / (b + 1) > mx - n) {
+                    bias = internal::calc_bias(i - original_i, out + 1, original_i == 0);
+                    if (i / (out + 1) > mx - n) {
                         return number::NumError::overflow;
                     }
-                    n += i / (b + 1);
-                    i %= (b + 1);
+                    n += i / (out + 1);
+                    i %= (out + 1);
                     memmove(tmp.data() + i + 1, tmp.data() + i, (b - i) * sizeof(std::uint32_t));
                     tmp[i] = n;
                     i++;
