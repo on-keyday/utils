@@ -116,6 +116,7 @@ namespace utils {
                     els.push_back(seq.current());
                     allmatch = false;
                 }
+                seq.consume();
             }
             return allmatch;
         }
