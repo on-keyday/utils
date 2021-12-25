@@ -169,6 +169,7 @@ namespace utils {
                         }
                         seq.consume();
                     }
+                    n++;
                 }
                 return true;
             }
