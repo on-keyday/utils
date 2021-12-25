@@ -52,5 +52,8 @@ namespace utils {
             };
         }  // namespace internal
 
+        HttpResponse request(IOClose&& io, const char* method, Header& header) {
+        }
+
     }  // namespace net
 }  // namespace utils
