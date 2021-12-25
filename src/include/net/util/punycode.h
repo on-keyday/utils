@@ -148,6 +148,9 @@ namespace utils {
                         if (!internal::encode_int(result, bias, delta)) {
                             return number::NumError::overflow;
                         }
+                        bias = internal::calc_bias(delta, h + 1, h == b);
+                        delta = 0;
+                        h++;
                     }
                 }
             }
