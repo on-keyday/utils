@@ -253,7 +253,7 @@ namespace utils {
                     }
                     n += i / (b + 1);
                     i %= (b + 1);
-                    memmove(tmp.data() + i + 1, tmp.data() + i, (b - i) * sizeof(uint32_t));
+                    ::memmove(tmp.data() + i + 1, tmp.data() + i, (b - i) * sizeof(uint32_t));
                     tmp[i] = n;
                     i++;
                 }
