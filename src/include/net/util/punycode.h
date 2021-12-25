@@ -156,6 +156,7 @@ namespace utils {
                         seq.consume();
                     }
                 }
+                return true;
             }
         }  // namespace punycode
 
