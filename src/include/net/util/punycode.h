@@ -122,8 +122,10 @@ namespace utils {
                         di++;
                         return false;
                     })) {
-                    helper::append(result, tmp);
-                    result.push_back('-');
+                    if (di != 0) {
+                        helper::append(result, tmp);
+                        result.push_back('-');
+                    }
                 }
                 else {
                     helper::append(result, tmp);
