@@ -71,9 +71,9 @@ namespace utils {
                         q = (q - t) / (base_ - t);
                         k += base_;
                     }
-                    if (!encode_digit(result, q)) {
+                    /*if (!encode_digit(result, q)) {
                         return false;
-                    }
+                    }*/
                     return true;
                 }
 
