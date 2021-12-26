@@ -47,6 +47,8 @@ namespace utils {
             Header(Header&&);
             Header& operator=(Header&&);
 
+            void set(const char* key, const char* value);
+
             explicit operator bool() {
                 return impl != nullptr;
             }

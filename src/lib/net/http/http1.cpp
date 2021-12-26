@@ -109,6 +109,13 @@ namespace utils {
             return *this;
         }
 
+        void Header::set(const char* key, const char* value) {
+            if (!impl || !key || !value) {
+                return;
+            }
+            impl->emplace(key, value);
+        }
+
         Header HttpResponse::get_response() {
             if (!impl || impl->state == HttpState::failed || impl->state == HttpState::end_process) {
                 return nullptr;
