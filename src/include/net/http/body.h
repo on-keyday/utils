@@ -64,6 +64,12 @@ namespace utils {
                     return State::complete;
                 }
             }
+
+            constexpr auto default_bodyinfo_preview(BodyType& type, size_t& expect) {
+                return [](auto& key, auto& value) {
+
+                };
+            }
         }  // namespace h1body
 
     }  // namespace net
