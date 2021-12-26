@@ -107,6 +107,7 @@ namespace utils {
             HttpResponse response;
             response.impl = new internal::HttpResponseImpl{};
             io.write(buf.c_str(), buf.size());
+            return response;
         }
 
     }  // namespace net

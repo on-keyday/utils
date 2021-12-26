@@ -141,7 +141,7 @@ namespace utils {
                     if (!number::is_in_visible_range(c)) {
                         return false;
                     }
-                    if (!is_valid_header_char(c)) {
+                    if (!is_valid_key_char(c)) {
                         return false;
                     }
                     return true;
@@ -176,6 +176,7 @@ namespace utils {
                     helper::append(str, "\r\n");
                 }
                 helper::append(str, "\r\n");
+                return true;
             }
 
             template <class String, class Method, class Path, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
