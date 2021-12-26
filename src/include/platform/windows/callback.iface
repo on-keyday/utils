@@ -5,6 +5,9 @@
 
 # callback - iocompletion callback
 
+# generate code
+# tool\ifacegen -i src/include/platform/windows/callback.iface -o src/include/platform/windows/callback.h -d --helper-deref "\"../../helper/deref.h\"" --license
+
 package utils::platform::windwos
 
 interface Complate {
