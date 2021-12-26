@@ -69,9 +69,9 @@ int main(int argc, char** argv) {
 
 Special Value:
     Func Name:
-        decltype - generate type assert func
-        __copy__ - generate copy constructor and copy assign
-        __call__ - generate `operator()`
+        decltype - generate type assert func ex) decltype() type
+        __copy__ - generate copy constructor and copy assign ex) __copy__() type
+        __call__ - generate `operator()` ex) __call__(num int) int 
     Default Value:
         panic - generate throw std::bad_function_call()
 )";
