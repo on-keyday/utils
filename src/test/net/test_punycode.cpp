@@ -17,6 +17,10 @@ void test_punycode() {
     assert(utils::helper::equal(buf.buf, "cckbak0byl6e"));
     utils::net::punycode::decode(buf.buf, buf2);
     assert(utils::helper::equal(buf2.buf, u8"ウィキペディア"));
+    buf = {}, buf2 = {};
+    utils::net::punycode::encode(u8"bücher", buf);
+    assert(utils::helper::equal(buf.buf, "bcher-kva"));
+    utils::net::punycode::decode(buf.buf, buf2);
 }
 
 int main() {
