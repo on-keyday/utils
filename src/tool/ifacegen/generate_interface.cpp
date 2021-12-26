@@ -13,7 +13,8 @@ namespace ifacegen {
     namespace hlp = utils::helper;
 
     constexpr auto decltype_func = "decltype";
-    constexpr auto copy_func = "copy";
+    constexpr auto copy_func = "__copy__";
+    constexpr auto call_func = "__call__";
 
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, utw::string>* alias) {
         if (alias) {
@@ -53,7 +54,12 @@ namespace ifacegen {
 
     void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias) {
         render_cpp_type(func.type, str, alias);
-        hlp::append(str, func.funcname);
+        if (func.funcname == "__call__") {
+            hlp::append(str, "operator()");
+        }
+        else {
+            hlp::append(str, func.funcname);
+        }
         hlp::append(str, "(");
         bool is_first = true;
         for (auto& arg : func.args) {
@@ -71,7 +77,12 @@ namespace ifacegen {
     }
 
     void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias) {
-        hlp::append(str, func.funcname);
+        if (func.funcname == "__call__") {
+            hlp::append(str, "operator()");
+        }
+        else {
+            hlp::append(str, func.funcname);
+        }
         hlp::append(str, "(");
         bool is_first = true;
         for (auto& arg : func.args) {
