@@ -192,6 +192,7 @@ namespace utils {
                 size_t bias = initial_bias;
                 size_t i = 0, out = 0;
                 size_t b = 0, j = 0;
+                wrap::u32string tmp;
                 while (!seq.eos()) {
                     auto c = seq.current();
                     if (!number::is_in_ascii_range(c)) {
@@ -202,8 +203,14 @@ namespace utils {
                     }
                     seq.consume();
                 }
-                wrap::u32string tmp;
-                tmp.resize(1000);
+                j = inipos;
+                seq.seek(inipos);
+                while (j < b) {
+                    tmp.push_back(seq.current());
+                    seq.consume();
+                    j++;
+                }
+                tmp.resize(seq.size());
                 size_t in = b > 0 ? b + 1 : 0;
                 seq.seek(inipos + in);
                 constexpr size_t mx = (std::numeric_limits<size_t>::max)();
@@ -253,6 +260,8 @@ namespace utils {
                     i++;
                     out++;
                 }
+                tmp.resize(out);
+                utf::convert(tmp, result);
                 return true;
             }
 

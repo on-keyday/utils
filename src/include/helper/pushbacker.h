@@ -9,6 +9,8 @@
 // pushbacker - push_back utility
 #pragma once
 
+#include <type_traits>
+
 namespace utils {
     namespace helper {
         struct NopPushBacker {
@@ -34,6 +36,8 @@ namespace utils {
         struct FixedPushBacker {
             Buf buf{};
             size_t count = 0;
+
+            using char_type = std::remove_cvref_t<decltype(buf[0])>;
 
             constexpr FixedPushBacker() {}
 

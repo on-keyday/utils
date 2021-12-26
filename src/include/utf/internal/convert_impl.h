@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../conv_method.h"
+#include "../../helper/append_charsize.h"
 
 namespace utils {
     namespace utf {
@@ -20,7 +21,7 @@ namespace utils {
             };
 
             template <class Buf, class T, class U, size_t expectT, size_t expectU>
-            using expect_size_t = typename expect_size<Buf, typename BufferType<T>::char_type, typename BufferType<U>::char_type, expectT, expectU>::type;
+            using expect_size_t = typename expect_size<Buf, typename BufferType<T>::char_type, helper::append_size_t<U>, expectT, expectU>::type;
 
 #define DEFINE_CONVERT_WITH_UTF32(FROM, TOMETHOD, FROMMETHOD)                             \
     template <bool decode_all, class T, class U>                                          \
