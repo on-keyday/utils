@@ -11,17 +11,32 @@
 #include "../../../include/net/core/platform.h"
 #include "../../../include/net/core/init_net.h"
 
+#ifdef USE_IOCP
+#include "../../../include/platform/windows/io_completetion_port.h"
+#endif
+
 namespace utils {
     namespace net {
         namespace internal {
             constexpr ::SOCKET invalid_socket = ~0;
-
+#ifdef USE_IOCP
+            struct TCPIOCP {
+                ::WSABUF buf;
+                wrap::string buffer;
+                ::OVERLAPPED ol;
+                bool iocprunning = false;
+                bool done = false;
+                wrap::weak_ptr<TCPConn> self;
+            };
+#endif
             struct TCPImpl {
                 wrap::shared_ptr<Address> addr;
                 addrinfo* selected = nullptr;
                 ::SOCKET sock = invalid_socket;
                 bool connected = false;
-
+#ifdef USE_IOCP
+                TCPIOCP iocp;
+#endif
                 void close() {
                     if (sock != invalid_socket) {
                         if (connected) {
@@ -77,7 +92,26 @@ namespace utils {
             if (size > (std::numeric_limits<int>::max)()) {
                 size = (std::numeric_limits<int>::max)();
             }
+#ifdef USE_IOCP
+            if (impl->iocp.iocprunning) {
+                if (impl->iocp.done) {
+                    impl->iocp.iocprunning = false;
+                    impl->iocp.done = false;
+                }
+                return State::running;
+            }
+            impl->iocp.buffer.resize(1024);
+            impl->iocp.buf.buf = impl->iocp.buffer.data();
+            impl->iocp.buf.len = 1024;
+            impl->iocp.iocprunning = true;
+            auto res = ::WSARecv(impl->sock, &impl->iocp.buf, 1, nullptr, 0, &impl->iocp.ol, nullptr);
+            if (res != NO_ERROR && res != WSA_IO_PENDING) {
+                return State::failed;
+            }
+            return State::running;
+#else
             auto res = ::recv(impl->sock, ptr, int(size), 0);
+
             if (res < 0) {
                 if (is_blocking()) {
                     return State::running;
@@ -88,6 +122,7 @@ namespace utils {
                 *red = size_t(res);
             }
             return State::complete;
+#endif
         }
 
         State TCPConn::write(const char* ptr, size_t size) {
@@ -157,6 +192,9 @@ namespace utils {
             auto make_conn = [&]() {
                 auto conn = wrap::make_shared<TCPConn>();
                 conn->impl = impl;
+#ifdef USE_IOCP
+                conn->impl->iocp.self = conn;
+#endif
                 impl = nullptr;
                 return conn;
             };
@@ -189,7 +227,7 @@ namespace utils {
             SOCKET sock = internal::invalid_socket;
             for (; p; p = info->ai_next) {
 #ifdef _WIN32
-                sock = ::WSASocketA(p->ai_family, p->ai_socktype, p->ai_protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+                sock = ::WSASocketW(p->ai_family, p->ai_socktype, p->ai_protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #else
                 sock = ::socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 #endif

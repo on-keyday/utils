@@ -47,6 +47,10 @@ namespace utils {
                         delete pol;
                         break;
                     }
+                    helper::Unsafe<Complete> cvt;
+                    cvt.ptr = reinterpret_cast<void*>(key);
+                    auto completed = std::move(cvt.iface);
+                    completed();
                 }
             }
 
@@ -64,10 +68,23 @@ namespace utils {
                 return &obj;
             }
 
-            bool IOCPObject::register_handler(Complete&& complete) {
-                // XXX: unsafe ptr using
+            thread::LiteLock glock;
+
+            void set_handle(void* handle, void* completed) {
+                auto res = ::CreateIoCompletionPort(handle, &context,
+                                                    ULONG_PTR(completed), 0);
+                assert(res);
+                return;
+            }
+
+            bool IOCPObject::register_handler(void* handle, Complete&& complete) {
+                if (!handle || handle == INVALID_HANDLE_VALUE || !complete) {
+                    return false;
+                }
                 helper::Unsafe<Complete> cvt;
                 cvt.iface = std::move(complete);
+                set_handle(handle, cvt.ptr);
+                return true;
             }
 
             void start_iocp(IOCPContext* ctx) {
@@ -77,17 +94,6 @@ namespace utils {
                 for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
                     std::thread(iocp_thread).detach();
                 }
-            }
-
-            thread::LiteLock glock;
-
-            void set_handle(void* handle) {
-                glock.lock();
-                context.id++;
-                size_t ctx = context.id;
-                glock.unlock();
-                ::CreateIoCompletionPort(handle, &context,
-                                         context.id, 0);
             }
 
         }  // namespace windows

@@ -18,7 +18,7 @@ namespace utils {
             struct IOCPObject {
                 friend IOCPObject* start_iocp();
 
-                bool register_handler(Complete&& cmp);
+                bool register_handler(void* handle, Complete&& complete);
 
                private:
                 IOCPObject();

@@ -45,6 +45,9 @@ namespace utils::platform::windows {
 
         template <class T>
         Complete(T&& t) {
+            if (!utils::helper::deref(t)) {
+                return;
+            }
             iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
         }
 
