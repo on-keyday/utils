@@ -27,6 +27,7 @@ namespace utils {
             State read_body(String& result, Sequencer<T>& seq, BodyType type = BodyType::no_info, size_t expect = 0) {
                 auto inipos = seq.rptr;
                 if (type == BodyType::chuncked) {
+                    helper::match_eol(seq);
                     size_t num = 0;
                     auto e = number::parse_integer(seq, num, 16);
                     if (e != number::NumError::none) {
@@ -37,6 +38,7 @@ namespace utils {
                     }
                     if (num != 0) {
                         if (seq.remain() < num) {
+                            seq.rptr = inipos;
                             return State::running;
                         }
                         if (!helper::read_n(result, seq, num)) {
