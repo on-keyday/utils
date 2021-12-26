@@ -35,6 +35,16 @@ namespace utils {
                     if (!helper::match_eol(seq)) {
                         return State::failed;
                     }
+                    if (num != 0) {
+                        if (seq.remain() < num) {
+                            return State::running;
+                        }
+                        if (!helper::read_n(result, seq, num)) {
+                            return State::failed;
+                        }
+                    }
+                    helper::match_eol(seq);
+                    return num == 0 ? State::complete : State::running;
                 }
                 else if (type == BodyType::content_length) {
                     if (seq.remain() < expect) {
