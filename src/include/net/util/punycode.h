@@ -20,8 +20,8 @@ namespace utils {
     namespace net {
         namespace punycode {
             // reference implementation
-            //https://github.com/bnoordhuis/punycode/blob/master/punycode.c
-
+            // https://github.com/bnoordhuis/punycode/blob/master/punycode.c
+            // https://www.gnu.org/software/libidn/doxygen/punycode_8c_source.html
             constexpr std::uint32_t initial_n = 128;
             constexpr std::uint32_t initial_bias = 72;
             constexpr std::uint32_t t_min = 1;
@@ -185,48 +185,45 @@ namespace utils {
             template <class Out, class T>
             number::NumErr decode(Sequencer<T>& seq, Out& result) {
                 if (seq.eos()) {
-                    return number::NumError::invalid;
+                    return true;
                 }
                 auto inipos = seq.rptr;
-                size_t hypos = 0;
+                std::uint32_t n = initial_n;
+                size_t bias = initial_bias;
+                size_t i = 0, out = 0;
+                size_t b = 0, j = 0;
                 while (!seq.eos()) {
                     auto c = seq.current();
                     if (!number::is_in_ascii_range(c)) {
-                        return number::NumError::invalid;
+                        return false;
                     }
                     else if (c == '-') {
-                        hypos = seq.rptr;
+                        b = seq.rptr;
                     }
                     seq.consume();
                 }
                 wrap::u32string tmp;
-                tmp.resize(seq.size() + 3);
-                seq.seek(inipos);
-                while (seq.rptr < hypos) {
-                    tmp.push_back(seq.current());
-                    seq.consume();
-                }
-                size_t b = 0;
-                b = seq.remain();
-                size_t i = 0, n = initial_n, bias = initial_bias, original_i = 0;
-                size_t sz = 0, si, w, k, t;
-                constexpr auto mx = (std::numeric_limits<size_t>::max)();
-                size_t out = b;
-                for (si = b > 0 ? b + 1 : 0; !seq.eos(); out++) {
-                    original_i = i;
-                    for (w = 1, k = base_;; k += base_) {
+                tmp.resize(1000);
+                size_t in = b > 0 ? b + 1 : 0;
+                seq.seek(inipos + in);
+                constexpr size_t mx = (std::numeric_limits<size_t>::max)();
+                while (!seq.eos()) {
+                    size_t oldi = i;
+                    size_t w = 1, k = base_;
+                    while (true) {
+                        if (in >= seq.size()) {
+                            return number::NumError::invalid;
+                        }
                         auto digit = internal::decode_digit(seq.current());
                         seq.consume();
                         if (digit == ~0) {
                             return number::NumError::invalid;
                         }
-
                         if (digit > (mx - i) / w) {
                             return number::NumError::overflow;
                         }
-
                         i += digit * w;
-
+                        size_t t;
                         if (k <= bias) {
                             t = t_min;
                         }
@@ -236,26 +233,25 @@ namespace utils {
                         else {
                             t = k - bias;
                         }
-
                         if (digit < t) {
                             break;
                         }
-
                         if (w > mx / (base_ - t)) {
                             return number::NumError::overflow;
                         }
-
                         w *= (base_ - t);
+                        k += base_;
                     }
-                    bias = internal::calc_bias(i - original_i, out + 1, original_i == 0);
+                    bias = internal::calc_bias(i - oldi, out + 1, oldi == 0);
                     if (i / (out + 1) > mx - n) {
                         return number::NumError::overflow;
                     }
                     n += i / (out + 1);
                     i %= (out + 1);
-                    memmove(tmp.data() + i + 1, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
+                    ::memmove(tmp.data() + i, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
                     tmp[i] = n;
                     i++;
+                    out++;
                 }
                 return true;
             }
