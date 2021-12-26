@@ -148,7 +148,7 @@ namespace utils {
                 auto res = read(impl->buf, impl->io);
                 if (is_failed(res)) {
                     failed_clean();
-                    return false;
+                    return nullptr;
                 }
                 auto seq = make_ref_seq(impl->buf);
                 seq.rptr = impl->redpos;
@@ -159,7 +159,7 @@ namespace utils {
                                 seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
                                 h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
                             failed_clean();
-                            return false;
+                            return nullptr;
                         }
                         impl->state = HttpState::body_recving;
                         break;
@@ -172,6 +172,10 @@ namespace utils {
                 auto seq = make_ref_seq(impl->buf);
                 seq.rptr = impl->redpos;
                 auto e = h1body::read_body(impl->response.impl->body, seq, impl->bodytype, impl->expect);
+                if (is_failed(e)) {
+                    failed_clean();
+                    return nullptr;
+                }
             }
         }
 
