@@ -14,7 +14,7 @@ namespace utils::platform::windows {
     struct Complete {
        private:
         struct interface__ {
-            virtual void operator()() = 0;
+            virtual void operator()(size_t size) = 0;
 
             virtual ~interface__() {}
         };
@@ -27,12 +27,12 @@ namespace utils::platform::windows {
             implements__(Args&&... args)
                 : t_holder_(std::forward<Args>(args)...) {}
 
-            void operator()() override {
+            void operator()(size_t size) override {
                 auto t_ptr_ = utils::helper::deref(this->t_holder_);
                 if (!t_ptr_) {
                     return void{};
                 }
-                return t_ptr_->operator()();
+                return t_ptr_->operator()(size);
             }
         };
 
@@ -71,8 +71,8 @@ namespace utils::platform::windows {
             delete iface;
         }
 
-        void operator()() {
-            return iface ? iface->operator()() : void{};
+        void operator()(size_t size) {
+            return iface ? iface->operator()(size) : void{};
         }
     };
 

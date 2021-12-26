@@ -11,5 +11,5 @@
 package utils::platform::windows
 
 interface Complete {
-    __call__() void
+    __call__(size size_t) void
 }
