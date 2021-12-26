@@ -29,6 +29,7 @@ namespace utils {
 
         namespace internal {
             struct HeaderImpl {
+                h1header::StatusCode code;
                 wrap::vector<std::pair<wrap::string, wrap::string>> order;
                 wrap::string body;
 
@@ -67,6 +68,8 @@ namespace utils {
                 HttpState state;
                 IOClose io;
                 wrap::string buf;
+                size_t redpos = 0;
+                Header response;
             };
         }  // namespace internal
 
@@ -139,6 +142,18 @@ namespace utils {
                 impl->buf.clear();
             }
             if (impl->state == HttpState::responding) {
+                auto res = read(impl->buf, impl->io);
+                if (is_failed(res)) {
+                    failed_clean();
+                    return false;
+                }
+                auto seq = make_ref_seq(impl->buf);
+                seq.rptr = impl->redpos;
+
+                if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
+                }
+                if (!h1header::parse_response<wrap::string>(seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl)) {
+                }
             }
         }
 
