@@ -50,7 +50,16 @@ int main(int argc, char** argv) {
     }
     if (result.is_set("help")) {
         cout << desc.help(argv[0]);
-        cout << R"(Special Value:
+        cout << R"(
+Syntax:
+    interface NAME{
+        const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = 0
+    }
+
+    import <header-file>
+
+    alias NAME REFERED
+Special Value:
     Func Name:
         decltype - generate type assert func
         __copy__ - generate copy constructor and copy assign
