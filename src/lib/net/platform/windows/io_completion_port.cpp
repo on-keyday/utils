@@ -7,6 +7,7 @@
 
 
 #include "../../../../include/platform/windows/io_completetion_port.h"
+#include "../../../../include/thread/lite_lock.h"
 
 #include <windows.h>
 #include <cassert>
@@ -47,16 +48,27 @@ namespace utils {
                 }
             }
 
-            void start_iocp() {
-                context.handle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL,
-                                                          0, 0);
-                assert(context.handle);
+            IOCPObject* start_iocp() {
+            }
+
+            void start_iocp(IOCPContext* ctx) {
+                ctx->handle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL,
+                                                       0, 0);
+                assert(ctx->handle);
                 for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
                     std::thread(iocp_thread).detach();
                 }
             }
 
+            thread::LiteLock glock;
+
             void set_handle(void* handle) {
+                glock.lock();
+                context.id++;
+                size_t ctx = context.id;
+                glock.unlock();
+                ::CreateIoCompletionPort(handle, &context,
+                                         context.id, 0);
             }
 
         }  // namespace windows

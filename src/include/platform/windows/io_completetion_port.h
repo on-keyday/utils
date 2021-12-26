@@ -12,8 +12,14 @@
 namespace utils {
     namespace platform {
         namespace windows {
-            void start_iocp();
-            void set_handle(void* handle);
+            struct IOCPContext;
+            struct IOCPObject {
+                void register_handler();
+
+               private:
+                IOCPContext* ctx;
+            };
+            IOCPObject* start_iocp();
         }  // namespace windows
 
     }  // namespace platform
