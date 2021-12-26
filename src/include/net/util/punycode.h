@@ -248,7 +248,7 @@ namespace utils {
                     }
                     n += i / (out + 1);
                     i %= (out + 1);
-                    ::memmove(tmp.data() + i, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
+                    ::memmove(tmp.data() + i + 1, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
                     tmp[i] = n;
                     i++;
                     out++;
