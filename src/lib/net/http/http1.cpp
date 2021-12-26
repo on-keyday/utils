@@ -26,6 +26,7 @@ namespace utils {
             responding,
             body_recving,
             failed,
+            end_process,
         };
 
         namespace internal {
@@ -109,7 +110,7 @@ namespace utils {
         }
 
         Header HttpResponse::get_response() {
-            if (!impl || impl->state == HttpState::failed) {
+            if (!impl || impl->state == HttpState::failed || impl->state == HttpState::end_process) {
                 return nullptr;
             }
             auto failed_clean = [&] {
@@ -192,6 +193,7 @@ namespace utils {
                     }
                     goto BEGIN;
                 }
+                impl->state = HttpState::end_process;
                 return std::move(impl->response);
             }
             return nullptr;
