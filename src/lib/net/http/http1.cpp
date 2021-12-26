@@ -154,12 +154,18 @@ namespace utils {
                 if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
                     seq.rptr = 0;
                     h1body::BodyType type;
+                    size_t expect = 0;
                     if (!h1header::parse_response<wrap::string>(
                             seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
-                            [](auto& key, auto& value) {
-                                if (type == h1body::BodyType::no_info && helper::equal(key, "transfer-encoding", helper::ignore_case()) &&
+                            [&](auto& key, auto& value) {
+                                if (helper::equal(key, "transfer-encoding", helper::ignore_case()) &&
                                     helper::contains(value, "chunked")) {
                                     type = h1body::BodyType::chuncked;
+                                }
+                                else if (type == h1body::BodyType::no_info &&
+                                         helper::equal(key, "content-length")) {
+                                    number::parse_integer(seq, expect);
+                                    type = h1body::BodyType::content_length;
                                 }
                             })) {
                         failed_clean();
