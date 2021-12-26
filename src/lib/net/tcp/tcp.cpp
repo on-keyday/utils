@@ -188,7 +188,11 @@ namespace utils {
             State state = State::failed;
             SOCKET sock = internal::invalid_socket;
             for (; p; p = info->ai_next) {
+#ifdef _WIN32
+                sock = ::WSASocketA(p->ai_family, p->ai_socktype, p->ai_protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+#else
                 sock = ::socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+#endif
                 if (sock < 0 || sock == internal::invalid_socket) {
                     continue;
                 }

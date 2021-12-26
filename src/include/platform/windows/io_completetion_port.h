@@ -22,6 +22,7 @@ namespace utils {
                 IOCPContext* ctx;
             };
             IOCPObject* start_iocp();
+
         }  // namespace windows
 
     }  // namespace platform
