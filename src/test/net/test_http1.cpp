@@ -52,7 +52,7 @@ void test_http1() {
     auto resp = req.get_response();
     while (!resp) {
         if (req.failed()) {
-            assert(false && "connect ssl failed");
+            assert(false && "request htt1 failed");
         }
         Sleep(10);
         resp = req.get_response();

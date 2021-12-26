@@ -67,13 +67,16 @@ target_link_libraries(make_parser libutils)
 target_link_libraries(syntaxc libutils)
 target_link_libraries(cmdparse libutils)
 target_link_libraries(netcore libutils)
+target_link_libraries(http1 libutils)
 
 target_link_libraries(ifacegen libutils)
 
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)
+target_link_libraries(http1 libssl libcrypto ws2_32)
 else()
 target_link_libraries(netcore libssl.so libcrypto.so Threads::Threads)
+target_link_libraries(http1 libssl.so libcrypto.so Threads::Threads)
 endif()
 
 

@@ -256,6 +256,7 @@ namespace utils {
             header.impl = nullptr;
             response.impl->state = done == State::complete ? HttpState::requesting : HttpState::body_sending;
             response.impl->buf = std::move(buf);
+            response.impl->io = std::move(io);
             return response;
         }
 
