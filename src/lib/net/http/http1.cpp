@@ -173,7 +173,6 @@ namespace utils {
                 auto seq = make_ref_seq(impl->buf);
                 seq.rptr = impl->redpos;
                 State e = State::complete;
-
                 if (impl->bodytype == h1body::BodyType::no_info && !seq.eos()) {
                     while (read(impl->buf, impl->io) == State::complete) {
                         // busy loop
