@@ -50,6 +50,14 @@ int main(int argc, char** argv) {
     }
     if (result.is_set("help")) {
         cout << desc.help(argv[0]);
+        cout << R"(Special Value:
+    Func Name:
+        decltype - generate type assert func
+        __copy__ - generate copy constructor and copy assign
+        __call__ - generate `operator()`
+    Default Value:
+        panic - generate throw std::bad_function_call()
+)";
         return 1;
     }
     auto in = result.is_set("input-file");
