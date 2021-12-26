@@ -6,8 +6,8 @@
 */
 
 
-#include "../../../../include/platform/windows/io_completetion_port.h"
-#include "../../../../include/thread/lite_lock.h"
+#include "../../../include/platform/windows/io_completetion_port.h"
+#include "../../../include/thread/lite_lock.h"
 
 #include <windows.h>
 #include <cassert>
