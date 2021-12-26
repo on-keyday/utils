@@ -171,18 +171,23 @@ namespace utils {
             if (impl->state == HttpState::body_recving) {
                 auto seq = make_ref_seq(impl->buf);
                 seq.rptr = impl->redpos;
+                State e = State::complete;
+
                 if (impl->bodytype == h1body::BodyType::no_info && !seq.eos()) {
                     while (read(impl->buf, impl->io) == State::complete) {
+                        // busy loop
                     }
                 }
-                auto e = h1body::read_body(impl->response.impl->body, seq, impl->bodytype, impl->expect);
+            BEGIN:
+                e = h1body::read_body(impl->response.impl->body, seq, impl->bodytype, impl->expect);
                 if (is_failed(e)) {
                     failed_clean();
                     return nullptr;
                 }
                 if (e == State::running) {
-                    auto e = read(impl->buf, impl->io);
+                    e = read(impl->buf, impl->io);
                     if (is_failed(e)) {
+                        goto BEGIN;
                     }
                 }
             }
