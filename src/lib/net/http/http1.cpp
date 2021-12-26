@@ -157,9 +157,7 @@ namespace utils {
                     size_t expect = 0;
                     if (!h1header::parse_response<wrap::string>(
                             seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
-                            [&](auto& key, auto& value) {
-
-                            })) {
+                            h1body::bodyinfo_preview(type, expect))) {
                         failed_clean();
                         return false;
                     }
