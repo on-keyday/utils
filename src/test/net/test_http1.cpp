@@ -14,8 +14,8 @@
 
 #include <windows.h>
 
-utils::net::IOClose make_ioclose() {
-    auto query = utils::net::query_dns("google.com", "https");
+utils::net::IOClose make_ioclose(const char* host) {
+    auto query = utils::net::query_dns(host, "https");
     auto addr = query.get_address();
     while (!addr) {
         if (query.failed()) {
@@ -46,11 +46,16 @@ utils::net::IOClose make_ioclose() {
 }
 
 void test_http1() {
-    auto ioclose = make_ioclose();
+    auto ioclose = make_ioclose("google.com");
     assert(ioclose);
     auto req = utils::net::request(std::move(ioclose), "google.com", "GET", "/", {});
     auto resp = req.get_response();
     while (!resp) {
+        if (req.failed()) {
+            assert(false && "connect ssl failed");
+        }
+        Sleep(10);
+        resp = req.get_response();
     }
 }
 
