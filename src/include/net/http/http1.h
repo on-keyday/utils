@@ -34,6 +34,9 @@ namespace utils {
             Header();
             ~Header();
 
+            Header(Header&&);
+            Header& operator=(Header&&);
+
            private:
             internal::HeaderImpl* impl = nullptr;
         };

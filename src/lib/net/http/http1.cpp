@@ -56,6 +56,8 @@ namespace utils {
 
             struct HttpResponseImpl {
                 HeaderImpl* header = nullptr;
+                bool request_done = false;
+                IOClose io;
             };
         }  // namespace internal
 
@@ -65,6 +67,17 @@ namespace utils {
 
         Header::~Header() {
             delete impl;
+        }
+
+        Header::Header(Header&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+        Header& Header::operator=(Header&& in) {
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
         }
 
         HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
@@ -106,7 +119,13 @@ namespace utils {
             }
             HttpResponse response;
             response.impl = new internal::HttpResponseImpl{};
-            io.write(buf.c_str(), buf.size());
+            auto done = io.write(buf.c_str(), buf.size());
+            if (done != State::complete && done != State::running) {
+                return HttpResponse{};
+            }
+            response.impl->header = header.impl;
+            header.impl = nullptr;
+            response.impl->request_done = done == State::complete;
             return response;
         }
 
