@@ -21,6 +21,7 @@ void test_punycode() {
     utils::net::punycode::encode(u8"bücher", buf);
     assert(utils::helper::equal(buf.buf, "bcher-kva"));
     utils::net::punycode::decode(buf.buf, buf2);
+    assert(utils::helper::equal(buf2.buf, u8"bücher"));
 }
 
 int main() {
