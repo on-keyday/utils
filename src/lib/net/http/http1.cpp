@@ -22,6 +22,8 @@ namespace utils {
         enum class HttpState {
             requesting,
             body_sending,
+            responding,
+            body_recving,
             failed,
         };
 
@@ -133,7 +135,9 @@ namespace utils {
                         return nullptr;
                     }
                 }
-                impl->body_sent = true;
+                impl->state = HttpState::responding;
+            }
+            if (impl->state == HttpState::responding) {
             }
         }
 
