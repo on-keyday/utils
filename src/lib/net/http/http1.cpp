@@ -19,6 +19,12 @@
 
 namespace utils {
     namespace net {
+        enum class HttpState {
+            requesting,
+            body_sending,
+            failed,
+        };
+
         namespace internal {
             struct HeaderImpl {
                 wrap::vector<std::pair<wrap::string, wrap::string>> order;
@@ -56,9 +62,7 @@ namespace utils {
 
             struct HttpResponseImpl {
                 HeaderImpl* header = nullptr;
-                bool request_done = false;
-                bool body_sent = false;
-                bool failed = false;
+                HttpState state;
                 IOClose io;
                 wrap::string buf;
             };
@@ -97,17 +101,17 @@ namespace utils {
         }
 
         Header HttpResponse::get_response() {
-            if (!impl) {
+            if (!impl || impl->state == HttpState::failed) {
                 return nullptr;
             }
             auto failed_clean = [&] {
-                impl->failed = true;
+                impl->state = HttpState::failed;
                 impl->io.close(true);
             };
             auto is_failed = [](auto res) {
                 return res != State::complete && res != State::running;
             };
-            if (!impl->request_done) {
+            if (impl->state == HttpState::requesting) {
                 auto res = impl->io.write(impl->buf.c_str(), impl->buf.size());
                 if (is_failed(res)) {
                     failed_clean();
@@ -116,9 +120,9 @@ namespace utils {
                 if (res == State::running) {
                     return nullptr;
                 }
-                impl->request_done = true;
+                impl->state = HttpState::body_sending;
             }
-            if (!impl->body_sent) {
+            if (impl->state == HttpState::body_sending) {
                 if (impl->header->body.size()) {
                     auto res = impl->io.write(impl->header->body.c_str(), impl->header->body.size());
                     if (is_failed(res)) {
@@ -178,7 +182,7 @@ namespace utils {
             }
             response.impl->header = header.impl;
             header.impl = nullptr;
-            response.impl->request_done = done == State::complete;
+            response.impl->state = done == State::complete ? HttpState::requesting : HttpState::body_sending;
             response.impl->buf = std::move(buf);
             return response;
         }
