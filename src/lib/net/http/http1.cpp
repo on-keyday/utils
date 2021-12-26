@@ -136,6 +136,7 @@ namespace utils {
                     }
                 }
                 impl->state = HttpState::responding;
+                impl->buf.clear();
             }
             if (impl->state == HttpState::responding) {
             }
