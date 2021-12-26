@@ -153,6 +153,8 @@ namespace utils {
                 if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
                     seq.rptr = 0;
                     if (!h1header::parse_response<wrap::string>(seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl)) {
+                        failed_clean();
+                        return false;
                     }
                 }
             }
