@@ -31,8 +31,8 @@ namespace utils {
                 }
             };
 
-            template <class String, class T, class Result>
-            bool parse_common(Sequencer<T>& seq, Result& result) {
+            template <class String, class T, class Result, class Preview>
+            bool parse_common(Sequencer<T>& seq, Result& result, Preview&& preview) {
                 while (true) {
                     if (helper::match_eol(seq)) {
                         break;
@@ -54,6 +54,7 @@ namespace utils {
                         })) {
                         return false;
                     }
+                    preview(key, value);
                     result.emplace(std::move(key), std::move(value));
                     if (!helper::match_eol(seq)) {
                         return false;
@@ -62,8 +63,8 @@ namespace utils {
                 return true;
             }
 
-            template <class String, class T, class Result, class Method, class Path, class Version>
-            bool parse_request(Sequencer<T>& seq, Method& method, Path& path, Version& ver, Result& result) {
+            template <class String, class T, class Result, class Method, class Path, class Version, class PreView = decltype(helper::no_check())>
+            bool parse_request(Sequencer<T>& seq, Method& method, Path& path, Version& ver, Result& result, PreView&& preview = helper::no_check()) {
                 if (!helper::read_while<true>(method, seq, [](auto v) {
                         return v != ' ';
                     })) {
@@ -88,11 +89,11 @@ namespace utils {
                 if (!helper::match_eol(seq)) {
                     return false;
                 }
-                return parse_common(seq, result);
+                return parse_common(seq, result, preview);
             }
 
-            template <class String, class T, class Result, class Version, class Status, class Phrase>
-            bool parse_response(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase, Result& result) {
+            template <class String, class T, class Result, class Version, class Status, class Phrase, class PreView = decltype(helper::no_check())>
+            bool parse_response(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase, Result& result, PreView&& preview = helper::no_check()) {
                 if (!helper::read_while<true>(ver, seq, [](auto v) {
                         return v != ' ';
                     })) {
@@ -124,7 +125,7 @@ namespace utils {
                 if (!helper::match_eol(seq)) {
                     return false;
                 }
-                return header_parse_common<String>(seq, result);
+                return parse_common<String>(seq, result, preview);
             }
 
             constexpr bool is_valid_key_char(std::uint8_t c) {
