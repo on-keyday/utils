@@ -72,7 +72,7 @@ namespace utils {
                         type = h1body::BodyType::chuncked;
                     }
                     else if (type == h1body::BodyType::no_info &&
-                             helper::equal(key, "content-length")) {
+                             helper::equal(key, "content-length", helper::ignore_case())) {
                         auto seq = make_ref_seq(value);
                         number::parse_integer(seq, expect);
                         type = h1body::BodyType::content_length;
