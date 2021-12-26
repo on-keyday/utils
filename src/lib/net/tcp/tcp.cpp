@@ -82,6 +82,15 @@ namespace utils {
             return *this;
         }
 
+        auto io_complete_callback(wrap::weak_ptr<TCPConn>& self, internal::TCPImpl* impl) {
+            return [=]() {
+                auto conn = self.lock();
+                if (!conn) {
+                    return;
+                }
+            };
+        }
+
         State TCPConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl || impl->is_closed()) {
                 return State::failed;
