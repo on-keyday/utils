@@ -59,7 +59,9 @@ int main(int argc, char** argv) {
         const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_RETURN_VALUE
     }
 
-    import <header-file>
+    import <HEADERNAME>
+
+    import "HEADERNAME"
 
     alias NAME REFERRED
 
