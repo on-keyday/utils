@@ -46,7 +46,12 @@ utils::net::IOClose make_ioclose() {
 }
 
 void test_http1() {
-    utils::net::request();
+    auto ioclose = make_ioclose();
+    assert(ioclose);
+    auto req = utils::net::request(std::move(ioclose), "google.com", "GET", "/", {});
+    auto resp = req.get_response();
+    while (!resp) {
+    }
 }
 
 int main() {

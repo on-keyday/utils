@@ -29,6 +29,8 @@ namespace utils {
 
             Header get_response();
 
+            bool failed() const;
+
            private:
             internal::HttpResponseImpl* impl = nullptr;
         };

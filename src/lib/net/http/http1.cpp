@@ -116,6 +116,10 @@ namespace utils {
             impl->emplace(key, value);
         }
 
+        bool HttpResponse::failed() const {
+            return !impl || impl->state == HttpState::failed;
+        }
+
         Header HttpResponse::get_response() {
             if (!impl || impl->state == HttpState::failed || impl->state == HttpState::end_process) {
                 return nullptr;
