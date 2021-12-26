@@ -192,7 +192,9 @@ namespace utils {
                     }
                     goto BEGIN;
                 }
+                return std::move(impl->response);
             }
+            return nullptr;
         }
 
         HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
