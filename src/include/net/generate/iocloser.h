@@ -26,6 +26,8 @@ namespace utils::net {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
             virtual State close(bool force) = 0;
+            virtual const void* raw__() const = 0;
+            virtual const std::type_info& type__() const = 0;
 
             virtual ~interface__() {}
         };
@@ -60,6 +62,14 @@ namespace utils::net {
                     return State::undefined;
                 }
                 return t_ptr_->close(force);
+            }
+
+            const void* raw__() const override {
+                return reinterpret_cast<const void*>(std::addressof(t_holder_));
+            }
+
+            const std::type_info& type__() const override {
+                return typeid(T);
             }
         };
 
@@ -115,10 +125,10 @@ namespace utils::net {
             if (!iface) {
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
+            if (iface->type__() != typeid(T)) {
+                return nullptr;
             }
-            return nullptr;
+            return reinterpret_cast<const T*>(iface->raw__());
         }
 
         template <class T>
@@ -126,10 +136,10 @@ namespace utils::net {
             if (!iface) {
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
+            if (iface->type__() != typeid(T)) {
+                return nullptr;
             }
-            return nullptr;
+            return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));
         }
     };
 
@@ -138,6 +148,8 @@ namespace utils::net {
         struct NOVTABLE__ interface__ {
             virtual State write(const char* ptr, size_t size) = 0;
             virtual State read(char* ptr, size_t size, size_t* red) = 0;
+            virtual const void* raw__() const = 0;
+            virtual const std::type_info& type__() const = 0;
 
             virtual ~interface__() {}
         };
@@ -164,6 +176,14 @@ namespace utils::net {
                     return State::undefined;
                 }
                 return t_ptr_->read(ptr, size, red);
+            }
+
+            const void* raw__() const override {
+                return reinterpret_cast<const void*>(std::addressof(t_holder_));
+            }
+
+            const std::type_info& type__() const override {
+                return typeid(T);
             }
         };
 
@@ -215,10 +235,10 @@ namespace utils::net {
             if (!iface) {
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
+            if (iface->type__() != typeid(T)) {
+                return nullptr;
             }
-            return nullptr;
+            return reinterpret_cast<const T*>(iface->raw__());
         }
 
         template <class T>
@@ -226,10 +246,10 @@ namespace utils::net {
             if (!iface) {
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
+            if (iface->type__() != typeid(T)) {
+                return nullptr;
             }
-            return nullptr;
+            return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));
         }
     };
 
