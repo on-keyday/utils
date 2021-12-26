@@ -118,7 +118,7 @@ namespace utils {
                     return false;
                 }
                 if (!helper::read_whilef<true>(phrase, seq, [](auto v) {
-                        return v != 'r' && v != '\n';
+                        return v != '\r' && v != '\n';
                     })) {
                     return false;
                 }
