@@ -151,8 +151,9 @@ namespace utils {
                 seq.rptr = impl->redpos;
 
                 if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
-                }
-                if (!h1header::parse_response<wrap::string>(seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl)) {
+                    seq.rptr = 0;
+                    if (!h1header::parse_response<wrap::string>(seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl)) {
+                    }
                 }
             }
         }
