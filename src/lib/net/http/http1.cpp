@@ -176,6 +176,8 @@ namespace utils {
                     failed_clean();
                     return nullptr;
                 }
+                if (e == State::running) {
+                }
             }
         }
 
