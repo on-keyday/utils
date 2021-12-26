@@ -38,7 +38,7 @@ namespace utils {
                         break;
                     }
                     String key, value;
-                    if (!helper::read_while<true>(key, seq, [](auto v) {
+                    if (!helper::read_whilef<true>(key, seq, [](auto v) {
                             return v != ':';
                         })) {
                         return false;
@@ -46,10 +46,10 @@ namespace utils {
                     if (!seq.consume_if(':')) {
                         return false;
                     }
-                    helper::read_while(helper::nop, seq, [](auto v) {
+                    helper::read_whilef(helper::nop, seq, [](auto v) {
                         return v == ' ';
                     });
-                    if (!helper::read_while<true>(value, seq, [](auto v) {
+                    if (!helper::read_whilef<true>(value, seq, [](auto v) {
                             return v != '\r' && v != '\n';
                         })) {
                         return false;
@@ -94,7 +94,7 @@ namespace utils {
 
             template <class String, class T, class Result, class Version, class Status, class Phrase, class PreView = decltype(helper::no_check())>
             bool parse_response(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase, Result& result, PreView&& preview = helper::no_check()) {
-                if (!helper::read_while<true>(ver, seq, [](auto v) {
+                if (!helper::read_whilef<true>(ver, seq, [](auto v) {
                         return v != ' ';
                     })) {
                     return false;
@@ -117,7 +117,7 @@ namespace utils {
                 if (!seq.consume_if(' ')) {
                     return false;
                 }
-                if (!helper::read_while<true>(phrase, seq, [](auto v) {
+                if (!helper::read_whilef<true>(phrase, seq, [](auto v) {
                         return v != 'r' && v != '\n';
                     })) {
                     return false;

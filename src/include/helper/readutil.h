@@ -30,7 +30,7 @@ namespace utils {
         }
 
         template <bool no_zero = false, class Result, class T, class Func>
-        constexpr bool read_while(Result& result, Sequencer<T>& seq, Func&& cmp) {
+        constexpr bool read_whilef(Result& result, Sequencer<T>& seq, Func&& cmp) {
             bool first = true;
             while (!seq.eos()) {
                 if (cmp(seq.current())) {
@@ -48,14 +48,14 @@ namespace utils {
         }
 
         constexpr auto no_check() {
-            return [](auto&&...) -> bool {
+            return [](auto&&) -> bool {
                 return true;
             };
         }
 
-        template <class Result, class T, class Func>
+        template <class Result, class T>
         constexpr bool read_all(Result& result, Sequencer<T>& seq) {
-            return read_while(result, seq, no_check());
+            return read_whilef(result, seq, no_check());
         }
 
         template <class Result, class T, class Func = decltype(no_check())>
@@ -64,7 +64,7 @@ namespace utils {
                 return false;
             }
             for (size_t i = 0; i < n; i++) {
-                if (!func(seq.cuurent())) {
+                if (!func(seq.current())) {
                     return false;
                 }
                 result.push_back(seq.current());
