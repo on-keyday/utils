@@ -155,11 +155,9 @@ namespace utils {
 
                 if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
                     seq.rptr = 0;
-                    h1body::BodyType type;
-                    size_t expect = 0;
                     if (!h1header::parse_response<wrap::string>(
                             seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
-                            h1body::bodyinfo_preview(type, expect))) {
+                            h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
                         failed_clean();
                         return false;
                     }
