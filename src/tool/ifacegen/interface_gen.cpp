@@ -63,6 +63,8 @@ int main(int argc, char** argv) {
 
     alias NAME REFERRED
 
+    # COMMENT
+
 Special Value:
     Func Name:
         decltype - generate type assert func
