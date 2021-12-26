@@ -13,6 +13,7 @@
 #include "../../../include/wrap/lite/vector.h"
 
 #include "../../../include/helper/strutil.h"
+#include "../../../include/number/to_string.h"
 
 #include <algorithm>
 
@@ -70,6 +71,9 @@ namespace utils {
                 return HttpResponse{};
             }
             constexpr auto validator = h1header::default_validator();
+            if (!validator(std::pair{"Host", host})) {
+                return HttpResponse{};
+            }
             wrap::string buf;
             auto res = h1header::render_request(
                 buf, method, path, *header.impl,
@@ -85,6 +89,13 @@ namespace utils {
                 false,
                 [&](auto& str) {
                     helper::append(str, "Host: ");
+                    helper::append(str, host);
+                    helper::append(str, "\r\n");
+                    helper::append(str, "Content-Length:");
+                    helper::FixedPushBacker<char[64], 63> pb;
+                    number::to_string(pb, header.impl->body.size());
+                    helper::append(str, pb.buf);
+                    helper::append(str, "\r\n");
                 });
             if (!res) {
                 return HttpResponse{};
