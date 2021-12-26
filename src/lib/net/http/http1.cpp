@@ -158,15 +158,7 @@ namespace utils {
                     if (!h1header::parse_response<wrap::string>(
                             seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
                             [&](auto& key, auto& value) {
-                                if (helper::equal(key, "transfer-encoding", helper::ignore_case()) &&
-                                    helper::contains(value, "chunked")) {
-                                    type = h1body::BodyType::chuncked;
-                                }
-                                else if (type == h1body::BodyType::no_info &&
-                                         helper::equal(key, "content-length")) {
-                                    number::parse_integer(seq, expect);
-                                    type = h1body::BodyType::content_length;
-                                }
+
                             })) {
                         failed_clean();
                         return false;

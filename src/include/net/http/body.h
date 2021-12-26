@@ -65,9 +65,18 @@ namespace utils {
                 }
             }
 
-            constexpr auto default_bodyinfo_preview(BodyType& type, size_t& expect) {
-                return [](auto& key, auto& value) {
-
+            constexpr auto bodyinfo_preview(BodyType& type, size_t& expect) {
+                return [&](auto& key, auto& value) {
+                    if (helper::equal(key, "transfer-encoding", helper::ignore_case()) &&
+                        helper::contains(value, "chunked")) {
+                        type = h1body::BodyType::chuncked;
+                    }
+                    else if (type == h1body::BodyType::no_info &&
+                             helper::equal(key, "content-length")) {
+                        auto seq = make_ref_seq(value);
+                        number::parse_integer(seq, expect);
+                        type = h1body::BodyType::content_length;
+                    }
                 };
             }
         }  // namespace h1body
