@@ -187,7 +187,7 @@ namespace utils {
                     return false;
                 }
                 helper::append(str, method);
-                helper::append(str, " ");
+                str.push_back(str, ' ');
                 helper::append(str, path);
                 helper::append(str, " HTTP/1.1\r\n");
                 prerender(str);
