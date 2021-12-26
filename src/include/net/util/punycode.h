@@ -261,7 +261,7 @@ namespace utils {
                     i++;
                     out++;
                 }
-                tmp.resize(out + j);
+                tmp.resize(out);
                 utf::convert(tmp, result);
                 return true;
             }
