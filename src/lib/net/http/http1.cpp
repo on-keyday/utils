@@ -52,6 +52,9 @@ namespace utils {
                     }
                     return nullptr;
                 }
+
+                struct HttpResponseImpl {
+                };
             };
         }  // namespace internal
 
@@ -100,6 +103,9 @@ namespace utils {
             if (!res) {
                 return HttpResponse{};
             }
+            HttpResponse response;
+            response.impl = new internal::HttpResponseImpl();
+            io.write(buf.c_str(), buf.size());
         }
 
     }  // namespace net
