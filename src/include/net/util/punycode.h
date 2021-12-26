@@ -209,6 +209,7 @@ namespace utils {
                     tmp.push_back(seq.current());
                     seq.consume();
                     j++;
+                    out++;
                 }
                 tmp.resize(seq.size());
                 size_t in = b > 0 ? b + 1 : 0;
@@ -255,7 +256,7 @@ namespace utils {
                     }
                     n += i / (out + 1);
                     i %= (out + 1);
-                    ::memmove(tmp.data() + i + 1, tmp.data() + i, (out + j - i) * sizeof(std::uint32_t));
+                    ::memmove(tmp.data() + i + 1, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
                     tmp[i] = n;
                     i++;
                     out++;
