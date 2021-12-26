@@ -27,13 +27,19 @@ namespace utils {
             HttpResponse(HttpResponse&&);
             HttpResponse& operator=(HttpResponse&&);
 
-            wrap::shared_ptr<Header> get_response();
+            Header get_response();
 
            private:
             internal::HttpResponseImpl* impl = nullptr;
         };
 
         struct Header {
+            friend struct HttpResponse;
+
+           private:
+            constexpr Header(std::nullptr_t) {}
+
+           public:
             friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             Header();
             ~Header();
