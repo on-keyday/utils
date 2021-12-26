@@ -14,6 +14,7 @@
 
 #include "../../../include/helper/strutil.h"
 #include "../../../include/number/to_string.h"
+#include "../../../include/net/http/body.h"
 
 #include <algorithm>
 
@@ -152,7 +153,15 @@ namespace utils {
 
                 if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
                     seq.rptr = 0;
-                    if (!h1header::parse_response<wrap::string>(seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl)) {
+                    h1body::BodyType type;
+                    if (!h1header::parse_response<wrap::string>(
+                            seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
+                            [](auto& key, auto& value) {
+                                if (type == h1body::BodyType::no_info && helper::equal(key, "transfer-encoding", helper::ignore_case()) &&
+                                    helper::contains(value, "chunked")) {
+                                    type = h1body::BodyType::chuncked;
+                                }
+                            })) {
                         failed_clean();
                         return false;
                     }
