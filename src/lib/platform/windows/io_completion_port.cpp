@@ -48,7 +48,18 @@ namespace utils {
                 }
             }
 
+            IOCPObject::IOCPObject() {
+                ctx = &context;
+                start_iocp(ctx);
+            }
+
+            IOCPObject::~IOCPObject() {
+                clean_iocp_thread(ctx);
+            }
+
             IOCPObject* start_iocp() {
+                static IOCPObject obj;
+                return &obj;
             }
 
             void start_iocp(IOCPContext* ctx) {

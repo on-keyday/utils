@@ -16,9 +16,13 @@ namespace utils {
         namespace windows {
             struct IOCPContext;
             struct IOCPObject {
+                friend IOCPObject* start_iocp();
+
                 void register_handler(Complete& cmp);
 
                private:
+                IOCPObject();
+                ~IOCPObject();
                 IOCPContext* ctx;
             };
             IOCPObject* start_iocp();
