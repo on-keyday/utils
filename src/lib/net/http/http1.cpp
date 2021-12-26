@@ -85,6 +85,7 @@ namespace utils {
             impl = in.impl;
             in.impl = nullptr;
         }
+
         Header& Header::operator=(Header&& in) {
             delete impl;
             impl = in.impl;

@@ -27,6 +27,8 @@ namespace utils {
             HttpResponse(HttpResponse&&);
             HttpResponse& operator=(HttpResponse&&);
 
+            wrap::shared_ptr<Header> get_response();
+
            private:
             internal::HttpResponseImpl* impl = nullptr;
         };
@@ -38,6 +40,10 @@ namespace utils {
 
             Header(Header&&);
             Header& operator=(Header&&);
+
+            explicit operator bool() {
+                return impl != nullptr;
+            }
 
            private:
             internal::HeaderImpl* impl = nullptr;
