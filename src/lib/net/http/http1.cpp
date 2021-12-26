@@ -57,7 +57,10 @@ namespace utils {
             struct HttpResponseImpl {
                 HeaderImpl* header = nullptr;
                 bool request_done = false;
+                bool body_sent = false;
+                bool failed = false;
                 IOClose io;
+                wrap::string buf;
             };
         }  // namespace internal
 
@@ -91,6 +94,43 @@ namespace utils {
             impl = in.impl;
             in.impl = nullptr;
             return *this;
+        }
+
+        Header HttpResponse::get_response() {
+            if (!impl) {
+                return nullptr;
+            }
+            auto failed_clean = [&] {
+                impl->failed = true;
+                impl->io.close(true);
+            };
+            auto is_failed = [](auto res) {
+                return res != State::complete && res != State::running;
+            };
+            if (!impl->request_done) {
+                auto res = impl->io.write(impl->buf.c_str(), impl->buf.size());
+                if (is_failed(res)) {
+                    failed_clean();
+                    return nullptr;
+                }
+                if (res == State::running) {
+                    return nullptr;
+                }
+                impl->request_done = true;
+            }
+            if (!impl->body_sent) {
+                if (impl->header->body.size()) {
+                    auto res = impl->io.write(impl->header->body.c_str(), impl->header->body.size());
+                    if (is_failed(res)) {
+                        failed_clean();
+                        return nullptr;
+                    }
+                    if (res == State::running) {
+                        return nullptr;
+                    }
+                }
+                impl->body_sent = true;
+            }
         }
 
         HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
@@ -139,6 +179,7 @@ namespace utils {
             response.impl->header = header.impl;
             header.impl = nullptr;
             response.impl->request_done = done == State::complete;
+            response.impl->buf = std::move(buf);
             return response;
         }
 
