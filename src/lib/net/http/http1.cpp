@@ -71,6 +71,8 @@ namespace utils {
                 wrap::string buf;
                 size_t redpos = 0;
                 Header response;
+                h1body::BodyType bodytype = h1body::BodyType::no_info;
+                size_t expect = 0;
             };
         }  // namespace internal
 
