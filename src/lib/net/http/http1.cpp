@@ -61,6 +61,18 @@ namespace utils {
             };
         }  // namespace internal
 
+        HttpResponse::HttpResponse(HttpResponse&& in) {
+            impl = in.impl;
+            in.impl = nullptr;
+        }
+
+        HttpResponse& HttpResponse::operator=(HttpResponse&& in) {
+            delete impl;
+            impl = in.impl;
+            in.impl = nullptr;
+            return *this;
+        }
+
         Header::Header() {
             impl = new internal::HeaderImpl();
         }

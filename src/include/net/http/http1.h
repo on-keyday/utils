@@ -24,6 +24,8 @@ namespace utils {
         struct HttpResponse {
             friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             constexpr HttpResponse() {}
+            HttpResponse(HttpResponse&&);
+            HttpResponse& operator=(HttpResponse&&);
 
            private:
             internal::HttpResponseImpl* impl = nullptr;
