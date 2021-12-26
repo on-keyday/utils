@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
     import <header-file>
 
     alias NAME REFERED
+
 Special Value:
     Func Name:
         decltype - generate type assert func
