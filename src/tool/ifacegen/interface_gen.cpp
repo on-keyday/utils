@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
         .set("verbose,v", bool_option(true), "verbose log", OptFlag::once_in_cmd)
         .set("help,h", bool_option(true), "show help", OptFlag::none)
+        .set("syntax,s", bool_option(true), "show syntax help", OptFlag::none)
         .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename")
         .set("expand,e", bool_option(true), "expand alias", OptFlag::once_in_cmd)
         .set("no-vtable,V", bool_option(true), "add __declspec(novtable) (for windows)", OptFlag::once_in_cmd)
@@ -50,6 +51,9 @@ int main(int argc, char** argv) {
     }
     if (result.is_set("help")) {
         cout << desc.help(argv[0]);
+        return 1;
+    }
+    if (result.is_set("syntax")) {
         cout << R"(Syntax:
     interface NAME{
         const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = 0
@@ -57,7 +61,7 @@ int main(int argc, char** argv) {
 
     import <header-file>
 
-    alias NAME REFERED
+    alias NAME REFERRED
 
 Special Value:
     Func Name:
