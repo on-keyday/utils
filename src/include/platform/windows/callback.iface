@@ -8,8 +8,8 @@
 # generate code
 # tool\ifacegen -i src/include/platform/windows/callback.iface -o src/include/platform/windows/callback.h -d --helper-deref "\"../../helper/deref.h\"" --license
 
-package utils::platform::windwos
+package utils::platform::windows
 
-interface Complate {
+interface Complete {
     __call__() void
 }

@@ -9,12 +9,14 @@
 // io_completetion_port
 #pragma once
 
+#include "callback.h"
+
 namespace utils {
     namespace platform {
         namespace windows {
             struct IOCPContext;
             struct IOCPObject {
-                void register_handler();
+                void register_handler(Complete& cmp);
 
                private:
                 IOCPContext* ctx;
