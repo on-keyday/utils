@@ -50,11 +50,15 @@ namespace utils {
                     if (seq.remain() < expect) {
                         return State::running;
                     }
-                    helper::read_n(result, seq, expect);
+                    if (!helper::read_n(result, seq, expect)) {
+                        return State::failed;
+                    }
                     return State::complete;
                 }
                 else {
-                    helper::read_all(result, seq);
+                    if (!helper::read_all(result, seq)) {
+                        return State::failed;
+                    }
                     return State::complete;
                 }
             }
