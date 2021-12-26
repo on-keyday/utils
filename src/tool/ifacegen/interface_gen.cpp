@@ -50,8 +50,7 @@ int main(int argc, char** argv) {
     }
     if (result.is_set("help")) {
         cout << desc.help(argv[0]);
-        cout << R"(
-Syntax:
+        cout << R"(Syntax:
     interface NAME{
         const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = 0
     }
