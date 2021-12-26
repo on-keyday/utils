@@ -152,16 +152,26 @@ namespace utils {
                 }
                 auto seq = make_ref_seq(impl->buf);
                 seq.rptr = impl->redpos;
-
-                if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
-                    seq.rptr = 0;
-                    if (!h1header::parse_response<wrap::string>(
-                            seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
-                            h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
-                        failed_clean();
-                        return false;
+                while (!seq.eos()) {
+                    if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") || seq.seek_if("\r\r")) {
+                        seq.rptr = 0;
+                        if (!h1header::parse_response<wrap::string>(
+                                seq, helper::nop, impl->response.impl->code, helper::nop, *impl->response.impl,
+                                h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
+                            failed_clean();
+                            return false;
+                        }
+                        impl->state = HttpState::body_recving;
+                        break;
                     }
+                    seq.consume();
                 }
+                impl->redpos = seq.rptr;
+            }
+            if (impl->state == HttpState::body_recving) {
+                auto seq = make_ref_seq(impl->buf);
+                seq.rptr = impl->redpos;
+                auto e = h1body::read_body(impl->response.impl->body, seq, impl->bodytype, impl->expect);
             }
         }
 
