@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     if (result.is_set("syntax")) {
         cout << R"(Syntax:
     interface NAME{
-        const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = 0
+        const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_VALUE
     }
 
     import <header-file>
