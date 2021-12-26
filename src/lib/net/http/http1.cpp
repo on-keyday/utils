@@ -187,8 +187,10 @@ namespace utils {
                 if (e == State::running) {
                     e = read(impl->buf, impl->io);
                     if (is_failed(e)) {
-                        goto BEGIN;
+                        failed_clean();
+                        return nullptr;
                     }
+                    goto BEGIN;
                 }
             }
         }
