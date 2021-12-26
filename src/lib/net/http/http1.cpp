@@ -52,9 +52,10 @@ namespace utils {
                     }
                     return nullptr;
                 }
+            };
 
-                struct HttpResponseImpl {
-                };
+            struct HttpResponseImpl {
+                HeaderImpl* header = nullptr;
             };
         }  // namespace internal
 
@@ -104,7 +105,7 @@ namespace utils {
                 return HttpResponse{};
             }
             HttpResponse response;
-            response.impl = new internal::HttpResponseImpl();
+            response.impl = new internal::HttpResponseImpl{};
             io.write(buf.c_str(), buf.size());
         }
 
