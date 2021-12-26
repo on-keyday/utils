@@ -76,6 +76,7 @@ namespace utils {
                 if (!validate(seq.current())) {
                     return false;
                 }
+                seq.consume();
                 first = false;
             }
             if constexpr (no_zero) {
