@@ -9,6 +9,8 @@
 #include "../../../include/platform/windows/io_completetion_port.h"
 #include "../../../include/thread/lite_lock.h"
 
+#include "../../../include/helper/iface_cast.h"
+
 #include <windows.h>
 #include <cassert>
 
@@ -60,6 +62,12 @@ namespace utils {
             IOCPObject* start_iocp() {
                 static IOCPObject obj;
                 return &obj;
+            }
+
+            bool IOCPObject::register_handler(Complete&& complete) {
+                // XXX: unsafe ptr using
+                helper::Unsafe<Complete> cvt;
+                cvt.iface = std::move(complete);
             }
 
             void start_iocp(IOCPContext* ctx) {

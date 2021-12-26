@@ -31,5 +31,14 @@ namespace utils {
             return *res;
         }
 
+        template <class Interface>
+        union Unsafe {
+            Interface iface;
+            static_assert(sizeof(Interface) == sizeof(void*), "need interface");
+            void* ptr = nullptr;
+            Unsafe() {}
+            ~Unsafe() {}
+        };
+
     }  // namespace helper
 }  // namespace utils
