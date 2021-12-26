@@ -11,6 +11,7 @@
 
 #include "../../core/sequencer.h"
 #include "../core/iodef.h"
+#include "../../helper/readutil.h"
 
 namespace utils {
     namespace net {
@@ -22,7 +23,12 @@ namespace utils {
             };
 
             template <class String, class T>
-            bool read_body(String& result, Sequencer<T>& seq) {
+            bool read_body(String& result, Sequencer<T>& seq, BodyType type = BodyType::no_info, size_t expect = 0) {
+                auto inipos = seq.rptr;
+                if (type == BodyType::no_info) {
+                    helper::read_all(result, seq);
+                    return true;
+                }
             }
         }  // namespace h1body
 

@@ -55,7 +55,7 @@ namespace utils {
 
         template <class Result, class T, class Func>
         constexpr bool read_all(Result& result, Sequencer<T>& seq) {
-            return read_if(result, seq, no_check());
+            return read_while(result, seq, no_check());
         }
 
         template <class Result, class T, class Func = decltype(no_check())>
