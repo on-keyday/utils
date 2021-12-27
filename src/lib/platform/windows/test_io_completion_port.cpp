@@ -10,6 +10,7 @@
 
 void test_io_completion_port() {
     auto iocp = utils::platform::windows::start_iocp();
+    iocp->register_handler();
 }
 
 int main() {

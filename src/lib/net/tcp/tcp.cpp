@@ -91,6 +91,13 @@ namespace utils {
             };
         }
 
+        size_t TCPConn::get_raw() {
+            if (!impl) {
+                return internal::invalid_socket;
+            }
+            return impl->sock;
+        }
+
         State TCPConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl || impl->is_closed()) {
                 return State::failed;
