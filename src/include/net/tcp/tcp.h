@@ -27,7 +27,7 @@ namespace utils {
             State read(char* ptr, size_t size, size_t* red);
             State close(bool);
 
-            size_t get_raw();
+            size_t get_raw() const;
 
            private:
             internal::TCPImpl* impl = nullptr;

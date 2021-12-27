@@ -91,7 +91,7 @@ namespace utils {
             };
         }
 
-        size_t TCPConn::get_raw() {
+        size_t TCPConn::get_raw() const {
             if (!impl) {
                 return internal::invalid_socket;
             }
