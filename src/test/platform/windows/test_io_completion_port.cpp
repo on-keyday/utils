@@ -46,7 +46,8 @@ void test_io_completion_port() {
     wsbuf.buf = buf;
     wsbuf.len = 1024;
     ::OVERLAPPED ol;
-    ::WSASend(tcp->get_raw(), &wsbuf, 1, nullptr, 0, &ol, nullptr);
+    auto res = ::WSASend(tcp->get_raw(), &wsbuf, 1, nullptr, 0, &ol, nullptr);
+    assert(::WSAGetLastError() == WSA_IO_PENDING);
     while (true) {
         Sleep(100);
     }
