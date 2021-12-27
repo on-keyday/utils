@@ -83,7 +83,7 @@ namespace utils {
         }
 
         auto io_complete_callback(wrap::weak_ptr<TCPConn>& self, internal::TCPImpl* impl) {
-            return [=]() {
+            return [=](size_t size) {
                 auto conn = self.lock();
                 if (!conn) {
                     return;
@@ -120,7 +120,6 @@ namespace utils {
             return State::running;
 #else
             auto res = ::recv(impl->sock, ptr, int(size), 0);
-
             if (res < 0) {
                 if (is_blocking()) {
                     return State::running;
