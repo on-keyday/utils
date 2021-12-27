@@ -64,7 +64,7 @@ namespace utils {
             void set_handle(void* handle, void* completed) {
                 auto res = ::CreateIoCompletionPort(handle, context.handle,
                                                     ULONG_PTR(completed), 0);
-                assert(res);
+                assert(res == context.handle);
                 return;
             }
 
