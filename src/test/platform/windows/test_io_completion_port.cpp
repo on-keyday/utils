@@ -13,7 +13,7 @@
 #include <WinSock2.h>
 
 auto get_tcp() {
-    auto query = utils::net::query_dns("localhost:8080", "https");
+    auto query = utils::net::query_dns("localhost", "8080");
     auto addr = query.get_address();
     while (!addr) {
         if (query.failed()) {
