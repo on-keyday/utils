@@ -10,7 +10,7 @@
 
 #include "../../../include/net/tcp/tcp.h"
 
-#include <windows.h>
+#include <WinSock2.h>
 
 auto get_tcp() {
     auto query = utils::net::query_dns("localhost:8080", "https");
@@ -41,6 +41,15 @@ void test_io_completion_port() {
         Sleep(10);
         return (void)0;
     });
+    char buf[1024] = "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+    ::WSABUF wsbuf;
+    wsbuf.buf = buf;
+    wsbuf.len = 1024;
+    ::OVERLAPPED ol;
+    ::WSASend(tcp->get_raw(), &wsbuf, 1, nullptr, 0, &ol, nullptr);
+    while (true) {
+        Sleep(100);
+    }
 }
 
 int main() {
