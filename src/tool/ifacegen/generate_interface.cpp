@@ -77,8 +77,8 @@ namespace ifacegen {
     }
 
     void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias) {
-        if (func.funcname == "__call__") {
-            hlp::append(str, "operator()");
+        if (func.funcname == call_func) {
+            //hlp::append(str, "operator()");
         }
         else {
             hlp::append(str, func.funcname);
@@ -290,7 +290,13 @@ namespace ifacegen {
                     hlp::append(str, ";\n");
                     hlp::append(str, "            }\n");
                     hlp::append(str, "            ");
-                    hlp::append(str, "return t_ptr_->");
+                    hlp::append(str, "return ");
+                    if (func.funcname == "__call__") {
+                        hlp::append(str, "(*t_ptr_)");
+                    }
+                    else {
+                        hlp::append(str, "t_ptr_->");
+                    }
                     render_cpp_call(func, str, alias);
                     hlp::append(str, ";\n        }\n\n    ");
                 }
@@ -444,6 +450,9 @@ namespace ifacegen {
                     render_cpp_function(func, str, alias);
                     hlp::append(str, R"({
         return iface?iface->)");
+                    if (func.funcname == call_func) {
+                        hlp::append(str, "operator()");
+                    }
                     render_cpp_call(func, str, alias);
                     hlp::append(str, ":");
                     render_cpp_default_value(func, str, false, alias);

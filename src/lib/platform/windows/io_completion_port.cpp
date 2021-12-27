@@ -54,15 +54,6 @@ namespace utils {
                 }
             }
 
-            IOCPObject::IOCPObject() {
-                ctx = &context;
-                start_iocp(ctx);
-            }
-
-            IOCPObject::~IOCPObject() {
-                clean_iocp_thread(ctx);
-            }
-
             IOCPObject* start_iocp() {
                 static IOCPObject obj;
                 return &obj;
@@ -94,6 +85,15 @@ namespace utils {
                 for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
                     std::thread(iocp_thread, ctx).detach();
                 }
+            }
+
+            IOCPObject::IOCPObject() {
+                ctx = &context;
+                start_iocp(ctx);
+            }
+
+            IOCPObject::~IOCPObject() {
+                clean_iocp_thread(ctx);
             }
 
         }  // namespace windows

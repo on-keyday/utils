@@ -9,6 +9,7 @@
 
 #pragma once
 #include "../../helper/deref.h"
+#include <functional>
 
 namespace utils::platform::windows {
     struct Complete {
@@ -30,9 +31,9 @@ namespace utils::platform::windows {
             void operator()(size_t size) override {
                 auto t_ptr_ = utils::helper::deref(this->t_holder_);
                 if (!t_ptr_) {
-                    return void{};
+                    throw std::bad_function_call();
                 }
-                return t_ptr_->operator()(size);
+                return (*t_ptr_)(size);
             }
         };
 
@@ -72,7 +73,7 @@ namespace utils::platform::windows {
         }
 
         void operator()(size_t size) {
-            return iface ? iface->operator()(size) : void{};
+            return iface ? iface->operator()(size) : throw std::bad_function_call();
         }
     };
 

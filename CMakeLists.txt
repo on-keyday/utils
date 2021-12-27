@@ -39,6 +39,7 @@ add_executable(sha1 "src/test/net/test_sha1.cpp")
 add_executable(to_string "src/test/number/test_to_string.cpp")
 add_executable(punycode "src/test/net/test_punycode.cpp")
 add_executable(http1 "src/test/net/test_http1.cpp")
+#add_executable(io_completion_port "src/test/platform/windows/test_io_completion_port.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -57,7 +58,8 @@ add_library(libutils
   "src/lib/net/tcp/tcp.cpp"
   "src/lib/net/ssl/ssl_common.cpp"
   "src/lib/net/ssl/ssl_conn.cpp"
-  "src/lib/net/http/http1.cpp")
+  "src/lib/net/http/http1.cpp"
+  "src/lib/platform/windows/io_completion_port.cpp")
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
