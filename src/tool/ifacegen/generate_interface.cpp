@@ -126,6 +126,10 @@ namespace ifacegen {
                 ret_w();
                 hlp::append(str, "nullptr");
             }
+            else if (func.type.prim == "void") {
+                ret_w();
+                hlp::append(str, "(void)0");
+            }
             else {
                 ret_w();
                 resolve_alias(str, func.type.prim, alias);
