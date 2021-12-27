@@ -71,7 +71,7 @@ namespace utils {
             thread::LiteLock glock;
 
             void set_handle(void* handle, void* completed) {
-                auto res = ::CreateIoCompletionPort(handle, &context,
+                auto res = ::CreateIoCompletionPort(handle, context.handle,
                                                     ULONG_PTR(completed), 0);
                 assert(res);
                 return;
@@ -92,7 +92,7 @@ namespace utils {
                                                        0, 0);
                 assert(ctx->handle);
                 for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
-                    std::thread(iocp_thread).detach();
+                    std::thread(iocp_thread, ctx).detach();
                 }
             }
 
