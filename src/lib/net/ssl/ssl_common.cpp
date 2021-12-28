@@ -76,6 +76,7 @@ namespace utils {
                     }
                     iophase = SSLIOPhase::read_from_ssl;
                     if (has_wbuf) {
+                        has_wbuf = false;
                         goto BEGIN;
                     }
                 }
