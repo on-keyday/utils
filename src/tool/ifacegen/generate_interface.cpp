@@ -199,7 +199,7 @@ namespace ifacegen {
         }
         for (auto& def : data.defvec) {
             auto& iface = *data.ifaces.find(def);
-            if (any(flag & GenFlag::use_allocator)) {
+            if (has_alloc) {
                 hlp::append(str, "template<class Alloc__ = std::allocator>\n");
             }
             hlp::append(str, "struct ");
@@ -207,7 +207,12 @@ namespace ifacegen {
             hlp::append(str, " {");
             hlp::append(str, R"(
    private:
-    struct )");
+
+)");
+            if (has_alloc) {
+                hlp::append(str, "    Alloc__ alloc_obj__;\n\n");
+            }
+            hlp::append(str, "    struct ");
             if (any(flag & GenFlag::no_vtable)) {
                 hlp::append(str, "NOVTABLE__ ");
             }
@@ -284,6 +289,7 @@ namespace ifacegen {
                 else if (func.funcname == copy_func) {
                     hlp::append(str, R"(    interface__* copy__() const override {
             )");
+
                     hlp::append(str, R"(return new implements__<T>(t_holder_);)");
                     hlp::append(str, R"(
                 }
