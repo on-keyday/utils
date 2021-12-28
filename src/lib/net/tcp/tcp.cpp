@@ -115,6 +115,7 @@ namespace utils {
                     *red = cpy;
                     if (impl->iocp.buffer.size() == 0) {
                         impl->iocp.iocprunning = false;
+                        impl->iocp.done = false;
                         impl->iocp.size = 0;
                         ::CloseHandle(impl->iocp.ol.hEvent);
                     }
