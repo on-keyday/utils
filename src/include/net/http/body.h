@@ -28,6 +28,9 @@ namespace utils {
                 auto inipos = seq.rptr;
                 if (type == BodyType::chuncked) {
                     helper::match_eol(seq);
+                    if (seq.eos()) {
+                        return State::running;
+                    }
                     size_t num = 0;
                     auto e = number::parse_integer(seq, num, 16);
                     if (e != number::NumError::none) {
