@@ -106,6 +106,7 @@ namespace utils {
         }
 
         State handle_iocp(internal::TCPImpl* impl, char* ptr, size_t size, size_t* red) {
+        BEGIN:
             if (impl->iocp.iocprunning) {
                 if (impl->iocp.done) {
                     auto cpy = size >= impl->iocp.size ? impl->iocp.size : size;
@@ -134,6 +135,9 @@ namespace utils {
             auto err = ::WSAGetLastError();
             if (err != NO_ERROR && err != WSA_IO_PENDING) {
                 return State::failed;
+            }
+            if (err == NO_ERROR) {
+                goto BEGIN;
             }
             return State::running;
         }
