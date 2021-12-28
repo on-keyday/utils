@@ -59,13 +59,12 @@ void test_io_completion_port() {
     }
     sent = false;
     buf = {};
-    iocp->register_handler(reinterpret_cast<void*>(sock), [&](size_t size) {
-        sent = true;
-    });
     ::CloseHandle(ol.hEvent);
+    wsbuf.len = 1024;
     ol.hEvent = ::CreateEventW(nullptr, true, false, nullptr);
     res = ::WSARecv(sock, &wsbuf, 1, nullptr, 0, &ol, nullptr);
     err = ::WSAGetLastError();
+    WSA_IO_PENDING;
     while (!sent) {
         Sleep(100);
     }
