@@ -49,13 +49,13 @@ utils::net::IOClose make_ioclose(const char* host, const char* port, bool secure
 }
 
 void test_http1() {
-    auto ioclose = make_ioclose("localhost", "8080", false);
+    auto ioclose = make_ioclose("www.google.com", "https", true);
     assert(ioclose);
-    auto req = utils::net::request(std::move(ioclose), "localhost", "GET", "/", {});
+    auto req = utils::net::request(std::move(ioclose), "www.google.com", "GET", "/", {});
     auto resp = req.get_response();
     while (!resp) {
         if (req.failed()) {
-            assert(false && "request htt1 failed");
+            assert(false && "request http1 failed");
         }
         Sleep(10);
         resp = req.get_response();

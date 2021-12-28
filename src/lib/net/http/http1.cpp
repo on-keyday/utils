@@ -201,6 +201,10 @@ namespace utils {
                         failed_clean();
                         return nullptr;
                     }
+                    if (e == State::running) {
+                        impl->redpos = seq.rptr;
+                        return nullptr;
+                    }
                     goto BEGIN;
                 }
                 impl->state = HttpState::end_process;
