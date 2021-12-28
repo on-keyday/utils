@@ -24,7 +24,7 @@ namespace utils {
 #ifdef USE_IOCP
             struct TCPIOCP {
                 ::WSABUF buf;
-                wrap::string buffer;
+                char buffer[1024] = {0};
                 ::OVERLAPPED ol;
                 bool iocprunning = false;
                 bool done = false;
@@ -109,23 +109,22 @@ namespace utils {
             if (impl->iocp.iocprunning) {
                 if (impl->iocp.done) {
                     auto cpy = size >= impl->iocp.size ? impl->iocp.size : size;
-                    ::memcpy(ptr, impl->iocp.buffer.c_str(), cpy);
-                    impl->iocp.buffer.erase(0, cpy);
+                    ::memcpy(ptr, impl->iocp.buffer, cpy);
                     impl->iocp.size -= cpy;
+                    ::memmove(impl->iocp.buffer, impl->iocp.buffer + cpy, cpy);
                     *red = cpy;
-                    if (impl->iocp.buffer.size() == 0) {
-                        impl->iocp.iocprunning = false;
+                    if (impl->iocp.size == 0) {
                         impl->iocp.done = false;
                         impl->iocp.size = 0;
                         ::CloseHandle(impl->iocp.ol.hEvent);
+                        impl->iocp.iocprunning = false;
                     }
                     return State::complete;
                 }
                 return State::running;
             }
-            impl->iocp.buffer.resize(size);
-            impl->iocp.buf.buf = impl->iocp.buffer.data();
-            impl->iocp.buf.len = size;
+            impl->iocp.buf.buf = impl->iocp.buffer;
+            impl->iocp.buf.len = 1024;
             impl->iocp.iocprunning = true;
             impl->iocp.ol = {};
             impl->iocp.ol.hEvent = ::CreateEventW(nullptr, true, false, nullptr);
