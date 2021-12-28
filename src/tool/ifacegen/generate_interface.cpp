@@ -289,8 +289,12 @@ namespace ifacegen {
                 else if (func.funcname == copy_func) {
                     hlp::append(str, R"(    interface__* copy__() const override {
             )");
-
-                    hlp::append(str, R"(return new implements__<T>(t_holder_);)");
+                    if (has_alloc) {
+                        hlp::append(str, "return make_iface__<implements_<T>>(t_holder_)");
+                    }
+                    else {
+                        hlp::append(str, "return new implements__<T>(t_holder_);");
+                    }
                     hlp::append(str, R"(
                 }
 
@@ -324,7 +328,25 @@ namespace ifacegen {
 
     interface__* iface = nullptr;
 
-   public:
+)");
+            if (has_alloc) {
+                hlp::append(str, R"(template<class T,class... Args>
+    interface__* make_iface__(Args&&... args){
+        using traits=std::allocator_traits<Alloc__>;
+        auto p__ = traits::allocate(alloc_obj__,sizeof(implements__<T>));
+        traits::construct(alloc_obj__,p__,std::forward<Args>(args)...);
+        return p__;
+    }
+
+    void delete_iface__(interface__* p__){
+        using traits=std::allocator_traits<Alloc__>;
+        traits::destroy(alloc_obj__,p__);
+        traits::deallocate(alloc_obj__,p__);
+    }
+
+)");
+            }
+            hlp::append(str, R"(   public:
     constexpr )");
             hlp::append(str, iface.first);
             hlp::append(str, "(){}\n\n    constexpr ");
@@ -342,9 +364,16 @@ namespace ifacegen {
         }
         )");
             }
-            hlp::append(str, R"a(iface=new implements__<std::decay_t<T>>(std::forward<T>(t));
-    }
-    
+            hlp::append(str, "iface=");
+            if (has_alloc) {
+                hlp::append(str, "make_iface__<std::decay_t<T>>(std::forward<T>(t));)");
+            }
+            else {
+                hlp::append(str, "new implements__<std::decay_t<T>>(std::forward<T>(t));");
+            }
+            hlp::append(str, R"a(
+        }
+
     )a");
             hlp::append(str, iface.first);
             hlp::append(str, "(");
