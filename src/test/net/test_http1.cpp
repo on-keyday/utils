@@ -11,6 +11,7 @@
 #include "../../include/wrap/lite/string.h"
 #include "../../include/wrap/cout.h"
 #include "../../include/net/http/http1.h"
+#include "../../include/wrap/cout.h"
 
 #include <windows.h>
 
@@ -60,6 +61,7 @@ void test_http1() {
         Sleep(10);
         resp = req.get_response();
     }
+    wrap::
 }
 
 int main() {

@@ -116,6 +116,19 @@ namespace utils {
             impl->emplace(key, value);
         }
 
+        const char* Header::body(size_t* size) {
+            if (!impl) {
+                if (size) {
+                    *size = 0;
+                }
+                return "";
+            }
+            if (size) {
+                *size = impl->body.size();
+            }
+            return impl->body.c_str();
+        }
+
         bool HttpResponse::failed() const {
             return !impl || impl->state == HttpState::failed;
         }
