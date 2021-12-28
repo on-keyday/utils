@@ -131,7 +131,8 @@ namespace utils {
             impl->iocp.ol.hEvent = ::CreateEventW(nullptr, true, false, nullptr);
             DWORD flagset = 0;
             auto res = ::WSARecv(impl->sock, &impl->iocp.buf, 1, nullptr, &flagset, &impl->iocp.ol, nullptr);
-            if (res != NO_ERROR && res != WSA_IO_PENDING) {
+            auto err = ::WSAGetLastError();
+            if (err != NO_ERROR && err != WSA_IO_PENDING) {
                 return State::failed;
             }
             return State::running;
