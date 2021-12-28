@@ -14,7 +14,7 @@
 
 #include <windows.h>
 
-utils::net::IOClose make_ioclose(const char* host, const char* port) {
+utils::net::IOClose make_ioclose(const char* host, const char* port, bool secure) {
     auto query = utils::net::query_dns(host, port);
     auto addr = query.get_address();
     while (!addr) {
@@ -33,6 +33,9 @@ utils::net::IOClose make_ioclose(const char* host, const char* port) {
         Sleep(10);
         sock = result.connect();
     }
+    if (!secure) {
+        return sock;
+    }
     auto sslres = utils::net::open(std::move(sock), "./src/test/net/cacert.pem");
     auto ssl = sslres.connect();
     while (!ssl) {
@@ -46,7 +49,7 @@ utils::net::IOClose make_ioclose(const char* host, const char* port) {
 }
 
 void test_http1() {
-    auto ioclose = make_ioclose("localhost", "8080");
+    auto ioclose = make_ioclose("localhost", "8080", false);
     assert(ioclose);
     auto req = utils::net::request(std::move(ioclose), "localhost", "GET", "/", {});
     auto resp = req.get_response();
