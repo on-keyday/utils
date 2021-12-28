@@ -28,6 +28,7 @@ namespace utils {
             } context;
 
             wrap::map<size_t, Complete> callbacks;
+            thread::LiteLock glock;
 
             constexpr size_t exit_msg = ~0;
 
@@ -51,9 +52,14 @@ namespace utils {
                         delete pol;
                         break;
                     }
-                    helper::Unsafe<Complete> cvt;
-                    cvt.ptr = reinterpret_cast<void*>(key);
-                    cvt.iface(transfered);
+                    glock.lock();
+                    auto found = callbacks.find(key);
+                    if (found == callbacks.end()) {
+                        glock.unlock();
+                        continue;
+                    }
+                    found->second(transfered);
+                    glock.unlock();
                 }
             }
 
@@ -62,23 +68,23 @@ namespace utils {
                 return &obj;
             }
 
-            thread::LiteLock glock;
-
-            void set_handle(void* handle, void* completed) {
+            bool set_handle(void* handle, Complete&& completed) {
+                glock.lock();
+                auto id = ++context.id;
+                glock.unlock();
                 auto res = ::CreateIoCompletionPort(handle, context.handle,
-                                                    ULONG_PTR(completed), 0);
-                assert(res == context.handle);
-                return;
+                                                    ULONG_PTR(id), 0);
+                glock.lock();
+                callbacks.emplace(id, std::move(completed));
+                glock.unlock();
+                return res != nullptr;
             }
 
             bool IOCPObject::register_handler(void* handle, Complete&& complete) {
                 if (!handle || handle == INVALID_HANDLE_VALUE || !complete) {
                     return false;
                 }
-                helper::Unsafe<Complete> cvt;
-                cvt.iface = std::move(complete);
-                set_handle(handle, cvt.ptr);
-                return true;
+                return set_handle(handle, std::move(complete));
             }
 
             void start_iocp(IOCPContext* ctx) {

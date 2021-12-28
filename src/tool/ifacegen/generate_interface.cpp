@@ -155,7 +155,7 @@ namespace ifacegen {
         hlp::append(str, "\n");
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
-        auto has_alloc = any(flag & GenFlag::use_allocator);
+        //auto has_alloc = any(flag & GenFlag::use_allocator);
         if (data.has_ref_ret) {
             hlp::append(str, "#include<functional>\n");
         }
