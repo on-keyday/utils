@@ -11,6 +11,8 @@
 
 #include "../../../include/helper/iface_cast.h"
 
+#include "../../../include/wrap/lite/map.h"
+
 #include <windows.h>
 #include <cassert>
 
@@ -24,6 +26,8 @@ namespace utils {
                 ::HANDLE handle = INVALID_HANDLE_VALUE;
                 size_t id = 0;
             } context;
+
+            wrap::map<size_t, Complete> callbacks;
 
             constexpr size_t exit_msg = ~0;
 

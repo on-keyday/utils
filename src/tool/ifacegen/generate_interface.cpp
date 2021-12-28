@@ -155,6 +155,10 @@ namespace ifacegen {
         hlp::append(str, "\n");
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
+        auto has_alloc = any(flag & GenFlag::use_allocator);
+        if (has_alloc) {
+            hlp::append(str, "#include<memory>\n");
+        }
         if (data.has_ref_ret) {
             hlp::append(str, "#include<functional>\n");
         }
@@ -195,6 +199,9 @@ namespace ifacegen {
         }
         for (auto& def : data.defvec) {
             auto& iface = *data.ifaces.find(def);
+            if (any(flag & GenFlag::use_allocator)) {
+                hlp::append(str, "template<class Alloc__ = std::allocator>\n");
+            }
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
             hlp::append(str, " {");
@@ -276,8 +283,10 @@ namespace ifacegen {
                 }
                 else if (func.funcname == copy_func) {
                     hlp::append(str, R"(    interface__* copy__() const override {
-            return new implements__<T>(t_holder_);
-        }
+            )");
+                    hlp::append(str, R"(return new implements__<T>(t_holder_);)");
+                    hlp::append(str, R"(
+                }
 
     )");
                 }
