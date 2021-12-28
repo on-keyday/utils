@@ -65,10 +65,11 @@ void test_io_completion_port() {
     auto ol2 = utils::wrap::make_shared<OVERLAPPED>();
     strp->resize(1024);
     wsbuf2->buf = strp->data();
-    wsbuf2->len = 1024;
+    wsbuf2->len = 1023;
+    DWORD recflag = 0;
     ol2->hEvent = ::CreateEventW(nullptr, true, false, nullptr);
-    res = ::WSARecv(sock, utils::helper::deref(wsbuf2), 1, nullptr, 0,
-                    utils::helper::deref(ol2), nullptr);
+    res = ::WSARecv(sock, wsbuf2.get(), 1, nullptr, &recflag,
+                    ol2.get(), nullptr);
     err = ::WSAGetLastError();
     while (!sent) {
         Sleep(100);
