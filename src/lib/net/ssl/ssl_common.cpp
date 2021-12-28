@@ -20,6 +20,11 @@ namespace utils {
             SSLImpl::~SSLImpl() {}
 #else
             State SSLImpl::do_IO() {
+                bool has_wbuf = buffer.size() != 0;
+                if (has_wbuf) {
+                    iophase = SSLIOPhase::write_to_ssl;
+                }
+            BEGIN:
                 if (iophase == SSLIOPhase::read_from_ssl) {
                     while (true) {
                         char tmpbuf[1024];
@@ -63,9 +68,16 @@ namespace utils {
                         }
                     }
                     else {
+                        if (w < buffer.size()) {
+                            buffer.erase(0, w);
+                            return State::complete;
+                        }
                         buffer.clear();
                     }
                     iophase = SSLIOPhase::read_from_ssl;
+                    if (has_wbuf) {
+                        goto BEGIN;
+                    }
                 }
                 return State::complete;
             }
