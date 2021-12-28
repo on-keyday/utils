@@ -156,9 +156,6 @@ namespace ifacegen {
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
         auto has_alloc = any(flag & GenFlag::use_allocator);
-        if (has_alloc) {
-            hlp::append(str, "#include<memory>\n");
-        }
         if (data.has_ref_ret) {
             hlp::append(str, "#include<functional>\n");
         }
@@ -199,9 +196,6 @@ namespace ifacegen {
         }
         for (auto& def : data.defvec) {
             auto& iface = *data.ifaces.find(def);
-            if (has_alloc) {
-                hlp::append(str, "template<class Alloc__ = std::allocator>\n");
-            }
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
             hlp::append(str, " {");
@@ -209,9 +203,7 @@ namespace ifacegen {
    private:
 
 )");
-            if (has_alloc) {
-                hlp::append(str, "    Alloc__ alloc_obj__;\n\n");
-            }
+
             hlp::append(str, "    struct ");
             if (any(flag & GenFlag::no_vtable)) {
                 hlp::append(str, "NOVTABLE__ ");
@@ -289,12 +281,7 @@ namespace ifacegen {
                 else if (func.funcname == copy_func) {
                     hlp::append(str, R"(    interface__* copy__() const override {
             )");
-                    if (has_alloc) {
-                        hlp::append(str, "return make_iface__<implements_<T>>(t_holder_)");
-                    }
-                    else {
-                        hlp::append(str, "return new implements__<T>(t_holder_);");
-                    }
+                    hlp::append(str, "return new implements__<T>(t_holder_);");
                     hlp::append(str, R"(
                 }
 
@@ -329,23 +316,6 @@ namespace ifacegen {
     interface__* iface = nullptr;
 
 )");
-            if (has_alloc) {
-                hlp::append(str, R"(template<class T,class... Args>
-    interface__* make_iface__(Args&&... args){
-        using traits=std::allocator_traits<Alloc__>;
-        auto p__ = traits::allocate(alloc_obj__,sizeof(implements__<T>));
-        traits::construct(alloc_obj__,p__,std::forward<Args>(args)...);
-        return p__;
-    }
-
-    void delete_iface__(interface__* p__){
-        using traits=std::allocator_traits<Alloc__>;
-        traits::destroy(alloc_obj__,p__);
-        traits::deallocate(alloc_obj__,p__);
-    }
-
-)");
-            }
             hlp::append(str, R"(   public:
     constexpr )");
             hlp::append(str, iface.first);
@@ -365,12 +335,7 @@ namespace ifacegen {
         )");
             }
             hlp::append(str, "iface=");
-            if (has_alloc) {
-                hlp::append(str, "make_iface__<std::decay_t<T>>(std::forward<T>(t));)");
-            }
-            else {
-                hlp::append(str, "new implements__<std::decay_t<T>>(std::forward<T>(t));");
-            }
+            hlp::append(str, "new implements__<std::decay_t<T>>(std::forward<T>(t));");
             hlp::append(str, R"a(
         }
 
