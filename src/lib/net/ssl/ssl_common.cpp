@@ -44,7 +44,7 @@ namespace utils {
                 }
                 if (iophase == SSLIOPhase::read_from_conn) {
                     auto err = read(buffer, io);
-                    if (err != State::complete && err != State::complete) {
+                    if (err != State::complete && err != State::running) {
                         return err;
                     }
                     if (buffer.size()) {
