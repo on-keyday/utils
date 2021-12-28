@@ -223,7 +223,7 @@ namespace ifacegen {
     )");
                 }
                 else if (func.funcname == copy_func) {
-                    hlp::append(str, "    virtual interface* copy__() const = 0;\n    ");
+                    hlp::append(str, "    virtual interface__* copy__() const = 0;\n    ");
                 }
                 else {
                     hlp::append(str, "    virtual ");

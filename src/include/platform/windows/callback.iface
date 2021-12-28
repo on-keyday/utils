@@ -12,4 +12,5 @@ package utils::platform::windows
 
 interface Complete {
     __call__(size size_t) void
+    __copy__() type
 }

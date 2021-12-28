@@ -15,6 +15,7 @@ namespace utils::platform::windows {
        private:
         struct interface__ {
             virtual void operator()(size_t size) = 0;
+            virtual interface* copy__() const = 0;
 
             virtual ~interface__() {}
         };
@@ -33,6 +34,10 @@ namespace utils::platform::windows {
                     return (void)0;
                 }
                 return (*t_ptr_)(size);
+            }
+
+            interface__* copy__() const override {
+                return new implements__<T>(t_holder_);
             }
         };
 
@@ -73,6 +78,21 @@ namespace utils::platform::windows {
 
         void operator()(size_t size) {
             return iface ? iface->operator()(size) : (void)0;
+        }
+
+        Complete(const Complete& in) {
+            if (in.iface) {
+                iface = in.iface->copy__();
+            }
+        }
+
+        Complete& operator=(const Complete& in) {
+            delete iface;
+            iface = nullptr;
+            if (in.iface) {
+                iface = in.iface->copy__();
+            }
+            return *this;
         }
     };
 
