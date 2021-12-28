@@ -104,9 +104,7 @@ namespace utils {
                 impl->iocp.done = true;
             };
         }
-#endif
 
-#ifdef USE_IOCP
         State handle_iocp(internal::TCPImpl* impl, char* ptr, size_t size, size_t* red) {
             if (impl->iocp.iocprunning) {
                 if (impl->iocp.done) {
@@ -235,6 +233,10 @@ namespace utils {
                 conn->impl = impl;
 #ifdef USE_IOCP
                 conn->impl->iocp.self = conn;
+                auto iocp = platform::windows::start_iocp();
+                auto s = iocp->register_handler(reinterpret_cast<void*>(conn->impl->sock),
+                                                io_complete_callback(conn->impl->iocp.self, conn->impl));
+                assert(s);
 #endif
                 impl = nullptr;
                 return conn;
