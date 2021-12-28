@@ -235,6 +235,7 @@ namespace utils {
             auto make_conn = [&]() {
                 auto conn = wrap::make_shared<TCPConn>();
                 conn->impl = impl;
+                conn->impl->connected = true;
 #ifdef USE_IOCP
                 conn->impl->iocp.self = conn;
                 auto iocp = platform::windows::start_iocp();
