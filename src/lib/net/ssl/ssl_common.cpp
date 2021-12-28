@@ -52,7 +52,6 @@ namespace utils {
                     }
                     else {
                         iophase = SSLIOPhase::read_from_ssl;
-                        return err;
                     }
                 }
                 if (iophase == SSLIOPhase::write_to_ssl) {
