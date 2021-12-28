@@ -61,7 +61,7 @@ void test_http1() {
         Sleep(10);
         resp = req.get_response();
     }
-    wrap::
+    utils::wrap::cout_wrap() << resp.body();
 }
 
 int main() {

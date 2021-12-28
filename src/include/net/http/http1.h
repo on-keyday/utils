@@ -51,7 +51,7 @@ namespace utils {
 
             void set(const char* key, const char* value);
 
-            const char* body(size_t*);
+            const char* body(size_t* p = nullptr);
 
             explicit operator bool() {
                 return impl != nullptr;
