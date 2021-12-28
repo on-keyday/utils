@@ -44,7 +44,7 @@ void test_io_completion_port() {
     iocp->register_handler(reinterpret_cast<void*>(sock), [&](size_t size) {
         sent = true;
     });
-    utils::helper::FixedPushBacker<char[1024], 1024> buf;
+    utils::helper::FixedPushBacker<char[50], 50> buf;
     utils::helper::append(buf, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
     ::WSABUF wsbuf;
     wsbuf.buf = buf.buf;
@@ -60,6 +60,9 @@ void test_io_completion_port() {
     sent = false;
     buf = {};
     ::CloseHandle(ol.hEvent);
+    utils::wrap::string str;
+    str.resize(1024);
+    wsbuf.buf = str.data();
     wsbuf.len = 1024;
     ol.hEvent = ::CreateEventW(nullptr, true, false, nullptr);
     res = ::WSARecv(sock, &wsbuf, 1, nullptr, 0, &ol, nullptr);
