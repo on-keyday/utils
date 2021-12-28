@@ -25,6 +25,9 @@ namespace utils {
                     tmp.result = code;
                     tmp.push_back(v);
                     code = tmp.result;
+                    if (code >= 1000) {
+                        code /= 10;
+                    }
                 }
                 operator std::uint16_t() {
                     return code;
