@@ -49,8 +49,7 @@ namespace utils {
                     }
                     helper::Unsafe<Complete> cvt;
                     cvt.ptr = reinterpret_cast<void*>(key);
-                    auto completed = std::move(cvt.iface);
-                    completed(transfered);
+                    cvt.iface(transfered);
                 }
             }
 

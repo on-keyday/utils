@@ -10,6 +10,8 @@
 
 #include "../../../include/net/tcp/tcp.h"
 
+#include "../../../include/helper/pushbacker.h"
+
 #include <WinSock2.h>
 
 auto get_tcp() {
@@ -37,18 +39,29 @@ auto get_tcp() {
 void test_io_completion_port() {
     auto iocp = utils::platform::windows::start_iocp();
     auto tcp = get_tcp();
-    iocp->register_handler((void*)tcp->get_raw(), [](size_t size) {
-        Sleep(10);
-        return (void)0;
+    ::SOCKET sock = tcp->get_raw();
+    bool sent = false;
+    iocp->register_handler(reinterpret_cast<void*>(sock), [&](size_t size) {
+        sent = true;
     });
-    char buf[1024] = "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+    utils::helper::FixedPushBacker<char[1024], 1024> buf;
+    utils::helper::append(buf, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
     ::WSABUF wsbuf;
-    wsbuf.buf = buf;
-    wsbuf.len = 1024;
-    ::OVERLAPPED ol;
-    auto res = ::WSASend(tcp->get_raw(), &wsbuf, 1, nullptr, 0, &ol, nullptr);
-    assert(::WSAGetLastError() == WSA_IO_PENDING);
-    while (true) {
+    wsbuf.buf = buf.buf;
+    wsbuf.len = buf.size();
+    ::OVERLAPPED ol{0};
+    ol.hEvent = ::CreateEventW(nullptr, true, false, nullptr);
+    auto res = ::WSASend(sock, &wsbuf, 1, nullptr, 0, &ol, nullptr);
+    auto err = ::WSAGetLastError();
+    assert(err == 0);
+    while (!sent) {
+        Sleep(100);
+    }
+    sent = false;
+    buf = {};
+    ::ResetEvent(ol.hEvent);
+    ::WSARecv(sock, &wsbuf, 1, nullptr, 0, &ol, nullptr);
+    while (!sent) {
         Sleep(100);
     }
 }
