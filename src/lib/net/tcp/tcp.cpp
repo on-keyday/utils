@@ -100,7 +100,6 @@ namespace utils {
                     return;
                 }
                 impl->iocp.size += size;
-                impl->iocp.buffer.resize(impl->iocp.size);
                 impl->iocp.done = true;
             };
         }
