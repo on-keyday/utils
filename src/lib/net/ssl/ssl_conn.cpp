@@ -98,6 +98,7 @@ namespace utils {
             else if (impl->io_mode != internal::IOMode::read) {
                 return State::invalid_argument;
             }
+            size_t repeat = 0;
         BEGIN:
             if (impl->iostate == State::complete) {
                 size_t w = 0;
@@ -120,6 +121,11 @@ namespace utils {
             if (impl->iostate == State::running) {
                 impl->iostate = impl->do_IO();
                 if (impl->iostate == State::complete) {
+                    repeat++;
+                    if (repeat >= 50) {
+                        impl->io_mode = internal::IOMode::idle;
+                        return State::running;
+                    }
                     goto BEGIN;
                 }
             }
