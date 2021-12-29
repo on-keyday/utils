@@ -370,21 +370,21 @@ namespace utils {
                 };
             }  // namespace internal
 
-            inline bool to_time_t(time_t& time, const Date& date) {
+            inline DateErr to_time_t(time_t& time, const Date& date) {
                 return internal::TimeConvert::to_time_t(time, date);
             }
 
-            inline bool from_time_t(const time_t& time, Date& date) {
+            inline DateErr from_time_t(const time_t& time, Date& date) {
                 return internal::TimeConvert::from_time_t(time, date);
             }
 
             template <class String, template <class...> class Vec = wrap::vector>
-            bool encode(const String& src, Date& date) {
+            DateErr encode(const String& src, Date& date) {
                 return internal::DateParser<String, Vec>::parse(src, date);
             }
 
             template <class String>
-            bool decode(const Date& src, String& str) {
+            DateErr decode(const Date& src, String& str) {
                 return internal::DateWriter<String>::write(str, src);
             }
 
