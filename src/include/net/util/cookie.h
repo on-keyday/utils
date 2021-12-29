@@ -131,10 +131,10 @@ namespace utils {
 
                         cookie.name = keyval[0];
                         cookie.value = keyval[1];
+                        constexpr auto cmp = [](auto& a, auto& b) {
+                            return helper::equal(a, b, helper::ignore_case());
+                        };
                         for (auto& attr : data) {
-                            auto cmp = [](auto& a, auto& b) {
-                                return helper::equal(a, b, helper::ignore_case());
-                            };
                             if (cmp(attr, "HttpOnly")) {
                                 if (cookie.httponly) {
                                     return CookieError::multiple_same_attr;
@@ -292,6 +292,7 @@ namespace utils {
                             info.expires == date::invalid_date) {
                             return false;
                         }
+
                         for (size_t i = 0; i < cookies.size(); i++) {
                             auto del_cookie = [&] {
                                 cookies.erase(cookies.begin() + i);
@@ -316,6 +317,31 @@ namespace utils {
                             helper::append(towrite, cookie.value);
                         }
                         return towrite.size() != 0;
+                    }
+
+                    template <class Cookies>
+                    static bool write_set_cookie(string_t& towrite, cookie_t& cookie) {
+                        helper::append(towrite, cookie.name);
+                        towrite.push_back('=');
+                        helper::append(towrite, cookie.value);
+                        if (cookie.httponly) {
+                            helper::append(towrite, "; HttpOnly");
+                        }
+                        if (cookie.secure) {
+                            helper::append(towrite, "; Secure");
+                        }
+                        if (cookie.domain.size()) {
+                            helper::append(towrite, "; Domain=");
+                            helper::append(towrite, cookie.domain);
+                        }
+                        if (cookie.path.size()) {
+                            helper::append(towrite, "; Path=");
+                            helper::append(towrite, cookie.path);
+                        }
+                        if (cookie.samesite != SameSite::default_mode) {
+                            helper::append(towrite, "; SameSite=");
+                            helper::append(towrite, get_samesite(cookie.samesite));
+                        }
                     }
                 };
             }  // namespace internal
