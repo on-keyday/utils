@@ -11,7 +11,10 @@
 #pragma once
 
 #include "../../wrap/lite/enum.h"
-#include <ctime>
+#include "date.h"
+#include "../../helper/strutil.h"
+#include "../../number/parse.h"
+#include "../../helper/appender.h"
 
 namespace utils {
     namespace net {
@@ -46,7 +49,7 @@ namespace utils {
 
                 string_t path;
                 string_t domain;
-                Date expires;
+                date::Date expires;
 
                 int maxage = 0;
                 bool secure = false;
@@ -74,26 +77,24 @@ namespace utils {
                 using cookie_t = Cookie<String>;
                 using cookies_t = Vec<cookie_t>;
                 using util_t = HttpUtil<String>;
-                using strvec_t = Vec<string_t>;
-                using url_t = commonlib2::URLContext<string_t>;
 
                 static void set_by_cookie_prefix(cookie_t& cookie) {
-                    if (commonlib2::Reader<string_t&>(cookie.name).ahead("__Secure-")) {
+                    if (helper::starts_with(cookie.name, "__Secure-")) {
                         cookie.secure = true;
                     }
-                    else if (commonlib2::Reader<string_t&>(cookie.name).ahead("__Host-")) {
+                    else if (helper::starts_with(cookie.name, "__Host-")) {
                         cookie.flag &= ~CookieFlag::domain_set;
                         cookie.path = "/";
                     }
                 }
 
                 static bool verify_cookie_prefix(cookie_t& cookie) {
-                    if (commonlib2::Reader<string_t&>(cookie.name).ahead("__Secure-")) {
+                    if (helper::starts_with(cookie.name, "__Secure-")) {
                         if (!cookie.secure) {
                             cookie.flag |= CookieFlag::not_allow_prefix_rule;
                         }
                     }
-                    else if (commonlib2::Reader<string_t&>(cookie.name).ahead("__Host-")) {
+                    else if (helper::starts_with(cookie.name, "__Host-")) {
                         if (cookie.path != "/" || any(cookie.flag & CookieFlag::domain_set)) {
                             cookie.flag |= CookieFlag::not_allow_prefix_rule;
                         }
@@ -102,9 +103,9 @@ namespace utils {
                 }
 
                 static CookieErr parse_cookie(const string_t& raw, cookies_t& cookies) {
-                    auto data = commonlib2::split<string_t, const char*, strvec_t>(raw, "; ");
+                    auto data = commonlib2::split<string_t, Vec>(raw, "; ");
                     for (auto& v : data) {
-                        auto keyval = commonlib2::split<string_t, const char*, strvec_t>(v, "=", 1);
+                        auto keyval = commonlib2::split<string_t, Vec>(v, "=", 1);
                         if (keyval.size() != 2) {
                             return CookieError::no_keyvalue;
                         }
@@ -114,12 +115,11 @@ namespace utils {
                     }
                     return true;
                 }
-
-                static CookieErr parse(const string_t& raw, cookie_t& cookie, const url_t& url) {
+                template <class URL>
+                static CookieErr parse(const string_t& raw, cookie_t& cookie, const URL& url) {
                     if (!url.host.size() || !url.path.size()) {
                         return CookieError::invalid_url;
                     }
-                    using commonlib2::str_eq;
                     auto data = commonlib2::split<string_t, const char*, strvec_t>(raw, "; ");
                     if (data.size() == 0) {
                         return CookieError::no_cookie;
@@ -133,7 +133,7 @@ namespace utils {
                     cookie.value = keyval[1];
                     for (auto& attr : data) {
                         auto cmp = [](auto& a, auto& b) {
-                            return str_eq(a, b, util_t::header_cmp);
+                            return helper::equal(a, b, helper::ignore_case());
                         };
                         if (cmp(attr, "HttpOnly")) {
                             if (cookie.httponly) {
@@ -148,17 +148,17 @@ namespace utils {
                             cookie.secure = true;
                         }
                         else {
-                            auto elm = commonlib2::split<string_t, const char*, strvec_t>(attr, "=", 1);
+                            auto elm = helper::split<string_t, Vec>(attr, "=", 1);
                             if (elm.size() != 2) {
                                 return CookieError::no_attrkeyvalue;
                             }
                             if (cmp(elm[0], "Expires")) {
-                                if (cookie.expires != Date{}) {
+                                if (cookie.expires != date::Date{}) {
                                     return CookieError::multiple_same_attr;
                                 }
-                                DateParser<string_t, Vec>::replace_to_parse(elm[1]);
-                                if (!DateParser<string_t, Vec>::parse(elm[1], cookie.expires)) {
-                                    cookie.expires = invalid_date;
+                                date::DateParser<string_t, Vec>::replace_to_parse(elm[1]);
+                                if (!date::DateParser<string_t, Vec>::parse(elm[1], cookie.expires)) {
+                                    cookie.expires = date::invalid_date;
                                 }
                             }
                             else if (cmp(elm[0], "Path")) {
@@ -196,7 +196,7 @@ namespace utils {
                                 if (cookie.maxage != 0) {
                                     return CookieError::multiple_same_attr;
                                 }
-                                commonlib2::Reader(elm[1]) >> cookie.maxage;
+                                number::parse_integer(elm[1], cookie.maxage);
                             }
                         }
                     }
@@ -210,10 +210,10 @@ namespace utils {
                     return CookieError::none;
                 }
 
-                template <class Header>
-                static CookieErr parse_set_cookie(Header& header, cookies_t& cookies, const url_t& url) {
+                template <class Header, class URL>
+                static CookieErr parse_set_cookie(Header& header, cookies_t& cookies, const URL& url) {
                     for (auto& h : header) {
-                        if (header_cmp(h.first, "Set-Cookie")) {
+                        if (helper::eqaul(h.first, "Set-Cookie", helper::ignore_case())) {
                             cookie_t cookie;
                             auto err = parse(h.second, cookie, url);
                             if (!err) return err;
@@ -266,9 +266,9 @@ namespace utils {
 
                 static bool check_expires(cookie_t& info, cookie_t& cookie) {
                     time_t now = ::time(nullptr), prevtime = 0;
-                    Date nowdate;
-                    TimeConvert::from_time_t(now, nowdate);
-                    TimeConvert::to_time_t(prevtime, info.expires);
+                    date::Date nowdate;
+                    date::TimeConvert::from_time_t(now, nowdate);
+                    date::TimeConvert::to_time_t(prevtime, info.expires);
                     if (cookie.maxage) {
                         if (cookie.maxage <= 0) {
                             return false;
@@ -277,7 +277,7 @@ namespace utils {
                             return false;
                         }
                     }
-                    else if (cookie.expires != Date{} && cookie.expires != invalid_date) {
+                    else if (cookie.expires != date::Date{} && cookie.expires != date::invalid_date) {
                         if (cookie.expires - nowdate <= 0) {
                             return false;
                         }
@@ -288,7 +288,8 @@ namespace utils {
                public:
                 template <class Cookies>
                 static bool write(string_t& towrite, cookie_t& info, Cookies& cookies) {
-                    if (!info.domain.size() || !info.path.size() || info.expires == Date{} || info.expires == invalid_date) {
+                    if (!info.domain.size() || !info.path.size() || info.expires == date::Date{} ||
+                        info.expires == date::invalid_date) {
                         return false;
                     }
                     for (size_t i = 0; i < cookies.size(); i++) {
@@ -308,11 +309,11 @@ namespace utils {
                             continue;
                         }
                         if (towrite.size()) {
-                            towrite += "; ";
+                            helper::append(towrite, "; ");
                         }
-                        towrite += cookie.name;
-                        towrite += "=";
-                        towrite += cookie.value;
+                        helper::append(towrite, cookie.name);
+                        towrite.push_back('=');
+                        helper::append(towrite, cookie.value);
                     }
                     return towrite.size() != 0;
                 }

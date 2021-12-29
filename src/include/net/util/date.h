@@ -13,6 +13,7 @@
 #include "../../core/sequencer.h"
 #include "../../helper/splits.h"
 #include "../../wrap/lite/enum.h"
+#include "../../helper/appender.h"
 #include <ctime>
 
 namespace utils {
@@ -266,8 +267,8 @@ namespace utils {
                 static void set_two(std::uint32_t src, string_t& towrite) {
                     auto high = src / 10;
                     auto low = src - high * 10;
-                    towrite += high + '0';
-                    towrite += low + '0';
+                    towrite.push_back(high + '0');
+                    towrite.push_back(low + '0');
                 }
 
                public:
@@ -275,39 +276,39 @@ namespace utils {
                     if (date.dayname == DayName::unset || date.dayname == DayName::invalid) {
                         return DateError::not_dayname;
                     }
-                    towrite += get_dayname(date.dayname);
-                    towrite += ", ";
+                    helper::append(towrite, get_dayname(date.month));
+                    helper::append(towrite, ", ");
                     if (date.day < 1 || date.day > 31) {
                         return DateError::not_day;
                     }
                     set_two(date.day, towrite);
-                    towrite += ' ';
+                    towrite.push_back(' ');
                     if (date.month == Month::unset || date.month == Month::invalid) {
                         return DateError::not_month;
                     }
-                    towrite += get_month(date.month);
-                    towrite += ' ';
+                    helper::append(towrite, get_month(date.month));
+                    towrite.push_back(' ');
                     if (date.year > 9999) {
                         return DateError::not_year;
                     }
                     set_two(date.year / 100, towrite);
                     set_two(date.year - (date.year / 100) * 100, towrite);
-                    towrite += ' ';
+                    towrite.push_back(' ');
                     if (date.hour > 23) {
                         return DateError::not_hour;
                     }
                     set_two(date.hour, towrite);
-                    towrite += ':';
+                    towrite.push_back(':');
                     if (date.minute > 59) {
                         return DateError::not_minute;
                     }
                     set_two(date.minute, towrite);
-                    towrite += ':';
+                    towrite.push_back(':');
                     if (date.second > 61) {
                         return DateError::not_minute;
                     }
                     set_two(date.second, towrite);
-                    towrite += " GMT";
+                    helper::append(towrite, " GMT");
                     return true;
                 }
             };
