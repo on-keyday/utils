@@ -19,3 +19,7 @@ void test_cookie() {
     uri.host = "google.com";
     utils::net::cookie::parse_set_cookie(str, cookies, uri);
 }
+
+int main() {
+    test_cookie();
+}
