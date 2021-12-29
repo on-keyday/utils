@@ -20,7 +20,7 @@ namespace utils {
             constexpr ReverseView(In&&... in)
                 : buf(std::forward<In>(in)...) {}
 
-            using char_type = typename Buffer<T>::char_type;
+            using char_type = typename Buffer<buffer_t<T>>::char_type;
 
             constexpr char_type operator[](size_t pos) const {
                 return buf.at(buf.size() - pos - 1);
@@ -68,5 +68,31 @@ namespace utils {
             }
         };
 
-        }  // namespace helper
+        template <class T>
+        struct Slice {
+            size_t start = 0;
+            size_t end = 0;
+            size_t stride = 1;
+            Buffer<buffer_t<T>> buf;
+
+            using char_type = std::remove_cvref_t<typename BufferType<T>::char_type>;
+
+            char_type operator[](size_t index) {
+                size_t ofs = stride <= 1 ? 1 : stride;
+                auto sz = buf.size();
+                auto idx = ofs * index;
+                auto ac = start + idx;
+                if (ac >= end || ac >= buf.size()) {
+                    return char_type{};
+                }
+                return buf.at(ac);
+            }
+
+            constexpr size_t size() const {
+                size_t d = stride <= 1 ? 1 : stride;
+                return (end - start) / d;
+            }
+        };
+
+    }  // namespace helper
 }  // namespace utils

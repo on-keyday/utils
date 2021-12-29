@@ -272,6 +272,19 @@ namespace utils {
                 return decode(seq, result);
             }
 
+            template <class In, class Out>
+            number::NumErr encode_host(In&& in, Out& result) {
+                auto seq = make_ref_seq(in);
+                auto inipos = seq.rptr;
+                bool is_ascii = true;
+                helper::read_whilef(helper::nop, seq, [&](auto&& c) {
+                    if (!number::is_in_ascii_range(c)) {
+                        is_ascii = false;
+                    }
+                    return c != '.';
+                });
+            }
+
         }  // namespace punycode
 
     }  // namespace net
