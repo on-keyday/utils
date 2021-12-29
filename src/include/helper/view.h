@@ -77,7 +77,7 @@ namespace utils {
 
             using char_type = std::remove_cvref_t<typename BufferType<T>::char_type>;
 
-            char_type operator[](size_t index) {
+            constexpr char_type operator[](size_t index) {
                 size_t ofs = stride <= 1 ? 1 : stride;
                 auto sz = buf.size();
                 auto idx = ofs * index;
