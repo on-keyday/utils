@@ -121,7 +121,8 @@ namespace utils {
             }
 
             constexpr size_t size() const {
-                        }
+                return count(buf.buffer, sep) + 1;
+            }
         };
 
     }  // namespace helper
