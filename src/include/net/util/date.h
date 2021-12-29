@@ -14,6 +14,7 @@
 #include "../../helper/splits.h"
 #include "../../wrap/lite/enum.h"
 #include "../../helper/appender.h"
+#include "../../wrap/lite/vector.h"
 #include <ctime>
 
 namespace utils {
@@ -122,7 +123,7 @@ namespace utils {
 
             namespace internal {
                 // hide old design pattern
-                template <class String, template <class...> class Vec>
+                template <class String, template <class...> class Vec = wrap::vector>
                 struct DateParser {
                     using string_t = String;
 
@@ -368,7 +369,20 @@ namespace utils {
                 };
             }  // namespace internal
 
-            bool operator==(const Date& a, const Date& b) {
+            inline bool to_time_t(time_t& time, const Date& date) {
+                return internal::TimeConvert::to_time_t(time, date);
+            }
+
+            inline bool from_time_t(const time_t& time, Date& date) {
+                return internal::TimeConvert::from_time_t(time, date);
+            }
+
+            template <class String, template <class...> class Vec = wrap::vector>
+            bool encode(const String& src, Date& date) {
+                return internal::DateParser<String, Vec>::parse(src, date);
+            }
+
+            inline bool operator==(const Date& a, const Date& b) {
                 union {
                     Date d;
                     std::uint64_t l;
@@ -376,10 +390,10 @@ namespace utils {
                 return a_c.l == b_c.l;
             }
 
-            time_t operator-(const Date& a, const Date& b) {
+            inline time_t operator-(const Date& a, const Date& b) {
                 time_t a_t = 0, b_t = 0;
-                internal::TimeConvert::to_time_t(a_t, a);
-                internal::TimeConvert::to_time_t(b_t, b);
+                to_time_t(a_t, a);
+                to_time_t(b_t, b);
                 return a_t - b_t;
             }
         }  // namespace date
