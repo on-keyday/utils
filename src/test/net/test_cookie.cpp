@@ -24,5 +24,6 @@ int main() {
     test_cookie();
     constexpr auto s = utils::helper::make_ref_splitview("call a b c", " ");
     constexpr auto sz = s.size();
-    constexpr auto view = s[0];
+    constexpr auto view = s[1];
+    constexpr auto c = view[0];
 }
