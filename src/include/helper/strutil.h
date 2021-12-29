@@ -119,6 +119,9 @@ namespace utils {
                 }
                 return make_ref_seq(buf.buffer, index == 0 ? first : first + 1, second);
             }
+
+            constexpr size_t size() const {
+                        }
         };
 
     }  // namespace helper
