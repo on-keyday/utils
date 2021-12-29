@@ -62,6 +62,16 @@ void test_http1() {
         resp = req.get_response();
     }
     utils::wrap::cout_wrap() << resp.body();
+    req = utils::net::request(std::move(req), "GET", "/teapot", {});
+    resp = req.get_response();
+    while (!resp) {
+        if (req.failed()) {
+            assert(false && "request http1 failed");
+        }
+        Sleep(10);
+        resp = req.get_response();
+    }
+    utils::wrap::cout_wrap() << resp.body();
 }
 
 int main() {
