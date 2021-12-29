@@ -73,7 +73,7 @@ namespace utils {
 
             namespace internal {
                 // hide old design pattern
-                template <class String>
+                template <class String, template <class...> class Vec>
                 struct CookieParser {
                     using string_t = String;
                     using cookie_t = Cookie<String>;
@@ -320,10 +320,11 @@ namespace utils {
                 };
             }  // namespace internal
 
-            template <class In, class String, class URL>
+            template <class In, class String, class URL, template <class...> class Vec = wrap::vector>
             CookieErr parse(In&& src, Cookie<String>& out, const URL& url) {
                 return internal::CookieParser<String>::parse(src, out, url);
             }
+
         }  // namespace cookie
 
     }  // namespace net
