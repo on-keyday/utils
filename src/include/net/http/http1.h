@@ -53,9 +53,11 @@ namespace utils {
 
             void set(const char* key, const char* value);
 
-            const char* body(size_t* p = nullptr);
+            std::uint16_t status() const;
 
-            explicit operator bool() {
+            const char* body(size_t* p = nullptr) const;
+
+            explicit operator bool() const {
                 return impl != nullptr;
             }
 

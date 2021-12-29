@@ -117,7 +117,14 @@ namespace utils {
             impl->emplace(key, value);
         }
 
-        const char* Header::body(size_t* size) {
+        std::uint16_t Header::status() const {
+            if (!impl) {
+                return 0;
+            }
+            return impl->code;
+        }
+
+        const char* Header::body(size_t* size) const {
             if (!impl) {
                 if (size) {
                     *size = 0;
