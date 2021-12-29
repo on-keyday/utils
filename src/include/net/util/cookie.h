@@ -103,7 +103,8 @@ namespace utils {
                         return any(cookie.flag & CookieFlag::not_allow_prefix_rule);
                     }
 
-                    static CookieErr parse_cookie(const string_t& raw, cookies_t& cookies) {
+                    template <class Cookies>
+                    static CookieErr parse_cookie(const string_t& raw, Cookies& cookies) {
                         auto data = helper::split<string_t, Vec>(raw, "; ");
                         for (auto& v : data) {
                             auto keyval = commonlib2::split<string_t, Vec>(v, "=", 1);
@@ -157,8 +158,8 @@ namespace utils {
                                     if (cookie.expires != date::Date{}) {
                                         return CookieError::multiple_same_attr;
                                     }
-                                    date::DateParser<string_t, Vec>::replace_to_parse(elm[1]);
-                                    if (!date::decode(elm[1], cookie.expires)) {
+                                    date::internal::DateParser<string_t, Vec>::replace_to_parse(elm[1]);
+                                    if (!date::encode(elm[1], cookie.expires)) {
                                         cookie.expires = date::invalid_date;
                                     }
                                 }
@@ -214,7 +215,7 @@ namespace utils {
                     template <class Header, class URL, class Cookies>
                     static CookieErr parse_set_cookie(Header& header, Cookies& cookies, const URL& url) {
                         for (auto& h : header) {
-                            if (helper::eqaul(std::get<0>(h), "Set-Cookie", helper::ignore_case())) {
+                            if (helper::equal(std::get<0>(h), "Set-Cookie", helper::ignore_case())) {
                                 cookie_t cookie;
                                 auto err = parse(std::get<1>(h), cookie, url);
                                 if (!err) return err;
