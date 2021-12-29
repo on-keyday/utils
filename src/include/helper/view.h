@@ -75,8 +75,9 @@ namespace utils {
             size_t end = 0;
             size_t stride = 1;
 
-            constexpr Slice(T&& t)
-                : buf(std::forward<T>(t)) {}
+            template <class V>
+            constexpr Slice(V&& t)
+                : buf(std::forward<V>(t)) {}
 
             using char_type = std::remove_cvref_t<typename BufferType<T>::char_type>;
 
@@ -99,7 +100,7 @@ namespace utils {
 
         template <class T>
         constexpr Slice<buffer_t<T&>> make_ref_slice(T&& in, size_t start, size_t end, size_t stride = 1) {
-            Slice<buffer_t<T&>> slice{in};
+            Slice<buffer_t<T&>> slice(in);
             slice.start = start;
             slice.end = end;
             slice.stride = stride;

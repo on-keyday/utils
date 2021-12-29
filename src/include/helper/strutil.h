@@ -119,7 +119,7 @@ namespace utils {
                 if (first == ~0 && second == ~0) {
                     return make_ref_slice(buf.buffer, 0, 0);
                 }
-                return make_ref_seq(buf.buffer, index == 0 ? first : first + 1, second);
+                return make_ref_slice(buf.buffer, index == 0 ? first : first + 1, second);
             }
 
             constexpr size_t size() const {
