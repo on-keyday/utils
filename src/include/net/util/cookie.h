@@ -342,6 +342,15 @@ namespace utils {
                             helper::append(towrite, "; SameSite=");
                             helper::append(towrite, get_samesite(cookie.samesite));
                         }
+                        if (cookie.expires != date::Date{}) {
+                            if (cookie.expires == date::invalid_date) {
+                                helper::append(towrite, "; Expires=-1");
+                            }
+                            else {
+                                helper::append(towrite, "; Expires=");
+                                date::decode(cookie.expires, towrite);
+                            }
+                        }
                     }
                 };
             }  // namespace internal
