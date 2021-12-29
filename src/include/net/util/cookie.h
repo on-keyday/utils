@@ -356,6 +356,7 @@ namespace utils {
                             helper::append(towrite, "; MaxAge=");
                             number::to_string(towrite, cookie.maxage)
                         }
+                        return true;
                     }
                 };
             }  // namespace internal
