@@ -286,6 +286,7 @@ namespace utils {
                 helper::Slice<In&> slice;
                 slice.start = inipos;
                 slice.end = seq.rptr;
+                auto enc = make_ref_seq(slice);
             }
 
         }  // namespace punycode

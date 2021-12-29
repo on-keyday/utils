@@ -94,5 +94,14 @@ namespace utils {
             }
         };
 
+        template <class T>
+        auto make_ref_slice(T&& in, size_t start, size_t end, size_t stride = 1) {
+            Slice<T&> slice{in};
+            slice.start = start;
+            slice.end = end;
+            slice.stride = stride;
+            return make_ref_seq(slice);
+        }
+
     }  // namespace helper
 }  // namespace utils
