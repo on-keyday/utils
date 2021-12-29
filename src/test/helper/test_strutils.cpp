@@ -15,4 +15,12 @@ constexpr bool test_endswith() {
 void test_strutils() {
     constexpr bool result1 = test_endswith();
     constexpr bool result2 = utils::helper::sandwiched("(hello)", "(", ")");
+    constexpr auto s = utils::helper::make_ref_splitview("call a b c", " ");
+    constexpr auto sz = s.size();
+    constexpr auto view = s[1];
+    constexpr auto c = view[0];
+}
+
+int main() {
+    test_strutils();
 }
