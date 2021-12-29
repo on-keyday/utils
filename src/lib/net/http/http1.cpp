@@ -306,6 +306,7 @@ namespace utils {
             delete io.impl->header;
             io.impl->header = header.impl;
             header.impl = nullptr;
+            io.impl->response = Header{};
             return std::move(io);
         }
 
