@@ -90,8 +90,8 @@ namespace utils {
         }
 
         template <class In, class Cmp, class Compare = decltype(default_compare())>
-        size_t count(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
-            auto seq = make_ref_seq(str);
+        constexpr size_t count(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
+            auto seq = make_ref_seq(in);
             size_t count = 0;
             while (seq.eos()) {
                 if (seq.seek_if(cmp, compare)) {
@@ -101,6 +101,7 @@ namespace utils {
                     seq.consume();
                 }
             }
+            return count;
         }
 
         template <class T, class Sep = const char*>
