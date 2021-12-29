@@ -15,6 +15,7 @@
 #include "../../helper/strutil.h"
 #include "../../number/parse.h"
 #include "../../helper/appender.h"
+#include "../../number/to_string.h"
 
 namespace utils {
     namespace net {
@@ -350,6 +351,10 @@ namespace utils {
                                 helper::append(towrite, "; Expires=");
                                 date::decode(cookie.expires, towrite);
                             }
+                        }
+                        else if (cookie.maxage) {
+                            helper::append(towrite, "; MaxAge=");
+                            number::to_string(towrite, cookie.maxage)
                         }
                     }
                 };
