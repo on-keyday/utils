@@ -275,17 +275,32 @@ namespace utils {
             template <class In, class Out>
             number::NumErr encode_host(In&& in, Out& result) {
                 auto seq = make_ref_seq(in);
-                auto inipos = seq.rptr;
-                bool is_ascii = true;
-                helper::read_whilef<true>(helper::nop, seq, [&](auto&& c) {
-                    if (!number::is_in_ascii_range(c)) {
-                        is_ascii = false;
+                while (true) {
+                    auto inipos = seq.rptr;
+                    bool is_ascii = true;
+                    helper::read_whilef<true>(helper::nop, seq, [&](auto&& c) {
+                        if (!number::is_in_ascii_range(c)) {
+                            is_ascii = false;
+                        }
+                        return c != '.';
+                    });
+                    if (is_ascii) {
+                        auto end = seq.rptr;
+                        seq.rptr = inipos;
+                        if (!helper::read_n(result, seq, end - inipos)) {
+                            return number::NumError::invalid;
+                        }
                     }
-                    return c != '.';
-                });
-                if (is_ascii) {
-                    if (!helper::read_n(result, seq, seq.rptr - inipos)) {
-                        return number::NumError::invalid;
+                    else {
+                        helper::append(result, "xn--");
+                        auto slice = helper::make_ref_slice(in, inipos, seq.rptr);
+                        auto e = encode(slice, result);
+                        if (!e) {
+                            return e;
+                        }
+                    }
+                    if (seq.current() == '.') {
+                        result.push_back('.');
                     }
                 }
             }
