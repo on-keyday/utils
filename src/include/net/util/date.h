@@ -382,6 +382,11 @@ namespace utils {
                 return internal::DateParser<String, Vec>::parse(src, date);
             }
 
+            template <class String>
+            bool decode(const Date& src, String& str) {
+                return internal::DateWriter<String>::write(str, src);
+            }
+
             inline bool operator==(const Date& a, const Date& b) {
                 union {
                     Date d;
