@@ -325,7 +325,7 @@ namespace utils {
                 return internal::CookieParser<String, Vec>::parse(src, out, url);
             }
 
-            template <class Header, class Cookies, class URL, class String = wrap::string, template <class...> class Vec = wrap::vector>
+            template <class String = wrap::string, template <class...> class Vec = wrap::vector, class Header, class Cookies, class URL>
             CookieErr parse_set_cookie(Header&& src, Cookies& cookies, const URL& url) {
                 return internal::CookieParser<String, Vec>::parse_set_cookie(src, cookies, url);
             }
