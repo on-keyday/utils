@@ -41,6 +41,7 @@ add_executable(punycode "src/test/net/test_punycode.cpp")
 add_executable(http1 "src/test/net/test_http1.cpp")
 add_executable(io_completion_port "src/test/platform/windows/test_io_completion_port.cpp")
 add_executable(cookie "src/test/net/test_cookie.cpp")
+add_executable(strutil "src/test/helper/test_strutil.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
