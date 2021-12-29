@@ -226,20 +226,9 @@ namespace utils {
             return nullptr;
         }
 
-        HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
-            if (!io || !host || !method || !path) {
-                return HttpResponse{};
-            }
-            if (!header.impl) {
-                return HttpResponse{};
-            }
-            constexpr auto validator = h1header::default_validator();
-            if (!validator(std::pair{"Host", host})) {
-                return HttpResponse{};
-            }
-            wrap::string buf;
+        bool render_request(wrap::string& buf, const char* host, const char* method, const char* path, internal::HeaderImpl* header) {
             auto res = h1header::render_request(
-                buf, method, path, *header.impl,
+                buf, method, path, *header,
                 [&](auto&& keyval) {
                     if (helper::equal(std::get<0>(keyval), "Host", helper::ignore_case())) {
                         return false;
@@ -261,6 +250,21 @@ namespace utils {
                     helper::append(str, "\r\n");
                 });
             if (!res) {
+                return false;
+            }
+            return true;
+        }
+
+        HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
+            if (!io || !host || !method || !path || !header) {
+                return HttpResponse{};
+            }
+            constexpr auto validator = h1header::default_validator();
+            if (!validator(std::pair{"Host", host})) {
+                return HttpResponse{};
+            }
+            wrap::string buf;
+            if (!render_request(buf, host, method, path, header.impl)) {
                 return HttpResponse{};
             }
             HttpResponse response;
@@ -275,6 +279,32 @@ namespace utils {
             response.impl->buf = std::move(buf);
             response.impl->io = std::move(io);
             return response;
+        }
+
+        HttpResponse request(HttpResponse&& io, const char* host, const char* method, const char* path, Header&& header) {
+            if (io.failed()) {
+                return HttpResponse{};
+            }
+            if (io.impl->state != HttpState::end_process) {
+                return HttpResponse{};
+            }
+            wrap::string buf;
+            if (!render_request(buf, host, method, path, header.impl)) {
+                return HttpResponse{};
+            }
+            auto done = io.impl->io.write(buf.c_str(), buf.size());
+            if (done != State::complete && done != State::running) {
+                return HttpResponse{};
+            }
+            io.impl->state = done != State::complete ? HttpState::requesting : HttpState::body_sending;
+            io.impl->bodytype = h1body::BodyType::no_info;
+            io.impl->buf = std::move(buf);
+            io.impl->redpos = 0;
+            io.impl->expect = 0;
+            delete io.impl->header;
+            io.impl->header = header.impl;
+            header.impl = nullptr;
+            return io;
         }
 
     }  // namespace net

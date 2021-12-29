@@ -23,6 +23,7 @@ namespace utils {
 
         struct HttpResponse {
             friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+            friend HttpResponse request(HttpResponse&& io, const char* host, const char* method, const char* path, Header&& header);
             constexpr HttpResponse() {}
             HttpResponse(HttpResponse&&);
             HttpResponse& operator=(HttpResponse&&);
@@ -43,6 +44,7 @@ namespace utils {
 
            public:
             friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+            friend HttpResponse request(HttpResponse&& io, const char* host, const char* method, const char* path, Header&& header);
             Header();
             ~Header();
 
@@ -62,5 +64,6 @@ namespace utils {
         };
 
         HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+        HttpResponse request(HttpResponse&& io, const char* host, const char* method, const char* path, Header&& header);
     }  // namespace net
 }  // namespace utils
