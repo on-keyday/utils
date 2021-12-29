@@ -301,8 +301,11 @@ namespace utils {
                     }
                     if (seq.current() == '.') {
                         result.push_back('.');
+                        continue;
                     }
+                    break;
                 }
+                return true;
             }
 
         }  // namespace punycode
