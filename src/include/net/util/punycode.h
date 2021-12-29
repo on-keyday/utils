@@ -283,6 +283,9 @@ namespace utils {
                     }
                     return c != '.';
                 });
+                helper::Slice<In&> slice;
+                slice.start = inipos;
+                slice.end = seq.rptr;
             }
 
         }  // namespace punycode
