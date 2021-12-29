@@ -354,7 +354,7 @@ namespace utils {
                         }
                         else if (cookie.maxage) {
                             helper::append(towrite, "; MaxAge=");
-                            number::to_string(towrite, cookie.maxage)
+                            number::to_string(towrite, cookie.maxage);
                         }
                         return true;
                     }
