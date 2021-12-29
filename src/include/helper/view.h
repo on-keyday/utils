@@ -100,7 +100,7 @@ namespace utils {
 
         template <class T>
         constexpr Slice<buffer_t<T&>> make_ref_slice(T&& in, size_t start, size_t end, size_t stride = 1) {
-            Slice<buffer_t<T&>> slice(in);
+            Slice<buffer_t<T&>> slice{in};
             slice.start = start;
             slice.end = end;
             slice.stride = stride;
