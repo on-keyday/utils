@@ -330,6 +330,11 @@ namespace utils {
                 return internal::CookieParser<String, Vec>::parse_set_cookie(src, cookies, url);
             }
 
+            template <class String, class Cookies>
+            CookieErr render_cookie(String& out, Cookie<String>& info, Cookies& cookies) {
+                return internal::CookieWriter<String>::write(out, info, cookies);
+            }
+
         }  // namespace cookie
 
     }  // namespace net
