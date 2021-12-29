@@ -93,7 +93,7 @@ namespace utils {
         constexpr size_t count(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
             auto seq = make_ref_seq(in);
             size_t count = 0;
-            while (seq.eos()) {
+            while (!seq.eos()) {
                 if (seq.seek_if(cmp, compare)) {
                     count++;
                 }
