@@ -228,6 +228,10 @@ namespace utils {
         }
 
         bool render_request(wrap::string& buf, const char* host, const char* method, const char* path, internal::HeaderImpl* header) {
+            constexpr auto validator = h1header::default_validator();
+            if (!validator(std::pair{"Host", host})) {
+                return false;
+            }
             auto res = h1header::render_request(
                 buf, method, path, *header,
                 [&](auto&& keyval) {
@@ -246,7 +250,7 @@ namespace utils {
                     helper::append(str, "\r\n");
                     helper::append(str, "Content-Length:");
                     helper::FixedPushBacker<char[64], 63> pb;
-                    number::to_string(pb, header.impl->body.size());
+                    number::to_string(pb, header->body.size());
                     helper::append(str, pb.buf);
                     helper::append(str, "\r\n");
                 });
@@ -258,10 +262,6 @@ namespace utils {
 
         HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
             if (!io || !host || !method || !path || !header) {
-                return HttpResponse{};
-            }
-            constexpr auto validator = h1header::default_validator();
-            if (!validator(std::pair{"Host", host})) {
                 return HttpResponse{};
             }
             wrap::string buf;
@@ -306,7 +306,7 @@ namespace utils {
             delete io.impl->header;
             io.impl->header = header.impl;
             header.impl = nullptr;
-            return io;
+            return std::move(io);
         }
 
     }  // namespace net
