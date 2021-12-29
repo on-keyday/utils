@@ -89,5 +89,12 @@ namespace utils {
             return true;
         }
 
+        template <class T>
+        struct SplitView {
+            Buffer<buffer_t<T>> buf;
+            constexpr SplitView(T&& t)
+                : buf(std::forward<T>(t)) {}
+        };
+
     }  // namespace helper
 }  // namespace utils
