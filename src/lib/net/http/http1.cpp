@@ -74,6 +74,7 @@ namespace utils {
                 Header response;
                 h1body::BodyType bodytype = h1body::BodyType::no_info;
                 size_t expect = 0;
+                wrap::string hostname;
             };
         }  // namespace internal
 
@@ -278,10 +279,11 @@ namespace utils {
             response.impl->state = done != State::complete ? HttpState::requesting : HttpState::body_sending;
             response.impl->buf = std::move(buf);
             response.impl->io = std::move(io);
+            response.impl->hostname = host;
             return response;
         }
 
-        HttpResponse request(HttpResponse&& io, const char* host, const char* method, const char* path, Header&& header) {
+        HttpResponse request(HttpResponse&& io, const char* method, const char* path, Header&& header) {
             if (io.failed()) {
                 return HttpResponse{};
             }
@@ -289,7 +291,7 @@ namespace utils {
                 return HttpResponse{};
             }
             wrap::string buf;
-            if (!render_request(buf, host, method, path, header.impl)) {
+            if (!render_request(buf, io.impl->hostname.c_str(), method, path, header.impl)) {
                 return HttpResponse{};
             }
             auto done = io.impl->io.write(buf.c_str(), buf.size());
