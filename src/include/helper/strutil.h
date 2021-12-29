@@ -107,6 +107,7 @@ namespace utils {
         struct SplitView {
             Buffer<buffer_t<T>> buf;
             Sep sep;
+
             constexpr SplitView(T&& t)
                 : buf(std::forward<T>(t)) {}
 
@@ -124,6 +125,13 @@ namespace utils {
                 return count(buf.buffer, sep) + 1;
             }
         };
+
+        template <class T, class Sep>
+        constexpr auto make_ref_splitview(T&& t, Sep&& sep) {
+            SplitView<buffer_t<T&>, buffer_t<Sep>> splt{t};
+            splt.sep = sep;
+            return splt;
+        }
 
     }  // namespace helper
 }  // namespace utils
