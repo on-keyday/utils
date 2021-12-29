@@ -94,7 +94,8 @@ namespace utils {
                     .hour = 0xff,
                     .minute = 0xff,
                     .second = 0xff,
-                    .year = 0xffff};
+                    .year = 0xffff,
+                };
             }
 
             constexpr auto invalid_date = get_invalid_date();

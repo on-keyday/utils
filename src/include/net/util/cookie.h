@@ -103,7 +103,7 @@ namespace utils {
                 }
 
                 static CookieErr parse_cookie(const string_t& raw, cookies_t& cookies) {
-                    auto data = commonlib2::split<string_t, Vec>(raw, "; ");
+                    auto data = helper::split<string_t, Vec>(raw, "; ");
                     for (auto& v : data) {
                         auto keyval = commonlib2::split<string_t, Vec>(v, "=", 1);
                         if (keyval.size() != 2) {
@@ -157,7 +157,7 @@ namespace utils {
                                     return CookieError::multiple_same_attr;
                                 }
                                 date::DateParser<string_t, Vec>::replace_to_parse(elm[1]);
-                                if (!date::DateParser<string_t, Vec>::parse(elm[1], cookie.expires)) {
+                                if (!date::decode(elm[1], cookie.expires)) {
                                     cookie.expires = date::invalid_date;
                                 }
                             }
