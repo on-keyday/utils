@@ -89,6 +89,20 @@ namespace utils {
             return true;
         }
 
+        template <class In, class Cmp, class Compare = decltype(default_compare())>
+        size_t count(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
+            auto seq = make_ref_seq(str);
+            size_t count = 0;
+            while (seq.eos()) {
+                if (seq.seek_if(cmp, compare)) {
+                    count++;
+                }
+                else {
+                    seq.consume();
+                }
+            }
+        }
+
         template <class T, class Sep = const char*>
         struct SplitView {
             Buffer<buffer_t<T>> buf;
@@ -100,7 +114,7 @@ namespace utils {
                 constexpr auto eq = default_compare();
                 size_t first = index == 0 ? 0 : find(buf.buffer, sep, eq, index - 1);
                 size_t second = find(buf.buffer, sep, eq, index);
-                if (first == ~0 || second == ~0) {
+                if (first == ~0 && second == ~0) {
                     return make_ref_slice(buf.buffer, 0, 0);
                 }
                 return make_ref_seq(buf.buffer, index == 0 ? first : first + 1, second);
