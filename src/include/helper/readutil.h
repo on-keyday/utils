@@ -14,8 +14,8 @@
 
 namespace utils {
     namespace helper {
-        template <bool consume = true, class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
-        constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
+        template <bool consume = true, class Result, class T, class Cmp, class Compare = decltype(default_compare())>
+        constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
             while (!seq.eos()) {
                 if (auto n = seq.match_n(cmp, compare)) {
                     if (consume) {
@@ -73,8 +73,8 @@ namespace utils {
             return true;
         }
 
-        template <class Result, class T, class Cmp, class Compare = compare_type<std::remove_reference_t<T>, Cmp>>
-        constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare<std::remove_reference_t<T>, Cmp>()) {
+        template <class Result, class T, class Cmp, class Compare = decltype(default_compare())>
+        constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
             while (!seq.eos()) {
                 if (auto n = seq.match_n(cmp, compare)) {
                     for (size_t i = 0; i < n; i++) {

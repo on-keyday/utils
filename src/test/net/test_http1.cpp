@@ -76,4 +76,5 @@ void test_http1() {
 
 int main() {
     test_http1();
+    constexpr auto e = utils::helper::make_ref_slice("call a or b", 2, 3);
 }

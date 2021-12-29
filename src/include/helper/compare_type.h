@@ -16,9 +16,10 @@ namespace utils {
         template <class T, class U>
         using compare_type = typename Sequencer<buffer_t<T&>>::template compare_type<U>;
 
-        template <class T, class U>
         constexpr auto default_compare() {
-            return Sequencer<buffer_t<T&>>::template default_compare<U>();
+            return [](auto&& a, auto&& b) {
+                return a == b;
+            };
         }
 
         template <class T>

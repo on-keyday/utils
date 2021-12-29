@@ -70,10 +70,13 @@ namespace utils {
 
         template <class T>
         struct Slice {
+            Buffer<buffer_t<T>> buf;
             size_t start = 0;
             size_t end = 0;
             size_t stride = 1;
-            Buffer<buffer_t<T>> buf;
+
+            constexpr Slice(T&& t)
+                : buf(std::forward<T>(t)) {}
 
             using char_type = std::remove_cvref_t<typename BufferType<T>::char_type>;
 
@@ -95,12 +98,12 @@ namespace utils {
         };
 
         template <class T>
-        auto make_ref_slice(T&& in, size_t start, size_t end, size_t stride = 1) {
-            Slice<T&> slice{in};
+        constexpr Slice<buffer_t<T&>> make_ref_slice(T&& in, size_t start, size_t end, size_t stride = 1) {
+            Slice<buffer_t<T&>> slice{in};
             slice.start = start;
             slice.end = end;
             slice.stride = stride;
-            return make_ref_seq(slice);
+            return slice;
         }
 
     }  // namespace helper
