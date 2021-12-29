@@ -12,12 +12,12 @@
 
 void test_cookie() {
     utils::wrap::vector<utils::net::cookie::Cookie<utils::wrap::string>> cookies;
-    utils::wrap::map<utils::wrap::string, utils::wrap::string> str;
-    str = {{"Set-Cookie", "id=a3fWa; Expires=Thu, 21 Oct 2021 07:28:00 GMT; Secure; HttpOnly"}};
+    utils::wrap::map<utils::wrap::string, utils::wrap::string> header;
+    header = {{"Set-Cookie", "id=a3fWa; Expires=Thu, 21 Oct 2021 07:28:00 GMT; Secure; HttpOnly"}};
     utils::net::URI uri;
     uri.path = "/";
     uri.host = "google.com";
-    utils::net::cookie::parse_set_cookie(str, cookies, uri);
+    utils::net::cookie::parse_set_cookie(header, cookies, uri);
 }
 
 int main() {

@@ -326,25 +326,11 @@ namespace utils {
                         helper::append(towrite, cookie.name);
                         towrite.push_back('=');
                         helper::append(towrite, cookie.value);
-                        if (cookie.httponly) {
-                            helper::append(towrite, "; HttpOnly");
+                        if (cookie.maxage) {
+                            helper::append(towrite, "; MaxAge=");
+                            number::to_string(towrite, cookie.maxage);
                         }
-                        if (cookie.secure) {
-                            helper::append(towrite, "; Secure");
-                        }
-                        if (cookie.domain.size()) {
-                            helper::append(towrite, "; Domain=");
-                            helper::append(towrite, cookie.domain);
-                        }
-                        if (cookie.path.size()) {
-                            helper::append(towrite, "; Path=");
-                            helper::append(towrite, cookie.path);
-                        }
-                        if (cookie.samesite != SameSite::default_mode) {
-                            helper::append(towrite, "; SameSite=");
-                            helper::append(towrite, get_samesite(cookie.samesite));
-                        }
-                        if (cookie.expires != date::Date{}) {
+                        else if (cookie.expires != date::Date{}) {
                             if (cookie.expires == date::invalid_date) {
                                 helper::append(towrite, "; Expires=-1");
                             }
@@ -353,9 +339,24 @@ namespace utils {
                                 date::decode(cookie.expires, towrite);
                             }
                         }
-                        else if (cookie.maxage) {
-                            helper::append(towrite, "; MaxAge=");
-                            number::to_string(towrite, cookie.maxage);
+
+                        if (cookie.domain.size()) {
+                            helper::append(towrite, "; Domain=");
+                            helper::append(towrite, cookie.domain);
+                        }
+                        if (cookie.path.size()) {
+                            helper::append(towrite, "; Path=");
+                            helper::append(towrite, cookie.path);
+                        }
+                        if (cookie.secure) {
+                            helper::append(towrite, "; Secure");
+                        }
+                        if (cookie.httponly) {
+                            helper::append(towrite, "; HttpOnly");
+                        }
+                        if (cookie.samesite != SameSite::default_mode) {
+                            helper::append(towrite, "; SameSite=");
+                            helper::append(towrite, get_samesite(cookie.samesite));
                         }
                         return true;
                     }
