@@ -89,14 +89,14 @@ namespace utils {
             return true;
         }
 
-        template <class T, class Sep>
+        template <class T, class Sep = const char*>
         struct SplitView {
             Buffer<buffer_t<T>> buf;
             Sep sep;
             constexpr SplitView(T&& t)
                 : buf(std::forward<T>(t)) {}
-            using slice_t = Slice<buffer_t<std::remove_reference_t<T>&>>;
-            slice_t operator[](size_t index) {
+
+            constexpr auto operator[](size_t index) const {
                 size_t first = index == 0 ? 0 : find(buf.buffer, sep, default_compare(), index - 1);
                 size_t second = find(buf.buffer, sep, default_compare(), index);
                 if (first == ~0 || second == ~0) {
