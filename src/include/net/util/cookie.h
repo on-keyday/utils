@@ -322,7 +322,12 @@ namespace utils {
 
             template <class In, class String, class URL, template <class...> class Vec = wrap::vector>
             CookieErr parse(In&& src, Cookie<String>& out, const URL& url) {
-                return internal::CookieParser<String>::parse(src, out, url);
+                return internal::CookieParser<String, Vec>::parse(src, out, url);
+            }
+
+            template <class Header, class Cookies, class URL, class String = wrap::string, template <class...> class Vec = wrap::vector>
+            CookieErr parse_set_cookie(Header&& src, Cookies& cookies, const URL& url) {
+                return internal::CookieParser<String, Vec>::parse_set_cookie(src, cookies, url);
             }
 
         }  // namespace cookie
