@@ -277,16 +277,17 @@ namespace utils {
                 auto seq = make_ref_seq(in);
                 auto inipos = seq.rptr;
                 bool is_ascii = true;
-                helper::read_whilef(helper::nop, seq, [&](auto&& c) {
+                helper::read_whilef<true>(helper::nop, seq, [&](auto&& c) {
                     if (!number::is_in_ascii_range(c)) {
                         is_ascii = false;
                     }
                     return c != '.';
                 });
-                helper::Slice<In&> slice;
-                slice.start = inipos;
-                slice.end = seq.rptr;
-                auto enc = make_ref_seq(slice);
+                if (is_ascii) {
+                    if (!helper::read_n(result, seq, seq.rptr - inipos)) {
+                        return number::NumError::invalid;
+                    }
+                }
             }
 
         }  // namespace punycode
