@@ -97,8 +97,9 @@ namespace utils {
                 : buf(std::forward<T>(t)) {}
 
             constexpr auto operator[](size_t index) const {
-                size_t first = index == 0 ? 0 : find(buf.buffer, sep, default_compare(), index - 1);
-                size_t second = find(buf.buffer, sep, default_compare(), index);
+                constexpr auto eq = default_compare();
+                size_t first = index == 0 ? 0 : find(buf.buffer, sep, eq, index - 1);
+                size_t second = find(buf.buffer, sep, eq, index);
                 if (first == ~0 || second == ~0) {
                     return make_ref_slice(buf.buffer, 0, 0);
                 }
