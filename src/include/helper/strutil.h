@@ -89,11 +89,21 @@ namespace utils {
             return true;
         }
 
-        template <class T>
+        template <class T, class Sep>
         struct SplitView {
             Buffer<buffer_t<T>> buf;
+            Sep sep;
             constexpr SplitView(T&& t)
                 : buf(std::forward<T>(t)) {}
+            using slice_t = Slice<buffer_t<std::remove_reference_t<T>&>>;
+            slice_t operator[](size_t index) {
+                size_t first = index == 0 ? 0 : find(buf.buffer, sep, default_compare(), index - 1);
+                size_t second = find(buf.buffer, sep, default_compare(), index);
+                if (first == ~0 || second == ~0) {
+                    return make_ref_slice(buf.buffer, 0, 0);
+                }
+                return make_ref_seq(buf.buffer, index == 0 ? first : first + 1, second);
+            }
         };
 
     }  // namespace helper
