@@ -210,7 +210,7 @@ namespace ifacegen {
             }
             hlp::append(str, R"(interface__ {
     )");
-            for (auto& func : iface.second) {
+            for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
                     if (use_dycast) {
                         continue;
@@ -248,7 +248,7 @@ namespace ifacegen {
             :t_holder_(std::forward<Args>(args)...){}
 
     )");
-            for (auto& func : iface.second) {
+            for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
                     if (use_dycast) {
                         continue;
@@ -371,7 +371,7 @@ namespace ifacegen {
     }
 
 )");
-            for (auto& func : iface.second) {
+            for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
                     hlp::append(str, R"(    template<class T>
     const T* type_assert() const {

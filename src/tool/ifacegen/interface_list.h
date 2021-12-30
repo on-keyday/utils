@@ -25,6 +25,7 @@ namespace ifacegen {
     };
 
     struct Type {
+        bool vararg = false;
         RefKind ref = RefKind::none;
         bool is_const = false;
         size_t pointer = 0;
@@ -44,9 +45,19 @@ namespace ifacegen {
         utw::string default_result;
     };
 
+    struct TypeName {
+        bool vararg = false;
+        utw::string name;
+    };
+
+    struct IfaceList {
+        utw::vector<TypeName> typeparam;
+        utw::vector<Interface> iface;
+    };
+
     struct FileData {
         utw::string pkgname;
-        utw::map<utw::string, utw::vector<Interface>> ifaces;
+        utw::map<utw::string, IfaceList> ifaces;
         utw::vector<utw::string> defvec;
         utw::vector<utw::string> headernames;
         utw::map<utw::string, utw::string> aliases;
@@ -59,6 +70,8 @@ namespace ifacegen {
     struct State {
         FileData data;
         utw::string current_iface;
+        bool vararg = false;
+        utw::vector<TypeName> types;
         Interface iface;
         std::string current_alias;
     };

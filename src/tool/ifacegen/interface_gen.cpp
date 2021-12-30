@@ -137,12 +137,14 @@ Special Value:
         PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
         ALIAS:= "alias" ID UNTILEOL
-        INTERFACE:="interface"[ ID "{" FUNCDEF*? "}" ]! EOS
+        INTERFACE:=TYPEPARAM? "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
+        TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME!]*? EOS
+        TYPENAME:="..." ID!|ID 
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
         VARDEF:=ID TYPE
-        TYPE:=["&&"|"&"]? POINTER? "const"? ID
+        TYPE:="..."? ["&&"|"&"]? POINTER? "const"? ID
     )def";
 
     tokenize::Tokenizer<wrap::string> token;

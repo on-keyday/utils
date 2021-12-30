@@ -18,6 +18,8 @@ namespace ifacegen {
     constexpr auto type_prim = "TYPEPRIM";
     constexpr auto alias_def = "ALIAS";
     constexpr auto import_def = "IMPORT";
+    constexpr auto typeparam_def = "TYPEPARAM";
+    constexpr auto typename_def = "TYPENAME";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -28,13 +30,13 @@ namespace ifacegen {
         if (result.top() == interface_def) {
             if (result.result.kind == us::KeyWord::id) {
                 state.current_iface = result.token();
-                /*state.data.ifaceimpl.push_back({});
-                auto idx = state.data.ifaceimpl.size() - 1;*/
+
                 auto res = state.data.ifaces.insert({state.current_iface, {}});
                 if (!res.second) {
                     return false;
                 }
                 state.data.defvec.push_back(state.current_iface);
+                res.first->second.typeparam = std::move(state.types);
                 return true;
             }
             if (result.result.kind == us::KeyWord::eos) {
@@ -47,7 +49,7 @@ namespace ifacegen {
                 if (state.iface.type.ref != RefKind::none) {
                     state.data.has_ref_ret = true;
                 }
-                state.data.ifaces[state.current_iface].push_back(std::move(state.iface));
+                state.data.ifaces[state.current_iface].iface.push_back(std::move(state.iface));
                 state.iface = {};
                 return true;
             }
@@ -90,6 +92,9 @@ namespace ifacegen {
             else if (result.token() == "&") {
                 type.ref = RefKind::lval;
             }
+            else if (result.token() == "...") {
+                type.vararg = true;
+            }
             else {
                 type.prim = result.token();
             }
@@ -118,6 +123,15 @@ namespace ifacegen {
         if (result.top() == import_def) {
             if (result.result.kind == us::KeyWord::until_eol) {
                 state.data.headernames.push_back(result.token());
+            }
+        }
+        if (result.top() == typeparam_def || result.top() == typename_def) {
+            if (result.token() == "...") {
+                state.vararg = true;
+            }
+            else if (result.result.kind == us::KeyWord::id) {
+                state.types.push_back({.name = result.token(), .vararg = state.vararg});
+                state.vararg = false;
             }
         }
         return true;
