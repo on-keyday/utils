@@ -37,7 +37,7 @@ namespace utils {
                 internal::ParseContext<String, Vec> ctx = syntax::make_parse_context<String, Vec>(rbase);
                 match.matcher.segments.clear();
                 if (!syntax::parse(ctx, match.matcher.segments)) {
-                    match.matcher.context.err << match.matcher.context.err.pack();
+                    match.matcher.context.err << ctx.err.pack();
                     return false;
                 }
                 output.keyword.predef = std::move(ctx.keyword);
