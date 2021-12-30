@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
         .set("verbose,v", bool_option(true), "verbose log", OptFlag::once_in_cmd)
-        .set("help,h", bool_option(true), "show help", OptFlag::none)
+        .set("help,h", bool_option(true), "show option help", OptFlag::none)
         .set("syntax,s", bool_option(true), "show syntax help", OptFlag::none)
         .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename")
         .set("expand,e", bool_option(true), "expand macro (alias is not expanded)", OptFlag::once_in_cmd)
