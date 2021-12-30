@@ -90,7 +90,7 @@ namespace ifacegen {
         add_license = 0x4,
         not_accept_null = 0x8,
         use_dyn_cast = 0x10,
-        use_allocator = 0x20,
+        sep_namespace = 0x20,
     };
 
     DEFINE_ENUM_FLAGOP(GenFlag)

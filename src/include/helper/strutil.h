@@ -119,7 +119,8 @@ namespace utils {
                 if (first == ~0 && second == ~0) {
                     return make_ref_slice(buf.buffer, 0, 0);
                 }
-                return make_ref_slice(buf.buffer, index == 0 ? first : first + 1, second);
+                auto add = Buffer<Sep&>(sep).size();
+                return make_ref_slice(buf.buffer, index == 0 ? first : first + add, second);
             }
 
             constexpr size_t size() const {

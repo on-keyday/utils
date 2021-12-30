@@ -94,7 +94,7 @@ namespace utils {
 
             constexpr size_t size() const {
                 size_t d = stride <= 1 ? 1 : stride;
-                return (end - start) / d;
+                return end > start ? (end - start) / d : 0;
             }
         };
 

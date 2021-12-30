@@ -8,6 +8,7 @@
 
 #include "interface_list.h"
 #include "../../include/helper/appender.h"
+#include "../../include/helper/strutil.h"
 
 namespace ifacegen {
     namespace hlp = utils::helper;
@@ -181,6 +182,18 @@ namespace ifacegen {
         hlp::append(str, ";\n");
     }
 
+    void render_cpp_namespace_begin(utw::string& str, auto& name) {
+        hlp::append(str, "namespace ");
+        hlp::append(str, name);
+        hlp::append(str, " {\n");
+    }
+
+    void render_cpp_namespace_end(utw::string& str, auto& name) {
+        hlp::append(str, "} // namespace ");
+        hlp::append(str, data.name);
+        hlp::append(str, "\n");
+    }
+
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
         if (any(flag & GenFlag::add_license)) {
             hlp::append(str, "/*license*/\n");
@@ -220,9 +233,18 @@ namespace ifacegen {
         }
         hlp::append(str, "\n");
         if (data.pkgname.size()) {
-            hlp::append(str, "namespace ");
-            hlp::append(str, data.pkgname);
-            hlp::append(str, " {\n");
+            bool viewed = false;
+            if (any(flag & GenFlag::sep_namespace)) {
+                auto spltview = hlp::make_ref_splitview(data.pkgname, "::");
+                auto sz = spltview.size();
+                for (auto i = 0; i < sz; i++) {
+                    render_cpp_namespace_begin(str, spltview[i]);
+                    viewed = true;
+                }
+            }
+            if (!viewed) {
+                render_cpp_namespace_begin(str, data.pkgname);
+            }
         }
         utw::map<utw::string, Alias>* alias = nullptr;
         if (!any(flag & GenFlag::expand_alias)) {
@@ -529,9 +551,18 @@ namespace ifacegen {
             hlp::append(str, "};\n\n");
         }
         if (data.pkgname.size()) {
-            hlp::append(str, "} // namespace ");
-            hlp::append(str, data.pkgname);
-            hlp::append(str, "\n");
+            bool viewed = false;
+            if (any(flag & GenFlag::sep_namespace)) {
+                auto spltview = hlp::make_ref_splitview(data.pkgname, "::");
+                auto sz = spltview.size();
+                for (auto i = sz - 1; i != ~0; i--) {
+                    render_cpp_namespace_end(str, spltview[i]);
+                    viewed = true;
+                }
+            }
+            if (!viewed) {
+                render_cpp_namespace_begin(str, data.pkgname);
+            }
         }
         return true;
     }
