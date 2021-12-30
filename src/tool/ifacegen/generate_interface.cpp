@@ -98,6 +98,9 @@ namespace ifacegen {
             if (arg.type.ref == RefKind::rval) {
                 hlp::append(str, ")");
             }
+            if (arg.type.vararg) {
+                hlp::append(str, "...");
+            }
             is_first = false;
         }
         hlp::append(str, ")");
@@ -196,6 +199,8 @@ namespace ifacegen {
         }
         for (auto& def : data.defvec) {
             auto& iface = *data.ifaces.find(def);
+            if (iface.second.typeparam.size()) {
+            }
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
             hlp::append(str, " {");

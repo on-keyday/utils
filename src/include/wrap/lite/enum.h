@@ -64,7 +64,7 @@ namespace utils {
                 : e(i ? trueval : falseval) {}
             constexpr EnumWrap(E i)
                 : e(i) {}
-            constexpr explicit operator bool() const {
+            constexpr operator bool() const {
                 return e == trueval;
             }
 

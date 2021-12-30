@@ -130,7 +130,7 @@ namespace ifacegen {
                 state.vararg = true;
             }
             else if (result.result.kind == us::KeyWord::id) {
-                state.types.push_back({.name = result.token(), .vararg = state.vararg});
+                state.types.push_back({.vararg = state.vararg, .name = result.token()});
                 state.vararg = false;
             }
         }
