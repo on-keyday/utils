@@ -94,7 +94,8 @@ namespace utils {
 
             constexpr size_t size() const {
                 size_t d = stride <= 1 ? 1 : stride;
-                return end > start ? (end - start) / d : 0;
+                size_t ed = buf.size() <= end ? buf.size() : end;
+                return ed > start ? (ed - start) / d : 0;
             }
         };
 
