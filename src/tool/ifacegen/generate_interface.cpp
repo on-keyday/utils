@@ -561,7 +561,7 @@ namespace ifacegen {
                 }
             }
             if (!viewed) {
-                render_cpp_namespace_begin(str, data.pkgname);
+                render_cpp_namespace_end(str, data.pkgname);
             }
         }
         return true;
