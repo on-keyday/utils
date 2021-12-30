@@ -55,7 +55,7 @@ interface Any {
     decltype() type
 }
 
-typeparam T , ... Arg
+typeparam T = size_t , ... Arg
 interface Template {
     invoke(arg ...Arg) T
     __call__(arg ...Arg) T

@@ -140,7 +140,7 @@ Special Value:
         INTERFACE:=TYPEPARAM? "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME]*?
         TYPENAME:="..." ID!|ID DEFTYPE?
-        DEFTYPE="=" ID
+        DEFTYPE:="=" ID
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
