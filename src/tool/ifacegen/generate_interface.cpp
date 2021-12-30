@@ -200,6 +200,19 @@ namespace ifacegen {
         for (auto& def : data.defvec) {
             auto& iface = *data.ifaces.find(def);
             if (iface.second.typeparam.size()) {
+                hlp::append(str, "template<");
+                bool is_first = false;
+                for (auto& type : iface.second.typeparam) {
+                    if (is_first) {
+                        hlp::append(str, ", ");
+                    }
+                    hlp::append(str, "typename");
+                    if (type.vararg) {
+                        hlp::append(str, "...");
+                    }
+                    str.push_back(' ');
+                    hlp::append(str, iface.second.typeparam);
+                }
             }
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
