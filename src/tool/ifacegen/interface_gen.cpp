@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         .set("help,h", bool_option(true), "show help", OptFlag::none)
         .set("syntax,s", bool_option(true), "show syntax help", OptFlag::none)
         .set("header,H", str_option(""), "additional header file", OptFlag::need_value, "filename")
-        .set("expand,e", bool_option(true), "expand alias", OptFlag::once_in_cmd)
+        .set("expand,e", bool_option(true), "expand macro (alias is not expand)", OptFlag::once_in_cmd)
         .set("no-vtable,V", bool_option(true), "add __declspec(novtable) (for windows)", OptFlag::once_in_cmd)
         .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T__)`", OptFlag::once_in_cmd, "type func")
         .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd)
