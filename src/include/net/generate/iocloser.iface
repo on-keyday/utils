@@ -7,9 +7,9 @@
 
 # generate command
 # release
-# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V -d
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V -dS
 # debug
-# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -d
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -dS
 
 package utils::net
 

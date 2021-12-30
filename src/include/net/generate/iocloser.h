@@ -11,218 +11,220 @@
 #include "../../helper/deref.h"
 #include "../core/iodef.h"
 
-namespace utils::net {
-    struct IOClose {
-       private:
-        struct interface__ {
-            virtual State write(const char* ptr, size_t size) = 0;
-            virtual State read(char* ptr, size_t size, size_t* red) = 0;
-            virtual State close(bool force) = 0;
+namespace utils {
+    namespace net {
+        struct IOClose {
+           private:
+            struct interface__ {
+                virtual State write(const char* ptr, size_t size) = 0;
+                virtual State read(char* ptr, size_t size, size_t* red) = 0;
+                virtual State close(bool force) = 0;
 
-            virtual ~interface__() {}
-        };
+                virtual ~interface__() {}
+            };
 
-        template <class T>
-        struct implements__ : interface__ {
-            T t_holder_;
+            template <class T__>
+            struct implements__ : interface__ {
+                T__ t_holder_;
 
-            template <class... Args>
-            implements__(Args&&... args)
-                : t_holder_(std::forward<Args>(args)...) {}
+                template <class V__>
+                implements__(V__&& args)
+                    : t_holder_(std::forward<V__>(args)) {}
 
-            State write(const char* ptr, size_t size) override {
-                auto t_ptr_ = utils::helper::deref(this->t_holder_);
-                if (!t_ptr_) {
-                    return State::undefined;
+                State write(const char* ptr, size_t size) override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return State::undefined;
+                    }
+                    return t_ptr_->write(ptr, size);
                 }
-                return t_ptr_->write(ptr, size);
-            }
 
-            State read(char* ptr, size_t size, size_t* red) override {
-                auto t_ptr_ = utils::helper::deref(this->t_holder_);
-                if (!t_ptr_) {
-                    return State::undefined;
+                State read(char* ptr, size_t size, size_t* red) override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return State::undefined;
+                    }
+                    return t_ptr_->read(ptr, size, red);
                 }
-                return t_ptr_->read(ptr, size, red);
-            }
 
-            State close(bool force) override {
-                auto t_ptr_ = utils::helper::deref(this->t_holder_);
-                if (!t_ptr_) {
-                    return State::undefined;
+                State close(bool force) override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return State::undefined;
+                    }
+                    return t_ptr_->close(force);
                 }
-                return t_ptr_->close(force);
+            };
+
+            interface__* iface = nullptr;
+
+           public:
+            constexpr IOClose() {}
+
+            constexpr IOClose(std::nullptr_t) {}
+
+            template <class T__>
+            IOClose(T__&& t) {
+                if (!utils::helper::deref(t)) {
+                    return;
+                }
+                iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
             }
-        };
 
-        interface__* iface = nullptr;
-
-       public:
-        constexpr IOClose() {}
-
-        constexpr IOClose(std::nullptr_t) {}
-
-        template <class T>
-        IOClose(T&& t) {
-            if (!utils::helper::deref(t)) {
-                return;
+            IOClose(IOClose&& in) {
+                iface = in.iface;
+                in.iface = nullptr;
             }
-            iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
-        }
 
-        IOClose(IOClose&& in) {
-            iface = in.iface;
-            in.iface = nullptr;
-        }
+            IOClose& operator=(IOClose&& in) {
+                delete iface;
+                iface = in.iface;
+                in.iface = nullptr;
+                return *this;
+            }
 
-        IOClose& operator=(IOClose&& in) {
-            delete iface;
-            iface = in.iface;
-            in.iface = nullptr;
-            return *this;
-        }
+            explicit operator bool() const {
+                return iface != nullptr;
+            }
 
-        explicit operator bool() const {
-            return iface != nullptr;
-        }
+            ~IOClose() {
+                delete iface;
+            }
 
-        ~IOClose() {
-            delete iface;
-        }
+            State write(const char* ptr, size_t size) {
+                return iface ? iface->write(ptr, size) : State::undefined;
+            }
 
-        State write(const char* ptr, size_t size) {
-            return iface ? iface->write(ptr, size) : State::undefined;
-        }
+            State read(char* ptr, size_t size, size_t* red) {
+                return iface ? iface->read(ptr, size, red) : State::undefined;
+            }
 
-        State read(char* ptr, size_t size, size_t* red) {
-            return iface ? iface->read(ptr, size, red) : State::undefined;
-        }
+            State close(bool force) {
+                return iface ? iface->close(force) : State::undefined;
+            }
 
-        State close(bool force) {
-            return iface ? iface->close(force) : State::undefined;
-        }
-
-        template <class T>
-        const T* type_assert() const {
-            if (!iface) {
+            template <class T__>
+            const T__* type_assert() const {
+                if (!iface) {
+                    return nullptr;
+                }
+                if (auto ptr = dynamic_cast<implements__<T__>*>(iface)) {
+                    return std::addressof(ptr->t_holder_);
+                }
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
-            }
-            return nullptr;
-        }
 
-        template <class T>
-        T* type_assert() {
-            if (!iface) {
+            template <class T__>
+            T__* type_assert() {
+                if (!iface) {
+                    return nullptr;
+                }
+                if (auto ptr = dynamic_cast<implements__<T__>*>(iface)) {
+                    return std::addressof(ptr->t_holder_);
+                }
                 return nullptr;
-            }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
-            }
-            return nullptr;
-        }
-    };
-
-    struct IO {
-       private:
-        struct interface__ {
-            virtual State write(const char* ptr, size_t size) = 0;
-            virtual State read(char* ptr, size_t size, size_t* red) = 0;
-
-            virtual ~interface__() {}
-        };
-
-        template <class T>
-        struct implements__ : interface__ {
-            T t_holder_;
-
-            template <class... Args>
-            implements__(Args&&... args)
-                : t_holder_(std::forward<Args>(args)...) {}
-
-            State write(const char* ptr, size_t size) override {
-                auto t_ptr_ = utils::helper::deref(this->t_holder_);
-                if (!t_ptr_) {
-                    return State::undefined;
-                }
-                return t_ptr_->write(ptr, size);
-            }
-
-            State read(char* ptr, size_t size, size_t* red) override {
-                auto t_ptr_ = utils::helper::deref(this->t_holder_);
-                if (!t_ptr_) {
-                    return State::undefined;
-                }
-                return t_ptr_->read(ptr, size, red);
             }
         };
 
-        interface__* iface = nullptr;
+        struct IO {
+           private:
+            struct interface__ {
+                virtual State write(const char* ptr, size_t size) = 0;
+                virtual State read(char* ptr, size_t size, size_t* red) = 0;
 
-       public:
-        constexpr IO() {}
+                virtual ~interface__() {}
+            };
 
-        constexpr IO(std::nullptr_t) {}
+            template <class T__>
+            struct implements__ : interface__ {
+                T__ t_holder_;
 
-        template <class T>
-        IO(T&& t) {
-            if (!utils::helper::deref(t)) {
-                return;
+                template <class V__>
+                implements__(V__&& args)
+                    : t_holder_(std::forward<V__>(args)) {}
+
+                State write(const char* ptr, size_t size) override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return State::undefined;
+                    }
+                    return t_ptr_->write(ptr, size);
+                }
+
+                State read(char* ptr, size_t size, size_t* red) override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return State::undefined;
+                    }
+                    return t_ptr_->read(ptr, size, red);
+                }
+            };
+
+            interface__* iface = nullptr;
+
+           public:
+            constexpr IO() {}
+
+            constexpr IO(std::nullptr_t) {}
+
+            template <class T__>
+            IO(T__&& t) {
+                if (!utils::helper::deref(t)) {
+                    return;
+                }
+                iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
             }
-            iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
-        }
 
-        IO(IO&& in) {
-            iface = in.iface;
-            in.iface = nullptr;
-        }
+            IO(IO&& in) {
+                iface = in.iface;
+                in.iface = nullptr;
+            }
 
-        IO& operator=(IO&& in) {
-            delete iface;
-            iface = in.iface;
-            in.iface = nullptr;
-            return *this;
-        }
+            IO& operator=(IO&& in) {
+                delete iface;
+                iface = in.iface;
+                in.iface = nullptr;
+                return *this;
+            }
 
-        explicit operator bool() const {
-            return iface != nullptr;
-        }
+            explicit operator bool() const {
+                return iface != nullptr;
+            }
 
-        ~IO() {
-            delete iface;
-        }
+            ~IO() {
+                delete iface;
+            }
 
-        State write(const char* ptr, size_t size) {
-            return iface ? iface->write(ptr, size) : State::undefined;
-        }
+            State write(const char* ptr, size_t size) {
+                return iface ? iface->write(ptr, size) : State::undefined;
+            }
 
-        State read(char* ptr, size_t size, size_t* red) {
-            return iface ? iface->read(ptr, size, red) : State::undefined;
-        }
+            State read(char* ptr, size_t size, size_t* red) {
+                return iface ? iface->read(ptr, size, red) : State::undefined;
+            }
 
-        template <class T>
-        const T* type_assert() const {
-            if (!iface) {
+            template <class T__>
+            const T__* type_assert() const {
+                if (!iface) {
+                    return nullptr;
+                }
+                if (auto ptr = dynamic_cast<implements__<T__>*>(iface)) {
+                    return std::addressof(ptr->t_holder_);
+                }
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
-            }
-            return nullptr;
-        }
 
-        template <class T>
-        T* type_assert() {
-            if (!iface) {
+            template <class T__>
+            T__* type_assert() {
+                if (!iface) {
+                    return nullptr;
+                }
+                if (auto ptr = dynamic_cast<implements__<T__>*>(iface)) {
+                    return std::addressof(ptr->t_holder_);
+                }
                 return nullptr;
             }
-            if (auto ptr = dynamic_cast<implements__<T>*>(iface)) {
-                return std::addressof(ptr->t_holder_);
-            }
-            return nullptr;
-        }
-    };
+        };
 
-}  // namespace utils::net
+    }  // namespace net
+}  // namespace utils
