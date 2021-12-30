@@ -26,6 +26,11 @@ int main(int argc, char** argv) {
     using namespace utils::cmdline;
     auto& cout = wrap::cout_wrap();
     auto& cerr = wrap::cerr_wrap();
+    auto dev_bug = [&] {
+        cerr << "this is library bug\n";
+        cerr << "please report bug to ";
+        cerr << "https://github.com/on-keyday/utils\n";
+    };
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
@@ -163,9 +168,7 @@ Special Value:
         auto seq = make_ref_seq(def);
         if (!stxc->make_tokenizer(seq, token)) {
             cerr << "ifacegen: " << stxc->error();
-            cerr << "this is developer's error\n";
-            cerr << "please report bug to ";
-            cerr << "https://github.com/on-keyday/utils\n";
+            dev_bug();
             return -1;
         }
     }
@@ -180,7 +183,11 @@ Special Value:
         auto sv = make_ref_seq(view);
 
         auto res = token.tokenize(sv, tok);
-        assert(res && "ifacegen: fatal error: can't tokenize");
+        if (!res) {
+            cerr << "ifacegen: fatal error: can't tokenize\n";
+            dev_bug();
+            return -1;
+        }
         const char* errmsg = nullptr;
         if (!tokenize::merge(errmsg, tok,
                              tokenize::line_comment<wrap::string>("#"),
