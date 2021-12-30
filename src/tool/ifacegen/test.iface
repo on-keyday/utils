@@ -8,7 +8,7 @@
 # generate code
 # tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -d
 
-package test # `package` will be namespace
+package test::util # `package` will be namespace
 
 # iface
 # const identifier(param type) rettype

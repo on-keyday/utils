@@ -182,15 +182,15 @@ namespace ifacegen {
         hlp::append(str, ";\n");
     }
 
-    void render_cpp_namespace_begin(utw::string& str, auto& name) {
+    void render_cpp_namespace_begin(utw::string& str, auto&& name) {
         hlp::append(str, "namespace ");
         hlp::append(str, name);
         hlp::append(str, " {\n");
     }
 
-    void render_cpp_namespace_end(utw::string& str, auto& name) {
+    void render_cpp_namespace_end(utw::string& str, auto&& name) {
         hlp::append(str, "} // namespace ");
-        hlp::append(str, data.name);
+        hlp::append(str, name);
         hlp::append(str, "\n");
     }
 
