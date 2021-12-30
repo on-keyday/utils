@@ -6,7 +6,7 @@
 # test - ifacegen test
 
 # generate code
-# tool\ifacegen -i src/tool/test.iface -o generated/generated.h 
+# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -d
 
 package test # `package` will be namespace
 
@@ -57,5 +57,6 @@ interface Any {
 
 typeparam T , ... Arg
 interface Template {
-    Test(arg ...Arg) T
+    invoke(arg ...Arg) T
+    __call__(arg ...Arg) T
 }

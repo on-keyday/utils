@@ -270,9 +270,9 @@ namespace ifacegen {
     struct implements__ : interface__ {
         T__ t_holder_;
 
-        template<class... Args>
-        implements__(Args&&...args)
-            :t_holder_(std::forward<Args>(args)...){}
+        template<class V__>
+        implements__(V__&& args)
+            :t_holder_(std::forward<V__>(args)){}
 
     )");
             for (auto& func : iface.second.iface) {
