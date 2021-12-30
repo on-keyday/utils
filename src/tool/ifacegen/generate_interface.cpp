@@ -493,7 +493,7 @@ namespace ifacegen {
                     if (func.funcname == call_func) {
                         hlp::append(str, "operator()");
                     }
-                    render_cpp_call(func, str, alias, false);
+                    render_cpp_call(func, str, alias, true);
                     hlp::append(str, ":");
                     render_cpp_default_value(func, str, false, alias);
                     hlp::append(str, R"(;
