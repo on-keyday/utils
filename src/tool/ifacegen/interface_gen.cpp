@@ -65,9 +65,7 @@ int main(int argc, char** argv) {
     }
 
     typeparam T, ...Args
-    interface NAME{
-        FUNC() TYPE    
-    }
+    interface NAME{}
 
     import <HEADERNAME>
 

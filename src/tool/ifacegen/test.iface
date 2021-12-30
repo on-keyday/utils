@@ -60,3 +60,6 @@ interface Template {
     invoke(arg ...Arg) T
     __call__(arg ...Arg) T
 }
+
+typeparam T
+alias TemplateS Template<T,int>
