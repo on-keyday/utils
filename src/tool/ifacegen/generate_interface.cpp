@@ -203,6 +203,7 @@ namespace ifacegen {
 #pragma once
 )");
         if (any(flag & GenFlag::not_depend_lib)) {
+            // unimplemented
         }
         else {
             hlp::append(str, "#include");
