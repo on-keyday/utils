@@ -11,23 +11,24 @@
 #include "../../helper/deref.h"
 
 namespace utils::platform::windows {
-    struct Complete {
+    template <typename Size>
+    struct CompleteBase {
        private:
         struct interface__ {
-            virtual void operator()(size_t size) = 0;
+            virtual void operator()(Size size) = 0;
 
             virtual ~interface__() {}
         };
 
-        template <class T>
+        template <class T__>
         struct implements__ : interface__ {
-            T t_holder_;
+            T__ t_holder_;
 
-            template <class... Args>
-            implements__(Args&&... args)
-                : t_holder_(std::forward<Args>(args)...) {}
+            template <class V__>
+            implements__(V__&& args)
+                : t_holder_(std::forward<V__>(args)) {}
 
-            void operator()(size_t size) override {
+            void operator()(Size size) override {
                 auto t_ptr_ = utils::helper::deref(this->t_holder_);
                 if (!t_ptr_) {
                     return (void)0;
@@ -39,24 +40,24 @@ namespace utils::platform::windows {
         interface__* iface = nullptr;
 
        public:
-        constexpr Complete() {}
+        constexpr CompleteBase() {}
 
-        constexpr Complete(std::nullptr_t) {}
+        constexpr CompleteBase(std::nullptr_t) {}
 
-        template <class T>
-        Complete(T&& t) {
+        template <class T__>
+        CompleteBase(T__&& t) {
             if (!utils::helper::deref(t)) {
                 return;
             }
-            iface = new implements__<std::decay_t<T>>(std::forward<T>(t));
+            iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
         }
 
-        Complete(Complete&& in) {
+        CompleteBase(CompleteBase&& in) {
             iface = in.iface;
             in.iface = nullptr;
         }
 
-        Complete& operator=(Complete&& in) {
+        CompleteBase& operator=(CompleteBase&& in) {
             delete iface;
             iface = in.iface;
             in.iface = nullptr;
@@ -67,13 +68,15 @@ namespace utils::platform::windows {
             return iface != nullptr;
         }
 
-        ~Complete() {
+        ~CompleteBase() {
             delete iface;
         }
 
-        void operator()(size_t size) {
+        void operator()(Size size) {
             return iface ? iface->operator()(size) : (void)0;
         }
     };
+
+    using Complete = CompleteBase<size_t>;
 
 }  // namespace utils::platform::windows

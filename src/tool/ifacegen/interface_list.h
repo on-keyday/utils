@@ -48,6 +48,7 @@ namespace ifacegen {
     struct TypeName {
         bool vararg = false;
         utw::string name;
+        utw::string defvalue;
     };
 
     struct IfaceList {

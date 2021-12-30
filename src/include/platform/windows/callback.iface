@@ -10,6 +10,7 @@
 
 package utils::platform::windows
 
-interface Complete {
-    __call__(size size_t) void
+typeparam Size
+interface CompleteBase {
+    __call__(size Size) void
 }

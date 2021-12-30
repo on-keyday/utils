@@ -20,6 +20,7 @@ namespace ifacegen {
     constexpr auto import_def = "IMPORT";
     constexpr auto typeparam_def = "TYPEPARAM";
     constexpr auto typename_def = "TYPENAME";
+    constexpr auto deftype_def = "DEFTYPE";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -132,6 +133,11 @@ namespace ifacegen {
             else if (result.result.kind == us::KeyWord::id) {
                 state.types.push_back({.vararg = state.vararg, .name = result.token()});
                 state.vararg = false;
+            }
+        }
+        if (result.top() == deftype_def) {
+            if (result.result.kind == us::KeyWord::id) {
+                state.types.back().defvalue = result.token();
             }
         }
         return true;
