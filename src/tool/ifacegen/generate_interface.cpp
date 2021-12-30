@@ -266,9 +266,9 @@ namespace ifacegen {
         virtual ~interface__(){}
     };
     
-    template<class T>
+    template<class T__>
     struct implements__ : interface__ {
-        T t_holder_;
+        T__ t_holder_;
 
         template<class... Args>
         implements__(Args&&...args)
@@ -298,7 +298,7 @@ namespace ifacegen {
                         hlp::append(str, data.typeid_func);
                     }
                     else {
-                        hlp::append(str, "typeid(T)");
+                        hlp::append(str, "typeid(T__)");
                     }
                     hlp::append(str, R"(;
         }
@@ -308,7 +308,7 @@ namespace ifacegen {
                 else if (func.funcname == copy_func) {
                     hlp::append(str, R"(    interface__* copy__() const override {
             )");
-                    hlp::append(str, "return new implements__<T>(t_holder_);");
+                    hlp::append(str, "return new implements__<T__>(t_holder_);");
                     hlp::append(str, R"(
                 }
 
@@ -350,10 +350,10 @@ namespace ifacegen {
             hlp::append(str, iface.first);
             hlp::append(str, "(std::nullptr_t){}\n");
             hlp::append(str, R"(
-    template <class T>
+    template <class T__>
     )");
             hlp::append(str, iface.first);
-            hlp::append(str, R"a((T&& t) {
+            hlp::append(str, R"a((T__&& t) {
         )a");
             if (any(flag & GenFlag::not_accept_null)) {
                 hlp::append(str, R"(if(!utils::helper::deref(t)){
@@ -362,7 +362,7 @@ namespace ifacegen {
         )");
             }
             hlp::append(str, "iface=");
-            hlp::append(str, "new implements__<std::decay_t<T>>(std::forward<T>(t));");
+            hlp::append(str, "new implements__<std::decay_t<T__>>(std::forward<T__>(t));");
             hlp::append(str, R"a(
         }
 
@@ -400,14 +400,14 @@ namespace ifacegen {
 )");
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
-                    hlp::append(str, R"(    template<class T>
-    const T* type_assert() const {
+                    hlp::append(str, R"(    template<class T__>
+    const T__* type_assert() const {
         if (!iface) {
             return nullptr;
         }
         )");
                     if (use_dycast) {
-                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T>*>(iface)){
+                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
             return std::addressof(ptr->t_holder_);
         }
         return nullptr;)");
@@ -418,7 +418,7 @@ namespace ifacegen {
                             hlp::append(str, data.typeid_func);
                         }
                         else {
-                            hlp::append(str, "typeid(T)");
+                            hlp::append(str, "typeid(T__)");
                         }
                         hlp::append(str, R"() {
             return nullptr;
@@ -429,14 +429,14 @@ namespace ifacegen {
     }
     
 )");
-                    hlp::append(str, R"(    template<class T>
+                    hlp::append(str, R"(    template<class T__>
     T* type_assert() {
         if (!iface) {
             return nullptr;
         }
         )");
                     if (use_dycast) {
-                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T>*>(iface)){
+                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
             return std::addressof(ptr->t_holder_);
         }
         return nullptr;)");
@@ -447,7 +447,7 @@ namespace ifacegen {
                             hlp::append(str, data.typeid_func);
                         }
                         else {
-                            hlp::append(str, "typeid(T)");
+                            hlp::append(str, "typeid(T__)");
                         }
                         hlp::append(str, R"() {
             return nullptr;

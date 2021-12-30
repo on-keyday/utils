@@ -57,5 +57,5 @@ interface Any {
 
 typeparam T , ... Arg
 interface Template {
-    Test(arg ...&&Arg) T
+    Test(arg ...Arg) T
 }
