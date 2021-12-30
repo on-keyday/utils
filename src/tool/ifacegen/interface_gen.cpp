@@ -138,11 +138,11 @@ Special Value:
     }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
-        ROOT:=PACKAGE? [INTERFACE|ALIAS|IMPORT]*? EOF
+        ROOT:=PACKAGE? [TYPEPARAM? [INTERFACE]|ALIAS|IMPORT]*? EOF
         PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
         ALIAS:= "alias" ID UNTILEOL
-        INTERFACE:=TYPEPARAM? "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
+        INTERFACE:= "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME]*?
         TYPENAME:="..." ID!|ID DEFTYPE?
         DEFTYPE:="=" ID
