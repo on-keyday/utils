@@ -49,6 +49,9 @@ namespace ifacegen {
         else if (type.ref == RefKind::rval) {
             hlp::append(str, "&&");
         }
+        if (type.vararg) {
+            hlp::append(str, "...");
+        }
         hlp::append(str, " ");
     }
 
