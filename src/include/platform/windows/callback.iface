@@ -6,7 +6,7 @@
 # callback - iocompletion callback
 
 # generate code
-# tool\ifacegen -i src/include/platform/windows/callback.iface -o src/include/platform/windows/callback.h -d -n --helper-deref "\"../../helper/deref.h\"" --license
+# tool\ifacegen -i src/include/platform/windows/callback.iface -o src/include/platform/windows/callback.h -d -n --helper-deref "\"../../helper/deref.h\"" --license -S
 
 package utils::platform::windows
 
