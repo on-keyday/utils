@@ -91,6 +91,7 @@ namespace ifacegen {
         not_accept_null = 0x8,
         use_dyn_cast = 0x10,
         sep_namespace = 0x20,
+        not_depend_lib = 0x40,
     };
 
     DEFINE_ENUM_FLAGOP(GenFlag)
