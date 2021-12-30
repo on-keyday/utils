@@ -164,7 +164,7 @@ Special Value:
         if (!stxc->make_tokenizer(seq, token)) {
             cerr << "ifacegen: " << stxc->error();
             cerr << "this is developer's error\n";
-            cerr << "please report bug to\n";
+            cerr << "please report bug to";
             cerr << "https://github.com/on-keyday/utils\n";
             return -1;
         }
