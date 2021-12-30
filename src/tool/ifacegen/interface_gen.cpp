@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 
 Special Value:
     Func Name:
-        decltype - generate type assert func ex) decltype() type (`type` is placeholder)
+        decltype - generate type assertion func ex) decltype() type (`type` is placeholder)
         __copy__ - generate copy constructor and copy assign ex) __copy__() type (`type` is placeholder)
         __call__ - generate `operator()` ex) __call__(num int) int 
     Default Value:
