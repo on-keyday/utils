@@ -163,6 +163,9 @@ Special Value:
         auto seq = make_ref_seq(def);
         if (!stxc->make_tokenizer(seq, token)) {
             cerr << "ifacegen: " << stxc->error();
+            cerr << "this is developer's error\n";
+            cerr << "please report bug to\n";
+            cerr << "https://github.com/on-keyday/utils\n";
             return -1;
         }
     }
