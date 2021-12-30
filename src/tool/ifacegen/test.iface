@@ -40,7 +40,7 @@ interface Stringer {
 
 # alias expand using statement or expand directry 
 # (because of incomplete lexer, you have to make alias if the type has over two type parameter)
-alias IOResult std::pair<size_t,bool>
+macro IOResult std::pair<size_t,bool>
 
 interface Writer {
     Write(ptr *const char,size size_t) IOResult

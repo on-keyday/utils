@@ -64,10 +64,20 @@ int main(int argc, char** argv) {
         const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_RETURN_VALUE
     }
 
+    typeparam T, ...Args
+    interface NAME{
+        FUNC() TYPE    
+    }
+
     import <HEADERNAME>
 
     import "HEADERNAME"
 
+    macro NAME REFERRED
+
+    alias NAME REFERRED
+
+    typeparam T
     alias NAME REFERRED
 
     # COMMENT
