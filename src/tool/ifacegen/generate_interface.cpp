@@ -423,14 +423,14 @@ namespace ifacegen {
                         hlp::append(str, R"() {
             return nullptr;
         }
-        return reinterpret_cast<const T*>(iface->raw__());)");
+        return reinterpret_cast<const T__*>(iface->raw__());)");
                     }
                     hlp::append(str, R"(
     }
     
 )");
                     hlp::append(str, R"(    template<class T__>
-    T* type_assert() {
+    T__* type_assert() {
         if (!iface) {
             return nullptr;
         }
@@ -452,7 +452,7 @@ namespace ifacegen {
                         hlp::append(str, R"() {
             return nullptr;
         }
-        return reinterpret_cast<T*>(const_cast<void*>(iface->raw__()));)");
+        return reinterpret_cast<T__*>(const_cast<void*>(iface->raw__()));)");
                     }
                     hlp::append(str, R"(
     }
