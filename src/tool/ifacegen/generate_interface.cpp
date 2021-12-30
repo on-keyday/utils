@@ -219,6 +219,10 @@ namespace ifacegen {
                     }
                     str.push_back(' ');
                     hlp::append(str, type.name);
+                    if (type.defvalue.size()) {
+                        hlp::append(str, " = ");
+                        hlp::append(str, type.defvalue);
+                    }
                     is_first = false;
                 }
                 hlp::append(str, ">\n");
