@@ -213,6 +213,7 @@ namespace ifacegen {
                     str.push_back(' ');
                     hlp::append(str, iface.second.typeparam);
                 }
+                hlp::append(str, ">\n");
             }
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);
