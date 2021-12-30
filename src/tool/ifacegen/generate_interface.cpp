@@ -16,11 +16,11 @@ namespace ifacegen {
     constexpr auto copy_func = "__copy__";
     constexpr auto call_func = "__call__";
 
-    void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, utw::string>* alias) {
+    void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, Alias>* alias) {
         if (alias) {
             auto found = alias->find(prim);
-            if (found != alias->end()) {
-                hlp::append(str, found->second);
+            if (found != alias->end() && found->second.is_macro) {
+                hlp::append(str, found->second.token);
             }
             else {
                 hlp::append(str, prim);
@@ -31,7 +31,7 @@ namespace ifacegen {
         }
     }
 
-    void render_cpp_noref_type(Type& type, utw::string& str, utw::map<utw::string, utw::string>* alias) {
+    void render_cpp_noref_type(Type& type, utw::string& str, utw::map<utw::string, Alias>* alias) {
         if (type.is_const) {
             hlp::append(str, "const ");
         }
@@ -41,7 +41,7 @@ namespace ifacegen {
         }
     }
 
-    void render_cpp_type(Type& type, utw::string& str, utw::map<utw::string, utw::string>* alias, bool on_iface) {
+    void render_cpp_type(Type& type, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
         render_cpp_noref_type(type, str, alias);
         if (on_iface && type.vararg) {
             hlp::append(str, "&&");
@@ -58,7 +58,7 @@ namespace ifacegen {
         hlp::append(str, " ");
     }
 
-    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias, bool on_iface) {
+    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
         render_cpp_type(func.type, str, alias, on_iface);
         if (func.funcname == "__call__") {
             hlp::append(str, "operator()");
@@ -82,7 +82,7 @@ namespace ifacegen {
         }
     }
 
-    void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias, bool on_iface) {
+    void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
         if (func.funcname == call_func) {
             //hlp::append(str, "operator()");
         }
@@ -113,7 +113,7 @@ namespace ifacegen {
         hlp::append(str, ")");
     }
 
-    void render_cpp_default_value(Interface& func, utw::string& str, bool need_ret, utw::map<utw::string, utw::string>* alias) {
+    void render_cpp_default_value(Interface& func, utw::string& str, bool need_ret, utw::map<utw::string, Alias>* alias) {
         auto ret_w = [&] {
             if (need_ret) {
                 hlp::append(str, "return ");
@@ -146,6 +146,39 @@ namespace ifacegen {
                 hlp::append(str, "{}");
             }
         }
+    }
+
+    void render_cpp_template(utw::string& str, utw::vector<TypeName>& typeparam) {
+        hlp::append(str, "template<");
+        bool is_first = true;
+        for (auto& type : typeparam) {
+            if (!is_first) {
+                hlp::append(str, ", ");
+            }
+            hlp::append(str, "typename");
+            if (type.vararg) {
+                hlp::append(str, "...");
+            }
+            str.push_back(' ');
+            hlp::append(str, type.name);
+            if (type.defvalue.size()) {
+                hlp::append(str, " = ");
+                hlp::append(str, type.defvalue);
+            }
+            is_first = false;
+        }
+        hlp::append(str, ">\n");
+    }
+
+    void render_cpp_using(utw::string& str, auto& alias) {
+        if (alias.second.types.size()) {
+            render_cpp_template(str, alias.second.types);
+        }
+        hlp::append(str, "using ");
+        hlp::append(str, alias.first);
+        hlp::append(str, " = ");
+        hlp::append(str, alias.second.token);
+        hlp::append(str, ";\n");
     }
 
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
@@ -191,41 +224,28 @@ namespace ifacegen {
             hlp::append(str, data.pkgname);
             hlp::append(str, " {\n");
         }
-        utw::map<utw::string, utw::string>* alias = nullptr;
+        utw::map<utw::string, Alias>* alias = nullptr;
         if (!any(flag & GenFlag::expand_alias)) {
             for (auto& alias : data.aliases) {
-                hlp::append(str, "using ");
-                hlp::append(str, alias.first);
-                hlp::append(str, " = ");
-                hlp::append(str, alias.second);
-                hlp::append(str, ";\n");
+                if (alias.second.is_macro) {
+                    render_cpp_using(str, alias);
+                }
             }
         }
         else {
             alias = &data.aliases;
         }
         for (auto& def : data.defvec) {
-            auto& iface = *data.ifaces.find(def);
+            auto found = data.ifaces.find(def);
+            if (found == data.ifaces.end()) {
+                auto found = data.aliases.find(def);
+                auto& alias = *found;
+                render_cpp_using(str, alias);
+                continue;
+            }
+            auto& iface = *found;
             if (iface.second.typeparam.size()) {
-                hlp::append(str, "template<");
-                bool is_first = true;
-                for (auto& type : iface.second.typeparam) {
-                    if (!is_first) {
-                        hlp::append(str, ", ");
-                    }
-                    hlp::append(str, "typename");
-                    if (type.vararg) {
-                        hlp::append(str, "...");
-                    }
-                    str.push_back(' ');
-                    hlp::append(str, type.name);
-                    if (type.defvalue.size()) {
-                        hlp::append(str, " = ");
-                        hlp::append(str, type.defvalue);
-                    }
-                    is_first = false;
-                }
-                hlp::append(str, ">\n");
+                render_cpp_template(str, iface.second.typeparam);
             }
             hlp::append(str, "struct ");
             hlp::append(str, iface.first);

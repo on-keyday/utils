@@ -56,12 +56,18 @@ namespace ifacegen {
         utw::vector<Interface> iface;
     };
 
+    struct Alias {
+        utw::string token;
+        bool is_macro = false;
+        utw::vector<TypeName> types;
+    };
+
     struct FileData {
         utw::string pkgname;
         utw::map<utw::string, IfaceList> ifaces;
         utw::vector<utw::string> defvec;
         utw::vector<utw::string> headernames;
-        utw::map<utw::string, utw::string> aliases;
+        utw::map<utw::string, Alias> aliases;
         bool has_ref_ret = false;
         utw::string typeid_func;
         utw::string typeid_type;

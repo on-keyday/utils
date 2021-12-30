@@ -17,6 +17,7 @@ namespace ifacegen {
     constexpr auto pointer_ = "POINTER";
     constexpr auto type_prim = "TYPEPRIM";
     constexpr auto alias_def = "ALIAS";
+    constexpr auto macro_def = "MACRO";
     constexpr auto import_def = "IMPORT";
     constexpr auto typeparam_def = "TYPEPARAM";
     constexpr auto typename_def = "TYPENAME";
@@ -109,15 +110,22 @@ namespace ifacegen {
                 return set_type(state.iface.type);
             }
         }
-        if (result.top() == alias_def) {
+        if (result.top() == macro_def || result.top() == alias_def) {
             if (result.result.kind == us::KeyWord::id) {
                 state.current_alias = result.token();
-                if (!state.data.aliases.insert({state.current_alias, {}}).second) {
+                if (!state.data.aliases.insert({state.current_alias, {.is_macro = result.top() == macro_def}}).second) {
                     return false;
+                }
+                if (!state.data.aliases.at(state.current_alias).is_macro) {
+                    state.data.aliases.at(state.current_alias).types = std::move(state.types);
+                    if (state.data.ifaces.find(state.current_alias) != state.data.ifaces.end()) {
+                        return false;
+                    }
+                    state.data.defvec.push_back(state.current_alias);
                 }
             }
             if (result.result.kind == us::KeyWord::until_eol) {
-                state.data.aliases[state.current_alias] = result.token();
+                state.data.aliases[state.current_alias].token = result.token();
                 state.current_alias.clear();
             }
         }

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     auto& cout = wrap::cout_wrap();
     auto& cerr = wrap::cerr_wrap();
     auto dev_bug = [&] {
-        cerr << "this is library bug\n";
+        cerr << "this is a library bug\n";
         cerr << "please report bug to ";
         cerr << "https://github.com/on-keyday/utils\n";
     };
@@ -138,10 +138,11 @@ Special Value:
     }
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
-        ROOT:=PACKAGE? [TYPEPARAM? [INTERFACE]|ALIAS|IMPORT]*? EOF
+        ROOT:=PACKAGE? [TYPEPARAM? [INTERFACE|ALIAS]|MACRO|IMPORT]*? EOF
         PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
-        ALIAS:= "alias" ID UNTILEOL
+        MACRO:= "macro" ID UNTILEOL
+        ALIAS:="alias" ID UNTILEOL
         INTERFACE:= "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME]*?
         TYPENAME:="..." ID!|ID DEFTYPE?
