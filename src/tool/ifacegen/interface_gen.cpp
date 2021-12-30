@@ -138,7 +138,7 @@ Special Value:
         IMPORT:="import" UNTILEOL
         ALIAS:= "alias" ID UNTILEOL
         INTERFACE:=TYPEPARAM? "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
-        TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME!]*? EOS
+        TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME]*?
         TYPENAME:="..." ID!|ID 
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*

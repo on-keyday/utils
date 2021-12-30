@@ -5,6 +5,9 @@
 
 # test - ifacegen test
 
+# generate code
+# tool\ifacegen -i src/tool/test.iface -o generated/generated.h 
+
 package test # `package` will be namespace
 
 # iface
@@ -48,6 +51,11 @@ interface Reader {
 }
 
 interface Any {
-    copy() type # `copy` is special value that generate copy assign operator and copy constructor 
+    __copy__() type # `__copy__` is special value that generate copy assign operator and copy constructor 
     decltype() type
+}
+
+typeparam T , ... Arg
+interface Template {
+    Test(arg ...&&Arg) T
 }

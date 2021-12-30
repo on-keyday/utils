@@ -201,9 +201,9 @@ namespace ifacegen {
             auto& iface = *data.ifaces.find(def);
             if (iface.second.typeparam.size()) {
                 hlp::append(str, "template<");
-                bool is_first = false;
+                bool is_first = true;
                 for (auto& type : iface.second.typeparam) {
-                    if (is_first) {
+                    if (!is_first) {
                         hlp::append(str, ", ");
                     }
                     hlp::append(str, "typename");
@@ -211,7 +211,8 @@ namespace ifacegen {
                         hlp::append(str, "...");
                     }
                     str.push_back(' ');
-                    hlp::append(str, iface.second.typeparam);
+                    hlp::append(str, type.name);
+                    is_first = false;
                 }
                 hlp::append(str, ">\n");
             }
