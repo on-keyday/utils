@@ -41,9 +41,12 @@ namespace ifacegen {
         }
     }
 
-    void render_cpp_type(Type& type, utw::string& str, utw::map<utw::string, utw::string>* alias) {
+    void render_cpp_type(Type& type, utw::string& str, utw::map<utw::string, utw::string>* alias, bool on_iface) {
         render_cpp_noref_type(type, str, alias);
-        if (type.ref == RefKind::lval) {
+        if (on_iface && type.vararg) {
+            hlp::append(str, "&&");
+        }
+        else if (type.ref == RefKind::lval) {
             hlp::append(str, "&");
         }
         else if (type.ref == RefKind::rval) {
@@ -55,8 +58,8 @@ namespace ifacegen {
         hlp::append(str, " ");
     }
 
-    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias) {
-        render_cpp_type(func.type, str, alias);
+    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias, bool on_iface) {
+        render_cpp_type(func.type, str, alias, on_iface);
         if (func.funcname == "__call__") {
             hlp::append(str, "operator()");
         }
@@ -69,7 +72,7 @@ namespace ifacegen {
             if (!is_first) {
                 hlp::append(str, ", ");
             }
-            render_cpp_type(arg.type, str, alias);
+            render_cpp_type(arg.type, str, alias, on_iface);
             hlp::append(str, arg.name);
             is_first = false;
         }
@@ -79,7 +82,7 @@ namespace ifacegen {
         }
     }
 
-    void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias) {
+    void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, utw::string>* alias, bool on_iface) {
         if (func.funcname == call_func) {
             //hlp::append(str, "operator()");
         }
@@ -92,13 +95,14 @@ namespace ifacegen {
             if (!is_first) {
                 hlp::append(str, ", ");
             }
-            if (arg.type.ref == RefKind::rval) {
+            bool make_forward = (on_iface && arg.type.vararg) || arg.type.ref == RefKind::rval;
+            if (make_forward) {
                 hlp::append(str, "std::forward<");
                 render_cpp_noref_type(arg.type, str, alias);
                 hlp::append(str, ">(");
             }
             hlp::append(str, arg.name);
-            if (arg.type.ref == RefKind::rval) {
+            if (make_forward) {
                 hlp::append(str, ")");
             }
             if (arg.type.vararg) {
@@ -254,7 +258,7 @@ namespace ifacegen {
                 }
                 else {
                     hlp::append(str, "    virtual ");
-                    render_cpp_function(func, str, alias);
+                    render_cpp_function(func, str, alias, true);
                     hlp::append(str, "= 0;\n    ");
                 }
             }
@@ -312,7 +316,7 @@ namespace ifacegen {
                 }
                 else {
                     hlp::append(str, "    ");
-                    render_cpp_function(func, str, alias);
+                    render_cpp_function(func, str, alias, true);
                     hlp::append(str, "override {\n");
                     hlp::append(str, "            ");
                     hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_);\n");
@@ -330,7 +334,7 @@ namespace ifacegen {
                     else {
                         hlp::append(str, "t_ptr_->");
                     }
-                    render_cpp_call(func, str, alias);
+                    render_cpp_call(func, str, alias, true);
                     hlp::append(str, ";\n        }\n\n    ");
                 }
             }
@@ -483,13 +487,13 @@ namespace ifacegen {
                 }
                 else {
                     hlp::append(str, "    ");
-                    render_cpp_function(func, str, alias);
+                    render_cpp_function(func, str, alias, false);
                     hlp::append(str, R"({
         return iface?iface->)");
                     if (func.funcname == call_func) {
                         hlp::append(str, "operator()");
                     }
-                    render_cpp_call(func, str, alias);
+                    render_cpp_call(func, str, alias, false);
                     hlp::append(str, ":");
                     render_cpp_default_value(func, str, false, alias);
                     hlp::append(str, R"(;

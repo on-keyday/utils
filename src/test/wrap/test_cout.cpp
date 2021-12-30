@@ -7,6 +7,8 @@
 
 #include "../../include/wrap/cout.h"
 
+#include <functional>
+
 void test_cout() {
     auto& cout = utils::wrap::cout_wrap();
 
@@ -14,6 +16,7 @@ void test_cout() {
     cout << 3;
     cout << utils::wrap::pack("\nerror: ", 3, U" is not ", u"a vector\n")
                 .pack(u8"please pay money, つまるところ かねはらえ\n", std::hex, 12);
+    std::function<int(int)> f;
 }
 
 int main() {
