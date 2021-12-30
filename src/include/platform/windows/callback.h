@@ -11,11 +11,10 @@
 #include "../../helper/deref.h"
 
 namespace utils::platform::windows {
-    template <typename Size>
-    struct CompleteBase {
+    struct Complete {
        private:
         struct interface__ {
-            virtual void operator()(Size size) = 0;
+            virtual void operator()(size_t size) = 0;
 
             virtual ~interface__() {}
         };
@@ -28,7 +27,7 @@ namespace utils::platform::windows {
             implements__(V__&& args)
                 : t_holder_(std::forward<V__>(args)) {}
 
-            void operator()(Size size) override {
+            void operator()(size_t size) override {
                 auto t_ptr_ = utils::helper::deref(this->t_holder_);
                 if (!t_ptr_) {
                     return (void)0;
@@ -40,24 +39,24 @@ namespace utils::platform::windows {
         interface__* iface = nullptr;
 
        public:
-        constexpr CompleteBase() {}
+        constexpr Complete() {}
 
-        constexpr CompleteBase(std::nullptr_t) {}
+        constexpr Complete(std::nullptr_t) {}
 
         template <class T__>
-        CompleteBase(T__&& t) {
+        Complete(T__&& t) {
             if (!utils::helper::deref(t)) {
                 return;
             }
             iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
         }
 
-        CompleteBase(CompleteBase&& in) {
+        Complete(Complete&& in) {
             iface = in.iface;
             in.iface = nullptr;
         }
 
-        CompleteBase& operator=(CompleteBase&& in) {
+        Complete& operator=(Complete&& in) {
             delete iface;
             iface = in.iface;
             in.iface = nullptr;
@@ -68,15 +67,13 @@ namespace utils::platform::windows {
             return iface != nullptr;
         }
 
-        ~CompleteBase() {
+        ~Complete() {
             delete iface;
         }
 
-        void operator()(Size size) {
+        void operator()(size_t size) {
             return iface ? iface->operator()(size) : (void)0;
         }
     };
-
-    using Complete = CompleteBase<size_t>;
 
 }  // namespace utils::platform::windows
