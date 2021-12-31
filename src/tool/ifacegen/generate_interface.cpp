@@ -231,7 +231,7 @@ namespace ifacegen {
         template<class T>
         struct has_deref:decltype(has_deref_impl::template test<T>(nullptr)){};
 
-        template<class T,bool f=had_deref<T>::value>
+        template<class T,bool f=has_deref<T>::value>
         struct deref_impl{
             using result=decltype(std::addressof(*std::declval<T>()));
             constexpr static result deref(auto& v){
