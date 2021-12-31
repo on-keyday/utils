@@ -460,7 +460,7 @@ namespace ifacegen {
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T__&& t) {
-    )a");
+        )a");
             if (any(flag & GenFlag::not_accept_null)) {
                 hlp::append(str, R"(if(!)");
                 hlp::append(str, nmspc);
@@ -472,7 +472,7 @@ namespace ifacegen {
             hlp::append(str, "iface=");
             hlp::append(str, "new implements__<std::decay_t<T__>>(std::forward<T__>(t));");
             hlp::append(str, R"a(
-        }
+    }
 
     )a");
             hlp::append(str, iface.first);
