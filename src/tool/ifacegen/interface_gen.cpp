@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd)
         .set("use-dynamic-cast,d", bool_option(true), "use dynamic cast for type assert", OptFlag::once_in_cmd)
         .set("separate,S", bool_option(true), "separate namespace by ::", OptFlag::once_in_cmd)
-        .set("independent,D", bool_option(true), "insert deref code to independent from utils", OptFlag::once_in_cmd);
+        .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
