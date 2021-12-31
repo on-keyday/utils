@@ -7,6 +7,7 @@
 
 
 // unicode_data - unicode data
+// almost copied from commonlib
 #pragma once
 
 #include "../../wrap/lite/string.h"
