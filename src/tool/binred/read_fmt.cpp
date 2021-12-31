@@ -12,6 +12,7 @@ namespace binred {
     namespace us = utils::syntax;
     constexpr auto struct_def = "STRUCT";
     constexpr auto member_def = "MEMBER";
+    constexpr auto type_def = "TYPE";
     constexpr auto flag_def = "FLAG";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == struct_def) {
@@ -25,8 +26,22 @@ namespace binred {
             }
             return true;
         }
+        auto memb = [&]() -> auto& {
+            return state.data.structs[state.cuurent_struct].member;
+        };
         if (result.top() == member_def) {
-            state.data.structs[state.cuurent_struct].member.push_back({.name = result.token()});
+            memb().push_back({.name = result.token()});
+        }
+        if (result.top() == type_def) {
+            if (result.kind() == us::KeyWord::id) {
+                memb().back().type.name = result.token();
+            }
+            if (result.kind() == us::KeyWord::string || result.kind() == us::KeyWord::integer) {
+                auto& t = memb().back();
+                t.defval = result.token();
+                t.kind = result.kind();
+            }
+            return true;
         }
         if (result.top() == flag_def) {
         }
