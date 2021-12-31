@@ -3,6 +3,8 @@
 #pragma once
 
 #include "../../include/wrap/lite/lite.h"
+#include "../../include/syntax/make_parser/keyword.h"
+#include "../../include/syntax/matching/matching.h"
 
 namespace binred {
     namespace utw = utils::wrap;
@@ -36,6 +38,9 @@ namespace binred {
     struct FileData {
         utw::map<utw::string, Struct> structs;
         utw::vector<utw::string> defvec;
+    };
+
+    struct State {
     };
 
 }  // namespace binred
