@@ -8,9 +8,10 @@
 
 int main() {
     constexpr auto def = R"(
-        STRUCT:="struct" ID "{" 
-        MEMBER:=ID TYPE
-        TYPE:=ID FLAG?
-        FLAG:="?" ID ["eq"|"bit"] INTEGER 
+        ROOT:=STRUCT*
+        STRUCT:="struct" ID "{" MEMBER*? "}" 
+        MEMBER:=ID TYPE!
+        TYPE:=ID FLAG? "=" [INTEGER|STRING]
+        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING] 
     )";
 }

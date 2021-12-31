@@ -16,8 +16,9 @@ namespace binred {
 
     struct Flag {
         utw::string depend;
-        size_t num = 0;
+        utw::string val;
         FlagType type = FlagType::none;
+        utils::syntax::KeyWord kind = {};
     };
 
     struct Type {
@@ -29,6 +30,7 @@ namespace binred {
         utw::string name;
         Type type;
         utw::string defval;
+        utils::syntax::KeyWord kind = {};
     };
 
     struct Struct {
@@ -41,6 +43,7 @@ namespace binred {
     };
 
     struct State {
+        utw::string cuurent_struct;
     };
 
 }  // namespace binred

@@ -10,7 +10,12 @@
 
 namespace binred {
     constexpr auto struct_def = "STRUCT";
-
+    constexpr auto member_def = "MEMBER";
+    constexpr auto flag_def = "FLAG";
     int read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
+        if (result.top() == struct_def) {
+            if (result.kind()) {
+            }
+        }
     }
 }  // namespace binred

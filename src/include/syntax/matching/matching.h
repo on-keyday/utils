@@ -29,6 +29,10 @@ namespace utils {
                 return stack[stack.size() - 1];
             }
 
+            KeyWord kind() const {
+                return result.kind;
+            }
+
             bool under(const String& v) const {
                 for (auto i = stack.size() - 1; i != -1; i--) {
                     if (stack[i] == v) {
