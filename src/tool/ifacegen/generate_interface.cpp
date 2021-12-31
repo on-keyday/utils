@@ -206,8 +206,8 @@ namespace ifacegen {
 )");
         utw::string nmspc;
         if (any(flag & GenFlag::not_depend_lib)) {
-            hlp::append(str, "#include<memory>");
-            hlp::append(str, "#include<type_traits>");
+            hlp::append(str, "#include<memory>\n");
+            hlp::append(str, "#include<type_traits>\n");
             std::random_device dev;
             std::uniform_int_distribution uni(0, 35);
             nmspc.append("indep_");
@@ -261,7 +261,9 @@ namespace ifacegen {
         return t;
     }
 
-})");
+}
+
+)");
         }
         else {
             hlp::append(str, "#include");
