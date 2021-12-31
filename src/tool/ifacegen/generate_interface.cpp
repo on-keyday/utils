@@ -216,7 +216,7 @@ namespace ifacegen {
                 nmspc.push_back(utils::number::to_num_char(uni(dev), upper));
                 upper = !upper;
             }
-            nmspc.append("::");
+
             hlp::append(str, "namespace ");
             hlp::append(str, nmspc);
             hlp::append(str, R"( {
@@ -264,6 +264,7 @@ namespace ifacegen {
 }
 
 )");
+            nmspc.append("::");
         }
         else {
             hlp::append(str, "#include");
