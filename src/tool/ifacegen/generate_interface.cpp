@@ -191,9 +191,7 @@ namespace ifacegen {
     }
 
     void render_cpp_namespace_end(utw::string& str, auto&& name) {
-        hlp::append(str, "} // namespace ");
-        hlp::append(str, name);
-        hlp::append(str, "\n");
+        hlp::appends(str, "} // namespace ", name, "\n");
     }
 
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
@@ -217,13 +215,11 @@ namespace ifacegen {
                 upper = !upper;
             }
 
-            hlp::append(str, "namespace ");
-            hlp::append(str, nmspc);
-            hlp::append(str, R"( {
+            hlp::appends(str, "namespace ", nmspc, R"( {
     namespace internal {
         struct has_deref_impl {
             template<class T>
-            static std::true_type test(decltype(*std::declval<T>(),(void)0)*);
+            static std::true_type test(decltype(*std::declval<T&>(),(void)0)*);
             template<class T>
             static std::false_type test(...);
         };
@@ -233,7 +229,7 @@ namespace ifacegen {
 
         template<class T,bool f=has_deref<T>::value>
         struct deref_impl{
-            using result=decltype(std::addressof(*std::declval<T>()));
+            using result=decltype(std::addressof(*std::declval<T&>()));
             constexpr static result deref(auto& v){
                 if(!v){
                     return nullptr;
@@ -244,7 +240,7 @@ namespace ifacegen {
 
         template<class T>
         struct deref_impl<T,false>{
-            using result=decltype(std::addressof(std::declval<T>()));
+            using result=decltype(std::addressof(std::declval<T&>()));
             constexpr static result deref(auto& v){
                 return std::addressof(v);
             }
@@ -284,9 +280,7 @@ namespace ifacegen {
             hlp::append(str, "#include<functional>\n");
         }
         for (auto& h : data.headernames) {
-            hlp::append(str, "#include");
-            hlp::append(str, h);
-            hlp::append(str, "\n");
+            hlp::appends(str, "#include", h, "\n");
         }
         if (any(flag & GenFlag::no_vtable)) {
             hlp::append(str, R"(
@@ -337,10 +331,7 @@ namespace ifacegen {
             if (iface.second.typeparam.size()) {
                 render_cpp_template(str, iface.second.typeparam);
             }
-            hlp::append(str, "struct ");
-            hlp::append(str, iface.first);
-            hlp::append(str, " {");
-            hlp::append(str, R"(
+            hlp::appends(str, "struct ", iface.first, " {", R"(
    private:
 
 )");
@@ -420,10 +411,9 @@ namespace ifacegen {
     )");
                 }
                 else if (func.funcname == copy_func) {
-                    hlp::append(str, R"(    interface__* copy__() const override {
-            )");
-                    hlp::append(str, "return new implements__<T__>(t_holder_);");
-                    hlp::append(str, R"(
+                    hlp::appends(str, R"(    interface__* copy__() const override {
+            )",
+                                 "return new implements__<T__>(t_holder_);", R"(
                 }
 
     )");

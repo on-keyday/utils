@@ -22,6 +22,8 @@ package test::util # `package` will be namespace
 #          copy__ , implicit used if `copy` appered 
 #          so type_assert, raw__, type__, copy__ function is not usable
 
+import <string>
+
 interface Hey {
     hey(name &const std::string) std::string 
     hey(name *const char) std::string
