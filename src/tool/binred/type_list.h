@@ -43,6 +43,7 @@ namespace binred {
     };
 
     struct State {
+        FileData data;
         utw::string cuurent_struct;
     };
 
