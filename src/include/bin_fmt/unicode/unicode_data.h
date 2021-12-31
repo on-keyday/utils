@@ -112,6 +112,7 @@ namespace utils {
             unsigned int ccc = 0;  //Canonical_Combining_Class
             wrap::string bidiclass;
             wrap::string east_asian_width;
+            wrap::string breakcategory;
             Decomposition decomposition;
             Numeric numeric;
             bool mirrored = false;
