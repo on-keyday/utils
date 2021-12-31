@@ -19,6 +19,7 @@
 #include "../../helper/strutil.h"
 
 #include "../../number/parse.h"
+#include "../../number/prefix.h"
 
 namespace utils {
     namespace syntax {
@@ -150,20 +151,17 @@ namespace utils {
                     report("invalid float number format");
                     return 0;
                 }
-                if (helper::starts_with(pt.str, "0x") || helper::starts_with(pt.str, "0X")) {
+                auto pf = number::has_prefix(pt.str);
+                if (pf == 16) {
                     if (pt.str.size() >= 3 && pt.str[2] == '.' && !pt.afterdot) {
                         report("invalid hex float fromat. token is " + pt.str);
                         return 0;
                     }
-                    base = 16;
+                    base = pf;
                     i = 2;
                 }
-                else if (helper::starts_with(pt.str, "0b") || helper::starts_with(pt.str, "0B")) {
-                    base = 2;
-                    i = 2;
-                }
-                else if (helper::starts_with(pt.str, "0o") || helper::starts_with(pt.str, "0O")) {
-                    base = 8;
+                else if (pf) {
+                    base = pf;
                     i = 2;
                 }
                 if (number::is_integer(pt.str, base, i)) {
