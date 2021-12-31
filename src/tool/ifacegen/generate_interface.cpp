@@ -230,7 +230,7 @@ namespace ifacegen {
         template<class T,bool f=has_deref<T>::value>
         struct deref_impl{
             using result=decltype(std::addressof(*std::declval<T&>()));
-            constexpr static result deref(auto& v){
+            constexpr static result deref(T& v){
                 if(!v){
                     return nullptr;
                 }
@@ -241,7 +241,7 @@ namespace ifacegen {
         template<class T>
         struct deref_impl<T,false>{
             using result=decltype(std::addressof(std::declval<T&>()));
-            constexpr static result deref(auto& v){
+            constexpr static result deref(T& v){
                 return std::addressof(v);
             }
         };
