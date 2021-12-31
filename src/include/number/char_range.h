@@ -86,7 +86,7 @@ namespace utils {
             if (n <= 9) {
                 return '0' + n;
             }
-            else if (n >= 10 && n <= 36) {
+            else if (n >= 10 && n < 36) {
                 if (upper) {
                     return 'A' + (n - 10);
                 }

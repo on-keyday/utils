@@ -9,6 +9,8 @@
 #include "interface_list.h"
 #include "../../include/helper/appender.h"
 #include "../../include/helper/strutil.h"
+#include "../../include/number/char_range.h"
+#include <random>
 
 namespace ifacegen {
     namespace hlp = utils::helper;
@@ -202,8 +204,64 @@ namespace ifacegen {
 
 #pragma once
 )");
+        utw::string nmspc;
         if (any(flag & GenFlag::not_depend_lib)) {
-            // unimplemented
+            hlp::append(str, "#include<memory>");
+            hlp::append(str, "#include<type_traits>");
+            std::random_device dev;
+            std::uniform_int_distribution uni(0, 35);
+            nmspc.append("indep_");
+            bool upper = false;
+            for (auto i = 0; i < 20; i++) {
+                nmspc.push_back(utils::number::to_num_char(uni(dev), upper));
+                upper = !upper;
+            }
+            nmspc.append("::");
+            hlp::append(str, "namespace ");
+            hlp::append(str, nmspc);
+            hlp::append(str, R"( {
+    namespace internal {
+        struct has_deref_impl {
+            template<class T>
+            static std::true_type test(decltype(*std::declval<T>(),(void)0)*);
+            template<class T>
+            static std::false_type test(...);
+        };
+
+        template<class T>
+        struct has_deref:decltype(has_deref_impl::template test<T>(nullptr)){};
+
+        template<class T,bool f=had_deref<T>::value>
+        struct deref_impl{
+            using result=decltype(std::addressof(*std::declval<T>()));
+            constexpr static result deref(auto& v){
+                if(!v){
+                    return nullptr;
+                }
+                return std::addressof(*v);
+            }
+        };
+
+        template<class T>
+        struct deref_impl<T,false>{
+            using result=decltype(std::addressof(std::declval<T>()));
+            constexpr static result deref(auto& v){
+                return std::addressof(v);
+            }
+        };
+    }
+
+    template<class T>
+    auto deref(T& t){
+        return internal::deref_impl<T>::deref(t);
+    }
+
+    template<class T>
+    T* deref(T* t){
+        return t;
+    }
+
+})");
         }
         else {
             hlp::append(str, "#include");
@@ -214,6 +272,7 @@ namespace ifacegen {
                 hlp::append(str, "<helper/deref.h>");
             }
             hlp::append(str, "\n");
+            nmspc = "utils::helper::";
         }
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
@@ -371,7 +430,9 @@ namespace ifacegen {
                     render_cpp_function(func, str, alias, true);
                     hlp::append(str, "override {\n");
                     hlp::append(str, "            ");
-                    hlp::append(str, "auto t_ptr_ = utils::helper::deref(this->t_holder_);\n");
+                    hlp::append(str, "auto t_ptr_ = ");
+                    hlp::append(str, nmspc);
+                    hlp::append(str, "deref(this->t_holder_);\n");
                     hlp::append(str, "            ");
                     hlp::append(str, "if (!t_ptr_) {\n");
                     hlp::append(str, "                ");
@@ -408,7 +469,9 @@ namespace ifacegen {
             hlp::append(str, R"a((T__&& t) {
         )a");
             if (any(flag & GenFlag::not_accept_null)) {
-                hlp::append(str, R"(if(!utils::helper::deref(t)){
+                hlp::append(str, R"(if(!)");
+                hlp::append(str, nmspc);
+                hlp::append(str, R"(deref(t)){
             return;
         }
         )");
