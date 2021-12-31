@@ -34,5 +34,14 @@ namespace utils {
         constexpr void append(T& t, const U& u) {
             return internal::has_append<T, U>::invoke(t, u);
         }
+
+        template <class T>
+        constexpr void appends(T& t) {}
+
+        template <class T, class First, class... Args>
+        constexpr void appends(T& t, First&& f, Args&&... args) {
+            append(t, f);
+            appends(t, std::forward<Args>(args)...);
+        }
     }  // namespace helper
 }  // namespace utils
