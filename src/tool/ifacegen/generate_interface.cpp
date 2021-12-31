@@ -460,7 +460,7 @@ namespace ifacegen {
     )");
             hlp::append(str, iface.first);
             hlp::append(str, R"a((T__&& t) {
-        )a");
+    )a");
             if (any(flag & GenFlag::not_accept_null)) {
                 hlp::append(str, R"(if(!)");
                 hlp::append(str, nmspc);
