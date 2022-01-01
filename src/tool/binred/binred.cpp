@@ -33,7 +33,8 @@ int main(int argc, char** argv) {
     desc
         .set("help,h", uc::bool_option(true), "show option help", uc::OptFlag::once_in_cmd)
         .set("input,i", uc::str_option(""), "input file", uc::OptFlag::once_in_cmd, "filename")
-        .set("verbose,v", uc::bool_option(true), "verbose log", uc::OptFlag::once_in_cmd);
+        .set("verbose,v", uc::bool_option(true), "verbose log", uc::OptFlag::once_in_cmd)
+        .set("write-method,w", uc::str_option("write"), "set write method", uc::OptFlag::once_in_cmd, "funcname");
     uc::DefaultSet result;
     utw::vector<utw::string> arg;
     auto err = uc::parse(idx, argc, argv, desc, result, uc::ParseFlag::optget_mode, &arg);
@@ -92,6 +93,10 @@ int main(int argc, char** argv) {
         }
     }
     binred::State state;
+    state.data.write_method = "write";
+    if (auto wm = result.has_value<utw::string>("write-method")) {
+        state.data.write_method = *wm;
+    }
     c->cb = [&](auto& ctx) {
         if (result.is_true("verbose")) {
             cout << ctx.top() << ":" << us::keywordv(ctx.kind()) << ":" << ctx.token() << "\n";

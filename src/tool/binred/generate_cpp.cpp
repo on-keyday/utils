@@ -36,7 +36,7 @@ namespace binred {
                         hlp::appends(str, "    if (", flag.depend, "&", flag.val, ") {\n    ");
                     }
                 }
-                hlp::appends(str, "    output.write(", memb.name, ");\n");
+                hlp::appends(str, "    output.", "write", "(", memb.name, ");\n");
                 if (has_flag) {
                     hlp::append(str, "    }\n");
                 }
