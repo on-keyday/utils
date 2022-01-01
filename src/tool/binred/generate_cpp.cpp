@@ -25,12 +25,12 @@ namespace binred {
         }
         hlp::append(str, "    ");
         if (check_succeed) {
-            hlp::append(str, "if(");
+            hlp::append(str, "if(!");
         }
         hlp::appends(str, out, ".", method, "(", in, ".", memb.name, ")");
         if (check_succeed) {
             hlp::appends(str, ") {\n        ", has_flag ? "    " : "",
-                         "return false;\n        }\n");
+                         "return false;\n    ", has_flag ? "    " : "", "}\n");
         }
         else {
             hlp::append(str, ";\n");
