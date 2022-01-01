@@ -63,6 +63,7 @@ namespace binred {
                 generate_with_flag(str, memb, "output", "input", data.read_method, true);
             }
             hlp::append(str, "    return true;\n");
+            hlp::append(str, "}\n\n");
         }
     }
 }  // namespace binred
