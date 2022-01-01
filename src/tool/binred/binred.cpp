@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
     }
     {
         std::ofstream fs(*outfile);
-        if (!fs.is_open() || true) {
+        if (!fs.is_open()) {
             cerr << "ifacegen: error:file `" << *outfile << "` couldn't open\n";
             return -1;
         }
