@@ -41,6 +41,7 @@ namespace binred {
                     hlp::append(str, "    }\n");
                 }
             }
+            hlp::append(str, "}");
         }
     }
 }  // namespace binred
