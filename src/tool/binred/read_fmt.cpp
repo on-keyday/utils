@@ -16,6 +16,7 @@ namespace binred {
     constexpr auto type_def = "TYPE";
     constexpr auto flag_def = "FLAG";
     constexpr auto import_def = "IMPORT";
+    constexpr auto size_def = "SIZE";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
@@ -79,7 +80,11 @@ namespace binred {
             }
             return true;
         }
-
+        if (result.top() == size_def) {
+            if (is_rval()) {
+                t.type.flag.size = result.token();
+            }
+        }
         return true;
     }
 }  // namespace binred

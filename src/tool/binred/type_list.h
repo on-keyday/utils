@@ -26,6 +26,7 @@ namespace binred {
         utw::string val;
         FlagType type = FlagType::none;
         utils::syntax::KeyWord kind = {};
+        utw::string size;
     };
 
     struct Type {

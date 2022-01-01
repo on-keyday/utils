@@ -56,8 +56,9 @@ int main(int argc, char** argv) {
         IMPORT:="import" UNTILEOL
         STRUCT:="struct" ID "{" MEMBER*? "}" EOS
         MEMBER:=ID TYPE!
-        TYPE:=ID FLAG? ["=" [INTEGER|STRING]]?
-        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING|ID]  
+        TYPE:=ID SIZE? FLAG? ["=" [INTEGER|STRING]]?
+        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING|ID]
+        SIZE:="!" [INTEGER|ID]  
     )";
     auto c = us::make_syntaxc();
     auto s = us::make_tokenizer();

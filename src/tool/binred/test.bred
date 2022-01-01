@@ -3,7 +3,7 @@
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 # generate code
-# tool\binred -i src/tool/binred/test.bred -v 
+# tool\binred -i src/tool/binred/test.bred -v -o generated/binred.h
 package utils
 
 import <cstdint>
@@ -20,4 +20,8 @@ struct Foo {
 
 struct Void{
 
+}
+
+struct H2Frame {
+    
 }
