@@ -17,11 +17,11 @@ namespace binred {
             auto d = *data.structs.find(def);
             hlp::appends(str, "struct ", d.first, " {\n");
             for (auto& memb : d.second.member) {
-                hlp::appends(str, memb.type.name, " ", memb.name);
+                hlp::appends(str, "    ", memb.type.name, " ", memb.name);
                 if (memb.defval.size()) {
                     hlp::appends(str, " = ", memb.defval);
                 }
-                hlp::append(str, ";");
+                hlp::append(str, ";\n");
             }
             hlp::append(str, "};\n");
         }

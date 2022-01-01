@@ -50,7 +50,8 @@ add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
                         "src/tool/ifacegen/read_interface.cpp"
                         "src/tool/ifacegen/generate_interface.cpp")
 add_executable(binred "src/tool/binred/binred.cpp"
-                      "src/tool/binred/read_fmt.cpp")
+                      "src/tool/binred/read_fmt.cpp"
+                      "src/tool/binred/generate_cpp.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
