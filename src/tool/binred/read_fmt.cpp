@@ -14,6 +14,7 @@ namespace binred {
     constexpr auto member_def = "MEMBER";
     constexpr auto type_def = "TYPE";
     constexpr auto flag_def = "FLAG";
+    constexpr auto import_def = "IMPORT";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == struct_def) {
             if (result.kind() == us::KeyWord::id) {
@@ -63,6 +64,8 @@ namespace binred {
                 }
             }
             return true;
+        }
+        if (result.top() == import_def) {
         }
         return true;
     }
