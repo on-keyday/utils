@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
     };
     uc::DefaultDesc desc;
     desc
+        .set("help,h", uc::bool_option(true), "show option help", uc::OptFlag::once_in_cmd)
         .set("input,i", uc::str_option(""), "input file", uc::OptFlag::once_in_cmd, "filename")
         .set("varbose,v", uc::bool_option(true), "verbose log", uc::OptFlag::once_in_cmd);
     uc::DefaultSet result;
@@ -39,6 +40,10 @@ int main(int argc, char** argv) {
     if (err != uc::ParseError::none) {
         cout << "binred: error: " << uc::error_message(err) << "\n";
         return -1;
+    }
+    if (result.is_true("help")) {
+        cout << desc.help(argv[0]);
+        return 1;
     }
     constexpr auto def = R"(
         ROOT:=STRUCT*
