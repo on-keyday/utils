@@ -24,4 +24,7 @@ struct Void{
 
 struct H2Frame {
     len int $ 3 
+    type std::uint8_t
+    flag std::uint8_t
+    
 }

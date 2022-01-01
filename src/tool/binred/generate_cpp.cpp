@@ -13,18 +13,43 @@
 namespace binred {
     namespace hlp = utils::helper;
 
+    void write_indent(utw::string& str, size_t indent) {
+        for (size_t i = 0; i < indent; i++) {
+            hlp::append(str, "    ");
+        }
+    }
+
+    void generate_flag_cond_begin(utw::string& str, auto& in, Flag& flag, bool not_ = false) {
+        write_indent(str, 1);
+        hlp::append(str, "if (");
+        if (not_) {
+            hlp::append(str, "!(");
+        }
+        hlp::appends(str, in, ".", flag.depend);
+        if (flag.type == FlagType::eq) {
+            hlp::append(str, " == ");
+        }
+        else if (flag.type == FlagType::bit) {
+            hlp::append(str, " & ");
+        }
+        hlp::append(str, flag.val);
+        if (not_) {
+            hlp::append(str, ")");
+        }
+        hlp::append(str, ") {\n");
+        write_indent(str, 1);
+    }
+
     void generate_with_flag(utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool check_succeed) {
         auto& flag = memb.type.flag;
         auto has_flag = flag.type != FlagType::none;
-        if (has_flag) {
-            if (flag.type == FlagType::eq) {
-                hlp::appends(str, "    if (", in, ".", flag.depend, " == ", flag.val, ") {\n    ");
-            }
-            else if (flag.type == FlagType::bit) {
-                hlp::appends(str, "    if (", in, ".", flag.depend, " & ", flag.val, ") {\n    ");
-            }
+        auto check_before = memb.type.flag.depend != memb.name;
+        int plus = 0;
+        if (has_flag && check_before) {
+            generate_flag_cond_begin(str, in, flag);
+            plus = 1;
         }
-        hlp::append(str, "    ");
+        write_indent(str, 1);
         if (check_succeed) {
             hlp::append(str, "if(!");
         }
@@ -34,14 +59,27 @@ namespace binred {
         }
         hlp::append(str, ")");
         if (check_succeed) {
-            hlp::appends(str, ") {\n        ", has_flag ? "    " : "",
-                         "return false;\n    ", has_flag ? "    " : "", "}\n");
+            hlp::append(str, ") {\n");
+            write_indent(str, 2 + plus);
+            hlp::append(str, "return false;\n");
+            write_indent(str, 1 + plus);
+            hlp::append(str, "}\n");
         }
         else {
             hlp::append(str, ";\n");
         }
         if (has_flag) {
-            hlp::append(str, "    }\n");
+            if (check_before) {
+                write_indent(str, 1);
+                hlp::append(str, "}\n");
+            }
+            else {
+                generate_flag_cond_begin(str, in, flag, true);
+                write_indent(str, 2);
+                hlp::append(str, "return false;\n");
+                write_indent(str, 1);
+                hlp::append(str, "}\n");
+            }
         }
     }
 
