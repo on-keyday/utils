@@ -6,10 +6,18 @@
 # tool\binred -i src/tool/binred/test.bred -v 
 package utils
 
-import <string>
+import <cstdint>
 
 struct ID {
-    A int
-    B int ? A eq 0x20
-    C int ? C bit 0x20
+    A int = 0
+    B int ? A eq 0x20 = 0
+    C int ? C bit 0x20 = 0
+}
+
+struct Foo {
+    foo std::uint8_t = 0xff
+}
+
+struct Void{
+
 }

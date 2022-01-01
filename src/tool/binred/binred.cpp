@@ -17,6 +17,8 @@
 
 #include "../../include/file/file_view.h"
 
+#include <fstream>
+
 int main(int argc, char** argv) {
     namespace us = utils::syntax;
     namespace uc = utils::cmdline;
@@ -33,6 +35,7 @@ int main(int argc, char** argv) {
     desc
         .set("help,h", uc::bool_option(true), "show option help", uc::OptFlag::once_in_cmd)
         .set("input,i", uc::str_option(""), "input file", uc::OptFlag::once_in_cmd, "filename")
+        .set("output,o", uc::str_option(""), "output file", uc::OptFlag::once_in_cmd, "filename")
         .set("verbose,v", uc::bool_option(true), "verbose log", uc::OptFlag::once_in_cmd)
         .set("write-method,w", uc::str_option("write"), "set write method", uc::OptFlag::once_in_cmd, "funcname")
         .set("read-method,r", uc::str_option("read"), "set read method", uc::OptFlag::once_in_cmd, "funcname");
@@ -68,7 +71,8 @@ int main(int argc, char** argv) {
     s.symbol.predef.push_back("#");
     decltype(s)::token_t tok;
     auto infile = result.has_value<utw::string>("input");
-    if (!infile) {
+    auto outfile = result.has_value<utw::string>("output");
+    if (!infile || !outfile) {
         cerr << "binred: error: need --input and --output\ntry binred -h for help\n";
         return -1;
     }
@@ -119,5 +123,17 @@ int main(int argc, char** argv) {
     }
     utw::string str;
     binred::generate_cpp(str, state.data, {});
-    cout << str;
+    if (result.is_true("verbose")) {
+        cout << "generated code:\n";
+        cout << str;
+    }
+    {
+        std::ofstream fs(*outfile);
+        if (!fs.is_open()) {
+            cerr << "ifacegen: error:file `" << outfile << "` couldn't open\n";
+            return -1;
+        }
+        fs << str;
+    }
+    cout << "generated\n";
 }
