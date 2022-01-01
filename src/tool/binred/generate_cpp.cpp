@@ -45,6 +45,13 @@ namespace binred {
         auto has_flag = flag.type != FlagType::none;
         auto check_before = memb.type.flag.depend != memb.name;
         int plus = 0;
+        auto check_self = [&] {
+            generate_flag_cond_begin(str, in, flag, true);
+            write_indent(str, 1);
+            hlp::append(str, "return false;\n");
+            write_indent(str, 1);
+            hlp::append(str, "}\n");
+        };
         if (has_flag && check_before) {
             generate_flag_cond_begin(str, in, flag);
             plus = 1;
@@ -74,11 +81,7 @@ namespace binred {
                 hlp::append(str, "}\n");
             }
             else {
-                generate_flag_cond_begin(str, in, flag, true);
-                write_indent(str, 2);
-                hlp::append(str, "return false;\n");
-                write_indent(str, 1);
-                hlp::append(str, "}\n");
+                check_self();
             }
         }
     }
