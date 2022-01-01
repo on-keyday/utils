@@ -310,6 +310,18 @@ namespace utils {
                 }
                 return nullptr;
             }
+
+            bool is_true(const String& name) {
+                auto s = is_set(name);
+                if (!s) {
+                    return false;
+                }
+                auto b = s->template value<bool>();
+                if (!b) {
+                    return false;
+                }
+                return *b;
+            }
         };
     }  // namespace cmdline
 

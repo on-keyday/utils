@@ -9,9 +9,9 @@
 int main() {
     constexpr auto def = R"(
         ROOT:=STRUCT*
-        STRUCT:="struct" ID "{" MEMBER*? "}" 
+        STRUCT:="struct" ID "{" MEMBER*? "}" EOS
         MEMBER:=ID TYPE!
         TYPE:=ID FLAG? "=" [INTEGER|STRING]
-        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING|ID] 
+        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING|ID]  
     )";
 }

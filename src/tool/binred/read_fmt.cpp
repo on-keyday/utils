@@ -62,6 +62,8 @@ namespace binred {
                     t.type.flag.type = FlagType::bit;
                 }
             }
+            return true;
         }
+        return true;
     }
 }  // namespace binred
