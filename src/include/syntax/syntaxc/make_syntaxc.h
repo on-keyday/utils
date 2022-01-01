@@ -22,6 +22,9 @@ namespace utils {
         wrap::shared_ptr<SyntaxC<String, Vec, Map>> make_syntaxc() {
             return wrap::make_shared<SyntaxC<String, Vec, Map>>();
         }
+        template <class String = wrap::string, template <class...> class Vec = wrap::vector>
+        tknz::Tokenizer<String, Vec> make_tokenizer() {
+        }
 #if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
         extern template struct SyntaxC<wrap::string, wrap::vector, wrap::map>;
 #endif
