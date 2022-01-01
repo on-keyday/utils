@@ -30,13 +30,13 @@ namespace binred {
                 auto has_flag = flag.type != FlagType::none;
                 if (has_flag) {
                     if (flag.type == FlagType::eq) {
-                        hlp::appends(str, "    if (", flag.depend, " == ", flag.val, ") {\n    ");
+                        hlp::appends(str, "    if (input.", flag.depend, " == ", flag.val, ") {\n    ");
                     }
                     else if (flag.type == FlagType::bit) {
-                        hlp::appends(str, "    if (", flag.depend, "&", flag.val, ") {\n    ");
+                        hlp::appends(str, "    if (input.", flag.depend, "&", flag.val, ") {\n    ");
                     }
                 }
-                hlp::appends(str, "    output.", data.write_method, "(", memb.name, ");\n");
+                hlp::appends(str, "    output.", data.write_method, "(input.", memb.name, ");\n");
                 if (has_flag) {
                     hlp::append(str, "    }\n");
                 }
