@@ -12,6 +12,7 @@
 
 namespace binred {
     namespace hlp = utils::helper;
+
     void generate_with_flag(utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool check_succeed) {
         auto& flag = memb.type.flag;
         auto has_flag = flag.type != FlagType::none;
@@ -47,6 +48,10 @@ namespace binred {
             hlp::appends(str, "#include", i, "\n");
         }
         hlp::append(str, "\n");
+
+        if (data.pkgname.size()) {
+            hlp::appends(str, "namespace ", data.pkgname, " {\n\n");
+        }
         for (auto& def : data.defvec) {
             auto d = *data.structs.find(def);
             hlp::appends(str, "struct ", d.first, " {\n");
@@ -70,6 +75,9 @@ namespace binred {
             }
             hlp::append(str, "    return true;\n");
             hlp::append(str, "}\n\n");
+        }
+        if (data.pkgname.size()) {
+            hlp::appends(str, "} // namespace ", data.pkgname, "\n");
         }
     }
 }  // namespace binred
