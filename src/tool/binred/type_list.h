@@ -49,6 +49,7 @@ namespace binred {
         utw::vector<utw::string> defvec;
         utw::string write_method;
         utw::string read_method;
+        utw::vector<utw::string> imports;
     };
 
     struct State {
