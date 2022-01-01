@@ -28,7 +28,11 @@ namespace binred {
         if (check_succeed) {
             hlp::append(str, "if(!");
         }
-        hlp::appends(str, out, ".", method, "(", in, ".", memb.name, ")");
+        hlp::appends(str, out, ".", method, "(", in, ".", memb.name, );
+        if (memb.type.flag.size.size()) {
+            hlp::appends(str, ",", memb.type.flag.size);
+        }
+        hlp::append(str, ")");
         if (check_succeed) {
             hlp::appends(str, ") {\n        ", has_flag ? "    " : "",
                          "return false;\n    ", has_flag ? "    " : "", "}\n");
