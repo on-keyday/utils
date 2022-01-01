@@ -20,7 +20,7 @@ namespace utils {
     namespace wrap {
 
         struct WriteWrapper {
-            SFINAE_BLOCK_T_BEGIN(is_string, sizeof(std::declval<T>()[0]) <= 4)
+            SFINAE_BLOCK_T_BEGIN(is_string, (std::enable_if_t<sizeof(std::declval<T>()[0]) <= 4>)0)
             template <class Out>
             static Out& invoke(Out& out, T&& t, stringstream&, thread::LiteLock*) {
                 path_string tmp;
