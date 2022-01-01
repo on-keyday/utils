@@ -67,7 +67,9 @@ namespace binred {
         }
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
+                state.data.imports.push_back(result.token());
             }
+            return true;
         }
         return true;
     }
