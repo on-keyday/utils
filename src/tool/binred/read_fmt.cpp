@@ -32,18 +32,36 @@ namespace binred {
         if (result.top() == member_def) {
             memb().push_back({.name = result.token()});
         }
+        auto& t = memb().back();
+        auto is_rval = [&] {
+            return result.kind() == us::KeyWord::id || result.kind() == us::KeyWord::string || result.kind() == us::KeyWord::integer;
+        };
         if (result.top() == type_def) {
-            if (result.kind() == us::KeyWord::id) {
-                memb().back().type.name = result.token();
+            if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
+                t.type.name = result.token();
             }
-            if (result.kind() == us::KeyWord::string || result.kind() == us::KeyWord::integer) {
-                auto& t = memb().back();
+            else if (is_rval()) {
                 t.defval = result.token();
                 t.kind = result.kind();
             }
             return true;
         }
         if (result.top() == flag_def) {
+            if (!t.type.flag.depend.size() && result.kind() == us::KeyWord::id) {
+                t.type.flag.depend = result.token();
+            }
+            else if (is_rval()) {
+                t.type.flag.val = result.token();
+                t.type.flag.kind = result.kind();
+            }
+            else if (result.kind() == us::KeyWord::literal_keyword) {
+                if (result.token() == "eq") {
+                    t.type.flag.type = FlagType::eq;
+                }
+                else if (result.token() == "bit") {
+                    t.type.flag.type = FlagType::bit;
+                }
+            }
         }
     }
 }  // namespace binred

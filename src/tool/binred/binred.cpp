@@ -12,6 +12,6 @@ int main() {
         STRUCT:="struct" ID "{" MEMBER*? "}" 
         MEMBER:=ID TYPE!
         TYPE:=ID FLAG? "=" [INTEGER|STRING]
-        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING] 
+        FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING|ID] 
     )";
 }
