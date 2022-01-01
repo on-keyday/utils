@@ -12,7 +12,7 @@
 
 namespace binred {
     namespace hlp = utils::helper;
-    void generate_with_flag(utw::string& str, Member& memb, auto& in, auto& out, auto& method) {
+    void generate_with_flag(utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool check_succeed) {
         auto& flag = memb.type.flag;
         auto has_flag = flag.type != FlagType::none;
         if (has_flag) {
@@ -23,7 +23,14 @@ namespace binred {
                 hlp::appends(str, "    if (", in, ".", flag.depend, "&", flag.val, ") {\n    ");
             }
         }
-        hlp::appends(str, "    ", out, ".", method, "(", in, ".", memb.name, ");\n");
+        hlp::append(str, "    ");
+        if (check_succeed) {
+            hlp::append(str, "if(");
+        }
+        hlp::appends(str, out, ".", method, "(", in, ".", memb.name, ");\n");
+        if (check_succeed) {
+            hlp::appends(str, ") {\n            return false;\n        }");
+        }
         if (has_flag) {
             hlp::append(str, "    }\n");
         }
@@ -43,13 +50,15 @@ namespace binred {
             hlp::append(str, "};\n\n");
             hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,OutPut& output){\n");
             for (auto& memb : d.second.member) {
-                generate_with_flag(str, memb, "input", "output", data.write_method);
+                generate_with_flag(str, memb, "input", "output", data.write_method, false);
             }
+            hlp::append(str, "    return true;\n");
             hlp::append(str, "}\n\n");
             hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output){\n");
             for (auto& memb : d.second.member) {
-                generate_with_flag(str, memb, "output", "input", data.read_method);
+                generate_with_flag(str, memb, "output", "input", data.read_method, true);
             }
+            hlp::append(str, "    return true;\n");
         }
     }
 }  // namespace binred
