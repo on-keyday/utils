@@ -24,7 +24,7 @@ namespace binred {
                 hlp::append(str, ";\n");
             }
             hlp::append(str, "};\n\n");
-            hlp::appends(str, "template<class Output>\nbool encode(", d.first, "& input,OutPut& output){\n");
+            hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,OutPut& output){\n");
             for (auto& memb : d.second.member) {
                 auto& flag = memb.type.flag;
                 auto has_flag = flag.type != FlagType::none;
