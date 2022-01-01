@@ -10,12 +10,25 @@
 
 namespace binred {
     namespace us = utils::syntax;
+    constexpr auto package_def = "PACKAGE";
     constexpr auto struct_def = "STRUCT";
     constexpr auto member_def = "MEMBER";
     constexpr auto type_def = "TYPE";
     constexpr auto flag_def = "FLAG";
     constexpr auto import_def = "IMPORT";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
+        if (result.top() == import_def) {
+            if (result.kind() == us::KeyWord::until_eol) {
+                state.data.imports.push_back(result.token());
+            }
+            return true;
+        }
+        if (result.top() == package_def) {
+            if (result.kind() == us::KeyWord::id) {
+                state.data.pkgname = result.token();
+            }
+            return true;
+        }
         if (result.top() == struct_def) {
             if (result.kind() == us::KeyWord::id) {
                 state.cuurent_struct = result.token();
@@ -32,6 +45,7 @@ namespace binred {
         };
         if (result.top() == member_def) {
             memb().push_back({.name = result.token()});
+            return true;
         }
         auto& t = memb().back();
         auto is_rval = [&] {
@@ -65,12 +79,7 @@ namespace binred {
             }
             return true;
         }
-        if (result.top() == import_def) {
-            if (result.kind() == us::KeyWord::until_eol) {
-                state.data.imports.push_back(result.token());
-            }
-            return true;
-        }
+
         return true;
     }
 }  // namespace binred

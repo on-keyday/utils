@@ -1,3 +1,9 @@
+# generate code
+
+
+# tool\binred -i src/tool/binred/test.bred -v 
+
+import <string>
 struct ID {
     A int
     B int ? A eq 0x20

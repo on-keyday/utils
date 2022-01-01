@@ -48,7 +48,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     constexpr auto def = R"(
-        ROOT:=[STRUCT|IMPORT]*?
+        ROOT:=PACKAGE? [STRUCT|IMPORT]*?
+        PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
         STRUCT:="struct" ID "{" MEMBER*? "}" EOS
         MEMBER:=ID TYPE!
