@@ -43,12 +43,12 @@ namespace binred {
             hlp::append(str, "};\n\n");
             hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,OutPut& output){\n");
             for (auto& memb : d.second.member) {
-                auto& flag = memb.type.flag;
+                generate_with_flag(str, memb, "input", "output", data.write_method);
             }
             hlp::append(str, "}\n\n");
             hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output){\n");
             for (auto& memb : d.second.member) {
-                generate_with_flag(str, memb, "input", "output", data.write_method);
+                generate_with_flag(str, memb, "output", "input", data.write_method);
             }
         }
     }
