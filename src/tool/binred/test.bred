@@ -1,0 +1,4 @@
+struct ID {
+    A int
+    B int ? A eq 0x20
+}
