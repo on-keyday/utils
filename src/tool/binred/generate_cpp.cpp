@@ -20,7 +20,7 @@ namespace binred {
                 hlp::appends(str, "    if (", in, ".", flag.depend, " == ", flag.val, ") {\n    ");
             }
             else if (flag.type == FlagType::bit) {
-                hlp::appends(str, "    if (", in, ".", flag.depend, "&", flag.val, ") {\n    ");
+                hlp::appends(str, "    if (", in, ".", flag.depend, " & ", flag.val, ") {\n    ");
             }
         }
         hlp::append(str, "    ");

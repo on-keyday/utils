@@ -1,4 +1,5 @@
 struct ID {
     A int
     B int ? A eq 0x20
+    C int ? C bit 0x20
 }
