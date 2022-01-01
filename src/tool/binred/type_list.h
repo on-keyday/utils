@@ -47,6 +47,11 @@ namespace binred {
         utw::string cuurent_struct;
     };
 
+    enum class GenFlag {
+
+    };
+
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
+    void generate_cpp(utw::string& str, FileData& data, GenFlag flag);
 
 }  // namespace binred

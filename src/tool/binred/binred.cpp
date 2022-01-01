@@ -105,4 +105,7 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
+    utw::string str;
+    binred::generate_cpp(str, state.data, {});
+    cout << str;
 }
