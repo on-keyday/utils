@@ -311,6 +311,19 @@ namespace utils {
                 return nullptr;
             }
 
+            template <class T>
+            T* has_value(const String& name) {
+                auto s = is_set(name);
+                if (!s) {
+                    return nullptr;
+                }
+                auto t = s->template value<T>();
+                if (!t) {
+                    return nullptr;
+                }
+                return t;
+            }
+
             bool is_true(const String& name) {
                 auto s = is_set(name);
                 if (!s) {

@@ -24,6 +24,7 @@ namespace utils {
         }
         template <class String = wrap::string, template <class...> class Vec = wrap::vector>
         tknz::Tokenizer<String, Vec> make_tokenizer() {
+            return tknz::Tokenizer<String, Vec>{};
         }
 #if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
         extern template struct SyntaxC<wrap::string, wrap::vector, wrap::map>;

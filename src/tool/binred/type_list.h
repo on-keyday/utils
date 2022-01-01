@@ -47,4 +47,6 @@ namespace binred {
         utw::string cuurent_struct;
     };
 
+    bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
+
 }  // namespace binred

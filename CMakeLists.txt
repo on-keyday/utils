@@ -49,6 +49,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
                         "src/tool/ifacegen/read_interface.cpp"
                         "src/tool/ifacegen/generate_interface.cpp")
+add_executable(binred "src/tool/binred/binred.cpp"
+                      "src/tool/binred/read_fmt.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 add_library(libutils
@@ -79,6 +81,7 @@ target_link_libraries(io_completion_port libutils)
 endif()
 
 target_link_libraries(ifacegen libutils)
+target_link_libraries(binred libutils)
 
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)
