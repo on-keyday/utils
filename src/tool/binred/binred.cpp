@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
         MEMBER:=ID TYPE!
         TYPE:=ID SIZE? FLAG? ["=" [INTEGER|STRING]]?
         FLAG:="?" ID ["eq"|"bit"] [INTEGER|STRING|ID]
-        SIZE:="!" [INTEGER|ID]  
+        SIZE:="$" [INTEGER|ID]  
     )";
     auto c = us::make_syntaxc();
     auto s = us::make_tokenizer();
