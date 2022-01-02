@@ -149,7 +149,7 @@ namespace binred {
 
     void generate_make_ptr_obj(utw::string& str, FileData& data, auto& obj) {
         if (data.make_ptr.size()) {
-            hlp::append(str, data.make_ptr, "<", obj, ">()");
+            hlp::appends(str, data.make_ptr, "<", obj, ">()");
         }
         else {
             hlp::appends(str, "new ", obj, "{}");
