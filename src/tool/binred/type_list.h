@@ -21,6 +21,9 @@ namespace binred {
         bit,
         ls,
         gt,
+        nq,
+        egt,
+        els,
     };
 
     struct Flag {
