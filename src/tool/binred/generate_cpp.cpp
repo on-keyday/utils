@@ -166,10 +166,16 @@ namespace binred {
                 write_indent(str, 2);
                 hlp::append(str, "if(decode(input,*p)) {\n");
                 write_indent(str, 3);
-                hlp::append(str, "return false;");
+                hlp::append(str, "return false;\n");
                 write_indent(str, 2);
                 hlp::append(str, "}\n");
                 write_indent(str, 2);
+                hlp::append(str, "output=p;\n");
+                write_indent(str, 2);
+                hlp::append(str, "return true;\n");
+                write_indent(str, 1);
+                hlp::append(str, "}\n");
+                write_indent(str, 1);
                 hlp::append(str, "else ");
             };
             for (auto& id : d.second) {
@@ -240,7 +246,7 @@ namespace binred {
                 write_indent(str, 1);
                 hlp::appends(str, "if (!decode(input,static_cast<", st.base.type.name, "&>(output))) { \n");
                 write_indent(str, 2);
-                hlp::appends(str, "return false;\n");
+                hlp::append(str, "return false;\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
                 if (st.base.type.flag.type != FlagType::none) {
