@@ -135,6 +135,9 @@ namespace binred {
                 else if (result.token() == "-") {
                     size.op = Op::sub;
                 }
+                else if (result.token() == "%") {
+                    size.op = Op::mod;
+                }
                 else if (is_rval()) {
                     if (!size.size1.val.size()) {
                         size.size1.val = result.token();

@@ -35,6 +35,7 @@ namespace binred {
         none,
         add,
         sub,
+        mod,
     };
 
     struct Size {

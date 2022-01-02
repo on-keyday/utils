@@ -70,6 +70,9 @@ namespace binred {
             else if (size.op == Op::sub) {
                 hlp::append(str, " - ");
             }
+            else if (size.op == Op::mod) {
+                hlp::append(str, " % ");
+            }
             set_val(str, size.size2, in);
         }
     }
