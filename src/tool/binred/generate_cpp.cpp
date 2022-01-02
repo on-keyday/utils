@@ -155,20 +155,31 @@ namespace binred {
             write_indent(str, 1);
             hlp::append(str, "}\n");
             write_indent(str, 1);
-            auto& st = *data.structs.find(d.second[0]);
-            generate_flag_cond_begin(str, "output", st.second.base.type.flag);
-            write_indent(str, 1);
-            hlp::appends(str, "auto p = new ", st.first, "();\n");
-            for (auto& memb : st.second.member) {
+            auto gen_decode = [&](auto& st) {
+                generate_flag_cond_begin(str, "output", st.second.base.type.flag);
                 write_indent(str, 1);
-                hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
+                hlp::appends(str, "auto p = new ", st.first, "();\n");
+                for (auto& memb : st.second.member) {
+                    write_indent(str, 2);
+                    hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
+                }
+                write_indent(str, 2);
+                hlp::append(str, "if(decode(input,*p)) {\n");
+                write_indent(str, 3);
+                hlp::append(str, "return false;");
+                write_indent(str, 2);
+                hlp::append(str, "}\n");
+                write_indent(str, 2);
+                hlp::append(str, "else ");
+            };
+            for (auto& id : d.second) {
+                gen_decode(*data.structs.find(id));
             }
-            write_indent(str, 1);
-            hlp::append(str, "if(decode(input,*p)) {\n");
+            hlp::append(str, "{\n");
+            write_indent(str, 3);
+            hlp::append(str, "return false;\n");
             write_indent(str, 2);
-            hlp::append(str, "return false;");
-            write_indent(str, 1);
-            size_t i = 1;
+            hlp::append(str, "}\n}\n\n");
         }
     }
 
@@ -247,6 +258,7 @@ namespace binred {
             hlp::append(str, "    return true;\n");
             hlp::append(str, "}\n\n");
         }
+        generate_dependency(dependency, str, data, flag);
         if (data.pkgname.size()) {
             hlp::appends(str, "} // namespace ", data.pkgname, "\n");
         }
