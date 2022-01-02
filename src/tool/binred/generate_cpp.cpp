@@ -47,7 +47,7 @@ namespace binred {
         else if (flag.type == FlagType::nq) {
             hlp::append(str, " != ");
         }
-        hlp::append(str, flag.val);
+        hlp::append(str, flag.val.val);
         if (not_) {
             hlp::append(str, ")");
         }
@@ -81,12 +81,12 @@ namespace binred {
             hlp::append(str, "if(!");
         }
         hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
-        if (memb.type.flag.size.size()) {
+        if (memb.type.flag.size.val.size()) {
             hlp::append(str, ",");
-            if (memb.type.flag.kind == utils::syntax::KeyWord::id) {
+            if (memb.type.flag.size.kind == utils::syntax::KeyWord::id) {
                 hlp::appends(str, in, ".");
             }
-            hlp::appends(str, memb.type.flag.size);
+            hlp::appends(str, memb.type.flag.size.val);
         }
         hlp::append(str, ")");
         if (check_succeed) {

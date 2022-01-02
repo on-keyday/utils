@@ -66,8 +66,8 @@ namespace binred {
                     flag.depend = result.token();
                 }
                 else if (is_rval()) {
-                    flag.val = result.token();
-                    flag.kind = result.kind();
+                    flag.val.val = result.token();
+                    flag.val.kind = result.kind();
                 }
                 else if (result.kind() == us::KeyWord::literal_keyword) {
                     auto& type = flag.type;
@@ -119,9 +119,16 @@ namespace binred {
             return true;
         }
         if (result.top() == size_def) {
-            auto& t = memb().back();
-            if (is_rval()) {
-                t.type.flag.size = result.token();
+            if (result.under(base_def)) {
+                cst.base.type.flag.size.val = result.token();
+                cst.base.type.flag.size.kind = result.kind();
+            }
+            else {
+                auto& t = memb().back();
+                if (is_rval()) {
+                    t.type.flag.size.val = result.token();
+                    t.type.flag.size.kind = result.kind();
+                }
             }
             return true;
         }

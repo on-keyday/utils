@@ -26,12 +26,16 @@ namespace binred {
         els,
     };
 
+    struct Val {
+        utw::string val;
+        utils::syntax::KeyWord kind = {};
+    };
+
     struct Flag {
         utw::string depend;
-        utw::string val;
+        Val val;
         FlagType type = FlagType::none;
-        utils::syntax::KeyWord kind = {};
-        utw::string size;
+        Val size;
     };
 
     struct Type {
