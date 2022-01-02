@@ -324,6 +324,24 @@ namespace utils {
                 return t;
             }
 
+            template <class T>
+            T* arg(const String& name, size_t index) {
+                if (index == 0) {
+                    auto e = has_value<T>(name);
+                    if (e) {
+                        return e;
+                    }
+                }
+                auto vec = has_value<Vec<OptValue<>>>();
+                if (!vec) {
+                    return nullptr;
+                }
+                if (index >= vec->size()) {
+                    return nullptr;
+                }
+                return (*vec)[index].template value<T>();
+            }
+
             bool is_true(const String& name) {
                 auto s = is_set(name);
                 if (!s) {
