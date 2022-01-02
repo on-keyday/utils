@@ -111,6 +111,18 @@ namespace binred {
         }
     }
 
+    void generate_ptr_obj(utw::string& str, FileData& data, auto& obj) {
+        hlp::appends(str, obj, "*");
+    }
+
+    void generate_make_ptr_obj(utw::string& str, FileData& data, auto& obj) {
+        hlp::append(str, "new ", obj, "{}");
+    }
+
+    void generate_delete_ptr_obj(utw::string& str, FileData& data, auto& obj) {
+        hlp::append(str, "delete ", obj);
+    }
+
     using Dependency = utw::map<utw::string, utw::vector<utw::string>>;
     namespace us = utils::syntax;
     void generate_dependency(Dependency& dep, utw::string& str, FileData& data, GenFlag flag) {
@@ -146,7 +158,8 @@ namespace binred {
                 continue;
             }
             hlp::appends(str, "template<class Input>\nbool decode(Input&& input,");
-            hlp::appends(str, d.first, "*& output) {\n");
+            generate_ptr_obj(str, data, d.first);
+            hlp::append(str, "& output) {\n");
             write_indent(str, 1);
             hlp::appends(str, d.first, " judgement;\n");
             write_indent(str, 1);
@@ -159,13 +172,17 @@ namespace binred {
             auto gen_decode = [&](auto& st) {
                 generate_flag_cond_begin(str, "output", st.second.base.type.flag);
                 write_indent(str, 1);
-                hlp::appends(str, "auto p = new ", st.first, "();\n");
+                hlp::appends(str, "auto p = ");
+                generate_make_ptr_obj(str, data, st.first);
+                hlp::append(str, ";\n");
                 for (auto& memb : bsst.second.member) {
                     write_indent(str, 2);
                     hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
                 }
                 write_indent(str, 2);
                 hlp::append(str, "if(decode(input,*p)) {\n");
+                write_indent(str, 3);
+                generate_delete_ptr_obj(str, data, "p");
                 write_indent(str, 3);
                 hlp::append(str, "return false;\n");
                 write_indent(str, 2);
