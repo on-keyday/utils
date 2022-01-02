@@ -83,6 +83,12 @@ namespace binred {
                 else if (result.token() == "gt") {
                     t.type.flag.type = FlagType::gt;
                 }
+                else if (result.token() == "egt") {
+                    t.type.flag.type = FlagType::egt;
+                }
+                else if (result.token() == "els") {
+                    t.type.flag;
+                }
             }
             return true;
         }
