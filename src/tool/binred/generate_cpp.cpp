@@ -38,6 +38,15 @@ namespace binred {
         else if (flag.type == FlagType::gt) {
             hlp::append(str, " > ");
         }
+        else if (flag.type == FlagType::egt) {
+            hlp::append(str, " >= ");
+        }
+        else if (flag.type == FlagType::els) {
+            hlp::append(str, " <=");
+        }
+        else if (flag.type == FlagType::nq) {
+            hlp::append(str, " != ");
+        }
         hlp::append(str, flag.val);
         if (not_) {
             hlp::append(str, ")");
