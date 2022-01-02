@@ -103,8 +103,10 @@ namespace binred {
                 }
             };
             if (result.under(base_def)) {
+                set_to_flag(state.data.structs[state.cuurent_struct].base.type.flag);
             }
             else {
+                set_to_flag(t.type.flag);
             }
             return true;
         }
@@ -112,6 +114,13 @@ namespace binred {
             if (is_rval()) {
                 t.type.flag.size = result.token();
             }
+            return true;
+        }
+        if (result.top() == base_def) {
+            if (result.kind() == us::KeyWord::id) {
+                state.data.structs[state.cuurent_struct].base.name = result.token();
+            }
+            return true;
         }
         return true;
     }

@@ -46,8 +46,15 @@ namespace binred {
         utils::syntax::KeyWord kind = {};
     };
 
+    struct Base {
+        utw::string name;
+        Type type;
+    };
+
     struct Struct {
-        utw::vector<Member> member;
+        Base base;
+        utw::vector<Member>
+            member;
     };
 
     struct FileData {
