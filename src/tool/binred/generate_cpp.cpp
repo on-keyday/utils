@@ -170,7 +170,7 @@ namespace binred {
             hlp::append(str, "}\n");
             write_indent(str, 1);
             auto gen_decode = [&](auto& st) {
-                generate_flag_cond_begin(str, "output", st.second.base.type.flag);
+                generate_flag_cond_begin(str, "judgement", st.second.base.type.flag);
                 write_indent(str, 1);
                 hlp::appends(str, "auto p = ");
                 generate_make_ptr_obj(str, data, st.first);
