@@ -136,6 +136,13 @@ namespace binred {
             hlp::append(str, "};\n\n");
             hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,Output& output){\n");
             if (has_base) {
+                if (st.base.type.flag.type != FlagType::none) {
+                    generate_flag_cond_begin(str, "input", st.base.type.flag, true);
+                    write_indent(str, 1);
+                    hlp::append(str, "return false;\n");
+                    write_indent(str, 1);
+                    hlp::append(str, "}\n");
+                }
                 write_indent(str, 1);
                 hlp::appends(str, "if (!encode(static_cast<const ", st.base.type.name, "&>(input),output)) { \n");
                 write_indent(str, 2);
@@ -157,6 +164,13 @@ namespace binred {
                 hlp::appends(str, "return false;\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
+                if (st.base.type.flag.type != FlagType::none) {
+                    generate_flag_cond_begin(str, "input", st.base.type.flag, true);
+                    write_indent(str, 1);
+                    hlp::append(str, "return false;\n");
+                    write_indent(str, 1);
+                    hlp::append(str, "}\n");
+                }
             }
             for (auto& memb : d.second.member) {
                 generate_with_flag(str, memb, "output", "input", data.read_method, true);
