@@ -183,6 +183,7 @@ namespace binred {
                 hlp::append(str, "if(decode(input,*p)) {\n");
                 write_indent(str, 3);
                 generate_delete_ptr_obj(str, data, "p");
+                hlp::append(str, "\n");
                 write_indent(str, 3);
                 hlp::append(str, "return false;\n");
                 write_indent(str, 2);
