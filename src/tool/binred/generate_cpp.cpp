@@ -155,6 +155,20 @@ namespace binred {
             write_indent(str, 1);
             hlp::append(str, "}\n");
             write_indent(str, 1);
+            auto& st = *data.structs.find(d.second[0]);
+            generate_flag_cond_begin(str, "output", st.second.base.type.flag);
+            write_indent(str, 1);
+            hlp::appends(str, "auto p = new ", st.first, "();\n");
+            for (auto& memb : st.second.member) {
+                write_indent(str, 1);
+                hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
+            }
+            write_indent(str, 1);
+            hlp::append(str, "if(decode(input,*p)) {\n");
+            write_indent(str, 2);
+            hlp::append(str, "return false;");
+            write_indent(str, 1);
+            size_t i = 1;
         }
     }
 
