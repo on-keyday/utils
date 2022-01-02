@@ -284,15 +284,19 @@ namespace binred {
             }
             hlp::append(str, "};\n\n");
             hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,Output& output){\n");
-            if (has_base) {
-                if (st.base.type.flag.type != FlagType::none) {
+            auto gen_base_flag = [&](auto& flag, auto& io) {
+                if (flag.type != FlagType::none) {
                     write_indent(str, 1);
-                    generate_flag_cond_begin(str, "input", st.base.type.flag, true);
+                    generate_flag_cond_begin(str, io, flag, true);
                     write_indent(str, 1);
                     hlp::append(str, "return false;\n");
                     write_indent(str, 1);
                     hlp::append(str, "}\n");
                 }
+            };
+            if (has_base) {
+                gen_base_flag(st.base.type.bind, "input");
+                gen_base_flag(st.base.type.flag, "input");
                 write_indent(str, 1);
                 hlp::appends(str, "if (!encode(static_cast<const ", st.base.type.name, "&>(input),output)) { \n");
                 write_indent(str, 2);
@@ -323,14 +327,8 @@ namespace binred {
                 hlp::append(str, "}\n");
                 write_indent(str, offset);
                 hlp::appends(str, "}\n");
-                if (st.base.type.flag.type != FlagType::none) {
-                    write_indent(str, 1);
-                    generate_flag_cond_begin(str, "output", st.base.type.flag, true);
-                    write_indent(str, offset);
-                    hlp::append(str, "return false;\n");
-                    write_indent(str, offset);
-                    hlp::append(str, "}\n");
-                }
+                gen_base_flag(st.base.type.bind, "output");
+                gen_base_flag(st.base.type.flag, "output");
             }
             for (auto& memb : d.second.member) {
                 generate_with_flag(data, str, memb, "output", "input", data.read_method, false, true);

@@ -50,6 +50,6 @@ struct PriorityFrame - H2Frame ? type eq 2 {
     priority Priority
 }
 
-struct RstStreamFrame - H2Frame ? type eq 3 {
-    code std::uint32_t ! len eq 4
+struct RstStreamFrame - H2Frame ? type eq 3 ! len eq 4{
+    code std::uint32_t
 }
