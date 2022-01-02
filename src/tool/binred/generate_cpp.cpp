@@ -52,9 +52,14 @@ namespace binred {
             write_indent(str, 1);
             hlp::append(str, "}\n");
         };
-        if (has_flag && check_before) {
-            generate_flag_cond_begin(str, in, flag);
-            plus = 1;
+        if (has_flag) {
+            if (check_before) {
+                generate_flag_cond_begin(str, in, flag);
+                plus = 1;
+            }
+            else if (!check_succeed) {
+                check_self();
+            }
         }
         write_indent(str, 1);
         if (check_succeed) {
@@ -80,7 +85,7 @@ namespace binred {
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
             }
-            else {
+            else if (check_succeed) {
                 check_self();
             }
         }
