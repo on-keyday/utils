@@ -53,6 +53,7 @@ namespace binred {
     struct Type {
         utw::string name;
         Flag flag;
+        Flag bind;
     };
 
     struct Member {
@@ -68,8 +69,7 @@ namespace binred {
 
     struct Struct {
         Base base;
-        utw::vector<Member>
-            member;
+        utw::vector<Member> member;
     };
 
     struct FileData {

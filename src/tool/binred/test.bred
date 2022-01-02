@@ -45,3 +45,7 @@ struct HeaderFrame - H2Frame ? type eq 1 {
     priority Priority ? flag bit 0x20
     data std::string $ len - padding 
 }
+
+struct PriorityFrame - H2Frame ? type eq 2 {
+    priority Priority
+}

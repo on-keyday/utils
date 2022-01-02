@@ -14,10 +14,11 @@ namespace binred {
     constexpr auto struct_def = "STRUCT";
     constexpr auto member_def = "MEMBER";
     constexpr auto type_def = "TYPE";
-    constexpr auto flag_def = "FLAG";
+    constexpr auto flag_def = "FLAG_DETAIL";
     constexpr auto import_def = "IMPORT";
     constexpr auto size_def = "SIZE";
     constexpr auto base_def = "BASE";
+    constexpr auto bind_def = "BIND";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
@@ -94,11 +95,19 @@ namespace binred {
                     }
                 }
             };
+            auto under_disp = [&](auto& type) {
+                if (result.under(bind_def)) {
+                    set_to_flag(type.bind);
+                }
+                else {
+                    set_to_flag(type.flag);
+                }
+            };
             if (result.under(base_def)) {
-                set_to_flag(cst.base.type.flag);
+                under_disp(cst.base.type);
             }
             else {
-                set_to_flag(memb().back().type.flag);
+                under_disp(memb().back().type);
             }
             return true;
         }

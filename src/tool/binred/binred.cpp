@@ -60,7 +60,9 @@ int main(int argc, char** argv) {
         BASE:="-" TYPE!
         MEMBER:=ID TYPE! ["=" [INTEGER|STRING]!]?
         TYPE:=ID SIZE? FLAG? 
-        FLAG:="?" [ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"] [INTEGER|STRING|ID]]!
+        FLAG:="?" FLAG_DETAIL!
+        BIND:="!" FLAG_DETAIL!
+        FLAG_DETAIL:=ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"] [INTEGER|STRING|ID]]
         SIZE:="$" [INTEGER|ID] [["+"|"-"] [INTEGER|ID]!]? 
     )";
     auto c = us::make_syntaxc();
