@@ -116,11 +116,11 @@ namespace binred {
     }
 
     void generate_make_ptr_obj(utw::string& str, FileData& data, auto& obj) {
-        hlp::append(str, "new ", obj, "{}");
+        hlp::appends(str, "new ", obj, "{}");
     }
 
     void generate_delete_ptr_obj(utw::string& str, FileData& data, auto& obj) {
-        hlp::append(str, "delete ", obj);
+        hlp::appends(str, "delete ", obj);
     }
 
     using Dependency = utw::map<utw::string, utw::vector<utw::string>>;
