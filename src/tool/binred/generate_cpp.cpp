@@ -82,7 +82,11 @@ namespace binred {
         }
         hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
         if (memb.type.flag.size.size()) {
-            hlp::appends(str, ",", memb.type.flag.size);
+            hlp::append(str, ",");
+            if (memb.type.flag.kind == utils::syntax::KeyWord::id) {
+                hlp::appends(str, in, ".");
+            }
+            hlp::appends(str, memb.type.flag.size);
         }
         hlp::append(str, ")");
         if (check_succeed) {
