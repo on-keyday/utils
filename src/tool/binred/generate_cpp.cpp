@@ -118,13 +118,15 @@ namespace binred {
             hlp::appends(str, "namespace ", data.pkgname, " {\n\n");
         }
         for (auto& def : data.defvec) {
-            auto d = *data.structs.find(def);
+            auto& d = *data.structs.find(def);
+            auto& st = d.second;
             hlp::appends(str, "struct ", d.first);
-            if (d.second.base.type.name.size()) {
-                hlp::appends(str, " : ", d.second.base.type.name);
+            auto has_base = st.base.type.name.size() != 0;
+            if (has_base) {
+                hlp::appends(str, " : ", st.base.type.name);
             }
             hlp::append(str, " {\n");
-            for (auto& memb : d.second.member) {
+            for (auto& memb : st.member) {
                 hlp::appends(str, "    ", memb.type.name, " ", memb.name);
                 if (memb.defval.size()) {
                     hlp::appends(str, " = ", memb.defval);
@@ -133,10 +135,19 @@ namespace binred {
             }
             hlp::append(str, "};\n\n");
             hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,Output& output){\n");
+            if (has_base) {
+                write_indent(str, 1);
+                hlp::appends(str, "if (!encode(static_cast<", st.base.type.name, "&>(input)) { \n");
+                write_indent(str, 2);
+                hlp::appends(str, "return false;\n");
+                write_indent(str, 1);
+                hlp::append(str, "}\n");
+            }
             for (auto& memb : d.second.member) {
                 generate_with_flag(str, memb, "input", "output", data.write_method, false);
             }
-            hlp::append(str, "    return true;\n");
+            write_indent(str, 1);
+            hlp::append(str, "return true;\n");
             hlp::append(str, "}\n\n");
             hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output){\n");
             for (auto& memb : d.second.member) {
