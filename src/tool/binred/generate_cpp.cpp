@@ -150,6 +150,14 @@ namespace binred {
             hlp::append(str, "return true;\n");
             hlp::append(str, "}\n\n");
             hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output){\n");
+            if (has_base) {
+                write_indent(str, 1);
+                hlp::appends(str, "if (!decode(input,static_cast<", st.base.type.name, "&>(output)) { \n");
+                write_indent(str, 2);
+                hlp::appends(str, "return false;\n");
+                write_indent(str, 1);
+                hlp::append(str, "}\n");
+            }
             for (auto& memb : d.second.member) {
                 generate_with_flag(str, memb, "output", "input", data.read_method, true);
             }
