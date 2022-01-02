@@ -120,8 +120,8 @@ namespace binred {
         for (auto& def : data.defvec) {
             auto d = *data.structs.find(def);
             hlp::appends(str, "struct ", d.first);
-            if (d.second.base.name.size()) {
-                hlp::appends(str, " : ", d.second.base.name);
+            if (d.second.base.type.name.size()) {
+                hlp::appends(str, " : ", d.second.base.type.name);
             }
             hlp::append(str, " {\n");
             for (auto& memb : d.second.member) {

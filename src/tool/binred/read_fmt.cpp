@@ -103,9 +103,6 @@ namespace binred {
             return true;
         }
         if (result.top() == base_def) {
-            if (result.kind() == us::KeyWord::id) {
-                cst.base.name = result.token();
-            }
             return true;
         }
         auto& t = memb().back();
