@@ -20,7 +20,6 @@ namespace binred {
     }
 
     void generate_flag_cond_begin(utw::string& str, auto& in, Flag& flag, bool not_ = false) {
-        write_indent(str, 1);
         hlp::append(str, "if (");
         if (not_) {
             hlp::append(str, "!(");
@@ -61,6 +60,7 @@ namespace binred {
         auto check_before = memb.type.flag.depend != memb.name;
         int plus = 0;
         auto check_self = [&] {
+            write_indent(str, 1);
             generate_flag_cond_begin(str, in, flag, true);
             write_indent(str, 1);
             hlp::append(str, "return false;\n");
@@ -69,6 +69,7 @@ namespace binred {
         };
         if (has_flag) {
             if (check_before) {
+                write_indent(str, 1);
                 generate_flag_cond_begin(str, in, flag);
                 plus = 1;
             }
@@ -145,6 +146,15 @@ namespace binred {
             }
             hlp::appends(str, "template<class Input>\ndecode(Input&& input,");
             hlp::appends(str, d.first, "*& output) {\n");
+            write_indent(str, 1);
+            hlp::appends(str, d.first, " judgement;\n");
+            write_indent(str, 1);
+            hlp::append(str, "if (!decode(input,judgement)) {\n");
+            write_indent(str, 2);
+            hlp::append(str, "return false;");
+            write_indent(str, 1);
+            hlp::append(str, "}\n");
+            write_indent(str, 1);
         }
     }
 
@@ -180,6 +190,7 @@ namespace binred {
             hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,Output& output){\n");
             if (has_base) {
                 if (st.base.type.flag.type != FlagType::none) {
+                    write_indent(str, 1);
                     generate_flag_cond_begin(str, "input", st.base.type.flag, true);
                     write_indent(str, 1);
                     hlp::append(str, "return false;\n");
@@ -208,6 +219,7 @@ namespace binred {
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
                 if (st.base.type.flag.type != FlagType::none) {
+                    write_indent(str, 1);
                     generate_flag_cond_begin(str, "input", st.base.type.flag, true);
                     write_indent(str, 1);
                     hlp::append(str, "return false;\n");
