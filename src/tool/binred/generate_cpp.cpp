@@ -270,7 +270,7 @@ namespace binred {
                 hlp::append(str, "}\n");
                 if (st.base.type.flag.type != FlagType::none) {
                     write_indent(str, 1);
-                    generate_flag_cond_begin(str, "input", st.base.type.flag, true);
+                    generate_flag_cond_begin(str, "output", st.base.type.flag, true);
                     write_indent(str, 1);
                     hlp::append(str, "return false;\n");
                     write_indent(str, 1);
