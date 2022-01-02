@@ -122,6 +122,7 @@ namespace binred {
             FlagType type = FlagType::none;
             bool first = true;
             bool not_match = false;
+            auto& bsst = *data.structs.find(d.first);
             for (auto& i : d.second) {
                 auto& st = *data.structs.find(i);
                 auto& flag = st.second.base.type.flag;
@@ -159,7 +160,7 @@ namespace binred {
                 generate_flag_cond_begin(str, "output", st.second.base.type.flag);
                 write_indent(str, 1);
                 hlp::appends(str, "auto p = new ", st.first, "();\n");
-                for (auto& memb : st.second.member) {
+                for (auto& memb : bsst.second.member) {
                     write_indent(str, 2);
                     hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
                 }
