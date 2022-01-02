@@ -332,7 +332,7 @@ namespace utils {
                         return e;
                     }
                 }
-                auto vec = has_value<Vec<OptValue<>>>();
+                auto vec = has_value<Vec<OptValue<>>>(name);
                 if (!vec) {
                     return nullptr;
                 }

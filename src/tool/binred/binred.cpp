@@ -115,6 +115,11 @@ int main(int argc, char** argv) {
         state.data.ptr_type = ptr->at(0);
         state.data.make_ptr = ptr->at(1);
     }
+    size_t i = 0;
+    while (auto arg = result.arg<utw::string>("", i)) {
+        state.data.imports.push_back(*arg);
+        i++;
+    }
     c->cb = [&](auto& ctx) {
         if (result.is_true("verbose")) {
             cout << ctx.top() << ":" << us::keywordv(ctx.kind()) << ":" << ctx.token() << "\n";
