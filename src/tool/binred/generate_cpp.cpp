@@ -260,27 +260,37 @@ namespace binred {
             write_indent(str, 1);
             hlp::append(str, "return true;\n");
             hlp::append(str, "}\n\n");
-            hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output){\n");
+            hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output");
             if (has_base) {
-                write_indent(str, 1);
+                hlp::append(str, ",bool base_set=false");
+            }
+            hlp::append(str, "){\n");
+            if (has_base) {
+                int offset = 1;
+                write_indent(str, offset);
+                hlp::appends(str, "if (!base_set) {\n");
+                write_indent(str, offset + 1);
                 hlp::appends(str, "if (!decode(input,static_cast<", st.base.type.name, "&>(output))) { \n");
-                write_indent(str, 2);
+                write_indent(str, offset + 2);
                 hlp::append(str, "return false;\n");
-                write_indent(str, 1);
+                write_indent(str, offset + 1);
                 hlp::append(str, "}\n");
+                write_indent(str, offset);
+                hlp::appends(str, "}\n");
                 if (st.base.type.flag.type != FlagType::none) {
                     write_indent(str, 1);
                     generate_flag_cond_begin(str, "output", st.base.type.flag, true);
-                    write_indent(str, 1);
+                    write_indent(str, offset + 1);
                     hlp::append(str, "return false;\n");
-                    write_indent(str, 1);
+                    write_indent(str, offset + 1);
                     hlp::append(str, "}\n");
                 }
             }
             for (auto& memb : d.second.member) {
                 generate_with_flag(str, memb, "output", "input", data.read_method, true);
             }
-            hlp::append(str, "    return true;\n");
+            write_indent(str, 1);
+            hlp::append(str, "return true;\n");
             hlp::append(str, "}\n\n");
         }
         generate_dependency(dependency, str, data, flag);
