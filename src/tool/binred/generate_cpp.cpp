@@ -74,7 +74,7 @@ namespace binred {
         }
     }
 
-    void generate_with_flag(utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool check_succeed) {
+    void generate_with_flag(FileData& data, utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool is_enc, bool check_succeed) {
         auto& flag = memb.type.flag;
         auto has_flag = flag.type != FlagType::none;
         auto check_before = memb.type.flag.depend != memb.name;
@@ -101,12 +101,19 @@ namespace binred {
         if (check_succeed) {
             hlp::append(str, "if(!");
         }
-        hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
-        if (memb.type.flag.size.size1.val.size()) {
-            hlp::append(str, ",");
-            set_size(str, memb.type.flag.size, in);
+        if (data.structs.count(memb.type.name)) {
+            hlp::appends(str, dencode, "(", in);
+            hlp::appends(str, ", ");
+            hlp::append(str, out, ")");
         }
-        hlp::append(str, ")");
+        else {
+            hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
+            if (memb.type.flag.size.size1.val.size()) {
+                hlp::append(str, ",");
+                set_size(str, memb.type.flag.size, in);
+            }
+            hlp::append(str, ")");
+        }
         if (check_succeed) {
             hlp::append(str, ") {\n");
             write_indent(str, 2 + plus);
@@ -272,7 +279,7 @@ namespace binred {
                 hlp::append(str, "}\n");
             }
             for (auto& memb : d.second.member) {
-                generate_with_flag(str, memb, "input", "output", data.write_method, false);
+                generate_with_flag(data, str, memb, "input", "output", data.write_method, "encode", false);
             }
             write_indent(str, 1);
             hlp::append(str, "return true;\n");
@@ -304,7 +311,7 @@ namespace binred {
                 }
             }
             for (auto& memb : d.second.member) {
-                generate_with_flag(str, memb, "output", "input", data.read_method, true);
+                generate_with_flag(data, str, memb, "output", "input", data.read_method, "decode", true);
             }
             write_indent(str, 1);
             hlp::append(str, "return true;\n");
