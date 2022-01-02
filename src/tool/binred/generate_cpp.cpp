@@ -152,7 +152,7 @@ namespace binred {
             write_indent(str, 1);
             hlp::append(str, "if (!decode(input,judgement)) {\n");
             write_indent(str, 2);
-            hlp::append(str, "return false;");
+            hlp::append(str, "return false;\n");
             write_indent(str, 1);
             hlp::append(str, "}\n");
             write_indent(str, 1);
