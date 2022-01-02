@@ -47,7 +47,6 @@ namespace binred {
     };
 
     struct Base {
-        utw::string name;
         Type type;
     };
 

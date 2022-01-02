@@ -102,6 +102,12 @@ namespace binred {
             }
             return true;
         }
+        if (result.top() == base_def) {
+            if (result.kind() == us::KeyWord::id) {
+                cst.base.name = result.token();
+            }
+            return true;
+        }
         auto& t = memb().back();
         if (result.top() == type_def) {
             if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
@@ -112,12 +118,6 @@ namespace binred {
         if (result.top() == size_def) {
             if (is_rval()) {
                 t.type.flag.size = result.token();
-            }
-            return true;
-        }
-        if (result.top() == base_def) {
-            if (result.kind() == us::KeyWord::id) {
-                state.data.structs[state.cuurent_struct].base.name = result.token();
             }
             return true;
         }
