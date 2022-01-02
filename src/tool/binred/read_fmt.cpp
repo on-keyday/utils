@@ -42,8 +42,9 @@ namespace binred {
             }
             return true;
         }
+        auto& cst = state.data.structs[state.cuurent_struct];
         auto memb = [&]() -> auto& {
-            return state.data.structs[state.cuurent_struct].member;
+            return cst.member;
         };
         auto is_rval = [&] {
             return result.kind() == us::KeyWord::id || result.kind() == us::KeyWord::string || result.kind() == us::KeyWord::integer;
@@ -56,15 +57,6 @@ namespace binred {
                 auto& t = memb().back();
                 t.defval = result.token();
                 t.kind = result.kind();
-            }
-            return true;
-        }
-        auto& t = memb().back();
-        if (result.top() == type_def) {
-            if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
-                t.type.name = result.token();
-            }
-            else if (is_rval()) {
             }
             return true;
         }
@@ -89,7 +81,7 @@ namespace binred {
                         type = FlagType::ls;
                     }
                     else if (result.token() == "gt") {
-                        t.type.flag.type = FlagType::gt;
+                        type = FlagType::gt;
                     }
                     else if (result.token() == "egt") {
                         type = FlagType::egt;
@@ -103,10 +95,17 @@ namespace binred {
                 }
             };
             if (result.under(base_def)) {
-                set_to_flag(state.data.structs[state.cuurent_struct].base.type.flag);
+                set_to_flag(cst.base.type.flag);
             }
             else {
-                set_to_flag(t.type.flag);
+                set_to_flag(memb().back().type.flag);
+            }
+            return true;
+        }
+        auto& t = memb().back();
+        if (result.top() == type_def) {
+            if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
+                t.type.name = result.token();
             }
             return true;
         }

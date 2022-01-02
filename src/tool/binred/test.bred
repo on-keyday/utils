@@ -29,3 +29,7 @@ struct H2Frame {
     flag std::uint8_t
     id std::int32_t ? id egt 0
 }
+
+struct DataFrame - H2Frame {
+
+}
