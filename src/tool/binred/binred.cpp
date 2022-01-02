@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
         TYPE:=ID SIZE? FLAG? BIND?
         FLAG:="?" FLAG_DETAIL!
         BIND:="!" FLAG_DETAIL!
-        FLAG_DETAIL:=ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"|"nbit"] [INTEGER|STRING|ID]
+        FLAG_DETAIL:=ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"|"nbit"|"mod"] [INTEGER|STRING|ID]
         SIZE:="$" [INTEGER|ID] [["+"|"-"|"%"] [INTEGER|ID]!]? 
     )";
     auto c = us::make_syntaxc();
