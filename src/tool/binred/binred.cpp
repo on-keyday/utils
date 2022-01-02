@@ -54,9 +54,10 @@ int main(int argc, char** argv) {
         ROOT:=PACKAGE? [STRUCT|IMPORT]*?
         PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
-        STRUCT:="struct" ID "{" MEMBER*? "}" EOS
-        MEMBER:=ID TYPE!
-        TYPE:=ID SIZE? FLAG? ["=" [INTEGER|STRING]]?
+        STRUCT:="struct" ID BASE? "{" MEMBER*? "}" EOS
+        BASE:="-" MEMBER!
+        MEMBER:=ID TYPE! ["=" [INTEGER|STRING]]?
+        TYPE:=ID SIZE? FLAG? 
         FLAG:="?" [ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"] [INTEGER|STRING|ID]]!
         SIZE:="$" [INTEGER|ID]  
     )";

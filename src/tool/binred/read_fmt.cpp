@@ -17,6 +17,7 @@ namespace binred {
     constexpr auto flag_def = "FLAG";
     constexpr auto import_def = "IMPORT";
     constexpr auto size_def = "SIZE";
+    constexpr auto base_def = "BASE";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
@@ -44,55 +45,66 @@ namespace binred {
         auto memb = [&]() -> auto& {
             return state.data.structs[state.cuurent_struct].member;
         };
-        if (result.top() == member_def) {
-            memb().push_back({.name = result.token()});
-            return true;
-        }
-        auto& t = memb().back();
         auto is_rval = [&] {
             return result.kind() == us::KeyWord::id || result.kind() == us::KeyWord::string || result.kind() == us::KeyWord::integer;
         };
-        if (result.top() == type_def) {
-            if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
-                t.type.name = result.token();
+        if (result.top() == member_def) {
+            if (result.kind() == us::KeyWord::id) {
+                memb().push_back({.name = result.token()});
             }
             else if (is_rval()) {
+                auto& t = memb().back();
                 t.defval = result.token();
                 t.kind = result.kind();
             }
             return true;
         }
-        if (result.top() == flag_def) {
-            if (!t.type.flag.depend.size() && result.kind() == us::KeyWord::id) {
-                t.type.flag.depend = result.token();
+        auto& t = memb().back();
+        if (result.top() == type_def) {
+            if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
+                t.type.name = result.token();
             }
             else if (is_rval()) {
-                t.type.flag.val = result.token();
-                t.type.flag.kind = result.kind();
             }
-            else if (result.kind() == us::KeyWord::literal_keyword) {
-                auto& type = t.type.flag.type;
-                if (result.token() == "eq") {
-                    type = FlagType::eq;
+            return true;
+        }
+        if (result.top() == flag_def) {
+            auto set_to_flag = [&](auto& flag) {
+                if (!flag.depend.size() && result.kind() == us::KeyWord::id) {
+                    flag.depend = result.token();
                 }
-                else if (result.token() == "bit") {
-                    type = FlagType::bit;
+                else if (is_rval()) {
+                    flag.val = result.token();
+                    flag.kind = result.kind();
                 }
-                else if (result.token() == "ls") {
-                    type = FlagType::ls;
+                else if (result.kind() == us::KeyWord::literal_keyword) {
+                    auto& type = flag.type;
+                    if (result.token() == "eq") {
+                        type = FlagType::eq;
+                    }
+                    else if (result.token() == "bit") {
+                        type = FlagType::bit;
+                    }
+                    else if (result.token() == "ls") {
+                        type = FlagType::ls;
+                    }
+                    else if (result.token() == "gt") {
+                        t.type.flag.type = FlagType::gt;
+                    }
+                    else if (result.token() == "egt") {
+                        type = FlagType::egt;
+                    }
+                    else if (result.token() == "els") {
+                        type = FlagType::els;
+                    }
+                    else if (result.token() == "nq") {
+                        type = FlagType::nq;
+                    }
                 }
-                else if (result.token() == "gt") {
-                    t.type.flag.type = FlagType::gt;
-                }
-                else if (result.token() == "egt") {
-                    type = FlagType::egt;
-                }
-                else if (result.token() == "els") {
-                    type = FlagType::els;
-                }
-                else if (result.token() == "nq") {
-                    type = FlagType::nq;
-                }
+            };
+            if (result.under(base_def)) {
+            }
+            else {
             }
             return true;
         }
