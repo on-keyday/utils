@@ -56,8 +56,7 @@ struct RstStreamFrame - H2Frame ? type eq 3 ! len eq 4 {
     code std::uint32_t
 }
 
-struct SetingsFrame - H2Frame ? type eq 3 ! len  {
-    
+struct SetingsFrame - H2Frame ? type eq 3 ! len mod 6 {
     setting std::string $ len 
 }
 
