@@ -78,6 +78,8 @@ namespace binred {
         utw::vector<utw::string> defvec;
         utw::string write_method;
         utw::string read_method;
+        utw::string make_ptr;
+        utw::string ptr_type;
         utw::vector<utw::string> imports;
     };
 

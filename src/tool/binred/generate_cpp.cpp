@@ -139,15 +139,27 @@ namespace binred {
     }
 
     void generate_ptr_obj(utw::string& str, FileData& data, auto& obj) {
-        hlp::appends(str, obj, "*");
+        if (data.ptr_type.size()) {
+            hlp::appends(str, data.ptr_type, "<", obj, ">");
+        }
+        else {
+            hlp::appends(str, obj, "*");
+        }
     }
 
     void generate_make_ptr_obj(utw::string& str, FileData& data, auto& obj) {
-        hlp::appends(str, "new ", obj, "{}");
+        if (data.make_ptr.size()) {
+            hlp::append(str, data.make_ptr, "<", obj, ">()");
+        }
+        else {
+            hlp::appends(str, "new ", obj, "{}");
+        }
     }
 
     void generate_delete_ptr_obj(utw::string& str, FileData& data, auto& obj) {
-        hlp::appends(str, "delete ", obj, ";");
+        if (!data.make_ptr.size()) {
+            hlp::appends(str, "delete ", obj, ";");
+        }
     }
 
     using Dependency = utw::map<utw::string, utw::vector<utw::string>>;
