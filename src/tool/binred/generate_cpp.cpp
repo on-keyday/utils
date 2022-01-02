@@ -180,7 +180,7 @@ namespace binred {
                     hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
                 }
                 write_indent(str, 2);
-                hlp::append(str, "if(decode(input,*p)) {\n");
+                hlp::append(str, "if(decode(input,*p,true)) {\n");
                 write_indent(str, 3);
                 generate_delete_ptr_obj(str, data, "p");
                 hlp::append(str, "\n");
