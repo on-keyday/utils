@@ -145,7 +145,7 @@ namespace binred {
             if (not_match) {
                 continue;
             }
-            hlp::appends(str, "template<class Input>\ndecode(Input&& input,");
+            hlp::appends(str, "template<class Input>\nbool decode(Input&& input,");
             hlp::appends(str, d.first, "*& output) {\n");
             write_indent(str, 1);
             hlp::appends(str, d.first, " judgement;\n");
@@ -183,9 +183,9 @@ namespace binred {
                 gen_decode(*data.structs.find(id));
             }
             hlp::append(str, "{\n");
-            write_indent(str, 3);
-            hlp::append(str, "return false;\n");
             write_indent(str, 2);
+            hlp::append(str, "return false;\n");
+            write_indent(str, 1);
             hlp::append(str, "}\n}\n\n");
         }
     }
