@@ -105,14 +105,21 @@ namespace binred {
         if (result.top() == base_def) {
             return true;
         }
-        auto& t = memb().back();
         if (result.top() == type_def) {
-            if (!t.type.name.size() && result.kind() == us::KeyWord::id) {
-                t.type.name = result.token();
+            if (result.kind() == us::KeyWord::id) {
+                if (result.under(base_def)) {
+                    cst.base.type.name = result.token();
+                }
+                else {
+                    auto& t = memb().back();
+
+                    t.type.name = result.token();
+                }
             }
             return true;
         }
         if (result.top() == size_def) {
+            auto& t = memb().back();
             if (is_rval()) {
                 t.type.flag.size = result.token();
             }
