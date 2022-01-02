@@ -24,6 +24,9 @@ namespace binred {
         if (not_) {
             hlp::append(str, "!(");
         }
+        if (flag.type == FlagType::nbit) {
+            hlp::append(str, "!(");
+        }
         hlp::appends(str, in, ".", flag.depend);
         if (flag.type == FlagType::eq) {
             hlp::append(str, " == ");
@@ -46,7 +49,13 @@ namespace binred {
         else if (flag.type == FlagType::nq) {
             hlp::append(str, " != ");
         }
+        else if (flag.type == FlagType::nbit) {
+            hlp::append(str, " & ");
+        }
         hlp::append(str, flag.val.val);
+        if (flag.type == FlagType::nbit) {
+            hlp::append(str, ")");
+        }
         if (not_) {
             hlp::append(str, ")");
         }

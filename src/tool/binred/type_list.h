@@ -24,6 +24,7 @@ namespace binred {
         nq,
         egt,
         els,
+        nbit,
     };
 
     struct Val {

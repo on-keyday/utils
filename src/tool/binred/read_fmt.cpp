@@ -93,6 +93,9 @@ namespace binred {
                     else if (result.token() == "nq") {
                         type = FlagType::nq;
                     }
+                    else if (result.token() == "nbit") {
+                        type == FlagType::nbit;
+                    }
                 }
             };
             auto under_disp = [&](auto& type) {
