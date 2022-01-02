@@ -26,5 +26,5 @@ struct H2Frame {
     len int $ 3 
     type std::uint8_t
     flag std::uint8_t
-    id std::int32_t ? id gt 0
+    id std::int32_t ? id egt 0
 }

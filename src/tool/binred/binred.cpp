@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
         STRUCT:="struct" ID "{" MEMBER*? "}" EOS
         MEMBER:=ID TYPE!
         TYPE:=ID SIZE? FLAG? ["=" [INTEGER|STRING]]?
-        FLAG:="?" [ID ["eq"|"bit"|"ls"|"gt"] [INTEGER|STRING|ID]]!
+        FLAG:="?" [ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"] [INTEGER|STRING|ID]]!
         SIZE:="$" [INTEGER|ID]  
     )";
     auto c = us::make_syntaxc();
