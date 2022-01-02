@@ -71,23 +71,27 @@ namespace binred {
                 t.type.flag.kind = result.kind();
             }
             else if (result.kind() == us::KeyWord::literal_keyword) {
+                auto& type = t.type.flag.type;
                 if (result.token() == "eq") {
-                    t.type.flag.type = FlagType::eq;
+                    type = FlagType::eq;
                 }
                 else if (result.token() == "bit") {
-                    t.type.flag.type = FlagType::bit;
+                    type = FlagType::bit;
                 }
                 else if (result.token() == "ls") {
-                    t.type.flag.type = FlagType::ls;
+                    type = FlagType::ls;
                 }
                 else if (result.token() == "gt") {
                     t.type.flag.type = FlagType::gt;
                 }
                 else if (result.token() == "egt") {
-                    t.type.flag.type = FlagType::egt;
+                    type = FlagType::egt;
                 }
                 else if (result.token() == "els") {
-                    t.type.flag;
+                    type = FlagType::els;
+                }
+                else if (result.token() == "nq") {
+                    type = FlagType::nq;
                 }
             }
             return true;
