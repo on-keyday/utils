@@ -75,11 +75,12 @@ namespace binred {
     }
 
     void generate_with_flag(FileData& data, utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool is_enc, bool check_succeed) {
-        auto& flag = memb.type.flag;
-        auto has_flag = flag.type != FlagType::none;
+        auto& type = memb.type;
+        auto has_flag = type.flag.type != FlagType::none;
+        auto has_bind = type.bind.type != FlagType::none;
         auto check_before = memb.type.flag.depend != memb.name;
         int plus = 0;
-        auto check_self = [&] {
+        auto check_self = [&](auto& flag) {
             write_indent(str, 1);
             generate_flag_cond_begin(str, in, flag, true);
             write_indent(str, 1);
@@ -90,12 +91,15 @@ namespace binred {
         if (has_flag) {
             if (check_before) {
                 write_indent(str, 1);
-                generate_flag_cond_begin(str, in, flag);
+                generate_flag_cond_begin(str, in, type.flag);
                 plus = 1;
             }
             else if (!check_succeed) {
-                check_self();
+                check_self(type.flag);
             }
+        }
+        if (has_bind && !check_succeed) {
+            check_self(type.bind);
         }
         write_indent(str, 1);
         if (check_succeed) {
@@ -133,8 +137,11 @@ namespace binred {
                 hlp::append(str, "}\n");
             }
             else if (check_succeed) {
-                check_self();
+                check_self(type.flag);
             }
+        }
+        if (has_bind && check_succeed) {
+            check_self(type.bind);
         }
     }
 
