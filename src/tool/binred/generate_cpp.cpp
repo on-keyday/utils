@@ -102,9 +102,12 @@ namespace binred {
             hlp::append(str, "if(!");
         }
         if (data.structs.count(memb.type.name)) {
-            hlp::appends(str, dencode, "(", in);
-            hlp::appends(str, ", ");
-            hlp::append(str, out, ")");
+            if (is_enc) {
+                hlp::appends(str, "encode(", in, ".", memb.name, ", ", out, ")");
+            }
+            else {
+                hlp::appends(str, "decode(", in, ", ", out, ".", memb.name, ")");
+            }
         }
         else {
             hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
@@ -279,7 +282,7 @@ namespace binred {
                 hlp::append(str, "}\n");
             }
             for (auto& memb : d.second.member) {
-                generate_with_flag(data, str, memb, "input", "output", data.write_method, "encode", false);
+                generate_with_flag(data, str, memb, "input", "output", data.write_method, true, false);
             }
             write_indent(str, 1);
             hlp::append(str, "return true;\n");
@@ -311,7 +314,7 @@ namespace binred {
                 }
             }
             for (auto& memb : d.second.member) {
-                generate_with_flag(data, str, memb, "output", "input", data.read_method, "decode", true);
+                generate_with_flag(data, str, memb, "output", "input", data.read_method, false, true);
             }
             write_indent(str, 1);
             hlp::append(str, "return true;\n");
