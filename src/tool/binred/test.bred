@@ -57,7 +57,7 @@ struct RstStreamFrame - H2Frame ? type eq 3 ! len eq 4 {
 }
 
 struct SetingsFrame - H2Frame ? type eq 3 ! len mod 6 {
-    setting std::string $ len 
+    setting std::string $ len ? flag nbit 0x1
 }
 
 struct PingFrame - H2Frame ? type eq 6 ! len eq 8 {
