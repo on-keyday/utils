@@ -280,9 +280,9 @@ namespace binred {
                 if (st.base.type.flag.type != FlagType::none) {
                     write_indent(str, 1);
                     generate_flag_cond_begin(str, "output", st.base.type.flag, true);
-                    write_indent(str, offset + 1);
+                    write_indent(str, offset);
                     hlp::append(str, "return false;\n");
-                    write_indent(str, offset + 1);
+                    write_indent(str, offset);
                     hlp::append(str, "}\n");
                 }
             }
