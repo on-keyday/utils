@@ -77,6 +77,12 @@ namespace binred {
                 else if (result.token() == "bit") {
                     t.type.flag.type = FlagType::bit;
                 }
+                else if (result.token() == "ls") {
+                    t.type.flag.type = FlagType::ls;
+                }
+                else if (result.token() == "gt") {
+                    t.type.flag.type = FlagType::gt;
+                }
             }
             return true;
         }

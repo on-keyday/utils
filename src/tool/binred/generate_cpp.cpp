@@ -32,6 +32,12 @@ namespace binred {
         else if (flag.type == FlagType::bit) {
             hlp::append(str, " & ");
         }
+        else if (flag.type == FlagType::ls) {
+            hlp::append(str, " < ");
+        }
+        else if (flag.type == FlagType::gt) {
+            hlp::append(str, " > ");
+        }
         hlp::append(str, flag.val);
         if (not_) {
             hlp::append(str, ")");
