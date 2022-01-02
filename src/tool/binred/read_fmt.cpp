@@ -94,7 +94,7 @@ namespace binred {
                         type = FlagType::nq;
                     }
                     else if (result.token() == "nbit") {
-                        type == FlagType::nbit;
+                        type = FlagType::nbit;
                     }
                 }
             };
