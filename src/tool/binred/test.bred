@@ -35,5 +35,6 @@ struct DataFrame - H2Frame ? type eq 0 {
 }
 
 struct HeaderFrame - H2Frame ? type eq 1 {
-
+    padding std::uint8_t ? flag bit 0x8
+    data std::string $ len - padding 
 }
