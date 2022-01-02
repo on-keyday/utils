@@ -119,16 +119,30 @@ namespace binred {
             return true;
         }
         if (result.top() == size_def) {
+            auto handle_size = [&](Size& size) {
+                if (result.token() == "+") {
+                    size.op = Op::add;
+                }
+                else if (result.token() == "-") {
+                    size.op = Op::sub;
+                }
+                else if (is_rval()) {
+                    if (!size.size1.val.size()) {
+                        size.size1.val = result.token();
+                        size.size1.kind = result.kind();
+                    }
+                    else {
+                        size.size2.val = result.token();
+                        size.size2.kind = result.kind();
+                    }
+                }
+            };
             if (result.under(base_def)) {
-                cst.base.type.flag.size.val = result.token();
-                cst.base.type.flag.size.kind = result.kind();
+                handle_size(cst.base.type.flag.size);
             }
             else {
                 auto& t = memb().back();
-                if (is_rval()) {
-                    t.type.flag.size.val = result.token();
-                    t.type.flag.size.kind = result.kind();
-                }
+                handle_size(t.type.flag.size);
             }
             return true;
         }

@@ -54,6 +54,26 @@ namespace binred {
         write_indent(str, 1);
     }
 
+    void set_val(utw::string& str, Val& val, auto& in) {
+        if (val.kind == utils::syntax::KeyWord::id) {
+            hlp::appends(str, in, ".");
+        }
+        hlp::appends(str, val.val);
+    }
+
+    void set_size(utw::string& str, Size& size, auto& in) {
+        set_val(str, size.size1, in);
+        if (size.op != Op::none) {
+            if (size.op == Op::add) {
+                hlp::append(str, " + ");
+            }
+            else if (size.op == Op::sub) {
+                hlp::append(str, " - ");
+            }
+            set_val(str, size.size2, in);
+        }
+    }
+
     void generate_with_flag(utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool check_succeed) {
         auto& flag = memb.type.flag;
         auto has_flag = flag.type != FlagType::none;
@@ -82,12 +102,9 @@ namespace binred {
             hlp::append(str, "if(!");
         }
         hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
-        if (memb.type.flag.size.val.size()) {
+        if (memb.type.flag.size.size1.val.size()) {
             hlp::append(str, ",");
-            if (memb.type.flag.size.kind == utils::syntax::KeyWord::id) {
-                hlp::appends(str, in, ".");
-            }
-            hlp::appends(str, memb.type.flag.size.val);
+            set_size(str, memb.type.flag.size, in);
         }
         hlp::append(str, ")");
         if (check_succeed) {

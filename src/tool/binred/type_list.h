@@ -31,11 +31,23 @@ namespace binred {
         utils::syntax::KeyWord kind = {};
     };
 
+    enum class Op {
+        none,
+        add,
+        sub,
+    };
+
+    struct Size {
+        Val size1;
+        Op op = Op::none;
+        Val size2;
+    };
+
     struct Flag {
         utw::string depend;
         Val val;
         FlagType type = FlagType::none;
-        Val size;
+        Size size;
     };
 
     struct Type {

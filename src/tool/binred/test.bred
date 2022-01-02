@@ -28,13 +28,12 @@ struct H2Frame {
     type std::uint8_t
     flag std::uint8_t
     id std::int32_t ? id egt 0
-    data std::string $ len
 }
 
 struct DataFrame - H2Frame ? type eq 0 {
-
+    data std::string $ len
 }
 
 struct HeaderFrame - H2Frame ? type eq 1 {
-    
+
 }
