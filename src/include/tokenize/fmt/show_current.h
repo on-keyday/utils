@@ -10,7 +10,6 @@
 #pragma once
 
 #include "../reader.h"
-#include "../../wrap/pack.h"
 #include "../cast.h"
 
 #include <iomanip>
@@ -18,8 +17,8 @@
 namespace utils {
     namespace tokenize {
         namespace fmt {
-            template <class String>
-            void show_current(Reader<String>& r, wrap::internal::Pack& output) {
+            template <class String, class Pack>
+            void show_current(Reader<String>& r, Pack&& output) {
                 auto root = r.root;
                 auto current = r.current;
                 auto beginline = root;
