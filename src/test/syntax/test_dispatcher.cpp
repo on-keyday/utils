@@ -25,7 +25,7 @@ void test_dispatcher() {
     assert(tok);
 
     disp.append([](auto&) {}, FilterType::filter | FilterType::check,
-                filter::stack(0, ""));
+                filter::stack_strict(0, ""));
 }
 
 int main() {

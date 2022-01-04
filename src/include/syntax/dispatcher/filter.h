@@ -30,7 +30,7 @@ namespace utils {
                             return false;
                         }
                         else {
-                            return stack_eq<incr>(index + 1, ctx, std::forward<Args>(args)...);
+                            return stack_eq<incr>(index + 1, ctx, std::forward<C>(current), std::forward<Args>(args)...);
                         }
                     }
                     return stack_eq<incr>(index + 1, ctx, std::forward<Args>(args)...);
