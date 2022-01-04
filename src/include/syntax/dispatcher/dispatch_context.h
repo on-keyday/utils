@@ -20,6 +20,7 @@ namespace utils {
             none = 0,
             filter = 0x1,
             check = 0x2,
+            final = 0x4,
         };
 
         DEFINE_ENUM_FLAGOP(FilterType)
@@ -43,9 +44,13 @@ namespace utils {
                         }
                     }
                     auto res = filter.dispatch(ctx);
-                    if (any(filter.type & FilterType::fatal)) {
-                        if (res) {
+                    if (any(filter.type & FilterType::check)) {
+                        if (res != MatchState::not_match) {
+                            return res;
                         }
+                    }
+                    if (any(filter.type & FilterType::final)) {
+                        return res;
                     }
                 }
                 return MatchState::succeed;
