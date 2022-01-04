@@ -47,12 +47,6 @@ namespace utils {
             return true;
         }
 
-        constexpr auto no_check() {
-            return [](auto&&) -> bool {
-                return true;
-            };
-        }
-
         template <class Result, class T>
         constexpr bool read_all(Result& result, Sequencer<T>& seq) {
             return read_whilef(result, seq, no_check());

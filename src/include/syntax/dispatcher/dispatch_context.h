@@ -12,6 +12,7 @@
 #include "dispatcher.h"
 #include "../../wrap/lite/enum.h"
 #include "../matching/context.h"
+#include "../../helper/compare_type.h"
 
 namespace utils {
     namespace syntax {
@@ -36,6 +37,11 @@ namespace utils {
         struct DispatchContext {
             using context_t = MatchContext<String, Vec>;
             Vec<DispatchFilter<context_t>> disp;
+
+            template <class F, class B = decltype(helper::no_check())>
+            void append(F&& f, FilterType type, B&& filter = helper::no_check()) {
+            }
+
             MatchState operator()(context_t& ctx) {
                 for (DispatchFilter<context_t>& filter : disp) {
                     if (any(filter.type & FilterType::filter)) {

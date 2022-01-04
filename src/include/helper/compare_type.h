@@ -43,5 +43,11 @@ namespace utils {
                 return to_upper(a) == to_upper(b);
             };
         }
+
+        constexpr auto no_check() {
+            return [](auto&&) -> bool {
+                return true;
+            };
+        }
     }  // namespace helper
 }  // namespace utils
