@@ -11,11 +11,12 @@
 #include "../../include/tokenize/merge.h"
 
 #include "../../include/wrap/lite/string.h"
+#include "../../include/wrap/lite/vector.h"
 #include "../../include/wrap/cout.h"
 using namespace utils;
 
 void test_tokenizer() {
-    tokenize::Tokenizer<wrap::string> tokenizer;
+    tokenize::Tokenizer<wrap::string, wrap::vector> tokenizer;
     decltype(tokenizer)::token_t output;
 
     tokenizer.keyword.predef = {"def", "func", "int", "bool"};

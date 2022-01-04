@@ -16,12 +16,10 @@
 #include "identifier.h"
 #include "comment.h"
 
-#include "../wrap/lite/vector.h"
-
 namespace utils {
     namespace tokenize {
 
-        template <class String, template <class...> class Vec = wrap::vector>
+        template <class String, template <class...> class Vec>
         struct Tokenizer {
             Predefined<String, Vec> keyword;
             Predefined<String, Vec> symbol;

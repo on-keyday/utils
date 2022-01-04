@@ -170,7 +170,7 @@ Special Value:
         TYPE:="..."? ["&&"|"&"]? POINTER? "const"? ID
     )def";
 
-    tokenize::Tokenizer<wrap::string> token;
+    tokenize::Tokenizer<wrap::string, wrap::vector> token;
 
     stxc->cb = [&](auto& ctx) {
         if (verbose) {
