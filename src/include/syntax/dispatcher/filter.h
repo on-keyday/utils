@@ -39,9 +39,16 @@ namespace utils {
             }  // namespace internal
 
             template <class... Args>
-            auto stack(size_t first_index, Args&&... args) {
+            auto stack_strict(size_t first_index, Args&&... args) {
                 return [=](auto& ctx) {
-                    return internal::stack_eq(false, first_index, ctx, std::forward<Args>(args)...);
+                    return internal::stack_eq<false>(first_index, ctx, std::forward<Args>(args)...);
+                };
+            }
+
+            template <class... Args>
+            auto stack_order(size_t first_index, Args&&... args) {
+                return [=](auto& ctx) {
+                    return internal::stack_eq<true>(first_index, ctx, std::forward<Args>(args)...);
                 };
             }
 

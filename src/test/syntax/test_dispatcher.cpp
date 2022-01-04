@@ -27,3 +27,6 @@ void test_dispatcher() {
     disp.append([](auto&) {}, FilterType::filter | FilterType::check,
                 filter::stack(0, ""));
 }
+
+int main() {
+}
