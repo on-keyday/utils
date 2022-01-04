@@ -24,9 +24,10 @@ void test_dispatcher() {
     auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
     assert(tok);
 
-    disp.append([](auto&) {}, FilterType::filter | FilterType::check,
+    disp.append([](auto&) { return MatchState::succeed; }, FilterType::filter | FilterType::check,
                 filter::stack_strict(0, ""));
 }
 
 int main() {
+    test_dispatcher();
 }

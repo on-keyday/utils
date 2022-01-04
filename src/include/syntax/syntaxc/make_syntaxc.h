@@ -28,7 +28,7 @@ namespace utils {
         }
 
         template <class T, class String, template <class...> class Vec, class... Ctx>
-        wrap::shared_ptr<tknz::Token<String>> tokenize_and_merge(const char*& err, Sequencer<T>& input, tknz::Tokenizer<String, Vec>& tokenizer, Ctx&&... ctx) {
+        wrap::shared_ptr<tknz::Token<String>> tokenize_and_merge(const char*& err, Sequencer<T>& input, tknz::Tokenizer<String, Vec>& t, Ctx&&... ctx) {
             wrap::shared_ptr<tknz::Token<String>> ret;
             if (!t.tokenize(input, ret)) {
                 return nullptr;

@@ -44,6 +44,7 @@ add_executable(io_completion_port "src/test/platform/windows/test_io_completion_
 endif()
 add_executable(cookie "src/test/net/test_cookie.cpp")
 add_executable(strutil "src/test/helper/test_strutil.cpp")
+add_executable(dispatcher "src/test/syntax/test_dispatcher.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -80,6 +81,7 @@ target_link_libraries(http1 libutils)
 if(WIN32)
 target_link_libraries(io_completion_port libutils)
 endif()
+target_link_libraries(dispatcher libutils)
 
 target_link_libraries(ifacegen libutils)
 target_link_libraries(binred libutils)
