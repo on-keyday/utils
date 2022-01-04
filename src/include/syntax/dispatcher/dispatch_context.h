@@ -39,13 +39,14 @@ namespace utils {
             Vec<DispatchFilter<context_t>> disp;
 
             template <class F, class B = decltype(helper::no_check())>
-            void append(F&& f, FilterType type = FilterType::filter, B&& filter = helper::no_check()) {
+            DispatchContext& append(F&& f, FilterType type = FilterType::filter, B&& filter = helper::no_check()) {
                 disp.push_back(
                     DispatchFilter<context_t>{
                         .dispatch = std::forward<F>(f),
                         .type = type,
                         .filter = std::forward<B>(filter),
                     });
+                return *this;
             }
 
             MatchState operator()(context_t& ctx) {

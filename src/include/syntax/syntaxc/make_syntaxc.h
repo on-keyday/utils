@@ -26,6 +26,28 @@ namespace utils {
         tknz::Tokenizer<String, Vec> make_tokenizer() {
             return tknz::Tokenizer<String, Vec>{};
         }
+        template <class Define, class Input, class String = wrap::string, template <class...> class Vec = wrap::vector, template <class...> class Map = wrap::map, class... Ctx>
+        wrap::shared_ptr<tknz::Token<String>> default_parse(wrap::shared_ptr<SyntaxC<String, Vec, Map>>& c, Sequencer<Define>& def, Sequencer<Input>& input, Ctx&&... ctx) {
+            if (!c) {
+                return nullptr;
+            }
+            auto t = make_tokenizer<String, Vec>();
+            auto m = c->make_tokenizer(def, t);
+            if (!m) {
+                return nullptr;
+            }
+            wrap::shared_ptr<tknz::Token<String>> ret;
+            if (!t.tokenize(input, ret)) {
+                return nullptr;
+            }
+            const char* err = nullptr;
+            if (!tknz::merge(err, ret, ctx...)) {
+                c->error() << err;
+                return nullptr;
+            }
+            return ret;
+        }
+
 #if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
         extern template struct SyntaxC<wrap::string, wrap::vector, wrap::map>;
 #endif
