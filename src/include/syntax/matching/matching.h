@@ -16,33 +16,6 @@
 namespace utils {
     namespace syntax {
 
-        template <class String, template <class...> class Vec>
-        struct MatchContext {
-            const Vec<String>& stack;
-            MatchResult<String> result;
-
-            const String& token() const {
-                return result.token;
-            }
-
-            const String& top() const {
-                return stack[stack.size() - 1];
-            }
-
-            KeyWord kind() const {
-                return result.kind;
-            }
-
-            bool under(const String& v) const {
-                for (auto i = stack.size() - 1; i != -1; i--) {
-                    if (stack[i] == v) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        };
-
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct Match {
             internal::MatcherHelper<String, Vec, Map> matcher;

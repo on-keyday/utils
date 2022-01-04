@@ -10,19 +10,23 @@
 #pragma once
 
 #include "dispatcher.h"
+#include "../../wrap/lite/enum.h"
 
 namespace utils {
     namespace syntax {
 
         enum class FilterType {
-            no_check,
-            check,
+            none = 0,
+            filter = 0x1,
+            cb = 0x2,
         };
+
+        DEFINE_ENUM_FLAGOP(FilterType)
 
         template <class T>
         struct DispatchFilter {
             Dispatch<T> dispatch;
-            FilterType type = FilterType::no_check;
+            FilterType type = FilterType::none;
             Filter<T> filter;
         };
 
