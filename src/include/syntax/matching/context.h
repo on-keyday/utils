@@ -36,6 +36,10 @@ namespace utils {
             const Vec<String>& stack;
             MatchResult<String> result;
 
+            const char* what() const {
+                return keywordv(result.kind);
+            }
+
             const String& token() const {
                 return result.token;
             }
