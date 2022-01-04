@@ -70,7 +70,7 @@ namespace utils {
             auto not_filter(A&& a) {
                 return [=](auto& ctx) {
                     return !a(ctx);
-                }
+                };
             }
 
         }  // namespace filter
