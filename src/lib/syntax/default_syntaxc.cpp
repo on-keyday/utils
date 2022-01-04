@@ -8,6 +8,7 @@
 
 #define UTILS_SYNTAX_NO_EXTERN_SYNTAXC
 #include "../../include/syntax/syntaxc/make_syntaxc.h"
+#include "../../include/syntax/dispatcher/default_dispatcher.h"
 
 namespace utils {
     namespace syntax {
@@ -28,6 +29,7 @@ namespace utils {
             tokenizer.tokenize(input2, res);
 
             utils::syntax::Reader<utils::wrap::string> r{res};
+            instance.cb = DefaultDispatcher{};
             instance.matching(r);
             instance.error();
         }
