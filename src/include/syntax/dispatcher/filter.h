@@ -16,19 +16,22 @@ namespace utils {
 
             namespace internal {
                 template <class T, class... Arg>
-                bool stack_eq(size_t index, T& ctx, Args&&...) {
+                bool stack_eq(bool incr, size_t index, T& ctx, Args&&...) {
                     return true;
                 }
 
                 template <class T, class C, class... Args>
-                bool stack_eq(size_t index, T& ctx, C&& current, Args&&... args) {
+                bool stack_eq(bool incr, size_t index, T& ctx, C&& current, Args&&... args) {
                     if (ctx.stack.size() <= index) {
                         return false;
                     }
                     if (!helper::equal(ctx.stack[ctx.stack.size() - 1 - index], current)) {
-                        return false;
+                        if (!incr) {
+                            return false;
+                        }
+                        return stack_eq(true, index + 1, ctx, std::forward<Args>(args)...);
                     }
-                    return stack_eq(index + 1, ctx, std::forward<Args>(args)...);
+                    return stack_eq(incr, index + 1, ctx, std::forward<Args>(args)...);
                 }
 
             }  // namespace internal

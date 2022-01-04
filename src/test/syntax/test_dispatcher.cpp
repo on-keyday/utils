@@ -6,6 +6,7 @@
 */
 
 #include "../../include/syntax/dispatcher/default_dispatcher.h"
+#include "../../include/syntax/dispatcher/filter.h"
 #include "../../include/syntax/syntaxc/make_syntaxc.h"
 #include "../../include/tokenize/merger.h"
 
@@ -21,4 +22,8 @@ void test_dispatcher() {
 
     )");
     auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
+    assert(tok);
+
+    disp.append([](auto&) {}, FilterType::filter | FilterType::check,
+                filter::stack(0, ""));
 }
