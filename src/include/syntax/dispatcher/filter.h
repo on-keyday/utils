@@ -52,6 +52,27 @@ namespace utils {
                 };
             }
 
+            template <class A, class B>
+            auto and_filter(A&& a, B&& b) {
+                return [=](auto& ctx) {
+                    return a(ctx) && b(ctx);
+                };
+            }
+
+            template <class A, class B>
+            auto or_filter(A&& a, B&& b) {
+                return [=](auto& ctx) {
+                    return a(ctx) || b(ctx);
+                };
+            }
+
+            template <class A>
+            auto not_filter(A&& a) {
+                return [=](auto& ctx) {
+                    return !a(ctx);
+                }
+            }
+
         }  // namespace filter
 
     }  // namespace syntax

@@ -17,6 +17,12 @@ void test_dispatcher() {
     auto c = make_syntaxc();
     auto seq = utils::make_ref_seq(R"(
         COMMENT_TAG:="#"
+        ROOT:=EOF
+        EXPR:=ASSIGN
+        ASSIGN:=
+        EQ:=ADD "=="
+        ADD:=MUL "+"
+        MUL:=
     )");
     auto input = utils::make_ref_seq(R"(
 
@@ -26,6 +32,9 @@ void test_dispatcher() {
 
     disp.append([](auto&) { return MatchState::succeed; }, FilterType::filter | FilterType::check,
                 filter::stack_strict(0, ""));
+    auto r = Reader<utils::wrap::string>(tok);
+    c->cb = &disp;
+    c->matching(r);
 }
 
 int main() {
