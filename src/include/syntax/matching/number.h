@@ -130,7 +130,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            int parse_float(Context<String, Vec>& ctx, std::shared_ptr<Element<String, Vec>>& v, String& token, bool onlyint = false) {
+            int parse_float(ErrorContext<String, Vec>& ctx, std::shared_ptr<Element<String, Vec>>& v, String& token, bool onlyint = false) {
                 auto cr = ctx.r.from_current();
                 FloatReadPoint<String> pt;
                 auto report = [&](const auto& msg) {

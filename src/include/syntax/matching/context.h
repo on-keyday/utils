@@ -18,7 +18,7 @@ namespace utils {
     namespace syntax {
 
         template <class String, template <class...> class Vec>
-        struct Context {
+        struct ErrorContext {
             Reader<String> r;
             wrap::internal::Pack err;
             wrap::shared_ptr<tknz::Token<String>> errat;

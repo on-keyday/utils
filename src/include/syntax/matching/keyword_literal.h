@@ -20,7 +20,7 @@ namespace utils {
     namespace syntax {
         namespace internal {
             template <class String, template <class...> class Vec>
-            MatchState match_keyword(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
+            MatchState match_keyword(ErrorContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
                 auto report = [&](auto&&... args) {
                     ctx.err.packln("error: ", args...);
                     ctx.errat = ctx.r.get();
@@ -217,7 +217,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            MatchState match_literal(Context<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
+            MatchState match_literal(ErrorContext<String, Vec>& ctx, wrap::shared_ptr<Element<String, Vec>>& v, MatchResult<String>& result) {
                 auto report = [&](auto&&... args) {
                     ctx.err.packln("error: ", args...);
                     ctx.errat = ctx.r.get();

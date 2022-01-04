@@ -23,7 +23,7 @@ namespace utils {
                 using element_t = wrap::shared_ptr<Element<String, Vec>>;
                 using vec_t = Vec<element_t>;
                 Stack<String, Vec> stack;
-                Context<String, Vec> context;
+                ErrorContext<String, Vec> context;
                 Map<String, element_t> segments;
                 Vec<String> virtual_stack;
 
