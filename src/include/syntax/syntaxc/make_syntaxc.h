@@ -49,14 +49,10 @@ namespace utils {
             if (!m) {
                 return nullptr;
             }
-            wrap::shared_ptr<tknz::Token<String>> ret;
-            if (!t.tokenize(input, ret)) {
-                return nullptr;
-            }
             const char* err = nullptr;
-            if (!tknz::merge(err, ret, ctx...)) {
+            auto ret = tokenize_and_merge(err, input, t, ctx...);
+            if (!ret) {
                 c->error() << err;
-                return nullptr;
             }
             return ret;
         }
