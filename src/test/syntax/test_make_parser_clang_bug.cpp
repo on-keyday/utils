@@ -28,7 +28,7 @@ void test_make_parser() {
         )";
     Sequencer input(teststr);
     wrap::shared_ptr<tokenize::Token<wrap::string>> output;
-    auto res = syntax::tokenize_and_merge(input, output);
+    auto res = syntax::internal::tokenize_and_merge(input, output);
     assert(res && "expect true but tokenize and merge failed");
     wrap::map<wrap::string, utils::wrap::shared_ptr<utils::syntax::Element<wrap::string, wrap::vector>>> result;
     auto ctx = syntax::make_parse_context(output);

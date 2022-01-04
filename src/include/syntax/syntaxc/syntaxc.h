@@ -30,7 +30,7 @@ namespace utils {
                 match.matcher.context.err.clear();
                 wrap::shared_ptr<tknz::Token<String>> rbase;
                 const char* errmsg = nullptr;
-                if (!syntax::tokenize_and_merge<T, String, Vec>(input, rbase, &errmsg)) {
+                if (!syntax::internal::tokenize_and_merge<T, String, Vec>(input, rbase, &errmsg)) {
                     match.matcher.context.err << errmsg;
                     return false;
                 }

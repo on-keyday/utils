@@ -12,16 +12,13 @@
 void test_dispatcher() {
     using namespace utils::syntax;
     DefaultDispatcher disp;
+
     auto c = make_syntaxc();
-    auto t = make_tokenizer();
-    auto seq = utils::make_ref_seq(R"()");
-    auto m = c->make_tokenizer(seq, t);
-    decltype(t)::token_t tok;
-    assert(m);
-    auto input = utils::make_ref_seq("R()");
-    t.symbol.predef.push_back("#");
-    t.tokenize(input, tok);
-    const char* err = nullptr;
-    auto e = tknz::merge(err, tok, tknz::sh_comment(), tknz::string());
-    assert(e);
+    auto seq = utils::make_ref_seq(R"(
+        COMMENT_TAG:="#"
+    )");
+    auto input = utils::make_ref_seq(R"(
+
+    )");
+    auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
 }
