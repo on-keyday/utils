@@ -14,7 +14,6 @@ namespace utils {
         enum class MatchState {
             succeed,
             not_match,
-            eof,
             fatal,
         };
     }  // namespace syntax

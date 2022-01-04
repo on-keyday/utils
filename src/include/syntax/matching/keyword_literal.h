@@ -72,7 +72,7 @@ namespace utils {
                     if (is_keyword(kwd)) {
                         if (!e) {
                             report("unexpected EOF");
-                            ret = MatchState::eof;
+                            ret = MatchState::not_match;
                             return true;
                         }
                         keyword_cache = kwd;
@@ -138,7 +138,7 @@ namespace utils {
                              e = r.consume_get();
                              if (!e) {
                                  report("unexpected EOF");
-                                 ret = MatchState::eof;
+                                 ret = MatchState::not_match;
                                  return;
                              }
                              if (!e->is(tknz::TokenKind::comment)) {
@@ -149,7 +149,7 @@ namespace utils {
                              e = r.consume_get();
                              if (!e) {
                                  report("unexpected EOF");
-                                 ret = MatchState::eof;
+                                 ret = MatchState::not_match;
                                  return;
                              }
                              if (!e->has("\"")) {

@@ -42,7 +42,13 @@ namespace utils {
                             continue;
                         }
                     }
+                    auto res = filter.dispatch(ctx);
+                    if (any(filter.type & FilterType::fatal)) {
+                        if (res) {
+                        }
+                    }
                 }
+                return MatchState::succeed;
             }
         };
     }  // namespace syntax
