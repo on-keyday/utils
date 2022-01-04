@@ -31,18 +31,18 @@ struct H2Frame {
 }
 
 struct Priority {
-    depend std::uint32_t
-    wight std::uint8_t
+    depend std::uint32_t = 0 
+    wight std::uint8_t = 0
 }
 
 struct DataFrame - H2Frame ? type eq 0 {
-    padding std::uint8_t ? flag bit 0x8
+    padding std::uint8_t ? flag bit 0x8 = 0 
     data std::string $ len - padding
     pad std::string $ padding
 }
 
 struct HeaderFrame - H2Frame ? type eq 1 {
-    padding std::uint8_t ? flag bit 0x8
+    padding std::uint8_t ? flag bit 0x8 = 0
     priority Priority ? flag bit 0x20
     data std::string $ len - padding 
     pad std::string $ padding
@@ -61,14 +61,14 @@ struct SetingsFrame - H2Frame ? type eq 4 ! len mod 6 {
 }
 
 struct PushPromiseFrame - H2Frame ? type eq 5 {
-    padding std::uint8_t ? flag bit 0x8
+    padding std::uint8_t ? flag bit 0x8 = 0
     promise std::int32_t ! promise gt 0
     data std::string $ len - padding
-    pad std::string % padding 
+    pad std::string $ padding 
 }
 
 struct PingFrame - H2Frame ? type eq 6 ! len eq 8 {
-    opeque std::uint64_t
+    opeque std::uint64_t ! id eq 0
 }
 
 struct GoAwayFrame - H2Frame ? type eq 7 {
