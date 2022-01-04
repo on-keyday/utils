@@ -9,26 +9,27 @@
 // merger - define merge contexts
 #pragma once
 #include "merge.h"
+#include "../wrap/lite/string.h"
 
 namespace utils {
     namespace tokenize {
 
-        template <class String>
+        template <class String = wrap::string>
         internal::CommentMergeContext<String> c_comment(bool nest = false) {
             return blcok_comment<String>("/*", "*/", nest);
         }
 
-        template <class String>
+        template <class String = wrap::string>
         internal::CommentMergeContext<String> string(bool allow_line = false) {
             return escaped_comment<String>("\"", "\\", allow_line);
         }
 
-        template <class String>
+        template <class String = wrap::string>
         internal::CommentMergeContext<String> cpp_comment() {
             return line_comment<String>("//");
         }
 
-        template <class String>
+        template <class String = wrap::string>
         internal::CommentMergeContext<String> sh_comment() {
             return line_comment<String>("#");
         }
