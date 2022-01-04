@@ -29,7 +29,9 @@ namespace utils {
                         if constexpr (!incr) {
                             return false;
                         }
-                        return stack_eq<incr>(index + 1, ctx, std::forward<Args>(args)...);
+                        else {
+                            return stack_eq<incr>(index + 1, ctx, std::forward<Args>(args)...);
+                        }
                     }
                     return stack_eq<incr>(index + 1, ctx, std::forward<Args>(args)...);
                 }
