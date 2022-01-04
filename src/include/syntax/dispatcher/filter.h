@@ -15,7 +15,7 @@ namespace utils {
         namespace filter {
 
             namespace internal {
-                template <bool incr, class T, class... Arg>
+                template <bool incr, class T, class... Args>
                 bool stack_eq(size_t index, T& ctx, Args&&...) {
                     return true;
                 }
