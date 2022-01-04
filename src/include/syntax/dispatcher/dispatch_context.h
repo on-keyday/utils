@@ -11,6 +11,7 @@
 
 #include "dispatcher.h"
 #include "../../wrap/lite/enum.h"
+#include "../matching/context.h"
 
 namespace utils {
     namespace syntax {
@@ -18,7 +19,7 @@ namespace utils {
         enum class FilterType {
             none = 0,
             filter = 0x1,
-            cb = 0x2,
+            check = 0x2,
         };
 
         DEFINE_ENUM_FLAGOP(FilterType)
@@ -30,9 +31,19 @@ namespace utils {
             Filter<T> filter;
         };
 
-        template <template <class...> class Vec>
+        template <class String, template <class...> class Vec>
         struct DispatchContext {
-            Vec<DispatchFilter<>> disp;
+            using context_t = MatchContext<String, Vec>;
+            Vec<DispatchFilter<context_t>> disp;
+            MatchState operator()(context_t& ctx) {
+                for (DispatchFilter<context_t>& filter : disp) {
+                    if (any(filter.type & FilterType::filter)) {
+                        if (!filter.filter(ctx)) {
+                            continue;
+                        }
+                    }
+                }
+            }
         };
     }  // namespace syntax
 }  // namespace utils

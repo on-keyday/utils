@@ -11,7 +11,7 @@ import "../matching/state.h"
 
 typeparam T
 interface Filter {
-    __call__(ctx &T) bool
+    __call__(ctx &T) bool = false
 }
 
 typeparam T
