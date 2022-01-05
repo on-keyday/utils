@@ -113,7 +113,7 @@ namespace utils {
                     }
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
-                        load_r(c, res != MatchState::not_match || !any(c.element->attr & Attribute::ifexists));
+                        load_r(c, res != MatchState::not_match || !any(c.element->attr & Attribute::ifexists) || !c.on_repeat);
                         return res;
                     }
                 }
@@ -152,7 +152,7 @@ namespace utils {
                         c.index++;
                         if (c.index >= or_->or_list.size()) {
                             MatchState res = judge_by_attribute(or_->attr, c.on_repeat);
-                            load_r(c, res != MatchState::not_match || !any(or_->attr & Attribute::ifexists));
+                            load_r(c, res != MatchState::not_match || !any(or_->attr & Attribute::ifexists) || !c.on_repeat);
                             return res;
                         }
                         load_r(c);
@@ -208,7 +208,7 @@ namespace utils {
                     }
                     else {
                         MatchState res = judge_by_attribute(c.element->attr, c.on_repeat);
-                        load_r(c, res != MatchState::not_match || !any(c.element->attr & Attribute::ifexists));
+                        load_r(c, res != MatchState::not_match || !any(c.element->attr & Attribute::ifexists) || !c.on_repeat);
                         return res;
                     }
                 }

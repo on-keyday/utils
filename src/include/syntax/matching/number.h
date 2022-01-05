@@ -134,7 +134,7 @@ namespace utils {
                 auto cr = ctx.r.from_current();
                 FloatReadPoint<String> pt;
                 auto report = [&](const auto& msg) {
-                    ctx.err.packln("error:", msg);
+                    ctx.err.packln("error: ", msg);
                     ctx.errat = pt.exists();
                     ctx.errelement = v;
                 };

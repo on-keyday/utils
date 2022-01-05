@@ -50,7 +50,7 @@ namespace utils {
                                 if (any(v->attr & Attribute::fatal)) {
                                     return MatchState::fatal;
                                 }
-                                else if (current.on_repeat || any(v->attr & Attribute::ifexists)) {
+                                else if (any(v->attr & Attribute::ifexists)) {
                                     current.on_repeat = false;
                                     current.index++;
                                     return MatchState::succeed;

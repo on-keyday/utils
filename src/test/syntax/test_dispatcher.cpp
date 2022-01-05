@@ -23,14 +23,14 @@ void test_dispatcher() {
         COMMENT_TAG:="#"
         ROOT:=EXPR*? EOF
         EXPR:=ASSIGN
-        ASSIGN:=EQ ["=" ASSIGN]*?
-        EQ:=ADD ["==" ADD]*? 
-        ADD:=MUL ["+" MUL]*?
-        MUL:=PRIM ["*" PRIM]*?
+        ASSIGN:=EQ ["=" ASSIGN!]*?
+        EQ:=ADD ["==" ADD!]*? 
+        ADD:=MUL ["+" MUL!]*?
+        MUL:=PRIM ["*" PRIM!]*?
         PRIM:=INTEGER|ID|"("EXPR")"
     )a");
     auto input = utils::make_ref_seq(R"(
-        ( 1 + 1 * (3 == 50) ) == 2
+        ( 1 + 1 * (3 == 50) ) == 2 
     )");
     auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
     assert(tok);
