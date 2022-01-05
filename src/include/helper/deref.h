@@ -14,32 +14,45 @@
 
 namespace utils {
     namespace helper {
+        enum class DerefKind {
+            object,
+            ptrlike,
+            ptr,
+        };
+
         namespace internal {
+
             SFINAE_BLOCK_T_BEGIN(derefable, *std::declval<T>())
+            constexpr static auto kind = std::is_pointer_v<T> ? DerefKind::ptr : DerefKind::ptrlike;
             using type = decltype(std::addressof(*std::declval<T&>()));
-            static auto deref(T& t) {
+            constexpr static auto deref(T& t) {
                 if (!t) {
                     return type(nullptr);
                 }
                 return std::addressof(*t);
             }
             SFINAE_BLOCK_T_ELSE(derefable)
+            constexpr static auto kind = DerefKind::object;
             using type = decltype(std::addressof(std::declval<T&>()));
-            static auto deref(T& t) {
+            constexpr static auto deref(T& t) {
                 return std::addressof(t);
             }
             SFINAE_BLOCK_T_END()
         }  // namespace internal
 
         template <class T>
-        auto deref(T& t) {
+        constexpr auto deref(T& t) {
             return internal::derefable<T>::deref(t);
         }
 
         template <class T>
-        T* deref(T* t) {
+        constexpr T* deref(T* t) {
             return t;
         }
 
+        template <class T>
+        constexpr DerefKind derefkind() {
+            return internal::derefable<T>::kind;
+        }
     }  // namespace helper
 }  // namespace utils
