@@ -40,14 +40,13 @@ void test_syntaxc() {
     assert(result && "expect true but make tokenizer failed");
 
     auto other =
-        u8R"(
-        {
+        u8R"(        {
            "hello":"world",
            "hey": [null,"string",0.2,3],
            "google":true,
            "gmail":"com\""
         }
-    )";
+)";
 
     utils::Sequencer input2(other);
 
@@ -62,6 +61,8 @@ void test_syntaxc() {
     assert(tmp && "failed to merge");
 
     utils::syntax::Reader<utils::wrap::string> r{res};
+    cout << "base:\n"
+         << other;
     auto result2 = test.matching(r);
 
     cout << test.error();
