@@ -15,6 +15,7 @@
 #include "../../wrap/lite/string.h"
 #include "../../utf/view.h"
 #include <limits>
+#include <cstring>
 
 namespace utils {
     namespace net {
