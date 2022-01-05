@@ -240,6 +240,7 @@ namespace utils {
                     }
 #ifndef _WIN32
 #define gettime_s(tm, time) (*tm = gmtime(time))
+#define gmtime_s(info, time) gmtime_r(time, info)
 #endif
                 };
 
@@ -249,11 +250,7 @@ namespace utils {
                         auto calc_diff = [] {
                             time_t now_local = time(nullptr), now_utc = 0;
                             ::tm tminfo = {0};
-#ifdef _WIN32
                             gmtime_s(&tminfo, &now_local);
-#else
-                            gmtime_r(&now_local, &tminfo);
-#endif
                             now_utc = mktime(&tminfo);
                             return now_local - now_utc;
                         };
