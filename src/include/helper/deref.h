@@ -41,7 +41,7 @@ namespace utils {
         }  // namespace internal
 
         template <class T>
-        constexpr auto deref(T& t) {
+        constexpr auto deref(T&& t) {
             return internal::derefable<T>::deref(t);
         }
 
