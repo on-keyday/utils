@@ -28,8 +28,8 @@
 #else
 #define _sopen_s(fd, path, mode, share, perm) (*(fd) = ::open(path, mode))
 #define _close(fd) ::close(fd)
-#define _stat(path, stat) ::stat(path, stat)
-#define _fdopen(fd, mode) fdopen(fd, mode)
+#define _stat(path, stat_) ::stat(path, stat_)
+#define _fdopen(fd, mode) ::fdopen(fd, mode)
 #define _O_RDONLY O_RDONLY
 #define _SH_DENYWR 0
 #define _S_IREAD 0
