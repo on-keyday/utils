@@ -11,6 +11,9 @@
 
 #include <type_traits>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
 
 namespace utils {
 

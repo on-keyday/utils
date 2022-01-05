@@ -54,5 +54,10 @@ namespace utils {
         constexpr DerefKind derefkind() {
             return internal::derefable<T>::kind;
         }
+
+        template <class T>
+        constexpr bool is_deref() {
+            return derefkind() != DerefKind::object;
+        }
     }  // namespace helper
 }  // namespace utils

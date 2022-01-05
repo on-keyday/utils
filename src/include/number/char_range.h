@@ -8,6 +8,7 @@
 
 // char_range - define char range
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include "../wrap/lite/enum.h"
 

@@ -63,7 +63,7 @@ namespace utils {
             SFINAE_BLOCK_TU_ELSE(has_new_cb)
             template <class... Args>
             static U* invoke(Args&&... args) {
-                return DefaultHandler::template new_cb<U>(std::forward<Args>(args));
+                return DefaultHandler::template new_cb<U>(std::forward<Args>(args)...);
             }
             SFINAE_BLOCK_TU_END()
 

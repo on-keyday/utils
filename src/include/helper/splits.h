@@ -68,7 +68,6 @@ namespace utils {
             if (current.size()) {
                 result.push_back(std::move(current));
             }
-            return true;
         }
 
         template <class String = wrap::string, template <class...> class Vec = wrap::vector, class T, class Sep>

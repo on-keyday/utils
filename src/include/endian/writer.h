@@ -11,6 +11,7 @@
 
 #include "endian.h"
 #include <utility>
+#include <cstddef>
 
 namespace utils {
     namespace endian {

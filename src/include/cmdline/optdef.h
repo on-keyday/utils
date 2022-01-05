@@ -14,6 +14,7 @@
 #include "../wrap/lite/smart_ptr.h"
 #include "../helper/strutil.h"
 #include "../helper/splits.h"
+#include "../helper/pushbacker.h"
 #include "../wrap/lite/enum.h"
 #include "../helper/appender.h"
 
@@ -140,7 +141,7 @@ namespace utils {
                 String result;
                 size_t maxlen = 0;
                 for (option_t& opt : vec) {
-                    helper::CountPushBacker counter;
+                    helper::CountPushBacker<> counter;
                     set_desc(opt, counter);
                     if (counter.count > maxlen) {
                         maxlen = counter.count;

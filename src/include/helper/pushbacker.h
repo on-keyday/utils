@@ -10,6 +10,7 @@
 #pragma once
 
 #include <type_traits>
+#include <cstddef>
 
 namespace utils {
     namespace helper {
