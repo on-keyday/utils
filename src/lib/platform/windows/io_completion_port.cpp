@@ -6,6 +6,7 @@
 */
 
 
+#ifdef _WIN32
 #include "../../../include/platform/windows/io_completetion_port.h"
 #include "../../../include/thread/lite_lock.h"
 
@@ -109,3 +110,4 @@ namespace utils {
 
     }  // namespace platform
 }  // namespace utils
+#endif
