@@ -12,9 +12,12 @@
 #include "../../include/wrap/cout.h"
 #include "../../include/net/http/http1.h"
 #include "../../include/wrap/cout.h"
-
+#ifdef _WIN32
 #include <windows.h>
-
+#else
+#include <unistd.h>
+#define Sleep sleep
+#endif
 utils::net::IOClose make_ioclose(const char* host, const char* port, bool secure) {
     auto query = utils::net::query_dns(host, port);
     auto addr = query.get_address();

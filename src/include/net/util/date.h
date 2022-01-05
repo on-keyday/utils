@@ -280,7 +280,7 @@ namespace utils {
                         if (date.dayname == DayName::unset || date.dayname == DayName::invalid) {
                             return DateError::not_dayname;
                         }
-                        helper::append(towrite, get_dayname(date.month));
+                        helper::append(towrite, get_dayname(date.dayname));
                         helper::append(towrite, ", ");
                         if (date.day < 1 || date.day > 31) {
                             return DateError::not_day;
