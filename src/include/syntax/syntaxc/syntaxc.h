@@ -50,7 +50,9 @@ namespace utils {
                 if (!cb) {
                     cb = [](auto&) { return MatchState::succeed; };
                 }
-                return match.matching(cb, root) == MatchState::succeed;
+                auto res = match.matching(cb, root);
+                r.seek_to(match.matcher.context.r);
+                return res == MatchState::succeed;
             }
 
             wrap::internal::Pack&& error() {
