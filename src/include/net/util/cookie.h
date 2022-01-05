@@ -107,7 +107,7 @@ namespace utils {
                     static CookieErr parse_cookie(const string_t& raw, Cookies& cookies) {
                         auto data = helper::split<string_t, Vec>(raw, "; ");
                         for (auto& v : data) {
-                            auto keyval = commonlib2::split<string_t, Vec>(v, "=", 1);
+                            auto keyval = helper::split<string_t, Vec>(v, "=", 1);
                             if (keyval.size() != 2) {
                                 return CookieError::no_keyvalue;
                             }
@@ -269,8 +269,8 @@ namespace utils {
                     static bool check_expires(cookie_t& info, cookie_t& cookie) {
                         time_t now = ::time(nullptr), prevtime = 0;
                         date::Date nowdate;
-                        date::TimeConvert::from_time_t(now, nowdate);
-                        date::TimeConvert::to_time_t(prevtime, info.expires);
+                        date::internal::TimeConvert::from_time_t(now, nowdate);
+                        date::internal::TimeConvert::to_time_t(prevtime, info.expires);
                         if (cookie.maxage) {
                             if (cookie.maxage <= 0) {
                                 return false;
