@@ -6,13 +6,15 @@ include_directories("D:/OpenSSL/build-x64-debug/include")
 link_directories("D:/OpenSSL/build-x64-debug/lib")
 else()
 # find_package(OPENSSL REQUIRED)
-link_directories("/lib/x86_64-linux-gnu")
+link_directories("/lib/llvm-12/lib")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
 endif()
 
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(Threads REQUIRED)
+#find_package(Threads REQUIRED)
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "test")
