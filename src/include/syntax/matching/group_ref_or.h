@@ -46,6 +46,7 @@ namespace utils {
                     stack.push(std::move(c));
                 }
 
+               public:
                 void load_r(StackContext<String, Vec>& c, bool seek = false) {
                     if (seek) {
                         c.r.seek_to(context.r);
@@ -53,7 +54,6 @@ namespace utils {
                     context.r = std::move(c.r);
                 }
 
-               public:
                 MatchState judge_by_attribute(Attribute attr, bool on_repeat) {
                     if (any(attr & Attribute::fatal)) {
                         return MatchState::fatal;

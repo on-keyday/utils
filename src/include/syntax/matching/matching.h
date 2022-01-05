@@ -99,6 +99,7 @@ namespace utils {
                         size_t top = stack.top();
                         auto prev = state;
                         if (!c.element) {
+                            matcher.load_r(c, true);
                             return state;
                         }
                         if (c.element->type == SyntaxType::or_) {

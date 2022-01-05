@@ -30,7 +30,7 @@ void test_dispatcher() {
         PRIM:=INTEGER|ID|"("EXPR")"
     )a");
     auto input = utils::make_ref_seq(R"(
-        ( 1 + 1 * (3 == 50) ) ==  
+        ( 1 + 1 * (3 == 50) ) == 2
     )");
     auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
     assert(tok);
@@ -49,7 +49,6 @@ void test_dispatcher() {
     auto r = Reader<utils::wrap::string>(tok);
     c->cb = [&](auto& ctx) { return disp(ctx); };
     c->matching(r);
-    tknz::fmt::show_current(r, c->error());
     cout << c->error();
 }
 
