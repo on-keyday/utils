@@ -82,8 +82,8 @@ namespace utils {
 
             ~U8Arg();
 #else
-            explicit constexpr U8Argv(int&, char**&) {}
-            constexpr ~U8Argv() {}
+            explicit constexpr U8Arg(int&, char**&) {}
+            constexpr ~U8Arg() {}
 #endif
         };
 

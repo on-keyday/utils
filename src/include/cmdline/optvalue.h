@@ -11,6 +11,7 @@
 
 #include <type_traits>
 #include <utility>
+#include <memory>
 
 namespace utils {
     namespace cmdline {

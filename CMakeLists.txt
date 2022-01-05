@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
-project(utils)
+project(utils CXX C)
 
 if(WIN32)
 include_directories("D:/OpenSSL/build-x64-debug/include")
 link_directories("D:/OpenSSL/build-x64-debug/lib")
 else()
 # find_package(OPENSSL REQUIRED)
+set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+set(CMAKE_HAVE_THREADS_LIBRARY 1)
+set(CMAKE_USE_WIN32_THREADS_INIT 0)
+set(CMAKE_USE_PTHREADS_INIT 1)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 link_directories("/lib/llvm-12/lib")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
@@ -14,7 +19,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 
-#find_package(Threads REQUIRED)
+find_package(Threads REQUIRED)
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "test")
