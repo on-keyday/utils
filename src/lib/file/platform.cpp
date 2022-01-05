@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #else
 #include <unistd.h>
+#include <sys/mman.h>
 #endif
 
 #ifdef _WIN32
