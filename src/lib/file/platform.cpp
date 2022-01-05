@@ -26,7 +26,7 @@
 #define _stat(path, stat) ::_wstat64(path, stat)
 #define _fdopen(fd, mode) _fdopen(fd, mode)
 #else
-#define sopen_s(fd, path, mode, share, perm) (*(fd) = ::open(path, mode))
+#define _sopen_s(fd, path, mode, share, perm) (*(fd) = ::open(path, mode))
 #define _close(fd) ::close(fd)
 #define _stat(path, stat) stat(path, stat)
 #define _fdopen(fd, mode) fdopen(fd, mode)
