@@ -30,7 +30,7 @@ void test_dispatcher() {
         PRIM:=INTEGER|ID|"("EXPR")"
     )a");
     auto input = utils::make_ref_seq(R"(
-        ( 1 + 1 * (3 == 50) ) == 2 
+        ( 1 + 1 * (3 == 50) ) ==  
     )");
     auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
     assert(tok);

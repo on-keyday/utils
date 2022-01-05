@@ -166,8 +166,8 @@ namespace utils {
                 }
                 if (number::is_integer(pt.str, base, i)) {
                     pt.exists();
-                    ctx.r.current = pt.exists()->next;
-                    ctx.r.count = pt.stack;
+                    ctx.r.current = cr.current;
+                    ctx.r.count = cr.count;
                     return 1;
                 }
                 if (base == 2 || base == 8 || onlyint) {
@@ -176,8 +176,8 @@ namespace utils {
                 }
                 auto e = number::is_float_number(pt.str, base, i);
                 if (e) {
-                    ctx.r.current = pt.exists()->next;
-                    ctx.r.count = pt.stack;
+                    ctx.r.current = cr.current;
+                    ctx.r.count = cr.count;
                     return 1;
                 }
                 if (e == number::NumError::invalid) {

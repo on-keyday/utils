@@ -24,7 +24,7 @@ void test_syntaxc() {
     auto seq =
         u8R"a(
         ROOT:=JSON
-        JSON:="{" OBJPARAM "}"|"["JSON ["," JSON]*? "]"|NUMBER|STRING|"null"|"true"|"false"
+        JSON:="{" OBJPARAM? "}"|"["JSON ["," JSON]*? "]"|NUMBER|STRING|"null"|"true"|"false"
         OBJPARAM:=STRING ":" JSON ["," OBJPARAM]?
 
         IDVAR:=ID ":=" NUMBER
@@ -64,6 +64,7 @@ void test_syntaxc() {
     utils::syntax::Reader<utils::wrap::string> r{res};
     auto result2 = test.matching(r);
 
+    cout << test.error();
     assert(result2 && "expect true but matching is failed");
 }
 
