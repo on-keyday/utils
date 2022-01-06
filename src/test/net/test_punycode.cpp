@@ -24,9 +24,8 @@ void test_punycode() {
     assert(utils::helper::equal(buf2.buf, u8"bücher"));
     buf = {}, buf2 = {};
     utils::net::punycode::encode_host(u8"Go言語.com", buf);
+    assert(utils::helper::equal(buf.buf, u8"xn--go-hh0g6u.com", utils::helper::ignore_case()));
     utils::net::punycode::decode_host(buf.buf, buf2);
-    utils::wrap::u32string str;
-    utils::utf::convert(buf2.buf, str);
     assert(utils::helper::equal(buf2.buf, u8"Go言語.com", utils::helper::ignore_case()));
 }
 
