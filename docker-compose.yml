@@ -17,6 +17,8 @@ services:
       - ./CMakeLists.txt:/usr/utilsdev/workspace/CMakeLists.txt
       - ./.clang-format:/usr/utilsdev/workspace/.clang-format
       - ./.vscode/settings.json:/usr/utilsdev/workspace/.vscode/settings.json
+      - ./docker_vscode/tasks.json:/usr/utilsdev/workspace/.vscode/tasks.json
+      - ./docker_vscode/launch.json:/usr/utilsdev/workspace/.vscode/launch.json
     cap_add:
       - SYS_PTRACE
     security_opt:
