@@ -65,6 +65,7 @@ namespace utils {
 #ifdef _WIN32
             auto err = ::WSAGetLastError();
 #else
+#define WSAEWOULDBLOCK EWOULDBLOCK
             auto err = errno;
 #endif
             if (err == WSAEWOULDBLOCK) {
@@ -319,7 +320,7 @@ namespace utils {
                 return nullptr;
             }
             ::sockaddr_storage st;
-            int size = sizeof(st);
+            ::socklen_t size = sizeof(st);
             auto acsock = ::accept(impl->sock, reinterpret_cast<::sockaddr*>(&st), &size);
             if (acsock < 0 || acsock == internal::invalid_socket) {
                 return nullptr;

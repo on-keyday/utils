@@ -41,7 +41,7 @@ namespace utils {
                         delete result;
                     }
                     else {
-                        freeaddrinfo(result);
+                        internal::freeaddrinfo(result);
                     }
                 }
             };
@@ -73,10 +73,12 @@ namespace utils {
                 }
 
                 void cancel_impl() {
+#ifdef _WIN32
                     if (running) {
                         ::GetAddrInfoExCancel(&cancel);
                         running = false;
                     }
+#endif
                 }
 
                 ~DnsResultImpl() {
