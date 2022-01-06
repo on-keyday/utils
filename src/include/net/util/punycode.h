@@ -310,6 +310,11 @@ namespace utils {
                 return true;
             }
 
+            template <class In, class Out>
+            number::NumErr decode_host(In&& in, Out& result){
+                
+            }
+
         }  // namespace punycode
 
     }  // namespace net
