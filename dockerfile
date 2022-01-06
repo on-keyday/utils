@@ -20,11 +20,17 @@ RUN apt-get update && \
     libstdc++-10-dev\
     libpthread-stubs0-dev\
     libssl-dev\
-    vim
+    vim\
+    lldb-12\
+    curl
+
 
 RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-12/bin/clang /bin/clang
+RUN ln -s /bin/lldb-12 /bin/lldb
 RUN ln -s /lib/llvm-12/lib/libc++abi.so.1.0 /lib/llvm-12/lib/libc++abi.so
+
+RUN curl 
 
 #COPY ./src/ /usr/utilsdev/workspace/src/
 #COPY ./build /usr/utilsdev/workspace/build

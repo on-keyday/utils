@@ -1,0 +1,82 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+# generate code
+# tool\binred -i src/tool/binred/test.bred -o generated/binred.h -S std::shared_ptr std::make_shared -I "<memory>"
+package utils
+
+import <cstdint>
+import <string>
+
+struct ID {
+    A int = 0
+    B int ? A eq 0x20 = 0
+    C int ? C bit 0x20 = 0
+}
+
+struct Foo {
+    foo std::uint8_t = 0xff
+}
+
+struct Void{
+
+}
+
+struct H2Frame {
+    len int $ 3
+    type std::uint8_t
+    flag std::uint8_t
+    id std::int32_t ? id egt 0
+}
+
+struct Priority {
+    depend std::uint32_t = 0 
+    wight std::uint8_t = 0
+}
+
+struct DataFrame - H2Frame ? type eq 0 {
+    padding std::uint8_t ? flag bit 0x8 = 0 
+    data std::string $ len - padding
+    pad std::string $ padding
+}
+
+struct HeaderFrame - H2Frame ? type eq 1 {
+    padding std::uint8_t ? flag bit 0x8 = 0
+    priority Priority ? flag bit 0x20
+    data std::string $ len - padding 
+    pad std::string $ padding
+}
+
+struct PriorityFrame - H2Frame ? type eq 2 ! len eq 5 {
+    priority Priority
+}
+
+struct RstStreamFrame - H2Frame ? type eq 3 ! len eq 4 {
+    code std::uint32_t
+}
+
+struct SetingsFrame - H2Frame ? type eq 4 ! len mod 6 {
+    setting std::string $ len ? flag bit 0x1
+}
+
+struct PushPromiseFrame - H2Frame ? type eq 5 {
+    padding std::uint8_t ? flag bit 0x8 = 0
+    promise std::int32_t ! promise gt 0
+    data std::string $ len - padding
+    pad std::string $ padding 
+}
+
+struct PingFrame - H2Frame ? type eq 6 ! len eq 8 {
+    opeque std::uint64_t ! id eq 0
+}
+
+struct GoAwayFrame - H2Frame ? type eq 7 {
+    id std::int32_t ? id egt 0
+    code std::uint32_t
+    data std::string $ len - 8
+}
+
+struct WindowUpdateFrame - H2Frame ? type eq 8 ! len eq 4 {
+    increment std::int32_t ! id gt 0
+}
