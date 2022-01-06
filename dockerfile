@@ -26,9 +26,10 @@ RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-12/bin/clang /bin/clang
 RUN ln -s /lib/llvm-12/lib/libc++abi.so.1.0 /lib/llvm-12/lib/libc++abi.so
 
-COPY ./src/ /usr/utilsdev/workspace/src/
-COPY ./build /usr/utilsdev/workspace/build
-COPY ./CMakeLists.txt  /usr/utilsdev/workspace/CMakeLists.txt
-COPY ./.clang-format /usr/utilsdev/workspace/.clang-format
+#COPY ./src/ /usr/utilsdev/workspace/src/
+#COPY ./build /usr/utilsdev/workspace/build
+#COPY ./CMakeLists.txt  /usr/utilsdev/workspace/CMakeLists.txt
+#COPY ./.clang-format /usr/utilsdev/workspace/.clang-format
+
 
 CMD /bin/bash

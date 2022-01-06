@@ -11,3 +11,10 @@ services:
     container_name: utils
     tty: true
     stdin_open: true
+    volumes:
+      - ./src:/usr/utilsdev/workspace/src
+      - ./build:/usr/utilsdev/workspace/build
+      - ./CMakeLists.txt:/usr/utilsdev/workspace/CMakeLists.txt
+
+volumes:
+  src:

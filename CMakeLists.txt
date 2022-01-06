@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(utils CXX C)
+project(utils)
 
 if(WIN32)
 include_directories("D:/OpenSSL/build-x64-debug/include")
