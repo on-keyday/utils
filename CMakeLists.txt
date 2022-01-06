@@ -78,7 +78,7 @@ add_library(libutils
 
 target_link_libraries(fileview libutils)
 target_link_libraries(cout libutils)
-target_link_libraries(channel libutils)
+target_link_libraries(channel libutils Threads::Threads)
 target_link_libraries(tokenizer libutils)
 target_link_libraries(make_parser libutils)
 target_link_libraries(syntaxc libutils)
