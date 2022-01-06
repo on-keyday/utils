@@ -303,6 +303,7 @@ namespace utils {
                     }
                     if (seq.current() == '.') {
                         result.push_back('.');
+                        seq.consume();
                         continue;
                     }
                     break;
@@ -311,8 +312,44 @@ namespace utils {
             }
 
             template <class In, class Out>
-            number::NumErr decode_host(In&& in, Out& result){
-                
+            number::NumErr decode_host(In&& in, Out& result) {
+                auto seq = make_ref_seq(in);
+                while (true) {
+                    auto inipos = seq.rptr;
+                    bool is_ascii = true;
+                    bool is_international = seq.match("xn--");
+                    helper::read_whilef<true>(helper::nop, seq, [&](auto&& c) {
+                        if (!number::is_in_ascii_range(c)) {
+                            is_ascii = false;
+                            return false;
+                        }
+                        return c != '.';
+                    });
+                    if (!is_ascii) {
+                        return number::NumError::invalid;
+                    }
+                    if (is_international) {
+                        auto slice = helper::make_ref_slice(in, inipos, seq.rptr);
+                        auto e = decode(slice, result);
+                        if (!e) {
+                            return e;
+                        }
+                    }
+                    else {
+                        auto end = seq.rptr;
+                        seq.seek(inipos);
+                        if (!helper::read_n(result, seq, end - inipos)) {
+                            return number::NumError::invalid;
+                        }
+                    }
+                    if (seq.current() == '.') {
+                        result.push_back('.');
+                        seq.consume();
+                        continue;
+                    }
+                    break;
+                }
+                return true;
             }
 
         }  // namespace punycode
