@@ -315,9 +315,9 @@ namespace utils {
             number::NumErr decode_host(In&& in, Out& result) {
                 auto seq = make_ref_seq(in);
                 while (true) {
-                    auto inipos = seq.rptr;
                     bool is_ascii = true;
-                    bool is_international = seq.match("xn--");
+                    bool is_international = seq.seek_if("xn--");
+                    auto inipos = seq.rptr;
                     helper::read_whilef<true>(helper::nop, seq, [&](auto&& c) {
                         if (!number::is_in_ascii_range(c)) {
                             is_ascii = false;
