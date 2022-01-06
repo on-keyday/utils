@@ -39,8 +39,9 @@ RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
 RUN unzip /usr/utilsdev/lldb-mi.zip -d /usr/utilsdev
 RUN rm /usr/utilsdev/lldb-mi.zip
 
-RUN cmake /usr/utilsdev/lldb-mi-main
-#RUN cmake --build /usr/utilsdev/lldb-mi-main
+RUN (cd /usr/utilsdev/lldb-mi-main;cmake -G Ninja .)
+RUN (cd /usr/utilsdev/lldb-mi-main;cmake --build .)
+RUN cp /usr/utilsdev/lldb-mi-main/src/lldb-mi /bin/lldb-mi
 
 #COPY ./src/ /usr/utilsdev/workspace/src/
 #COPY ./build /usr/utilsdev/workspace/build
