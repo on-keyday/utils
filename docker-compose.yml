@@ -15,6 +15,7 @@ services:
       - ./src:/usr/utilsdev/workspace/src
       - ./build:/usr/utilsdev/workspace/build
       - ./CMakeLists.txt:/usr/utilsdev/workspace/CMakeLists.txt
+      - ./.clang-format:/usr/utilsdev/workspace/.clang-format
 
 volumes:
   src:
