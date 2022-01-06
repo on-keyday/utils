@@ -19,7 +19,8 @@ RUN apt-get update && \
     libc++-12-dev\
     libstdc++-10-dev\
     libpthread-stubs0-dev\
-    libssl-dev
+    libssl-dev\
+    vim
 
 RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-12/bin/clang /bin/clang
