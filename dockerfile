@@ -32,6 +32,7 @@ RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-12/bin/clang /bin/clang
 RUN ln -s /bin/lldb-12 /bin/lldb
 RUN ln -s /lib/llvm-12/lib/libc++abi.so.1.0 /lib/llvm-12/lib/libc++abi.so
+RUN ln /usr/bin/lldb-server-12 /usr/bin/lldb-server-12.0.0
 
 RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
     -o /usr/utilsdev/lldb-mi.zip -L
@@ -42,6 +43,7 @@ RUN rm /usr/utilsdev/lldb-mi.zip
 RUN (cd /usr/utilsdev/lldb-mi-main;cmake -G Ninja .)
 RUN (cd /usr/utilsdev/lldb-mi-main;cmake --build .)
 RUN cp /usr/utilsdev/lldb-mi-main/src/lldb-mi /bin/lldb-mi
+
 
 #COPY ./src/ /usr/utilsdev/workspace/src/
 #COPY ./build /usr/utilsdev/workspace/build
