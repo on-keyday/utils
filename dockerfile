@@ -22,7 +22,8 @@ RUN apt-get update && \
     libssl-dev\
     vim\
     lldb-12\
-    curl
+    curl\
+    unzip
 
 
 RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
@@ -30,7 +31,13 @@ RUN ln -s /lib/llvm-12/bin/clang /bin/clang
 RUN ln -s /bin/lldb-12 /bin/lldb
 RUN ln -s /lib/llvm-12/lib/libc++abi.so.1.0 /lib/llvm-12/lib/libc++abi.so
 
-RUN curl 
+RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
+    -o /usr/utilsdev/lldb-mi.zip
+
+#RUN unzip /usr/utilsdev/lldb-mi.zip
+
+#RUN cmake /usr/utilsdev/lldb-mi
+#RUN cmake --build /usr/utilsdev/lldb-mi
 
 #COPY ./src/ /usr/utilsdev/workspace/src/
 #COPY ./build /usr/utilsdev/workspace/build
