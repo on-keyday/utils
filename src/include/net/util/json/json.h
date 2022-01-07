@@ -16,7 +16,10 @@ namespace utils {
         namespace json {
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
+               private:
                 internal::JSONHolder<String, Vec, Object> obj;
+
+               public:
             };
         }  // namespace json
     }      // namespace net

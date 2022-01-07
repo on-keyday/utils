@@ -141,6 +141,42 @@ namespace utils {
                         p = nullptr;
                         kind = JSONKind::undefined;
                     }
+
+                    bool is_undef() const {
+                        return kind == JSONKind::undefined;
+                    }
+
+                    bool is_null() const {
+                        return kind == JSONKind::null;
+                    }
+
+                    const std::int64_t* as_numi() const {
+                        return kind == JSONKind::number_i ? &i : nullptr;
+                    }
+
+                    const std::uint64_t* as_numu() const {
+                        return kind == JSONKind::number_u ? &u : nullptr;
+                    }
+
+                    const double* as_numf() const {
+                        return kind == JSONKind::number_f ? &f : nullptr;
+                    }
+
+                    const bool* as_bool() const {
+                        return kind == JSONKind::boolean ? &b : nullptr;
+                    }
+
+                    const String* as_str() const {
+                        return kind == JSONKind::string ? &s : nullptr;
+                    }
+
+                    const object_t* as_obj() const {
+                        return kind == JSONKind::object ? &o : nullptr;
+                    }
+
+                    const array_t* as_arr() const {
+                        return kind == JSONKind::array ? &a : nullptr;
+                    }
                 };
             }  // namespace internal
 
