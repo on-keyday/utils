@@ -160,6 +160,7 @@ namespace utils {
                 exp = normalize(value, pos_th, neg_th);
                 integ = static_cast<std::uint32_t>(value);
                 double rem = value - integ;
+                rem *= rem_th;
             }
         }  // namespace internal
 
