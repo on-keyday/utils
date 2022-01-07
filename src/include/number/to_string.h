@@ -10,6 +10,7 @@
 #pragma once
 
 #include <limits>
+#include <concepts>
 
 #include "char_range.h"
 
