@@ -37,6 +37,7 @@ namespace utils {
 
                    private:
                     union {
+                        bool b;
                         std::int64_t i;
                         std::uint64_t u;
                         double f;
@@ -66,6 +67,10 @@ namespace utils {
                     constexpr JSONHolder() {}
                     constexpr JSONHolder(std::nullptr_t)
                         : kind(JSONKind::null), p(nullptr) {}
+                    constexpr JSONHolder(bool n)
+                        : kind(JSONKind::boolean), b(n) {}
+                    constexpr JSONHolder(int n)
+                        : kind(JSONKind::number_i), i(n) {}
                     constexpr JSONHolder(std::int64_t n)
                         : kind(JSONKind::number_i), i(n) {}
                     constexpr JSONHolder(std::uint64_t n)
