@@ -134,14 +134,28 @@ namespace utils {
                     VALUE(1)
                 }
 #undef VALUE
-#define VALUE(v1, v2)      \
-    if (value < 1e-##v1) { \
-        value *= 1e##v2;   \
-        exp -= ##v2;       \
+#define VALUE(v1, v2)     \
+    if (value < 1e##v1) { \
+        value *= 1e##v2;  \
+        exp -= ##v2;      \
     }
+
+                if (value > 0 && value <= negative) {
+                    VALUE(-255, 256)
+                    VALUE(-127, 128)
+                    VALUE(-63, 64)
+                    VALUE(-31, 32)
+                    VALUE(-15, 16)
+                    VALUE(-7, 8)
+                    VALUE(-3, 4)
+                    VALUE(-1, 2)
+                    VALUE(0, 1)
+                }
+#undef VALUE
+                return exp;
             }
         }  // namespace internal
-#undef VALUE
+
         template <class Result, std::floating_point T>
         constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false) {
             if (radix != 10 && radix != 16) {
