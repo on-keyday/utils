@@ -46,15 +46,15 @@ namespace utils {
                 JSONBase(double f)
                     : obj(f) {}
                 JSONBase(const String& s)
-                    : obj(std::move(s)) {}
+                    : obj(s) {}
                 JSONBase(String&& s)
                     : obj(std::move(s)) {}
                 JSONBase(const object_t& o)
-                    : obj(std::move(o)) {}
+                    : obj(o) {}
                 JSONBase(object_t&& o)
                     : obj(std::move(o)) {}
                 JSONBase(const array_t& a)
-                    : obj(std::move(a)) {}
+                    : obj(a) {}
                 JSONBase(array_t&& a)
                     : obj(std::move(a)) {}
 
@@ -155,7 +155,12 @@ namespace utils {
                 self_t& operator[](size_t n) {
                     return const_cast<self_t&>(as_const(*this)[n]);
                 }
+
+                bool is_undef() const {
+                    return obj.is_undef();
+                }
             };
+
         }  // namespace json
 
     }  // namespace net
