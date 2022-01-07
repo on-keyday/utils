@@ -177,6 +177,15 @@ namespace utils {
                     }
                 }
             }
+
+            template <class Result, class InT>
+            number::NumErr write_decimal(Result& result, InT value, InT width, int radix, bool upper) {
+                while (value % 10 == 0 && width > 0) {
+                    value /= 10;
+                    width--;
+                }
+                return to_string(result, value, radix, upper);
+            }
         }  // namespace internal
 
         template <class Result, std::floating_point T>
@@ -199,6 +208,17 @@ namespace utils {
             }
             if (in < 0.0) {
                 result.push_back('-');
+            }
+            std::uint32_t integ;
+            std::uint32_t decimal;
+            std::int16_t exp;
+            internal::split_float(in, integ, decimal, exp,
+                                  1e7, 1e-5, 1000000000, 1e9, 0.5);
+            auto err = to_string(result, integ, radix, upper);
+            if (!err) {
+                return err;
+            }
+            if (decimal) {
             }
         }
 
