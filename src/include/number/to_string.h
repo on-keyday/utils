@@ -172,7 +172,7 @@ namespace utils {
             }
 
             template <class Result, class InT>
-            number::NumErr write_decimal(Result& result, InT value, int width, int radix, bool upper) {
+            constexpr number::NumErr write_decimal(Result& result, InT value, int width, int radix, bool upper) {
                 while (value % radix == 0 && width > 0) {
                     value /= radix;
                     width--;
@@ -219,6 +219,22 @@ namespace utils {
                     return err;
                 }
             }
+            if (exp) {
+                if (radix == 16) {
+                    result.push_back(upper ? 'P' : 'p');
+                }
+                else {
+                    result.push_back(upper ? 'E' : 'e');
+                }
+                if (exp < 0) {
+                    result.push_back('-');
+                }
+                err = to_string(result, exp < 0 ? -exp : exp, radix, upper);
+                if (!err) {
+                    return err;
+                }
+            }
+            return true;
         }
 
         template <class Result, class T>
