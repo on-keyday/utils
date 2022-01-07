@@ -204,6 +204,20 @@ namespace utils {
             if (in < 0.0) {
                 result.push_back('-');
             }
+            if (in == std::numeric_limits<T>::infinity() ||
+                in == -std::numeric_limits<T>::infinity()) {
+                if (upper) {
+                    result.push_back('I');
+                    result.push_back('N');
+                    result.push_back('F');
+                }
+                else {
+                    result.push_back('i');
+                    result.push_back('n');
+                    result.push_back('f');
+                }
+                return true;
+            }
             InT integ;
             InT decimal;
             Exp exp;
