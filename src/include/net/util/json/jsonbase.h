@@ -6,16 +6,23 @@
 */
 
 
-// json - json object
+// jsonbase - json object base template
 #pragma once
 
 #include "internal.h"
 #include <stdexcept>
 #include "../../../utf/convert.h"
+#include "../../../helper/append_charsize.h"
 
 namespace utils {
     namespace net {
         namespace json {
+            template <class T>
+            concept StringLike = std::is_default_constructible_v<T> && requires(T t) {
+                t.push_back(0);
+                helper::append_size<T>() <= 4;
+            };
+
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
                private:
@@ -250,6 +257,15 @@ namespace utils {
                     T t;
                     if (!to_number(t)) {
                         bad_type("not number type");
+                    }
+                    return t;
+                }
+
+                template <StringLike T>
+                explicit operator T() const {
+                    T t;
+                    if (!as_string(t)) {
+                        bad_type("not string type");
                     }
                     return t;
                 }
