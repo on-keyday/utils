@@ -187,6 +187,30 @@ namespace utils {
                 bool is_array() const {
                     return obj.as_arr();
                 }
+
+                template <class T>
+                bool to_number(T& to) {
+                    auto i = obj.as_numi();
+                    if (i) {
+                        to = T(*i);
+                        return true;
+                    }
+                    auto u = obj.as_numu();
+                    if (u) {
+                        to = T(*u);
+                        return true;
+                    }
+                    auto f = obj.as_numf();
+                    if (f) {
+                        to = T(*u);
+                        return true;
+                    }
+                    return false;
+                }
+
+                template <std::integral T>
+                explicit operator T() const {
+                }
             };
 
         }  // namespace json
