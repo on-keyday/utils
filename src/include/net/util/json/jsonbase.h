@@ -38,17 +38,17 @@ namespace utils {
                 }
 
                public:
-                JSONBase(std::nullptr_t)
+                constexpr JSONBase(std::nullptr_t)
                     : obj(nullptr) {}
-                JSONBase(bool b)
+                constexpr JSONBase(bool b)
                     : obj(b) {}
-                JSONBase(int i)
+                constexpr JSONBase(int i)
                     : obj(i) {}
-                JSONBase(std::int64_t i)
+                constexpr JSONBase(std::int64_t i)
                     : obj(i) {}
-                JSONBase(std::uint64_t u)
+                constexpr JSONBase(std::uint64_t u)
                     : obj(u) {}
-                JSONBase(double f)
+                constexpr JSONBase(double f)
                     : obj(f) {}
                 JSONBase(const String& s)
                     : obj(s) {}
@@ -62,6 +62,10 @@ namespace utils {
                     : obj(a) {}
                 JSONBase(array_t&& a)
                     : obj(std::move(a)) {}
+                JSONBase(const JSONBase& o)
+                    : obj(o.obj) {}
+                constexpr JSONBase(JSONBase&& o)
+                    : obj(std::move(o.obj)) {}
 
                 size_t size() const {
                     if (obj.is_null() || obj.is_undef()) {
@@ -159,6 +163,19 @@ namespace utils {
 
                 self_t& operator[](size_t n) {
                     return const_cast<self_t&>(as_const(*this)[n]);
+                }
+
+                template <class T>
+                bool push_back(T&& n) {
+                    if (obj.is_undef()) {
+                        obj = new array_t{};
+                    }
+                    auto a = const_cast<array_t*>(obj.as_arr());
+                    if (!a) {
+                        return false;
+                    }
+                    a->push_back(std::forward<T>(n));
+                    return true;
                 }
 
                 bool is_undef() const {
