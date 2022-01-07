@@ -154,6 +154,13 @@ namespace utils {
 #undef VALUE
                 return exp;
             }
+
+            constexpr void split_float(double value, std::uint32_t& integ, std::uint32_t& decimal, std::int16_t& exp,
+                                       double pos_th, double neg_th, double rem_th, std::uint32_t dec_th) {
+                exp = normalize(value, pos_th, neg_th);
+                integ = static_cast<std::uint32_t>(value);
+                double rem = value - integ;
+            }
         }  // namespace internal
 
         template <class Result, std::floating_point T>
