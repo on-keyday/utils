@@ -219,6 +219,7 @@ namespace utils {
                 return err;
             }
             if (decimal) {
+                internal::write_decimal(result, decimal, );
             }
         }
 

@@ -110,5 +110,13 @@ namespace utils {
 
         using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
 
+        // copied from other
+        template <class T>
+        constexpr T spow(T base, T exp) noexcept {
+            return exp <= 0   ? 1
+                   : exp == 1 ? base
+                              : base * spow(base, exp - 1);
+        }
+
     }  // namespace number
 }  // namespace utils
