@@ -159,6 +159,34 @@ namespace utils {
                 bool is_undef() const {
                     return obj.is_undef();
                 }
+
+                bool is_null() const {
+                    return obj.is_null();
+                }
+
+                bool is_bool() const {
+                    return obj.as_bool();
+                }
+
+                bool is_number() const {
+                    return obj.as_numi() || obj.as_numu() || obj.as_numf();
+                }
+
+                bool is_float() const {
+                    return obj.as_numf();
+                }
+
+                bool is_string() const {
+                    return obj.as_str();
+                }
+
+                bool is_object() const {
+                    return obj.as_obj();
+                }
+
+                bool is_array() const {
+                    return obj.as_arr();
+                }
             };
 
         }  // namespace json
