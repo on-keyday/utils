@@ -11,6 +11,20 @@
 
 namespace utils {
     namespace net {
+        enum class JSONKind {
+            undefined,
+            null,
+            boolean,
+            number_i,
+            number_f,
+            number_u,
+            string,
+        };
 
-    }
+        struct JSON {
+            JSONKind kind = JSONKind::undefined;
+            union {
+            };
+        };
+    }  // namespace net
 }  // namespace utils
