@@ -19,7 +19,6 @@ namespace utils {
         namespace json {
             template <class T>
             concept StringLike = std::is_default_constructible_v<T> && requires(T t) {
-                t.push_back(0);
                 helper::append_size<T>() <= 4;
             };
 

@@ -21,6 +21,9 @@ namespace utils {
                 return sizeof(std::declval<T>()[0]);
             }
             SFINAE_BLOCK_T_ELSE(has_subscript)
+            constexpr static size_t size() {
+                return ~0;
+            }
             SFINAE_BLOCK_T_END()
 
             SFINAE_BLOCK_T_BEGIN(append_size, sizeof(typename T::char_type))
@@ -46,6 +49,9 @@ namespace utils {
 
         template <class T>
         using append_size_t = typename internal::append_size<T>::char_type;
+
+        template <class T>
+        constexpr bool is_utf_convertable = append_size_v<T> <= 4;
 
     }  // namespace helper
 }  // namespace utils
