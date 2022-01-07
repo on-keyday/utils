@@ -30,7 +30,7 @@ namespace utils {
                         auto& current = stack.current();
                         wrap::shared_ptr<Element<String, Vec>> v = (*current.vec)[current.index];
                         auto invoke_matching = [&](auto&& f) {
-                            MatchContext<String, Vec> tmpctx{matcher.virtual_stack};
+                            MatchContext<String, Vec> tmpctx{matcher.context, matcher.virtual_stack};
                             state = f(matcher.context, v, tmpctx.result);
                             if (state == MatchState::succeed) {
                                 state = static_cast<MatchState>(cb(tmpctx));

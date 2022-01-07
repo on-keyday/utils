@@ -33,8 +33,14 @@ namespace utils {
 
         template <class String, template <class...> class Vec>
         struct MatchContext {
+            ErrorContext<String, Vec>& err;
             const Vec<String>& stack;
             MatchResult<String> result;
+
+            template <class Input>
+            void error(Input&& input) {
+                err.err << "error: " << input << "\n";
+            }
 
             const char* what() const {
                 return keywordv(result.kind);
