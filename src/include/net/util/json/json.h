@@ -19,6 +19,8 @@ namespace utils {
             number_f,
             number_u,
             string,
+            object,
+            array,
         };
 
         struct JSON {
