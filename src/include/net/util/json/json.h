@@ -17,9 +17,21 @@ namespace utils {
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
                private:
-                internal::JSONHolder<String, Vec, Object> obj;
+                using holder_t = internal::JSONHolder<String, Vec, Object>;
+                holder_t obj;
+                using object_t = typename holder_t::object_t;
 
                public:
+                JSONBase(std::nullptr_t)
+                    : obj(nullptr) {}
+                JSONBase(bool b)
+                    : obj(b) {}
+                JSONBase(int i)
+                    : obj(i) {}
+                JSONBase(std::int64_t i)
+                    : obj(i) {}
+                JSONBase(std::uint64_t u)
+                    : obj(u) {}
             };
         }  // namespace json
     }      // namespace net
