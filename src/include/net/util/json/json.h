@@ -88,6 +88,24 @@ namespace utils {
                     return &(*a)[n];
                 }
 
+                const self_t* at(const String& n, const char** err = nullptr) const {
+                    auto a = obj.as_obj();
+                    if (!a) {
+                        if (err) {
+                            *err = "not object type";
+                        }
+                        return nullptr;
+                    }
+                    auto found = a->find(n);
+                    if (found == a->end()) {
+                        if (err) {
+                            *err = "key not found";
+                        }
+                        return nullptr;
+                    }
+                    return &std::get<1>(*found);
+                }
+
                 const self_t& operator[](size_t n) const {
                     const char* err = nullptr;
                     auto res = at(n, &err);
