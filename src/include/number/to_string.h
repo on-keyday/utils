@@ -104,13 +104,6 @@ namespace utils {
             return true;
         }
 
-        template <class Result, class T>
-        constexpr Result to_string(T in, int radix = 10, bool upper = false) {
-            Result result;
-            to_string(result, in, radix, upper);
-            return result;
-        }
-
         // reference implementation
         // https://blog.benoitblanchon.fr/lightweight-float-to-string/
 
@@ -226,6 +219,20 @@ namespace utils {
                     return err;
                 }
             }
+        }
+
+        template <class Result, class T>
+        constexpr Result to_string(T in, int radix = 10, bool upper = false) {
+            Result result;
+            to_string(result, in, radix, upper);
+            return result;
+        }
+
+        template <class Result, std::floating_point T, class InT = std::uint32_t, class Exp = std::int16_t>
+        constexpr Result to_string(T in, int radix = 10, bool upper = false, int decdigit = 9) {
+            Result result;
+            to_string(result, in, radix, upper, decdigit);
+            return result;
         }
 
     }  // namespace number
