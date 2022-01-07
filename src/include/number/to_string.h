@@ -120,7 +120,7 @@ namespace utils {
         value /= 1e##v;   \
         exp += ##v;       \
     }
-            constexpr int normalize(double& value, double positive, double negative) {
+            constexpr int normalize(double& value, const double positive, const double negative) {
                 int exp = 0;
                 if (value >= positive) {
                     VALUE(256)
@@ -156,11 +156,26 @@ namespace utils {
             }
 
             constexpr void split_float(double value, std::uint32_t& integ, std::uint32_t& decimal, std::int16_t& exp,
-                                       double pos_th, double neg_th, double rem_th, std::uint32_t dec_th) {
+                                       const double pos_th, const double neg_th, const double rem_th,
+                                       const std::uint32_t dec_th, const double round_th) {
                 exp = normalize(value, pos_th, neg_th);
                 integ = static_cast<std::uint32_t>(value);
                 double rem = value - integ;
                 rem *= rem_th;
+                decimal = static_cast<std::uint32_t>(rem);
+
+                rem -= decimal;
+                if (rem >= round_th) {
+                    decimal++;
+                    if (decimal >= dec_th) {
+                        decimal = 0;
+                        integ++;
+                        if (exp != 0 && integ >= 10) {
+                            exp++;
+                            integ = 1;
+                        }
+                    }
+                }
             }
         }  // namespace internal
 
