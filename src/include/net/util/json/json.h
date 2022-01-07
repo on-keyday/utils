@@ -8,29 +8,16 @@
 
 // json - json object
 #pragma once
-#include <cstdint>
+
+#include "internal.h"
 
 namespace utils {
     namespace net {
-        enum class JSONKind {
-            undefined,
-            null,
-            boolean,
-            number_i,
-            number_f,
-            number_u,
-            string,
-            object,
-            array,
-        };
-
-        template <class String, template <class...> class Vec, template <class...> class Object>
-        struct JSONBase {
-            JSONKind kind = JSONKind::undefined;
-            union {
-                std::int64_t i;
-                std::uint64_t u;
+        namespace json {
+            template <class String, template <class...> class Vec, template <class...> class Object>
+            struct JSONBase {
+                JSONKind kind = JSONKind::undefined;
             };
-        };
-    }  // namespace net
+        }  // namespace json
+    }      // namespace net
 }  // namespace utils
