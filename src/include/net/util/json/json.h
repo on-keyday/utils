@@ -189,6 +189,15 @@ namespace utils {
                     return obj.as_arr();
                 }
 
+                bool as_bool(bool& r) const {
+                    auto b = obj.as_bool();
+                    if (!b) {
+                        return false;
+                    }
+                    r = *b;
+                    return true;
+                }
+
                 template <class T>
                 bool as_number(T& to) {
                     auto i = obj.as_numi();
@@ -233,7 +242,7 @@ namespace utils {
                     if (!b) {
                         bad_type("not boolean type");
                     }
-                    return b;
+                    return *b;
                 }
 
                 template <std::floating_point T>
