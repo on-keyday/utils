@@ -11,11 +11,19 @@
 
 #include "../core/sequencer.h"
 #include "../helper/appender.h"
+#include "../utf/convert.h"
 namespace utils {
     namespace escape {
 
+        enum class EscapeFlag {
+            none = 0,
+            utf = 0x1,
+            oct = 0x2,
+            hex = 0x4,
+        };
+
         template <class In, class Out>
-        constexpr bool escape_str(Sequencer<In>& seq, Out& out) {
+        constexpr bool escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
             while (!seq.eos()) {
                 auto c = seq.current();
                 if (c == '\n') {
