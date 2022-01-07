@@ -32,6 +32,8 @@ namespace utils {
                 template <class String, template <class...> class Vec, template <class...> class Object>
                 struct JSONHolder {
                     using self_t = JSONBase<String, Vec, Object>;
+                    using object_t = Object<String, self_t>;
+                    using array_t = Vec<self_t>;
 
                    private:
                     union {
@@ -39,8 +41,8 @@ namespace utils {
                         std::uint64_t u;
                         double f;
                         String* s;
-                        Object<String, self_t>* o;
-                        Vec<self_t>* a;
+                        object_t* o;
+                        array_t* a;
                         void* p = nullptr;
                     };
                     JSONKind kind = JSONKind::undefined;
@@ -57,6 +59,12 @@ namespace utils {
                         : kind(JSONKind::number_f), f(n) {}
                     JSONHolder(const String& n)
                         : kind(JSONKind::string), s(new String(n)) {}
+                    JSONHolder(String&& n)
+                        : kind(JSONKind::string), s(new String(std::move(n))) {}
+                    JSONHolder(const object_t& n)
+                        : kind(JSONKind::object), o(new object_t(n)) {}
+                    JSONHolder(object_t&& n)
+                        : kind(JSONKind::object), o(new object_t(std::move(n))) {}
                 };
             }  // namespace internal
 
