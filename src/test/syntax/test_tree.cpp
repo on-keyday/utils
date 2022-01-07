@@ -18,10 +18,10 @@ void test_tree() {
         EXPR:=ADD
         ADD:=BOS MUL [["+"|"-"] ADD]*? EOS
         MUL:=BOS PRIM [["*"|"/"] PRIM]*? EOS
-        PRIM:=INTEGER|ID|"("BOS EXPR")" EOS
+        PRIM:=BOS [INTEGER|ID|"("EXPR")"] EOS
     )a");
     auto input = make_ref_seq(R"(
-        (a + b) - 3 * 4
+        (a + b) - 3 * 4 + 4
     )");
     auto e = syntax::default_parse(c, def, input);
     assert(e);
