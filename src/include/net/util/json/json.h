@@ -10,6 +10,7 @@
 #pragma once
 
 #include "internal.h"
+#include <stdexcept>
 
 namespace utils {
     namespace net {
@@ -22,6 +23,14 @@ namespace utils {
                 using object_t = typename holder_t::object_t;
                 using array_t = typename holder_t::array_t;
                 using self_t = JSONBase<String, Vec, Object>;
+
+                [[noreturn]] static void bad_type(const char* err) {
+                    throw std::invalid_argument(err);
+                }
+
+                static const self_t& as_const(self_t& in) {
+                    return in;
+                }
 
                public:
                 JSONBase(std::nullptr_t)
@@ -62,7 +71,34 @@ namespace utils {
                     return 1;
                 }
 
+                const self_t* at(size_t n, const char** err = nullptr) const {
+                    auto a = obj.as_arr();
+                    if (!a) {
+                        if (err) {
+                            *err = "not array type";
+                        }
+                        return nullptr;
+                    }
+                    if (a->size() <= n) {
+                        if (err) {
+                            *err = "index out of range";
+                        }
+                        return nullptr;
+                    }
+                    return &(*a)[n];
+                }
+
                 const self_t& operator[](size_t n) const {
+                    const char* err = nullptr;
+                    auto res = at(n, &err);
+                    if (!res) {
+                        bad_type(err);
+                    }
+                    return *res;
+                }
+
+                self_t& operator[](size_t n) {
+                    return const_cast<self_t&>(as_const(*this)[n]);
                 }
             };
         }  // namespace json
