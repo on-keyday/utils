@@ -155,15 +155,15 @@ namespace utils {
                 return exp;
             }
 
-            constexpr void split_float(double value, std::uint32_t& integ, std::uint32_t& decimal, std::int16_t& exp,
+            template <class InT = std::uint32_t, class Exp = std::int16_t>
+            constexpr void split_float(double value, InT& integ, InT& decimal, Exp& exp,
                                        const double pos_th, const double neg_th, const double rem_th,
-                                       const std::uint32_t dec_th, const double round_th) {
+                                       const InT dec_th, const double round_th) {
                 exp = normalize(value, pos_th, neg_th);
-                integ = static_cast<std::uint32_t>(value);
+                integ = static_cast<InT>(value);
                 double rem = value - integ;
                 rem *= rem_th;
-                decimal = static_cast<std::uint32_t>(rem);
-
+                decimal = static_cast<InT>(rem);
                 rem -= decimal;
                 if (rem >= round_th) {
                     decimal++;
@@ -179,17 +179,18 @@ namespace utils {
             }
 
             template <class Result, class InT>
-            number::NumErr write_decimal(Result& result, InT value, InT width, int radix, bool upper) {
-                while (value % 10 == 0 && width > 0) {
-                    value /= 10;
+            number::NumErr write_decimal(Result& result, InT value, int width, int radix, bool upper) {
+                while (value % radix == 0 && width > 0) {
+                    value /= radix;
                     width--;
                 }
+                result.push_back('.');
                 return to_string(result, value, radix, upper);
             }
         }  // namespace internal
 
-        template <class Result, std::floating_point T>
-        constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false) {
+        template <class Result, std::floating_point T, class InT = std::uint32_t, class Exp = std::int16_t>
+        constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false, int decdigit = 9) {
             if (radix != 10 && radix != 16) {
                 return number::NumError::invalid;
             }
@@ -209,17 +210,21 @@ namespace utils {
             if (in < 0.0) {
                 result.push_back('-');
             }
-            std::uint32_t integ;
-            std::uint32_t decimal;
-            std::int16_t exp;
-            internal::split_float(in, integ, decimal, exp,
-                                  1e7, 1e-5, 1000000000, 1e9, 0.5);
+            InT integ;
+            InT decimal;
+            Exp exp;
+            auto p = internal::spow(10, decdigit);
+            internal::split_float<InT, Exp>(in, integ, decimal, exp,
+                                            1e7, 1e-5, p, p, 0.5);
             auto err = to_string(result, integ, radix, upper);
             if (!err) {
                 return err;
             }
             if (decimal) {
-                internal::write_decimal(result, decimal, 9, radix, upper);
+                err = internal::write_decimal(result, decimal, decdigit, radix, upper);
+                if (!err) {
+                    return err;
+                }
             }
         }
 
