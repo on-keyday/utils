@@ -132,6 +132,26 @@ namespace utils {
                     return *res;
                 }
 
+                self_t& operator[](const String& n) {
+                    if (obj.is_undef()) {
+                        obj = new object_t{};
+                    }
+                    const char* err = nullptr;
+                    auto res = at(n, &err);
+                    if (res) {
+                        return *res;
+                    }
+                    auto obj = obj.as_obj();
+                    if (!obj) {
+                        bad_type(err);
+                    }
+                    auto it = obj->emplace(n, {});
+                    if (!std::get<1>(it)) {
+                        bad_type("failed to insert");
+                    }
+                    return std::get<1>(*std::get<0>(it));
+                }
+
                 self_t& operator[](size_t n) {
                     return const_cast<self_t&>(as_const(*this)[n]);
                 }
