@@ -20,6 +20,7 @@ namespace utils {
                 using holder_t = internal::JSONHolder<String, Vec, Object>;
                 holder_t obj;
                 using object_t = typename holder_t::object_t;
+                using array_t = typename holder_t::array_t;
 
                public:
                 JSONBase(std::nullptr_t)
@@ -32,6 +33,20 @@ namespace utils {
                     : obj(i) {}
                 JSONBase(std::uint64_t u)
                     : obj(u) {}
+                JSONBase(double f)
+                    : obj(f) {}
+                JSONBase(const String& s)
+                    : obj(std::move(s)) {}
+                JSONBase(String&& s)
+                    : obj(std::move(s)) {}
+                JSONBase(const object_t& o)
+                    : obj(std::move(o)) {}
+                JSONBase(object_t&& o)
+                    : obj(std::move(o)) {}
+                JSONBase(const array_t& a)
+                    : obj(std::move(a)) {}
+                JSONBase(array_t&& a)
+                    : obj(std::move(a)) {}
             };
         }  // namespace json
     }      // namespace net
