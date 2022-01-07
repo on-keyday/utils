@@ -57,6 +57,11 @@ namespace utils {
             return ret;
         }
 
+        template <class String>
+        Reader<String> make_reader(wrap::shared_ptr<tknz::Token<String>>& tok) {
+            return Reader<String>(tok);
+        }
+
 #if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
         extern template struct SyntaxC<wrap::string, wrap::vector, wrap::map>;
 #endif

@@ -37,6 +37,7 @@ namespace utils {
         struct DispatchContext {
             using context_t = MatchContext<String, Vec>;
             Vec<DispatchFilter<context_t>> disp;
+            size_t prev = 0;
 
             template <class F, class B = decltype(helper::no_check())>
             DispatchContext& append(F&& f, FilterType type = FilterType::filter, B&& filter = helper::no_check()) {
@@ -56,7 +57,7 @@ namespace utils {
                             continue;
                         }
                     }
-                    auto res = filter.dispatch(ctx);
+                    auto res = filter.dispatch(ctx, false);
                     if (any(filter.type & FilterType::check)) {
                         if (res != MatchState::not_match) {
                             return res;

@@ -42,6 +42,10 @@ namespace utils {
                 err.err << "error: " << input << "\n";
             }
 
+            size_t pos() const {
+                return err.r.count;
+            }
+
             const char* what() const {
                 return keywordv(result.kind);
             }

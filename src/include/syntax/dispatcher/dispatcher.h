@@ -91,7 +91,7 @@ namespace utils {
         struct Dispatch {
            private:
             struct NOVTABLE__ interface__ {
-                virtual MatchState operator()(T& ctx) = 0;
+                virtual MatchState operator()(T& ctx, bool cancel) = 0;
 
                 virtual ~interface__() {}
             };
@@ -104,12 +104,12 @@ namespace utils {
                 implements__(V__&& args)
                     : t_holder_(std::forward<V__>(args)) {}
 
-                MatchState operator()(T& ctx) override {
+                MatchState operator()(T& ctx, bool cancel) override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
                         return MatchState::succeed;
                     }
-                    return (*t_ptr_)(ctx);
+                    return (*t_ptr_)(ctx, cancel);
                 }
             };
 
@@ -148,8 +148,8 @@ namespace utils {
                 delete iface;
             }
 
-            MatchState operator()(T& ctx) {
-                return iface ? iface->operator()(ctx) : MatchState::succeed;
+            MatchState operator()(T& ctx, bool cancel) {
+                return iface ? iface->operator()(ctx, cancel) : MatchState::succeed;
             }
         };
 

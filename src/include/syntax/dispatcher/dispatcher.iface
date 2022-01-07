@@ -16,5 +16,5 @@ interface Filter {
 
 typeparam T
 interface Dispatch {
-    __call__(ctx &T) MatchState = MatchState::succeed
+    __call__(ctx &T,cancel bool) MatchState = MatchState::succeed
 }

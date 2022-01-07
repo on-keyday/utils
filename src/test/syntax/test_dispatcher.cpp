@@ -33,13 +33,13 @@ void test_dispatcher() {
     auto tok = default_parse(c, seq, input, tknz::sh_comment(), tknz::string());
     assert(tok);
 
-    disp.append([&](auto& ctx) {
+    disp.append([&](auto& ctx, bool) {
             cout << ctx.top() << ":" << ctx.what() << ":" << ctx.token()
                  << "\n";
             return MatchState::succeed;
         })
         .append(
-            [&](auto&) {
+            [&](auto&, bool) {
                 cout << "equal\n";
                 return MatchState::succeed;
             },
