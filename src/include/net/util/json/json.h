@@ -21,6 +21,7 @@ namespace utils {
                 holder_t obj;
                 using object_t = typename holder_t::object_t;
                 using array_t = typename holder_t::array_t;
+                using self_t = JSONBase<String, Vec, Object>;
 
                public:
                 JSONBase(std::nullptr_t)
@@ -47,7 +48,24 @@ namespace utils {
                     : obj(std::move(a)) {}
                 JSONBase(array_t&& a)
                     : obj(std::move(a)) {}
+
+                size_t size() const {
+                    if (obj.is_null() || obj.is_undef()) {
+                        return 0;
+                    }
+                    else if (auto o = obj.as_obj()) {
+                        return o->size();
+                    }
+                    else if (auto a = obj.as_arr()) {
+                        return a->size();
+                    }
+                    return 1;
+                }
+
+                const self_t& operator[](size_t n) const {
+                }
             };
         }  // namespace json
-    }      // namespace net
+
+    }  // namespace net
 }  // namespace utils
