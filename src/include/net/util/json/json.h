@@ -210,6 +210,20 @@ namespace utils {
 
                 template <std::integral T>
                 explicit operator T() const {
+                    T t;
+                    if (!to_number(t)) {
+                        bad_type("not number type");
+                    }
+                    return t;
+                }
+
+                template <std::floating_point T>
+                explicit operator T() const {
+                    T t;
+                    if (!to_number(t)) {
+                        bad_type("not number type");
+                    }
+                    return t;
                 }
             };
 
