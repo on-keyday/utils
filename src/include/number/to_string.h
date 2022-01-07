@@ -111,5 +111,53 @@ namespace utils {
             return result;
         }
 
+        // reference implementation
+        // https://blog.benoitblanchon.fr/lightweight-float-to-string/
+
+        namespace internal {
+#define VALUE(v)          \
+    if (value >= 1e##v) { \
+        value /= 1e##v;   \
+        exp += ##v;       \
+    }
+            constexpr int normalize(double& value, double positive, double negative) {
+                int exp = 0;
+                if (value >= positive) {
+                    VALUE(256)
+                    VALUE(128)
+                    VALUE(64)
+                    VALUE(32)
+                    VALUE(16)
+                    VALUE(8)
+                    VALUE(4)
+                    VALUE(2)
+                    VALUE(1)
+                }
+            }
+        }  // namespace internal
+#undef VALUE
+        template <class Result, std::floating_point T>
+        constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false) {
+            if (radix != 10 && radix != 16) {
+                return number::NumError::invalid;
+            }
+            if (in != in) {
+                if (upper) {
+                    result.push_back('N');
+                    result.push_back('A');
+                    result.push_back('N');
+                }
+                else {
+                    result.push_back('n');
+                    result.push_back('a');
+                    result.push_back('n');
+                }
+                return true;
+            }
+            if (in < 0.0) {
+                result.push_back('-');
+            }
+        }
+
     }  // namespace number
 }  // namespace utils
