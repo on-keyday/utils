@@ -106,7 +106,24 @@ namespace utils {
                     return &std::get<1>(*found);
                 }
 
+                self_t* at(size_t n, const char** err = nullptr) {
+                    return const_cast<self_t*>(as_const(*this).at(n, err));
+                }
+
+                self_t* at(const String& n, const char** err = nullptr) {
+                    return const_cast<self_t*>(as_const(*this).at(n, err));
+                }
+
                 const self_t& operator[](size_t n) const {
+                    const char* err = nullptr;
+                    auto res = at(n, &err);
+                    if (!res) {
+                        bad_type(err);
+                    }
+                    return *res;
+                }
+
+                const self_t& operator[](const String& n) const {
                     const char* err = nullptr;
                     auto res = at(n, &err);
                     if (!res) {
