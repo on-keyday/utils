@@ -8,6 +8,7 @@
 
 // json - json object
 #pragma once
+#include <cstdint>
 
 namespace utils {
     namespace net {
@@ -23,9 +24,12 @@ namespace utils {
             array,
         };
 
-        struct JSON {
+        template <class String, template <class...> class Vec, template <class...> class Object>
+        struct JSONBase {
             JSONKind kind = JSONKind::undefined;
             union {
+                std::int64_t i;
+                std::uint64_t u;
             };
         };
     }  // namespace net
