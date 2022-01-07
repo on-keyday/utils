@@ -9,7 +9,6 @@
 // space - define what is space
 #pragma once
 
-#include "../utf/convert.h"
 #include "../helper/space.h"
 #include "token.h"
 
