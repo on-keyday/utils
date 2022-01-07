@@ -16,7 +16,6 @@ namespace utils {
         namespace json {
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
-                JSONKind kind = JSONKind::undefined;
                 internal::JSONHolder<String, Vec, Object> obj;
             };
         }  // namespace json

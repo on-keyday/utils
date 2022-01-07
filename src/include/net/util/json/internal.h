@@ -9,6 +9,7 @@
 // internal - json internal definition
 #pragma once
 #include <cstdint>
+#include <cassert>
 
 namespace utils {
     namespace net {
@@ -89,6 +90,16 @@ namespace utils {
                         : kind(JSONKind::array), a(new array_t(n)) {}
                     JSONHolder(array_t&& n)
                         : kind(JSONKind::array), a(new array_t(std::move(n))) {}
+
+                    constexpr JSONHolder(object_t* n)
+                        : kind(JSONKind::object), o(n) {
+                        assert(n);
+                    }
+
+                    constexpr JSONHolder(array_t* n)
+                        : kind(JSONKind::array), o(n) {
+                        assert(n);
+                    }
 
                     constexpr JSONHolder(JSONHolder&& n)
                         : kind(n.kind), p(n.p) {
