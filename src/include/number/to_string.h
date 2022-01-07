@@ -133,6 +133,12 @@ namespace utils {
                     VALUE(2)
                     VALUE(1)
                 }
+#undef VALUE
+#define VALUE(v1, v2)      \
+    if (value < 1e-##v1) { \
+        value *= 1e##v2;   \
+        exp -= ##v2;       \
+    }
             }
         }  // namespace internal
 #undef VALUE
