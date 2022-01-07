@@ -11,6 +11,7 @@
 
 #include "internal.h"
 #include <stdexcept>
+#include "../../../utf/convert.h"
 
 namespace utils {
     namespace net {
@@ -189,7 +190,7 @@ namespace utils {
                 }
 
                 template <class T>
-                bool to_number(T& to) {
+                bool as_number(T& to) {
                     auto i = obj.as_numi();
                     if (i) {
                         to = T(*i);
@@ -208,6 +209,16 @@ namespace utils {
                     return false;
                 }
 
+                template <class String>
+                bool as_string(String& str) {
+                    auto s = obj.as_str();
+                    if (!s) {
+                        return false;
+                    }
+                    utf::convert(*s, str);
+                    return true;
+                }
+
                 template <std::integral T>
                 explicit operator T() const {
                     T t;
@@ -215,6 +226,14 @@ namespace utils {
                         bad_type("not number type");
                     }
                     return t;
+                }
+
+                explicit operator bool() const {
+                    auto b = obj.as_bool();
+                    if (!b) {
+                        bad_type("not boolean type");
+                    }
+                    return b;
                 }
 
                 template <std::floating_point T>
@@ -226,7 +245,6 @@ namespace utils {
                     return t;
                 }
             };
-
         }  // namespace json
 
     }  // namespace net
