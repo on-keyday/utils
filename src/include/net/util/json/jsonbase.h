@@ -18,9 +18,7 @@ namespace utils {
     namespace net {
         namespace json {
             template <class T>
-            concept StringLike = std::is_default_constructible_v<T> && requires(T t) {
-                helper::append_size<T>() <= 4;
-            };
+            concept StringLike = std::is_default_constructible_v<T> && helper::is_utf_convertable<T>;
 
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
