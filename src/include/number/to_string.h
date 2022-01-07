@@ -118,7 +118,7 @@ namespace utils {
 #define VALUE(v)          \
     if (value >= 1e##v) { \
         value /= 1e##v;   \
-        exp += ##v;       \
+        exp += v;         \
     }
             constexpr int normalize(double& value, const double positive, const double negative) {
                 int exp = 0;
@@ -134,21 +134,21 @@ namespace utils {
                     VALUE(1)
                 }
 #undef VALUE
-#define VALUE(v1, v2)     \
-    if (value < 1e##v1) { \
-        value *= 1e##v2;  \
-        exp -= ##v2;      \
+#define VALUE(v1, v2)      \
+    if (value < 1e-##v1) { \
+        value *= 1e##v2;   \
+        exp -= v2;         \
     }
 
                 if (value > 0 && value <= negative) {
-                    VALUE(-255, 256)
-                    VALUE(-127, 128)
-                    VALUE(-63, 64)
-                    VALUE(-31, 32)
-                    VALUE(-15, 16)
-                    VALUE(-7, 8)
-                    VALUE(-3, 4)
-                    VALUE(-1, 2)
+                    VALUE(255, 256)
+                    VALUE(127, 128)
+                    VALUE(63, 64)
+                    VALUE(31, 32)
+                    VALUE(15, 16)
+                    VALUE(7, 8)
+                    VALUE(3, 4)
+                    VALUE(1, 2)
                     VALUE(0, 1)
                 }
 #undef VALUE
@@ -219,7 +219,7 @@ namespace utils {
                 return err;
             }
             if (decimal) {
-                internal::write_decimal(result, decimal, );
+                internal::write_decimal(result, decimal, 9, radix, upper);
             }
         }
 
