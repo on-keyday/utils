@@ -414,7 +414,7 @@ namespace ifacegen {
                     hlp::appends(str, R"(    interface__* copy__() const override {
             )",
                                  "return new implements__<T__>(t_holder_);", R"(
-                }
+            }
 
     )");
                 }
