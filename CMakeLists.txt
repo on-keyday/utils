@@ -54,6 +54,7 @@ add_executable(strutil "src/test/helper/test_strutil.cpp")
 add_executable(dispatcher "src/test/syntax/test_dispatcher.cpp")
 add_executable(tree "src/test/syntax/test_tree.cpp")
 add_executable(escape "src/test/escape/test_escape.cpp")
+add_executable(json "src/test/net/test_json.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -73,6 +74,7 @@ option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" OFF)
 
 if(UTILS_BUILD_SHARED_LIBS)
 add_library(utils SHARED)
+add_compile_options(utils -D UTILS_AS_DLL)
 else()
 add_library(utils STATIC)
 endif()

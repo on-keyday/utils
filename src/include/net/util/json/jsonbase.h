@@ -38,6 +38,7 @@ namespace utils {
                 }
 
                public:
+                constexpr JSONBase() {}
                 constexpr JSONBase(std::nullptr_t)
                     : obj(nullptr) {}
                 constexpr JSONBase(bool b)
@@ -54,6 +55,9 @@ namespace utils {
                     : obj(s) {}
                 JSONBase(String&& s)
                     : obj(std::move(s)) {}
+                template <class C = char>
+                JSONBase(C* p)
+                    : obj(String(p)) {}
                 JSONBase(const object_t& o)
                     : obj(o) {}
                 JSONBase(object_t&& o)
@@ -66,6 +70,16 @@ namespace utils {
                     : obj(o.obj) {}
                 constexpr JSONBase(JSONBase&& o)
                     : obj(std::move(o.obj)) {}
+
+                JSONBase& operator=(const JSONBase& in) {
+                    obj = in.obj;
+                    return *this;
+                }
+
+                JSONBase& operator=(JSONBase&& in) {
+                    obj = std::move(in.obj);
+                    return *this;
+                }
 
                 size_t size() const {
                     if (obj.is_null() || obj.is_undef()) {
@@ -150,11 +164,11 @@ namespace utils {
                     if (res) {
                         return *res;
                     }
-                    auto obj = obj.as_obj();
-                    if (!obj) {
+                    auto objp = obj.as_obj();
+                    if (!objp) {
                         bad_type(err);
                     }
-                    auto it = obj->emplace(n, {});
+                    auto it = objp->emplace(n, {});
                     if (!std::get<1>(it)) {
                         bad_type("failed to insert");
                     }
@@ -220,7 +234,7 @@ namespace utils {
                 }
 
                 template <class T>
-                bool as_number(T& to) {
+                bool as_number(T& to) const {
                     auto i = obj.as_numi();
                     if (i) {
                         to = T(*i);
@@ -239,8 +253,8 @@ namespace utils {
                     return false;
                 }
 
-                template <class String>
-                bool as_string(String& str) {
+                template <class Instr>
+                bool as_string(Instr& str) const {
                     auto s = obj.as_str();
                     if (!s) {
                         return false;
@@ -249,7 +263,8 @@ namespace utils {
                     return true;
                 }
 
-                template <std::integral T>
+                template <class T>
+                requires std::is_integral_v<T>
                 explicit operator T() const {
                     T t;
                     if (!to_number(t)) {
@@ -266,7 +281,8 @@ namespace utils {
                     return *b;
                 }
 
-                template <std::floating_point T>
+                template <class T>
+                requires std::is_floating_point_v<T>
                 explicit operator T() const {
                     T t;
                     if (!to_number(t)) {

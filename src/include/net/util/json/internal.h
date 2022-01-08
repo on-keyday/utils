@@ -10,6 +10,8 @@
 #pragma once
 #include <cstdint>
 #include <cassert>
+#include <cstddef>
+#include <utility>
 
 namespace utils {
     namespace net {
@@ -167,15 +169,15 @@ namespace utils {
                     }
 
                     const String* as_str() const {
-                        return kind == JSONKind::string ? &s : nullptr;
+                        return kind == JSONKind::string ? s : nullptr;
                     }
 
                     const object_t* as_obj() const {
-                        return kind == JSONKind::object ? &o : nullptr;
+                        return kind == JSONKind::object ? o : nullptr;
                     }
 
                     const array_t* as_arr() const {
-                        return kind == JSONKind::array ? &a : nullptr;
+                        return kind == JSONKind::array ? a : nullptr;
                     }
                 };
             }  // namespace internal

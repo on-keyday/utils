@@ -10,7 +10,7 @@
 #pragma once
 
 #include <limits>
-#include <concepts>
+#include <type_traits>
 
 #include "char_range.h"
 
@@ -183,7 +183,8 @@ namespace utils {
             }
         }  // namespace internal
 
-        template <class Result, std::floating_point T, class InT = std::uint32_t, class Exp = std::int16_t>
+        template <class Result, class T, class InT = std::uint32_t, class Exp = std::int16_t>
+        requires std::is_floating_point_v<T>
         constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false, int decdigit = 9) {
             if (radix != 10 && radix != 16) {
                 return number::NumError::invalid;
@@ -259,7 +260,8 @@ namespace utils {
             return result;
         }
 
-        template <class Result, std::floating_point T, class InT = std::uint32_t, class Exp = std::int16_t>
+        template <class Result, class T, class InT = std::uint32_t, class Exp = std::int16_t>
+        requires std::is_floating_point_v<T>
         constexpr Result to_string(T in, int radix = 10, bool upper = false, int decdigit = 9) {
             Result result;
             to_string(result, in, radix, upper, decdigit);
