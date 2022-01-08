@@ -46,7 +46,7 @@ namespace utils {
                     }
                     obj.push_back({key, value});
                     auto ret = --obj.end();
-                    return result_t{e, true};
+                    return result_t{ret, true};
                 }
             };
 
