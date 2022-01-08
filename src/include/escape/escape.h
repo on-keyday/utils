@@ -12,6 +12,7 @@
 #include "../core/sequencer.h"
 #include "../helper/appender.h"
 #include "../utf/convert.h"
+#include "../number/char_range.h"
 namespace utils {
     namespace escape {
 
@@ -21,6 +22,8 @@ namespace utils {
             oct = 0x2,
             hex = 0x4,
         };
+
+        DEFINE_ENUM_FLAGOP(EscapeFlag)
 
         template <class In, class Out>
         constexpr bool escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
@@ -58,6 +61,10 @@ namespace utils {
                 }
                 else if (c == '\"') {
                     helper::append(out, "\\\"");
+                }
+                else if (!number::is_in_visible_range(c)) {
+                    if (any()) {
+                    }
                 }
                 else {
                     out.push_back(c);

@@ -52,7 +52,7 @@ namespace utils {
 
             DEFINE_CONVERT_WITH_UTF32(1, utf8_to_utf32, utf32_to_utf8)
             DEFINE_CONVERT_WITH_UTF32(2, utf16_to_utf32, utf32_to_utf16)
-
+#undef DEFINE_CONVERT_WITH_UTF32
 #define DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(FROM, TO, METHOD)                            \
     template <bool decode_all, class T, class U>                                           \
     constexpr bool convert_impl(Sequencer<T>& in, expect_size_t<U, T, U, FROM, TO>& out) { \
@@ -68,7 +68,7 @@ namespace utils {
     }
             DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(2, 1, utf16_to_utf8)
             DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16(1, 2, utf8_to_utf16)
-
+#undef DEFINE_CONVERT_BETWEEN_UTF8_AND_UTF16
 #define DEFINE_CONVERT_BETWEEN_SAME_SIZE(SIZE)                                               \
     template <bool decode_all, class T, class U>                                             \
     constexpr bool convert_impl(Sequencer<T>& in, expect_size_t<U, T, U, SIZE, SIZE>& out) { \
@@ -81,6 +81,7 @@ namespace utils {
             DEFINE_CONVERT_BETWEEN_SAME_SIZE(2)
             DEFINE_CONVERT_BETWEEN_SAME_SIZE(4)
 
+#undef DEFINE_CONVERT_BETWEEN_SAME_SIZE
         }  // namespace internal
     }      // namespace utf
 }  // namespace utils
