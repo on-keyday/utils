@@ -20,8 +20,10 @@ namespace utils {
 
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
-                while (helper::space::match_space<true>(seq, true)) {
-                }
+                auto consume_space = [&] {
+                    while (helper::space::match_space<true>(seq, true)) {
+                    }
+                };
                 if (seq.seek_if("true")) {
                     json = true;
                     return true;
