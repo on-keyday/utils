@@ -37,8 +37,7 @@ namespace utils {
                     json = nullptr;
                     return true;
                 }
-                else if (seq.seek_if("\"")) {
-                    seq.consume();
+                else if (seq.consume_if('\"')) {
                     auto beg = seq.rptr;
                     while (true) {
                         if (!seq.eos()) {
@@ -61,7 +60,7 @@ namespace utils {
                         return JSONError::invalid_escape;
                     }
                 }
-                else if (seq.seek_if("[")) {
+                else if (seq.consume_if('[')) {
                 }
             }
         }  // namespace json
