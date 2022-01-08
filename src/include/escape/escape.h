@@ -181,7 +181,7 @@ namespace utils {
                             return false;
                         }
                         utf::U16Buffer buf;
-                        std::uint32_t i;
+                        std::uint16_t i;
                         if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
                             return e;
                         }

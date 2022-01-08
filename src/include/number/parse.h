@@ -34,14 +34,16 @@ namespace utils {
                     if (overflow) {
                         return;
                     }
+                    if (result) {
+                        constexpr T maxi = (std::numeric_limits<T>::max)();
+                        if (!(result <= maxi / radix)) {
+                            overflow = true;
+                            return;
+                        }
+                        result *= radix;
+                    }
                     auto c = number_transform[in];
                     result += c;
-                    constexpr T maxi = (std::numeric_limits<T>::max)();
-                    if (!(result <= maxi / radix)) {
-                        overflow = true;
-                        return;
-                    }
-                    result *= radix;
                 }
             };
 
@@ -211,7 +213,7 @@ namespace utils {
             if (parser.overflow) {
                 return NumError::overflow;
             }
-            result = parser.result / radix;
+            result = parser.result;
             if (minus) {
                 result = -result;
             }

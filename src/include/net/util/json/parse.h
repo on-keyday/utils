@@ -144,9 +144,20 @@ namespace utils {
                             return JSONError::need_colon;
                         }
                         CONSUME_EOF();
+                        self_t value;
+                        auto e = parse(seq, value);
+                        if (!e) {
+                            return false;
+                        }
+                        auto res = ptr->emplace(std::move(key), std::move(value));
+                        if (!std::get<1>(res)) {
+                            return JSONError::emplace_error;
+                        }
                         first = false;
                     }
+                    return true;
                 }
+                return JSONError::not_json;
             }
 #undef DETECT_EOF
 #undef CONSUME_EOF
