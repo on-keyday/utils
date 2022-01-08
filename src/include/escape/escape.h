@@ -127,7 +127,7 @@ namespace utils {
 
         template <class In, class Out>
         constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out) {
-            constexpr auto mx = (std::numeric_limits<std::make_unsigned<
+            constexpr auto mx = (std::numeric_limits<std::make_unsigned_t<
                                      typename Sequencer<In>::char_type>>::max)();
             while (!seq.eos()) {
                 auto c = seq.current();
@@ -173,7 +173,7 @@ namespace utils {
                         if (i > mx) {
                             return number::NumError::overflow;
                         }
-                        seq.push_back(i);
+                        out.push_back(i);
                     }
                     else if (c == 'u') {
                         seq.consume();
@@ -220,6 +220,7 @@ namespace utils {
                 }
                 seq.consume();
             }
+            return true;
         }
     }  // namespace escape
 }  // namespace utils

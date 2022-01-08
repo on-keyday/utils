@@ -25,6 +25,7 @@ constexpr auto test_unescape_str(const char* str) {
     auto seq = utils::make_ref_seq(str);
     uh::FixedPushBacker<char[30], 29> out;
     ue::unescape_str(seq, out);
+    return out;
 }
 
 void test_escape() {
@@ -32,6 +33,7 @@ void test_escape() {
     static_assert(utils::helper::equal("\\n\\t\\r\\u3042\\u3044", e.buf), "expect true but assertion failed");
     constexpr auto o = test_escape_str(u8"\n\t\rあ", utils::escape::EscapeFlag::hex);
     static_assert(utils::helper::equal("\\n\\t\\r\\xe3\\x81\\x82", o.buf), "expect true but assertion failed");
+    constexpr auto ue = test_unescape_str("\\n\\t\\r\\u3042\\u3044");
 }
 
 int main() {
