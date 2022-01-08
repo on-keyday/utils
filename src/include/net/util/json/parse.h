@@ -20,6 +20,7 @@ namespace utils {
 
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
+                using self_t = JSONBase<String, Vec, Object>;
                 using object_t = JSONBase<String, Vec, Object>::object_t;
                 using array_t = JSONBase<String, Vec, Object>::array_t;
                 auto consume_space = [&] {
@@ -61,6 +62,7 @@ namespace utils {
                     if (!escape::unescape_str(sl, *ptr)) {
                         return JSONError::invalid_escape;
                     }
+                    return true;
                 }
                 else if (seq.consume_if('[')) {
                     auto& s = json.get_holder();
@@ -72,7 +74,14 @@ namespace utils {
                         if (seq.consume_if(']')) {
                             break;
                         }
+                        self_t tmp;
+                        auto e = parse(seq, tmp);
+                        if (!e) {
+                            return e;
+                        }
+                        ptr->push_back(std::move(tmp));
                     }
+                    return true;
                 }
             }
         }  // namespace json
