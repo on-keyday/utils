@@ -20,6 +20,8 @@ namespace utils {
 
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
+                using object_t = JSONBase<String, Vec, Object>::object_t;
+                using array_t = JSONBase<String, Vec, Object>::array_t;
                 auto consume_space = [&] {
                     while (helper::space::match_space<true>(seq, true)) {
                     }
@@ -61,6 +63,16 @@ namespace utils {
                     }
                 }
                 else if (seq.consume_if('[')) {
+                    auto& s = json.get_holder();
+                    s = new array_t{};
+                    auto ptr = const_cast<array_t*>(s.as_arr());
+                    assert(ptr);
+                    while (true) {
+                        consume_space();
+                        if (seq.consume_if(']')) {
+                            break;
+                        }
+                    }
                 }
             }
         }  // namespace json
