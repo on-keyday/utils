@@ -181,7 +181,7 @@ namespace utils {
                             return false;
                         }
                         utf::U16Buffer buf;
-                        std::uint16_t i;
+                        std::uint32_t i;
                         if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
                             return e;
                         }
@@ -203,6 +203,7 @@ namespace utils {
                         if (!utf::convert(buf, out)) {
                             return false;
                         }
+                        seq.backto();
                     }
                     else if (number::is_oct(c)) {
                         std::uint8_t i;
@@ -210,6 +211,7 @@ namespace utils {
                             return e;
                         }
                         out.push_back(i);
+                        seq.backto();
                     }
                     else {
                         out.push_back(c);

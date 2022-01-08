@@ -33,7 +33,8 @@ void test_escape() {
     static_assert(utils::helper::equal("\\n\\t\\r\\u3042\\u3044", e.buf), "expect true but assertion failed");
     constexpr auto o = test_escape_str(u8"\n\t\rあ", utils::escape::EscapeFlag::hex);
     static_assert(utils::helper::equal("\\n\\t\\r\\xe3\\x81\\x82", o.buf), "expect true but assertion failed");
-    constexpr auto ue = test_unescape_str("\\n\\t\\r\\u3042\\u3044");
+    constexpr auto ue = test_unescape_str("\\n\\t\\r\\u3042");
+    static_assert(utils::helper::equal("\n\t\r\xe3\x81\x82", ue.buf), "expect true but assertion failed");
 }
 
 int main() {
