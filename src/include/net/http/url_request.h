@@ -8,7 +8,7 @@
 
 // url_request - http request by url
 #pragma once
-
+#include "../../platform/windows/dllexport_header.h"
 #include "http1.h"
 #include "../util/uri.h"
 #include "../../wrap/lite/enum.h"
@@ -39,7 +39,7 @@ namespace utils {
             RequestFlag flag = RequestFlag::none;
         };
 
-        HttpResponse request(const URI& uri, const char* cacert = nullptr, RequestOption opt = {});
+        DLL HttpResponse STDCALL request(const URI& uri, const char* cacert = nullptr, RequestOption opt = {});
         template <class String>
         HttpResponse request(const String& uri, const char* cacert = nullptr, RequestOption opt = {}) {
             URI parsed;

@@ -6,6 +6,7 @@
 */
 
 
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/http/http1.h"
 #include "../../../include/net/http/header.h"
 #include "../../../include/wrap/lite/string.h"

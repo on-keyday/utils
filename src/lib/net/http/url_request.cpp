@@ -6,6 +6,7 @@
 */
 
 
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/http/url_request.h"
 
 namespace utils {

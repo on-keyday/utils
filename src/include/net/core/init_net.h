@@ -8,11 +8,12 @@
 
 // init_net - initialize network
 #pragma once
+#include "../../platform/windows/dllexport_header.h"
 
 namespace utils {
     namespace net {
 
-        struct Init {
+        struct DLL Init {
            private:
             Init();
             friend Init& network();
@@ -21,7 +22,7 @@ namespace utils {
             bool initialized();
         };
 
-        Init& network();
+        DLL Init& STDCALL network();
 
     }  // namespace net
 }  // namespace utils

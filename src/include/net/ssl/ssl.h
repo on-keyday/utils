@@ -9,7 +9,7 @@
 // ssl - ssl wrapper
 // depends on OpenSSL
 #pragma once
-
+#include "../../platform/windows/dllexport_header.h"
 #include "../core/iodef.h"
 
 #include "../../wrap/lite/smart_ptr.h"
@@ -22,7 +22,7 @@ namespace utils {
             struct SSLImpl;
         }
 
-        struct SSLConn {
+        struct DLL SSLConn {
             friend struct SSLResult;
 
             constexpr SSLConn() {}
@@ -38,7 +38,7 @@ namespace utils {
         };
         struct SSLServer;
 
-        struct SSLResult {
+        struct DLL SSLResult {
             friend SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
                                   const char* selfcert, const char* selfprivate);
             friend SSLServer;
@@ -62,7 +62,7 @@ namespace utils {
             internal::SSLImpl* impl = nullptr;
         };
 
-        struct SSLServer {
+        struct DLL SSLServer {
             friend SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert);
             SSLResult accept(IO&& io);
 
@@ -76,8 +76,8 @@ namespace utils {
             internal::SSLImpl* impl = nullptr;
         };
 
-        SSLResult open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
-                       const char* selfcert = nullptr, const char* selfprivate = nullptr);
-        SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr);
+        DLL SSLResult STDCALL open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
+                                   const char* selfcert = nullptr, const char* selfprivate = nullptr);
+        DLL SSLServer STDCALL setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr);
     }  // namespace net
 }  // namespace utils

@@ -8,7 +8,7 @@
 
 // tcp - tcp connection
 #pragma once
-
+#include "../../platform/windows/dllexport_header.h"
 #include "../dns/dns.h"
 #include "../core/iodef.h"
 
@@ -18,7 +18,7 @@ namespace utils {
             struct TCPImpl;
         };
 
-        struct TCPConn {
+        struct DLL TCPConn {
             friend struct TCPResult;
             friend struct TCPServer;
             constexpr TCPConn() {}
@@ -33,7 +33,7 @@ namespace utils {
             internal::TCPImpl* impl = nullptr;
         };
 
-        struct TCPResult {
+        struct DLL TCPResult {
             friend TCPResult open(wrap::shared_ptr<Address>&& addr);
             constexpr TCPResult() {}
 
@@ -51,7 +51,7 @@ namespace utils {
             internal::TCPImpl* impl = nullptr;
         };
 
-        struct TCPServer {
+        struct DLL TCPServer {
             constexpr TCPServer() {}
             friend TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver);
 
@@ -71,8 +71,8 @@ namespace utils {
             internal::TCPImpl* impl = nullptr;
         };
 
-        TCPResult open(wrap::shared_ptr<Address>&& addr);
+        DLL TCPResult STDCALL open(wrap::shared_ptr<Address>&& addr);
 
-        TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver = 0);
+        DLL TCPServer STDCALL setup(wrap::shared_ptr<Address>&& addr, int ipver = 0);
     }  // namespace net
 }  // namespace utils

@@ -8,7 +8,7 @@
 
 // dns - dns query
 #pragma once
-
+#include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/lite/smart_ptr.h"
 
 namespace utils {
@@ -22,7 +22,7 @@ namespace utils {
 
         }  // namespace internal
 
-        struct Address {
+        struct DLL Address {
             friend wrap::shared_ptr<Address> internal::from_sockaddr_st(void* st, int len);
             friend struct DnsResult;
             Address();
@@ -34,7 +34,7 @@ namespace utils {
             internal::AddressImpl* impl = nullptr;
         };
 
-        struct DnsResult {
+        struct DLL DnsResult {
             friend DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
                                        int address_family, int socket_type, int protocol, int flags);
             constexpr DnsResult() {}
@@ -59,7 +59,7 @@ namespace utils {
             internal::DnsResultImpl* impl = nullptr;
         };
 
-        DnsResult query_dns(const char* host, const char* port, time_t timeout_sec = 60,
+        DLL DnsResult STDCALL query_dns(const char* host, const char* port, time_t timeout_sec = 60,
                             int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
 
     }  // namespace net

@@ -6,6 +6,7 @@
 */
 
 
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/core/init_net.h"
 #include "../../../include/net/core/platform.h"
 

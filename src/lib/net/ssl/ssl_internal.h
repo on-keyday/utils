@@ -8,6 +8,7 @@
 
 // ssl_internal - ssl internal header
 #pragma once
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/ssl/ssl.h"
 
 #include "../../../include/net/core/platform.h"

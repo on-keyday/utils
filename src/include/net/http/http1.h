@@ -8,7 +8,7 @@
 
 // http1 - http1.1 protocol
 #pragma once
-
+#include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/lite/smart_ptr.h"
 #include "../generate/iocloser.h"
 
@@ -21,7 +21,7 @@ namespace utils {
 
         struct Header;
 
-        struct HttpResponse {
+        struct DLL HttpResponse {
             friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             friend HttpResponse request(HttpResponse&& io, const char* method, const char* path, Header&& header);
             constexpr HttpResponse() {}
@@ -36,7 +36,7 @@ namespace utils {
             internal::HttpResponseImpl* impl = nullptr;
         };
 
-        struct Header {
+        struct DLL Header {
             friend struct HttpResponse;
 
            private:
@@ -65,7 +65,7 @@ namespace utils {
             internal::HeaderImpl* impl = nullptr;
         };
 
-        HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
-        HttpResponse request(HttpResponse&& io, const char* method, const char* path, Header&& header);
+        DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+        DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
     }  // namespace net
 }  // namespace utils

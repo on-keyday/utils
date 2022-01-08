@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-
+#include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/wrap/argv.h"
 #ifdef _WIN32
 #include <windows.h>
