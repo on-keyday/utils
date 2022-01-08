@@ -6,6 +6,7 @@
 */
 
 
+#include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/file/platform.h"
 #ifdef _WIN32
 #include <windows.h>
