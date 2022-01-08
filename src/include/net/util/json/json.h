@@ -52,6 +52,9 @@ namespace utils {
 
             template <class Key, class Value>
             using ordered_map = OrderedMapBase<wrap::vector, Key, Value>;
+
+            using OrderJSON=JSONBase<wrap::string,wrap::vector,ordered_map>;
+
         }  // namespace json
-    }      // namespace net
+    }  // namespace net
 }  // namespace utils

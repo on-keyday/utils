@@ -126,6 +126,12 @@ namespace utils {
         }
 
         template <class In, class Out>
+        constexpr number::NumErr escape_str(In&& in, Out& out) {
+            auto seq = make_ref_seq(in);
+            return escape_str(seq, out);
+        }
+
+        template <class In, class Out>
         constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out) {
             constexpr auto mx = (std::numeric_limits<std::make_unsigned_t<
                                      typename Sequencer<In>::char_type>>::max)();
@@ -223,6 +229,12 @@ namespace utils {
                 seq.consume();
             }
             return true;
+        }
+
+        template <class In, class Out>
+        constexpr number::NumErr unescape_str(In&& in, Out& out) {
+            auto seq = make_ref_seq(in);
+            return unescape_str(seq, out);
         }
     }  // namespace escape
 }  // namespace utils

@@ -104,7 +104,7 @@ namespace utils {
                     }
 
                     constexpr JSONHolder(array_t* n)
-                        : kind(JSONKind::array), o(n) {
+                        : kind(JSONKind::array), a(n) {
                         assert(n);
                     }
 

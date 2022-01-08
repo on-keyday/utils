@@ -5,12 +5,27 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/net/util/json/jsonbase.h"
+#include "../../include/net/util/json/json.h"
 #include "../../include/wrap/lite/lite.h"
+#include "../../include/net/util/json/parse.h"
 
 void test_json() {
     namespace utw = utils::wrap;
-    utils::net::json::JSONBase<utw::string, utw::vector, utw::map> json;
+    utils::net::json::JSON json;
+    utils::net::json::parse(
+        R"({
+            "json": [
+                "is",
+                92,
+                null,
+                true,
+                false,
+                -9483,
+                0.5,
+                "object"
+            ]
+        })",
+        json);
 }
 
 int main() {

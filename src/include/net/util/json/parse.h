@@ -21,8 +21,8 @@ namespace utils {
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
                 using self_t = JSONBase<String, Vec, Object>;
-                using object_t = JSONBase<String, Vec, Object>::object_t;
-                using array_t = JSONBase<String, Vec, Object>::array_t;
+                using object_t = typename JSONBase<String, Vec, Object>::object_t;
+                using array_t = typename JSONBase<String, Vec, Object>::array_t;
 
                 auto consume_space = [&] {
                     while (helper::space::match_space<true>(seq, true)) {
@@ -36,7 +36,7 @@ namespace utils {
     DETECT_EOF()
 
                 auto read_strs = [&](size_t& beg, size_t& en) -> JSONErr {
-                    auto beg = seq.rptr;
+                    beg = seq.rptr;
                     while (true) {
                         DETECT_EOF();
                         if (seq.current() == '\"') {
@@ -51,7 +51,7 @@ namespace utils {
                     return true;
                 };
                 auto unescape = [&](auto& str, size_t be, size_t en) -> JSONErr {
-                    auto sl = helper::make_ref_slice(buf.in, be, en);
+                    auto sl = helper::make_ref_slice(seq.buf.buffer, be, en);
                     if (!escape::unescape_str(sl, str)) {
                         return JSONError::invalid_escape;
                     }
@@ -140,13 +140,13 @@ namespace utils {
                             return e;
                         }
                         CONSUME_EOF();
-                        if (!seq.consume_if(":")) {
+                        if (!seq.consume_if(':')) {
                             return JSONError::need_colon;
                         }
                         CONSUME_EOF();
                         self_t value;
-                        auto e = parse(seq, value);
-                        if (!e) {
+                        auto err = parse(seq, value);
+                        if (!err) {
                             return false;
                         }
                         auto res = ptr->emplace(std::move(key), std::move(value));
@@ -162,7 +162,7 @@ namespace utils {
                     bool sign = seq.current() == '-';
                     std::int64_t v;
                     auto e = number::parse_integer(seq, v);
-                    if (seq.current() == '.' || seq.curret() == 'e' || seq.current() == 'E') {
+                    if (seq.current() == '.' || seq.current() == 'e' || seq.current() == 'E') {
                         double d;
                         seq.rptr = inipos;
                         auto e = number::parse_float(seq, d);
@@ -192,6 +192,12 @@ namespace utils {
             }
 #undef DETECT_EOF
 #undef CONSUME_EOF
+
+            template <class T, class String, template <class...> class Vec, template <class...> class Object>
+            JSONErr parse(T&& in, JSONBase<String, Vec, Object>& json) {
+                auto seq = make_ref_seq(in);
+                return parse(seq, json);
+            }
         }  // namespace json
 
     }  // namespace net
