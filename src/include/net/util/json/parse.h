@@ -19,14 +19,6 @@ namespace utils {
     namespace net {
         namespace json {
 
-            enum class JSONError {
-                none,
-                unknown,
-                unexpected_eof,
-            };
-
-            using JSONErr = wrap::EnumWrap<JSONError, JSONError::none, JSONError::unknown>;
-
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
                 while (helper::space::match_space<true>(seq, true)) {
@@ -59,6 +51,7 @@ namespace utils {
                     }
                     auto sl = helper::make_ref_slice(seq.buf, beg, seq.rptr);
                     seq.consume();
+                    escape::unescape_str(sl, out);
                 }
             }
         }  // namespace json

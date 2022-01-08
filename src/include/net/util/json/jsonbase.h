@@ -10,6 +10,7 @@
 #pragma once
 
 #include "internal.h"
+#include "error.h"
 #include <stdexcept>
 #include "../../../utf/convert.h"
 #include "../../../helper/append_charsize.h"
@@ -20,9 +21,15 @@ namespace utils {
             template <class T>
             concept StringLike = std::is_default_constructible_v<T> && helper::is_utf_convertable<T>;
 
+            template <class T, class String, template <class...> class Vec, template <class...> class Object>
+            JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json);
+
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
                private:
+                template <class T, class Str, template <class...> class V, template <class...> class O>
+                friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
+
                 using holder_t = internal::JSONHolder<String, Vec, Object>;
                 holder_t obj;
                 using object_t = typename holder_t::object_t;
@@ -35,6 +42,11 @@ namespace utils {
 
                 static const self_t& as_const(self_t& in) {
                     return in;
+                }
+
+               private:
+                holder_t& get_holder() {
+                    return obj;
                 }
 
                public:
