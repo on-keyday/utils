@@ -93,6 +93,11 @@ namespace utils {
                     JSONHolder(array_t&& n)
                         : kind(JSONKind::array), a(new array_t(std::move(n))) {}
 
+                    constexpr JSONHolder(String* n)
+                        : kind(JSONKind::string), s(n) {
+                        assert(n);
+                    }
+
                     constexpr JSONHolder(object_t* n)
                         : kind(JSONKind::object), o(n) {
                         assert(n);

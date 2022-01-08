@@ -10,7 +10,6 @@
 #pragma once
 #include "jsonbase.h"
 #include "../../../core/sequencer.h"
-#include "../../../wrap/lite/enum.h"
 #include "../../../helper/space.h"
 #include "../../../helper/strutil.h"
 #include "../../../escape/escape.h"
@@ -51,6 +50,7 @@ namespace utils {
                     }
                     auto sl = helper::make_ref_slice(seq.buf, beg, seq.rptr);
                     seq.consume();
+                    json.get_holder();
                     escape::unescape_str(sl, out);
                 }
             }
