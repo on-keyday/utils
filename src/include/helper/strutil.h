@@ -32,12 +32,6 @@ namespace utils {
             return intmp.match(cmptmp, compare);
         }
 
-        template <class In, class Cmp, class Compare = decltype(default_compare())>
-        constexpr bool equal(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
-            Sequencer<buffer_t<In&>> intmp(in);
-            return intmp.seek_if(cmp, compare) && intmp.eos();
-        }
-
         template <class In, class Begin, class End, class Compare = decltype(default_compare())>
         constexpr bool sandwiched(In&& in, Begin&& begin, End&& end, Compare&& compare = default_compare()) {
             return starts_with(in, begin, compare) && ends_with(in, end, compare);

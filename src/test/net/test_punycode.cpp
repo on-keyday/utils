@@ -8,7 +8,7 @@
 
 #include "../../include/net/util/punycode.h"
 #include "../../include/helper/pushbacker.h"
-#include "../../include/helper/strutil.h"
+#include "../../include/helper/equal.h"
 
 void test_punycode() {
     utils::helper::FixedPushBacker<char[50], 49> buf;

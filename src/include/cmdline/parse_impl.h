@@ -9,6 +9,7 @@
 // parse_impl - implementation of parse
 #pragma once
 #include "optdef.h"
+#include "../helper/equal.h"
 #include "../helper/strutil.h"
 #include "../utf/convert.h"
 #include "../wrap/lite/enum.h"

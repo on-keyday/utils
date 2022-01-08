@@ -16,6 +16,7 @@
 #include "../../number/parse.h"
 #include "../../helper/appender.h"
 #include "../../number/to_string.h"
+#include "../../helper/equal.h"
 
 namespace utils {
     namespace net {

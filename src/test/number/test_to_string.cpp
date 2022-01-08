@@ -10,7 +10,7 @@
 
 #include "../../include/helper/pushbacker.h"
 
-#include "../../include/helper/strutil.h"
+#include "../../include/helper/equal.h"
 
 template <class T>
 constexpr auto test_to_string_num(T i, int radix = 10) {

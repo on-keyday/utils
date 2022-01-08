@@ -7,7 +7,7 @@
 
 
 #include "../../include/net/util/urlencode.h"
-#include "../../include/helper/strutil.h"
+#include "../../include/helper/equal.h"
 
 constexpr auto test_encode() {
     utils::helper::FixedPushBacker<char[120], 119> buf;

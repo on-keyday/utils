@@ -12,7 +12,7 @@
 #include "../../../include/wrap/lite/map.h"
 #include "../../../include/wrap/lite/vector.h"
 
-#include "../../../include/helper/strutil.h"
+#include "../../../include/helper/equal.h"
 #include "../../../include/number/to_string.h"
 #include "../../../include/net/http/body.h"
 

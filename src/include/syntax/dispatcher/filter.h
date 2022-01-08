@@ -8,7 +8,7 @@
 
 // filter - predefined filter
 #pragma once
-#include "../../helper/strutil.h"
+#include "../../helper/equal.h"
 
 namespace utils {
     namespace syntax {

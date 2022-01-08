@@ -8,7 +8,7 @@
 
 #include "../../include/escape/escape.h"
 #include "../../include/helper/pushbacker.h"
-#include "../../include/helper/strutil.h"
+#include "../../include/helper/equal.h"
 
 constexpr auto test_escape_str() {
     namespace ue = utils::escape;
