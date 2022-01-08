@@ -9,13 +9,14 @@
 // io_completetion_port
 #pragma once
 
+#include "dllexport.h"
 #include "callback.h"
 
 namespace utils {
     namespace platform {
         namespace windows {
             struct IOCPContext;
-            struct IOCPObject {
+            struct DLL IOCPObject {
                 friend IOCPObject* start_iocp();
 
                 bool register_handler(void* handle, Complete&& complete);
