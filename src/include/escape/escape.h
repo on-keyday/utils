@@ -200,6 +200,9 @@ namespace utils {
                                 }
                             }
                         }
+                        if (!utf::convert(buf, out)) {
+                            return false;
+                        }
                     }
                 }
                 else {
