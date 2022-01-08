@@ -23,16 +23,22 @@ namespace utils {
                 using self_t = JSONBase<String, Vec, Object>;
                 using object_t = JSONBase<String, Vec, Object>::object_t;
                 using array_t = JSONBase<String, Vec, Object>::array_t;
+
                 auto consume_space = [&] {
                     while (helper::space::match_space<true>(seq, true)) {
                     }
                 };
+#define DETECT_EOF() \
+    if (seq.eos())   \
+    return JSONError::unexpected_eof
+#define CONSUME_EOF() \
+    consume_space();  \
+    DETECT_EOF()
+
                 auto read_strs = [&](size_t& beg, size_t& en) -> JSONErr {
                     auto beg = seq.rptr;
                     while (true) {
-                        if (!seq.eos()) {
-                            return JSONError::unexpected_eof;
-                        }
+                        DETECT_EOF();
                         if (seq.current() == '\"') {
                             if (seq.current(-1) != '\\') {
                                 break;
@@ -44,7 +50,14 @@ namespace utils {
                     seq.consume();
                     return true;
                 };
-                consume_space();
+                auto unescape = [&](auto& str, size_t be, size_t en) -> JSONErr {
+                    auto sl = helper::make_ref_slice(buf.in, be, en);
+                    if (!escape::unescape_str(sl, str)) {
+                        return JSONError::invalid_escape;
+                    }
+                    return true;
+                };
+                CONSUME_EOF();
                 if (seq.seek_if("true")) {
                     json = true;
                     return true;
@@ -58,20 +71,16 @@ namespace utils {
                     return true;
                 }
                 else if (seq.consume_if('\"')) {
-                    size_t beg, en;
+                    size_t be, en;
                     auto e = read_strs(beg, en);
                     if (!e) {
                         return e;
                     }
-                    auto sl = helper::make_ref_slice(buf.in, beg, en);
                     auto& s = json.get_holder();
                     s = new String{};
                     auto ptr = const_cast<String*>(s.as_str());
                     assert(ptr);
-                    if (!escape::unescape_str(sl, *ptr)) {
-                        return JSONError::invalid_escape;
-                    }
-                    return true;
+                    return unescape(*ptr, be, en);
                 }
                 else if (seq.consume_if('[')) {
                     auto& s = json.get_holder();
@@ -80,22 +89,17 @@ namespace utils {
                     assert(ptr);
                     bool first = true;
                     while (true) {
-                        consume_space();
-                        if (seq.eos()) {
-                            return JSONError::unexpected_eof;
-                        }
+                        CONSUME_EOF();
                         if (!first) {
                             if (!seq.consume_if(',')) {
                                 return JSONError::need_comma_on_array;
                             }
-                            consume_space();
+                            CONSUME_EOF();
                         }
                         if (seq.consume_if(']')) {
                             break;
                         }
-                        if (seq.eos()) {
-                            return JSONError::unexpected_eof;
-                        }
+                        DETECT_EOF();
                         self_t tmp;
                         auto e = parse(seq, tmp);
                         if (!e) {
@@ -113,20 +117,34 @@ namespace utils {
                     assert(ptr);
                     bool first = true;
                     while (true) {
-                        consume_space();
+                        CONSUME_EOF();
                         if (!first) {
                             if (!seq.consume_if(',')) {
                                 return JSONError::need_comma_on_array;
                             }
-                            consume_space();
+                            CONSUME_EOF();
                         }
                         if (seq.consume_if('}')) {
                             break;
+                        }
+                        if (!seq.consume_if('\"')) {
+                            return JSONError::need_key_name;
+                        }
+                        size_t be, en;
+                        auto e = read_strs(be, en);
+                        if (!e) {
+                            return e;
+                        }
+                        String key;
+                        if (auto e = unescape(key, be, en); !e) {
+                            return e;
                         }
                         first = false;
                     }
                 }
             }
+#undef DETECT_EOF
+#undef CONSUME_EOF
         }  // namespace json
 
     }  // namespace net
