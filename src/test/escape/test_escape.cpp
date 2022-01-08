@@ -8,6 +8,7 @@
 
 #include "../../include/escape/escape.h"
 #include "../../include/helper/pushbacker.h"
+#include "../../include/helper/strutil.h"
 
 constexpr auto test_escape_str() {
     namespace ue = utils::escape;
@@ -20,6 +21,7 @@ constexpr auto test_escape_str() {
 
 void test_escape() {
     constexpr auto e = test_escape_str();
+    static_assert(utils::helper::equal("\\n\\t\\r\\u3042", e.buf), "expect true but assertion failed");
 }
 
 int main() {

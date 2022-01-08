@@ -70,12 +70,12 @@ namespace utils {
                         utf::U32Buffer buf;
                         if (utf::convert_one(seq, buf)) {
                             auto set_one = [&](auto n) {
-                                helper::append("\\u");
+                                helper::append(out, "\\u");
                                 if (n < 0x1000) {
                                     out.push_back('0');
                                 }
                                 if (n < 0x100) {
-                                    out.push_back('0')
+                                    out.push_back('0');
                                 }
                                 if (n < 0x10) {
                                     out.push_back('0');
@@ -83,11 +83,15 @@ namespace utils {
                                 if (!number::to_string(out, n, 16)) {
                                     return false;
                                 }
+                                return true;
                             };
                             for (auto i = 0; i < buf.size(); i++) {
-                                set_one(buf[i]);
+                                if (!set_one(buf[i])) {
+                                    return false;
+                                }
                             }
                             done = true;
+                            seq.backto();
                         }
                         else {
                             seq.rptr = s;
@@ -99,24 +103,21 @@ namespace utils {
                             return false;
                         }
                         done = true;
-                        seq.consume();
                     }
                     if (!done && any(EscapeFlag::oct)) {
                         helper::append(out, "\\");
                         if (!number::to_string(out, c, 8)) {
                             return false;
                         }
-                        seq.consume();
                     }
                     if (!done) {
                         out.push_back(c);
-                        seq.consume();
                     }
                 }
                 else {
                     out.push_back(c);
-                    seq.consume();
                 }
+                seq.consume();
             }
             return true;
         }
