@@ -10,19 +10,19 @@
 #include "../../include/helper/pushbacker.h"
 #include "../../include/helper/equal.h"
 
-constexpr auto test_escape_str(utils::escape::EscapeFlag flag) {
+constexpr auto test_escape_str(const char8_t* str, utils::escape::EscapeFlag flag) {
     namespace ue = utils::escape;
     namespace uh = utils::helper;
-    auto seq = utils::make_ref_seq(u8"\n\t\rあ");
+    auto seq = utils::make_ref_seq(str);
     uh::FixedPushBacker<char[30], 29> out;
     ue::escape_str(seq, out, flag);
     return out;
 }
 
 void test_escape() {
-    constexpr auto e = test_escape_str(utils::escape::EscapeFlag::utf);
-    static_assert(utils::helper::equal("\\n\\t\\r\\u3042", e.buf), "expect true but assertion failed");
-    constexpr auto o = test_escape_str(utils::escape::EscapeFlag::hex);
+    constexpr auto e = test_escape_str(u8"\n\t\rあい", utils::escape::EscapeFlag::utf);
+    static_assert(utils::helper::equal("\\n\\t\\r\\u3042\\u3044", e.buf), "expect true but assertion failed");
+    constexpr auto o = test_escape_str(u8"\n\t\rあ", utils::escape::EscapeFlag::hex);
     static_assert(utils::helper::equal("\\n\\t\\r\\xe3\\x81\\x82", o.buf), "expect true but assertion failed");
 }
 
