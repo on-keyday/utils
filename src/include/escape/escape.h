@@ -29,7 +29,7 @@ namespace utils {
         DEFINE_ENUM_FLAGOP(EscapeFlag)
 
         template <class In, class Out>
-        constexpr bool escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
+        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
             while (!seq.eos()) {
                 auto c = seq.current();
                 if (c == '\n') {
@@ -71,7 +71,7 @@ namespace utils {
                         auto s = seq.rptr;
                         utf::U32Buffer buf;
                         if (utf::convert_one(seq, buf)) {
-                            auto set_one = [&](auto n) {
+                            auto set_one = [&](auto n) -> number::NumErr {
                                 helper::append(out, "\\u");
                                 if (n < 0x1000) {
                                     out.push_back('0');
@@ -82,14 +82,14 @@ namespace utils {
                                 if (n < 0x10) {
                                     out.push_back('0');
                                 }
-                                if (!number::to_string(out, n, 16)) {
-                                    return false;
+                                if (auto e = number::to_string(out, n, 16); !e) {
+                                    return e;
                                 }
                                 return true;
                             };
                             for (auto i = 0; i < buf.size(); i++) {
-                                if (!set_one(buf[i])) {
-                                    return false;
+                                if (auto e = set_one(buf[i]); !e) {
+                                    return e;
                                 }
                             }
                             done = true;
@@ -101,16 +101,17 @@ namespace utils {
                     }
                     if (!done && any(flag & EscapeFlag::hex)) {
                         helper::append(out, "\\x");
-                        if (!number::to_string(out, c, 16)) {
-                            return false;
+                        if (auto e = number::to_string(out, c, 16); !e) {
+                            return e;
                         }
                         done = true;
                     }
                     if (!done && any(EscapeFlag::oct)) {
                         helper::append(out, "\\");
-                        if (!number::to_string(out, c, 8)) {
-                            return false;
+                        if (auto e = number::to_string(out, c, 8); !e) {
+                            return e;
                         }
+                        done = true;
                     }
                     if (!done) {
                         out.push_back(c);
@@ -125,7 +126,7 @@ namespace utils {
         }
 
         template <class In, class Out>
-        constexpr bool unescape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
+        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
             while (!seq.eos()) {
                 auto c = seq.current();
                 if (c == '\\') {
@@ -162,6 +163,15 @@ namespace utils {
                         seq.consume();
                         if (seq.eos()) {
                             return false;
+                        }
+                        std::uint16_t i;
+                        if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
+                            return e;
+                        }
+                        constexpr auto mx = (std::numeric_limits<std::make_unsigned<
+                                                 typename Sequencer<In>::char_type>>::max)();
+                        if (i > mx) {
+                            return number::NumError::overflow;
                         }
                     }
                 }
