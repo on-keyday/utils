@@ -205,6 +205,14 @@ namespace utils {
                         }
                     }
                     else if (number::is_oct(c)) {
+                        std::uint8_t i;
+                        if (auto e = number::read_limited_int<3>(seq, i, 8); !e) {
+                            return e;
+                        }
+                        out.push_back(i);
+                    }
+                    else {
+                        out.push_back(c);
                     }
                 }
                 else {
