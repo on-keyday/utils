@@ -127,6 +127,8 @@ namespace utils {
 
         template <class In, class Out>
         constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
+            constexpr auto mx = (std::numeric_limits<std::make_unsigned<
+                                     typename Sequencer<In>::char_type>>::max)();
             while (!seq.eos()) {
                 auto c = seq.current();
                 if (c == '\\') {
@@ -168,10 +170,35 @@ namespace utils {
                         if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
                             return e;
                         }
-                        constexpr auto mx = (std::numeric_limits<std::make_unsigned<
-                                                 typename Sequencer<In>::char_type>>::max)();
                         if (i > mx) {
                             return number::NumError::overflow;
+                        }
+                        seq.push_back(i);
+                    }
+                    else if (c == 'u') {
+                        seq.consume();
+                        if (seq.eos()) {
+                            return false;
+                        }
+                        utf::U16Buffer buf;
+                        std::uint16_t i;
+                        if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
+                            return e;
+                        }
+                        buf.push_back(i);
+                        if (utf::is_utf16_high_surrogate(i)) {
+                            auto p = seq.rptr;
+                            if (seq.seek_if("\\u")) {
+                                if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
+                                    return e;
+                                }
+                                if (!utf::is_utf16_low_surrogate(i)) {
+                                    seq.rptr = p;
+                                }
+                                else {
+                                    buf.push_back(i);
+                                }
+                            }
                         }
                     }
                 }
