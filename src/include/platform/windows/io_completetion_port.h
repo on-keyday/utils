@@ -17,7 +17,7 @@ namespace utils {
         namespace windows {
             struct IOCPContext;
             struct DLL IOCPObject {
-                friend IOCPObject* start_iocp();
+                friend DLL IOCPObject* STDCALL start_iocp();
 
                 bool register_handler(void* handle, Complete&& complete);
 

@@ -16,7 +16,7 @@ namespace utils {
         struct DLL Init {
            private:
             Init();
-            friend Init& network();
+            friend DLL Init& STDCALL network();
 
            public:
             bool initialized();

@@ -12,9 +12,11 @@ import "../matching/state.h"
 typeparam T
 interface Filter {
     __call__(ctx &T) bool = false
+    __copy__() type
 }
 
 typeparam T
 interface Dispatch {
     __call__(ctx &T,cancel bool) MatchState = MatchState::succeed
+    __copy__() type
 }

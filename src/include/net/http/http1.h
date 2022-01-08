@@ -22,8 +22,8 @@ namespace utils {
         struct Header;
 
         struct DLL HttpResponse {
-            friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
-            friend HttpResponse request(HttpResponse&& io, const char* method, const char* path, Header&& header);
+            friend DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+            friend DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
             constexpr HttpResponse() {}
             HttpResponse(HttpResponse&&);
             HttpResponse& operator=(HttpResponse&&);
@@ -37,14 +37,14 @@ namespace utils {
         };
 
         struct DLL Header {
-            friend struct HttpResponse;
+            friend struct DLL HttpResponse;
 
            private:
             constexpr Header(std::nullptr_t) {}
 
            public:
-            friend HttpResponse request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
-            friend HttpResponse request(HttpResponse&& io, const char* method, const char* path, Header&& header);
+            friend DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+            friend DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
             Header();
             ~Header();
 

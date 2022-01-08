@@ -5,8 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-
-// dllexport_source - dllexport included by source
+// dllexport - define dllexport flag
 #pragma once
-#include "dllexport.h"
-#define DLL __declspec(dllexport)
+// Be enable below if you build utils as dll on windows
+#define UTILS_AS_DLL

@@ -23,7 +23,7 @@ namespace utils {
         }
 
         struct DLL SSLConn {
-            friend struct SSLResult;
+            friend struct DLL SSLResult;
 
             constexpr SSLConn() {}
 
@@ -39,8 +39,8 @@ namespace utils {
         struct SSLServer;
 
         struct DLL SSLResult {
-            friend SSLResult open(IO&& io, const char* cert, const char* alpn, const char* host,
-                                  const char* selfcert, const char* selfprivate);
+            friend DLL SSLResult STDCALL open(IO&& io, const char* cert, const char* alpn, const char* host,
+                                              const char* selfcert, const char* selfprivate);
             friend SSLServer;
             constexpr SSLResult() {}
 
@@ -63,7 +63,7 @@ namespace utils {
         };
 
         struct DLL SSLServer {
-            friend SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert);
+            friend DLL SSLServer STDCALL setup(const char* selfcert, const char* selfprivate, const char* cert);
             SSLResult accept(IO&& io);
 
             constexpr SSLServer() {}

@@ -30,7 +30,8 @@ namespace utils {
             tokenizer.tokenize(input2, res);
 
             utils::syntax::Reader<utils::wrap::string> r{res};
-            instance.cb = DefaultDispatcher{};
+            DefaultDispatcher b{};
+            instance.cb = &b;
             instance.matching(r);
             instance.error();
         }

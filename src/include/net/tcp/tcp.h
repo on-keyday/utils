@@ -19,8 +19,8 @@ namespace utils {
         };
 
         struct DLL TCPConn {
-            friend struct TCPResult;
-            friend struct TCPServer;
+            friend struct DLL TCPResult;
+            friend struct DLL TCPServer;
             constexpr TCPConn() {}
 
             State write(const char* ptr, size_t size);
@@ -34,7 +34,7 @@ namespace utils {
         };
 
         struct DLL TCPResult {
-            friend TCPResult open(wrap::shared_ptr<Address>&& addr);
+            friend DLL TCPResult STDCALL open(wrap::shared_ptr<Address>&& addr);
             constexpr TCPResult() {}
 
             TCPResult(TCPResult&&);
@@ -53,7 +53,7 @@ namespace utils {
 
         struct DLL TCPServer {
             constexpr TCPServer() {}
-            friend TCPServer setup(wrap::shared_ptr<Address>&& addr, int ipver);
+            friend DLL TCPServer STDCALL setup(wrap::shared_ptr<Address>&& addr, int ipver);
 
             wrap::shared_ptr<TCPConn> accept();
 

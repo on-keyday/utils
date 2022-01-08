@@ -68,19 +68,31 @@ if(WIN32)
     set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
     set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 endif()
-add_library(utils
-  "src/lib/file/platform.cpp"
-  "src/lib/file/file_view.cpp"
-  "src/lib/wrap/argv.cpp"
-  "src/lib/wrap/cout.cpp"
-  "src/lib/syntax/default_syntaxc.cpp"
-  "src/lib/net/core/init_net.cpp"
-  "src/lib/net/dns/dns.cpp"
-  "src/lib/net/tcp/tcp.cpp"
-  "src/lib/net/ssl/ssl_common.cpp"
-  "src/lib/net/ssl/ssl_conn.cpp"
-  "src/lib/net/http/http1.cpp"
-  "src/lib/platform/windows/io_completion_port.cpp")
+
+option(UTILS_BUILD_SHARED_LIBS "build mylib as a shared library" ON)
+
+if(UTILS_BUILD_SHARED_LIBS)
+add_library(utils SHARED)
+else()
+add_library(utils STATIC)
+endif()
+
+target_sources(utils
+PRIVATE
+"src/lib/file/platform.cpp"
+"src/lib/file/file_view.cpp"
+"src/lib/wrap/argv.cpp"
+"src/lib/wrap/cout.cpp"
+"src/lib/syntax/default_syntaxc.cpp"
+"src/lib/net/core/init_net.cpp"
+"src/lib/net/dns/dns.cpp"
+"src/lib/net/tcp/tcp.cpp"
+"src/lib/net/ssl/ssl_common.cpp"
+"src/lib/net/ssl/ssl_conn.cpp"
+"src/lib/net/http/http1.cpp"
+"src/lib/platform/windows/io_completion_port.cpp" 
+)
+
 
 target_link_libraries(fileview utils)
 target_link_libraries(cout utils)
@@ -104,9 +116,15 @@ if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)
 target_link_libraries(http1 libssl libcrypto ws2_32)
 target_link_libraries(io_completion_port libssl libcrypto ws2_32)
+if(UTILS_BUILD_SHARED_LIBS)
+target_link_libraries(utils libssl libcrypto ws2_32)
+endif()
 else()
 target_link_libraries(netcore libssl.so libcrypto.so Threads::Threads)
 target_link_libraries(http1 libssl.so libcrypto.so Threads::Threads)
+if(UTILS_BUILD_SHARED_LIBS)
+target_link_libraries(utils libssl.so libcrypto.so)
+endif()
 endif()
 
 

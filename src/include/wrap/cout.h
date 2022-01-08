@@ -21,7 +21,7 @@
 namespace utils {
     namespace wrap {
 
-        struct UtfOut {
+        struct DLL UtfOut {
            private:
             ostream& out;
             stringstream ss;

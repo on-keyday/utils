@@ -26,6 +26,7 @@ namespace utils {
            private:
             struct NOVTABLE__ interface__ {
                 virtual bool operator()(T& ctx) = 0;
+                virtual interface__* copy__() const = 0;
 
                 virtual ~interface__() {}
             };
@@ -44,6 +45,10 @@ namespace utils {
                         return false;
                     }
                     return (*t_ptr_)(ctx);
+                }
+
+                interface__* copy__() const override {
+                    return new implements__<T__>(t_holder_);
                 }
             };
 
@@ -85,6 +90,21 @@ namespace utils {
             bool operator()(T& ctx) {
                 return iface ? iface->operator()(ctx) : false;
             }
+
+            Filter(const Filter& in) {
+                if (in.iface) {
+                    iface = in.iface->copy__();
+                }
+            }
+
+            Filter& operator=(const Filter& in) {
+                delete iface;
+                iface = nullptr;
+                if (in.iface) {
+                    iface = in.iface->copy__();
+                }
+                return *this;
+            }
         };
 
         template <typename T>
@@ -92,6 +112,7 @@ namespace utils {
            private:
             struct NOVTABLE__ interface__ {
                 virtual MatchState operator()(T& ctx, bool cancel) = 0;
+                virtual interface__* copy__() const = 0;
 
                 virtual ~interface__() {}
             };
@@ -110,6 +131,10 @@ namespace utils {
                         return MatchState::succeed;
                     }
                     return (*t_ptr_)(ctx, cancel);
+                }
+
+                interface__* copy__() const override {
+                    return new implements__<T__>(t_holder_);
                 }
             };
 
@@ -150,6 +175,21 @@ namespace utils {
 
             MatchState operator()(T& ctx, bool cancel) {
                 return iface ? iface->operator()(ctx, cancel) : MatchState::succeed;
+            }
+
+            Dispatch(const Dispatch& in) {
+                if (in.iface) {
+                    iface = in.iface->copy__();
+                }
+            }
+
+            Dispatch& operator=(const Dispatch& in) {
+                delete iface;
+                iface = nullptr;
+                if (in.iface) {
+                    iface = in.iface->copy__();
+                }
+                return *this;
             }
         };
 

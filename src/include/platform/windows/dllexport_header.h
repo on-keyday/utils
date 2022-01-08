@@ -8,6 +8,7 @@
 
 // dllexport_header - dllexport included by header
 #pragma once
+#include "dllexport.h"
 #if defined(_WIN32) && defined(UTILS_AS_DLL)
 #ifndef DLL
 #define DLL __declspec(dllimport)

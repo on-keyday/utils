@@ -8,7 +8,7 @@
 
 // default_dispatcher - default dispatcher
 #pragma once
-
+#include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/lite/string.h"
 #include "../../wrap/lite/vector.h"
 #include "dispatch_context.h"
@@ -17,7 +17,8 @@ namespace utils {
     namespace syntax {
         using DefaultDispatcher = DispatchContext<wrap::string, wrap::vector>;
 #if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
-        extern template struct DispatchContext<wrap::string, wrap::vector>;
+        extern
 #endif
+            template struct DLL DispatchContext<wrap::string, wrap::vector>;
     }  // namespace syntax
 }  // namespace utils

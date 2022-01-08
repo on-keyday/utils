@@ -35,8 +35,8 @@ namespace utils {
         };
 
         struct DLL DnsResult {
-            friend DnsResult query_dns(const char* host, const char* port, time_t timeout_sec,
-                                       int address_family, int socket_type, int protocol, int flags);
+            friend DLL DnsResult STDCALL query_dns(const char* host, const char* port, time_t timeout_sec,
+                                                   int address_family, int socket_type, int protocol, int flags);
             constexpr DnsResult() {}
 
             DnsResult(const DnsResult&) = delete;
@@ -60,7 +60,7 @@ namespace utils {
         };
 
         DLL DnsResult STDCALL query_dns(const char* host, const char* port, time_t timeout_sec = 60,
-                            int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
+                                        int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
 
     }  // namespace net
 }  // namespace utils
