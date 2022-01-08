@@ -72,7 +72,7 @@ namespace utils {
                 }
                 else if (seq.consume_if('\"')) {
                     size_t be, en;
-                    auto e = read_strs(beg, en);
+                    auto e = read_strs(be, en);
                     if (!e) {
                         return e;
                     }

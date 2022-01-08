@@ -10,9 +10,7 @@
 
 void test_json() {
     namespace utw = utils::wrap;
-    utils::net::json::JSONBase<utw::string, utw::vector, utw::map> base;
-    base = "";
-    auto bs = static_cast<utw::string>(base);
+    utils::net::json::JSONBase<utw::string, utw::vector, utw::map> json;
 }
 
 int main() {
