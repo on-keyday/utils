@@ -22,6 +22,7 @@ namespace utils {
                 need_key_name,
                 need_colon,
                 emplace_error,
+                invalid_number,
                 not_json,
             };
 

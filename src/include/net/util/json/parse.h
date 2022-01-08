@@ -157,6 +157,37 @@ namespace utils {
                     }
                     return true;
                 }
+                else if (number::is_digit(seq.current()) || seq.current() == '-') {
+                    auto inipos = seq.rptr;
+                    bool sign = seq.current() == '-';
+                    std::int64_t v;
+                    auto e = number::parse_integer(seq, v);
+                    if (seq.current() == '.' || seq.curret() == 'e' || seq.current() == 'E') {
+                        double d;
+                        seq.rptr = inipos;
+                        auto e = number::parse_float(seq, d);
+                        if (!e) {
+                            return JSONError::invalid_number;
+                        }
+                        json = d;
+                    }
+                    else if (!sign && e == number::NumError::overflow) {
+                        std::uint64_t u;
+                        seq.rptr = inipos;
+                        auto e = number::parse_integer(seq, u);
+                        if (!e) {
+                            return JSONError::invalid_number;
+                        }
+                        json = u;
+                    }
+                    else if (!e) {
+                        return JSONError::invalid_number;
+                    }
+                    else {
+                        json = v;
+                    }
+                    return true;
+                }
                 return JSONError::not_json;
             }
 #undef DETECT_EOF
