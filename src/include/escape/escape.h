@@ -163,7 +163,6 @@ namespace utils {
                         if (seq.eos()) {
                             return false;
                         }
-                        size_t count = 0;
                     }
                 }
                 else {

@@ -290,13 +290,21 @@ namespace utils {
         }
 
         template <size_t limit, class In, class T>
-        constexpr NumErr read_limited_int(Sequencer<In>& seq, T& t, int radix = 10) {
+        constexpr NumErr read_limited_int(Sequencer<In>& seq, T& t, int radix = 10, bool must = false) {
             char num[limit + 1] = {0};
             size_t count = 0;
-            while (!seq.eos() && number::is_radix_char(seq.current(), radix) && limit < 4) {
+            while (!seq.eos() && is_radix_char(seq.current(), radix) && count < limit) {
                 num[count] = seq.current();
                 count++;
                 seq.consume();
+            }
+            if (count == 0) {
+                return NumError::invalid;
+            }
+            if (must) {
+                if (count != limit) {
+                    return NumError::invalid;
+                }
             }
             return number::parse_integer(num, t, radix);
         }
