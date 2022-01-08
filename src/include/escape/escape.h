@@ -126,7 +126,7 @@ namespace utils {
         }
 
         template <class In, class Out>
-        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
+        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out) {
             constexpr auto mx = (std::numeric_limits<std::make_unsigned<
                                      typename Sequencer<In>::char_type>>::max)();
             while (!seq.eos()) {

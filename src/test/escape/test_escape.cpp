@@ -19,6 +19,14 @@ constexpr auto test_escape_str(const char8_t* str, utils::escape::EscapeFlag fla
     return out;
 }
 
+constexpr auto test_unescape_str(const char* str) {
+    namespace ue = utils::escape;
+    namespace uh = utils::helper;
+    auto seq = utils::make_ref_seq(str);
+    uh::FixedPushBacker<char[30], 29> out;
+    ue::unescape_str(seq, out);
+}
+
 void test_escape() {
     constexpr auto e = test_escape_str(u8"\n\t\rあい", utils::escape::EscapeFlag::utf);
     static_assert(utils::helper::equal("\\n\\t\\r\\u3042\\u3044", e.buf), "expect true but assertion failed");
