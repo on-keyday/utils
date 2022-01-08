@@ -24,6 +24,7 @@ namespace utils {
                     while (helper::space::match_space<true>(seq, true)) {
                     }
                 };
+                consume_space();
                 if (seq.seek_if("true")) {
                     json = true;
                     return true;
@@ -59,6 +60,8 @@ namespace utils {
                     if (!escape::unescape_str(sl, *ptr)) {
                         return JSONError::invalid_escape;
                     }
+                }
+                else if (seq.seek_if("[")) {
                 }
             }
         }  // namespace json
