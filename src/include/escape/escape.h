@@ -14,6 +14,8 @@
 #include "../utf/convert.h"
 #include "../number/char_range.h"
 #include "../number/to_string.h"
+#include "../number/parse.h"
+
 namespace utils {
     namespace escape {
 
@@ -120,6 +122,55 @@ namespace utils {
                 seq.consume();
             }
             return true;
+        }
+
+        template <class In, class Out>
+        constexpr bool unescape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none) {
+            while (!seq.eos()) {
+                auto c = seq.current();
+                if (c == '\\') {
+                    seq.consume();
+                    if (seq.eos()) {
+                        return false;
+                    }
+                    c = seq.current();
+                    if (c == 'n') {
+                        out.push_back('\n');
+                    }
+                    else if (c == 'r') {
+                        out.push_back('\r');
+                    }
+                    else if (c == 't') {
+                        out.push_back('\t');
+                    }
+                    else if (c == 'a') {
+                        out.push_back('\a');
+                    }
+                    else if (c == 'b') {
+                        out.push_back('\b');
+                    }
+                    else if (c == 'v') {
+                        out.push_back('\v');
+                    }
+                    else if (c == 'e') {
+                        out.push_back('\e');
+                    }
+                    else if (c == 'f') {
+                        out.push_back('\f');
+                    }
+                    else if (c == 'x') {
+                        seq.consume();
+                        if (seq.eos()) {
+                            return false;
+                        }
+                        size_t count = 0;
+                    }
+                }
+                else {
+                    out.push_back(c);
+                }
+                seq.consume();
+            }
         }
     }  // namespace escape
 }  // namespace utils

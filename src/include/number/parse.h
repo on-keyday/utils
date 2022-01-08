@@ -289,5 +289,17 @@ namespace utils {
             return true;
         }
 
+        template <size_t limit, class In, class T>
+        constexpr NumErr read_limited_int(Sequencer<In>& seq, T& t, int radix = 10) {
+            char num[limit + 1] = {0};
+            size_t count = 0;
+            while (!seq.eos() && number::is_radix_char(seq.current(), radix) && limit < 4) {
+                num[count] = seq.current();
+                count++;
+                seq.consume();
+            }
+            return number::parse_integer(num, t, radix);
+        }
+
     }  // namespace number
 }  // namespace utils
