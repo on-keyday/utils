@@ -69,7 +69,7 @@ namespace utils {
                     bool done = false;
                     if (any(flag & EscapeFlag::utf)) {
                         auto s = seq.rptr;
-                        utf::U32Buffer buf;
+                        utf::U16Buffer buf;
                         if (utf::convert_one(seq, buf)) {
                             auto set_one = [&](auto n) -> number::NumErr {
                                 helper::append(out, "\\u");
