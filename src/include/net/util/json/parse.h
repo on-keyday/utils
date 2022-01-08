@@ -50,8 +50,13 @@ namespace utils {
                     }
                     auto sl = helper::make_ref_slice(seq.buf, beg, seq.rptr);
                     seq.consume();
-                    json.get_holder();
-                    escape::unescape_str(sl, out);
+                    auto& s = json.get_holder();
+                    s = new String{};
+                    auto ptr = const_cast<String*>(s.as_str());
+                    assert(ptr);
+                    if (!escape::unescape_str(sl, *ptr)) {
+                        return JSONError::invalid_escape;
+                    }
                 }
             }
         }  // namespace json
