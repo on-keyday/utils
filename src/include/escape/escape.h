@@ -204,6 +204,8 @@ namespace utils {
                             return false;
                         }
                     }
+                    else if (number::is_oct(c)) {
+                    }
                 }
                 else {
                     out.push_back(c);
