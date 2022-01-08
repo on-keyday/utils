@@ -20,6 +20,7 @@ namespace utils {
             enum class JSONError {
                 none,
                 unknown,
+                unexpected_eof,
             };
 
             using JSONErr = wrap::EnumWrap<JSONError, JSONError::none, JSONError::unknown>;
@@ -41,6 +42,13 @@ namespace utils {
                     return true;
                 }
                 else if (seq.seek_if("\"")) {
+                    seq.consume();
+                    String hold;
+                    while (true) {
+                        if (!seq.eos()) {
+                            return JSONError::unexpected_eof;
+                        }
+                    }
                 }
             }
         }  // namespace json
