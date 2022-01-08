@@ -15,7 +15,7 @@
 
 namespace utils {
     namespace file {
-        class View {
+        class DLL View {
             mutable platform::ReadFileInfo info;
 
            public:

@@ -9,7 +9,7 @@
 // cout - wrapper of cout
 // need to link libutils
 #pragma once
-
+#include "../platform/windows/dllexport_header.h"
 #include <iosfwd>
 #include <sstream>
 #include "lite/char.h"
@@ -43,17 +43,17 @@ namespace utils {
             UtfOut& operator<<(internal::Pack&& pack);
         };
 
-        extern int stdinmode;
-        extern int stdoutmode;
-        extern int stderrmode;
-        extern bool sync_stdio;
-        extern bool no_change_mode;
-        extern bool out_virtual_terminal;
-        extern bool in_virtual_terminal;
+        DLL extern int stdinmode;
+        DLL extern int stdoutmode;
+        DLL extern int stderrmode;
+        DLL extern bool sync_stdio;
+        DLL extern bool no_change_mode;
+        DLL extern bool out_virtual_terminal;
+        DLL extern bool in_virtual_terminal;
 
-        UtfOut& cout_wrap();
-        UtfOut& cerr_wrap();
+        DLL UtfOut& STDCALL cout_wrap();
+        DLL UtfOut& STDCALL cerr_wrap();
 
-        void force_init_io();
+        DLL void STDCALL force_init_io();
     }  // namespace wrap
 }  // namespace utils

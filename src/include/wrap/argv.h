@@ -9,7 +9,7 @@
 // argv - wrap argv to utf8
 // need to link libutils
 #pragma once
-
+#include "../platform/windows/dllexport_header.h"
 #include "../utf/convert.h"
 #include "lite/string.h"
 #include "lite/vector.h"
@@ -68,7 +68,7 @@ namespace utils {
             }
         };
 
-        struct U8Arg {
+        struct DLL U8Arg {
 #ifdef _WIN32
            private:
             ArgvVector<> replaced;

@@ -10,6 +10,8 @@
 // need to link libutils
 #pragma once
 
+#include "../platform/windows/dllexport_header.h"
+
 #include <cstdio>
 
 #include <sys/stat.h>
@@ -20,7 +22,7 @@ namespace utils {
     namespace file {
         namespace platform {
 
-            struct ReadFileInfo {
+            struct DLL ReadFileInfo {
                 ::FILE* file = nullptr;
                 int fd = -1;
                 char* mapptr = nullptr;

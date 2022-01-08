@@ -9,7 +9,7 @@
 // io_completetion_port
 #pragma once
 
-#include "dllexport.h"
+#include "dllexport_header.h"
 #include "callback.h"
 
 namespace utils {
@@ -26,7 +26,7 @@ namespace utils {
                 ~IOCPObject();
                 IOCPContext* ctx;
             };
-            IOCPObject* start_iocp();
+            DLL IOCPObject* STDCALL start_iocp();
 
         }  // namespace windows
 

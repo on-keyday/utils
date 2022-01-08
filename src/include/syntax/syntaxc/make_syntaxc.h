@@ -9,6 +9,7 @@
 // make_syntaxc - make syntaxc implementation
 // need to link libutils
 #pragma once
+#include "../../platform/windows/dllexport_header.h"
 #include "syntaxc.h"
 
 #include "../../wrap/lite/string.h"
@@ -63,7 +64,8 @@ namespace utils {
         }
 
 #if !defined(UTILS_SYNTAX_NO_EXTERN_SYNTAXC)
-        extern template struct SyntaxC<wrap::string, wrap::vector, wrap::map>;
+        extern
 #endif
+            template struct DLL SyntaxC<wrap::string, wrap::vector, wrap::map>;
     }  // namespace syntax
 }  // namespace  utils

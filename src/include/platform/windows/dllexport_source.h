@@ -9,5 +9,6 @@
 // dllexport_source - dllexport included by source
 #pragma once
 
+// Be enable below if you build utils as dll on windows
 //#define UTILS_AS_DLL
 #define DLL __declspec(dllexport)

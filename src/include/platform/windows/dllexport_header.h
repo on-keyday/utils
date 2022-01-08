@@ -12,7 +12,12 @@
 #ifndef DLL
 #define DLL __declspec(dllimport)
 #endif
+#ifndef STDCALL
+#define STDCALL __stdcall
+#endif
 #else
 #undef DLL
+#undef STDCALL
 #define DLL
+#define STDCALL
 #endif
