@@ -18,7 +18,9 @@ namespace utils {
                 unexpected_eof,
                 invalid_escape,
                 need_comma_on_array,
+                need_comma_on_object,
                 need_key_name,
+                need_colon,
             };
 
             using JSONErr = wrap::EnumWrap<JSONError, JSONError::none, JSONError::unknown>;

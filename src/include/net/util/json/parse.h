@@ -120,7 +120,7 @@ namespace utils {
                         CONSUME_EOF();
                         if (!first) {
                             if (!seq.consume_if(',')) {
-                                return JSONError::need_comma_on_array;
+                                return JSONError::need_comma_on_object;
                             }
                             CONSUME_EOF();
                         }
@@ -139,6 +139,11 @@ namespace utils {
                         if (auto e = unescape(key, be, en); !e) {
                             return e;
                         }
+                        CONSUME_EOF();
+                        if (!seq.consume_if(":")) {
+                            return JSONError::need_colon;
+                        }
+                        CONSUME_EOF();
                         first = false;
                     }
                 }
