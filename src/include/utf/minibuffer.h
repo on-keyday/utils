@@ -76,5 +76,8 @@ namespace utils {
             }
         };
 
+        using U8Buffer = Minibuffer<std::uint8_t>;
+        using U16Buffer = Minibuffer<char16_t>;
+        using U32Buffer = Minibuffer<char32_t>;
     }  // namespace utf
 }  // namespace utils

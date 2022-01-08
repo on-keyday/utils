@@ -53,6 +53,7 @@ add_executable(cookie "src/test/net/test_cookie.cpp")
 add_executable(strutil "src/test/helper/test_strutil.cpp")
 add_executable(dispatcher "src/test/syntax/test_dispatcher.cpp")
 add_executable(tree "src/test/syntax/test_tree.cpp")
+add_executable(escape "src/test/escape/test_escape.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"

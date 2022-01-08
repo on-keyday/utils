@@ -13,6 +13,7 @@
 #include "../helper/appender.h"
 #include "../utf/convert.h"
 #include "../number/char_range.h"
+#include "../number/to_string.h"
 namespace utils {
     namespace escape {
 
@@ -62,14 +63,62 @@ namespace utils {
                 else if (c == '\"') {
                     helper::append(out, "\\\"");
                 }
-                else if (!number::is_in_visible_range(c)) {
-                    if (any()) {
+                else if (c != ' ' && !number::is_in_visible_range(c)) {
+                    bool done = false;
+                    if (any(flag & EscapeFlag::utf)) {
+                        auto s = seq.rptr;
+                        utf::U32Buffer buf;
+                        if (utf::convert_one(seq, buf)) {
+                            auto set_one = [&](auto n) {
+                                helper::append("\\u");
+                                if (n < 0x1000) {
+                                    out.push_back('0');
+                                }
+                                if (n < 0x100) {
+                                    out.push_back('0')
+                                }
+                                if (n < 0x10) {
+                                    out.push_back('0');
+                                }
+                                if (!number::to_string(out, n, 16)) {
+                                    return false;
+                                }
+                            };
+                            for (auto i = 0; i < buf.size(); i++) {
+                                set_one(buf[i]);
+                            }
+                            done = true;
+                        }
+                        else {
+                            seq.rptr = s;
+                        }
+                    }
+                    if (!done && any(flag & EscapeFlag::hex)) {
+                        helper::append(out, "\\x");
+                        if (!number::to_string(out, c, 16)) {
+                            return false;
+                        }
+                        done = true;
+                        seq.consume();
+                    }
+                    if (!done && any(EscapeFlag::oct)) {
+                        helper::append(out, "\\");
+                        if (!number::to_string(out, c, 8)) {
+                            return false;
+                        }
+                        seq.consume();
+                    }
+                    if (!done) {
+                        out.push_back(c);
+                        seq.consume();
                     }
                 }
                 else {
                     out.push_back(c);
+                    seq.consume();
                 }
             }
+            return true;
         }
     }  // namespace escape
 }  // namespace utils
