@@ -12,6 +12,8 @@
 #include "../../../core/sequencer.h"
 #include "../../../wrap/lite/enum.h"
 #include "../../../helper/space.h"
+#include "../../../helper/strutil.h"
+#include "../../../escape/escape.h"
 
 namespace utils {
     namespace net {
@@ -43,12 +45,20 @@ namespace utils {
                 }
                 else if (seq.seek_if("\"")) {
                     seq.consume();
-                    String hold;
+                    auto beg = seq.rptr;
                     while (true) {
                         if (!seq.eos()) {
                             return JSONError::unexpected_eof;
                         }
+                        if (seq.current() == '\"') {
+                            if (seq.current(-1) != '\\') {
+                                break;
+                            }
+                        }
+                        seq.consume();
                     }
+                    auto sl = helper::make_ref_slice(seq.buf, beg, seq.rptr);
+                    seq.consume();
                 }
             }
         }  // namespace json
