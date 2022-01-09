@@ -198,6 +198,16 @@ namespace utils {
                 auto seq = make_ref_seq(in);
                 return parse(seq, json);
             }
+
+            template <class T, class String, template <class...> class Vec, template <class...> class Object>
+            JSONBase<String, Vec, Object> parse(T&& in) {
+                JSONBase<String, Vec, Object> json;
+                if (!parse(in, json)) {
+                    return {};
+                }
+                return json;
+            }
+
         }  // namespace json
 
     }  // namespace net
