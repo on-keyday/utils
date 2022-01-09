@@ -113,7 +113,11 @@ namespace utils {
                     }
                     out.write_raw("}");
                 }
-                else if () {
+                else if (auto a = holder.as_arr()) {
+                    out.write_raw("[");
+                    bool first = true;
+                    for (auto& v : *a) {
+                    }
                 }
                 return JSONError::not_json;
             }
