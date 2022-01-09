@@ -210,6 +210,18 @@ namespace utils {
                     return ptr->erase(n);
                 }
 
+                bool erase(size_t i) {
+                    auto ptr = const_cast<array_t*>(obj.as_arr());
+                    if (!ptr) {
+                        return false;
+                    }
+                    if (ptr->size() <= i) {
+                        return false;
+                    }
+                    ptr->erase(ptr->begin() + i);
+                    return true;
+                }
+
                 template <class T>
                 bool push_back(T&& n) {
                     if (obj.is_undef()) {
