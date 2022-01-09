@@ -12,12 +12,13 @@
 #include "jsonbase.h"
 #include "../../../number/to_string.h"
 #include "../../../helper/appender.h"
+#include "../../../escape/escape.h"
 
 namespace utils {
     namespace net {
         namespace json {
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out) {
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, bool escape) {
                 internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
                     auto e = number::to_string(out, *j);
@@ -38,6 +39,15 @@ namespace utils {
                 }
                 else if (auto f = holder.as_numf()) {
                     return numtostr(*f);
+                }
+                else if (auto s = holder.as_str()) {
+                    out.push_back('\"');
+                    auto e = escape::escape_str(*s, out, escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none);
+                    if (!e) {
+                        return JSONError::invalid_escape;
+                    }
+                    out.push_back('\"');
+                    return true;
                 }
             }
         }  // namespace json
