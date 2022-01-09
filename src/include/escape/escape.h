@@ -64,14 +64,15 @@ namespace utils {
         }
 
         constexpr auto default_range() {
-            return [&](auto&& c) {
+            return [](auto&& c) {
                 return c != ' ' && !number::is_in_visible_range(c);
             };
         };
 
         constexpr auto html_range() {
-            return [&](auto&& c) {
-                return default_range(c) || c == '<' || c == '>';
+            return [](auto&& c) {
+                constexpr auto defrange = default_range();
+                return defrange(c) || c == '<' || c == '>';
             };
         }
 
