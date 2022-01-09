@@ -23,12 +23,16 @@ namespace utils {
 
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json);
+            template <class Out, class String, template <class...> class Vec, template <class...> class Object>
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out);
 
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
                private:
                 template <class T, class Str, template <class...> class V, template <class...> class O>
                 friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
+                template <class Out, class Str, template <class...> class V, template <class...> class O>
+                friend JSONErr to_string(const JSONBase<Str, V, O>& json, Out& out);
 
                 using holder_t = internal::JSONHolder<String, Vec, Object>;
                 holder_t obj;
@@ -44,7 +48,6 @@ namespace utils {
                     return in;
                 }
 
-               private:
                 holder_t& get_holder() {
                     return obj;
                 }

@@ -12,7 +12,7 @@
 void test_json() {
     namespace utw = utils::wrap;
     utils::net::json::JSON json;
-    utils::net::json::parse(
+    auto e = utils::net::json::parse(
         R"({
             "json": [
                 "is",

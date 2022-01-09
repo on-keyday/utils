@@ -91,7 +91,7 @@ namespace utils {
                     while (true) {
                         CONSUME_EOF();
                         if (!first) {
-                            if (!seq.consume_if(',')) {
+                            if (!seq.consume_if(',') && seq.current() != ']') {
                                 return JSONError::need_comma_on_array;
                             }
                             CONSUME_EOF();
@@ -119,7 +119,7 @@ namespace utils {
                     while (true) {
                         CONSUME_EOF();
                         if (!first) {
-                            if (!seq.consume_if(',')) {
+                            if (!seq.consume_if(',') && seq.current() != '}') {
                                 return JSONError::need_comma_on_object;
                             }
                             CONSUME_EOF();

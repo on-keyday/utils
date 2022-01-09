@@ -33,6 +33,10 @@ namespace utils {
                     });
                 }
 
+                auto begin() const {
+                    return obj.begin();
+                }
+
                 auto end() const {
                     return obj.end();
                 }
@@ -53,8 +57,8 @@ namespace utils {
             template <class Key, class Value>
             using ordered_map = OrderedMapBase<wrap::vector, Key, Value>;
 
-            using OrderJSON=JSONBase<wrap::string,wrap::vector,ordered_map>;
+            using OrderJSON = JSONBase<wrap::string, wrap::vector, ordered_map>;
 
         }  // namespace json
-    }  // namespace net
+    }      // namespace net
 }  // namespace utils
