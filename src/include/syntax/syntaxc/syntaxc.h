@@ -36,7 +36,7 @@ namespace utils {
                 }
                 internal::ParseContext<String, Vec> ctx = syntax::make_parse_context<String, Vec>(rbase);
                 match.matcher.segments.clear();
-                if (!syntax::parse(ctx, match.matcher.segments)) {
+                if (!syntax::parse<String, Vec, Map>(ctx, match.matcher.segments)) {
                     match.matcher.context.err << ctx.err.pack();
                     return false;
                 }

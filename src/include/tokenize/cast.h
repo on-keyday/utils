@@ -20,7 +20,7 @@ namespace utils {
 
     namespace tokenize {
         namespace internal {
-            template <class String, class T>
+            template <class String, template <class> class T>
             struct CastHelper {
                 static std::nullptr_t cast(auto&) {
                     return nullptr;
@@ -28,7 +28,7 @@ namespace utils {
             };
 
             template <class String>
-            struct CastHelper<String, Predef<String>> {
+            struct CastHelper<String, Predef> {
                 static Predef<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
@@ -41,7 +41,7 @@ namespace utils {
             };
 
             template <class String>
-            struct CastHelper<String, PredefCtx<String>> {
+            struct CastHelper<String, PredefCtx> {
                 static PredefCtx<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
@@ -54,7 +54,7 @@ namespace utils {
             };
 
             template <class String>
-            struct CastHelper<String, Identifier<String>> {
+            struct CastHelper<String, Identifier> {
                 static Identifier<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
@@ -67,7 +67,7 @@ namespace utils {
             };
 
             template <class String>
-            struct CastHelper<String, Line<String>> {
+            struct CastHelper<String, Line> {
                 static Line<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
@@ -80,7 +80,7 @@ namespace utils {
             };
 
             template <class String>
-            struct CastHelper<String, Space<String>> {
+            struct CastHelper<String, Space> {
                 static Space<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
@@ -93,7 +93,7 @@ namespace utils {
             };
 
             template <class String>
-            struct CastHelper<String, Comment<String>> {
+            struct CastHelper<String, Comment> {
                 static Comment<String>* cast(auto& ptr) {
                     if (!ptr) {
                         return nullptr;
@@ -108,12 +108,12 @@ namespace utils {
 
         template <template <class> class T, class String>
         T<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
-            return internal::CastHelper<String, T<String>>::cast(ptr);
+            return internal::CastHelper<String, T>::cast(ptr);
         }
 
         template <template <class> class T, class String>
         T<String>* cast(Token<String>* ptr) {
-            return internal::CastHelper<String, T<String>>::cast(ptr);
+            return internal::CastHelper<String, T>::cast(ptr);
         }
 
     }  // namespace tokenize

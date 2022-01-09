@@ -116,7 +116,7 @@ namespace utils {
 
             template <class T>
             T* value() {
-                if (cmdline::type<T>() == type()) {
+                if (cmdline::type<T>() == this->type()) {
                     return reinterpret_cast<T*>(const_cast<void*>(iface->raw()));
                 }
                 return nullptr;
@@ -124,7 +124,7 @@ namespace utils {
 
             template <class T>
             const T* value() const {
-                if (type<T>() == type()) {
+                if (cmdline::type<T>() == this->type()) {
                     return reinterpret_cast<const T*>(iface->raw());
                 }
                 return nullptr;
