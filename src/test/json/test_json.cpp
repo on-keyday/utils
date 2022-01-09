@@ -61,7 +61,7 @@ void test_json() {
   }
 })"_ojson;
     js["url"] = "https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify";
-    cout << json::to_string<utils::wrap::string>(js, json::FmtFlag::no_line)
+    cout << json::to_string<utils::wrap::string>(js, json::FmtFlag::no_line | json::FmtFlag::unescape_slash)
          << "\n";
 }
 
