@@ -34,12 +34,16 @@ namespace utils {
             }
 
             constexpr void indent(int i) {
+                if (ind == 0 && i < 0) {
+                    return;
+                }
                 ind += i;
             }
         };
 
         template <class T, class Indent = const char*>
         auto make_indent_writer(T&& t, Indent&& i = "  ") {
+            return IndentWriter<std::decay_t<T>&, std::decay_t<Indent>>{t, i};
         }
 
     }  // namespace helper
