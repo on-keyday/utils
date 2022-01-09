@@ -133,6 +133,7 @@ namespace utils {
                         }
                     }
                     write_tail(first);
+                    out.write_raw("]");
                 }
                 return JSONError::not_json;
             }
