@@ -15,7 +15,6 @@
 #include "../wrap/lite/vector.h"
 #include <utility>
 #include <algorithm>
-#include "../helper/equal.h"
 #include "parse.h"
 #include "to_string.h"
 #include "ordered_map.h"
