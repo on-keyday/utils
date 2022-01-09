@@ -23,19 +23,19 @@ namespace utils {
         namespace internal {
             template <class String, template <class> class T>
             struct CastHelper {
-                static std::nullptr_t cast(auto&) {
+                static std::nullptr_t cast(Token<String>*) {
                     return nullptr;
                 }
             };
 
             template <class String>
             struct CastHelper<String, Predef> {
-                static Predef<String>* cast(auto& ptr) {
+                static Predef<String>* cast(Token<String>* ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
                     if (ptr->is(TokenKind::keyword) || ptr->is(TokenKind::symbol)) {
-                        return static_cast<Predef<String>*>(std::addressof(*ptr));
+                        return static_cast<Predef<String>*>(ptr);
                     }
                     return nullptr;
                 }
@@ -43,12 +43,12 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, PredefCtx> {
-                static PredefCtx<String>* cast(auto& ptr) {
+                static PredefCtx<String>* cast(Token<String>* ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
                     if (ptr->is(TokenKind::context)) {
-                        return static_cast<PredefCtx<String>*>(std::addressof(*ptr));
+                        return static_cast<PredefCtx<String>*>(ptr);
                     }
                     return nullptr;
                 }
@@ -56,12 +56,12 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Identifier> {
-                static Identifier<String>* cast(auto& ptr) {
+                static Identifier<String>* cast(Token<String>* ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
                     if (ptr->is(TokenKind::identifier)) {
-                        return static_cast<Identifier<String>*>(std::addressof(*ptr));
+                        return static_cast<Identifier<String>*>(ptr);
                     }
                     return nullptr;
                 }
@@ -69,12 +69,12 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Line> {
-                static Line<String>* cast(auto& ptr) {
+                static Line<String>* cast(Token<String>* ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
                     if (ptr->is(TokenKind::line)) {
-                        return static_cast<Line<String>*>(std::addressof(*ptr));
+                        return static_cast<Line<String>*>(ptr);
                     }
                     return nullptr;
                 }
@@ -82,12 +82,12 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Space> {
-                static Space<String>* cast(auto& ptr) {
+                static Space<String>* cast(Token<String>* ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
                     if (ptr->is(TokenKind::space)) {
-                        return static_cast<Space<String>*>(std::addressof(*ptr));
+                        return static_cast<Space<String>*>(ptr);
                     }
                     return nullptr;
                 }
@@ -95,12 +95,12 @@ namespace utils {
 
             template <class String>
             struct CastHelper<String, Comment> {
-                static Comment<String>* cast(auto& ptr) {
+                static Comment<String>* cast(Token<String>* ptr) {
                     if (!ptr) {
                         return nullptr;
                     }
                     if (ptr->is(TokenKind::comment)) {
-                        return static_cast<Comment<String>*>(std::addressof(*ptr));
+                        return static_cast<Comment<String>*>(ptr);
                     }
                     return nullptr;
                 }

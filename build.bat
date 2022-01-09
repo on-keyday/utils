@@ -1,7 +1,7 @@
 @echo off
 setlocal
 set BUILTIN_BINARY=1
-set CLANG=true
+set CLANG=false
 set BUILD_TYPE=Debug
 rem -D CMAKE_CXX_CLANG_TIDY=clang-tidy;-header-filter=src/include;--checks=-*
 if "%CLANG%"=="true" (
