@@ -48,8 +48,15 @@ namespace utils {
             };
         }
 
-        template <class In, class Out, class Escape = decltype(default_set())>
-        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none, Escape&& esc = default_set()) {
+        constexpr auto default_range() {
+            return [&](auto&& c) {
+                return c != ' ' && !number::is_in_visible_range(c);
+            };
+        };
+
+        template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_range())>
+        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none,
+                                            Escape&& esc = default_set(), Range&& range = default_range()) {
             while (!seq.eos()) {
                 auto c = seq.current();
                 bool done = false;
@@ -62,7 +69,7 @@ namespace utils {
                     }
                 }
                 if (!done) {
-                    if (c != ' ' && !number::is_in_visible_range(c)) {
+                    if (range(c)) {
                         if (any(flag & EscapeFlag::utf)) {
                             auto s = seq.rptr;
                             utf::U16Buffer buf;
