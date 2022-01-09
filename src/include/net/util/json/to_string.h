@@ -132,6 +132,7 @@ namespace utils {
                             out.indent(-1);
                         }
                     }
+                    write_tail(first);
                 }
                 return JSONError::not_json;
             }
