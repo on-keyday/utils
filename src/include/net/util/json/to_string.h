@@ -13,12 +13,13 @@
 #include "../../../number/to_string.h"
 #include "../../../helper/appender.h"
 #include "../../../escape/escape.h"
+#include "../../../helper/indent.h"
 
 namespace utils {
     namespace net {
         namespace json {
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, bool escape) {
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*> out, bool escape) {
                 internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
                     auto e = number::to_string(out, *j);

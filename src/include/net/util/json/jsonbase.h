@@ -16,6 +16,11 @@
 #include "../../../helper/append_charsize.h"
 
 namespace utils {
+    namespace helper {
+        template <class T, class Indent>
+        struct IndentWriter;
+    }
+
     namespace net {
         namespace json {
             template <class T>
@@ -24,7 +29,7 @@ namespace utils {
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json);
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out);
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& w, bool escape);
 
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
