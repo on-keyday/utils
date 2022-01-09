@@ -25,12 +25,21 @@ namespace utils {
                 appends(t, std::forward<V>(v)...);
             }
 
-            template <class... V>
-            constexpr void write(V&&... v) {
+            constexpr void write_indent() {
                 for (size_t i = 0; i < indent; i++) {
                     append(t, indent_str);
                 }
-                write_raw(std::forward<V>(v)..., "\n");
+            }
+
+            constexpr void write_line() {
+                write_raw("\n");
+            }
+
+            template <class... V>
+            constexpr void write(V&&... v) {
+                write_indent();
+                write_raw(std::forward<V>(v)...);
+                write_line();
             }
 
             constexpr void indent(int i) {
@@ -38,9 +47,6 @@ namespace utils {
                     return;
                 }
                 ind += i;
-            }
-            constexpr void write_line() {
-                write_raw("\n");
             }
         };
 

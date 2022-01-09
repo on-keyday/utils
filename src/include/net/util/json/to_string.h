@@ -50,6 +50,11 @@ namespace utils {
                     out.push_back('\"');
                     return true;
                 }
+                else if (auto o = holder.as_obj()) {
+                    for (auto& kv : *o) {
+                        std::get<0>(kv);
+                    }
+                }
             }
         }  // namespace json
     }      // namespace net
