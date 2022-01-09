@@ -15,8 +15,8 @@ namespace utils {
         template <class T, class Indent = const char*>
         struct IndentWriter {
             T t;
-            Indent indent;
-            size_t indent = 0;
+            Indent indent_str;
+            size_t ind = 0;
             template <class V, class C>
             constexpr IndentWriter(V&& v, C&& c)
                 : t(v), indent(c) {}
@@ -28,10 +28,14 @@ namespace utils {
             template <class... V>
             constexpr void write(V&&... v) {
                 for (size_t i = 0; i < indent; i++) {
-                    append(t, indent);
+                    append(t, indent_str);
                 }
                 write_raw(std::forward<V>(v)...);
                 append(t, "\n");
+            }
+
+            constexpr void indent(int i) {
+                ind += i;
             }
         };
 
