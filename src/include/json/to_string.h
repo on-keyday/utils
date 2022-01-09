@@ -62,7 +62,12 @@ namespace utils {
                         return escape::escape_str(str, out.t, escflag, escape::json_set(), escape::html_range());
                     }
                     else {
-                        return escape::escape_str(str, out.t, escflag, escape::json_set());
+                        if (any(flag & FmtFlag::unescape_slash)) {
+                            return escape::escape_str(str, out.t, escflag, escape::json_set_without_slash());
+                        }
+                        else {
+                            return escape::escape_str(str, out.t, escflag, escape::json_set());
+                        }
                     }
                 };
                 if (holder.is_undef()) {
