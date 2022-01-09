@@ -222,6 +222,18 @@ namespace utils {
                     return true;
                 }
 
+                bool pop_back() {
+                    auto a = const_cast<array_t*>(obj.as_arr());
+                    if (!a) {
+                        return false;
+                    }
+                    if (a->size() == 0) {
+                        return false;
+                    }
+                    a->pop_back();
+                    return true;
+                }
+
                 template <class T>
                 bool push_back(T&& n) {
                     if (obj.is_undef()) {
