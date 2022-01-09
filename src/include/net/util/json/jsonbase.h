@@ -25,6 +25,10 @@ namespace utils {
         namespace json {
             template <class T>
             concept StringLike = std::is_default_constructible_v<T> && helper::is_utf_convertable<T>;
+            namespace internal {
+                template <class Out, class Str, template <class...> class V, template <class...> class O>
+                JSONErr to_string_detail(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
+            }
 
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
@@ -32,7 +36,7 @@ namespace utils {
                 template <class T, class Str, template <class...> class V, template <class...> class O>
                 friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
                 template <class Out, class Str, template <class...> class V, template <class...> class O>
-                friend JSONErr to_string(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
+                friend JSONErr internal::to_string_detail(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
 
                 using holder_t = internal::JSONHolder<String, Vec, Object>;
                 holder_t obj;

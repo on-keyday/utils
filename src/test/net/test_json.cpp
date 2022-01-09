@@ -35,7 +35,7 @@ void test_json() {
     utils::wrap::string v;
     auto w = utils::helper::make_indent_writer(v, "    ");
     using namespace utils::net;
-    utils::net::json::to_string(json, w, utils::net::json::FmtFlag::space_key_value);
+    utils::net::json::to_string(json, w);
     auto& cout = utils::wrap::cout_wrap();
     cout << v;
     using namespace utils::net::json::literals;

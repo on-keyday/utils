@@ -32,11 +32,11 @@ namespace utils {
             enum class FmtFlag {
                 none,
                 escape = 0x1,
-                space_key_value = 0x2,
+                no_space_key_value = 0x2,
                 no_line = 0x4,
                 html = 0x8,
                 undef_as_null = 0x10,
-                las_line = 0x20,
+                last_line = 0x20,
             };
 
             DEFINE_ENUM_FLAGOP(FmtFlag)
