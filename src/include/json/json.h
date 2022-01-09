@@ -27,15 +27,5 @@ namespace utils {
 
         using OrderedJSON = JSONBase<wrap::string, wrap::vector, ordered_map>;
 
-        namespace literals {
-            JSON operator""_json(const char* s, size_t sz) {
-                return parse<JSON>(helper::SizedView(s, sz));
-            }
-
-            OrderedJSON operator""_ojson(const char* s, size_t sz) {
-                return parse<OrderedJSON>(helper::SizedView(s, sz));
-            }
-        }  // namespace literals
-
     }  // namespace json
 }  // namespace utils
