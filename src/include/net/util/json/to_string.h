@@ -65,7 +65,14 @@ namespace utils {
                         return escape::escape_str(str, out.t, escflag, escape::json_set());
                     }
                 };
-                if (holder.is_null()) {
+                if (holder.is_undef()) {
+                    if (any(flag & FmtFlag::undef_as_null)) {
+                        helper::append(out.t, "null");
+                        return true;
+                    }
+                    return JSONError::invalid_value;
+                }
+                else if (holder.is_null()) {
                     helper::append(out.t, "null");
                     return true;
                 }
@@ -142,6 +149,7 @@ namespace utils {
                 }
                 return JSONError::not_json;
             }
+
         }  // namespace json
     }      // namespace net
 }  // namespace utils

@@ -24,6 +24,7 @@ namespace utils {
                 emplace_error,
                 invalid_number,
                 not_json,
+                invalid_value,
             };
 
             using JSONErr = wrap::EnumWrap<JSONError, JSONError::none, JSONError::unknown>;
@@ -34,6 +35,7 @@ namespace utils {
                 space_key_value = 0x2,
                 no_line = 0x4,
                 html = 0x8,
+                undef_as_null = 0x10,
             };
 
             DEFINE_ENUM_FLAGOP(FmtFlag)
