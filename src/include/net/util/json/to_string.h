@@ -19,15 +19,16 @@ namespace utils {
     namespace net {
         namespace json {
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, bool escape) {
-                internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, bool escape = false) {
+                const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
-                    auto e = number::to_string(out.t, *j);
+                    auto e = number::to_string(out.t, j);
                     if (!e) {
                         return JSONError::invalid_number;
                     }
                     return true;
                 };
+                auto flag = escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
                 if (auto b = holder.as_bool()) {
                     helper::append(out.t, *b ? "true" : "false");
                     return true;
@@ -43,7 +44,7 @@ namespace utils {
                 }
                 else if (auto s = holder.as_str()) {
                     out.t.push_back('\"');
-                    auto e = escape::escape_str(*s, out.t, escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none);
+                    auto e = escape::escape_str(*s, out.t, flag);
                     if (!e) {
                         return JSONError::invalid_escape;
                     }
@@ -65,7 +66,7 @@ namespace utils {
                         }
                         out.write_indent();
                         out.write_raw("\"");
-                        auto e1 = escape::escape_str(std::get<0>(kv), out.t);
+                        auto e1 = escape::escape_str(std::get<0>(kv), out.t, flag);
                         if (!e1) {
                             return JSONError::invalid_escape;
                         }

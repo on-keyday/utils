@@ -110,6 +110,7 @@ target_link_libraries(io_completion_port utils)
 endif()
 target_link_libraries(dispatcher utils)
 target_link_libraries(tree utils)
+target_link_libraries(json utils)
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)

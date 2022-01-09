@@ -26,7 +26,7 @@ namespace utils {
             }
 
             constexpr void write_indent() {
-                for (size_t i = 0; i < indent; i++) {
+                for (size_t i = 0; i < ind; i++) {
                     append(t, indent_str);
                 }
             }

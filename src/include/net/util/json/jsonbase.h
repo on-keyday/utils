@@ -26,18 +26,13 @@ namespace utils {
             template <class T>
             concept StringLike = std::is_default_constructible_v<T> && helper::is_utf_convertable<T>;
 
-            template <class T, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json);
-            template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& w, bool escape);
-
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONBase {
                private:
                 template <class T, class Str, template <class...> class V, template <class...> class O>
                 friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
                 template <class Out, class Str, template <class...> class V, template <class...> class O>
-                friend JSONErr to_string(const JSONBase<Str, V, O>& json, Out& out);
+                friend JSONErr to_string(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, bool escape);
 
                 using holder_t = internal::JSONHolder<String, Vec, Object>;
                 holder_t obj;
@@ -51,6 +46,10 @@ namespace utils {
 
                 static const self_t& as_const(self_t& in) {
                     return in;
+                }
+
+                const holder_t& get_holder() const {
+                    return obj;
                 }
 
                 holder_t& get_holder() {
@@ -184,11 +183,11 @@ namespace utils {
                     if (res) {
                         return *res;
                     }
-                    auto objp = obj.as_obj();
+                    auto objp = const_cast<object_t*>(obj.as_obj());
                     if (!objp) {
                         bad_type(err);
                     }
-                    auto it = objp->emplace(n, {});
+                    auto it = objp->emplace(n, self_t{});
                     if (!std::get<1>(it)) {
                         bad_type("failed to insert");
                     }

@@ -126,9 +126,9 @@ namespace utils {
         }
 
         template <class In, class Out>
-        constexpr number::NumErr escape_str(In&& in, Out& out) {
+        constexpr number::NumErr escape_str(In&& in, Out& out, EscapeFlag flag = EscapeFlag::none) {
             auto seq = make_ref_seq(in);
-            return escape_str(seq, out);
+            return escape_str(seq, out, flag);
         }
 
         template <class In, class Out>
