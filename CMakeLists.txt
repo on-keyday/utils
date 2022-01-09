@@ -65,12 +65,15 @@ add_executable(binred "src/tool/binred/binred.cpp"
                       "src/tool/binred/generate_cpp.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "lib")
 if(WIN32)
     set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
     set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 endif()
 
-option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" OFF)
+
+option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
 if(UTILS_BUILD_SHARED_LIBS)
 add_library(utils SHARED)

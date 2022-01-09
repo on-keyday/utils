@@ -8,4 +8,4 @@
 // dllexport - define dllexport flag
 #pragma once
 // Be enable below if you build utils as dll on windows
-//#define UTILS_AS_DLL
+#define UTILS_AS_DLL
