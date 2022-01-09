@@ -58,7 +58,12 @@ namespace utils {
                             out.write_line();
                             first = false;
                         }
-                        out.write(std::get<0>(kv));
+                        out.write_indent();
+                        out.write_raw("\"");
+                        out.write_raw(std::get<0>(kv));
+                        out.write_raw("\": ");
+                        out.indent(1);
+                        to_string(std::get<1>(kv), out, escape);
                     }
                     out.write_raw("}");
                 }
