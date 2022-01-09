@@ -29,7 +29,7 @@ namespace utils {
                     return true;
                 };
                 if (auto b = holder.as_bool()) {
-                    helper::append(out, *b ? "true" : "false");
+                    helper::append(out.t, *b ? "true" : "false");
                     return true;
                 }
                 else if (auto i = holder.as_numi()) {
@@ -42,18 +42,20 @@ namespace utils {
                     return numtostr(*f);
                 }
                 else if (auto s = holder.as_str()) {
-                    out.push_back('\"');
+                    out.t.push_back('\"');
                     auto e = escape::escape_str(*s, out.t, escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none);
                     if (!e) {
                         return JSONError::invalid_escape;
                     }
-                    out.push_back('\"');
+                    out.t.push_back('\"');
                     return true;
                 }
                 else if (auto o = holder.as_obj()) {
                     for (auto& kv : *o) {
                         std::get<0>(kv);
                     }
+                    out.write_raw("{", "\n");
+                    out.write_indent();
                 }
             }
         }  // namespace json
