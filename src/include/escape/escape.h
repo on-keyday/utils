@@ -30,7 +30,7 @@ namespace utils {
         DEFINE_ENUM_FLAGOP(EscapeFlag)
         template <size_t num>
         using escape_set = std::array<std::pair<char, char>, num>;
-        auto default_set() {
+        constexpr auto default_set() {
             return escape_set<11>{
                 {
                     {'\n', 'n'},
