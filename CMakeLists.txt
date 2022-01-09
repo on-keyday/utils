@@ -134,6 +134,13 @@ target_link_libraries(utils libssl.so libcrypto.so)
 endif()
 endif()
 
-
-
-
+if(UTILS_BUILD_SHARED_LIBS)
+add_custom_command(
+  TARGET utils POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "test/libutils.dll"
+)
+add_custom_command(
+  TARGET utils POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"
+)
+endif()
