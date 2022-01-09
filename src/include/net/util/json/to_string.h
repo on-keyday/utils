@@ -39,6 +39,24 @@ namespace utils {
                 };
                 auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
                 auto line = !any(flag & FmtFlag::no_line);
+                auto write_comma = [&](bool& first) {
+                    if (first) {
+                        if (line) {
+                            out.write_line();
+                            out.indent(1);
+                        }
+                        first = false;
+                    }
+                    else {
+                        out.write_raw(",");
+                        if (line) {
+                            out.write_line();
+                        }
+                    }
+                    if (line) {
+                        out.write_indent();
+                    }
+                };
                 if (holder.is_null()) {
                     helper::append(out.t, "null");
                     return true;
@@ -69,22 +87,7 @@ namespace utils {
                     out.write_raw("{");
                     bool first = true;
                     for (auto& kv : *o) {
-                        if (first) {
-                            if (line) {
-                                out.write_line();
-                                out.indent(1);
-                            }
-                            first = false;
-                        }
-                        else {
-                            out.write_raw(",");
-                            if (line) {
-                                out.write_line();
-                            }
-                        }
-                        if (line) {
-                            out.write_indent();
-                        }
+                        write_comma(first);
                         out.write_raw("\"");
                         auto e1 = escape::escape_str(std::get<0>(kv), out.t, escflag);
                         if (!e1) {
