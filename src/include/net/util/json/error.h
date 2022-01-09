@@ -36,6 +36,7 @@ namespace utils {
                 no_line = 0x4,
                 html = 0x8,
                 undef_as_null = 0x10,
+                las_line = 0x20,
             };
 
             DEFINE_ENUM_FLAGOP(FmtFlag)

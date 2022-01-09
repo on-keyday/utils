@@ -18,9 +18,8 @@
 namespace utils {
     namespace net {
         namespace json {
-
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
+            JSONErr to_string_detail(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
                 const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
                     auto e = number::to_string(out.t, j);
@@ -148,6 +147,15 @@ namespace utils {
                     return true;
                 }
                 return JSONError::not_json;
+            }
+
+            template <class Out, class String, template <class...> class Vec, template <class...> class Object>
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
+                auto e = to_string_detail(json, out, flag);
+                if (e && any(flag & FmtFlag::last_line)) {
+                    out.write_line();
+                }
+                return e;
             }
 
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>

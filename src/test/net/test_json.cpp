@@ -34,9 +34,17 @@ void test_json() {
     json["handle"] = 0;
     utils::wrap::string v;
     auto w = utils::helper::make_indent_writer(v, "    ");
+    using namespace utils::net;
     utils::net::json::to_string(json, w, utils::net::json::FmtFlag::space_key_value);
     auto& cout = utils::wrap::cout_wrap();
     cout << v;
+    using namespace utils::net::json::literals;
+    auto js = R"({
+      "\they yp": {
+          "escape\n": null
+      }  
+    })"_ojson;
+    cout << json::to_string<utils::wrap::string>(js);
 }
 
 int main() {
