@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/json/json.h"
+#include "../../include/json/json_export.h"
 #include "../../include/json/literals.h"
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/json/parse.h"
