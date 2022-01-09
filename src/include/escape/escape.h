@@ -30,25 +30,26 @@ namespace utils {
         DEFINE_ENUM_FLAGOP(EscapeFlag)
         template <size_t num>
         using escape_set = std::array<std::pair<char, char>, num>;
+        auto default_set() {
+            return escape_set<11>{
+                {
+                    {'\n', 'n'},
+                    {'\r', 'r'},
+                    {'\t', 't'},
+                    {'\a', 'a'},
+                    {'\b', 'b'},
+                    {'\v', 'v'},
+                    {'\e', 'e'},
+                    {'\f', 'f'},
+                    {'\\', '\\'},
+                    {'\"', '\"'},
+                    {'\'', '\''},
+                },
+            };
+        }
 
-        constexpr escape_set<11> default_set{
-            {
-                {'\n', 'n'},
-                {'\r', 'r'},
-                {'\t', 't'},
-                {'\a', 'a'},
-                {'\b', 'b'},
-                {'\v', 'v'},
-                {'\e', 'e'},
-                {'\f', 'f'},
-                {'\\', '\\'},
-                {'\"', '\"'},
-                {'\'', '\''},
-            },
-        };
-
-        template <class In, class Out, class Escape = decltype(default_set)>
-        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none, Escape&& esc = std::move(default_set)) {
+        template <class In, class Out, class Escape = decltype(default_set())>
+        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none, Escape&& esc = default_set()) {
             while (!seq.eos()) {
                 auto c = seq.current();
                 bool done = false;
@@ -127,8 +128,8 @@ namespace utils {
             return escape_str(seq, out, flag);
         }
 
-        template <class In, class Out, class Escape = decltype(default_set)>
-        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, Escape&& esc = std::move(default_set)) {
+        template <class In, class Out, class Escape = decltype(default_set())>
+        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, Escape&& esc = default_set()) {
             constexpr auto mx = (std::numeric_limits<std::make_unsigned_t<
                                      typename Sequencer<In>::char_type>>::max)();
             while (!seq.eos()) {
