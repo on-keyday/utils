@@ -51,11 +51,16 @@ namespace utils {
                     return true;
                 }
                 else if (auto o = holder.as_obj()) {
+                    out.write_raw("{");
+                    bool first = true;
                     for (auto& kv : *o) {
-                        std::get<0>(kv);
+                        if (first) {
+                            out.write_line();
+                            first = false;
+                        }
+                        out.write(std::get<0>(kv));
                     }
-                    out.write_raw("{", "\n");
-                    out.write_indent();
+                    out.write_raw("}");
                 }
             }
         }  // namespace json
