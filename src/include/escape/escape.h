@@ -48,11 +48,32 @@ namespace utils {
             };
         }
 
+        constexpr auto json_set() {
+            return escape_set<8>{
+                {
+                    {'\n', 'n'},
+                    {'\r', 'r'},
+                    {'\t', 't'},
+                    {'\b', 'b'},
+                    {'\f', 'f'},
+                    {'\\', '\\'},
+                    {'\"', '\"'},
+                    {'/', '/'},
+                },
+            };
+        }
+
         constexpr auto default_range() {
             return [&](auto&& c) {
                 return c != ' ' && !number::is_in_visible_range(c);
             };
         };
+
+        constexpr auto html_range() {
+            return [&](auto&& c) {
+                return default_range(c) || c == '<' || c == '>';
+            };
+        }
 
         template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_range())>
         constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none,
@@ -129,10 +150,11 @@ namespace utils {
             return true;
         }
 
-        template <class In, class Out>
-        constexpr number::NumErr escape_str(In&& in, Out& out, EscapeFlag flag = EscapeFlag::none) {
+        template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_range())>
+        constexpr number::NumErr escape_str(In&& in, Out& out, EscapeFlag flag = EscapeFlag::none,
+                                            Escape&& esc = default_set(), Range&& range = default_range()) {
             auto seq = make_ref_seq(in);
-            return escape_str(seq, out, flag);
+            return escape_str(seq, out, flag, esc, range);
         }
 
         template <class In, class Out, class Escape = decltype(default_set())>
