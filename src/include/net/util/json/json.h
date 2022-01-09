@@ -16,6 +16,7 @@
 #include <utility>
 #include <algorithm>
 #include "../../../helper/equal.h"
+#include "parse.h"
 
 namespace utils {
     namespace net {
@@ -57,7 +58,7 @@ namespace utils {
             template <class Key, class Value>
             using ordered_map = OrderedMapBase<wrap::vector, Key, Value>;
 
-            using OrderJSON = JSONBase<wrap::string, wrap::vector, ordered_map>;
+            using OrderedJSON = JSONBase<wrap::string, wrap::vector, ordered_map>;
 
         }  // namespace json
     }      // namespace net
