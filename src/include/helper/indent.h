@@ -28,7 +28,10 @@ namespace utils {
             template <class... V>
             constexpr void write(V&&... v) {
                 for (size_t i = 0; i < indent; i++) {
+                    append(t, indent);
                 }
+                write_raw(std::forward<V>(v)...);
+                append(t, "\n");
             }
         };
 
