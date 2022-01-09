@@ -12,16 +12,16 @@
 #include "json.h"
 
 namespace utils {
-    namespace net {
-        namespace json {
+
+    namespace json {
 #if !defined(UTILS_NET_JSON_NO_EXTERN_TEMPLATE)
-            extern
+        extern
 #endif
-                template struct JSONBase<wrap::string, wrap::vector, wrap::map>;
+            template struct JSONBase<wrap::string, wrap::vector, wrap::map>;
 #if !defined(UTILS_NET_JSON_NO_EXTERN_TEMPLATE)
-            extern
+        extern
 #endif
-                template struct JSONBase<wrap::string, wrap::vector, ordered_map>;
-        }  // namespace json
-    }      // namespace net
+            template struct JSONBase<wrap::string, wrap::vector, ordered_map>;
+    }  // namespace json
+
 }  // namespace utils
