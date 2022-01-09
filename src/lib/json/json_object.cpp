@@ -23,6 +23,15 @@ void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
     obj[String{}];
     obj[0];
     obj.pop_back();
+    obj.erase(0);
+    obj.size();
+    obj.is_undef();
+    obj.is_bool();
+    obj.is_number();
+    obj.is_float();
+    obj.is_string();
+    obj.is_object();
+    obj.is_array();
 }
 
 void instantiate() {
