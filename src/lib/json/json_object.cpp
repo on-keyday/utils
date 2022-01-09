@@ -16,9 +16,9 @@ void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
     obj = nullptr;
     obj = true;
     obj = 0;
-    obj = 0ll;
+    obj = std::int64_t(0);
     obj = 0.9;
-    obj = 0ull;
+    obj = std::uint64_t(0);
     obj = String();
     obj = Vec<self_t>{};
     obj = Object<String, self_t>{};
