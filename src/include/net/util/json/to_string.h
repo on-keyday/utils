@@ -63,7 +63,10 @@ namespace utils {
                         out.write_raw(std::get<0>(kv));
                         out.write_raw("\": ");
                         out.indent(1);
-                        to_string(std::get<1>(kv), out, escape);
+                        auto e = to_string(std::get<1>(kv), out, escape);
+                        if (!e) {
+                            return e;
+                        }
                     }
                     out.write_raw("}");
                 }
