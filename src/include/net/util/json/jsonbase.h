@@ -202,6 +202,14 @@ namespace utils {
                     return const_cast<self_t&>(as_const(*this)[n]);
                 }
 
+                bool erase(const String& n) {
+                    auto ptr = const_cast<object_t*>(obj.as_obj());
+                    if (!ptr) {
+                        return false;
+                    }
+                    return ptr->erase(n);
+                }
+
                 template <class T>
                 bool push_back(T&& n) {
                     if (obj.is_undef()) {

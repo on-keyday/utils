@@ -54,6 +54,13 @@ namespace utils {
                     auto ret = --obj.end();
                     return result_t{ret, true};
                 }
+
+                template <class K>
+                bool erase(K&& k) {
+                    return std::erase_if(obj.begin(), obj.end(), [](auto& kv) {
+                        return helper::equal(std::get<0>(kv), k);
+                    });
+                }
             };
 
             template <class Key, class Value>

@@ -37,14 +37,31 @@ void test_json() {
     using namespace utils::net;
     utils::net::json::to_string(json, w);
     auto& cout = utils::wrap::cout_wrap();
-    cout << v;
+    cout << v << "\n";
     using namespace utils::net::json::literals;
     auto js = R"({
       "\they yp": {
           "escape\n": null
       }  
     })"_ojson;
-    cout << json::to_string<utils::wrap::string>(js, json::FmtFlag::no_line);
+    js = R"({
+  "browsers": {
+    "firefox": {
+      "name": "Firefox",
+      "pref_url": "about:config",
+      "releases": {
+        "1": {
+          "release_date": "2004-11-09",
+          "status": "retired",
+          "engine": "Gecko",
+          "engine_version": "1.7"
+        }
+      }
+    }
+  }
+})"_ojson;
+    cout << json::to_string<utils::wrap::string>(js, json::FmtFlag::no_line)
+         << "\n";
 }
 
 int main() {
