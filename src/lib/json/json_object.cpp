@@ -5,6 +5,8 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+
+#define UTILS_JSON_NO_EXTERN_TEMPLATE
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/json/json_export.h"
 

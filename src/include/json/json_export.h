@@ -15,11 +15,11 @@
 namespace utils {
 
     namespace json {
-#if !defined(UTILS_NET_JSON_NO_EXTERN_TEMPLATE)
+#if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
             template struct DLL JSONBase<wrap::string, wrap::vector, wrap::map>;
-#if !defined(UTILS_NET_JSON_NO_EXTERN_TEMPLATE)
+#if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
             template struct DLL JSONBase<wrap::string, wrap::vector, ordered_map>;
