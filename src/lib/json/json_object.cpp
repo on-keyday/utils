@@ -13,6 +13,10 @@ void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
     using self_t = utils::json::JSONBase<String, Vec, Object>;
     obj = nullptr;
     obj = true;
+    obj = 0;
+    obj = 0ll;
+    obj = 0.9;
+    obj = 0ull;
     obj = String();
     obj = Vec<self_t>{};
     obj = Object<String, self_t>{};
