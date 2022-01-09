@@ -77,7 +77,9 @@ namespace utils {
                         }
                         out.indent(-1);
                     }
-                    out.indent(-1);
+                    if (!first) {
+                        out.indent(-1);
+                    }
                     out.write_raw("}");
                 }
                 return JSONError::not_json;
