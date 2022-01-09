@@ -11,6 +11,7 @@
 #include "error.h"
 #include "jsonbase.h"
 #include "../../../number/to_string.h"
+#include "../../../helper/appender.h"
 
 namespace utils {
     namespace net {
@@ -18,6 +19,10 @@ namespace utils {
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out) {
                 internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
+                if (auto b = holder.as_bool()) {
+                    helper::append(out, *b ? "true" : "false");
+                    return true;
+                }
             }
         }  // namespace json
     }      // namespace net
