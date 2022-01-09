@@ -155,6 +155,15 @@ namespace utils {
                 auto w = helper::make_indent_writer(out, indent);
                 return to_string(json, w, flag);
             }
+
+            template <class Out, class String, template <class...> class Vec, template <class...> class Object>
+            Out to_string(const JSONBase<String, Vec, Object>& json) {
+                Out res;
+                if (!to_string(json, res)) {
+                    return {};
+                }
+                return res;
+            }
         }  // namespace json
     }      // namespace net
 }  // namespace utils
