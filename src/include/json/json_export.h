@@ -11,6 +11,7 @@
 
 #include "../platform/windows/dllexport_header.h"
 #include "json.h"
+#include "literals.h"
 
 namespace utils {
 
@@ -23,6 +24,18 @@ namespace utils {
         extern
 #endif
             template struct DLL JSONBase<wrap::string, wrap::vector, ordered_map>;
+
+#if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
+        extern
+#endif
+            template DLL JSON
+            parse<JSON, helper::SizedView<const char>>(helper::SizedView<const char>&&);
+
+#if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
+        extern
+#endif
+            template DLL OrderedJSON
+            parse<OrderedJSON, helper::SizedView<const char>>(helper::SizedView<const char>&&);
     }  // namespace json
 
 }  // namespace utils

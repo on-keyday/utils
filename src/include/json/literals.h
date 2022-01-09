@@ -13,13 +13,14 @@
 namespace utils {
     namespace json {
         namespace literals {
-            JSON operator""_json(const char* s, size_t sz) {
+            inline JSON operator""_json(const char* s, size_t sz) {
                 return parse<JSON>(helper::SizedView(s, sz));
             }
 
-            OrderedJSON operator""_ojson(const char* s, size_t sz) {
+            inline OrderedJSON operator""_ojson(const char* s, size_t sz) {
                 return parse<OrderedJSON>(helper::SizedView(s, sz));
             }
+
         }  // namespace literals
     }      // namespace json
 }  // namespace utils
