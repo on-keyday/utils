@@ -47,8 +47,8 @@ namespace utils {
             },
         };
 
-        template <class In, class Out, class Escape = escape_set<11>>
-        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none, Escape&& esc = default_set) {
+        template <class In, class Out, class Escape = decltype(default_set)>
+        constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none, Escape&& esc = std::move(default_set)) {
             while (!seq.eos()) {
                 auto c = seq.current();
                 bool done = false;
@@ -127,8 +127,8 @@ namespace utils {
             return escape_str(seq, out, flag);
         }
 
-        template <class In, class Out, class Escape = escape_set<11>>
-        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, Escape&& esc = default_set) {
+        template <class In, class Out, class Escape = decltype(default_set)>
+        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, Escape&& esc = std::move(default_set)) {
             constexpr auto mx = (std::numeric_limits<std::make_unsigned_t<
                                      typename Sequencer<In>::char_type>>::max)();
             while (!seq.eos()) {
