@@ -124,6 +124,13 @@ namespace utils {
                     bool first = true;
                     for (auto& v : *a) {
                         write_comma(first);
+                        auto e2 = to_string(v, out, flag);
+                        if (!e2) {
+                            return e2;
+                        }
+                        if (line) {
+                            out.indent(-1);
+                        }
                     }
                 }
                 return JSONError::not_json;
