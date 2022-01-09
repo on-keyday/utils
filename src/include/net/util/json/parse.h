@@ -199,10 +199,10 @@ namespace utils {
                 return parse(seq, json);
             }
 
-            template <class T, class String, template <class...> class Vec, template <class...> class Object>
-            JSONBase<String, Vec, Object> parse(T&& in) {
-                JSONBase<String, Vec, Object> json;
-                if (!parse(in, json)) {
+            template <class JSON, class T>
+            JSON parse(T&& in) {
+                JSON json;
+                if (!json::parse(in, json)) {
                     return {};
                 }
                 return json;
