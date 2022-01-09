@@ -35,16 +35,17 @@ namespace utils {
                     if (first) {
                         if (line) {
                             out.write_line();
-                                                }
+                            out.indent(1);
+                        }
                         first = false;
                     }
                     else {
                         out.write_raw(",");
                         if (line) {
                             out.write_line();
+                            out.indent(1);
                         }
                     }
-                    out.indent(1);
                     if (line) {
                         out.write_indent();
                     }
@@ -53,7 +54,6 @@ namespace utils {
                     if (!first) {
                         if (line) {
                             out.write_line();
-                            out.indent(-1);
                         }
                     }
                 };
@@ -98,7 +98,7 @@ namespace utils {
                             out.t.push_back(' ');
                         }
                         if (line) {
-                            out.indent(1);
+                            //out.indent(1);
                         }
                         auto e2 = to_string(std::get<1>(kv), out, flag);
                         if (!e2) {
@@ -125,7 +125,11 @@ namespace utils {
                         }
                     }
                     write_tail(first);
+                    if (line) {
+                        out.write_indent();
+                    }
                     out.write_raw("]");
+                    return true;
                 }
                 return JSONError::not_json;
             }
