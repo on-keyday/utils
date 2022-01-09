@@ -99,10 +99,10 @@ namespace utils {
                         value = utf::convert<String>(argv[index] + seq.rptr + offset);
                         ptr = &value;
                     }
-                    desc.find(name, opt);
+                    desc.find(name, &opt);
                 }
                 else {
-                    desc.find(optname, opt);
+                    desc.find(optname, &opt);
                 }
                 if (opt) {
                     return internal::parse_one(index, argc, argv, opt, result, flag, ptr);
@@ -152,7 +152,7 @@ namespace utils {
                     if (any(flag & ParseFlag::adjacent_value)) {
                         option_t opt;
                         auto view = helper::CharView<Char>(argv[index][1]);
-                        desc.find(view.c_str(), opt);
+                        desc.find(view.c_str(), &opt);
                         if (opt) {
                             String* ptr = nullptr;
                             String value;
@@ -177,7 +177,7 @@ namespace utils {
                     auto current = index;
                     for (int i = 1; argv[current][i]; i++) {
                         option_t opt;
-                        desc.find(helper::CharView<Char>(argv[current][i]).c_str(), opt);
+                        desc.find(helper::CharView<Char>(argv[current][i]).c_str(), &opt);
                         if (opt) {
                             if (auto e = internal::parse_one(index, argc, argv, opt, result, flag, static_cast<String*>(nullptr)); e != ParseError::none) {
                                 return e;

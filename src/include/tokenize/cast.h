@@ -109,7 +109,8 @@ namespace utils {
 
         template <template <class> class T, class String>
         T<String>* cast(wrap::shared_ptr<Token<String>>& ptr) {
-            return internal::CastHelper<String, T>::cast(ptr);
+            auto p = std::addressof(*ptr);
+            return internal::CastHelper<String, T>::cast(p);
         }
 
         template <template <class> class T, class String>

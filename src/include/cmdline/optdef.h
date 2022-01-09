@@ -190,11 +190,11 @@ namespace utils {
                 return *this;
             }
 
-            bool find(const auto& name, option_t& opt) {
+            bool find(const auto& name, option_t* opt) {
                 if (auto found = desc.find(name); found != desc.end()) {
                     auto idx = std::get<1>(*found);
                     assert(idx < vec.size());
-                    opt = vec[idx];
+                    *opt = vec[idx];
                     return true;
                 }
                 return false;
