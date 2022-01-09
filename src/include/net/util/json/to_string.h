@@ -18,14 +18,6 @@
 namespace utils {
     namespace net {
         namespace json {
-            enum class FmtFlag {
-                none,
-                escape = 0x1,
-                space_key_value = 0x2,
-                no_line = 0x4,
-            };
-
-            DEFINE_ENUM_FLAGOP(FmtFlag)
 
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
@@ -103,7 +95,7 @@ namespace utils {
                         }
                         out.write_raw("\":");
                         if (any(flag & FmtFlag::space_key_value)) {
-                            out.push_back(' ');
+                            out.t.push_back(' ');
                         }
                         if (line) {
                             out.indent(1);

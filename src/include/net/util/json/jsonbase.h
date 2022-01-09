@@ -32,7 +32,7 @@ namespace utils {
                 template <class T, class Str, template <class...> class V, template <class...> class O>
                 friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
                 template <class Out, class Str, template <class...> class V, template <class...> class O>
-                friend JSONErr to_string(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, bool escape);
+                friend JSONErr to_string(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
 
                 using holder_t = internal::JSONHolder<String, Vec, Object>;
                 holder_t obj;

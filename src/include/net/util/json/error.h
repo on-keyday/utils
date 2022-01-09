@@ -28,6 +28,15 @@ namespace utils {
 
             using JSONErr = wrap::EnumWrap<JSONError, JSONError::none, JSONError::unknown>;
 
+            enum class FmtFlag {
+                none,
+                escape = 0x1,
+                space_key_value = 0x2,
+                no_line = 0x4,
+            };
+
+            DEFINE_ENUM_FLAGOP(FmtFlag)
+
         }  // namespace json
 
     }  // namespace net

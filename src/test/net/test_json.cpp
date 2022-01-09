@@ -28,7 +28,6 @@ void test_json() {
             ]
         })",
         json);
-    json["json"] = "root";
     json["handle"] = 0;
     utils::wrap::string v;
     auto w = utils::helper::make_indent_writer(v, "    ");
