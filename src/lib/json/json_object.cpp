@@ -11,3 +11,11 @@
 template <class String, template <class...> class Vec, template <class...> class Object>
 void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
 }
+
+void instantiate() {
+    using namespace utils::json;
+    JSON json;
+    instantiate_json(json);
+    OrderedJSON ojson;
+    instantiate_json(ojson);
+}
