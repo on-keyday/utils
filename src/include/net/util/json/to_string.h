@@ -39,7 +39,11 @@ namespace utils {
                 };
                 auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
                 auto line = !any(flag & FmtFlag::no_line);
-                if (auto b = holder.as_bool()) {
+                if (holder.is_null()) {
+                    helper::append(out.t, "null");
+                    return true;
+                }
+                else if (auto b = holder.as_bool()) {
                     helper::append(out.t, *b ? "true" : "false");
                     return true;
                 }
@@ -108,6 +112,8 @@ namespace utils {
                         }
                     }
                     out.write_raw("}");
+                }
+                else if () {
                 }
                 return JSONError::not_json;
             }
