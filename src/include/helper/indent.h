@@ -30,8 +30,7 @@ namespace utils {
                 for (size_t i = 0; i < indent; i++) {
                     append(t, indent_str);
                 }
-                write_raw(std::forward<V>(v)...);
-                append(t, "\n");
+                write_raw(std::forward<V>(v)..., "\n");
             }
 
             constexpr void indent(int i) {
