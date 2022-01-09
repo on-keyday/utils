@@ -84,7 +84,7 @@ namespace utils {
                 }
                 else if (auto s = holder.as_str()) {
                     out.t.push_back('\"');
-                    auto e = escape::escape_str(*s, out.t, escflag);
+                    auto e = escape(*s);
                     if (!e) {
                         return JSONError::invalid_escape;
                     }
@@ -97,16 +97,13 @@ namespace utils {
                     for (auto& kv : *o) {
                         write_comma(first);
                         out.write_raw("\"");
-                        auto e1 = escape::escape_str(std::get<0>(kv), out.t, escflag);
+                        auto e1 = escape(std::get<0>(kv));
                         if (!e1) {
                             return JSONError::invalid_escape;
                         }
                         out.write_raw("\":");
                         if (any(flag & FmtFlag::space_key_value)) {
                             out.t.push_back(' ');
-                        }
-                        if (line) {
-                            //out.indent(1);
                         }
                         auto e2 = to_string(std::get<1>(kv), out, flag);
                         if (!e2) {
