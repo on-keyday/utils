@@ -56,18 +56,28 @@ namespace utils {
                     for (auto& kv : *o) {
                         if (first) {
                             out.write_line();
+                            out.indent(1);
                             first = false;
+                        }
+                        else {
+                            out.write_raw(",");
+                            out.write_line();
                         }
                         out.write_indent();
                         out.write_raw("\"");
-                        out.write_raw(std::get<0>(kv));
+                        auto e1 = escape::escape_str(std::get<0>(kv), out.t);
+                        if (!e1) {
+                            return JSONError::invalid_escape;
+                        }
                         out.write_raw("\": ");
                         out.indent(1);
-                        auto e = to_string(std::get<1>(kv), out, escape);
-                        if (!e) {
-                            return e;
+                        auto e2 = to_string(std::get<1>(kv), out, escape);
+                        if (!e2) {
+                            return e2;
                         }
+                        out.indent(-1);
                     }
+                    out.indent(-1);
                     out.write_raw("}");
                 }
                 return JSONError::not_json;
