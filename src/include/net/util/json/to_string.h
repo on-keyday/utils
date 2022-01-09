@@ -110,6 +110,7 @@ namespace utils {
                     }
                     write_tail(first);
                     out.write_raw("}");
+                    return true;
                 }
                 else if (auto a = holder.as_arr()) {
                     out.write_raw("[");

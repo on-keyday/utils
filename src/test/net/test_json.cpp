@@ -24,14 +24,15 @@ void test_json() {
                 false,
                 -9483,
                 0.5,
-                "object"
+                "object",
+                {}
             ]
         })",
         json);
     json["handle"] = 0;
     utils::wrap::string v;
     auto w = utils::helper::make_indent_writer(v, "    ");
-    utils::net::json::to_string(json, w);
+    utils::net::json::to_string(json, w, utils::net::json::FmtFlag::space_key_value);
     auto& cout = utils::wrap::cout_wrap();
     cout << v;
 }
