@@ -15,7 +15,7 @@ namespace utils {
     namespace json {
         template <template <class...> class Vec, class Key, class Value>
         struct OrderedMapBase {
-            Vec<std::pair<const Key, Value>> obj;
+            Vec<std::pair<Key, Value>> obj;
 
             template <class T>
             auto find(T&& t) const {
@@ -46,9 +46,12 @@ namespace utils {
 
             template <class K>
             bool erase(K&& k) {
-                return std::erase_if(obj.begin(), obj.end(), [](auto& kv) {
+                return std::erase_if(obj, [&](auto& kv) {
                     return helper::equal(std::get<0>(kv), k);
                 });
+            }
+            size_t size() const {
+                return obj.size();
             }
         };
 
