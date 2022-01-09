@@ -44,7 +44,7 @@ void test_json() {
           "escape\n": null
       }  
     })"_ojson;
-    cout << json::to_string<utils::wrap::string>(js);
+    cout << json::to_string<utils::wrap::string>(js, json::FmtFlag::no_line);
 }
 
 int main() {

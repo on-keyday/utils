@@ -109,7 +109,7 @@ namespace utils {
                                 return JSONError::invalid_escape;
                             }
                             out.write_raw("\":");
-                            if (any(flag & FmtFlag::no_space_key_value)) {
+                            if (!any(flag & FmtFlag::no_space_key_value)) {
                                 out.t.push_back(' ');
                             }
                             auto e2 = to_string(std::get<1>(kv), out, flag);
@@ -166,9 +166,9 @@ namespace utils {
             }
 
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            Out to_string(const JSONBase<String, Vec, Object>& json, FmtFlag flag = FmtFlag::none) {
+            Out to_string(const JSONBase<String, Vec, Object>& json, FmtFlag flag = FmtFlag::none, const char* indent = "    ") {
                 Out res;
-                if (!to_string(json, res, flag)) {
+                if (!to_string(json, res, flag, indent)) {
                     return {};
                 }
                 return res;
