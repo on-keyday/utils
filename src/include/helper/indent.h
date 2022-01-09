@@ -39,6 +39,9 @@ namespace utils {
                 }
                 ind += i;
             }
+            constexpr void write_line() {
+                write_raw("\n");
+            }
         };
 
         template <class T, class Indent = const char*>

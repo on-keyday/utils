@@ -19,10 +19,10 @@ namespace utils {
     namespace net {
         namespace json {
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*> out, bool escape) {
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, bool escape) {
                 internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
-                    auto e = number::to_string(out, *j);
+                    auto e = number::to_string(out.t, *j);
                     if (!e) {
                         return JSONError::invalid_number;
                     }
@@ -43,7 +43,7 @@ namespace utils {
                 }
                 else if (auto s = holder.as_str()) {
                     out.push_back('\"');
-                    auto e = escape::escape_str(*s, out, escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none);
+                    auto e = escape::escape_str(*s, out.t, escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none);
                     if (!e) {
                         return JSONError::invalid_escape;
                     }
