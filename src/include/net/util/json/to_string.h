@@ -70,6 +70,7 @@ namespace utils {
                     }
                     out.write_raw("}");
                 }
+                return JSONError::not_json;
             }
         }  // namespace json
     }      // namespace net
