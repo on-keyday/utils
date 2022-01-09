@@ -25,7 +25,9 @@ void test_json() {
                 -9483,
                 0.5,
                 "object",
-                {}
+                {
+                    "nested":"value"
+                }
             ]
         })",
         json);

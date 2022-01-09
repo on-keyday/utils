@@ -114,6 +114,9 @@ namespace utils {
                         }
                     }
                     write_tail(first);
+                    if (line) {
+                        out.write_indent();
+                    }
                     out.write_raw("}");
                     return true;
                 }
