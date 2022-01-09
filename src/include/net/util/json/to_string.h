@@ -81,6 +81,9 @@ namespace utils {
                     if (!first) {
                         out.indent(-1);
                     }
+                    else {
+                        out.write_line();
+                    }
                     out.write_raw("}");
                 }
                 return JSONError::not_json;
