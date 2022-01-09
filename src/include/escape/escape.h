@@ -63,6 +63,20 @@ namespace utils {
             };
         }
 
+        constexpr auto json_set_without_slash() {
+            return escape_set<7>{
+                {
+                    {'\n', 'n'},
+                    {'\r', 'r'},
+                    {'\t', 't'},
+                    {'\b', 'b'},
+                    {'\f', 'f'},
+                    {'\\', '\\'},
+                    {'\"', '\"'},
+                },
+            };
+        }
+
         constexpr auto default_range() {
             return [](auto&& c) {
                 return c != ' ' && !number::is_in_visible_range(c);

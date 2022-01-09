@@ -194,7 +194,7 @@ namespace utils {
                 if (!std::get<1>(it)) {
                     bad_type("failed to insert");
                 }
-                return std::get<1>(*std::get<0>(it));
+                return const_cast<self_t&>(std::get<1>(*std::get<0>(it)));
             }
 
             self_t& operator[](size_t n) {
