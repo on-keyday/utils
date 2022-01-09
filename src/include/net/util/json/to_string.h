@@ -35,8 +35,7 @@ namespace utils {
                     if (first) {
                         if (line) {
                             out.write_line();
-                            out.indent(1);
-                        }
+                                                }
                         first = false;
                     }
                     else {
@@ -45,6 +44,7 @@ namespace utils {
                             out.write_line();
                         }
                     }
+                    out.indent(1);
                     if (line) {
                         out.write_indent();
                     }
