@@ -18,8 +18,15 @@
 namespace utils {
     namespace net {
         namespace json {
+            enum class FmtFlag {
+                none,
+                escape = 0x1,
+            };
+
+            DEFINE_ENUM_FLAGOP(FmtFlag)
+
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, bool escape = false) {
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
                 const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
                     auto e = number::to_string(out.t, j);
@@ -28,7 +35,7 @@ namespace utils {
                     }
                     return true;
                 };
-                auto flag = escape ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
+                auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
                 if (auto b = holder.as_bool()) {
                     helper::append(out.t, *b ? "true" : "false");
                     return true;
@@ -44,7 +51,7 @@ namespace utils {
                 }
                 else if (auto s = holder.as_str()) {
                     out.t.push_back('\"');
-                    auto e = escape::escape_str(*s, out.t, flag);
+                    auto e = escape::escape_str(*s, out.t, escflag);
                     if (!e) {
                         return JSONError::invalid_escape;
                     }
@@ -66,23 +73,22 @@ namespace utils {
                         }
                         out.write_indent();
                         out.write_raw("\"");
-                        auto e1 = escape::escape_str(std::get<0>(kv), out.t, flag);
+                        auto e1 = escape::escape_str(std::get<0>(kv), out.t, escflag);
                         if (!e1) {
                             return JSONError::invalid_escape;
                         }
-                        out.write_raw("\": ");
+                        out.write_raw("\":");
+                        out.push_back(' ');
                         out.indent(1);
-                        auto e2 = to_string(std::get<1>(kv), out, escape);
+                        auto e2 = to_string(std::get<1>(kv), out, flag);
                         if (!e2) {
                             return e2;
                         }
                         out.indent(-1);
                     }
                     if (!first) {
-                        out.indent(-1);
-                    }
-                    else {
                         out.write_line();
+                        out.indent(-1);
                     }
                     out.write_raw("}");
                 }
