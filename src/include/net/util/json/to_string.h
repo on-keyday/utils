@@ -21,6 +21,8 @@ namespace utils {
             enum class FmtFlag {
                 none,
                 escape = 0x1,
+                space_key_value = 0x2,
+                no_line = 0x4,
             };
 
             DEFINE_ENUM_FLAGOP(FmtFlag)
@@ -36,6 +38,7 @@ namespace utils {
                     return true;
                 };
                 auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
+                auto line = !any(flag & FmtFlag::no_line);
                 if (auto b = holder.as_bool()) {
                     helper::append(out.t, *b ? "true" : "false");
                     return true;
@@ -63,32 +66,46 @@ namespace utils {
                     bool first = true;
                     for (auto& kv : *o) {
                         if (first) {
-                            out.write_line();
-                            out.indent(1);
+                            if (line) {
+                                out.write_line();
+                                out.indent(1);
+                            }
                             first = false;
                         }
                         else {
                             out.write_raw(",");
-                            out.write_line();
+                            if (line) {
+                                out.write_line();
+                            }
                         }
-                        out.write_indent();
+                        if (line) {
+                            out.write_indent();
+                        }
                         out.write_raw("\"");
                         auto e1 = escape::escape_str(std::get<0>(kv), out.t, escflag);
                         if (!e1) {
                             return JSONError::invalid_escape;
                         }
                         out.write_raw("\":");
-                        out.push_back(' ');
-                        out.indent(1);
+                        if (any(flag & FmtFlag::space_key_value)) {
+                            out.push_back(' ');
+                        }
+                        if (line) {
+                            out.indent(1);
+                        }
                         auto e2 = to_string(std::get<1>(kv), out, flag);
                         if (!e2) {
                             return e2;
                         }
-                        out.indent(-1);
+                        if (line) {
+                            out.indent(-1);
+                        }
                     }
                     if (!first) {
-                        out.write_line();
-                        out.indent(-1);
+                        if (line) {
+                            out.write_line();
+                            out.indent(-1);
+                        }
                     }
                     out.write_raw("}");
                 }
