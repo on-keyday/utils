@@ -57,6 +57,14 @@ namespace utils {
                         out.write_indent();
                     }
                 };
+                auto write_tail = [&](bool& first) {
+                    if (!first) {
+                        if (line) {
+                            out.write_line();
+                            out.indent(-1);
+                        }
+                    }
+                };
                 if (holder.is_null()) {
                     helper::append(out.t, "null");
                     return true;
@@ -108,18 +116,14 @@ namespace utils {
                             out.indent(-1);
                         }
                     }
-                    if (!first) {
-                        if (line) {
-                            out.write_line();
-                            out.indent(-1);
-                        }
-                    }
+                    write_tail(first);
                     out.write_raw("}");
                 }
                 else if (auto a = holder.as_arr()) {
                     out.write_raw("[");
                     bool first = true;
                     for (auto& v : *a) {
+                        write_comma(first);
                     }
                 }
                 return JSONError::not_json;
