@@ -8,6 +8,8 @@
 #include "../../include/net/util/json/json.h"
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/net/util/json/parse.h"
+#include "../../include/net/util/json/to_string.h"
+#include "../../include/wrap/cout.h"
 
 void test_json() {
     namespace utw = utils::wrap;
@@ -26,6 +28,12 @@ void test_json() {
             ]
         })",
         json);
+    json["json"] = "root";
+    utils::wrap::string v;
+    auto w = utils::helper::make_indent_writer(v, "    ");
+    utils::net::json::to_string(json, w);
+    auto& cout = utils::wrap::cout_wrap();
+    cout << v;
 }
 
 int main() {
