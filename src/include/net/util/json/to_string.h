@@ -57,6 +57,14 @@ namespace utils {
                         }
                     }
                 };
+                auto escape = [&](auto& str) {
+                    if (any(flag & FmtFlag::html)) {
+                        return escape::escape_str(str, out.t, escflag, escape::json_set(), escape::html_range());
+                    }
+                    else {
+                        return escape::escape_str(str, out.t, escflag, escape::json_set());
+                    }
+                };
                 if (holder.is_null()) {
                     helper::append(out.t, "null");
                     return true;
