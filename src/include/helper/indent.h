@@ -16,9 +16,21 @@ namespace utils {
         struct IndentWriter {
             T t;
             Indent indent;
+            size_t indent = 0;
             template <class V, class C>
             constexpr IndentWriter(V&& v, C&& c)
                 : t(v), indent(c) {}
+            template <class... V>
+            constexpr void write_raw(V&&... v) {
+                appends(t, std::forward<V>(v)...);
+            }
+
+            template <class... V>
+            constexpr void write(V&&... v) {
+                for (size_t i = 0; i < indent; i++) {
+                }
+            }
         };
+
     }  // namespace helper
 }  // namespace utils
