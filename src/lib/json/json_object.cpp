@@ -10,6 +10,19 @@
 
 template <class String, template <class...> class Vec, template <class...> class Object>
 void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
+    using self_t = utils::json::JSONBase<String, Vec, Object>;
+    obj = nullptr;
+    obj = true;
+    obj = String();
+    obj = Vec<self_t>{};
+    obj = Object<String, self_t>{};
+    bool b;
+    obj.as_bool(b);
+    obj.at(String{});
+    obj.at(0);
+    obj[String{}];
+    obj[0];
+    obj.pop_back();
 }
 
 void instantiate() {
