@@ -150,6 +150,11 @@ namespace utils {
                 return JSONError::not_json;
             }
 
+            template <class Out, class String, template <class...> class Vec, template <class...> class Object>
+            JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, FmtFlag flag = FmtFlag::none, const char* indent = "    ") {
+                auto w = helper::make_indent_writer(out, indent);
+                return to_string(json, w, flag);
+            }
         }  // namespace json
     }      // namespace net
 }  // namespace utils
