@@ -9,6 +9,7 @@
 // json_export - export json
 #pragma once
 
+#include "../platform/windows/dllexport_header.h"
 #include "json.h"
 
 namespace utils {
@@ -17,11 +18,11 @@ namespace utils {
 #if !defined(UTILS_NET_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
-            template struct JSONBase<wrap::string, wrap::vector, wrap::map>;
+            template struct DLL JSONBase<wrap::string, wrap::vector, wrap::map>;
 #if !defined(UTILS_NET_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
-            template struct JSONBase<wrap::string, wrap::vector, ordered_map>;
+            template struct DLL JSONBase<wrap::string, wrap::vector, ordered_map>;
     }  // namespace json
 
 }  // namespace utils
