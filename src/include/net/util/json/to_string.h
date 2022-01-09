@@ -40,7 +40,6 @@ namespace utils {
                     return numtostr(*f);
                 }
             }
-        }
-    }  // namespace json
-}  // namespace net
+        }  // namespace json
+    }      // namespace net
 }  // namespace utils
