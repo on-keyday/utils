@@ -19,7 +19,7 @@ namespace utils {
             size_t ind = 0;
             template <class V, class C>
             constexpr IndentWriter(V&& v, C&& c)
-                : t(v), indent(c) {}
+                : t(v), indent_str(c) {}
             template <class... V>
             constexpr void write_raw(V&&... v) {
                 appends(t, std::forward<V>(v)...);
@@ -37,6 +37,10 @@ namespace utils {
                 ind += i;
             }
         };
+
+        template <class T, class Indent = const char*>
+        auto make_indent_writer(T&& t, Indent&& i = "  ") {
+        }
 
     }  // namespace helper
 }  // namespace utils
