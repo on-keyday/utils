@@ -22,7 +22,7 @@ namespace utils {
                 Option<String, Vec>& option = *opt;
                 OptValue<>& def = option.defvalue;
                 OptionResult<String, Vec>* target = nullptr;
-                if (result.find(option.mainname, target)) {
+                if (result.find(option.mainname, &target)) {
                     if (any(option.flag & OptFlag::once_in_cmd)) {
                         return ParseError::not_one_opt;
                     }
@@ -64,7 +64,7 @@ namespace utils {
                          OptionDesc<String, Vec, Map>& desc,
                          OptionSet<String, Vec, Map>& result,
                          ParseFlag flag, Arg* arg = nullptr) {
-            using option_t = wrap::shared_ptr<Option<String, Vec>>;
+            using option_t = typename OptionDesc<String, Vec, Map>::option_t;
             bool nooption = false;
             ParseError ret = ParseError::none;
             auto parse_all = [&](bool failed) {

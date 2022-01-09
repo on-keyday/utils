@@ -284,30 +284,31 @@ namespace utils {
         template <class String, template <class...> class Vec, template <class...> class Map>
         struct OptionSet {
            private:
-            Map<String, OptionResult<String, Vec>> result;
+            using result_t = OptionResult<String, Vec>;
+            Map<String, result_t> result;
 
             template <class Str, class Char, template <class...> class Maps, template <class...> class Vecs>
             friend ParseError internal::parse_one(int& index, int argc, Char** argv, wrap::shared_ptr<Option<Str, Vecs>>& opt,
                                                   OptionSet<Str, Vecs, Maps>& result,
                                                   ParseFlag flag, Str* assign);
 
-            void emplace(wrap::shared_ptr<Option<String, Vec>> option, OptionResult<String, Vec>*& res) {
+            void emplace(wrap::shared_ptr<Option<String, Vec>> option, result_t*& res) {
                 res = &result[option->mainname];
                 res->base = std::move(option);
             }
 
-            bool find(auto& name, OptionResult<String, Vec>*& opt) {
+            bool find(auto& name, result_t** opt) {
                 if (auto found = result.find(name); found != result.end()) {
-                    opt = &std::get<1>(*found);
+                    *opt = &std::get<1>(*found);
                     return true;
                 }
                 return false;
             }
 
            public:
-            OptionResult<String, Vec>* is_set(const String& name) {
-                OptionResult<String, Vec>* f;
-                if (find(name, f)) {
+            result_t* is_set(const String& name) {
+                result_t* f;
+                if (find(name, &f)) {
                     return f;
                 }
                 return nullptr;

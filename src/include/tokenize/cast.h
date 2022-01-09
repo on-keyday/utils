@@ -15,6 +15,7 @@
 #include "predefined.h"
 #include "identifier.h"
 #include "comment.h"
+#include <memory>
 
 namespace utils {
 
