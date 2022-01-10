@@ -25,7 +25,7 @@ void test_cin() {
     while (!cin.peek_buffer(peek)) {
         Sleep(100);
         cout << "\b\b\b\b";
-        cout << utils::helper::CharView<wchar_t>('\b', presize);
+        cout << utils::helper::CharView<wchar_t>('\b', presize + 1);
         switch (i) {
             case 0:
                 cout << "\\";
