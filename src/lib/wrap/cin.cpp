@@ -66,10 +66,9 @@ namespace utils {
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
                     auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
-                    ::putwc(c, stdout);
+                    ::fwrite(&c, 2, 1, stdout);
                     if (c == '\b') {
-                        ::putwc(' ', stdout);
-                        ::putwc('\b', stdout);
+                        ::fwrite(L" \b", 2, 2, stdout);
                         if (buf.size()) {
                             buf.pop_back();
                         }
