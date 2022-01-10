@@ -25,7 +25,7 @@ void test_cin() {
     bool updated = false;
     while (!cin.peek_buffer(peek, false, &updated)) {
         Sleep(10);
-        if (peek.size() != prev.size()) {
+        if (updated) {
             cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
             cout << "\b\b\b\b";
             switch (i) {
