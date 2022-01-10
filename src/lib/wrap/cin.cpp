@@ -38,7 +38,7 @@ namespace utils {
 
         static path_string glbuf;
 #ifdef _WIN32
-        bool load_to_glbuf(::FILE* std_handle) {
+        bool load_to_glbuf() {
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
             ::DWORD num = 0, res = 0;
@@ -49,11 +49,12 @@ namespace utils {
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
                     auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
-                    ::putwc(c, std_handle);
-                    glbuf.push_back(c);
-                    if (c == '\n') {
+                    ::putwc(c, stdout);
+                    if (c == '\r' || c == '\n') {
                         tr = true;
+                        c = '\n';
                     }
+                    glbuf.push_back(c);
                 }
                 ::ReadConsoleInputW(h, &rec, 1, &res);
             }
@@ -64,7 +65,7 @@ namespace utils {
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                return load_to_glbuf(std_handle);
+                return load_to_glbuf();
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};
