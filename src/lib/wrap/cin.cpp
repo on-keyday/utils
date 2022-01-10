@@ -23,7 +23,7 @@ namespace utils {
         ::FILE* is_std(istream&);
 
         UtfIn::UtfIn(istream& i)
-            : in(in) {
+            : in(i) {
             std_handle = is_std(i);
         }
 
@@ -51,7 +51,7 @@ namespace utils {
             else {
                 auto c = in.get();
                 in.unget();
-                return c != EOF;
+                return c != decltype(c)(EOF);
             }
         }
 
