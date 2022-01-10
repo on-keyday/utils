@@ -59,6 +59,7 @@ namespace utils {
             ::DWORD num = 0, res = 0;
             ::GetNumberOfConsoleInputEvents(h, &num);
             path_string buf;
+            size_t bk = 0;
             bool tr = false;
             for (auto i = 0; i < num; i++) {
                 ::PeekConsoleInputW(h, &rec, 1, &res);
@@ -69,10 +70,24 @@ namespace utils {
                     if (c == '\b') {
                         ::putwc(' ', stdout);
                         ::putwc('\b', stdout);
+                        if (buf.size()) {
+                            buf.pop_back();
+                        }
+                        else {
+                            lock.lock();
+                            if (glbuf.size()) {
+                                glbuf.pop_back();
+                            }
+                            lock.unlock();
+                        }
                     }
                     else if (c == '\r' || c == '\n') {
                         tr = true;
                         c = '\n';
+                        bk = 0;
+                    }
+                    if (bk) {
+                        bk--;
                     }
                     buf.push_back(c);
                 }
