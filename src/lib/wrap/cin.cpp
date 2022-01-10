@@ -40,6 +40,9 @@ namespace utils {
             ::GetNumberOfConsoleInputEvents(h, &num);
             path_string buf;
             bool tr = false;
+            if (updated) {
+                *updated = false;
+            }
             for (auto i = 0; i < num; i++) {
                 ::PeekConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
