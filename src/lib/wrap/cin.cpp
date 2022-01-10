@@ -16,6 +16,8 @@
 #include <io.h>
 #include "Windows.h"
 #else
+#include <sys/select.h>
+#include <sys/time.h>
 #define _O_U8TEXT 0
 #endif
 
@@ -28,66 +30,30 @@ namespace utils {
             std_handle = is_std(i);
         }
 
-        static path_string glbuf;
-
         UtfIn& UtfIn::operator>>(path_string& out) {
             force_init_io();
-            if (std_handle) {
-                while (true) {
-                    lock.lock();
-                    if (glbuf.size()) {
-                        auto seq = make_ref_seq(glbuf);
-                        auto e = helper::read_until(out, seq, '\n');
-                        glbuf.erase(0, seq.rptr);
-                        if (!e) {
-                            lock.unlock();
-                            continue;
-                        }
-                    }
-                    else {
-                        lock.unlock();
-                        continue;
-                    }
-                    break;
-                }
-                lock.unlock();
-            }
-            else {
-                std::getline(in, out);
-            }
+            std::getline(in, out);
             return *this;
         }
 
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                lock.lock();
-                if (::_isatty(0)) {
-                    while (::_kbhit()) {
-                        auto c = ::_getwch();
-                        if (c == '\b' && glbuf.size()) {
-                            glbuf.pop_back();
-                        }
-                        else {
-                            glbuf.push_back(c);
-                        }
-                        if (c == '\n') {
-                            lock.unlock();
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                else {
-                    return true;
-                }
+                auto h = ::GetStdHandle(STD_INPUT_HANDLE);
+                ::DWORD bytes_left;
+                ::PeekNamedPipe(h, NULL, 0, NULL, &bytes_left, NULL);
+                return bytes_left != 0;
+#else
+                ::fd_set set{0};
+                ::timeval tv{0};
+                FD_ZERO(set, 0)
+                FD_SET(set, 0)::select();
+                auto e = ::select(1, &set, nullptr, nullptr, &tv);
+                return e != 0;
 #endif
-                return true;
             }
             else {
-                auto c = in.get();
-                in.unget();
-                return c != decltype(c)(EOF);
+                return true;
             }
         }
 
