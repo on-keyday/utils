@@ -126,6 +126,7 @@ endif()
 target_link_libraries(dispatcher utils)
 target_link_libraries(tree utils)
 target_link_libraries(json utils)
+target_link_libraries(cin utils)
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
