@@ -63,6 +63,7 @@ add_executable(dispatcher "src/test/syntax/test_dispatcher.cpp")
 add_executable(tree "src/test/syntax/test_tree.cpp")
 add_executable(escape "src/test/escape/test_escape.cpp")
 add_executable(json "src/test/json/test_json.cpp")
+add_executable(cin "src/test/wrap/test_cin.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
