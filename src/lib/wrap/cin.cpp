@@ -54,6 +54,7 @@ namespace utils {
 
 #ifdef _WIN32
         bool load_to_glbuf(thread::LiteLock& lock) {
+            force_init_io();
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
             ::DWORD num = 0, res = 0;
