@@ -44,7 +44,7 @@ void test_cin() {
                     cout << "|";
                     break;
             }
-            if (count > 100) {
+            if (count > 10) {
                 i++;
                 if (i == 4) {
                     i = 0;
