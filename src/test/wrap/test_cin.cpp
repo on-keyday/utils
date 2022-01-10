@@ -25,6 +25,7 @@ void test_cin() {
     size_t count = 0;
     utils::wrap::path_string peek, prev;
     bool updated = false;
+    cout << "\e[?25l";
     while (!cin.peek_buffer(peek, false, &updated)) {
         Sleep(10);
         auto update_progress = [&] {
@@ -53,7 +54,9 @@ void test_cin() {
                 count++;
             }
         };
+
         if (updated) {
+            cout << "\e[1M";
             cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
             cout << "\b\b\b\b";
             update_progress();
@@ -69,6 +72,7 @@ void test_cin() {
     utils::wrap::string str;
     cin >> str;
     cout << str;
+    cout << "\e[?25h";
 }
 
 int main() {
