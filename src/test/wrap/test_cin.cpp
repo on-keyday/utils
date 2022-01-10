@@ -16,6 +16,7 @@
 #include "unistd.h"
 #define Sleep sleep
 #endif
+
 void test_cin() {
     utils::wrap::out_virtual_terminal = true;
     auto& cout = utils::wrap::cout_wrap();
@@ -27,7 +28,7 @@ void test_cin() {
     bool updated = false;
     cout << "\e[?25l";
     while (!cin.peek_buffer(peek, false, &updated)) {
-        Sleep(10);
+        Sleep(1);
         auto update_progress = [&] {
             switch (i) {
                 case 0:
@@ -43,7 +44,7 @@ void test_cin() {
                     cout << "|";
                     break;
             }
-            if (count > 10) {
+            if (count > 100) {
                 i++;
                 if (i == 4) {
                     i = 0;
