@@ -31,29 +31,8 @@ namespace utils {
         }
         static path_string glbuf;
 
-        UtfIn& UtfIn::operator>>(path_string& out) {
-            force_init_io();
-            if (std_handle) {
-                while (true) {
-                    lock.lock();
-                    auto seq = make_ref_seq(glbuf);
-                    auto e = helper::read_until(out, seq, "\n");
-                    if (!e) {
-                        lock.unlock();
-                        continue;
-                    }
-                    break;
-                }
-                lock.unlock();
-            }
-            else {
-                std::getline(in, out);
-            }
-            return *this;
-        }
-
 #ifdef _WIN32
-        bool load_to_glbuf(thread::LiteLock& lock) {
+        bool load_to_buf(path_string* prvbuf, thread::LiteLock& lock) {
             force_init_io();
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
@@ -72,6 +51,11 @@ namespace utils {
                             ::fwrite(L" \b", 2, 2, stdout);
                             if (buf.size()) {
                                 buf.pop_back();
+                            }
+                            else if (prvbuf) {
+                                if (prvbuf->size()) {
+                                    prvbuf->pop_back();
+                                }
                             }
                             else {
                                 lock.lock();
@@ -97,6 +81,9 @@ namespace utils {
             }
             ::fflush(stdout);
             if (buf.size()) {
+                if (prvbuf) {
+                    prvbuf->append(buf);
+                }
                 lock.lock();
                 glbuf.append(buf);
                 lock.unlock();
@@ -105,10 +92,32 @@ namespace utils {
         }
 #endif
 
+        UtfIn& UtfIn::operator>>(path_string& out) {
+            force_init_io();
+            if (std_handle) {
+                while (true) {
+                    lock.lock();
+                    auto seq = make_ref_seq(glbuf);
+                    auto e = helper::read_until(out, seq, "\n");
+                    if (!e) {
+                        lock.unlock();
+                        std::getline(in, out);
+                        break;
+                    }
+                    break;
+                }
+                lock.unlock();
+            }
+            else {
+                std::getline(in, out);
+            }
+            return *this;
+        }
+
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                return load_to_glbuf(lock);
+                return load_to_buf(nullptr, lock);
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};

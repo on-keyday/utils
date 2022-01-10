@@ -17,8 +17,30 @@
 void test_cin() {
     auto& cout = utils::wrap::cout_wrap();
     auto& cin = utils::wrap::cin_wrap();
+    cout << "|>> ";
+    size_t i = 0;
     while (!cin.has_input()) {
-        Sleep(1);
+        Sleep(100);
+        cout << "\b\b\b\b";
+        switch (i) {
+            case 0:
+                cout << "\\";
+                break;
+            case 1:
+                cout << "-";
+                break;
+            case 2:
+                cout << "/";
+                break;
+            case 3:
+                cout << "|";
+                break;
+        }
+        cout << ">> ";
+        i++;
+        if (i == 4) {
+            i = 0;
+        }
     }
     utils::wrap::string str;
     cin >> str;
