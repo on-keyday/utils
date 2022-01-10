@@ -25,14 +25,16 @@ RUN apt-get update && \
     liblldb-12-dev\
     curl\
     unzip\
-    llvm-12
+    llvm-12\
+    g++-10
 
 
 RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-12/bin/clang /bin/clang
 RUN ln -s /bin/lldb-12 /bin/lldb
 RUN ln -s /lib/llvm-12/lib/libc++abi.so.1.0 /lib/llvm-12/lib/libc++abi.so
-RUN ln /usr/bin/lldb-server-12 /usr/bin/lldb-server-12.0.0
+RUN ln -s /usr/bin/lldb-server-12 /usr/bin/lldb-server-12.0.0
+RUN ln -s /bin/g++-10 /bin/g++
 
 RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
     -o /usr/utilsdev/lldb-mi.zip -L
