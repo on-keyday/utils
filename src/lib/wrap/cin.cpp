@@ -32,7 +32,7 @@ namespace utils {
         static path_string glbuf;
 
 #ifdef _WIN32
-        bool load_to_buf(path_string* prvbuf, thread::LiteLock* lock) {
+        bool load_to_buf(path_string* prvbuf, thread::LiteLock* lock, bool* updated = nullptr) {
             force_init_io();
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
@@ -77,6 +77,9 @@ namespace utils {
                             }
                             buf.push_back(c);
                         }
+                        if (updated) {
+                            *updated = true;
+                        }
                     }
                 }
                 ::ReadConsoleInputW(h, &rec, 1, &res);
@@ -96,10 +99,10 @@ namespace utils {
         }
 #endif
 
-        bool UtfIn::peek_buffer(path_string& buf, bool no_cin) {
+        bool UtfIn::peek_buffer(path_string& buf, bool no_cin, bool* updated) {
 #ifdef _WIN32
             if (std_handle && ::_isatty(0)) {
-                return load_to_buf(&buf, no_cin ? nullptr : &lock);
+                return load_to_buf(&buf, no_cin ? nullptr : &lock, updated);
             }
 #endif
             return true;
