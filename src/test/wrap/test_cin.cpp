@@ -43,10 +43,10 @@ void test_cin() {
                 break;
         }
         if (count > 10) {
+            i++;
             if (i == 4) {
                 i = 0;
             }
-            i++;
             count = 0;
         }
         else {
