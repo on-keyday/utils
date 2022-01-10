@@ -27,6 +27,7 @@ namespace utils {
             thread::LiteLock lock;
 
            public:
+            UtfIn(istream& i);
             UtfIn& operator>>(path_string& out);
 
             bool has_input() const;

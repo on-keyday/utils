@@ -30,6 +30,19 @@ namespace utils {
         bool in_virtual_terminal = false;
         bool no_change_mode = false;
 
+        ::FILE* is_std(istream& in) {
+            auto addr = std::addressof(in);
+#ifdef _WIN32
+            if (addr == std::addressof(std::wcin))
+#else
+            if (addr == std::addressof(std::cin))
+#endif
+            {
+                return stdin;
+            }
+            return nullptr;
+        }  // namespace wrap
+
         ::FILE* is_std(ostream& out) {
             auto addr = std::addressof(out);
 #ifdef _WIN32
