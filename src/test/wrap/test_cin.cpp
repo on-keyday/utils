@@ -42,7 +42,7 @@ void test_cin() {
         }
         cout << ">> ";
         cout << peek;
-        presize = 0;
+        presize = peek.size();
         i++;
         if (i == 4) {
             i = 0;
