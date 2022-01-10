@@ -80,6 +80,7 @@ namespace utils {
                             }
                             lock.unlock();
                         }
+                        continue;
                     }
                     else if (c == '\r' || c == '\n') {
                         tr = true;
