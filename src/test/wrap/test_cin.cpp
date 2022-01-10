@@ -19,7 +19,8 @@ void test_cin() {
     auto& cin = utils::wrap::cin_wrap();
     cout << "|>> ";
     size_t i = 0;
-    while (!cin.has_input()) {
+    utils::wrap::path_string peek;
+    while (!cin.peek_buffer(peek)) {
         Sleep(100);
         cout << "\b\b\b\b";
         switch (i) {

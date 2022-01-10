@@ -45,7 +45,7 @@ namespace utils {
             // no_cin means not buffering to cin
             // if above is not satisfied
             // this function always return true
-            bool peek_buffer(path_string& buf, bool no_cin);
+            bool peek_buffer(path_string& buf, bool no_cin = false);
         };
 
         UtfIn& STDCALL cin_wrap();
