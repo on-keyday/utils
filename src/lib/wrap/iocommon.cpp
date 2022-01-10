@@ -41,7 +41,7 @@ namespace utils {
                 return stdin;
             }
             return nullptr;
-        }  // namespace wrap
+        }
 
         ::FILE* is_std(ostream& out) {
             auto addr = std::addressof(out);
@@ -94,7 +94,7 @@ namespace utils {
             return true;
         }
 
-        static bool change_console_mode() {
+        static bool change_console_mode(bool out) {
             auto outhandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
             auto inhandle = ::GetStdHandle(STD_INPUT_HANDLE);
             auto errhandle = ::GetStdHandle(STD_ERROR_HANDLE);
@@ -104,13 +104,13 @@ namespace utils {
                 return false;
             }
 
-            if (out_virtual_terminal) {
+            if (out && out_virtual_terminal) {
                 auto res = change_output_mode(outhandle) && change_output_mode(errhandle);
                 if (!res) {
                     return false;
                 }
             }
-            if (in_virtual_terminal) {
+            if (!out && in_virtual_terminal) {
                 auto res = change_input_mode(inhandle);
                 if (!res) {
                     return false;
@@ -119,15 +119,10 @@ namespace utils {
             return true;
         }
 #endif
-
-        static bool io_init() {
+        static bool out_init() {
 #ifdef _WIN32
-            change_console_mode();
+            change_console_mode(true);
             if (!no_change_mode) {
-                if (_setmode(_fileno(stdin), stdinmode) == -1) {
-                    //err = "error:text input mode change failed";
-                    return false;
-                }
                 if (_setmode(_fileno(stdout), stdoutmode) == -1) {
                     //err = "error:text output mode change failed\n";
                     return false;
@@ -138,6 +133,26 @@ namespace utils {
                 }
             }
 #endif
+            return true;
+        }
+
+        static bool in_init() {
+#ifdef _WIN32
+            change_console_mode(false);
+            if (!no_change_mode) {
+                if (_setmode(_fileno(stdin), stdinmode) == -1) {
+                    //err = "error:text input mode change failed";
+                    return false;
+                }
+            }
+#endif
+            return true;
+        }
+
+        static bool io_init() {
+            if (!in_init() || !out_init()) {
+                return false;
+            }
             std::ios_base::sync_with_stdio(sync_stdio);
             initialized = true;
             return true;

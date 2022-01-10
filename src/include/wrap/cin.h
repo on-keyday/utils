@@ -10,7 +10,6 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include <iosfwd>
-#include <sstream>
 #include "lite/char.h"
 #include "lite/string.h"
 #include "../thread/lite_lock.h"
@@ -29,6 +28,14 @@ namespace utils {
            public:
             UtfIn(istream& i);
             UtfIn& operator>>(path_string& out);
+
+            template <class T>
+            UtfIn& operator>>(T& out) {
+                path_string str;
+                (*this) >> str;
+                utf::convert(str, out);
+                return *this;
+            }
 
             bool has_input() const;
         };

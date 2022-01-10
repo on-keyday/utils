@@ -11,7 +11,6 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include <iosfwd>
-#include <sstream>
 #include "lite/char.h"
 #include "lite/string.h"
 #include "../thread/lite_lock.h"
