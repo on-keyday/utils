@@ -65,31 +65,37 @@ namespace utils {
                 ::PeekConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
-                    auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
-                    ::fwrite(&c, 2, 1, stdout);
-                    if (c == '\b') {
-                        ::fwrite(L" \b", 2, 2, stdout);
-                        if (buf.size()) {
-                            buf.pop_back();
+                    for (auto i = rec.Event.KeyEvent.wRepeatCount; i != 0; i--) {
+                        auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
+                        ::fwrite(&c, 2, 1, stdout);
+                        if (c == '\b') {
+                            ::fwrite(L" \b", 2, 2, stdout);
+                            if (buf.size()) {
+                                buf.pop_back();
+                            }
+                            else {
+                                lock.lock();
+                                if (glbuf.size()) {
+                                    glbuf.pop_back();
+                                }
+                                lock.unlock();
+                            }
                         }
                         else {
-                            lock.lock();
-                            if (glbuf.size()) {
-                                glbuf.pop_back();
+                            if (c == '\r' || c == '\n') {
+                                tr = true;
+                                if (c == '\r') {
+                                    ::fwrite(L"\n", 2, 1, stdout);
+                                }
+                                c = '\n';
                             }
-                            lock.unlock();
+                            buf.push_back(c);
                         }
-                    }
-                    else {
-                        if (c == '\r' || c == '\n') {
-                            tr = true;
-                            c = '\n';
-                        }
-                        buf.push_back(c);
                     }
                 }
                 ::ReadConsoleInputW(h, &rec, 1, &res);
             }
+            ::fflush(stdout);
             if (buf.size()) {
                 lock.lock();
                 glbuf.append(buf);
