@@ -51,7 +51,7 @@ namespace utils {
             return c >= 0x21 && c <= 0x7e;
         }
 
-        constexpr bool is_radix_char(std::uint8_t c, size_t radix) {
+        constexpr bool is_radix_char(std::uint8_t c, std::uint32_t radix) {
             return number_transform[c] < radix;
         }
 
