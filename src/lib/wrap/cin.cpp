@@ -28,6 +28,7 @@ namespace utils {
         }
 
         UtfIn& UtfIn::operator>>(path_string& out) {
+            force_init_io();
             std::getline(in, out);
             return *this;
         }

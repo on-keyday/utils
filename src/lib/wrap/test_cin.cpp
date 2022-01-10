@@ -9,6 +9,7 @@
 #include "../../include/wrap/cin.h"
 
 void test_cin() {
+    auto& cin = utils::wrap::cin_wrap();
 }
 
 int main() {
