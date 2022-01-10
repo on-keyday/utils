@@ -8,6 +8,7 @@
 
 #include "../../include/wrap/cin.h"
 #include "../../include/wrap/cout.h"
+#include "../../include/helper/view.h"
 #ifdef _WIN32
 #include "windows.h"
 #else
@@ -20,9 +21,11 @@ void test_cin() {
     cout << "|>> ";
     size_t i = 0;
     utils::wrap::path_string peek;
+    size_t presize = 0;
     while (!cin.peek_buffer(peek)) {
         Sleep(100);
         cout << "\b\b\b\b";
+        cout << utils::helper::CharView<wchar_t>('\b', presize);
         switch (i) {
             case 0:
                 cout << "\\";
@@ -38,6 +41,8 @@ void test_cin() {
                 break;
         }
         cout << ">> ";
+        cout << peek;
+        presize = 0;
         i++;
         if (i == 4) {
             i = 0;
