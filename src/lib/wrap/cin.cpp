@@ -49,28 +49,34 @@ namespace utils {
                     rec.Event.KeyEvent.bKeyDown) {
                     for (auto i = rec.Event.KeyEvent.wRepeatCount; i != 0; i--) {
                         auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
-                        ::fwrite(&c, 2, 1, stdout);
                         if (c == '\b') {
-                            ::fwrite(L" \b", 2, 2, stdout);
+                            bool poped = false;
                             if (buf.size()) {
                                 buf.pop_back();
+                                poped = true;
                             }
                             else {
                                 if (prvbuf) {
                                     if (prvbuf->size()) {
                                         prvbuf->pop_back();
+                                        poped = true;
                                     }
                                 }
                                 if (lock) {
                                     lock->lock();
                                     if (glbuf.size()) {
                                         glbuf.pop_back();
+                                        poped = true;
                                     }
                                     lock->unlock();
                                 }
                             }
+                            if (poped) {
+                                ::fwrite(L"\b \b", 2, 2, stdout);
+                            }
                         }
                         else {
+                            ::fwrite(&c, 2, 1, stdout);
                             if (c == '\r' || c == '\n') {
                                 tr = true;
                                 if (c == '\r') {
