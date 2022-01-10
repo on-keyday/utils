@@ -36,7 +36,7 @@ namespace utils {
                 return *this;
             }
 
-            bool has_input() const;
+            bool has_input();
         };
 
         UtfIn& STDCALL cin_wrap();

@@ -8,6 +8,7 @@
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/wrap/iocommon.h"
 #include "../../include/wrap/cin.h"
+#include "../../include/helper/readutil.h"
 #include <cstdio>
 #include <iostream>
 #ifdef _WIN32
@@ -27,18 +28,53 @@ namespace utils {
             std_handle = is_std(i);
         }
 
+        static path_string glbuf;
+
         UtfIn& UtfIn::operator>>(path_string& out) {
             force_init_io();
-            std::getline(in, out);
+            if (std_handle) {
+                while (true) {
+                    lock.lock();
+                    if (glbuf.size()) {
+                        auto seq = make_ref_seq(glbuf);
+                        auto e = helper::read_until(out, seq, '\n');
+                        glbuf.erase(0, seq.rptr);
+                        if (!e) {
+                            lock.unlock();
+                            continue;
+                        }
+                    }
+                    else {
+                        lock.unlock();
+                        continue;
+                    }
+                    break;
+                }
+                lock.unlock();
+            }
+            else {
+                std::getline(in, out);
+            }
             return *this;
         }
 
-        bool UtfIn::has_input() const {
+        bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
+                lock.lock();
                 if (::_isatty(0)) {
-                    if (_kbhit()) {
-                        return true;
+                    while (::_kbhit()) {
+                        auto c = ::_getwch();
+                        if (c == '\b' && glbuf.size()) {
+                            glbuf.pop_back();
+                        }
+                        else {
+                            glbuf.push_back(c);
+                        }
+                        if (c == '\n') {
+                            lock.unlock();
+                            return true;
+                        }
                     }
                     return false;
                 }
