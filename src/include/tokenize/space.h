@@ -43,7 +43,7 @@ namespace utils {
                 using char_t = std::remove_cvref_t<typename BufferType<String>::char_type>;
                 auto sp = helper::space::get_space<char_t>(space);
                 for (size_t i = 0; i < count; i++) {
-                    for (auto i = 0; i < sp.size(); i++) {
+                    for (size_t i = 0; i < sp.size(); i++) {
                         cmp.push_back(sp[i]);
                     }
                 }

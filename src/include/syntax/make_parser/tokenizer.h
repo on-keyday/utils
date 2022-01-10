@@ -25,7 +25,7 @@ namespace utils {
                     utf::convert(base, converted);
                     predef.push_back(std::move(converted));
                 };
-                for (auto i = 0; i < sizeof(keyword_str) / sizeof(keyword_str[0]); i++) {
+                for (size_t i = 0; i < sizeof(keyword_str) / sizeof(keyword_str[0]); i++) {
                     cvt_push(keyword_str[i], ret.keyword.predef);
                 }
                 cvt_push(":=", ret.symbol.predef);

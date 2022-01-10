@@ -126,7 +126,7 @@ namespace utils {
                                     }
                                     return true;
                                 };
-                                for (auto i = 0; i < buf.size(); i++) {
+                                for (size_t i = 0; i < buf.size(); i++) {
                                     if (auto e = set_one(buf[i]); !e) {
                                         return e;
                                     }
