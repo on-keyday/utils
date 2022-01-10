@@ -6,8 +6,7 @@
 */
 
 
-// cout - wrapper of cout
-// need to link libutils
+// cin - wrap cin
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include <iosfwd>
@@ -20,31 +19,17 @@
 
 namespace utils {
     namespace wrap {
-
-        struct DLL UtfOut {
+        struct UtfIn {
            private:
-            ostream& out;
+            istream& in;
             stringstream ss;
             ::FILE* std_handle = nullptr;
             thread::LiteLock lock;
 
            public:
-            UtfOut(ostream& out);
+            UtfIn& operator>>(path_string& out);
 
-            template <class T>
-            UtfOut& operator<<(T&& t) {
-                return WriteWrapper::write(*this, std::forward<T>(t), ss, &lock);
-            }
-
-            UtfOut& operator<<(const path_string&);
-
-            void write(const path_string&);
-
-            UtfOut& operator<<(internal::Pack&& pack);
+            bool has_input() const;
         };
-
-        DLL UtfOut& STDCALL cout_wrap();
-        DLL UtfOut& STDCALL cerr_wrap();
-
     }  // namespace wrap
 }  // namespace utils

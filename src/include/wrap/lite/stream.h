@@ -14,9 +14,11 @@ namespace utils {
     namespace wrap {
 #ifdef _WIN32
         using ostream = std::wostream;
+        using istream = std::wistream;
         using stringstream = std::wstringstream;
 #else
         using ostream = std::ostream;
+        using istream = std::istream;
         using stringstream = std::stringstream;
 #endif
     }  // namespace wrap

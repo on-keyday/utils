@@ -13,6 +13,7 @@
 #include "../../include/wrap/lite/string.h"
 #include "../../include/wrap/lite/map.h"
 #include "../../include/wrap/cout.h"
+#include "../../include/wrap/iocommon.h"
 using namespace utils;
 
 void test_make_parser() {

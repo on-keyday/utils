@@ -105,6 +105,7 @@ PRIVATE
 "src/lib/net/http/http1.cpp"
 "src/lib/platform/windows/io_completion_port.cpp" 
 "src/lib/json/json_object.cpp"
+"src/lib/wrap/iocommon.cpp"
 )
 
 
