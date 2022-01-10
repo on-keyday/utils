@@ -106,6 +106,7 @@ PRIVATE
 "src/lib/platform/windows/io_completion_port.cpp" 
 "src/lib/json/json_object.cpp"
 "src/lib/wrap/iocommon.cpp"
+"src/lib/wrap/cin.cpp"
 )
 
 

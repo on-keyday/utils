@@ -7,9 +7,23 @@
 
 
 #include "../../include/wrap/cin.h"
-
+#include "../../include/wrap/cout.h"
+#ifdef _WIN32
+#include "windows.h"
+#else
+#include "unistd.h"
+#define Sleep sleep
+#endif
 void test_cin() {
+    auto& cout = utils::wrap::cout_wrap();
     auto& cin = utils::wrap::cin_wrap();
+    while (!cin.has_input()) {
+        Sleep(500);
+        cout << "waiting\n";
+    }
+    utils::wrap::string str;
+    cin >> str;
+    cout << str;
 }
 
 int main() {
