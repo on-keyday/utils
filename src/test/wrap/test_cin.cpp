@@ -23,7 +23,7 @@ void test_cin() {
     size_t count = 0;
     utils::wrap::path_string peek, prev;
     while (!cin.peek_buffer(peek)) {
-        Sleep(1);
+        Sleep(10);
         if (peek.size() != 0 || prev.size() != 0) {
             cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
         }
