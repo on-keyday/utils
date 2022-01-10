@@ -49,7 +49,7 @@ namespace utils {
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
                     auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
-                    ::fputc(c, std_handle);
+                    ::putwc(c, std_handle);
                     glbuf.push_back(c);
                     if (c == '\n') {
                         tr = true;
