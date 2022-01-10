@@ -36,13 +36,28 @@ namespace utils {
             return *this;
         }
 
+        static path_string glbuf;
+
+        bool load_to_glbuf() {
+            auto h = ::GetStdHandle(STD_INPUT_HANDLE);
+            ::INPUT_RECORD rec;
+            ::DWORD num = 0, res = 0;
+            ::GetNumberOfConsoleInputEvents(h, &num);
+            for (auto i = 0; i < num; i++) {
+                ::PeekConsoleInputW(h, &rec, 1, &res);
+                if (rec.EventType == KEY_EVENT &&
+                    rec.Event.KeyEvent.bKeyDown) {
+                    glbuf.push_back(rec.Event.KeyEvent.uChar.UnicodeChar);
+                }
+                ::ReadConsoleInputW(h, &rec, 1, &res);
+            }
+            return false;
+        }
+
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                auto h = ::GetStdHandle(STD_INPUT_HANDLE);
-                ::DWORD bytes_left;
-                ::PeekNamedPipe(h, NULL, 0, NULL, &bytes_left, NULL);
-                return bytes_left != 0;
+                return load_to_glbuf();
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};
@@ -52,9 +67,7 @@ namespace utils {
                 return e != 0;
 #endif
             }
-            else {
-                return true;
-            }
+            return true;
         }
 
         UtfIn& STDCALL cin_wrap() {
