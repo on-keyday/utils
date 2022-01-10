@@ -18,7 +18,7 @@ void test_cin() {
     auto& cout = utils::wrap::cout_wrap();
     auto& cin = utils::wrap::cin_wrap();
     while (!cin.has_input()) {
-        Sleep(500);
+        Sleep(1);
         cout << "waiting\n";
     }
     utils::wrap::string str;

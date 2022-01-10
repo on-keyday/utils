@@ -29,20 +29,36 @@ namespace utils {
             : in(i) {
             std_handle = is_std(i);
         }
+        static path_string glbuf;
 
         UtfIn& UtfIn::operator>>(path_string& out) {
             force_init_io();
-            std::getline(in, out);
+            if (std_handle) {
+                while (true) {
+                    lock.lock();
+                    auto seq = make_ref_seq(glbuf);
+                    auto e = helper::read_until(out, seq, "\n");
+                    if (!e) {
+                        lock.unlock();
+                        continue;
+                    }
+                    break;
+                }
+                lock.unlock();
+            }
+            else {
+                std::getline(in, out);
+            }
             return *this;
         }
 
-        static path_string glbuf;
 #ifdef _WIN32
-        bool load_to_glbuf() {
+        bool load_to_glbuf(thread::LiteLock& lock) {
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
             ::DWORD num = 0, res = 0;
             ::GetNumberOfConsoleInputEvents(h, &num);
+            path_string buf;
             bool tr = false;
             for (auto i = 0; i < num; i++) {
                 ::PeekConsoleInputW(h, &rec, 1, &res);
@@ -54,9 +70,14 @@ namespace utils {
                         tr = true;
                         c = '\n';
                     }
-                    glbuf.push_back(c);
+                    buf.push_back(c);
                 }
                 ::ReadConsoleInputW(h, &rec, 1, &res);
+            }
+            if (buf.size()) {
+                lock.lock();
+                glbuf.append(buf);
+                lock.unlock();
             }
             return tr;
         }
@@ -65,7 +86,7 @@ namespace utils {
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                return load_to_glbuf();
+                return load_to_glbuf(lock);
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};
