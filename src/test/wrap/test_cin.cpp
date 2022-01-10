@@ -24,37 +24,37 @@ void test_cin() {
     utils::wrap::path_string peek, prev;
     while (!cin.peek_buffer(peek)) {
         Sleep(10);
-        if (peek.size() != 0 || prev.size() != 0) {
+        if (peek.size() != prev.size()) {
             cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
-        }
-        cout << "\b\b\b\b";
-        switch (i) {
-            case 0:
-                cout << "\\";
-                break;
-            case 1:
-                cout << "-";
-                break;
-            case 2:
-                cout << "/";
-                break;
-            case 3:
-                cout << "|";
-                break;
-        }
-        if (count > 10) {
-            i++;
-            if (i == 4) {
-                i = 0;
+            cout << "\b\b\b\b";
+            switch (i) {
+                case 0:
+                    cout << "\\";
+                    break;
+                case 1:
+                    cout << "-";
+                    break;
+                case 2:
+                    cout << "/";
+                    break;
+                case 3:
+                    cout << "|";
+                    break;
             }
-            count = 0;
+            if (count > 10) {
+                i++;
+                if (i == 4) {
+                    i = 0;
+                }
+                count = 0;
+            }
+            else {
+                count++;
+            }
+            cout << ">> ";
+            cout << peek;
+            prev = peek;
         }
-        else {
-            count++;
-        }
-        cout << ">> ";
-        cout << peek;
-        prev = peek;
     }
     utils::wrap::string str;
     cin >> str;
