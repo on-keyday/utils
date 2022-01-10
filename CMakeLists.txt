@@ -15,8 +15,15 @@ set(CMAKE_USE_WIN32_THREADS_INIT 0)
 set(CMAKE_USE_PTHREADS_INIT 1)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 link_directories("/lib/llvm-12/lib")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GCC")
+set(CMAKE_CXX_FLAGS -nostdinc++ -nodefaultlibs 
+                    -isystem /lib/llvm-12/include/c++/v1
+                    -Wl,-rpath /lib/llvm-12/lib
+                    -lc++ -lc++abi -lm -lc -lgcc_s -lgcc)
+endif()
 endif()
 
 
