@@ -8,6 +8,7 @@
 
 #include "../../include/wrap/cin.h"
 #include "../../include/wrap/cout.h"
+#include "../../include/wrap/iocommon.h"
 #include "../../include/helper/view.h"
 #ifdef _WIN32
 #include "windows.h"
@@ -16,6 +17,7 @@
 #define Sleep sleep
 #endif
 void test_cin() {
+    utils::wrap::out_virtual_terminal = true;
     auto& cout = utils::wrap::cout_wrap();
     auto& cin = utils::wrap::cin_wrap();
     cout << "|>> ";
@@ -25,9 +27,7 @@ void test_cin() {
     bool updated = false;
     while (!cin.peek_buffer(peek, false, &updated)) {
         Sleep(10);
-        if (updated) {
-            cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
-            cout << "\b\b\b\b";
+        auto update_progress = [&] {
             switch (i) {
                 case 0:
                     cout << "\\";
@@ -52,9 +52,18 @@ void test_cin() {
             else {
                 count++;
             }
+        };
+        if (updated) {
+            cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
+            cout << "\b\b\b\b";
+            update_progress();
             cout << ">> ";
             cout << peek;
             prev = peek;
+        }
+        else {
+            cout << "\e[0G";
+            update_progress();
         }
     }
     utils::wrap::string str;
