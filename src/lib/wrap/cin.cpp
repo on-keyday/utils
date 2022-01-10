@@ -37,27 +37,34 @@ namespace utils {
         }
 
         static path_string glbuf;
-
-        bool load_to_glbuf() {
+#ifdef _WIN32
+        bool load_to_glbuf(::FILE* std_handle) {
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
             ::DWORD num = 0, res = 0;
             ::GetNumberOfConsoleInputEvents(h, &num);
+            bool tr = false;
             for (auto i = 0; i < num; i++) {
                 ::PeekConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
-                    glbuf.push_back(rec.Event.KeyEvent.uChar.UnicodeChar);
+                    auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
+                    ::fputc(c, std_handle);
+                    glbuf.push_back(c);
+                    if (c == '\n') {
+                        tr = true;
+                    }
                 }
                 ::ReadConsoleInputW(h, &rec, 1, &res);
             }
-            return false;
+            return tr;
         }
+#endif
 
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                return load_to_glbuf();
+                return load_to_glbuf(std_handle);
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};
