@@ -18,10 +18,9 @@
 
 namespace utils {
     namespace wrap {
-        struct UtfIn {
+        struct DLL UtfIn {
            private:
             istream& in;
-            stringstream ss;
             ::FILE* std_handle = nullptr;
             thread::LiteLock lock;
 

@@ -39,12 +39,18 @@ namespace utils {
                     if (_kbhit()) {
                         return true;
                     }
+                    return false;
+                }
+                else {
+                    return true;
                 }
 #endif
+                return true;
             }
             else {
-                in.get();
-                return true;
+                auto c = in.get();
+                in.unget();
+                return c != EOF;
             }
         }
 
