@@ -79,13 +79,14 @@ namespace utils {
                             }
                             lock.unlock();
                         }
-                        continue;
                     }
-                    else if (c == '\r' || c == '\n') {
-                        tr = true;
-                        c = '\n';
+                    else {
+                        if (c == '\r' || c == '\n') {
+                            tr = true;
+                            c = '\n';
+                        }
+                        buf.push_back(c);
                     }
-                    buf.push_back(c);
                 }
                 ::ReadConsoleInputW(h, &rec, 1, &res);
             }
