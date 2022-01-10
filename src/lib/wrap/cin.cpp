@@ -66,7 +66,11 @@ namespace utils {
                     rec.Event.KeyEvent.bKeyDown) {
                     auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
                     ::putwc(c, stdout);
-                    if (c == '\r' || c == '\n') {
+                    if (c == '\b') {
+                        ::putwc(' ', stdout);
+                        ::putwc('\b', stdout);
+                    }
+                    else if (c == '\r' || c == '\n') {
                         tr = true;
                         c = '\n';
                     }
