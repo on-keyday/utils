@@ -38,5 +38,7 @@ namespace utils {
 
             bool has_input() const;
         };
+
+        UtfIn& STDCALL cin_wrap();
     }  // namespace wrap
 }  // namespace utils

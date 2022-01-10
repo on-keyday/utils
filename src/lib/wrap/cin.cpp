@@ -54,5 +54,14 @@ namespace utils {
             }
         }
 
+        UtfIn& STDCALL cin_wrap() {
+#ifdef _WIN32
+            static UtfIn cin{std::wcin};
+#else
+            static UtfIn cin{std::cin};
+#endif
+            return cin;
+        }
+
     }  // namespace wrap
 }  // namespace utils

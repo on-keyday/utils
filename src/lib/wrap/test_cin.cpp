@@ -7,3 +7,10 @@
 
 
 #include "../../include/wrap/cin.h"
+
+void test_cin() {
+}
+
+int main() {
+    test_cin();
+}
