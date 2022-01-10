@@ -37,6 +37,13 @@ namespace utils {
             }
 
             bool has_input();
+
+            // returns has line
+            // this works on condition below
+            // 1. on windows
+            // 2. stdin object
+            // no_cin means not buffering to cin
+            bool peek_buffer(path_string& buf, bool no_cin);
         };
 
         UtfIn& STDCALL cin_wrap();

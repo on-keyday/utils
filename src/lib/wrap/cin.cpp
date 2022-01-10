@@ -32,7 +32,7 @@ namespace utils {
         static path_string glbuf;
 
 #ifdef _WIN32
-        bool load_to_buf(path_string* prvbuf, thread::LiteLock& lock) {
+        bool load_to_buf(path_string* prvbuf, thread::LiteLock* lock) {
             force_init_io();
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
             ::INPUT_RECORD rec;
@@ -52,17 +52,19 @@ namespace utils {
                             if (buf.size()) {
                                 buf.pop_back();
                             }
-                            else if (prvbuf) {
-                                if (prvbuf->size()) {
-                                    prvbuf->pop_back();
-                                }
-                            }
                             else {
-                                lock.lock();
-                                if (glbuf.size()) {
-                                    glbuf.pop_back();
+                                if (prvbuf) {
+                                    if (prvbuf->size()) {
+                                        prvbuf->pop_back();
+                                    }
                                 }
-                                lock.unlock();
+                                if (lock) {
+                                    lock->lock();
+                                    if (glbuf.size()) {
+                                        glbuf.pop_back();
+                                    }
+                                    lock->unlock();
+                                }
                             }
                         }
                         else {
@@ -84,9 +86,11 @@ namespace utils {
                 if (prvbuf) {
                     prvbuf->append(buf);
                 }
-                lock.lock();
-                glbuf.append(buf);
-                lock.unlock();
+                if (lock) {
+                    lock->lock();
+                    glbuf.append(buf);
+                    lock->unlock();
+                }
             }
             return tr;
         }
@@ -117,7 +121,9 @@ namespace utils {
         bool UtfIn::has_input() {
             if (std_handle) {
 #ifdef _WIN32
-                return load_to_buf(nullptr, lock);
+                if (::_isatty(0)) {
+                    return load_to_buf(nullptr, &lock);
+                }
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};
