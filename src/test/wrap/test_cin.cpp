@@ -58,8 +58,6 @@ void test_cin() {
 
         if (updated) {
             cout << "\e[1M";
-            cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
-            cout << "\b\b\b\b";
             update_progress();
             cout << ">> ";
             cout << peek;
