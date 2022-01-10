@@ -72,6 +72,7 @@ namespace utils {
         };
 
         template <class Result, class T>
+        requires std::is_integral_v<T>
         constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false) {
             if (radix < 2 || radix > 36) {
                 return NumError::invalid;

@@ -26,8 +26,10 @@ void test_to_string() {
     static_assert(utils::helper::equal(result2.buf, "-12394"), "expect -12394 but assetion failed");
     constexpr auto result3 = test_to_string_num(0xff, 16);
     static_assert(utils::helper::equal(result3.buf, "ff"), "expect ff but assetion failed");
+#if !defined(__GNUC__) || defined(__clang__)
     constexpr auto result4 = test_to_string_num(0.5);
     static_assert(utils::helper::equal(result4.buf, "0.5"), "expect 0.5 but assetion failed");
+#endif
 }
 
 int main() {

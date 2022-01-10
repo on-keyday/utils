@@ -26,7 +26,8 @@ RUN apt-get update && \
     curl\
     unzip\
     llvm-12\
-    g++-10
+    g++-10\
+    lld
 
 
 RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++

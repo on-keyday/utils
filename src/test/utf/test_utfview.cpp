@@ -59,6 +59,7 @@ constexpr bool test_view_utf32_to_utf16() {
 }
 
 void test_utfview() {
+#if !defined(__GNUC__) || defined(__clang__)
     constexpr bool result1 = test_view_utf8_to_utf32();
     static_assert(result1 == true, "view utf8 to utf32 is incorrect");
     constexpr bool result2 = test_view_utf8_to_utf16();
@@ -71,6 +72,7 @@ void test_utfview() {
     static_assert(result5 == true, "view utf32 to utf8 is incorrect");
     constexpr bool result6 = test_view_utf32_to_utf16();
     static_assert(result6 == true, "view utf32 to utf16 is incorrect");
+#endif
 }
 
 int main() {
