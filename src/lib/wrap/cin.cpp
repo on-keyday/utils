@@ -96,6 +96,15 @@ namespace utils {
         }
 #endif
 
+        bool UtfIn::peek_buffer(path_string& buf, bool no_cin) {
+#ifdef _WIN32
+            if (std_handle && ::_isatty(0)) {
+                return load_to_buf(&buf, no_cin ? nullptr : &lock);
+            }
+#endif
+            return true;
+        }
+
         UtfIn& UtfIn::operator>>(path_string& out) {
             force_init_io();
             if (std_handle) {
