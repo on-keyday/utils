@@ -20,14 +20,14 @@ void test_cin() {
     auto& cin = utils::wrap::cin_wrap();
     cout << "|>> ";
     size_t i = 0;
-    utils::wrap::path_string peek;
-    size_t presize = 0;
+    size_t count = 0;
+    utils::wrap::path_string peek, prev;
     while (!cin.peek_buffer(peek)) {
-        Sleep(100);
-        cout << "\b\b\b\b";
-        if (peek.size() != 0 || presize != 0) {
-            cout << utils::helper::CharView<wchar_t>('\b', presize + 1);
+        Sleep(1);
+        if (peek.size() != 0 || prev.size() != 0) {
+            cout << utils::helper::CharView<wchar_t>('\b', prev.size() + 1);
         }
+        cout << "\b\b\b\b";
         switch (i) {
             case 0:
                 cout << "\\";
@@ -42,13 +42,19 @@ void test_cin() {
                 cout << "|";
                 break;
         }
+        if (count > 10) {
+            if (i == 4) {
+                i = 0;
+            }
+            i++;
+            count = 0;
+        }
+        else {
+            count++;
+        }
         cout << ">> ";
         cout << peek;
-        presize = peek.size();
-        i++;
-        if (i == 4) {
-            i = 0;
-        }
+        prev = peek;
     }
     utils::wrap::string str;
     cin >> str;
