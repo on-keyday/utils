@@ -44,11 +44,13 @@ namespace utils {
             if (updated) {
                 *updated = false;
             }
+            bool zeroed = false;
             wchar_t surrogatebuf[2] = {0};
             for (auto i = 0; i < num; i++) {
                 ::ReadConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
-                    rec.Event.KeyEvent.bKeyDown) {
+                    (rec.Event.KeyEvent.bKeyDown || zeroed)) {
+                    zeroed = false;
                     for (auto k = rec.Event.KeyEvent.wRepeatCount; k != 0; k--) {
                         auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
                         if (c == '\b') {
@@ -88,6 +90,13 @@ namespace utils {
                                 surrogatebuf[1] = 0;
                             }
                             else {
+                                if (c == 0) {
+                                    auto& event = rec.Event.KeyEvent;
+                                    if (!(event.dwControlKeyState & LEFT_CTRL_PRESSED) && !(event.dwControlKeyState & RIGHT_CTRL_PRESSED)) {
+                                        zeroed = true;
+                                        break;
+                                    }
+                                }
                                 ::fwrite(&c, 2, 1, stdout);
                                 if (c == '\r' || c == '\n') {
                                     tr = true;
