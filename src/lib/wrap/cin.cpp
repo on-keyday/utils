@@ -16,6 +16,7 @@
 #include <conio.h>
 #include <io.h>
 #include "Windows.h"
+#include "../../include/wrap/cout.h"
 #else
 #include <sys/select.h>
 #include <sys/time.h>
@@ -76,7 +77,7 @@ namespace utils {
                                 }
                             }
                             if (poped) {
-                                ::fwrite(L"\b \b", 2, 2, stdout);
+                                wrap::cout_wrap() << L"\b \b";
                             }
                         }
                         else {
@@ -85,7 +86,7 @@ namespace utils {
                             }
                             else if (utf::is_utf16_low_surrogate(c)) {
                                 surrogatebuf[1] = c;
-                                ::fwrite(surrogatebuf, 2, 2, stdout);
+                                wrap::cout_wrap() << surrogatebuf;
                                 surrogatebuf[0] = 0;
                                 surrogatebuf[1] = 0;
                             }
@@ -97,11 +98,11 @@ namespace utils {
                                         break;
                                     }
                                 }
-                                ::fwrite(&c, 2, 1, stdout);
+                                wrap::cout_wrap() << c;
                                 if (c == '\r' || c == '\n') {
                                     tr = true;
                                     if (c == '\r') {
-                                        ::fwrite(L"\n", 2, 1, stdout);
+                                        wrap::cout_wrap() << '\n';
                                     }
                                     c = '\n';
                                 }
@@ -114,7 +115,6 @@ namespace utils {
                     }
                 }
             }
-            ::fflush(stdout);
             if (buf.size()) {
                 if (prvbuf) {
                     prvbuf->append(buf);
