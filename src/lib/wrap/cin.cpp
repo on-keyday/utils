@@ -49,7 +49,7 @@ namespace utils {
                 ::ReadConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
-                    for (auto i = rec.Event.KeyEvent.wRepeatCount; i != 0; i--) {
+                    for (auto k = rec.Event.KeyEvent.wRepeatCount; k != 0; k--) {
                         auto c = rec.Event.KeyEvent.uChar.UnicodeChar;
                         if (c == '\b') {
                             bool poped = false;
