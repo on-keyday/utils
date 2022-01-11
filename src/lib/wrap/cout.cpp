@@ -30,8 +30,19 @@ namespace utils {
         void UtfOut::write(const path_string& p) {
             if (std_handle) {
                 force_init_io();
-                ::fwrite(p.c_str(), sizeof(path_char), p.size(), std_handle);
-                ::fflush(std_handle);
+#ifdef _WIN32
+                auto no = ::_fileno(std_handle);
+                if (::_isatty(no)) {
+                    auto h = ::GetStdHandle(no == 1 ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
+                    DWORD written;
+                    ::WriteConsoleW(h, p.c_str(), p.size(), &written, nullptr);
+                }
+                else
+#endif
+                {
+                    ::fwrite(p.c_str(), sizeof(path_char), p.size(), std_handle);
+                    ::fflush(std_handle);
+                }
             }
             else {
                 this->out << p;
