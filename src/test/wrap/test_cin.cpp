@@ -20,7 +20,6 @@
 
 void test_cin() {
     utils::wrap::out_virtual_terminal = true;
-    utils::wrap::stdoutmode = _O_U16TEXT;
     auto& cout = utils::wrap::cout_wrap();
     auto& cin = utils::wrap::cin_wrap();
     cout << "|>> ";
