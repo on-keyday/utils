@@ -66,9 +66,9 @@ namespace utils {
             }
 
             template <class T>
-            bool consume_space(Sequencer<T>& seq) {
+            bool consume_space(Sequencer<T>& seq, bool inclline = false) {
                 bool ret = false;
-                while (match_space<true>(seq)) {
+                while (match_space<true>(seq, inclline)) {
                     ret = true;
                 }
                 return ret;
