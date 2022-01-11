@@ -64,6 +64,15 @@ namespace utils {
                 }
                 return 0;
             }
+
+            template <class T>
+            bool consume_space(Sequencer<T>& seq) {
+                bool ret = false;
+                while (match_space<true>(seq)) {
+                    ret = true;
+                }
+                return ret;
+            }
         }  // namespace space
 
     }  // namespace helper
