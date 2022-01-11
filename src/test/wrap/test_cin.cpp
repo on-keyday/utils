@@ -11,14 +11,16 @@
 #include "../../include/wrap/iocommon.h"
 #include "../../include/helper/view.h"
 #ifdef _WIN32
-#include "windows.h"
+#include <windows.h>
+#include <fcntl.h>
 #else
-#include "unistd.h"
+#include <unistd.h>
 #define Sleep sleep
 #endif
 
 void test_cin() {
     utils::wrap::out_virtual_terminal = true;
+    utils::wrap::stdoutmode = _O_U16TEXT;
     auto& cout = utils::wrap::cout_wrap();
     auto& cin = utils::wrap::cin_wrap();
     cout << "|>> ";
@@ -71,6 +73,7 @@ void test_cin() {
     utils::wrap::string str;
     cin >> str;
     cout << str;
+    cout << u8"🎅";
     cout << "\e[?25h";
 }
 
