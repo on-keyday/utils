@@ -73,7 +73,6 @@ void test_cin() {
     utils::wrap::string str;
     cin >> str;
     cout << str;
-    cout << u8"🎅";
     cout << "\e[?25h";
 }
 
