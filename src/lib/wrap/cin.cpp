@@ -9,6 +9,7 @@
 #include "../../include/wrap/iocommon.h"
 #include "../../include/wrap/cin.h"
 #include "../../include/helper/readutil.h"
+#include "../../include/utf/convert.h"
 #include <cstdio>
 #include <iostream>
 #ifdef _WIN32
@@ -43,6 +44,7 @@ namespace utils {
             if (updated) {
                 *updated = false;
             }
+            wchar_t surrogatebuf[2] = {0};
             for (auto i = 0; i < num; i++) {
                 ::PeekConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
@@ -76,13 +78,24 @@ namespace utils {
                             }
                         }
                         else {
-                            ::fwrite(&c, 2, 1, stdout);
-                            if (c == '\r' || c == '\n') {
-                                tr = true;
-                                if (c == '\r') {
-                                    ::fwrite(L"\n", 2, 1, stdout);
+                            if (utf::is_utf16_high_surrogate(c) && num - i > 0) {
+                                surrogatebuf[0] = c;
+                            }
+                            else if (utf::is_utf16_low_surrogate(c)) {
+                                surrogatebuf[1] = c;
+                                ::fwrite(surrogatebuf, 2, 2, stdout);
+                                surrogatebuf[0] = 0;
+                                surrogatebuf[1] = 0;
+                            }
+                            else {
+                                ::fwrite(&c, 2, 1, stdout);
+                                if (c == '\r' || c == '\n') {
+                                    tr = true;
+                                    if (c == '\r') {
+                                        ::fwrite(L"\n", 2, 1, stdout);
+                                    }
+                                    c = '\n';
                                 }
-                                c = '\n';
                             }
                             buf.push_back(c);
                         }
