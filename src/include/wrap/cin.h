@@ -48,6 +48,6 @@ namespace utils {
             bool peek_buffer(path_string& buf, bool no_cin = false, bool* updated = nullptr);
         };
 
-        UtfIn& STDCALL cin_wrap();
+        DLL UtfIn& STDCALL cin_wrap();
     }  // namespace wrap
 }  // namespace utils
