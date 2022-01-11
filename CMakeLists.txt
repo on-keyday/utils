@@ -82,7 +82,7 @@ if(WIN32)
 endif()
 
 
-option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" OFF)
+option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
 if(UTILS_BUILD_SHARED_LIBS)
 add_library(utils SHARED)

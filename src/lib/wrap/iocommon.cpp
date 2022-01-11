@@ -6,9 +6,12 @@
 */
 
 #include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/wrap/cout.h"
+#include "../../include/wrap/iocommon.h"
+#include"../../include/thread/lite_lock.h"
+#include"../../include/wrap/lite/stream.h"
 #include <cstdio>
 #include <iostream>
+#include <cassert>
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
