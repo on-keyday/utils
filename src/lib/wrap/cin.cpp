@@ -46,7 +46,7 @@ namespace utils {
             }
             wchar_t surrogatebuf[2] = {0};
             for (auto i = 0; i < num; i++) {
-                ::PeekConsoleInputW(h, &rec, 1, &res);
+                ::ReadConsoleInputW(h, &rec, 1, &res);
                 if (rec.EventType == KEY_EVENT &&
                     rec.Event.KeyEvent.bKeyDown) {
                     for (auto i = rec.Event.KeyEvent.wRepeatCount; i != 0; i--) {
@@ -104,7 +104,6 @@ namespace utils {
                         }
                     }
                 }
-                ::ReadConsoleInputW(h, &rec, 1, &res);
             }
             ::fflush(stdout);
             if (buf.size()) {
