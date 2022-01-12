@@ -123,5 +123,10 @@ namespace utils {
         internal::Pack pack(Args&&... args) {
             return internal::Pack(std::forward<Args>(args)...);
         }
+
+        template <class... Args>
+        internal::Pack packln(Args&&... args) {
+            return internal::Pack(std::forward<Args>(args)..., "\n");
+        }
     }  // namespace wrap
 }  // namespace utils
