@@ -246,6 +246,14 @@ namespace utils {
                 return true;
             }
 
+            void init_obj() {
+                obj = new object_t{};
+            }
+
+            void init_array() {
+                obj = new array_t{};
+            }
+
             bool is_undef() const {
                 return obj.is_undef();
             }
@@ -352,6 +360,38 @@ namespace utils {
                     bad_type("not string type");
                 }
                 return t;
+            }
+
+            auto obegin() const {
+                auto o = obj.as_obj();
+                if (!o) {
+                    bad_type("not object type");
+                }
+                return o->begin();
+            }
+
+            auto oend() const {
+                auto o = obj.as_obj();
+                if (!o) {
+                    bad_type("not object type");
+                }
+                return o->end();
+            }
+
+            auto abegin() const {
+                auto a = obj.as_arr();
+                if (!a) {
+                    bad_type("not array type");
+                }
+                return a->begin();
+            }
+
+            auto aend() const {
+                auto a = obj.as_arr();
+                if (!a) {
+                    bad_type("not array type");
+                }
+                return a->end();
             }
         };
     }  // namespace json

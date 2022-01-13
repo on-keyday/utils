@@ -55,10 +55,19 @@ namespace binred {
         Size size;
     };
 
+    struct Tree {
+        us::KeyWord kw;
+        utw::string token;
+        utw::shared_ptr<Tree> left;
+        utw::shared_ptr<Tree> right;
+    };
+
     struct Type {
+        using tree_t = utw::shared_ptr<Tree>;
         utw::string name;
-        Flag flag;
-        Flag bind;
+        utw::vector<tree_t> prevcond;
+        utw::vector<tree_t> aftercond;
+        tree_t size;
     };
 
     struct Member {
@@ -86,13 +95,6 @@ namespace binred {
         utw::string make_ptr;
         utw::string ptr_type;
         utw::vector<utw::string> imports;
-    };
-
-    struct Tree {
-        us::KeyWord kw;
-        utw::string token;
-        utw::shared_ptr<Tree> left;
-        utw::shared_ptr<Tree> right;
     };
 
     struct Manager {

@@ -26,6 +26,9 @@ namespace binred {
         if (is_expr(result)) {
             return state.tree(result, false) == us::MatchState::succeed;
         }
+        if (result.top() == expr_def) {
+            return true;
+        }
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
                 state.data.imports.push_back(result.token());
@@ -68,51 +71,15 @@ namespace binred {
             return true;
         }
         if (result.top() == flag_def) {
-            auto set_to_flag = [&](auto& flag) {
-                if (!flag.depend.size() && result.kind() == us::KeyWord::id) {
-                    flag.depend = result.token();
-                }
-                else if (is_rval()) {
-                    flag.val.val = result.token();
-                    flag.val.kind = result.kind();
-                }
-                else if (result.kind() == us::KeyWord::literal_keyword) {
-                    auto& type = flag.type;
-                    if (result.token() == "eq") {
-                        type = FlagType::eq;
-                    }
-                    else if (result.token() == "bit") {
-                        type = FlagType::bit;
-                    }
-                    else if (result.token() == "ls") {
-                        type = FlagType::ls;
-                    }
-                    else if (result.token() == "gt") {
-                        type = FlagType::gt;
-                    }
-                    else if (result.token() == "egt") {
-                        type = FlagType::egt;
-                    }
-                    else if (result.token() == "els") {
-                        type = FlagType::els;
-                    }
-                    else if (result.token() == "nq") {
-                        type = FlagType::nq;
-                    }
-                    else if (result.token() == "nbit") {
-                        type = FlagType::nbit;
-                    }
-                    else if (result.token() == "mod") {
-                        type = FlagType::mod;
-                    }
-                }
+            auto set_to_flag = [&](auto& cond) {
+                cond.push_back(std::move(state.tree.current));
             };
             auto under_disp = [&](auto& type) {
                 if (result.under(bind_def)) {
-                    set_to_flag(type.bind);
+                    set_to_flag(type.aftercond);
                 }
                 else {
-                    set_to_flag(type.flag);
+                    set_to_flag(type.prevcond);
                 }
             };
             if (result.under(base_def)) {
@@ -140,33 +107,15 @@ namespace binred {
             return true;
         }
         if (result.top() == size_def) {
-            auto handle_size = [&](Size& size) {
-                if (result.token() == "+") {
-                    size.op = Op::add;
-                }
-                else if (result.token() == "-") {
-                    size.op = Op::sub;
-                }
-                else if (result.token() == "%") {
-                    size.op = Op::mod;
-                }
-                else if (is_rval()) {
-                    if (!size.size1.val.size()) {
-                        size.size1.val = result.token();
-                        size.size1.kind = result.kind();
-                    }
-                    else {
-                        size.size2.val = result.token();
-                        size.size2.kind = result.kind();
-                    }
-                }
+            auto handle_size = [&](auto& size) {
+                size = std::move(state.tree.current);
             };
             if (result.under(base_def)) {
-                handle_size(cst.base.type.flag.size);
+                handle_size(cst.base.type.size);
             }
             else {
                 auto& t = memb().back();
-                handle_size(t.type.flag.size);
+                handle_size(t.type.size);
             }
             return true;
         }

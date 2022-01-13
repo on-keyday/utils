@@ -38,6 +38,10 @@ void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
     obj.is_string();
     obj.is_object();
     obj.is_array();
+    obj.obegin();
+    obj.oend();
+    obj.abegin();
+    obj.aend();
 }
 
 void instantiate() {

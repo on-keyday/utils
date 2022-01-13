@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
         cout << desc.help(argv[0]);
         return 1;
     }
-    constexpr auto def = R"(
+    constexpr auto def = R"a(
         ROOT:=PACKAGE? [STRUCT|IMPORT]*? EOF
         PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
@@ -62,16 +62,16 @@ int main(int argc, char** argv) {
         TYPE:=ID SIZE? FLAG? BIND?
         FLAG:="?" FLAG_DETAIL!
         BIND:="!" FLAG_DETAIL!
-        FLAG_DETAIL:=EXPR
-        SIZE:="$" [INTEGER|ID] [["+"|"-"|"%"] [INTEGER|ID]!]? 
+        FLAG_DETAIL:=EXPR EOS
+        SIZE:="$" EXPR
 
-        EXPR:=ASSIGN
+        EXPR:=ASSIGN EOS
         ASSIGN:=BOS MUL ["=" ASSIGN!]*? EOS 
         MUL:=BOS ADD [["*"|"/"|"%"] ADD!]*? EOS
         ADD:=BOS PRIM [["+"|"-"|"&"|"|"] PRIM!]*? EOS
-        PRIM:=BOS INTEGER|IDs EOS
+        PRIM:=BOS [INTEGER|IDs|"(" EXPR! ")"]! EOS
         IDs:=BOS ID ["." ID!]*? EOS
-    )";
+    )a";
     auto c = us::make_syntaxc();
     auto s = us::make_tokenizer();
     auto seq = utils::make_ref_seq(def);
@@ -143,12 +143,14 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
+    return 0;
     utw::string str;
     binred::generate_cpp(str, state.data, {});
     if (result.is_true("verbose")) {
         cout << "generated code:\n";
         cout << str;
     }
+    return 0;
     {
         std::ofstream fs(*outfile);
         if (!fs.is_open()) {
