@@ -14,6 +14,13 @@ using namespace utils::json;
 struct Test {
     int param1;
     utils::wrap::string param2;
+
+    bool to_json(JSON& js) const {
+        JSON_PARAM_BEGIN(*this, js)
+        TO_JSON_PARAM(param1, "param1")
+        TO_JSON_PARAM(param2, "param2")
+        JSON_PARAM_END()
+    }
     bool from_json(const JSON& v) {
         JSON_PARAM_BEGIN(*this, v)
         FROM_JSON_PARAM(param1, "param1")

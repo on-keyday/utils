@@ -273,7 +273,7 @@ namespace utils {
 
 #define TO_JSON_PARAM(param, name)                            \
     {                                                         \
-        if (!json___.is_object()) {                           \
+        if (!json___.is_undef() && !json___.is_object()) {    \
             return false;                                     \
         }                                                     \
         if (!convert_to_json(ref____.param, json___[name])) { \
