@@ -36,7 +36,7 @@ void test_to_json() {
     convert_to_json(test, json);
     json["param1"] = 40;
     json["param2"] = "call";
-    convert_from_json(tos, test);
+    convert_from_json(json, test);
 }
 
 int main() {
