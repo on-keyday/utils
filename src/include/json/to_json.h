@@ -162,6 +162,7 @@ namespace utils {
 
                 SFINAE_BLOCK_T_BEGIN(is_string, (std::enable_if_t<helper::is_utf_convertable<T>>)0)
                 static bool invoke(T& t, const JSON& json) {
+                    t = T{};
                     return json.as_string(t);
                 }
                 SFINAE_BLOCK_T_ELSE(is_string)
