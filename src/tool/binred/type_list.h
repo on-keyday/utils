@@ -12,6 +12,7 @@
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/syntax/make_parser/keyword.h"
 #include "../../include/syntax/matching/matching.h"
+#include "../../include/syntax/tree/parse_tree.h"
 
 namespace binred {
     namespace utw = utils::wrap;
@@ -89,6 +90,7 @@ namespace binred {
     struct State {
         FileData data;
         utw::string cuurent_struct;
+        utils::syntax::tree::TreeMatcher<> tree;
     };
 
     enum class GenFlag {

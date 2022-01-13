@@ -16,12 +16,12 @@ namespace utils {
 
             namespace internal {
                 template <bool incr, class T, class... Args>
-                bool stack_eq(size_t index, T& ctx, Args&&...) {
+                constexpr bool stack_eq(size_t index, T& ctx, Args&&...) {
                     return true;
                 }
 
                 template <bool incr, class T, class C, class... Args>
-                bool stack_eq(size_t index, T& ctx, C&& current, Args&&... args) {
+                constexpr bool stack_eq(size_t index, T& ctx, C&& current, Args&&... args) {
                     if (ctx.stack.size() <= index) {
                         return false;
                     }
@@ -39,35 +39,35 @@ namespace utils {
             }  // namespace internal
 
             template <class... Args>
-            auto stack_strict(size_t first_index, Args&&... args) {
+            constexpr auto stack_strict(size_t first_index, Args&&... args) {
                 return [=](auto& ctx) {
                     return internal::stack_eq<false>(first_index, ctx, std::forward<Args>(args)...);
                 };
             }
 
             template <class... Args>
-            auto stack_order(size_t first_index, Args&&... args) {
+            constexpr auto stack_order(size_t first_index, Args&&... args) {
                 return [=](auto& ctx) {
                     return internal::stack_eq<true>(first_index, ctx, std::forward<Args>(args)...);
                 };
             }
 
             template <class A, class B>
-            auto and_filter(A&& a, B&& b) {
+            constexpr auto and_filter(A&& a, B&& b) {
                 return [=](auto& ctx) {
                     return a(ctx) && b(ctx);
                 };
             }
 
             template <class A, class B>
-            auto or_filter(A&& a, B&& b) {
+            constexpr auto or_filter(A&& a, B&& b) {
                 return [=](auto& ctx) {
                     return a(ctx) || b(ctx);
                 };
             }
 
             template <class A>
-            auto not_filter(A&& a) {
+            constexpr auto not_filter(A&& a) {
                 return [=](auto& ctx) {
                     return !a(ctx);
                 };

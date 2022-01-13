@@ -7,6 +7,7 @@
 
 
 #include "type_list.h"
+#include "../../include/syntax/dispatcher/filter.h"
 
 namespace binred {
     namespace us = utils::syntax;
@@ -19,6 +20,7 @@ namespace binred {
     constexpr auto size_def = "SIZE";
     constexpr auto base_def = "BASE";
     constexpr auto bind_def = "BIND";
+    constexpr auto expr_def = "EXPR";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
@@ -163,6 +165,10 @@ namespace binred {
                 handle_size(t.type.flag.size);
             }
             return true;
+        }
+        constexpr auto is_expr = us::filter::stack_order(1, expr_def);
+        if (is_expr(result)) {
+            return state.tree(result, false) == us::MatchState::succeed;
         }
         return true;
     }
