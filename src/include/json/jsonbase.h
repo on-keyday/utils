@@ -324,6 +324,10 @@ namespace utils {
                     t = 0;
                     return true;
                 }
+                else if (auto b = obj.as_bool()) {
+                    t = *b ? 1 : 0;
+                    return true;
+                }
                 else if (auto s = obj.as_str()) {
                     std::int64_t i;
                     if (number::parse_integer(*s, t)) {
