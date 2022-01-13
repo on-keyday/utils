@@ -379,6 +379,9 @@ namespace utils {
                     }
                     return false;
                 }
+                else {
+                    return false;
+                }
             }
 
             template <class Outstr>
