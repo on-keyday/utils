@@ -187,7 +187,12 @@ namespace utils {
 
                 SFINAE_BLOCK_T_BEGIN(is_number, (std::enable_if_t<std::is_arithmetic_v<T>>)0)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
-                    return json.as_number(t);
+                    if (any(flag & FromFlag::force_element)) {
+                        return json.force_as_number(t);
+                    }
+                    else {
+                        return json.as_number(t);
+                    }
                 }
                 SFINAE_BLOCK_T_ELSE(is_number)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {

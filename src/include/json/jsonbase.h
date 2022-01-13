@@ -295,6 +295,39 @@ namespace utils {
                 return true;
             }
 
+            bool force_as_bool(bool& r) const {
+                if (as_bool(r)) {
+                    return true;
+                }
+                if (obj.is_null() || obj.is_undef()) {
+                    r = false;
+                    return true;
+                }
+                else if (auto s = obj.as_str()) {
+                    r = s->size() != 0;
+                    return true;
+                }
+                else if (auto i = obj.as_numi()) {
+                    r = *i != 0;
+                }
+                else if (auto u = obj.as_numu()) {
+                    r = *i != 0;
+                }
+                else if (auto f = obj.as_numf()) {
+                    r = *f != 0 && *f == *f;
+                }
+                else if (auto o = obj.as_obj()) {
+                    r = o->size() != 0;
+                }
+                else if (auto a = obj.as_arr()) {
+                    r = a->size() != 0;
+                }
+                else {
+                    return false;
+                }
+                return true;
+            }
+
             template <class T>
             bool as_number(T& to) const {
                 auto i = obj.as_numi();
