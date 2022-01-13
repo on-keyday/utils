@@ -88,7 +88,7 @@ namespace utils {
 
                 template <class T>
                 static bool invoke(T& t, JSON& json) {
-                    return has_to_json_member<T>::invoke(t, json);
+                    return is_primitive<T>::invoke(t, json);
                 }
             };
 
