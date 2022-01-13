@@ -96,14 +96,15 @@ namespace utils {
             struct FromJSONHelper {
                 using JSON = JSONBase<String, Vec, Object>;
 
-                SFINAE_BLOCK_T_BEGIN(has_array_interface, std::declval<T&>().push_back(std::declval<typename T::value_type>()))
+                SFINAE_BLOCK_T_BEGIN(has_array_interface, std::declval<T&>().push_back(std::declval<helper::append_size_t<T>>()))
                 static bool invoke(T& t, JSON& json) {
                     if (!json.is_array()) {
                         return false;
                     }
                     for (auto a = json.abegin(); a != json.aend(); a++) {
-                        typename T::value_type v;
-                        using recursion = is_bool<std::remove_reference_t<typename T::value_type>>;
+                        using elm_t = helper::append_size_t<T>;
+                        elm_t v;
+                        using recursion = is_bool<elm_t>;
                         auto err = recursion::invoke(v, *a);
                         if (!err) {
                             return false;
@@ -115,14 +116,15 @@ namespace utils {
                 SFINAE_BLOCK_T_ELSE(has_array_interface)
                 SFINAE_BLOCK_T_END()
 
-                SFINAE_BLOCK_T_BEGIN(has_map_interface, std::declval<T&>().emplace(std::declval<const String>(), std::declval<typename T::value_type>()))
+                SFINAE_BLOCK_T_BEGIN(has_map_interface, std::declval<T&>().emplace(std::declval<const String>(), std::declval<T>()[std::declval<const String>()]))
                 static bool invoke(T& t, const JSON& json) {
                     if (!json.is_object()) {
                         return false;
                     }
                     for (auto o = json.obegin(); o != json.oend(); o++) {
-                        typename T::value_type v;
-                        using recursion = is_bool<std::remove_reference_t<typename T::value_type>>;
+                        using elm_t = std::remove_reference_t<decltype(std::declval<T>()[std::declval<const String>()])>;
+                        elm_t v;
+                        using recursion = is_bool<elm_t>;
                         auto err = recursion::invoke(v, std::get<1>(*o));
                         if (!err) {
                             return false;
