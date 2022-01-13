@@ -14,6 +14,11 @@
 
 namespace utils {
     namespace json {
+        enum class FromFlag {
+            none = 0x0,
+            force_element = 0x1,
+        };
+
         namespace internal {
 
             template <class String, template <class...> class Vec, template <class...> class Object>
@@ -90,11 +95,6 @@ namespace utils {
                 static bool invoke(T& t, JSON& json) {
                     return is_primitive<T>::invoke(t, json);
                 }
-            };
-
-            enum class FromFlag {
-                none = 0x0,
-                force_element = 0x1,
             };
 
             DEFINE_ENUM_FLAGOP(FromFlag)
