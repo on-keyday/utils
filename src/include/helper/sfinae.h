@@ -24,8 +24,8 @@ namespace utils {
 #define DEFINE_SFINAE_T(NAME, EXPR) SFINAE_HELPER_BASE(NAME, <class T>, <T>, EXPR)
 #define DEFINE_SFINAE_TU(NAME, EXPR) SFINAE_HELPER_BASE(NAME, <class T SFINAE_HELPER_COMMA class U>, <T SFINAE_HELPER_COMMA U>, EXPR)
 
-#define SFINAE_BLOCK_BEGIN_BASE(NAME, ARG, REMARG)        \
-    template <REMARG, bool flag = NAME##_flag ARG::value> \
+#define SFINAE_BLOCK_BEGIN_BASE(NAME, ARG, REMARG)           \
+    template <REMARG, bool flag___ = NAME##_flag ARG::value> \
     struct NAME {
 #define SFINAE_BLOCK_ELSE_BASE(NAME, PARAM, ARG) \
     }                                            \
