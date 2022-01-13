@@ -235,17 +235,19 @@ namespace utils {
     {                                     \
         auto& ref____ = base;             \
         auto& json___ = json;
-#define FROM_JSON_PARAM(param, name)                     \
-    {                                                    \
-        auto err___ = json___.at(name);                  \
-        if (!err___) {                                   \
-            return false;                                \
-        }                                                \
-        if (!convert_from_json(*err___, ref___.param)) { \
-            return false;                                \
-        }                                                \
+#define FROM_JSON_PARAM(param, name)                      \
+    {                                                     \
+        auto err___ = json___.at(name);                   \
+        if (!err___) {                                    \
+            return false;                                 \
+        }                                                 \
+        if (!convert_from_json(*err___, ref____.param)) { \
+            return false;                                 \
+        }                                                 \
     }
 
-#define FROM_JSON_PARAM_END() }
+#define FROM_JSON_PARAM_END() \
+    return true;              \
+    }
     }  // namespace json
 }  // namespace utils
