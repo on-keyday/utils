@@ -29,13 +29,15 @@ bool to_json(const Test& t, JSON& js) {
 }
 
 void test_to_json() {
-    JSON json;
+    JSON json, tos;
     json["param1"] = 20;
     json["param2"] = "hello";
     Test test;
-    int repack = 0;
+    test.param1 = 20;
+    test.param2 = "hello";
     convert_to_json(test, json);
-    convert_from_json(json, repack);
+    tos = json;
+    convert_from_json(tos, test);
 }
 
 int main() {
