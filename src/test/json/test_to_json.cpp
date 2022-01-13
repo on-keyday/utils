@@ -17,6 +17,7 @@ struct Test {
     bool from_json(const JSON& v) {
         JSON_PARAM_BEGIN(*this, v)
         FROM_JSON_PARAM(param1, "param1")
+        FROM_JSON_PARAM(param2, "param2")
         JSON_PARAM_END()
     }
 };
