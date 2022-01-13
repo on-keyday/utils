@@ -42,6 +42,7 @@ void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
     obj.oend();
     obj.abegin();
     obj.aend();
+    obj.force_as_bool(b);
 }
 
 void instantiate() {
