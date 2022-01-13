@@ -309,19 +309,45 @@ namespace utils {
                 }
                 auto f = obj.as_numf();
                 if (f) {
-                    to = T(*u);
+                    to = T(*f);
                     return true;
                 }
                 return false;
             }
 
-            template <class Instr>
-            bool as_string(Instr& str) const {
+            template <class Outstr>
+            bool as_string(Outstr& str) const {
                 auto s = obj.as_str();
                 if (!s) {
                     return false;
                 }
                 utf::convert(*s, str);
+                return true;
+            }
+
+            template <class OutStr>
+            bool force_as_string(OutStr& str) const {
+                if (as_string(str)) {
+                    return true;
+                }
+                if (obj.is_null() || obj.is_undef()) {
+                    utf::convert("null", str);
+                }
+                else if (auto b = obj.as_bool()) {
+                    utf::convert(*b ? "true" : "false", str);
+                }
+                else if (auto i = obj.as_numi()) {
+                    number::to_string(str, *i);
+                }
+                else if (auto u = obj.as_numu()) {
+                    number::to_string(str, *u);
+                }
+                else if (auto f = obj.as_numf()) {
+                    number::to_string(str, *f);
+                }
+                else {
+                    return false;
+                }
                 return true;
             }
 

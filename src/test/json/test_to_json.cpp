@@ -40,6 +40,7 @@ void test_to_json() {
     convert_from_json(json, test);
     utils::wrap::cout_wrap() << to_string<utils::wrap::string>(json);
     utils::wrap::map<utils::wrap::string, utils::wrap::string> val;
+    json["param1"] = "40";
     convert_from_json(json, val);
 }
 
