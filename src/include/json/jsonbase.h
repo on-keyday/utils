@@ -315,6 +315,35 @@ namespace utils {
                 return false;
             }
 
+            template <class T>
+            bool force_as_number(T& t) const {
+                if (as_number(t)) {
+                    return true;
+                }
+                if (obj.is_null() || obj.is_undef()) {
+                    t = 0;
+                    return true;
+                }
+                else if (auto s = obj.as_str()) {
+                    std::int64_t i;
+                    if (number::parse_integer(*s, t)) {
+                        t = T(i);
+                        return true;
+                    }
+                    std::uint64_t u;
+                    if (number::parse_integer(*s, u)) {
+                        t = T(u);
+                        return true;
+                    }
+                    double d;
+                    if (number::parse_float(*s, d)) {
+                        t = T(d);
+                        return true;
+                    }
+                    return false;
+                }
+            }
+
             template <class Outstr>
             bool as_string(Outstr& str) const {
                 auto s = obj.as_str();
