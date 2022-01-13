@@ -16,6 +16,7 @@
 
 namespace binred {
     namespace utw = utils::wrap;
+    namespace us = utils::syntax;
     enum class FlagType {
         none,
         eq,
@@ -85,6 +86,26 @@ namespace binred {
         utw::string make_ptr;
         utw::string ptr_type;
         utw::vector<utw::string> imports;
+    };
+
+    struct Tree {
+        us::KeyWord kw;
+        utw::string token;
+        utw::shared_ptr<Tree> left;
+        utw::shared_ptr<Tree> right;
+    };
+
+    struct Manager {
+        using tree_t = utw::shared_ptr<Tree>;
+        tree_t make_tree(us::KeyWord kw, const utw::string& v) {
+            auto ret = utw::make_shared<Tree>();
+            ret->token = v;
+            ret->kw = kw;
+            return ret;
+        }
+        bool ignore(const utw::string& t) {
+            return false;
+        }
     };
 
     struct State {

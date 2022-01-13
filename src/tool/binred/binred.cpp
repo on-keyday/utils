@@ -62,14 +62,15 @@ int main(int argc, char** argv) {
         TYPE:=ID SIZE? FLAG? BIND?
         FLAG:="?" FLAG_DETAIL!
         BIND:="!" FLAG_DETAIL!
-        FLAG_DETAIL:=ID ["eq"|"nq"|"bit"|"ls"|"gt"|"egt"|"els"|"nbit"|"mod"] [INTEGER|STRING|ID]
+        FLAG_DETAIL:=EXPR
         SIZE:="$" [INTEGER|ID] [["+"|"-"|"%"] [INTEGER|ID]!]? 
 
         EXPR:=ASSIGN
         ASSIGN:=BOS MUL ["=" ASSIGN!]*? EOS 
-        MUL:=BOS ADD [["*"|"/"|"%"]]*? EOS
-        ADD:=BOS PRIM [["+"|"-"|"&"|"|"] PRIM]*? EOS
-        PRIM:=BOS INTEGER|ID EOS
+        MUL:=BOS ADD [["*"|"/"|"%"] ADD!]*? EOS
+        ADD:=BOS PRIM [["+"|"-"|"&"|"|"] PRIM!]*? EOS
+        PRIM:=BOS INTEGER|IDs EOS
+        IDs:=BOS ID ["." ID!]*? EOS
     )";
     auto c = us::make_syntaxc();
     auto s = us::make_tokenizer();
