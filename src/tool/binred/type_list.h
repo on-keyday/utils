@@ -111,7 +111,7 @@ namespace binred {
     struct State {
         FileData data;
         utw::string cuurent_struct;
-        utils::syntax::tree::TreeMatcher<> tree;
+        utils::syntax::tree::TreeMatcher<utw::string, utw::vector, Manager> tree;
     };
 
     enum class GenFlag {

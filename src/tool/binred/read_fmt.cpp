@@ -22,6 +22,10 @@ namespace binred {
     constexpr auto bind_def = "BIND";
     constexpr auto expr_def = "EXPR";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
+        constexpr auto is_expr = us::filter::stack_order(1, expr_def);
+        if (is_expr(result)) {
+            return state.tree(result, false) == us::MatchState::succeed;
+        }
         if (result.top() == import_def) {
             if (result.kind() == us::KeyWord::until_eol) {
                 state.data.imports.push_back(result.token());
@@ -165,10 +169,6 @@ namespace binred {
                 handle_size(t.type.flag.size);
             }
             return true;
-        }
-        constexpr auto is_expr = us::filter::stack_order(1, expr_def);
-        if (is_expr(result)) {
-            return state.tree(result, false) == us::MatchState::succeed;
         }
         return true;
     }
