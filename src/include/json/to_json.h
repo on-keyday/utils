@@ -231,9 +231,9 @@ namespace utils {
         constexpr internal::ConvertToJSONObject convert_to_json{};
 
         constexpr internal::ConvertFromJSONObject convert_from_json{};
-#define FROM_JSON_PARAM_BEGIN(base, json) \
-    {                                     \
-        auto& ref____ = base;             \
+#define JSON_PARAM_BEGIN(base, json) \
+    {                                \
+        auto& ref____ = base;        \
         auto& json___ = json;
 #define FROM_JSON_PARAM(param, name)                      \
     {                                                     \
@@ -246,8 +246,18 @@ namespace utils {
         }                                                 \
     }
 
-#define FROM_JSON_PARAM_END() \
-    return true;              \
+#define TO_JSON_PARAM(param, name)                            \
+    {                                                         \
+        if (!json___.is_object()) {                           \
+            return false;                                     \
+        }                                                     \
+        if (!convert_to_json(ref____.param, json___[name])) { \
+            return false;                                     \
+        }                                                     \
+    }
+
+#define JSON_PARAM_END() \
+    return true;         \
     }
     }  // namespace json
 }  // namespace utils

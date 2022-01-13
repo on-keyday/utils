@@ -15,15 +15,17 @@ struct Test {
     int param1;
     utils::wrap::string param2;
     bool from_json(const JSON& v) {
-        FROM_JSON_PARAM_BEGIN(*this, v)
+        JSON_PARAM_BEGIN(*this, v)
         FROM_JSON_PARAM(param1, "param1")
-        FROM_JSON_PARAM_END()
+        JSON_PARAM_END()
     }
 };
 
 bool to_json(const Test& t, JSON& js) {
-    auto e = js.at("param1");
-    return true;
+    JSON_PARAM_BEGIN(t, js)
+    TO_JSON_PARAM(param1, "param1")
+    TO_JSON_PARAM(param2, "param2")
+    JSON_PARAM_END()
 }
 
 void test_to_json() {
@@ -31,7 +33,7 @@ void test_to_json() {
     json["param1"] = 20;
     json["param2"] = "hello";
     Test test;
-    int repack;
+    int repack = 0;
     convert_to_json(test, json);
     convert_from_json(json, repack);
 }
