@@ -10,12 +10,11 @@
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/json/to_json.h"
 #include "../../include/wrap/cout.h"
-
+using namespace utils::json;
 struct Test {
     int param1;
     utils::wrap::string param2;
 };
-using namespace utils::json;
 
 bool to_json(const Test& t, JSON& js) {
     auto e = js.at("param1");
@@ -27,7 +26,9 @@ void test_to_json() {
     json["param1"] = 20;
     json["param2"] = "hello";
     Test test;
+    int repack;
     convert_to_json(test, json);
+    convert_from_json(json, repack);
 }
 
 int main() {

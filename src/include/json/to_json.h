@@ -160,7 +160,7 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_END()
 
-                SFINAE_BLOCK_T_BEGIN(is_string, (std::enable_if_t<StringLike<T>>)0)
+                SFINAE_BLOCK_T_BEGIN(is_string, (std::enable_if_t<helper::is_utf_convertable<T>>)0)
                 static bool invoke(T& t, const JSON& json) {
                     return json.as_string(t);
                 }
@@ -231,6 +231,21 @@ namespace utils {
         constexpr internal::ConvertToJSONObject convert_to_json{};
 
         constexpr internal::ConvertFromJSONObject convert_from_json{};
+#define FROM_JSON_PARAM_BEGIN(base, json) \
+    {                                     \
+        auto& ref____ = base;             \
+        auto& json___ = json;
+#define FROM_JSON_PARAM(param, name)                     \
+    {                                                    \
+        auto err___ = json___.at(name);                  \
+        if (!err___) {                                   \
+            return false;                                \
+        }                                                \
+        if (!convert_from_json(*err___, ref___.param)) { \
+            return false;                                \
+        }                                                \
+    }
 
+#define FROM_JSON_PARAM_END() }
     }  // namespace json
 }  // namespace utils

@@ -21,6 +21,7 @@ namespace utils {
                 return sizeof(std::declval<T>()[0]);
             }
             SFINAE_BLOCK_T_ELSE(has_subscript)
+            using char_type = void;
             constexpr static size_t size() {
                 return ~0;
             }
