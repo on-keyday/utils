@@ -30,13 +30,12 @@ bool to_json(const Test& t, JSON& js) {
 
 void test_to_json() {
     JSON json, tos;
-    json["param1"] = 20;
-    json["param2"] = "hello";
     Test test;
     test.param1 = 20;
     test.param2 = "hello";
     convert_to_json(test, json);
-    tos = json;
+    json["param1"] = 40;
+    json["param2"] = "call";
     convert_from_json(tos, test);
 }
 
