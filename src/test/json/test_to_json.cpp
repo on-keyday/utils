@@ -34,13 +34,16 @@ void test_to_json() {
     Test test;
     test.param1 = 20;
     test.param2 = "hello";
-    convert_to_json(test, json);
+    auto result1 = convert_to_json(test, json);
+    assert(result1);
     json["param1"] = 40;
     json["param2"] = "call";
-    convert_from_json(json, test);
+    auto result2 = convert_from_json(json, test);
+    assert(result2);
     utils::wrap::cout_wrap() << to_string<utils::wrap::string>(json);
     utils::wrap::map<utils::wrap::string, utils::wrap::string> val;
-    convert_from_json(json, val, FromFlag::force_element);
+    auto result3 = convert_from_json(json, val, FromFlag::force_element);
+    assert(result3);
 }
 
 int main() {
