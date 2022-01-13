@@ -92,12 +92,19 @@ namespace utils {
                 }
             };
 
+            enum class FromFlag {
+                none = 0x0,
+                force_element = 0x1,
+            };
+
+            DEFINE_ENUM_FLAGOP(FromFlag)
+
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct FromJSONHelper {
                 using JSON = JSONBase<String, Vec, Object>;
 
                 SFINAE_BLOCK_T_BEGIN(has_array_interface, std::declval<T&>().push_back(std::declval<helper::append_size_t<T>>()))
-                static bool invoke(T& t, JSON& json) {
+                static bool invoke(T& t, JSON& json, FromFlag flag) {
                     if (!json.is_array()) {
                         return false;
                     }
@@ -105,7 +112,7 @@ namespace utils {
                         using elm_t = helper::append_size_t<T>;
                         elm_t v;
                         using recursion = is_bool<elm_t>;
-                        auto err = recursion::invoke(v, *a);
+                        auto err = recursion::invoke(v, *a, flag);
                         if (!err) {
                             return false;
                         }
@@ -117,7 +124,7 @@ namespace utils {
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(has_map_interface, std::declval<T&>().emplace(std::declval<const String>(), std::declval<T>()[std::declval<const String>()]))
-                static bool invoke(T& t, const JSON& json) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     if (!json.is_object()) {
                         return false;
                     }
@@ -125,7 +132,7 @@ namespace utils {
                         using elm_t = std::remove_reference_t<decltype(std::declval<T>()[std::declval<const String>()])>;
                         elm_t v;
                         using recursion = is_bool<elm_t>;
-                        auto err = recursion::invoke(v, std::get<1>(*o));
+                        auto err = recursion::invoke(v, std::get<1>(*o), flag);
                         if (!err) {
                             return false;
                         }
@@ -137,65 +144,70 @@ namespace utils {
                     return true;
                 }
                 SFINAE_BLOCK_T_ELSE(has_map_interface)
-                static bool invoke(T& t, const JSON& json) {
-                    return has_array_interface<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return has_array_interface<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(has_from_json_adl, from_json(std::declval<T&>(), std::declval<JSON&>()))
-                static bool invoke(T& t, const JSON& json) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     return from_json(t, json);
                 }
                 SFINAE_BLOCK_T_ELSE(has_from_json_adl)
-                static bool invoke(T& t, const JSON& json) {
-                    return has_map_interface<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return has_map_interface<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(has_from_json_member, std::declval<T&>().from_json(std::declval<JSON&>()))
-                static bool invoke(T& t, const JSON& json) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     return t.from_json(json);
                 }
                 SFINAE_BLOCK_T_ELSE(has_from_json_member)
-                static bool invoke(T& t, const JSON& json) {
-                    return has_from_json_adl<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return has_from_json_adl<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(is_string, (std::enable_if_t<helper::is_utf_convertable<T>>)0)
-                static bool invoke(T& t, const JSON& json) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     t = T{};
-                    return json.as_string(t);
+                    if (any(flag & FromFlag::force_element)) {
+                        return json.force_as_string(t);
+                    }
+                    else {
+                        return json.as_string(t);
+                    }
                 }
                 SFINAE_BLOCK_T_ELSE(is_string)
-                static bool invoke(T& t, const JSON& json) {
-                    return has_from_json_member<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return has_from_json_member<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(is_number, (std::enable_if_t<std::is_arithmetic_v<T>>)0)
-                static bool invoke(T& t, const JSON& json) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     return json.as_number(t);
                 }
                 SFINAE_BLOCK_T_ELSE(is_number)
-                static bool invoke(T& t, const JSON& json) {
-                    return is_string<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return is_string<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(is_bool, (std::enable_if_t<std::is_same_v<T, bool>>)0)
-                static bool invoke(T& t, const JSON& json) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     return json.as_bool(t);
                 }
                 SFINAE_BLOCK_T_ELSE(is_bool)
-                static bool invoke(T& t, const JSON& json) {
-                    return is_number<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return is_number<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 template <class T>
-                static bool invoke(T& t, const JSON& json) {
-                    return is_bool<T>::invoke(t, json);
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return is_bool<T>::invoke(t, json, flag);
                 }
             };
 
@@ -221,8 +233,8 @@ namespace utils {
                 ConvertFromJSONObject(const ConvertFromJSONObject&) = delete;
                 ConvertFromJSONObject& operator=(const ConvertFromJSONObject&) = delete;
                 template <class T, class String, template <class...> class Vec, template <class...> class Object>
-                bool operator()(const JSONBase<String, Vec, Object>& json, T& t) const {
-                    return FromJSONHelper<String, Vec, Object>::invoke(t, json);
+                bool operator()(const JSONBase<String, Vec, Object>& json, T& t, FromFlag flag = FromFlag::none) const {
+                    return FromJSONHelper<String, Vec, Object>::invoke(t, json, flag);
                 }
 
                 template <class String1, template <class...> class Vec1, template <class...> class Object1,
