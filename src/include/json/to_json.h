@@ -202,7 +202,12 @@ namespace utils {
 
                 SFINAE_BLOCK_T_BEGIN(is_bool, (std::enable_if_t<std::is_same_v<T, bool>>)0)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
-                    return json.as_bool(t);
+                    if (any(flag & FromFlag::force_element)) {
+                        return json.force_as_bool(t);
+                    }
+                    else {
+                        return json.as_bool(t);
+                    }
                 }
                 SFINAE_BLOCK_T_ELSE(is_bool)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
