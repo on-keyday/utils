@@ -36,10 +36,9 @@ namespace utils {
                 }
             }
             else {
-                if (!helper::read_whilef<true>(key, seq, [&](auto&& c) {
-                        return cond(c);
-                    })) {
-                }
+                helper::read_whilef<true>(key, seq, [&](auto&& c) {
+                    return cond(c);
+                });
             }
             return true;
         }
@@ -54,7 +53,9 @@ namespace utils {
                 if (seq.eos()) {
                     break;
                 }
-
+                if (auto e = read_key(); !e) {
+                    return e;
+                }
                 if (ret->is_array()) {
                     size_t idx = 0;
                     if (!number::parse_integer(key, idx)) {
