@@ -12,7 +12,7 @@
 #include "../../include/json/path.h"
 #include "../../include/wrap/cout.h"
 
-int test_jsonpath() {
+void test_jsonpath() {
     using namespace utils::json;
     JSON js;
     auto obj = path(js, R"(.object["object"][0])", true);

@@ -137,7 +137,7 @@ namespace utils {
                     !e) {
                     return e;
                 }
-                if (auto e = internal::update_path(key, ret, json, append, str); !e) {
+                if (auto e = internal::update_path(key, ret, json, append, !as_array ? true : str); !e) {
                     return e;
                 }
                 if (as_array) {
