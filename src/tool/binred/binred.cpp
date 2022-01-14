@@ -63,9 +63,9 @@ int main(int argc, char** argv) {
         FLAG:="?" FLAG_DETAIL!
         BIND:="!" FLAG_DETAIL!
         FLAG_DETAIL:=EXPR EOS
-        SIZE:="$" EXPR
+        SIZE:="$" EXPR EOS
 
-        EXPR:=ASSIGN EOS
+        EXPR:=ASSIGN
         ASSIGN:=BOS MUL ["=" ASSIGN!]*? EOS 
         MUL:=BOS ADD [["*"|"/"|"%"] ADD!]*? EOS
         ADD:=BOS PRIM [["+"|"-"|"&"|"|"] PRIM!]*? EOS

@@ -221,61 +221,46 @@ namespace utils {
                 }
             };
 
-            struct ConvertToJSONObject {
-                constexpr ConvertToJSONObject() {}
-
-                ConvertToJSONObject(const ConvertToJSONObject&) = delete;
-                ConvertToJSONObject& operator=(const ConvertToJSONObject&) = delete;
-
-                template <class T, class String, template <class...> class Vec, template <class...> class Object>
-                bool operator()(T&& t, JSONBase<String, Vec, Object>& json) const {
-                    return ToJSONHelper<String, Vec, Object>::invoke(t, json);
-                }
-
-                template <class String1, template <class...> class Vec1, template <class...> class Object1,
-                          class String2, template <class...> class Vec2, template <class...> class Object2>
-                bool operator()(JSONBase<String1, Vec1, Object1>& t, JSONBase<String2, Vec2, Object2>& json);
-            };
-
-            struct ConvertFromJSONObject {
-                constexpr ConvertFromJSONObject() {}
-
-                ConvertFromJSONObject(const ConvertFromJSONObject&) = delete;
-                ConvertFromJSONObject& operator=(const ConvertFromJSONObject&) = delete;
-                template <class T, class String, template <class...> class Vec, template <class...> class Object>
-                bool operator()(const JSONBase<String, Vec, Object>& json, T& t, FromFlag flag = FromFlag::none) const {
-                    return FromJSONHelper<String, Vec, Object>::invoke(t, json, flag);
-                }
-
-                template <class String1, template <class...> class Vec1, template <class...> class Object1,
-                          class String2, template <class...> class Vec2, template <class...> class Object2>
-                bool operator()(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json);
-            };
         }  // namespace internal
 
-        constexpr internal::ConvertToJSONObject convert_to_json{};
+        template <class T, class String, template <class...> class Vec, template <class...> class Object>
+        bool convert_to_json(T&& t, JSONBase<String, Vec, Object>& json) {
+            return internal::ToJSONHelper<String, Vec, Object>::invoke(t, json);
+        }
 
-        constexpr internal::ConvertFromJSONObject convert_from_json{};
-#define JSON_PARAM_BEGIN(base, json) \
-    {                                \
-        auto& ref____ = base;        \
-        auto& json___ = json;
+        template <class String1, template <class...> class Vec1, template <class...> class Object1,
+                  class String2, template <class...> class Vec2, template <class...> class Object2>
+        bool convert_to_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json);
+
+        template <class T, class String, template <class...> class Vec, template <class...> class Object>
+        bool convert_from_json(const JSONBase<String, Vec, Object>& json, T& t, FromFlag flag = FromFlag::none) {
+            return internal::FromJSONHelper<String, Vec, Object>::invoke(t, json, flag);
+        }
+
+        template <class String1, template <class...> class Vec1, template <class...> class Object1,
+                  class String2, template <class...> class Vec2, template <class...> class Object2>
+        bool convert_from_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json);
+
+#define JSON_PARAM_BEGIN(base, json)                       \
+    {                                                      \
+        auto& ref____ = base;                              \
+        auto& json___ = json;                              \
+        if (!json___.is_undef() && !json___.is_object()) { \
+            return false;                                  \
+        }
 #define FROM_JSON_PARAM(param, name)                      \
     {                                                     \
-        auto err___ = json___.at(name);                   \
-        if (!err___) {                                    \
+        auto elm___ = json___.at(name);                   \
+        if (!elm___) {                                    \
             return false;                                 \
         }                                                 \
-        if (!convert_from_json(*err___, ref____.param)) { \
+        if (!convert_from_json(*elm___, ref____.param)) { \
             return false;                                 \
         }                                                 \
     }
 
 #define TO_JSON_PARAM(param, name)                            \
     {                                                         \
-        if (!json___.is_undef() && !json___.is_object()) {    \
-            return false;                                     \
-        }                                                     \
         if (!convert_to_json(ref____.param, json___[name])) { \
             return false;                                     \
         }                                                     \
