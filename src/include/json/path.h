@@ -164,5 +164,17 @@ namespace utils {
             auto seq = make_ref_seq(pathstr);
             return path(ret, json, seq);
         }
+
+        template <class Path, class String, template <class...> class Vec, template <class...> class Object>
+        JSONBase<String, Vec, Object>* path(JSONBase<String, Vec, Object>& json, Path&& pathstr, bool append = false) {
+            JSONBase<String, Vec, Object>* ret = nullptr;
+            path(ret, json, pathstr, append);
+            return ret;
+        }
+
+        template <class Path, class String, template <class...> class Vec, template <class...> class Object>
+        const JSONBase<String, Vec, Object>* path(const JSONBase<String, Vec, Object>& json, Path&& pathstr) {
+            return path(const_cast<JSONBase<String, Vec, Object>&>(json), pathstr, false);
+        }
     }  // namespace json
 }  // namespace utils
