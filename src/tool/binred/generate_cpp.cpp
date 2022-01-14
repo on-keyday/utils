@@ -114,7 +114,8 @@ namespace binred {
         }
     }
 
-    void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target, auto& method, auto& out, auto& coder, bool check_after) {
+    void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target,
+                            auto& method, auto& out, auto& coder, bool check_after, bool check_failed) {
         auto has_prev = memb.type.prevcond.size() != 0 && !check_after;
         auto has_exist = memb.type.existcond.size() != 0;
         auto has_after = memb.type.prevcond.size() != 0 && check_after;
@@ -149,8 +150,8 @@ namespace binred {
         if (has_exist) {
             cond_begin(memb.type.existcond, false);
         }
-        if (data.structs.find(memb.name) != data.structs.end()) {
-            if (hlp::equal(coder, "encode")) {
+        if (data.structs.find(memb.type.name) != data.structs.end()) {
+            if (hlp::equal(coder, "decode")) {
                 hlp::appends(str, "if(!", coder, "(", target, ",", out, ".", memb.name, ")){\n");
             }
             else {
@@ -160,12 +161,22 @@ namespace binred {
             hlp::append(str, "}\n");
         }
         else {
+            if (check_failed) {
+                hlp::append(str, "if(!");
+            }
             hlp::appends(str, target, ".", method, "(", out, ".", memb.name);
             if (memb.type.size) {
                 hlp::append(str, ",");
                 render_tree(str, memb.type.size, out);
             }
-            hlp::append(str, ");\n");
+            if (check_failed) {
+                hlp::append(str, ")){\n");
+                hlp::append(str, "return false;\n");
+                hlp::append(str, "}\n");
+            }
+            else {
+                hlp::append(str, ");\n");
+            }
         }
         if (has_after) {
             for (auto& m : memb.type.prevcond) {
@@ -411,7 +422,7 @@ namespace binred {
                 // gen_base_flag(st.base.type.aftercond, "input");
             }
             for (auto& memb : d.second.member) {
-                generate_with_cond(data, str, memb, "output", data.write_method, "input", "encode", false);
+                generate_with_cond(data, str, memb, "output", data.write_method, "input", "encode", false, false);
                 //generate_with_flag(data, str, memb, "input", "output", data.write_method, true, false);
             }
             write_indent(str, 1);
@@ -438,7 +449,7 @@ namespace binred {
                 //gen_base_flag(st.base.type.aftercond, "output");
             }
             for (auto& memb : d.second.member) {
-                generate_with_cond(data, str, memb, "input", data.read_method, "decode", "output", true);
+                generate_with_cond(data, str, memb, "input", data.read_method, "output", "decode", true, true);
                 //generate_with_flag(data, str, memb, "output", "input", data.read_method, false, true);
             }
             write_indent(str, 1);
