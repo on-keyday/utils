@@ -152,5 +152,17 @@ namespace utils {
             using self_t = JSONBase<String, Vec, Object>;
             return path(const_cast<self_t*&>(ret), const_cast<self_t&>(json), seq, false);
         }
+
+        template <class Path, class String, template <class...> class Vec, template <class...> class Object>
+        PathErr path(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Path&& pathstr, bool append = false) {
+            auto seq = make_ref_seq(pathstr);
+            return path(ret, json, seq, append);
+        }
+
+        template <class Path, class String, template <class...> class Vec, template <class...> class Object>
+        PathErr path(const JSONBase<String, Vec, Object>*& ret, const JSONBase<String, Vec, Object>& json, Path&& pathstr) {
+            auto seq = make_ref_seq(pathstr);
+            return path(ret, json, seq);
+        }
     }  // namespace json
 }  // namespace utils
