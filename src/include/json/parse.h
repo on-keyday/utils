@@ -19,7 +19,7 @@ namespace utils {
     namespace json {
 
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
-        JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
+        JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json, bool eof = false) {
             using self_t = JSONBase<String, Vec, Object>;
             using object_t = typename JSONBase<String, Vec, Object>::object_t;
             using array_t = typename JSONBase<String, Vec, Object>::array_t;
@@ -60,15 +60,12 @@ namespace utils {
             CONSUME_EOF();
             if (seq.seek_if("true")) {
                 json = true;
-                return true;
             }
             else if (seq.seek_if("false")) {
                 json = false;
-                return true;
             }
             else if (seq.seek_if("null")) {
                 json = nullptr;
-                return true;
             }
             else if (seq.consume_if('\"')) {
                 size_t be, en;
@@ -80,7 +77,9 @@ namespace utils {
                 s = new String{};
                 auto ptr = const_cast<String*>(s.as_str());
                 assert(ptr);
-                return unescape(*ptr, be, en);
+                if (auto e = unescape(*ptr, be, en); !e) {
+                    return e;
+                }
             }
             else if (seq.consume_if('[')) {
                 auto& s = json.get_holder();
@@ -108,7 +107,6 @@ namespace utils {
                     ptr->push_back(std::move(tmp));
                     first = false;
                 }
-                return true;
             }
             else if (seq.consume_if('{')) {
                 auto& s = json.get_holder();
@@ -155,7 +153,6 @@ namespace utils {
                     }
                     first = false;
                 }
-                return true;
             }
             else if (number::is_digit(seq.current()) || seq.current() == '-') {
                 auto inipos = seq.rptr;
@@ -186,9 +183,17 @@ namespace utils {
                 else {
                     json = v;
                 }
-                return true;
             }
-            return JSONError::not_json;
+            else {
+                return JSONError::not_json;
+            }
+            if (eof) {
+                consume_space();
+                if (!seq.eos()) {
+                    return JSONError::not_eof;
+                }
+            }
+            return true;
         }
 #undef DETECT_EOF
 #undef CONSUME_EOF

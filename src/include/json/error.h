@@ -24,6 +24,7 @@ namespace utils {
             emplace_error,
             invalid_number,
             not_json,
+            not_eof,
             invalid_value,
         };
 
