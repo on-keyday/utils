@@ -35,7 +35,7 @@ namespace utils {
         struct JSONBase {
            private:
             template <class T, class Str, template <class...> class V, template <class...> class O>
-            friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
+            friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json, bool eof);
             template <class Out, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr internal::to_string_detail(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
 

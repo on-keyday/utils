@@ -29,13 +29,13 @@ namespace utils {
         extern
 #endif
             template DLL JSON
-            parse<JSON, helper::SizedView<const char>>(helper::SizedView<const char>&&);
+            parse<JSON, helper::SizedView<const char>>(helper::SizedView<const char>&&, bool);
 
 #if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
             template DLL OrderedJSON
-            parse<OrderedJSON, helper::SizedView<const char>>(helper::SizedView<const char>&&);
+            parse<OrderedJSON, helper::SizedView<const char>>(helper::SizedView<const char>&&, bool);
     }  // namespace json
 
 }  // namespace utils

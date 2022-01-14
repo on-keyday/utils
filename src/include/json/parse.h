@@ -100,7 +100,7 @@ namespace utils {
                     }
                     DETECT_EOF();
                     self_t tmp;
-                    auto e = parse(seq, tmp);
+                    auto e = parse(seq, tmp, eof);
                     if (!e) {
                         return e;
                     }
@@ -143,7 +143,7 @@ namespace utils {
                     }
                     CONSUME_EOF();
                     self_t value;
-                    auto err = parse(seq, value);
+                    auto err = parse(seq, value, eof);
                     if (!err) {
                         return false;
                     }
@@ -199,15 +199,15 @@ namespace utils {
 #undef CONSUME_EOF
 
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
-        JSONErr parse(T&& in, JSONBase<String, Vec, Object>& json) {
+        JSONErr parse(T&& in, JSONBase<String, Vec, Object>& json, bool eof = false) {
             auto seq = make_ref_seq(in);
-            return parse(seq, json);
+            return parse(seq, json, eof);
         }
 
         template <class JSON, class T>
-        JSON parse(T&& in) {
+        JSON parse(T&& in, bool eof = false) {
             JSON json;
-            if (!json::parse(in, json)) {
+            if (!json::parse(in, json, eof)) {
                 return {};
             }
             return json;
