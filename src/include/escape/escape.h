@@ -263,5 +263,6 @@ namespace utils {
             auto seq = make_ref_seq(in);
             return unescape_str(seq, out);
         }
+
     }  // namespace escape
 }  // namespace utils

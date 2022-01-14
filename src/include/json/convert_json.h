@@ -40,6 +40,9 @@ namespace utils {
                     return true;
                 }
                 SFINAE_BLOCK_T_ELSE(has_array_interface)
+                static bool invoke(...) {
+                    static_assert(false, R"(type not implemented any attribute to_json)");
+                }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(has_map_interface, (std::get<1>(*std::declval<T&>().begin()), std::declval<T&>.end()))
