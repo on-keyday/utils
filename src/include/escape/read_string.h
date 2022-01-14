@@ -57,7 +57,7 @@ namespace utils {
                 if (!line && c == '\n') {
                     return true;
                 }
-                return !(is_prefix(c) && (esc ? seq.current(-1) != '\\' || seq.current(-2) == '\\' : true));
+                return !(c == s && (esc ? seq.current(-1) != '\\' || seq.current(-2) == '\\' : true));
             });
             if (seq.current() != s) {
                 return false;
@@ -65,6 +65,7 @@ namespace utils {
             if (needdpfx) {
                 key.push_back(s);
             }
+            seq.consume();
             if (esc) {
                 String tmp;
                 if (!escape::unescape_str(key, tmp)) {
