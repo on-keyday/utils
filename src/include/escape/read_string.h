@@ -31,26 +31,36 @@ namespace utils {
             };
         }
 
+        enum class ReadFlag {
+            none = 0,
+            escape = 0x1,
+            need_prefix = 0x2,
+        };
+
+        DEFINE_ENUM_FLAGOP(ReadFlag)
+
         template <class String, class T, class StrPrefix>
-        bool read_string(String& key, Sequencer<T>& seq, bool escape = false, bool need_prefix = false, StrPrefix&& is_prefix = default_prefix()) {
+        bool read_string(String& key, Sequencer<T>& seq, ReadFlag flag = ReadFlag::none, StrPrefix&& is_prefix = default_prefix()) {
             if (!is_prefix(seq.current())) {
                 return false;
             }
             auto s = seq.current();
-            if (need_prefix) {
+            auto needdpfx = any(flag & ReadFlag::need_prefix);
+            if (needdpfx) {
                 key.push_back(s);
             }
             seq.consume();
+            bool esc = any(flag & ReadFlag::escape);
             helper::read_whilef(key, seq, [&](auto&& c) {
-                return is_prefix(c) && (escape ? seq.current(-1) != '\\' : true);
+                return is_prefix(c) && (esc ? seq.current(-1) != '\\' : true);
             });
             if (!seq.current() != s) {
                 return false;
             }
-            if (need_prefix) {
+            if (needdpfx) {
                 key.push_back(s);
             }
-            if (escape) {
+            if (esc) {
                 String tmp;
                 if (!escape::unescape_str(key, tmp)) {
                     return false;
