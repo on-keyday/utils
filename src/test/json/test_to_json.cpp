@@ -48,12 +48,14 @@ void test_to_json() {
     json["param2"] = "call";
     auto result2 = convert_from_json(json, test);
     assert(result2);
-    utils::wrap::cout_wrap() << to_string<utils::wrap::string>(json);
+    utils::wrap::cout_wrap() << to_string<utils::wrap::string>(json) << "\n";
     utils::wrap::map<utils::wrap::string, utils::wrap::string> val;
     auto result3 = convert_from_json(json, val, FromFlag::force_element);
     assert(result3);
     std::nullptr_t v;
     v = nullptr;
+    convert_to_json(v, json);
+    utils::wrap::cout_wrap() << to_string<utils::wrap::string>(json);
 }
 
 int main() {
