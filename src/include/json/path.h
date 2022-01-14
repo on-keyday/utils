@@ -66,7 +66,7 @@ namespace utils {
                     }
                     auto tmp = ret->at(idx);
                     if (!tmp) {
-                        if (append && ret->size() + 1 == idx) {
+                        if (append && ret->size() == idx) {
                             ret->push_back(JSONBase<String, Vec, Object>{});
                             tmp = ret->at(idx);
                             assert(tmp);
