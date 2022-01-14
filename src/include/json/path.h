@@ -128,7 +128,7 @@ namespace utils {
                 String key;
                 bool str = false;
                 if (auto e = internal::read_key(
-                        key, seq, [&](auto& c) {if(as_array){return c!=']';}else{return c!='.';} }, str);
+                        key, seq, [&](auto& c) {if(as_array){return c!=']';}else{return c!='.'&&c!='[';} }, str);
                     !e) {
                     return e;
                 }
