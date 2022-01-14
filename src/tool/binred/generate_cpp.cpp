@@ -13,6 +13,18 @@
 namespace binred {
     namespace hlp = utils::helper;
 
+    void render_tree(utw::string& str, utw::shared_ptr<Tree>& tree) {
+        hlp::append(str, "(");
+        if (tree->left) {
+            render_tree(str, tree->left);
+        }
+        hlp::append(str, tree->token);
+        if (tree->right) {
+            render_tree(str, tree->right);
+        }
+        hlp::append(str, ")");
+    }
+
     void write_indent(utw::string& str, size_t indent) {
         for (size_t i = 0; i < indent; i++) {
             hlp::append(str, "    ");

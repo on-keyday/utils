@@ -65,11 +65,11 @@ int main(int argc, char** argv) {
         FLAG_DETAIL:=EXPR EOS
         SIZE:="$" EXPR EOS
 
-        EXPR:=ASSIGN
-        ASSIGN:=BOS MUL ["=" ASSIGN!]*? EOS 
-        MUL:=BOS ADD [["*"|"/"|"%"] ADD!]*? EOS
-        ADD:=BOS PRIM [["+"|"-"|"&"|"|"] PRIM!]*? EOS
-        PRIM:=BOS [INTEGER|IDs|"(" EXPR! ")"]! EOS
+        EXPR:=EQ
+        EQ:=BOS ADD [["=="|"!="|">="|"<="|">"|"<"] ADD!]*? EOS
+        ADD:=BOS MUL [["+"|"-"|"&"|"|"] MUL!]*? EOS
+        MUL:=BOS PRIM [["*"|"/"|"%"] PRIM!]*? EOS
+        PRIM:=BOS [INTEGER|IDs|"(" EXPR! ")"!]! EOS
         IDs:=BOS ID ["." ID!]*? EOS
     )a";
     auto c = us::make_syntaxc();

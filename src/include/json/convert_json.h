@@ -248,6 +248,7 @@ namespace utils {
         if (!json___.is_undef() && !json___.is_object()) { \
             return false;                                  \
         }
+
 #define FROM_JSON_PARAM(param, name)                      \
     {                                                     \
         auto elm___ = json___.at(name);                   \

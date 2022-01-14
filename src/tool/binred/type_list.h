@@ -106,7 +106,7 @@ namespace binred {
             return ret;
         }
         bool ignore(const utw::string& t) {
-            return false;
+            return t == "(" || t == ")";
         }
     };
 
