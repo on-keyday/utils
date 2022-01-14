@@ -23,6 +23,7 @@ namespace utils {
             out_of_range,
             key_not_found,
             expect_end_subscript,
+            not_object_or_array,
             unknown,
         };
 
@@ -85,6 +86,9 @@ namespace utils {
                         tmp = &(*ret)[key];
                     }
                     ret = tmp;
+                }
+                else {
+                    return PathError::not_object_or_array;
                 }
             }
         }  // namespace internal
