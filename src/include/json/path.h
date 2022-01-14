@@ -29,14 +29,15 @@ namespace utils {
         using PathErr = wrap::EnumWrap<PathError, PathError::none, PathError::unknown>;
         namespace internal {
             template <class String, class T, class SepCond>
-            PathErr read_key(String& key, Sequencer<T>& seq, SepCond&& cond) {
-                bool str = false;
+            PathErr read_key(String& key, Sequencer<T>& seq, SepCond&& cond, bool& str) {
                 if (seq.current() == '\"') {
+                    str = true;
                     if (!escape::read_string(key, seq, escape::ReadFlag::escape)) {
                         return PathError::escape_failed;
                     }
                 }
                 else {
+                    str = false;
                     helper::read_whilef<true>(key, seq, [&](auto&& c) {
                         return cond(c);
                     });
@@ -45,9 +46,17 @@ namespace utils {
             }
 
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
-            PathErr update_path(String& key, JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json) {
+            PathErr update_path(String& key, JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, bool append, bool str) {
                 if (!ret) {
                     ret = &json;
+                }
+                if (append && ret->is_undef()) {
+                    if (str) {
+                        ret->init_obj();
+                    }
+                    else {
+                        ret->init_array();
+                    }
                 }
                 if (ret->is_array()) {
                     size_t idx = 0;
@@ -84,10 +93,13 @@ namespace utils {
                     break;
                 }
                 String key;
-                if (auto e = internal::read_key(key, seq, [&](auto& c) { return c != '/'; }); !e) {
+                bool str = false;
+                if (auto e = internal::read_key(
+                        key, seq, [&](auto& c) { return c != '/'; }, str);
+                    !e) {
                     return e;
                 }
-                if (auto e = internal::update_path(key, ret, json); !e) {
+                if (auto e = internal::update_path(key, ret, json, append, str); !e) {
                     return e;
                 }
             }
@@ -107,10 +119,13 @@ namespace utils {
                     return PathError::expect_dot_or_subscript;
                 }
                 String key;
-                if (auto e = internal::read_key(key, seq, [&](auto& c) {if(as_array){return c!=']'}else{return c!='.';} }); !e) {
+                bool str = false;
+                if (auto e = internal::read_key(
+                        key, seq, [&](auto& c) {if(as_array){return c!=']'}else{return c!='.';} }, str);
+                    !e) {
                     return e;
                 }
-                if (auto e = internal::update_path(key, ret, json); !e) {
+                if (auto e = internal::update_path(key, ret, json, append, str); !e) {
                     return e;
                 }
                 if (as_array) {
@@ -119,6 +134,7 @@ namespace utils {
                     }
                 }
             }
+            return true;
         }
 
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
@@ -129,6 +145,12 @@ namespace utils {
             else {
                 return path_object_like(ret, json, seq, append);
             }
+        }
+
+        template <class T, class String, template <class...> class Vec, template <class...> class Object>
+        PathErr path(const JSONBase<String, Vec, Object>*& ret, const JSONBase<String, Vec, Object>& json, Sequencer<T>& seq) {
+            using self_t = JSONBase<String, Vec, Object>;
+            return path(const_cast<self_t*&>(ret), const_cast<self_t&>(json), seq, false);
         }
     }  // namespace json
 }  // namespace utils
