@@ -122,10 +122,7 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_ELSE(has_array_interface)
                 static bool invoke(...) {
-                    static_assert(false, R"(type not implemented any attribute below.
-    1. is bool or number or 
-    2. member function `from_json`
-    )");
+                    static_assert(false, R"(type not implemented any attribute from_json)");
                 }
                 SFINAE_BLOCK_T_END()
 
