@@ -65,7 +65,14 @@ namespace utils {
                     }
                     auto tmp = ret->at(idx);
                     if (!tmp) {
-                        return PathError::out_of_range;
+                        if (append && ret->size() + 1 == idx) {
+                            ret->push_back(JSONBase<String, Vec, Object>{});
+                            tmp = ret->at(idx);
+                            assert(tmp);
+                        }
+                        else {
+                            return PathError::out_of_range;
+                        }
                     }
                     ret = tmp;
                 }
