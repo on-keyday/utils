@@ -295,6 +295,14 @@ namespace utils {
                 return true;
             }
 
+            bool force_is_null() const {
+                bool b = false;
+                if (force_as_bool(b)) {
+                    return b == false;
+                }
+                return true;
+            }
+
             bool force_as_bool(bool& r) const {
                 if (as_bool(r)) {
                     return true;

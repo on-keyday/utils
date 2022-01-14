@@ -10,24 +10,25 @@
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/json/convert_json.h"
 #include "../../include/wrap/cout.h"
-using namespace utils::json;
+
 struct Test {
     int param1;
     utils::wrap::string param2;
 
-    bool to_json(JSON& js) const {
+    bool to_json(utils::json::JSON& js) const {
         JSON_PARAM_BEGIN(*this, js)
         TO_JSON_PARAM(param1, "param1")
         TO_JSON_PARAM(param2, "param2")
         JSON_PARAM_END()
     }
-    bool from_json(const JSON& v) {
+    bool from_json(const utils::json::JSON& v) {
         JSON_PARAM_BEGIN(*this, v)
         FROM_JSON_PARAM(param1, "param1")
         FROM_JSON_PARAM(param2, "param2")
         JSON_PARAM_END()
     }
 };
+using namespace utils::json;
 
 bool to_json(const Test& t, JSON& js) {
     JSON_PARAM_BEGIN(t, js)

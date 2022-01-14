@@ -12,8 +12,9 @@
 
 namespace binred {
     namespace hlp = utils::helper;
+    using tree_t = utw::shared_ptr<Tree>;
 
-    void render_tree(utw::string& str, utw::shared_ptr<Tree>& tree) {
+    void render_tree(utw::string& str, tree_t& tree) {
         hlp::append(str, "(");
         if (tree->left) {
             render_tree(str, tree->left);
@@ -31,9 +32,9 @@ namespace binred {
         }
     }
 
-    void generate_flag_cond_begin(utw::string& str, auto& in, Flag& flag, bool not_ = false) {
+    void generate_flag_cond_begin(utw::string& str, auto& in, tree_t& flag, bool not_ = false) {
         hlp::append(str, "if (");
-        if (not_) {
+        /*if (not_) {
             hlp::append(str, "!(");
         }
         if (flag.type == FlagType::nbit) {
@@ -79,7 +80,8 @@ namespace binred {
         }
         if (not_) {
             hlp::append(str, ")");
-        }
+        }*/
+        render_tree(str, flag);
         hlp::append(str, ") {\n");
         write_indent(str, 1);
     }

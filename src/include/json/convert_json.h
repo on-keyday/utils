@@ -121,6 +121,12 @@ namespace utils {
                     return true;
                 }
                 SFINAE_BLOCK_T_ELSE(has_array_interface)
+                static bool invoke(...) {
+                    static_assert(false, R"(type not implemented any attribute below.
+    1. is bool or number or 
+    2. member function `from_json`
+    )");
+                }
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(has_map_interface, std::declval<T&>().emplace(std::declval<const String>(), std::declval<T>()[std::declval<const String>()]))
@@ -198,6 +204,18 @@ namespace utils {
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     return is_string<T>::invoke(t, json, flag);
                 }
+                SFINAE_BLOCK_T_END()
+
+                SFINAE_BLOCK_T_BEGIN(is_null, (std::enable_if_t<std::is_same_v<T, std::nullptr_t>>)0)
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    if (any(flag & FromFlag::force_element)) {
+                        return json.force_as_bool(t);
+                    }
+                    else {
+                        return json.as_bool(t);
+                    }
+                }
+                SFINAE_BLOCK_T_ELSE(is_null)
                 SFINAE_BLOCK_T_END()
 
                 SFINAE_BLOCK_T_BEGIN(is_bool, (std::enable_if_t<std::is_same_v<T, bool>>)0)
