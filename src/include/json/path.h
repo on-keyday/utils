@@ -28,10 +28,10 @@ namespace utils {
         using PathErr = wrap::EnumWrap<PathError, PathError::none, PathError::unknown>;
 
         template <class String, class T, class SepCond>
-        PathErr read_key(String& key, Sequencer<T>& seq, bool escape = false, SepCond&& cond = helper::no_check()) {
+        PathErr read_key(String& key, Sequencer<T>& seq, SepCond&& cond) {
             bool str = false;
             if (seq.current() == '\"') {
-                if (!escape::read_string(key, seq, true)) {
+                if (!escape::read_string(key, seq, escape::ReadFlag::escape)) {
                     return PathError::escape_failed;
                 }
             }

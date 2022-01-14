@@ -35,6 +35,7 @@ namespace utils {
             none = 0,
             escape = 0x1,
             need_prefix = 0x2,
+            allow_line = 0x4,
         };
 
         DEFINE_ENUM_FLAGOP(ReadFlag)
@@ -51,8 +52,12 @@ namespace utils {
             }
             seq.consume();
             bool esc = any(flag & ReadFlag::escape);
+            bool line = any(flag & ReadFlag::allow_line);
             helper::read_whilef(key, seq, [&](auto&& c) {
-                return is_prefix(c) && (esc ? seq.current(-1) != '\\' : true);
+                if (!line && c == '\n') {
+                    return true;
+                }
+                return !(is_prefix(c) && (esc ? seq.current(-1) != '\\' : true));
             });
             if (!seq.current() != s) {
                 return false;
