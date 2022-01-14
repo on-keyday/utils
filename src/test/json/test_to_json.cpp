@@ -52,6 +52,8 @@ void test_to_json() {
     utils::wrap::map<utils::wrap::string, utils::wrap::string> val;
     auto result3 = convert_from_json(json, val, FromFlag::force_element);
     assert(result3);
+    std::nullptr_t v;
+    v = nullptr;
 }
 
 int main() {
