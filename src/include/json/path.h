@@ -22,39 +22,32 @@ namespace utils {
             not_number,
             out_of_range,
             key_not_found,
+            expect_end_subscript,
             unknown,
         };
 
         using PathErr = wrap::EnumWrap<PathError, PathError::none, PathError::unknown>;
-
-        template <class String, class T, class SepCond>
-        PathErr read_key(String& key, Sequencer<T>& seq, SepCond&& cond) {
-            bool str = false;
-            if (seq.current() == '\"') {
-                if (!escape::read_string(key, seq, escape::ReadFlag::escape)) {
-                    return PathError::escape_failed;
+        namespace internal {
+            template <class String, class T, class SepCond>
+            PathErr read_key(String& key, Sequencer<T>& seq, SepCond&& cond) {
+                bool str = false;
+                if (seq.current() == '\"') {
+                    if (!escape::read_string(key, seq, escape::ReadFlag::escape)) {
+                        return PathError::escape_failed;
+                    }
                 }
+                else {
+                    helper::read_whilef<true>(key, seq, [&](auto&& c) {
+                        return cond(c);
+                    });
+                }
+                return true;
             }
-            else {
-                helper::read_whilef<true>(key, seq, [&](auto&& c) {
-                    return cond(c);
-                });
-            }
-            return true;
-        }
 
-        template <class T, class String, template <class...> class Vec, template <class...> class Object>
-        PathErr path_file_like(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
-            ret = &json;
-            while (!seq.eos()) {
-                if (!seq.seek_if('/')) {
-                    return PathError::expect_slash;
-                }
-                if (seq.eos()) {
-                    break;
-                }
-                if (auto e = read_key(); !e) {
-                    return e;
+            template <class T, class String, template <class...> class Vec, template <class...> class Object>
+            PathErr update_path(String& key, JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json) {
+                if (!ret) {
+                    ret = &json;
                 }
                 if (ret->is_array()) {
                     size_t idx = 0;
@@ -78,18 +71,31 @@ namespace utils {
                     ret = tmp;
                 }
             }
-            return true;
-        }
+        }  // namespace internal
+
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
-        PathErr path_object_like(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
+        PathErr path_file_like(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
+            ret = &json;
+            while (!seq.eos()) {
+                if (!seq.seek_if('/')) {
+                    return PathError::expect_slash;
+                }
+                if (seq.eos()) {
+                    break;
+                }
+                String key;
+                if (auto e = internal::read_key(key, seq, [&](auto& c) { return c != '/'; }); !e) {
+                    return e;
+                }
+                if (auto e = internal::update_path(key, ret, json); !e) {
+                    return e;
+                }
+            }
+            return true;
         }
 
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
-        PathErr path(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
-            bool as_path = false;
-            if (seq.match("/")) {
-                as_path = true;
-            }
+        PathErr path_object_like(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
             while (!seq.eos()) {
                 bool as_array = false;
                 if (seq.consume_if('.')) {
@@ -100,6 +106,28 @@ namespace utils {
                 else {
                     return PathError::expect_dot_or_subscript;
                 }
+                String key;
+                if (auto e = internal::read_key(key, seq, [&](auto& c) {if(as_array){return c!=']'}else{return c!='.';} }); !e) {
+                    return e;
+                }
+                if (auto e = internal::update_path(key, ret, json); !e) {
+                    return e;
+                }
+                if (as_array) {
+                    if (!seq.consume_if(']')) {
+                        return PathError::expect_end_subscript;
+                    }
+                }
+            }
+        }
+
+        template <class T, class String, template <class...> class Vec, template <class...> class Object>
+        PathErr path(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
+            if (seq.current() == '/') {
+                return path_file_like(ret, json, seq, append);
+            }
+            else {
+                return path_object_like(ret, json, seq, append);
             }
         }
     }  // namespace json

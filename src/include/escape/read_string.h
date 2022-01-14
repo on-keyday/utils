@@ -57,7 +57,7 @@ namespace utils {
                 if (!line && c == '\n') {
                     return true;
                 }
-                return !(is_prefix(c) && (esc ? seq.current(-1) != '\\' : true));
+                return !(is_prefix(c) && (esc ? seq.current(-1) != '\\' || seq.current(-2) == '\\' : true));
             });
             if (!seq.current() != s) {
                 return false;
