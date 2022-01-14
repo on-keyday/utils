@@ -15,7 +15,7 @@
 int test_jsonpath() {
     using namespace utils::json;
     JSON js;
-    path(js, R"(.object["object"])");
+    auto obj = path(js, R"(.object["object"][0])", true);
 }
 
 int main() {

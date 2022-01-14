@@ -65,6 +65,7 @@ add_executable(escape "src/test/escape/test_escape.cpp")
 add_executable(json "src/test/json/test_json.cpp")
 add_executable(cin "src/test/wrap/test_cin.cpp")
 add_executable(to_json "src/test/json/test_to_json.cpp")
+add_executable(jsonpath "src/test/json/test_jsonpath.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
