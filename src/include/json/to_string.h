@@ -117,7 +117,7 @@ namespace utils {
                         if (!any(flag & FmtFlag::no_space_key_value)) {
                             out.t.push_back(' ');
                         }
-                        auto e2 = to_string(std::get<1>(kv), out, flag);
+                        auto e2 = to_string_detail(std::get<1>(kv), out, flag);
                         if (!e2) {
                             return e2;
                         }
@@ -137,7 +137,7 @@ namespace utils {
                     bool first = true;
                     for (auto& v : *a) {
                         write_comma(first);
-                        auto e2 = to_string(v, out, flag);
+                        auto e2 = to_string_detail(v, out, flag);
                         if (!e2) {
                             return e2;
                         }
