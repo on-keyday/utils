@@ -112,11 +112,20 @@ namespace binred {
     void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target, auto& method, auto& out) {
         auto has_prev = memb.type.prevcond.size() != 0;
         auto has_after = memb.type.aftercond.size() != 0;
-        auto cond_begin = [&](auto& cond) {
+        auto cond_begin_one = [&](auto& m, bool not_) {
+            hlp::appends(str, "if (");
+            if (not_) {
+                hlp::append(str, "!(");
+            }
+            render_tree(str, m);
+            if (not_) {
+                hlp::append(str, ")");
+            }
+            hlp::appends(str, "){\n");
+        };
+        auto cond_begin = [&](auto& cond, bool not_) {
             for (auto& m : cond) {
-                hlp::appends(str, "if (");
-                render_tree(str, m);
-                hlp::appends(str, "){\n");
+                cond_begin_one(m, not_);
             }
         };
         auto cond_end = [&](auto& cond) {
@@ -125,14 +134,21 @@ namespace binred {
             }
         };
         if (has_prev) {
-            cond_begin(memb.type.prevcond);
+            cond_begin(memb.type.prevcond, false);
         }
         hlp::appends(str, target, ".", method, "(", out, ".", memb.name);
         if (memb.type.size) {
             hlp::append(str, ",");
             render_tree(str, memb.type.size);
         }
-        hlp::append(str, ")");
+        hlp::append(str, ")\n");
+        if (has_after) {
+            for (auto& m : memb.type.aftercond) {
+                cond_begin_one(m, true);
+                hlp::append(str, "return false;\n");
+                hlp::append(str, "}\n");
+            }
+        }
         if (has_prev) {
             cond_end(memb.type.prevcond);
         }
