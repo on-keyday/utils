@@ -32,16 +32,23 @@ namespace utils {
         }
 
         template <class String, class T, class StrPrefix>
-        bool read_string(String& key, Sequencer<T>& seq, bool escape = false, StrPrefix&& is_prefix = default_prefix()) {
+        bool read_string(String& key, Sequencer<T>& seq, bool escape = false, bool need_prefix = false, StrPrefix&& is_prefix = default_prefix()) {
             if (!is_prefix(seq.current())) {
                 return false;
+            }
+            auto s = seq.current();
+            if (need_prefix) {
+                key.push_back(s);
             }
             seq.consume();
             helper::read_whilef(key, seq, [&](auto&& c) {
                 return is_prefix(c) && (escape ? seq.current(-1) != '\\' : true);
             });
-            if (!is_prefix(seq.current())) {
+            if (!seq.current() != s) {
                 return false;
+            }
+            if (need_prefix) {
+                key.push_back(s);
             }
             if (escape) {
                 String tmp;
