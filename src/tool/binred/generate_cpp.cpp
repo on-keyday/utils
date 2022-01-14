@@ -108,6 +108,36 @@ namespace binred {
             set_val(str, size.size2, in);
         }
     }
+
+    void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target, auto& method, auto& out) {
+        auto has_prev = memb.type.prevcond.size() != 0;
+        auto has_after = memb.type.aftercond.size() != 0;
+        auto cond_begin = [&](auto& cond) {
+            for (auto& m : cond) {
+                hlp::appends(str, "if (");
+                render_tree(str, m);
+                hlp::appends(str, "){\n");
+            }
+        };
+        auto cond_end = [&](auto& cond) {
+            for (auto& m : cond) {
+                hlp::append(str, "}\n");
+            }
+        };
+        if (has_prev) {
+            cond_begin(memb.type.prevcond);
+        }
+        hlp::appends(str, target, ".", method, "(", out, ".", memb.name);
+        if (memb.type.size) {
+            hlp::append(str, ",");
+            render_tree(str, memb.type.size);
+        }
+        hlp::append(str, ")");
+        if (has_prev) {
+            cond_end(memb.type.prevcond);
+        }
+    }
+
     /*
     void generate_with_flag(FileData& data, utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool is_enc, bool check_succeed) {
         auto& type = memb.type;
@@ -251,7 +281,7 @@ namespace binred {
             hlp::append(str, "}\n");
             write_indent(str, 1);
             auto gen_decode = [&](auto& st) {
-                //generate_flag_cond_begin(str, "judgement", st.second.base.type.flag);
+                //generate_flag_cond_begin(str, "judgement", st.second.base.type.prevcond);
                 write_indent(str, 1);
                 hlp::appends(str, "auto p = ");
                 generate_make_ptr_obj(str, data, st.first);
@@ -331,13 +361,13 @@ namespace binred {
             };
             if (has_base) {
                 gen_base_flag(st.base.type.prevcond, "input");
-                gen_base_flag(st.base.type.aftercond, "input");
                 write_indent(str, 1);
                 hlp::appends(str, "if (!encode(static_cast<const ", st.base.type.name, "&>(input),output)) { \n");
                 write_indent(str, 2);
                 hlp::appends(str, "return false;\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
+                gen_base_flag(st.base.type.aftercond, "input");
             }
             for (auto& memb : d.second.member) {
                 //generate_with_flag(data, str, memb, "input", "output", data.write_method, true, false);

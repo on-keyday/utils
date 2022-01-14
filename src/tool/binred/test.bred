@@ -27,7 +27,7 @@ struct H2Frame {
     len int $ 3
     type std::uint8_t
     flag std::uint8_t
-    id std::int32_t ? id egt 0
+    id std::int32_t ? id >= 0
 }
 
 struct Priority {
@@ -62,7 +62,7 @@ struct SetingsFrame - H2Frame ? type == 4 ! len % 6 {
 
 struct PushPromiseFrame - H2Frame ? type == 5 {
     padding std::uint8_t ? flag & 0x8 = 0
-    promise std::int32_t ! promise gt 0
+    promise std::int32_t ! promise > 0
     data std::string $ len - padding
     pad std::string $ padding 
 }

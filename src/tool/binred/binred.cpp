@@ -143,14 +143,14 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-    return 0;
+    //return 0;
     utw::string str;
     binred::generate_cpp(str, state.data, {});
     if (result.is_true("verbose")) {
         cout << "generated code:\n";
         cout << str;
     }
-    return 0;
+    //return 0;
     {
         std::ofstream fs(*outfile);
         if (!fs.is_open()) {
