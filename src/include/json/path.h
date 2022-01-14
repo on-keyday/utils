@@ -45,7 +45,7 @@ namespace utils {
                 return true;
             }
 
-            template <class T, class String, template <class...> class Vec, template <class...> class Object>
+            template <class String, template <class...> class Vec, template <class...> class Object>
             PathErr update_path(String& key, JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, bool append, bool str) {
                 if (!ret) {
                     ret = &json;
@@ -93,7 +93,7 @@ namespace utils {
         PathErr path_file_like(JSONBase<String, Vec, Object>*& ret, JSONBase<String, Vec, Object>& json, Sequencer<T>& seq, bool append = false) {
             ret = &json;
             while (!seq.eos()) {
-                if (!seq.seek_if('/')) {
+                if (!seq.consume_if('/')) {
                     return PathError::expect_slash;
                 }
                 if (seq.eos()) {
@@ -128,7 +128,7 @@ namespace utils {
                 String key;
                 bool str = false;
                 if (auto e = internal::read_key(
-                        key, seq, [&](auto& c) {if(as_array){return c!=']'}else{return c!='.';} }, str);
+                        key, seq, [&](auto& c) {if(as_array){return c!=']';}else{return c!='.';} }, str);
                     !e) {
                     return e;
                 }

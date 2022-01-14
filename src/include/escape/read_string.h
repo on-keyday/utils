@@ -40,7 +40,7 @@ namespace utils {
 
         DEFINE_ENUM_FLAGOP(ReadFlag)
 
-        template <class String, class T, class StrPrefix>
+        template <class String, class T, class StrPrefix = decltype(default_prefix())>
         bool read_string(String& key, Sequencer<T>& seq, ReadFlag flag = ReadFlag::none, StrPrefix&& is_prefix = default_prefix()) {
             if (!is_prefix(seq.current())) {
                 return false;
@@ -59,7 +59,7 @@ namespace utils {
                 }
                 return !(is_prefix(c) && (esc ? seq.current(-1) != '\\' || seq.current(-2) == '\\' : true));
             });
-            if (!seq.current() != s) {
+            if (seq.current() != s) {
                 return false;
             }
             if (needdpfx) {

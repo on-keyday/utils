@@ -130,6 +130,7 @@ target_link_libraries(tree utils)
 target_link_libraries(json utils)
 target_link_libraries(cin utils)
 target_link_libraries(to_json utils)
+target_link_libraries(jsonpath utils)
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)

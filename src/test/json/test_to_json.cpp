@@ -56,8 +56,6 @@ void test_to_json() {
     v = nullptr;
     convert_to_json(v, json);
     utils::wrap::cout_wrap() << to_string<utils::wrap::string>(json);
-    void* p;
-    convert_from_json(json, p);
 }
 
 int main() {
