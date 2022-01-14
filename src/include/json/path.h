@@ -90,6 +90,7 @@ namespace utils {
                 else {
                     return PathError::not_object_or_array;
                 }
+                return true;
             }
         }  // namespace internal
 
