@@ -16,6 +16,8 @@ void test_jsonpath() {
     using namespace utils::json;
     JSON js;
     auto obj = path(js, R"(.object["object"][0])", true);
+    assert(obj);
+    *obj = "string";
     utils::wrap::cout_wrap() << to_string<utils::wrap::string>(js);
 }
 
