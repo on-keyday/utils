@@ -7,15 +7,16 @@
 
 
 #include "../../include/json/json_export.h"
-#include "../../include/json/literals.h"
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/json/path.h"
+#include "../../include/json/to_string.h"
 #include "../../include/wrap/cout.h"
 
 void test_jsonpath() {
     using namespace utils::json;
     JSON js;
     auto obj = path(js, R"(.object["object"][0])", true);
+    utils::wrap::cout_wrap() << to_string<utils::wrap::string>(js);
 }
 
 int main() {

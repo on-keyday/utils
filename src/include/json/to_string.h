@@ -126,7 +126,7 @@ namespace utils {
                         }
                     }
                     write_tail(first);
-                    if (line) {
+                    if (!first && line) {
                         out.write_indent();
                     }
                     out.write_raw("}");
@@ -146,7 +146,7 @@ namespace utils {
                         }
                     }
                     write_tail(first);
-                    if (line) {
+                    if (!first && line) {
                         out.write_indent();
                     }
                     out.write_raw("]");
