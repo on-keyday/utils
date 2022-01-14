@@ -66,7 +66,8 @@ namespace binred {
         using tree_t = utw::shared_ptr<Tree>;
         utw::string name;
         utw::vector<tree_t> prevcond;
-        utw::vector<tree_t> aftercond;
+        utw::vector<tree_t> existcond;
+        //utw::vector<tree_t> aftercond;
         tree_t size;
     };
 

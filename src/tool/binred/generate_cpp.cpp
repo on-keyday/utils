@@ -14,14 +14,19 @@ namespace binred {
     namespace hlp = utils::helper;
     using tree_t = utw::shared_ptr<Tree>;
 
-    void render_tree(utw::string& str, tree_t& tree) {
+    void render_tree(utw::string& str, tree_t& tree, const utw::string& rel) {
         hlp::append(str, "(");
         if (tree->left) {
-            render_tree(str, tree->left);
+            render_tree(str, tree->left, rel);
+        }
+        if (tree->kw == us::KeyWord::id) {
+            if (rel.size() && str.back() != '.') {
+                hlp::appends(str, rel, ".");
+            }
         }
         hlp::append(str, tree->token);
         if (tree->right) {
-            render_tree(str, tree->right);
+            render_tree(str, tree->right, rel);
         }
         hlp::append(str, ")");
     }
@@ -109,15 +114,16 @@ namespace binred {
         }
     }
 
-    void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target, auto& method, auto& out) {
-        auto has_prev = memb.type.prevcond.size() != 0;
-        auto has_after = memb.type.aftercond.size() != 0;
+    void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target, auto& method, auto& out, auto& coder, bool check_after) {
+        auto has_prev = memb.type.prevcond.size() != 0 && !check_after;
+        auto has_exist = memb.type.existcond.size() != 0;
+        auto has_after = memb.type.prevcond.size() != 0 && check_after;
         auto cond_begin_one = [&](auto& m, bool not_) {
             hlp::appends(str, "if (");
             if (not_) {
                 hlp::append(str, "!(");
             }
-            render_tree(str, m);
+            render_tree(str, m, out);
             if (not_) {
                 hlp::append(str, ")");
             }
@@ -134,23 +140,42 @@ namespace binred {
             }
         };
         if (has_prev) {
-            cond_begin(memb.type.prevcond, false);
-        }
-        hlp::appends(str, target, ".", method, "(", out, ".", memb.name);
-        if (memb.type.size) {
-            hlp::append(str, ",");
-            render_tree(str, memb.type.size);
-        }
-        hlp::append(str, ")\n");
-        if (has_after) {
-            for (auto& m : memb.type.aftercond) {
+            for (auto& m : memb.type.prevcond) {
                 cond_begin_one(m, true);
                 hlp::append(str, "return false;\n");
                 hlp::append(str, "}\n");
             }
         }
-        if (has_prev) {
-            cond_end(memb.type.prevcond);
+        if (has_exist) {
+            cond_begin(memb.type.existcond, false);
+        }
+        if (data.structs.find(memb.name) != data.structs.end()) {
+            if (hlp::equal(coder, "encode")) {
+                hlp::appends(str, "if(!", coder, "(", target, ",", out, ".", memb.name, ")){\n");
+            }
+            else {
+                hlp::appends(str, "if(!", coder, "(", out, ".", memb.name, ",", target, ")){\n");
+            }
+            hlp::append(str, "return false;\n");
+            hlp::append(str, "}\n");
+        }
+        else {
+            hlp::appends(str, target, ".", method, "(", out, ".", memb.name);
+            if (memb.type.size) {
+                hlp::append(str, ",");
+                render_tree(str, memb.type.size, out);
+            }
+            hlp::append(str, ");\n");
+        }
+        if (has_after) {
+            for (auto& m : memb.type.prevcond) {
+                cond_begin_one(m, true);
+                hlp::append(str, "return false;\n");
+                hlp::append(str, "}\n");
+            }
+        }
+        if (has_exist) {
+            cond_end(memb.type.existcond);
         }
     }
 
@@ -383,9 +408,10 @@ namespace binred {
                 hlp::appends(str, "return false;\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
-                gen_base_flag(st.base.type.aftercond, "input");
+                // gen_base_flag(st.base.type.aftercond, "input");
             }
             for (auto& memb : d.second.member) {
+                generate_with_cond(data, str, memb, "output", data.write_method, "input", "encode", false);
                 //generate_with_flag(data, str, memb, "input", "output", data.write_method, true, false);
             }
             write_indent(str, 1);
@@ -409,9 +435,10 @@ namespace binred {
                 write_indent(str, offset);
                 hlp::appends(str, "}\n");
                 gen_base_flag(st.base.type.prevcond, "output");
-                gen_base_flag(st.base.type.aftercond, "output");
+                //gen_base_flag(st.base.type.aftercond, "output");
             }
             for (auto& memb : d.second.member) {
+                generate_with_cond(data, str, memb, "input", data.read_method, "decode", "output", true);
                 //generate_with_flag(data, str, memb, "output", "input", data.read_method, false, true);
             }
             write_indent(str, 1);

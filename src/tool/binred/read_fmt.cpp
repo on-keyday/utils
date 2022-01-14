@@ -20,6 +20,7 @@ namespace binred {
     constexpr auto size_def = "SIZE";
     constexpr auto base_def = "BASE";
     constexpr auto bind_def = "BIND";
+    constexpr auto prev_def = "PREV";
     constexpr auto expr_def = "EXPR";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         constexpr auto is_expr = us::filter::stack_order(1, expr_def);
@@ -75,9 +76,12 @@ namespace binred {
                 cond.push_back(std::move(state.tree.current));
             };
             auto under_disp = [&](auto& type) {
-                if (result.under(bind_def)) {
-                    set_to_flag(type.aftercond);
+                if (result.under(prev_def)) {
+                    set_to_flag(type.existcond);
                 }
+                /*else if (result.under(bind_def)) {
+                    set_to_flag(type.aftercond);
+                }*/
                 else {
                     set_to_flag(type.prevcond);
                 }
