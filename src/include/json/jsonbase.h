@@ -276,6 +276,10 @@ namespace utils {
                 return obj.as_numf();
             }
 
+            bool is_integer() const {
+                return obj.as_numi() || obj.as_numu();
+            }
+
             bool is_string() const {
                 return obj.as_str();
             }
