@@ -180,7 +180,9 @@ namespace utils {
         template <class Path, class String, template <class...> class Vec, template <class...> class Object>
         JSONBase<String, Vec, Object>* path(JSONBase<String, Vec, Object>& json, Path&& pathstr, bool append = false) {
             JSONBase<String, Vec, Object>* ret = nullptr;
-            path(ret, json, pathstr, append);
+            if (!path(ret, json, pathstr, append)) {
+                return nullptr;
+            }
             return ret;
         }
 
