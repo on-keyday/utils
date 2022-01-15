@@ -260,6 +260,15 @@ namespace utils {
             return internal::ToJSONHelper<String, Vec, Object>::invoke(t, json);
         }
 
+        template <class JSON, class T>
+        JSON convert_to_json(const T& t) {
+            JSON js;
+            if (!convert_to_json(t, js)) {
+                return JSON{};
+            }
+            return js;
+        }
+
         template <class String1, template <class...> class Vec1, template <class...> class Object1,
                   class String2, template <class...> class Vec2, template <class...> class Object2>
         bool convert_to_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json);
@@ -267,6 +276,15 @@ namespace utils {
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
         bool convert_from_json(const JSONBase<String, Vec, Object>& json, T& t, FromFlag flag = FromFlag::none) {
             return internal::FromJSONHelper<String, Vec, Object>::invoke(t, json, flag);
+        }
+
+        template <class T, class JSON>
+        T convert_from_json(const JSON& json, FromFlag flag = FromFlag::none) {
+            T t;
+            if (!convert_from_json(json, t, flag)) {
+                return T{};
+            }
+            return t;
         }
 
         template <class String1, template <class...> class Vec1, template <class...> class Object1,
