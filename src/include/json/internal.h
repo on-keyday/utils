@@ -49,7 +49,7 @@ namespace utils {
                     array_t* a;
                     void* p = nullptr;
                 };
-                JSONKind kind = JSONKind::undefined;
+                JSONKind kind_ = JSONKind::undefined;
 
                 void copy(const JSONHolder& n) {
                     if (kind == JSONKind::array) {
@@ -69,57 +69,61 @@ namespace utils {
                public:
                 constexpr JSONHolder() {}
                 constexpr JSONHolder(std::nullptr_t)
-                    : kind(JSONKind::null), p(nullptr) {}
+                    : kind_(JSONKind::null), p(nullptr) {}
                 constexpr JSONHolder(bool n)
-                    : kind(JSONKind::boolean), b(n) {}
+                    : kind_(JSONKind::boolean), b(n) {}
                 constexpr JSONHolder(int n)
-                    : kind(JSONKind::number_i), i(n) {}
+                    : kind_(JSONKind::number_i), i(n) {}
                 constexpr JSONHolder(std::int64_t n)
-                    : kind(JSONKind::number_i), i(n) {}
+                    : kind_(JSONKind::number_i), i(n) {}
                 constexpr JSONHolder(std::uint64_t n)
-                    : kind(JSONKind::number_u), u(n) {}
+                    : kind_(JSONKind::number_u), u(n) {}
                 constexpr JSONHolder(double n)
-                    : kind(JSONKind::number_f), f(n) {}
+                    : kind_(JSONKind::number_f), f(n) {}
                 JSONHolder(const String& n)
-                    : kind(JSONKind::string), s(new String(n)) {}
+                    : kind_(JSONKind::string), s(new String(n)) {}
                 JSONHolder(String&& n)
-                    : kind(JSONKind::string), s(new String(std::move(n))) {}
+                    : kind_(JSONKind::string), s(new String(std::move(n))) {}
                 JSONHolder(const object_t& n)
-                    : kind(JSONKind::object), o(new object_t(n)) {}
+                    : kind_(JSONKind::object), o(new object_t(n)) {}
                 JSONHolder(object_t&& n)
-                    : kind(JSONKind::object), o(new object_t(std::move(n))) {}
+                    : kind_(JSONKind::object), o(new object_t(std::move(n))) {}
                 JSONHolder(const array_t& n)
-                    : kind(JSONKind::array), a(new array_t(n)) {}
+                    : kind_(JSONKind::array), a(new array_t(n)) {}
                 JSONHolder(array_t&& n)
-                    : kind(JSONKind::array), a(new array_t(std::move(n))) {}
+                    : kind_(JSONKind::array), a(new array_t(std::move(n))) {}
 
                 constexpr JSONHolder(String* n)
-                    : kind(JSONKind::string), s(n) {
+                    : kind_(JSONKind::string), s(n) {
                     assert(n);
                 }
 
                 constexpr JSONHolder(object_t* n)
-                    : kind(JSONKind::object), o(n) {
+                    : kind_(JSONKind::object), o(n) {
                     assert(n);
                 }
 
                 constexpr JSONHolder(array_t* n)
-                    : kind(JSONKind::array), a(n) {
+                    : kind_(JSONKind::array), a(n) {
                     assert(n);
                 }
 
                 constexpr JSONHolder(JSONHolder&& n)
-                    : kind(n.kind), p(n.p) {
+                    : kind_(n.kind_), p(n.p) {
                     n.p = nullptr;
-                    n.kind = JSONKind::undefined;
+                    n.kind_ = JSONKind::undefined;
+                }
+
+                constexpr JSONKind kind() const {
+                    return kind_;
                 }
 
                 JSONHolder& operator=(JSONHolder&& n) {
                     this->~JSONHolder();
-                    kind = n.kind;
+                    kind_ = n.kind_;
                     p = n.p;
                     n.p = nullptr;
-                    n.kind = JSONKind::undefined;
+                    n.kind_ = JSONKind::undefined;
                     return *this;
                 }
 
@@ -130,61 +134,66 @@ namespace utils {
 
                 JSONHolder& operator=(const JSONHolder& n) {
                     this->~JSONHolder();
-                    kind = n.kind;
+                    kind_ = n.kind_;
                     copy(n);
                     return *this;
                 }
 
                 ~JSONHolder() {
-                    if (kind == JSONKind::array) {
+                    if (kind_ == JSONKind::array) {
                         delete a;
                     }
-                    else if (kind == JSONKind::object) {
+                    else if (kind_ == JSONKind::object) {
                         delete o;
                     }
-                    else if (kind == JSONKind::string) {
+                    else if (kind_ == JSONKind::string) {
                         delete s;
                     }
                     p = nullptr;
-                    kind = JSONKind::undefined;
+                    kind_ = JSONKind::undefined;
                 }
 
                 bool is_undef() const {
-                    return kind == JSONKind::undefined;
+                    return kind_ == JSONKind::undefined;
                 }
 
                 bool is_null() const {
-                    return kind == JSONKind::null;
+                    return kind_ == JSONKind::null;
                 }
 
                 const std::int64_t* as_numi() const {
-                    return kind == JSONKind::number_i ? &i : nullptr;
+                    return kind_ == JSONKind::number_i ? &i : nullptr;
                 }
 
                 const std::uint64_t* as_numu() const {
-                    return kind == JSONKind::number_u ? &u : nullptr;
+                    return kind_ == JSONKind::number_u ? &u : nullptr;
                 }
 
                 const double* as_numf() const {
-                    return kind == JSONKind::number_f ? &f : nullptr;
+                    return kind_ == JSONKind::number_f ? &f : nullptr;
                 }
 
                 const bool* as_bool() const {
-                    return kind == JSONKind::boolean ? &b : nullptr;
+                    return kind_ == JSONKind::boolean ? &b : nullptr;
                 }
 
                 const String* as_str() const {
-                    return kind == JSONKind::string ? s : nullptr;
+                    return kind_ == JSONKind::string ? s : nullptr;
                 }
 
                 const object_t* as_obj() const {
-                    return kind == JSONKind::object ? o : nullptr;
+                    return kind_ == JSONKind::object ? o : nullptr;
                 }
 
                 const array_t* as_arr() const {
-                    return kind == JSONKind::array ? a : nullptr;
+                    return kind_ == JSONKind::array ? a : nullptr;
                 }
             };
+
+            template <class String, template <class...> class Vec, template <class...> class Object>
+            bool operator==(const JSONHolder<String, Vec, Object>& a, const JSONHolder<String, Vec, Object>& b) {
+            }
+
         }  // namespace internal
 
     }  // namespace json
