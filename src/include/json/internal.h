@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstddef>
 #include <utility>
+#include <limits>
 
 namespace utils {
 
@@ -188,10 +189,32 @@ namespace utils {
                 const array_t* as_arr() const {
                     return kind_ == JSONKind::array ? a : nullptr;
                 }
+
+                const void* as_rawp() const {
+                    return p;
+                }
             };
 
             template <class String, template <class...> class Vec, template <class...> class Object>
             bool operator==(const JSONHolder<String, Vec, Object>& a, const JSONHolder<String, Vec, Object>& b) {
+                if (a.kind() != b.kind()) {
+                    return false;
+                }
+                if (a.kind() == JSONKind::object) {
+                    return *a.as_obj() == *b.as_obj();
+                }
+                else if (a.kind() == JSONKind::array) {
+                    return *a.as_arr() == *b.as_arr();
+                }
+                else if (a.kind() == JSONKind::string) {
+                    return *a.as_str() == *b.as_str();
+                }
+                else if (a.kind() == JSONKind::number_f) {
+                    return *a.as_numf() - *b.as_numf() < std::numeric_limits<double>::epsilon();
+                }
+                else {
+                    return a.as_rawp() == a.as_rawp();
+                }
             }
 
         }  // namespace internal
