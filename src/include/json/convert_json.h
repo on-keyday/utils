@@ -304,6 +304,13 @@ namespace utils {
         }                                                     \
     }
 
+#define TO_JSON_OPT(cond, param, name)                        \
+    if (cond) {                                               \
+        if (!convert_to_json(ref____.param, json___[name])) { \
+            return false;                                     \
+        }                                                     \
+    }
+
 #define JSON_PARAM_END() \
     return true;         \
     }
