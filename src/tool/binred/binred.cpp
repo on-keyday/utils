@@ -66,7 +66,9 @@ int main(int argc, char** argv) {
         FLAG_DETAIL:=EXPR EOS
         SIZE:="$" EXPR EOS
 
-        EXPR:=EQ
+        EXPR:=OR
+        OR:=BOS AND ["||" AND!]*? EOS 
+        AND:=BOS EQ ["&&" EQ!]*? EOS
         EQ:=BOS ADD [["=="|"!="|">="|"<="|">"|"<"] ADD!]*? EOS
         ADD:=BOS MUL [["+"|"-"|"&"|"|"] MUL!]*? EOS
         MUL:=BOS PRIM [["*"|"/"|"%"] PRIM!]*? EOS
