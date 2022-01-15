@@ -429,9 +429,9 @@ namespace binred {
                 hlp::append(str, "return false;\n");
                 write_indent(str, offset + 1);
                 hlp::append(str, "}\n");
+                gen_base_flag(st.base.type.existcond, "output");
                 write_indent(str, offset);
                 hlp::appends(str, "}\n");
-                gen_base_flag(st.base.type.existcond, "output");
                 gen_base_flag(st.base.type.prevcond, "output");
             }
             for (auto& memb : d.second.member) {
