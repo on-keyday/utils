@@ -19,7 +19,15 @@ namespace utils {
             Vec<std::pair<Key, Value>> obj;
 
             bool operator==(const OrderedMapBase& o) const {
-                return obj == o.obj;
+                if (obj.size() != obj.size()) {
+                    return false;
+                }
+                for (auto& o : o.obj) {
+                    if (find(std::get<0>(o)) == end()) {
+                        return false;
+                    }
+                }
+                return true;
             }
 
             template <class T>
