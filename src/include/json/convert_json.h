@@ -298,9 +298,6 @@ namespace utils {
         }                                                     \
     }
 
-#define TO_JSON_JSONPARAM(param, name) \
-    { json___[name] = ref____.param; }
-
 #define JSON_PARAM_END() \
     return true;         \
     }
