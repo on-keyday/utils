@@ -232,7 +232,7 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_ELSE(is_bool)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
-                    return is_json<T>::invoke(t, json, flag);
+                    return is_null<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
