@@ -114,7 +114,7 @@ namespace utils {
                     for (auto a = json.abegin(); a != json.aend(); a++) {
                         using elm_t = helper::append_size_t<T>;
                         elm_t v;
-                        using recursion = is_bool<elm_t>;
+                        using recursion = is_json<elm_t>;
                         auto err = recursion::invoke(v, *a, flag);
                         if (!err) {
                             return false;
@@ -137,7 +137,7 @@ namespace utils {
                     for (auto o = json.obegin(); o != json.oend(); o++) {
                         using elm_t = std::remove_reference_t<decltype(std::declval<T>()[std::declval<const String>()])>;
                         elm_t v;
-                        using recursion = is_bool<elm_t>;
+                        using recursion = is_json<elm_t>;
                         auto err = recursion::invoke(v, std::get<1>(*o), flag);
                         if (!err) {
                             return false;
@@ -232,13 +232,23 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_ELSE(is_bool)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
-                    return is_null<T>::invoke(t, json, flag);
+                    return is_json<T>::invoke(t, json, flag);
+                }
+                SFINAE_BLOCK_T_END()
+
+                SFINAE_BLOCK_T_BEGIN(is_json, (std::enable_if_t<std::is_same_v<T, JSONBase<String, Vec, Object>>>)0)
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    t = json;
+                }
+                SFINAE_BLOCK_T_ELSE(is_json)
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
+                    return is_bool<T>::invoke(t, json, flag);
                 }
                 SFINAE_BLOCK_T_END()
 
                 template <class T>
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
-                    return is_bool<T>::invoke(t, json, flag);
+                    return is_json<T>::invoke(t, json, flag);
                 }
             };
 

@@ -33,7 +33,7 @@ namespace utils {
             PathErr read_key(String& key, Sequencer<T>& seq, SepCond&& cond, bool& str) {
                 if (seq.current() == '\"') {
                     str = true;
-                    if (!escape::read_string(key, seq, escape::ReadFlag::escape, escape::json_set())) {
+                    if (!escape::read_string(key, seq, escape::ReadFlag::escape, escape::default_prefix(), escape::json_set())) {
                         return PathError::escape_failed;
                     }
                 }

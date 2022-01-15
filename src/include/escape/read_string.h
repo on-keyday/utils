@@ -68,7 +68,7 @@ namespace utils {
             seq.consume();
             if (esc) {
                 String tmp;
-                if (!escape::unescape_str(key, tmp, esc)) {
+                if (!escape::unescape_str(key, tmp, escset)) {
                     return false;
                 }
                 key = std::move(tmp);

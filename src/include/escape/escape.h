@@ -258,10 +258,10 @@ namespace utils {
             return true;
         }
 
-        template <class In, class Out>
-        constexpr number::NumErr unescape_str(In&& in, Out& out) {
+        template <class In, class Out, class Escape = decltype(default_set())>
+        constexpr number::NumErr unescape_str(In&& in, Out& out, Escape&& esc = default_set()) {
             auto seq = make_ref_seq(in);
-            return unescape_str(seq, out);
+            return unescape_str(seq, out, esc);
         }
 
     }  // namespace escape
