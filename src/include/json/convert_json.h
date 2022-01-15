@@ -239,6 +239,7 @@ namespace utils {
                 SFINAE_BLOCK_T_BEGIN(is_json, (std::enable_if_t<std::is_same_v<T, JSONBase<String, Vec, Object>>>)0)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     t = json;
+                    return true;
                 }
                 SFINAE_BLOCK_T_ELSE(is_json)
                 static bool invoke(T& t, const JSON& json, FromFlag flag) {
