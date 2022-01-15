@@ -499,7 +499,7 @@ namespace utils {
                 return a->end();
             }
 
-            bool operator==(const JSONBase<String, Vec, Object>& v) {
+            bool operator==(const JSONBase<String, Vec, Object>& v) const {
                 return obj == v.obj;
             }
         };

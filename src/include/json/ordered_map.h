@@ -18,6 +18,10 @@ namespace utils {
         struct OrderedMapBase {
             Vec<std::pair<Key, Value>> obj;
 
+            bool operator==(const OrderedMapBase& o) const {
+                return obj == o.obj;
+            }
+
             template <class T>
             auto find(T&& t) const {
                 return std::find_if(obj.begin(), obj.end(), [&](auto& kv) {

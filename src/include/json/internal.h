@@ -53,13 +53,13 @@ namespace utils {
                 JSONKind kind_ = JSONKind::undefined;
 
                 void copy(const JSONHolder& n) {
-                    if (kind == JSONKind::array) {
+                    if (kind_ == JSONKind::array) {
                         a = new array_t(*n.a);
                     }
-                    else if (kind == JSONKind::object) {
+                    else if (kind_ == JSONKind::object) {
                         o = new object_t(*n.o);
                     }
-                    else if (kind == JSONKind::string) {
+                    else if (kind_ == JSONKind::string) {
                         s = new String(*n.s);
                     }
                     else {
@@ -129,7 +129,7 @@ namespace utils {
                 }
 
                 JSONHolder(const JSONHolder& n)
-                    : kind(n.kind) {
+                    : kind_(n.kind_) {
                     copy(n);
                 }
 
