@@ -260,7 +260,7 @@ namespace utils {
 
         template <class String1, template <class...> class Vec1, template <class...> class Object1,
                   class String2, template <class...> class Vec2, template <class...> class Object2>
-        bool convert_from_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json);
+        bool convert_from_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json, FromFlag flag = FromFlag::none);
 
 #define JSON_PARAM_BEGIN(base, json)                       \
     {                                                      \
@@ -280,6 +280,14 @@ namespace utils {
             return false;                                 \
         }                                                 \
     }
+#define FROM_JSON_JSONPARAM(param, name) \
+    {                                    \
+        auto elm___ = json__.at(name);   \
+        if (!elm___) {                   \
+            return false;                \
+        }                                \
+        ref____.param = *elm___;         \
+    }
 
 #define TO_JSON_PARAM(param, name)                            \
     {                                                         \
@@ -287,6 +295,9 @@ namespace utils {
             return false;                                     \
         }                                                     \
     }
+
+#define TO_JSON_JSONPARAM(param, name) \
+    { json___[name] = ref____.param; }
 
 #define JSON_PARAM_END() \
     return true;         \
