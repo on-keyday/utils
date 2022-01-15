@@ -290,14 +290,6 @@ namespace utils {
             return false;                                 \
         }                                                 \
     }
-#define FROM_JSON_JSONPARAM(param, name) \
-    {                                    \
-        auto elm___ = json___.at(name);  \
-        if (!elm___) {                   \
-            return false;                \
-        }                                \
-        ref____.param = *elm___;         \
-    }
 
 #define TO_JSON_PARAM(param, name)                            \
     {                                                         \
