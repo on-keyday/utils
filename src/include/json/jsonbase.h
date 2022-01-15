@@ -438,7 +438,7 @@ namespace utils {
             requires std::is_integral_v<T>
             explicit operator T() const {
                 T t;
-                if (!to_number(t)) {
+                if (!as_number(t)) {
                     bad_type("not number type");
                 }
                 return t;
@@ -456,7 +456,7 @@ namespace utils {
             requires std::is_floating_point_v<T>
             explicit operator T() const {
                 T t;
-                if (!to_number(t)) {
+                if (!as_number(t)) {
                     bad_type("not number type");
                 }
                 return t;
