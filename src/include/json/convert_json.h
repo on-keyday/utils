@@ -290,6 +290,12 @@ namespace utils {
             return false;                                 \
         }                                                 \
     }
+#define FROM_JSON_OPT(param, name)                        \
+    if (auto elm___ = json.at(name)) {                    \
+        if (!convert_from_json(*elm___, ref____.param)) { \
+            return false;                                 \
+        }                                                 \
+    }
 
 #define TO_JSON_PARAM(param, name)                            \
     {                                                         \
