@@ -40,8 +40,8 @@ namespace utils {
 
         DEFINE_ENUM_FLAGOP(ReadFlag)
 
-        template <class String, class T, class StrPrefix = decltype(default_prefix())>
-        bool read_string(String& key, Sequencer<T>& seq, ReadFlag flag = ReadFlag::none, StrPrefix&& is_prefix = default_prefix()) {
+        template <class String, class T, class StrPrefix = decltype(default_prefix()), class Escape = decltype(default_set())>
+        bool read_string(String& key, Sequencer<T>& seq, ReadFlag flag = ReadFlag::none, StrPrefix&& is_prefix = default_prefix(), Escape&& escset = default_set()) {
             if (!is_prefix(seq.current())) {
                 return false;
             }
@@ -68,7 +68,7 @@ namespace utils {
             seq.consume();
             if (esc) {
                 String tmp;
-                if (!escape::unescape_str(key, tmp)) {
+                if (!escape::unescape_str(key, tmp, esc)) {
                     return false;
                 }
                 key = std::move(tmp);
