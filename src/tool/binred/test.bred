@@ -77,6 +77,6 @@ struct GoAwayFrame - H2Frame ^ type == 7 {
     data std::string $ len - 8
 }
 
-struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 {
-    increment std::int32_t ? id > 0
+struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 ? id > 0 {
+    increment std::int32_t ? increment > 0
 }

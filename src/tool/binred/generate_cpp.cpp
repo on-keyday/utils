@@ -22,7 +22,7 @@ namespace binred {
             render_tree(str, tree->left, rel);
         }
         if (tree->kw == us::KeyWord::id) {
-            if (rel.size() && str.back() != '.') {
+            if (tree->token != "true" && tree->token != "false" && tree->token != "nullptr" && rel.size() && str.back() != '.') {
                 hlp::appends(str, rel, ".");
             }
         }
