@@ -23,7 +23,11 @@ namespace utils {
                     return false;
                 }
                 for (auto& o : o.obj) {
-                    if (find(std::get<0>(o)) == end()) {
+                    auto e = find(std::get<0>(o));
+                    if (e == end()) {
+                        return false;
+                    }
+                    if (!(std::get<1>(*e) == std::get<1>(o))) {
                         return false;
                     }
                 }
