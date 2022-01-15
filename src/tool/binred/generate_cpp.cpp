@@ -243,6 +243,25 @@ namespace binred {
         }
     }
 
+    bool compare_tree(tree_t& left, tree_t& right) {
+        if (left == right) {
+            return true;
+        }
+        if (!left || !right) {
+            return false;
+        }
+        if (!compare_tree(left->left, right->left) || !compare_tree(left->right, right->left)) {
+            return false;
+        }
+        if (left->kw != right->kw) {
+            return false;
+        }
+        if (left->token != right->token) {
+            return false;
+        }
+        return true;
+    }
+
     using Dependency = utw::map<utw::string, utw::vector<utw::string>>;
     namespace us = utils::syntax;
     void generate_dependency(Dependency& dep, utw::string& str, FileData& data, GenFlag flag) {
@@ -254,21 +273,28 @@ namespace binred {
             FlagType type = FlagType::none;
             bool first = true;
             bool not_match = false;
+            tree_t cond;
             auto& bsst = *data.structs.find(d.first);
             for (auto& i : d.second) {
                 auto& st = *data.structs.find(i);
-                auto flag = Flag{};
+                if (!st.second.base.type.existcond.size()) {
+                    not_match = true;
+                    break;
+                }
                 if (first) {
-                    if (flag.type == FlagType::none) {
+                    cond = st.second.base.type.existcond[0];
+                    if (!cond->right || !cond->left) {
                         not_match = true;
                         break;
                     }
-                    depparam = flag.depend;
-                    type = flag.type;
-                    first = false;
                 }
                 else {
-                    if (flag.depend != depparam || flag.type != type) {
+                    auto cmp = st.second.base.type.existcond[0];
+                    if (!cmp->right || !cmp->left) {
+                        not_match = true;
+                        break;
+                    }
+                    if (!compare_tree(cmp->left, cond->left) || compare_tree(cmp->right, cond->right)) {
                         not_match = true;
                         break;
                     }
@@ -290,7 +316,10 @@ namespace binred {
             hlp::append(str, "}\n");
             write_indent(str, 1);
             auto gen_decode = [&](auto& st) {
-                //generate_flag_cond_begin(str, "judgement", st.second.base.type.prevcond);
+                auto cond = st.second.base.type.existcond[0];
+                hlp::append(str, "if(");
+                render_tree(str, cond, "judgement");
+                hlp::append(str, "){\n");
                 write_indent(str, 1);
                 hlp::appends(str, "auto p = ");
                 generate_make_ptr_obj(str, data, st.first);
@@ -369,6 +398,7 @@ namespace binred {
             };
             if (has_base) {
                 gen_base_flag(st.base.type.prevcond, "input");
+                gen_base_flag(st.base.type.existcond, "input");
                 write_indent(str, 1);
                 hlp::appends(str, "if (!encode(static_cast<const ", st.base.type.name, "&>(input),output)) { \n");
                 write_indent(str, 2);
@@ -401,8 +431,8 @@ namespace binred {
                 hlp::append(str, "}\n");
                 write_indent(str, offset);
                 hlp::appends(str, "}\n");
+                gen_base_flag(st.base.type.existcond, "output");
                 gen_base_flag(st.base.type.prevcond, "output");
-                //gen_base_flag(st.base.type.aftercond, "output");
             }
             for (auto& memb : d.second.member) {
                 generate_with_cond(data, str, memb, "input", data.read_method, "output", "decode", true, true);
