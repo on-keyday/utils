@@ -40,7 +40,7 @@ namespace utils {
                     return true;
                 }
                 SFINAE_BLOCK_T_ELSE(has_array_interface)
-                static bool invoke(...) {
+                static bool invoke(auto&&...) {
                     static_assert(false, R"(type not implemented any attribute to_json)");
                 }
                 SFINAE_BLOCK_T_END()
@@ -124,7 +124,7 @@ namespace utils {
                     return true;
                 }
                 SFINAE_BLOCK_T_ELSE(has_array_interface)
-                static bool invoke(...) {
+                static bool invoke(auto&&...) {
                     static_assert(false, R"(type not implemented any attribute from_json)");
                 }
                 SFINAE_BLOCK_T_END()
