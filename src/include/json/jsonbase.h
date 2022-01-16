@@ -342,6 +342,12 @@ namespace utils {
                 return true;
             }
 
+            bool force_as_bool() const {
+                bool r = false;
+                force_as_bool(r);
+                return r;
+            }
+
             template <class T>
             bool as_number(T& to) const {
                 auto i = obj.as_numi();
@@ -398,6 +404,13 @@ namespace utils {
                 }
             }
 
+            template <class T>
+            T force_as_number() const {
+                T t = T{};
+                force_as_number(t);
+                return t;
+            }
+
             template <class Outstr>
             bool as_string(Outstr& str) const {
                 auto s = obj.as_str();
@@ -432,6 +445,13 @@ namespace utils {
                     return false;
                 }
                 return true;
+            }
+
+            template <class OutStr>
+            OutStr force_as_string() const {
+                T t = T{};
+                force_as_string(t);
+                return t;
             }
 
             template <class T>
