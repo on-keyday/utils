@@ -35,7 +35,8 @@ namespace utils {
                 if (::_isatty(no)) {
                     auto h = ::GetStdHandle(no == 1 ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
                     DWORD written;
-                    ::WriteConsoleW(h, p.c_str(), p.size(), &written, nullptr);
+                    auto e = ::WriteConsoleW(h, p.c_str(), p.size(), &written, nullptr);
+                    assert(e);
                 }
                 else
 #endif
