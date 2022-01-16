@@ -325,7 +325,7 @@ namespace utils {
                     r = *i != 0;
                 }
                 else if (auto u = obj.as_numu()) {
-                    r = *i != 0;
+                    r = *u != 0;
                 }
                 else if (auto f = obj.as_numf()) {
                     r = *f != 0 && *f == *f;
