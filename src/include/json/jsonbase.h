@@ -68,7 +68,7 @@ namespace utils {
             constexpr JSONBase(bool b)
                 : obj(b) {}
             constexpr JSONBase(int i)
-                : obj(i) {}
+                : obj(std::int64_t(i)) {}
             constexpr JSONBase(std::int64_t i)
                 : obj(i) {}
             constexpr JSONBase(std::uint64_t u)
