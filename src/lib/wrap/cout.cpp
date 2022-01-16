@@ -36,6 +36,11 @@ namespace utils {
                     auto h = ::GetStdHandle(no == 1 ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
                     DWORD written;
                     auto e = ::WriteConsoleW(h, p.c_str(), p.size(), &written, nullptr);
+                    // for debug code
+                    auto err = ::GetLastError();
+                    if (err) {
+                        (void)err;
+                    }
                 }
                 else
 #endif
