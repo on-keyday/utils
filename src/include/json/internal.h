@@ -213,7 +213,7 @@ namespace utils {
                     return *a.as_numf() - *b.as_numf() < std::numeric_limits<double>::epsilon();
                 }
                 else {
-                    return a.as_rawp() == a.as_rawp();
+                    return a.as_rawp() == b.as_rawp();
                 }
             }
 
