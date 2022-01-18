@@ -10,11 +10,11 @@
 // almost copied from socklib
 #pragma once
 
-#include "../../core/sequencer.h"
-#include "../../helper/splits.h"
-#include "../../wrap/lite/enum.h"
-#include "../../helper/appender.h"
-#include "../../wrap/lite/vector.h"
+#include "../core/sequencer.h"
+#include "../helper/splits.h"
+#include "../wrap/lite/enum.h"
+#include "../helper/appender.h"
+#include "../wrap/lite/vector.h"
 #include <ctime>
 
 namespace utils {

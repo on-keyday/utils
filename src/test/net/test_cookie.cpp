@@ -6,8 +6,8 @@
 */
 
 
-#include "../../include/net/util/cookie.h"
-#include "../../include/net/util/uri.h"
+#include "../../include/net_util/cookie.h"
+#include "../../include/net_util/uri.h"
 #include "../../include/wrap/lite/lite.h"
 
 void test_cookie() {

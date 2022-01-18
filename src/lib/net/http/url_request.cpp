@@ -8,6 +8,7 @@
 
 #include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/http/url_request.h"
+#include "../../../include/net/dns/dns.h"
 
 namespace utils {
     namespace net {
@@ -23,6 +24,7 @@ namespace utils {
             }
             wrap::string path;
             if (uri.path.size()) {
+                path = uri.path;
             }
             else {
                 path = default_path(opt.path);

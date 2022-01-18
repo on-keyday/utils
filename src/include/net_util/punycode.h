@@ -8,13 +8,13 @@
 
 // punycode - punycode encoding
 #pragma once
-#include "../../helper/readutil.h"
-#include "../../helper/pushbacker.h"
-#include "../../helper/appender.h"
-#include "../../helper/strutil.h"
-#include "../../number/char_range.h"
-#include "../../wrap/lite/string.h"
-#include "../../utf/view.h"
+#include "../helper/readutil.h"
+#include "../helper/pushbacker.h"
+#include "../helper/appender.h"
+#include "../helper/strutil.h"
+#include "../number/char_range.h"
+#include "../wrap/lite/string.h"
+#include "../utf/view.h"
 #include <limits>
 #include <cstring>
 

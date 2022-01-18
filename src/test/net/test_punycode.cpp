@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/net/util/punycode.h"
+#include "../../include/net_util/punycode.h"
 #include "../../include/helper/pushbacker.h"
 #include "../../include/helper/equal.h"
 

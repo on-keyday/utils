@@ -6,8 +6,8 @@
 */
 
 
-#include "../../include/net/util/sha1.h"
-#include "../../include/net/util/base64.h"
+#include "../../include/net_util/sha1.h"
+#include "../../include/net_util/base64.h"
 #include "../../include/helper/equal.h"
 #include "../../include/helper/pushbacker.h"
 

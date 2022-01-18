@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/net/util/uri.h"
+#include "../../include/net_util/uri.h"
 
 void test_urlparse() {
     utils::net::URI url;

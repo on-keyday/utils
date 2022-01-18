@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/net/util/urlencode.h"
+#include "../../include/net_util/urlencode.h"
 #include "../../include/helper/equal.h"
 
 constexpr auto test_encode() {

@@ -9,9 +9,9 @@
 // base64 - parse base64
 #pragma once
 
-#include "../../core/sequencer.h"
-#include "../../helper/pushbacker.h"
-#include "../../endian/reader.h"
+#include "../core/sequencer.h"
+#include "../helper/pushbacker.h"
+#include "../endian/reader.h"
 
 namespace utils {
     namespace net {
