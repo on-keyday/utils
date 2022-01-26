@@ -20,7 +20,7 @@ enum class TokKind {
 BEGIN_ENUM_STRING_MSG(TokKind, to_string)
 ENUM_STRING_MSG(TokKind::line, "line")
 ENUM_STRING_MSG(TokKind::space, "space")
-ENUM_STRING_MSG(TokKind::blanks, "blaks")
+ENUM_STRING_MSG(TokKind::blanks, "blanks")
 END_ENUM_STRING_MSG("unknown")
 
 template <class Input>
