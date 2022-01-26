@@ -10,7 +10,7 @@
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
 #include "http1.h"
-#include "../util/uri.h"
+#include "../../net_util/uri.h"
 #include "../../wrap/lite/enum.h"
 
 namespace utils {

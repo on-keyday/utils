@@ -200,7 +200,25 @@ namespace utils {
             }
 
             self_t& operator[](size_t n) {
-                return const_cast<self_t&>(as_const(*this)[n]);
+                if (n == 0 && obj.is_undef()) {
+                    obj = new array_t{};
+                }
+                const char* err = nullptr;
+                auto res = at(n, &err);
+                if (res) {
+                    return *res;
+                }
+                auto arrayp = const_cast<array_t*>(obj.as_arr());
+                if (!arrayp) {
+                    bad_type(err);
+                }
+                if (n == arrayp->size()) {
+                    arrayp->push_back({});
+                }
+                else if (n > arrayp->size()) {
+                    bad_type("out of range");
+                }
+                return (*arrayp)[n];
             }
 
             bool erase(const String& n) {

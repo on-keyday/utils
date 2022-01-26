@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(utils)
-
+include_directories("src/include")
 if(WIN32)
 include_directories("D:/OpenSSL/build-x64-debug/include")
 link_directories("D:/OpenSSL/build-x64-debug/lib")
@@ -66,6 +66,7 @@ add_executable(json "src/test/json/test_json.cpp")
 add_executable(cin "src/test/wrap/test_cin.cpp")
 add_executable(to_json "src/test/json/test_to_json.cpp")
 add_executable(jsonpath "src/test/json/test_jsonpath.cpp")
+add_executable(parser "src/test/parser/test_parser")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -131,6 +132,7 @@ target_link_libraries(json utils)
 target_link_libraries(cin utils)
 target_link_libraries(to_json utils)
 target_link_libraries(jsonpath utils)
+target_link_libraries(parser utils)
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
