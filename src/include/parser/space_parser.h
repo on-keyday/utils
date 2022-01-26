@@ -70,6 +70,7 @@ namespace utils {
                     while (seq.seek_if(e.buf)) {
                         helper::append(ret->token, e.buf);
                     }
+                    pos.pos += seq.rptr - be;
                     return {ret};
                 }
                 return {};
