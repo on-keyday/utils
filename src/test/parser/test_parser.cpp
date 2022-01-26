@@ -11,6 +11,7 @@
 #include <wrap/lite/lite.h>
 #include <json/json_export.h>
 #include <json/convert_json.h>
+#include <wrap/cout.h>
 enum class TokKind {
     line,
     space,
@@ -35,8 +36,6 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto repeat = utils::parser::make_repeat(parser_t<Input>(or_), "blanks", TokKind::blanks);
     return repeat;
 }
-void to_json(const TokKind k, utils::json::JSON& js) {
-}
 
 void to_json(const token_t& tok, utils::json::JSON& json) {
     utils::json::JSON js;
@@ -45,6 +44,9 @@ void to_json(const token_t& tok, utils::json::JSON& json) {
     auto& pos = js["pos"];
     pos["line"] = tok->pos.line;
     pos["pos"] = tok->pos.pos;
+    for (auto i = 0; i < tok->child.size(); i++) {
+        to_json(tok->child[i], pos["children"][i]);
+    }
 }
 
 int main() {
@@ -52,5 +54,8 @@ int main() {
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);
-    utils::json::JSON result;
+    utils::json::JSON js;
+    to_json(res.tok, js);
+
+    utils::wrap::cout_wrap() << utils::json::to_string<utils::wrap::string>(js);
 }
