@@ -51,7 +51,7 @@ namespace utils {
                 return subparser->parse(input, posctx);
             }
 
-            bool none_is_not_error() const {
+            bool none_is_not_error() const override {
                 return true;
             }
         };
@@ -186,7 +186,7 @@ namespace utils {
                     }
                     ret->child.push_back(std::move(tmp.tok));
                 }
-                return ret;
+                return {ret};
             }
         };
 

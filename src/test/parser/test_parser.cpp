@@ -8,6 +8,7 @@
 
 #include <parser/logical_parser.h>
 #include <parser/space_parser.h>
+#include <parser/token_parser.h>
 #include <wrap/lite/lite.h>
 #include <json/json_export.h>
 #include <json/convert_json.h>
@@ -16,6 +17,9 @@ enum class TokKind {
     line,
     space,
     blanks,
+    keyword,
+    symbol,
+    segment,
 };
 BEGIN_ENUM_STRING_MSG(TokKind, to_string)
 ENUM_STRING_MSG(TokKind::line, "line")
@@ -34,7 +38,20 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto space = utils::parser::make_spaces<Input, string, TokKind, vector>(TokKind::space);
     auto or_ = utils::parser::make_or<Input, string, TokKind, vector>(vector<parser_t<Input>>{line, space});
     auto repeat = utils::parser::make_repeat(parser_t<Input>(or_), "blanks", TokKind::blanks);
-    return repeat;
+    auto struct_ = utils::parser::make_tokparser<Input, string, TokKind, vector>("struct", TokKind::keyword);
+    auto begin_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("{", TokKind::symbol);
+    auto end_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("}", TokKind::symbol);
+    auto some_space = utils::parser::make_allownone(parser_t<Input>{space});
+    auto struct_group = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{
+                                                                                    struct_,
+                                                                                    space,
+                                                                                    some_space,
+                                                                                    begin_br,
+                                                                                    some_space,
+                                                                                    end_br,
+                                                                                },
+                                                                                "struct", TokKind::segment);
+    return struct_group;
 }
 
 template <class Json>

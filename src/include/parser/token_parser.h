@@ -22,14 +22,14 @@ namespace utils {
                 if (seq.seek_if(token)) {
                     auto ret = make_token<String, Kind, Vec>(token, kind, pos);
                     pos.pos += seq.rptr - beg;
-                    return ret;
+                    return {ret};
                 }
                 return {};
             }
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec, class String2>
-        wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> make_repeat(wrap::shared_ptr<Parser<Input, String, Kind, Vec>> sub, String2 token, Kind kind) {
+        wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> make_tokparser(String2 token, Kind kind) {
             auto ret = wrap::make_shared<TokenParser<Input, String, Kind, Vec>>();
             ret->token = std::move(token);
             ret->kind = kind;
