@@ -37,16 +37,18 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     return repeat;
 }
 
-void to_json(const token_t& tok, utils::json::JSON& json) {
-    utils::json::JSON js;
+template <class Json>
+void to_json(const token_t& tok, Json& json) {
+    Json js;
     js["token"] = tok->token;
     js["kind"] = to_string(tok->kind);
     auto& pos = js["pos"];
     pos["line"] = tok->pos.line;
     pos["pos"] = tok->pos.pos;
     for (auto i = 0; i < tok->child.size(); i++) {
-        to_json(tok->child[i], pos["children"][i]);
+        to_json(tok->child[i], pos["children"]);
     }
+    json.push_back(std::move(js));
 }
 
 int main() {
@@ -54,7 +56,7 @@ int main() {
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);
-    utils::json::JSON js;
+    utils::json::OrderedJSON js;
     to_json(res.tok, js);
 
     utils::wrap::cout_wrap() << utils::json::to_string<utils::wrap::string>(js);
