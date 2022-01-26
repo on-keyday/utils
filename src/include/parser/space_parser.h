@@ -57,6 +57,26 @@ namespace utils {
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
+        struct SpacesParser : Parser<Input, String, Kind, Vec> {
+            Kind kind;
+            ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
+                auto be = seq.rptr;
+                auto e = helper::space::match_space<true>(seq);
+                if (e) {
+                    char16_t v[] = {e, 0};
+                    auto e = utf::convert<utf::Minibuffer<typename Sequencer<Input>::char_type>>(v);
+                    auto ch = utf::convert<String>(e);
+                    auto ret = make_token<String, Kind, Vec>(ch, kind, pos);
+                    while (seq.seek_if(e.buf)) {
+                        helper::append(ret->token, e.buf);
+                    }
+                    return {ret};
+                }
+                return {};
+            }
+        };
+
+        template <class Input, class String, class Kind, template <class...> class Vec>
         wrap::shared_ptr<LineParser<Input, String, Kind, Vec>> make_line(Kind kind) {
             auto ret = wrap::make_shared<LineParser<Input, String, Kind, Vec>>();
             ret->kind = kind;
@@ -66,6 +86,13 @@ namespace utils {
         template <class Input, class String, class Kind, template <class...> class Vec>
         wrap::shared_ptr<SpaceParser<Input, String, Kind, Vec>> make_space(Kind kind) {
             auto ret = wrap::make_shared<SpaceParser<Input, String, Kind, Vec>>();
+            ret->kind = kind;
+            return ret;
+        }
+
+        template <class Input, class String, class Kind, template <class...> class Vec>
+        wrap::shared_ptr<SpacesParser<Input, String, Kind, Vec>> make_spaces(Kind kind) {
+            auto ret = wrap::make_shared<SpacesParser<Input, String, Kind, Vec>>();
             ret->kind = kind;
             return ret;
         }

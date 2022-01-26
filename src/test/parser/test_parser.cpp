@@ -31,7 +31,7 @@ template <class Input>
 parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     using namespace utils::wrap;
     auto line = utils::parser::make_line<Input, string, TokKind, vector>(TokKind::line);
-    auto space = utils::parser::make_space<Input, string, TokKind, vector>(TokKind::space);
+    auto space = utils::parser::make_spaces<Input, string, TokKind, vector>(TokKind::space);
     auto or_ = utils::parser::make_or<Input, string, TokKind, vector>(vector<parser_t<Input>>{line, space});
     auto repeat = utils::parser::make_repeat(parser_t<Input>(or_), "blanks", TokKind::blanks);
     return repeat;
