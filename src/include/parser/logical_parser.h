@@ -40,6 +40,10 @@ namespace utils {
                 }
                 return {ret};
             }
+
+            PaserKind declkind() const override {
+                return PaserKind::repeat;
+            }
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
@@ -55,6 +59,9 @@ namespace utils {
 
             bool none_is_not_error() const override {
                 return true;
+            }
+            PaserKind declkind() const override {
+                return PaserKind::allow_none;
             }
         };
 
@@ -95,6 +102,10 @@ namespace utils {
                 posctx = suc;
                 return ret;
             }
+
+            PaserKind declkind() const override {
+                return PaserKind::only_one;
+            }
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
@@ -130,6 +141,10 @@ namespace utils {
                 posctx = postmp;
                 return ret;
             }
+
+            PaserKind declkind() const override {
+                return PaserKind::some_pattern;
+            }
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
@@ -154,6 +169,10 @@ namespace utils {
                     }
                 }
                 return {};
+            }
+
+            PaserKind declkind() const override {
+                return PaserKind::or_;
             }
         };
 
@@ -191,6 +210,10 @@ namespace utils {
                     tmp.tok->parent = ret;
                 }
                 return {ret};
+            }
+
+            PaserKind declkind() const override {
+                return PaserKind::and_;
             }
         };
 

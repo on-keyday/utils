@@ -15,7 +15,7 @@
 
 namespace utils {
     namespace helper {
-        constexpr auto string_reader(auto& end, auto& esc, bool allow_line = false) {
+        constexpr auto string_reader(auto&& end, auto&& esc, bool allow_line = false) {
             return [=](auto& seq, auto& tok) {
                 while (!seq.eos()) {
                     if (auto n = seq.match_n(end)) {

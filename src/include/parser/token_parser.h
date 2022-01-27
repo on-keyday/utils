@@ -33,6 +33,10 @@ namespace utils {
                 }
                 return {};
             }
+
+            PaserKind declkind() const override {
+                return PaserKind::token;
+            }
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
@@ -85,6 +89,10 @@ namespace utils {
                 pos.rptr = seq.rptr;
                 return {ret};
             }
+
+            PaserKind declkind() const override {
+                return PaserKind::anyother;
+            }
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec, class Func>
@@ -107,6 +115,10 @@ namespace utils {
                 pos.pos += seq.rptr - beg;
                 pos.rptr = seq.rptr;
                 return {ret};
+            }
+
+            PaserKind declkind() const override {
+                return PaserKind::func;
             }
         };
 

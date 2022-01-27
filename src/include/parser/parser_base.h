@@ -21,6 +21,21 @@ namespace utils {
             bool fatal;
         };
 
+        enum class PaserKind {
+            null,
+            token,
+            space,
+            line,
+            anyother,
+            func,
+            or_,
+            and_,
+            repeat,
+            allow_none,
+            some_pattern,
+            only_one,
+        };
+
         template <class Input, class String, class Kind, template <class...> class Vec>
         struct Parser {
             using token_t = Token<String, Kind, Vec>;
@@ -32,6 +47,10 @@ namespace utils {
 
             virtual bool none_is_not_error() const {
                 return false;
+            }
+
+            virtual PaserKind declkind() const {
+                return PaserKind::null;
             }
         };
 
