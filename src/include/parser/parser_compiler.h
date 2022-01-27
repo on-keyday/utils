@@ -20,6 +20,9 @@ namespace utils {
         namespace internal {
             template <class Input, class String, class Kind, template <class...> class Vec, class Src>
             wrap::shared_ptr<Parser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq) {
+                if (seq.seek_if("\"")) {
+                    auto reader = string_rule("\"", "\\", false);
+                }
             }
         }  // namespace internal
 
