@@ -29,12 +29,14 @@ namespace utils {
                     return {};
                 }
                 ret->child.push_back(tmp.tok);
+                tmp.tok->parent = ret;
                 while (true) {
                     tmp = subparser->parse(input, posctx);
                     if (!tmp.tok) {
                         break;
                     }
                     ret->child.push_back(tmp.tok);
+                    tmp.tok->parent = ret;
                 }
                 return {ret};
             }
@@ -120,7 +122,8 @@ namespace utils {
                         return tmp;
                     }
                     if (tmp.tok) {
-                        ret->child.push_back(std::move(tmp.tok));
+                        ret->child.push_back(tmp.tok);
+                        tmp.tok->parent = ret;
                     }
                 }
                 input.rptr = begin;
@@ -184,7 +187,8 @@ namespace utils {
                         posctx = std::move(postmp);
                         return {};
                     }
-                    ret->child.push_back(std::move(tmp.tok));
+                    ret->child.push_back(tmp.tok);
+                    tmp.tok->parent = ret;
                 }
                 return {ret};
             }
