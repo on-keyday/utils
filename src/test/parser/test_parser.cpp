@@ -21,6 +21,7 @@ enum class TokKind {
     symbol,
     segment,
     identifier,
+    string,
 };
 BEGIN_ENUM_STRING_MSG(TokKind, to_string)
 ENUM_STRING_MSG(TokKind::line, "line")
@@ -28,6 +29,8 @@ ENUM_STRING_MSG(TokKind::space, "space")
 ENUM_STRING_MSG(TokKind::blanks, "blanks")
 ENUM_STRING_MSG(TokKind::identifier, "identifier")
 ENUM_STRING_MSG(TokKind::segment, "segment")
+ENUM_STRING_MSG(TokKind::keyword, "keyword")
+ENUM_STRING_MSG(TokKind::symbol, "symbol")
 END_ENUM_STRING_MSG("unknown")
 
 template <class Input>
@@ -45,7 +48,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto begin_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("{", TokKind::symbol);
     auto end_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("}", TokKind::symbol);
     auto some_space = utils::parser::make_allownone(parser_t<Input>{space});
-    auto identifier = utils::parser::make_anyother<Input, string, TokKind, vector>(vector<string>{"struct"}, vector<string>{"{", "}"}, TokKind::identifier);
+    auto identifier = utils::parser::make_anyother<Input, string, TokKind, vector>(vector<string>{"struct"}, vector<string>{"{", "}", "\""}, TokKind::identifier);
     auto struct_group = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{
                                                                                     some_space,
                                                                                     struct_,
@@ -57,6 +60,9 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
                                                                                     end_br,
                                                                                 },
                                                                                 "struct", TokKind::segment);
+    auto strdetail = utils::parser::make_func<Input, string, TokKind, vector>(utils::parser::string_parser("\"", "\\"), TokKind::string);
+    auto quote = utils::parser::make_tokparser<Input, string, TokKind, vector>("\"", TokKind::string);
+    auto str = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{quote, strdetail, quote}, "string", TokKind::segment);
     return struct_group;
 }
 

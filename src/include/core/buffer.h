@@ -114,4 +114,10 @@ namespace utils {
     template <class T>
     using buffer_t = typename BufferType<T>::type;
 
+    template <class T>
+    constexpr size_t bufsize(T&& t) {
+        Buffer<buffer_t<T&>> f(t);
+        return f.size();
+    }
+
 }  // namespace utils

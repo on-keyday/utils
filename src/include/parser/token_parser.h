@@ -11,6 +11,8 @@
 
 #include "parser_base.h"
 #include "../helper/readutil.h"
+#include "../helper/strutil.h"
+#include "../helper/appender.h"
 
 namespace utils {
     namespace parser {
@@ -80,6 +82,30 @@ namespace utils {
             }
         };
 
+        template <class Input, class String, class Kind, template <class...> class Vec, class Func>
+        struct FuncParser : Parser<Input, String, Kind, Vec> {
+            template <class T>
+            constexpr FuncParser(T&& f)
+                : func(std::forward<T>(f)) {}
+            Func func;
+            Kind kind;
+            ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
+                size_t beg = seq.rptr;
+                int flag = 0;
+                auto ret = make_token<String, Kind, Vec>(String{}, kind, pos);
+                while (!seq.eos() && func(seq, ret, flag)) {
+                    if (flag < 0) {
+                        return {.fatal = true};
+                    }
+                }
+                if (!flag) {
+                    return {};
+                }
+                pos.pos += seq.rptr - beg;
+                return {ret};
+            }
+        };
+
         template <class Input, class String, class Kind, template <class...> class Vec, class String2>
         wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> make_tokparser(String2 token, Kind kind) {
             auto ret = wrap::make_shared<TokenParser<Input, String, Kind, Vec>>();
@@ -98,5 +124,36 @@ namespace utils {
             ret->no_line = no_line;
             return ret;
         }
+
+        template <class Input, class String, class Kind, template <class...> class Vec, class Func>
+        wrap::shared_ptr<FuncParser<Input, String, Kind, Vec, std::remove_cvref_t<Func>>> make_func(Func&& func, Kind kind) {
+            auto ret = wrap::make_shared<FuncParser<Input, String, Kind, Vec, std::remove_cvref_t<Func>>>(std::forward<Func>(func));
+            ret->kind = kind;
+            return ret;
+        }
+
+        auto string_parser(auto& end, auto& esc) {
+            return [=](auto& seq, auto& tok, int& flag) {
+                if (auto n = seq.match_n(end)) {
+                    if (helper::ends_with(tok->token, esc)) {
+                        auto sz = bufsize(esc);
+                        auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
+                        if (helper::ends_with(sl, esc)) {
+                            flag = 1;
+                            return false;
+                        }
+                        seq.consume(n);
+                        helper::append(tok->token, end);
+                        return true;
+                    }
+                    flag = 1;
+                    return false;
+                }
+                tok->token.push_back(seq.current());
+                seq.consume();
+                return true;
+            };
+        }
+
     }  // namespace parser
 }  // namespace utils
