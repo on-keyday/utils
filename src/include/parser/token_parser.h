@@ -50,10 +50,15 @@ namespace utils {
                             break;
                         }
                     }
+                    bool end = false;
                     for (auto& v : symbol) {
                         if (seq.match(v)) {
+                            end = true;
                             break;
                         }
+                    }
+                    if (end) {
+                        break;
                     }
                     if (!ret) {
                         ret = make_token<String, Kind, Vec>(String{}, kind, pos);
@@ -66,8 +71,12 @@ namespace utils {
                 }
                 for (auto& k : keyword) {
                     if (helper::equal(k, ret->token)) {
+                        seq.rptr = beg;
+                        return {};
                     }
                 }
+                pos.pos += seq.rptr - beg;
+                return {ret};
             }
         };
 
@@ -76,6 +85,17 @@ namespace utils {
             auto ret = wrap::make_shared<TokenParser<Input, String, Kind, Vec>>();
             ret->token = std::move(token);
             ret->kind = kind;
+            return ret;
+        }
+
+        template <class Input, class String, class Kind, template <class...> class Vec>
+        wrap::shared_ptr<AnyOtherParser<Input, String, Kind, Vec>> make_anyother(Vec<String> keyword, Vec<String> symbol, Kind kind, bool no_space = true, bool no_line = true) {
+            auto ret = wrap::make_shared<AnyOtherParser<Input, String, Kind, Vec>>();
+            ret->kind = kind;
+            ret->keyword = std::move(keyword);
+            ret->symbol = std::move(symbol);
+            ret->no_space = no_space;
+            ret->no_line = no_line;
             return ret;
         }
     }  // namespace parser

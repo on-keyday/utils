@@ -20,11 +20,14 @@ enum class TokKind {
     keyword,
     symbol,
     segment,
+    identifier,
 };
 BEGIN_ENUM_STRING_MSG(TokKind, to_string)
 ENUM_STRING_MSG(TokKind::line, "line")
 ENUM_STRING_MSG(TokKind::space, "space")
 ENUM_STRING_MSG(TokKind::blanks, "blanks")
+ENUM_STRING_MSG(TokKind::identifier, "identifier")
+ENUM_STRING_MSG(TokKind::segment, "segment")
 END_ENUM_STRING_MSG("unknown")
 
 template <class Input>
@@ -42,10 +45,12 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto begin_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("{", TokKind::symbol);
     auto end_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("}", TokKind::symbol);
     auto some_space = utils::parser::make_allownone(parser_t<Input>{space});
+    auto identifier = utils::parser::make_anyother<Input, string, TokKind, vector>(vector<string>{"struct"}, vector<string>{"{", "}"}, TokKind::identifier);
     auto struct_group = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{
                                                                                     some_space,
                                                                                     struct_,
                                                                                     space,
+                                                                                    identifier,
                                                                                     some_space,
                                                                                     begin_br,
                                                                                     some_space,
@@ -70,7 +75,7 @@ void to_json(const token_t& tok, Json& json) {
 }
 
 int main() {
-    auto seq = utils::make_ref_seq("  \n\r\n       ");
+    auto seq = utils::make_ref_seq("  struct Hello{}   ");
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);
