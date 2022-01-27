@@ -169,18 +169,19 @@ namespace utils {
             };
         }
 
-        auto number_rule(bool only_int = false) {
+        auto number_rule(bool only_int = false, bool none_prefix = false) {
             return [=](auto& seq, auto& tok, int& flag) {
                 size_t beg = seq.rptr;
-                auto pf = number::has_prefix(seq);
-                if (pf) {
-                    seq.consume(2);
-                }
-                else {
-                    pf = 10;
+                int radix = 10;
+                if (!none_prefix) {
+                    auto pf = number::has_prefix(seq);
+                    if (pf) {
+                        seq.consume(2);
+                        radix = pf;
+                    }
                 }
                 if (!only_int && (pf == 10 || pf == 16)) {
-                    if (!number::parse_float(seq, tok->token, pf)) {
+                    if (!number::parse_float(seq, tok->token, radix)) {
                         seq.rptr = beg;
                         flag = 0;
                         return false;
@@ -188,7 +189,7 @@ namespace utils {
                     flag = 1;
                 }
                 else {
-                    if (!number::parse_integer(seq, tok->token, pf)) {
+                    if (!number::parse_integer(seq, tok->token, radix)) {
                         seq.rptr = beg;
                         flag = 0;
                         return false;
