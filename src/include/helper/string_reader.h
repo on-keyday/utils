@@ -22,7 +22,7 @@ namespace utils {
                         auto sz = bufsize(esc);
                         if (sz) {
                             if (ends_with(tok, esc)) {
-                                auto sl = make_ref_slice(tok, 0, token.size() - sz);
+                                auto sl = make_ref_slice(tok, 0, tok.size() - sz);
                                 if (!ends_with(sl, esc)) {
                                     return true;
                                 }
@@ -39,7 +39,7 @@ namespace utils {
                             return false;
                         }
                     }
-                    tok->token.push_back(c);
+                    tok.push_back(c);
                     seq.consume();
                 }
                 return false;
