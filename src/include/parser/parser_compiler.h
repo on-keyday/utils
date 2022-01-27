@@ -9,11 +9,23 @@
 // parser_compiler - compile parser from text
 #pragma once
 #include "parser_base.h"
+#include "logical_parser.h"
+#include "space_parser.h"
+#include "token_parser.h"
+#include "../wrap/lite/map.h"
 
 namespace utils {
     namespace parser {
         template <class Input, class String, class Kind, template <class...> class Vec, class Src>
-        utils::wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Sequencer<Src>& seq) {
+        wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Sequencer<Src>& seq) {
+            using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
+            wrap::map<String, parser_t> desc;
+            helper::space::consume_space(seq, true);
+            String tok;
+            helper::read_whilef(tok, seq, [](auto&& c) {
+                return c != ':' && !helper::space::match_space(seq);
+            });
+            helper::space::consume_space(seq, true);
         }
     }  // namespace parser
 }  // namespace utils
