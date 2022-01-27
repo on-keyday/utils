@@ -22,10 +22,14 @@ namespace utils {
             wrap::map<String, parser_t> desc;
             helper::space::consume_space(seq, true);
             String tok;
-            helper::read_whilef(tok, seq, [](auto&& c) {
+            helper::read_whilef(tok, seq, [&](auto&& c) {
                 return c != ':' && !helper::space::match_space(seq);
             });
             helper::space::consume_space(seq, true);
+            if (!seq.seek_if(":=")) {
+                return nullptr;
+            }
+            return nullptr;
         }
     }  // namespace parser
 }  // namespace utils

@@ -14,6 +14,7 @@
 #include <json/convert_json.h>
 #include <wrap/cout.h>
 #include <parser/complex_parser.h>
+#include <parser/parser_compiler.h>
 enum class TokKind {
     line,
     space,
@@ -60,6 +61,8 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
                                                                                 },
                                                                                 "struct", TokKind::segment);
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
+    auto seq2 = utils::make_ref_seq(R"( string_quote:=)");
+    utils::parser::compile_parser<Input, string, TokKind, vector>(seq2);
     return utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{struct_group, some_space, str}, "struct and str", TokKind::segment);
 }
 
