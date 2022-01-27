@@ -17,7 +17,8 @@ namespace utils {
         template <class In, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool equal(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
             Sequencer<buffer_t<In&>> intmp(in);
-            return intmp.seek_if(cmp, compare) && intmp.eos();
+            Buffer<buffer_t<Cmp&>> cmptmp(cmp);
+            return intmp.size() == cmptmp.size() && intmp.seek_if(cmp, compare) && intmp.eos();
         }
     }  // namespace helper
 }  // namespace utils

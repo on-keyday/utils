@@ -43,6 +43,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto end_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("}", TokKind::symbol);
     auto some_space = utils::parser::make_allownone(parser_t<Input>{space});
     auto struct_group = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{
+                                                                                    some_space,
                                                                                     struct_,
                                                                                     space,
                                                                                     some_space,

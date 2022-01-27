@@ -10,6 +10,7 @@
 #pragma once
 
 #include "parser_base.h"
+#include "../helper/readutil.h"
 
 namespace utils {
     namespace parser {
@@ -25,6 +26,48 @@ namespace utils {
                     return {ret};
                 }
                 return {};
+            }
+        };
+
+        template <class Input, class String, class Kind, template <class...> class Vec>
+        struct AnyOtherParser : Parser<Input, String, Kind, Vec> {
+            Kind kind;
+            Vec<String> keyword;
+            Vec<String> symbol;
+            bool no_space = false;
+            bool no_line = false;
+            ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
+                size_t beg = seq.rptr;
+                wrap::shared_ptr<Token<String, Kind, Vec>> ret;
+                while (!seq.eos()) {
+                    if (no_space) {
+                        if (helper::space::match_space<false>(seq)) {
+                            break;
+                        }
+                    }
+                    if (no_line) {
+                        if (helper::match_eol<false>(seq)) {
+                            break;
+                        }
+                    }
+                    for (auto& v : symbol) {
+                        if (seq.match(v)) {
+                            break;
+                        }
+                    }
+                    if (!ret) {
+                        ret = make_token<String, Kind, Vec>(String{}, kind, pos);
+                    }
+                    ret->token.push_back(seq.current());
+                    seq.consume();
+                }
+                if (!ret) {
+                    return {};
+                }
+                for (auto& k : keyword) {
+                    if (helper::equal(k, ret->token)) {
+                    }
+                }
             }
         };
 
