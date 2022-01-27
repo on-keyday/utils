@@ -16,19 +16,29 @@
 
 namespace utils {
     namespace parser {
+
+        namespace internal {
+            template <class Input, class String, class Kind, template <class...> class Vec, class Src>
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq) {
+            }
+        }  // namespace internal
+
         template <class Input, class String, class Kind, template <class...> class Vec, class Src>
         wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Sequencer<Src>& seq) {
             using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
+#define CONSUME_SPACE() helper::space::consume_space(seq, true);
             wrap::map<String, parser_t> desc;
-            helper::space::consume_space(seq, true);
+            CONSUME_SPACE()
             String tok;
             helper::read_whilef(tok, seq, [&](auto&& c) {
-                return c != ':' && !helper::space::match_space(seq);
+                return c != ':' && !helper::space::match_space(seq, true);
             });
-            helper::space::consume_space(seq, true);
+            CONSUME_SPACE()
             if (!seq.seek_if(":=")) {
                 return nullptr;
             }
+            CONSUME_SPACE()
+
             return nullptr;
         }
     }  // namespace parser

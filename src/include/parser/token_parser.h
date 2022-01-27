@@ -97,13 +97,11 @@ namespace utils {
                 size_t beg = seq.rptr;
                 int flag = 0;
                 auto ret = make_token<String, Kind, Vec>(String{}, kind, pos);
-                while (!seq.eos() && func(seq, ret, flag)) {
-                    if (flag < 0) {
-                        return {.fatal = true};
+                if (!func(seq, ret, flag)) {
+                    seq.rptr = beg;
+                    if (flag <= 0) {
+                        return {.fatal = flag < 0};
                     }
-                }
-                if (flag <= 0) {
-                    return {.fatal = flag < 0};
                 }
                 pos.pos += seq.rptr - beg;
                 pos.rptr = seq.rptr;
@@ -139,33 +137,36 @@ namespace utils {
 
         auto string_rule(auto& end, auto& esc, bool allow_line) {
             return [=](auto& seq, auto& tok, int& flag) {
-                if (auto n = seq.match_n(end)) {
-                    auto sz = bufsize(esc);
-                    if (sz) {
-                        if (helper::ends_with(tok->token, esc)) {
-                            auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
-                            if (!helper::ends_with(sl, esc)) {
-                                flag = 1;
-                                return false;
+                while (!seq.eos()) {
+                    if (auto n = seq.match_n(end)) {
+                        auto sz = bufsize(esc);
+                        if (sz) {
+                            if (helper::ends_with(tok->token, esc)) {
+                                auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
+                                if (!helper::ends_with(sl, esc)) {
+                                    flag = 1;
+                                    return false;
+                                }
+                                seq.consume(n);
+                                helper::append(tok->token, end);
+                                continue;
                             }
-                            seq.consume(n);
-                            helper::append(tok->token, end);
-                            return true;
                         }
-                    }
-                    flag = 1;
-                    return false;
-                }
-                auto c = seq.current();
-                if (c == '\n' || c == '\r') {
-                    if (!allow_line) {
-                        flag = -1;
+                        flag = 1;
                         return true;
                     }
+                    auto c = seq.current();
+                    if (c == '\n' || c == '\r') {
+                        if (!allow_line) {
+                            flag = -1;
+                            return false;
+                        }
+                    }
+                    tok->token.push_back(c);
+                    seq.consume();
                 }
-                tok->token.push_back(c);
-                seq.consume();
-                return true;
+                flag = -1;
+                return false;
             };
         }
 
@@ -186,7 +187,6 @@ namespace utils {
                         flag = 0;
                         return false;
                     }
-                    flag = 1;
                 }
                 else {
                     if (!number::parse_integer(seq, tok->token, radix)) {
@@ -194,9 +194,9 @@ namespace utils {
                         flag = 0;
                         return false;
                     }
-                    flag = 1;
                 }
-                return false;
+                flag = 1;
+                return true;
             };
         }
 
