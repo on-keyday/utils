@@ -15,6 +15,7 @@
 #include "../helper/appender.h"
 #include "../number/parse.h"
 #include "../number/prefix.h"
+#include "../helper/string_reader.h"
 
 namespace utils {
     namespace parser {
@@ -136,37 +137,14 @@ namespace utils {
         }
 
         auto string_rule(auto& end, auto& esc, bool allow_line) {
-            return [=](auto& seq, auto& tok, int& flag) {
-                while (!seq.eos()) {
-                    if (auto n = seq.match_n(end)) {
-                        auto sz = bufsize(esc);
-                        if (sz) {
-                            if (helper::ends_with(tok->token, esc)) {
-                                auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
-                                if (!helper::ends_with(sl, esc)) {
-                                    flag = 1;
-                                    return false;
-                                }
-                                seq.consume(n);
-                                helper::append(tok->token, end);
-                                continue;
-                            }
-                        }
-                        flag = 1;
-                        return true;
-                    }
-                    auto c = seq.current();
-                    if (c == '\n' || c == '\r') {
-                        if (!allow_line) {
-                            flag = -1;
-                            return false;
-                        }
-                    }
-                    tok->token.push_back(c);
-                    seq.consume();
+            auto strreader = helper::string_reader(end, esc, allow_line);
+            return [strreader](auto& seq, auto& tok, int& flag) {
+                if (!strreader(seq, tok->token)) {
+                    flag = -1;
+                    return false;
                 }
-                flag = -1;
-                return false;
+                flag = 1;
+                return true;
             };
         }
 
