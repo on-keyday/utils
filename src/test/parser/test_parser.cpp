@@ -13,6 +13,7 @@
 #include <json/json_export.h>
 #include <json/convert_json.h>
 #include <wrap/cout.h>
+#include <parser/complex_parser.h>
 enum class TokKind {
     line,
     space,
@@ -31,6 +32,7 @@ ENUM_STRING_MSG(TokKind::identifier, "identifier")
 ENUM_STRING_MSG(TokKind::segment, "segment")
 ENUM_STRING_MSG(TokKind::keyword, "keyword")
 ENUM_STRING_MSG(TokKind::symbol, "symbol")
+ENUM_STRING_MSG(TokKind::string, "string")
 END_ENUM_STRING_MSG("unknown")
 
 template <class Input>
@@ -40,10 +42,7 @@ using token_t = utils::wrap::shared_ptr<utils::parser::Token<utils::wrap::string
 template <class Input>
 parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     using namespace utils::wrap;
-    auto line = utils::parser::make_line<Input, string, TokKind, vector>(TokKind::line);
-    auto space = utils::parser::make_spaces<Input, string, TokKind, vector>(TokKind::space);
-    auto or_ = utils::parser::make_or<Input, string, TokKind, vector>(vector<parser_t<Input>>{line, space});
-    auto repeat = utils::parser::make_repeat(parser_t<Input>(or_), "blanks", TokKind::blanks);
+    auto space = utils::parser::blank_parser<Input, string, TokKind, vector>(TokKind::space, TokKind::line, TokKind::blanks, "blanks", true);
     auto struct_ = utils::parser::make_tokparser<Input, string, TokKind, vector>("struct", TokKind::keyword);
     auto begin_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("{", TokKind::symbol);
     auto end_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("}", TokKind::symbol);
@@ -60,9 +59,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
                                                                                     end_br,
                                                                                 },
                                                                                 "struct", TokKind::segment);
-    auto strdetail = utils::parser::make_func<Input, string, TokKind, vector>(utils::parser::string_parser("\"", "\\"), TokKind::string);
-    auto quote = utils::parser::make_tokparser<Input, string, TokKind, vector>("\"", TokKind::string);
-    auto str = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{quote, strdetail, quote}, "string", TokKind::segment);
+    auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
     return utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{struct_group, some_space, str}, "struct and str", TokKind::segment);
 }
 

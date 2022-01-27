@@ -98,8 +98,8 @@ namespace utils {
                         return {.fatal = true};
                     }
                 }
-                if (!flag) {
-                    return {};
+                if (flag <= 0) {
+                    return {.fatal = flag < 0};
                 }
                 pos.pos += seq.rptr - beg;
                 return {ret};
@@ -132,24 +132,33 @@ namespace utils {
             return ret;
         }
 
-        auto string_parser(auto& end, auto& esc) {
+        auto string_rule(auto& end, auto& esc, bool allow_line) {
             return [=](auto& seq, auto& tok, int& flag) {
                 if (auto n = seq.match_n(end)) {
-                    if (helper::ends_with(tok->token, esc)) {
-                        auto sz = bufsize(esc);
-                        auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
-                        if (!helper::ends_with(sl, esc)) {
-                            flag = 1;
-                            return false;
+                    auto sz = bufsize(esc);
+                    if (sz) {
+                        if (helper::ends_with(tok->token, esc)) {
+                            auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
+                            if (!helper::ends_with(sl, esc)) {
+                                flag = 1;
+                                return false;
+                            }
+                            seq.consume(n);
+                            helper::append(tok->token, end);
+                            return true;
                         }
-                        seq.consume(n);
-                        helper::append(tok->token, end);
-                        return true;
                     }
                     flag = 1;
                     return false;
                 }
-                tok->token.push_back(seq.current());
+                auto c = seq.current();
+                if (c == '\n' || c == '\r') {
+                    if (!allow_line) {
+                        flag = -1;
+                        return true;
+                    }
+                }
+                tok->token.push_back(c);
                 seq.consume();
                 return true;
             };
