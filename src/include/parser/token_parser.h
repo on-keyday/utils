@@ -13,6 +13,8 @@
 #include "../helper/readutil.h"
 #include "../helper/strutil.h"
 #include "../helper/appender.h"
+#include "../number/parse.h"
+#include "../number/prefix.h"
 
 namespace utils {
     namespace parser {
@@ -164,6 +166,36 @@ namespace utils {
                 tok->token.push_back(c);
                 seq.consume();
                 return true;
+            };
+        }
+
+        auto number_rule(bool only_int = false) {
+            return [=](auto& seq, auto& tok, int& flag) {
+                size_t beg = seq.rptr;
+                auto pf = number::has_prefix(seq);
+                if (pf) {
+                    seq.consume(2);
+                }
+                else {
+                    pf = 10;
+                }
+                if (!only_int && (pf == 10 || pf == 16)) {
+                    if (!number::parse_float(seq, tok->token, pf)) {
+                        seq.rptr = beg;
+                        flag = 0;
+                        return false;
+                    }
+                    flag = 1;
+                }
+                else {
+                    if (!number::parse_integer(seq, tok->token, pf)) {
+                        seq.rptr = beg;
+                        flag = 0;
+                        return false;
+                    }
+                    flag = 1;
+                }
+                return false;
             };
         }
 

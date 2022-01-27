@@ -27,5 +27,19 @@ namespace utils {
             return 0;
         }
 
+        template <class T>
+        int has_prefix(Sequencer<T>& seq) {
+            if (seq.match("0x") || seq.match("0X")) {
+                return 16;
+            }
+            else if (seq.match("0o") || seq.match("0O")) {
+                return 8;
+            }
+            else if (seq.match("0b") || seq.match("0B")) {
+                return 2;
+            }
+            return 0;
+        }
+
     }  // namespace number
 }  // namespace utils
