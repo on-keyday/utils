@@ -21,14 +21,14 @@ namespace utils {
                     if (auto n = seq.match_n(end)) {
                         auto sz = bufsize(esc);
                         if (sz) {
-                            if (helper::ends_with(tok, esc)) {
-                                auto sl = helper::make_ref_slice(tok, 0, token.size() - sz);
-                                if (!helper::ends_with(sl, esc)) {
+                            if (ends_with(tok, esc)) {
+                                auto sl = make_ref_slice(tok, 0, token.size() - sz);
+                                if (!ends_with(sl, esc)) {
                                     flag = 1;
                                     return true;
                                 }
                                 seq.consume(n);
-                                helper::append(tok, end);
+                                append(tok, end);
                                 continue;
                             }
                         }
