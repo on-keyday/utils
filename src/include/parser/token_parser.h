@@ -180,7 +180,7 @@ namespace utils {
                         radix = pf;
                     }
                 }
-                if (!only_int && (pf == 10 || pf == 16)) {
+                if (!only_int && (radix == 10 || radix == 16)) {
                     if (!number::parse_float(seq, tok->token, radix)) {
                         seq.rptr = beg;
                         flag = 0;
