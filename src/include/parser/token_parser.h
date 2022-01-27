@@ -138,7 +138,7 @@ namespace utils {
                     if (helper::ends_with(tok->token, esc)) {
                         auto sz = bufsize(esc);
                         auto sl = helper::make_ref_slice(tok->token, 0, tok->token.size() - sz);
-                        if (helper::ends_with(sl, esc)) {
+                        if (!helper::ends_with(sl, esc)) {
                             flag = 1;
                             return false;
                         }

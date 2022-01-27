@@ -63,7 +63,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto strdetail = utils::parser::make_func<Input, string, TokKind, vector>(utils::parser::string_parser("\"", "\\"), TokKind::string);
     auto quote = utils::parser::make_tokparser<Input, string, TokKind, vector>("\"", TokKind::string);
     auto str = utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{quote, strdetail, quote}, "string", TokKind::segment);
-    return struct_group;
+    return utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{struct_group, some_space, str}, "struct and str", TokKind::segment);
 }
 
 template <class Json>
@@ -75,13 +75,13 @@ void to_json(const token_t& tok, Json& json) {
     pos["line"] = tok->pos.line;
     pos["pos"] = tok->pos.pos;
     for (auto i = 0; i < tok->child.size(); i++) {
-        to_json(tok->child[i], pos["children"]);
+        to_json(tok->child[i], js["children"]);
     }
     json.push_back(std::move(js));
 }
 
 int main() {
-    auto seq = utils::make_ref_seq("  struct Hello{}   ");
+    auto seq = utils::make_ref_seq(R"(  struct Hello{} "\\\"hey!"   )");
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);
