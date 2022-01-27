@@ -16,7 +16,7 @@
 namespace utils {
     namespace helper {
         constexpr auto string_reader(auto& end, auto& esc, bool allow_line) {
-            return [=](auto& seq, auto& tok, int& flag) {
+            return [=](auto& seq, auto& tok) {
                 while (!seq.eos()) {
                     if (auto n = seq.match_n(end)) {
                         auto sz = bufsize(esc);
@@ -24,7 +24,6 @@ namespace utils {
                             if (ends_with(tok, esc)) {
                                 auto sl = make_ref_slice(tok, 0, token.size() - sz);
                                 if (!ends_with(sl, esc)) {
-                                    flag = 1;
                                     return true;
                                 }
                                 seq.consume(n);
@@ -32,20 +31,17 @@ namespace utils {
                                 continue;
                             }
                         }
-                        flag = 1;
                         return true;
                     }
                     auto c = seq.current();
                     if (c == '\n' || c == '\r') {
                         if (!allow_line) {
-                            flag = -1;
                             return false;
                         }
                     }
                     tok->token.push_back(c);
                     seq.consume();
                 }
-                flag = -1;
                 return false;
             };
         }
