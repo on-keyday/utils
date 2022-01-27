@@ -42,7 +42,7 @@ using token_t = utils::wrap::shared_ptr<utils::parser::Token<utils::wrap::string
 template <class Input>
 parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     using namespace utils::wrap;
-    auto space = utils::parser::blank_parser<Input, string, TokKind, vector>(TokKind::space, TokKind::line, TokKind::blanks, "blanks", true);
+    auto space = utils::parser::blank_parser<Input, string, TokKind, vector>(TokKind::space, TokKind::line, TokKind::blanks, "blanks");
     auto struct_ = utils::parser::make_tokparser<Input, string, TokKind, vector>("struct", TokKind::keyword);
     auto begin_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("{", TokKind::symbol);
     auto end_br = utils::parser::make_tokparser<Input, string, TokKind, vector>("}", TokKind::symbol);
@@ -71,6 +71,7 @@ void to_json(const token_t& tok, Json& json) {
     auto& pos = js["pos"];
     pos["line"] = tok->pos.line;
     pos["pos"] = tok->pos.pos;
+    pos["rptr"] = tok->pos.rptr;
     for (auto i = 0; i < tok->child.size(); i++) {
         to_json(tok->child[i], js["children"]);
     }
@@ -78,7 +79,8 @@ void to_json(const token_t& tok, Json& json) {
 }
 
 int main() {
-    auto seq = utils::make_ref_seq(R"(  struct Hello{} "\\\"hey!"   )");
+    auto seq = utils::make_ref_seq(R"(  struct Hello{}
+     "\\\"hey! "   )");
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);

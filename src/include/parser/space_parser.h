@@ -22,18 +22,21 @@ namespace utils {
                     auto ret = make_token<String, Kind, Vec>(utf::convert<String>("\n"), kind, pos);
                     pos.line++;
                     pos.pos = 0;
+                    pos.rptr = seq.rptr;
                     return {ret};
                 }
                 if (seq.seek_if("\r\n")) {
                     auto ret = make_token<String, Kind, Vec>(utf::convert<String>("\r\n"), kind, pos);
                     pos.line++;
                     pos.pos = 0;
+                    pos.rptr = seq.rptr;
                     return {ret};
                 }
                 if (seq.consume_if('\r')) {
                     auto ret = make_token<String, Kind, Vec>(utf::convert<String>("\r"), kind, pos);
                     pos.line++;
                     pos.pos = 0;
+                    pos.rptr = seq.rptr;
                     return {ret};
                 }
                 return {};
@@ -50,6 +53,7 @@ namespace utils {
                     char16_t v[] = {e, 0};
                     auto ret = make_token<String, Kind, Vec>(utf::convert<String>(v), kind, pos);
                     pos.pos += seq.rptr - be;
+                    pos.rptr = seq.rptr;
                     return {ret};
                 }
                 return {};
@@ -71,6 +75,7 @@ namespace utils {
                         helper::append(ret->token, e.buf);
                     }
                     pos.pos += seq.rptr - be;
+                    pos.rptr = seq.rptr;
                     return {ret};
                 }
                 return {};

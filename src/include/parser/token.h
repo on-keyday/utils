@@ -16,6 +16,7 @@ namespace utils {
         struct Pos {
             size_t line = 0;
             size_t pos = 0;
+            size_t rptr = 0;
         };
 
         template <class String, class Kind, template <class...> class Vec>

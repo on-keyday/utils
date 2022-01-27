@@ -109,8 +109,8 @@ namespace utils {
             }
 
             result_t parse(Sequencer<Input>& input, Pos& posctx) override {
-                size_t begin = input.rptr, sucpos = begin;
-                Pos postmp = posctx, suc = posctx;
+                size_t begin = input.rptr;
+                Pos postmp = posctx;
                 auto ret = make_token<String, Kind, Vec>(token, kind, posctx);
                 for (auto& p : subparser) {
                     input.rptr = begin;

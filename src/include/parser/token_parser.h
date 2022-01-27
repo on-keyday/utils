@@ -25,6 +25,7 @@ namespace utils {
                 if (seq.seek_if(token)) {
                     auto ret = make_token<String, Kind, Vec>(token, kind, pos);
                     pos.pos += seq.rptr - beg;
+                    pos.rptr = seq.rptr;
                     return {ret};
                 }
                 return {};
@@ -78,6 +79,7 @@ namespace utils {
                     }
                 }
                 pos.pos += seq.rptr - beg;
+                pos.rptr = seq.rptr;
                 return {ret};
             }
         };
@@ -102,6 +104,7 @@ namespace utils {
                     return {.fatal = flag < 0};
                 }
                 pos.pos += seq.rptr - beg;
+                pos.rptr = seq.rptr;
                 return {ret};
             }
         };
