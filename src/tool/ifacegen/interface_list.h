@@ -47,6 +47,7 @@ namespace ifacegen {
 
     struct TypeName {
         bool vararg = false;
+        bool template_param = false;
         utw::string name;
         utw::string defvalue;
     };
@@ -78,6 +79,7 @@ namespace ifacegen {
         FileData data;
         utw::string current_iface;
         bool vararg = false;
+        bool template_param = false;
         utw::vector<TypeName> types;
         Interface iface;
         std::string current_alias;

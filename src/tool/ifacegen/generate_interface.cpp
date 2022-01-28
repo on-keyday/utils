@@ -158,6 +158,9 @@ namespace ifacegen {
             if (!is_first) {
                 hlp::append(str, ", ");
             }
+            if (type.template_param) {
+                hlp::append(str, "template<typename...>");
+            }
             hlp::append(str, "typename");
             if (type.vararg) {
                 hlp::append(str, "...");

@@ -6,7 +6,7 @@
 # test - ifacegen test
 
 # generate code
-# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -d
+# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -de
 
 package test::util # `package` will be namespace
 
@@ -65,3 +65,8 @@ interface Template {
 
 typeparam T
 alias TemplateS Template<T,int>
+
+
+
+typeparam ^T
+alias Value T<int>

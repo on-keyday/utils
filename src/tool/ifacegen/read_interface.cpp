@@ -22,6 +22,7 @@ namespace ifacegen {
     constexpr auto typeparam_def = "TYPEPARAM";
     constexpr auto typename_def = "TYPENAME";
     constexpr auto deftype_def = "DEFTYPE";
+    constexpr auto typeid_def = "TYPEID";
     namespace us = utils::syntax;
 
     bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
@@ -134,13 +135,17 @@ namespace ifacegen {
                 state.data.headernames.push_back(result.token());
             }
         }
-        if (result.top() == typeparam_def || result.top() == typename_def) {
+        if (result.top() == typeparam_def || result.top() == typename_def || result.top() == typeid_def) {
             if (result.token() == "...") {
                 state.vararg = true;
             }
+            else if (result.token() == "^") {
+                state.template_param = true;
+            }
             else if (result.result.kind == us::KeyWord::id) {
-                state.types.push_back({.vararg = state.vararg, .name = result.token()});
+                state.types.push_back({.vararg = state.vararg, .template_param = state.template_param, .name = result.token()});
                 state.vararg = false;
+                state.template_param = false;
             }
         }
         if (result.top() == deftype_def) {

@@ -161,7 +161,8 @@ Special Value:
         ALIAS:="alias" ID UNTILEOL
         INTERFACE:= "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME]*?
-        TYPENAME:="..." ID!|ID DEFTYPE?
+        TYPENAME:="..." ID!|TYPEID DEFTYPE?
+        TYPEID:="^"? ID 
         DEFTYPE:="=" ID
         FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*
