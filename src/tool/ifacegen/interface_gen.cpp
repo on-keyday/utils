@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     alias NAME REFERRED
 
     typeparam T,^U 
-    # T will be typename T, U will be template<typename...>typename U 
+    # T will be `typename T`, U will be `template<typename...>typename U` 
     alias NAME REFERRED
 
     
