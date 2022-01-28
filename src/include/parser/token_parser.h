@@ -107,14 +107,16 @@ namespace utils {
                 size_t beg = seq.rptr;
                 int flag = 0;
                 auto ret = make_token<String, Kind, Vec>(String{}, kind, pos);
-                if (!func(seq, ret, flag)) {
+                if (!func(seq, ret, flag, pos)) {
                     seq.rptr = beg;
                     if (flag <= 0) {
                         return {.fatal = flag < 0};
                     }
                 }
-                pos.pos += seq.rptr - beg;
-                pos.rptr = seq.rptr;
+                if (flag == 1) {
+                    pos.pos += seq.rptr - beg;
+                    pos.rptr = seq.rptr;
+                }
                 return {ret};
             }
 
@@ -151,7 +153,7 @@ namespace utils {
 
         auto string_rule(auto& end, auto& esc, bool allow_line) {
             auto strreader = helper::string_reader(end, esc, allow_line);
-            return [strreader](auto& seq, auto& tok, int& flag) {
+            return [strreader](auto& seq, auto& tok, int& flag, auto&) {
                 if (!strreader(seq, tok->token)) {
                     flag = -1;
                     return false;
@@ -162,7 +164,7 @@ namespace utils {
         }
 
         auto number_rule(bool only_int = false, bool none_prefix = false) {
-            return [=](auto& seq, auto& tok, int& flag) {
+            return [=](auto& seq, auto& tok, int& flag, auto&) {
                 size_t beg = seq.rptr;
                 int radix = 10;
                 if (!none_prefix) {

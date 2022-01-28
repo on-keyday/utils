@@ -18,7 +18,7 @@ namespace utils {
         struct Func {
            private:
             struct interface__ {
-                virtual bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag) = 0;
+                virtual bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag, Pos& pos) = 0;
 
                 virtual ~interface__() {}
             };
@@ -31,12 +31,12 @@ namespace utils {
                 implements__(V__&& args)
                     : t_holder_(std::forward<V__>(args)) {}
 
-                bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag) override {
+                bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag, Pos& pos) override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
                         throw std::bad_function_call();
                     }
-                    return (*t_ptr_)(seq, tok, flag);
+                    return (*t_ptr_)(seq, tok, flag, pos);
                 }
             };
 
@@ -75,8 +75,8 @@ namespace utils {
                 delete iface;
             }
 
-            bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag) {
-                return iface ? iface->operator()(seq, tok, flag) : throw std::bad_function_call();
+            bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag, Pos& pos) {
+                return iface ? iface->operator()(seq, tok, flag, pos) : throw std::bad_function_call();
             }
         };
 
