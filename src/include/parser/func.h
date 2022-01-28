@@ -9,6 +9,7 @@
 
 #pragma once
 #include "../helper/deref.h"
+#include <functional>
 #include "parser_base.h"
 
 namespace utils {
@@ -33,7 +34,7 @@ namespace utils {
                 bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag) override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
-                        return bool{};
+                        throw std::bad_function_call();
                     }
                     return (*t_ptr_)(seq, tok, flag);
                 }
@@ -75,7 +76,7 @@ namespace utils {
             }
 
             bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag) {
-                return iface ? iface->operator()(seq, tok, flag) : bool{};
+                return iface ? iface->operator()(seq, tok, flag) : throw std::bad_function_call();
             }
         };
 

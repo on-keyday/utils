@@ -17,6 +17,6 @@ macro Seq Sequencer<Input>
 
 typeparam Input,String,Kind,^Vec
 interface Func {
-    __call__(seq &Seq,tok &Tok,flag int) bool
+    __call__(seq &Seq,tok &Tok,flag int) bool = panic
 }
 

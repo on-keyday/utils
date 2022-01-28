@@ -62,6 +62,8 @@ int main(int argc, char** argv) {
     }
     if (result.is_set("syntax")) {
         cout << R"(Syntax:
+    #COMMENT
+    
     interface NAME{
         const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_RETURN_VALUE
     }
@@ -77,10 +79,11 @@ int main(int argc, char** argv) {
 
     alias NAME REFERRED
 
-    typeparam T
+    typeparam T,^U 
+    # T will be typename T, U will be template<typename...>typename U 
     alias NAME REFERRED
 
-    # COMMENT
+    
 
 Special Value:
     Func Name:
