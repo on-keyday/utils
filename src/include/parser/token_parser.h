@@ -16,6 +16,7 @@
 #include "../number/parse.h"
 #include "../number/prefix.h"
 #include "../helper/string_reader.h"
+#include "func.h"
 
 namespace utils {
     namespace parser {
@@ -95,12 +96,12 @@ namespace utils {
             }
         };
 
-        template <class Input, class String, class Kind, template <class...> class Vec, class Func>
+        template <class Input, class String, class Kind, template <class...> class Vec>
         struct FuncParser : Parser<Input, String, Kind, Vec> {
             template <class T>
             constexpr FuncParser(T&& f)
                 : func(std::forward<T>(f)) {}
-            Func func;
+            Func<Input, String, Kind, Vec> func;
             Kind kind;
             ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
                 size_t beg = seq.rptr;
@@ -142,8 +143,8 @@ namespace utils {
         }
 
         template <class Input, class String, class Kind, template <class...> class Vec, class Func>
-        wrap::shared_ptr<FuncParser<Input, String, Kind, Vec, std::remove_cvref_t<Func>>> make_func(Func&& func, Kind kind) {
-            auto ret = wrap::make_shared<FuncParser<Input, String, Kind, Vec, std::remove_cvref_t<Func>>>(std::forward<Func>(func));
+        wrap::shared_ptr<FuncParser<Input, String, Kind, Vec>> make_func(Func&& func, Kind kind) {
+            auto ret = wrap::make_shared<FuncParser<Input, String, Kind, Vec>>(std::forward<Func>(func));
             ret->kind = kind;
             return ret;
         }
