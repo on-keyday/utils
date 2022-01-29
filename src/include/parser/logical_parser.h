@@ -41,8 +41,8 @@ namespace utils {
                 return {ret};
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::repeat;
+            ParserKind declkind() const override {
+                return ParserKind::repeat;
             }
         };
 
@@ -60,8 +60,8 @@ namespace utils {
             bool none_is_not_error() const override {
                 return true;
             }
-            PaserKind declkind() const override {
-                return PaserKind::allow_none;
+            ParserKind declkind() const override {
+                return ParserKind::allow_none;
             }
         };
 
@@ -103,8 +103,8 @@ namespace utils {
                 return ret;
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::only_one;
+            ParserKind declkind() const override {
+                return ParserKind::only_one;
             }
         };
 
@@ -142,8 +142,8 @@ namespace utils {
                 return ret;
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::some_pattern;
+            ParserKind declkind() const override {
+                return ParserKind::some_pattern;
             }
         };
 
@@ -171,8 +171,8 @@ namespace utils {
                 return {};
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::or_;
+            ParserKind declkind() const override {
+                return ParserKind::or_;
             }
         };
 
@@ -212,8 +212,8 @@ namespace utils {
                 return {ret};
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::and_;
+            ParserKind declkind() const override {
+                return ParserKind::and_;
             }
         };
 

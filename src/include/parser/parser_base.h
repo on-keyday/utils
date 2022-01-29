@@ -21,7 +21,7 @@ namespace utils {
             bool fatal;
         };
 
-        enum class PaserKind {
+        enum class ParserKind {
             null,
             token,
             space,
@@ -34,6 +34,7 @@ namespace utils {
             allow_none,
             some_pattern,
             only_one,
+            week_ref,
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
@@ -49,8 +50,8 @@ namespace utils {
                 return false;
             }
 
-            virtual PaserKind declkind() const {
-                return PaserKind::null;
+            virtual ParserKind declkind() const {
+                return ParserKind::null;
             }
         };
 

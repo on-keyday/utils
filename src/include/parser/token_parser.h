@@ -35,8 +35,8 @@ namespace utils {
                 return {};
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::token;
+            ParserKind declkind() const override {
+                return ParserKind::token;
             }
         };
 
@@ -91,8 +91,8 @@ namespace utils {
                 return {ret};
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::anyother;
+            ParserKind declkind() const override {
+                return ParserKind::anyother;
             }
         };
 
@@ -120,8 +120,8 @@ namespace utils {
                 return {ret};
             }
 
-            PaserKind declkind() const override {
-                return PaserKind::func;
+            ParserKind declkind() const override {
+                return ParserKind::func;
             }
         };
 

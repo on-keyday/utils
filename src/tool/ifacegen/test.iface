@@ -70,3 +70,8 @@ alias TemplateS Template<T,int>
 
 typeparam ^T
 alias Value T<int>
+
+typeparam T
+interface Array {
+    __array__(index size_t) T
+}

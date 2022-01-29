@@ -18,6 +18,7 @@ namespace ifacegen {
     constexpr auto decltype_func = "decltype";
     constexpr auto copy_func = "__copy__";
     constexpr auto call_func = "__call__";
+    constexpr auto array_op = "__array__";
 
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, Alias>* alias) {
         if (alias) {
@@ -63,8 +64,11 @@ namespace ifacegen {
 
     void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
         render_cpp_type(func.type, str, alias, on_iface);
-        if (func.funcname == "__call__") {
+        if (func.funcname == call_func) {
             hlp::append(str, "operator()");
+        }
+        else if (func.funcname == array_op) {
+            hlp::append(str, "operator[]");
         }
         else {
             hlp::append(str, func.funcname);
@@ -86,19 +90,24 @@ namespace ifacegen {
     }
 
     void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
-        if (func.funcname == call_func) {
+        if (func.funcname == call_func || func.funcname == array_op) {
             //hlp::append(str, "operator()");
         }
         else {
             hlp::append(str, func.funcname);
         }
-        hlp::append(str, "(");
+        if (on_iface && func.funcname == array_op) {
+            hlp::append(str, "[");
+        }
+        else {
+            hlp::append(str, "(");
+        }
         bool is_first = true;
         for (auto& arg : func.args) {
             if (!is_first) {
                 hlp::append(str, ", ");
             }
-            bool make_forward = (on_iface && arg.type.vararg) || arg.type.ref == RefKind::rval;
+            bool make_forward = arg.type.vararg || arg.type.ref == RefKind::rval;
             if (make_forward) {
                 hlp::append(str, "std::forward<");
                 render_cpp_noref_type(arg.type, str, alias);
@@ -113,7 +122,12 @@ namespace ifacegen {
             }
             is_first = false;
         }
-        hlp::append(str, ")");
+        if (on_iface && func.funcname == array_op) {
+            hlp::append(str, "]");
+        }
+        else {
+            hlp::append(str, ")");
+        }
     }
 
     void render_cpp_default_value(Interface& func, utw::string& str, bool need_ret, utw::map<utw::string, Alias>* alias) {
@@ -437,7 +451,7 @@ namespace ifacegen {
                     hlp::append(str, "            }\n");
                     hlp::append(str, "            ");
                     hlp::append(str, "return ");
-                    if (func.funcname == "__call__") {
+                    if (func.funcname == call_func || func.funcname == array_op) {
                         hlp::append(str, "(*t_ptr_)");
                     }
                     else {
@@ -604,7 +618,10 @@ namespace ifacegen {
                     if (func.funcname == call_func) {
                         hlp::append(str, "operator()");
                     }
-                    render_cpp_call(func, str, alias, true);
+                    else if (func.funcname == array_op) {
+                        hlp::append(str, "operator[]");
+                    }
+                    render_cpp_call(func, str, alias, false);
                     hlp::append(str, ":");
                     render_cpp_default_value(func, str, false, alias);
                     hlp::append(str, R"(;
