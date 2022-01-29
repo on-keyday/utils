@@ -198,7 +198,7 @@ namespace ifacegen {
         hlp::append(str, alias.first);
         hlp::append(str, " = ");
         hlp::append(str, alias.second.token);
-        hlp::append(str, ";\n");
+        hlp::append(str, ";\n\n");
     }
 
     void render_cpp_namespace_begin(utw::string& str, auto&& name) {
