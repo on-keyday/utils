@@ -134,6 +134,7 @@ target_link_libraries(cin utils)
 target_link_libraries(to_json utils)
 target_link_libraries(jsonpath utils)
 target_link_libraries(parser utils)
+target_link_libraries(digitcount utils)
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
