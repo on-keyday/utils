@@ -17,6 +17,7 @@
 #include "../wrap/lite/set.h"
 #include "../escape/read_string.h"
 #include "../helper/iface_cast.h"
+#include "../json/convert_json.h"
 
 namespace utils {
     namespace parser {
@@ -40,6 +41,24 @@ namespace utils {
     if (eof && seq.eos()) return nullptr;
 
         namespace internal {
+
+            template <class String>
+            struct Sets {
+                wrap::set<String> keyword;
+                wrap::set<String> symbol;
+            };
+
+            template <class String>
+            struct Config {
+                Sets<String> set;
+                bool ignore_space = false;
+
+                bool from_json(auto& js) {
+                    JSON_PARAM_BEGIN(*this, js)
+                    FROM_JSON_OPT(ignore_space, "ignore_space")
+                    JSON_PARAM_END()
+                }
+            };
 
             bool is_symbol(auto&& v) {
                 return helper::is_valid<true>(v, [](auto&& c) {
@@ -103,7 +122,7 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq, Fn&& fn, auto& set) {
+            wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto beg = seq.rptr;
                 String str;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
@@ -112,10 +131,10 @@ namespace utils {
                 }
                 auto kd = fn(str, KindMap::token);
                 if (is_symbol(str)) {
-                    set.symbol.emplace(str);
+                    cfg.set.symbol.emplace(str);
                 }
                 else {
-                    set.keyword.emplace(str);
+                    cfg.set.keyword.emplace(str);
                 }
                 return make_tokparser<Input, String, Kind, Vec>(std::move(str), kd);
             }
@@ -290,9 +309,9 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec>
-            bool replace_weakref(auto& tok, auto& mp, auto& fn, auto& str, auto& set) {
+            bool replace_weakref(auto& tok, auto& mp, auto& fn, auto& str, auto& cfg) {
                 auto rep = [&](auto& v) {
-                    return replace_weakref<Input, String, Kind, Vec>(v, mp, fn, str, set);
+                    return replace_weakref<Input, String, Kind, Vec>(v, mp, fn, str, cfg);
                 };
                 auto rep_each = [&](auto ptr) {
                     for (auto& v : ptr->subparser) {
@@ -328,10 +347,10 @@ namespace utils {
                         }
                         else if (helper::equal(ref->tok, "ID")) {
                             Vec<String> kwd, sym;
-                            for (auto& k : set.keyword) {
+                            for (auto& k : cfg.set.keyword) {
                                 kwd.push_back(k);
                             }
-                            for (auto& s : set.symbol) {
+                            for (auto& s : cfg.set.symbol) {
                                 sym.push_back(s);
                             }
                             auto kd = fn("id", KindMap::id);
@@ -366,11 +385,6 @@ namespace utils {
                 }
                 return true;
             }
-            template <class String>
-            struct Sets {
-                wrap::set<String> keyword;
-                wrap::set<String> symbol;
-            };
 
         }  // namespace internal
 
@@ -378,7 +392,8 @@ namespace utils {
         wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Sequencer<Src>& seq, Fn&& fn = internal::def_Fn<Kind>()) {
             using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
             wrap::map<String, parser_t> desc;
-            internal::Sets<String> set;
+            internal::Config<String> cfg;
+            bool cfg_set = false;
             while (!seq.eos()) {
                 CONSUME_SPACE(true, true)
                 String tok;
@@ -390,21 +405,34 @@ namespace utils {
                 if (desc.find(tok) != desc.end()) {
                     return nullptr;
                 }
-                auto& value = desc[tok];
+
                 CONSUME_SPACE(true, true)
                 if (!seq.seek_if(":=")) {
                     return nullptr;
                 }
                 CONSUME_SPACE(true, true)
-                auto res = internal::compile_oneline<Input, String, Kind, Vec>(tok, seq, fn, set);
-                if (!res) {
-                    return nullptr;
+                if (!cfg_set && helper::equal(tok, "config")) {
+                    auto js = json::parse<json::JSON>(seq);
+                    if (js.is_undef()) {
+                        return nullptr;
+                    }
+                    if (!json::convert_from_json(js, cfg)) {
+                        return nullptr;
+                    }
+                    cfg_set = true;
                 }
-                value = res;
+                else {
+                    auto& value = desc[tok];
+                    auto res = internal::compile_oneline<Input, String, Kind, Vec>(tok, seq, fn, cfg);
+                    if (!res) {
+                        return nullptr;
+                    }
+                    value = res;
+                }
                 CONSUME_SPACE(false, false)
             }
             for (auto& v : desc) {
-                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn, std::get<0>(v), set)) {
+                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn, std::get<0>(v), cfg)) {
                     return nullptr;
                 }
             }
