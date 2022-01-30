@@ -14,6 +14,7 @@
 #include "token_parser.h"
 #include "complex_parser.h"
 #include "../wrap/lite/map.h"
+#include "../wrap/lite/set.h"
 #include "../escape/read_string.h"
 #include "../helper/iface_cast.h"
 
@@ -32,6 +33,7 @@ namespace utils {
             space,
             blank,
             eol,
+            id,
         };
 #define CONSUME_SPACE(line, eof)             \
     helper::space::consume_space(seq, line); \
@@ -40,8 +42,8 @@ namespace utils {
         namespace internal {
 
             bool is_symbol(auto&& v) {
-                helper::is_valid(v, [](auto&& c) {
-                    number::is_in_visible_range(c);
+                return helper::is_valid<true>(v, [](auto&& c) {
+                    return number::is_symbol_char(c);
                 });
             }
 
@@ -101,7 +103,7 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq, Fn&& fn) {
+            wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq, Fn&& fn, auto& set) {
                 auto beg = seq.rptr;
                 String str;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
@@ -109,6 +111,12 @@ namespace utils {
                     return nullptr;
                 }
                 auto kd = fn(str, KindMap::token);
+                if (is_symbol(str)) {
+                    set.symbol.emplace(str);
+                }
+                else {
+                    set.keyword.emplace(str);
+                }
                 return make_tokparser<Input, String, Kind, Vec>(std::move(str), kd);
             }
 
@@ -157,22 +165,22 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_some(auto& tok, Sequencer<Src>& seq, Fn&& fn);
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_some(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set);
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_primary(auto& tok, Sequencer<Src>& seq, Fn&& fn) {
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_primary(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
                 auto wrap_code = [&](auto& p) {
                     return wrap_elm<Input, String, Kind, Vec>(p, seq, fn);
                 };
                 CONSUME_SPACE(false, false)
-                if (auto p = read_str<Input, String, Kind, Vec>(seq, fn)) {
+                if (auto p = read_str<Input, String, Kind, Vec>(seq, fn, set)) {
                     return wrap_code(p);
                 }
                 else if (auto p2 = read_anyother<Input, String, Kind, Vec>(seq, fn)) {
                     return wrap_code(p2);
                 }
                 else if (seq.consume_if('[')) {
-                    auto se = compile_some<Input, String, Kind, Vec>(tok, seq, fn);
+                    auto se = compile_some<Input, String, Kind, Vec>(tok, seq, fn, set);
                     if (!se || !seq.consume_if(']')) {
                         return nullptr;
                     }
@@ -184,8 +192,8 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_seq(auto& tok, Sequencer<Src>& seq, Fn&& fn) {
-                auto root = compile_primary<Input, String, Kind, Vec>(tok, seq, fn);
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_seq(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
+                auto root = compile_primary<Input, String, Kind, Vec>(tok, seq, fn, set);
                 if (!root) {
                     return nullptr;
                 }
@@ -202,7 +210,7 @@ namespace utils {
                         and_ = make_and<Input, String, Kind, Vec>(Vec<parser_t>{root}, tok, kd);
                         root = and_;
                     }
-                    auto tmp = compile_primary<Input, String, Kind, Vec>(tok, seq, fn);
+                    auto tmp = compile_primary<Input, String, Kind, Vec>(tok, seq, fn, set);
                     if (!tmp) {
                         return nullptr;
                     }
@@ -212,8 +220,8 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_or(auto& tok, Sequencer<Src>& seq, Fn&& fn) {
-                auto root = compile_seq<Input, String, Kind, Vec>(tok, seq, fn);
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_or(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
+                auto root = compile_seq<Input, String, Kind, Vec>(tok, seq, fn, set);
                 if (!root) {
                     return nullptr;
                 }
@@ -232,7 +240,7 @@ namespace utils {
                         or_ = make_or<Input, String, Kind, Vec>(Vec<parser_t>{root});
                         root = or_;
                     }
-                    auto tmp = compile_seq<Input, String, Kind, Vec>(tok, seq, fn);
+                    auto tmp = compile_seq<Input, String, Kind, Vec>(tok, seq, fn, set);
                     if (!tmp) {
                         return nullptr;
                     }
@@ -242,8 +250,8 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_some(auto& tok, Sequencer<Src>& seq, Fn&& fn) {
-                auto root = compile_or<Input, String, Kind, Vec>(tok, seq, fn);
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_some(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
+                auto root = compile_or<Input, String, Kind, Vec>(tok, seq, fn, set);
                 if (!root) {
                     return nullptr;
                 }
@@ -263,7 +271,7 @@ namespace utils {
                         or_ = make_somepattern<Input, String, Kind, Vec>(Vec<parser_t>{root}, tok, kd);
                         root = or_;
                     }
-                    auto tmp = compile_or<Input, String, Kind, Vec>(tok, seq, fn);
+                    auto tmp = compile_or<Input, String, Kind, Vec>(tok, seq, fn, set);
                     if (!tmp) {
                         return nullptr;
                     }
@@ -273,8 +281,8 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_oneline(auto& tok, Sequencer<Src>& seq, Fn&& fn) {
-                auto res = compile_some<Input, String, Kind, Vec>(tok, seq, fn);
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_oneline(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
+                auto res = compile_some<Input, String, Kind, Vec>(tok, seq, fn, set);
                 if (!seq.eos() && !helper::match_eol(seq)) {
                     return nullptr;
                 }
@@ -282,9 +290,9 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec>
-            bool replace_weakref(auto& tok, auto& mp, auto& fn, auto& str) {
+            bool replace_weakref(auto& tok, auto& mp, auto& fn, auto& str, auto& set) {
                 auto rep = [&](auto& v) {
-                    return replace_weakref<Input, String, Kind, Vec>(v, mp, fn, str);
+                    return replace_weakref<Input, String, Kind, Vec>(v, mp, fn, str, set);
                 };
                 auto rep_each = [&](auto ptr) {
                     for (auto& v : ptr->subparser) {
@@ -318,6 +326,17 @@ namespace utils {
                             auto kd = fn("eol", KindMap::eol);
                             ref->subparser = make_line<Input, String, Kind, Vec>(kd);
                         }
+                        else if (helper::equal(ref->tok, "ID")) {
+                            Vec<String> kwd, sym;
+                            for (auto& k : set.keyword) {
+                                kwd.push_back(k);
+                            }
+                            for (auto& s : set.symbol) {
+                                sym.push_back(s);
+                            }
+                            auto kd = fn("id", KindMap::id);
+                            ref->subparser = make_anyother<Input, String, Kind, Vec>(kwd, sym, kd);
+                        }
                         else {
                             return false;
                         }
@@ -347,6 +366,11 @@ namespace utils {
                 }
                 return true;
             }
+            template <class String>
+            struct Sets {
+                wrap::set<String> keyword;
+                wrap::set<String> symbol;
+            };
 
         }  // namespace internal
 
@@ -354,6 +378,7 @@ namespace utils {
         wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Sequencer<Src>& seq, Fn&& fn = internal::def_Fn<Kind>()) {
             using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
             wrap::map<String, parser_t> desc;
+            internal::Sets<String> set;
             while (!seq.eos()) {
                 CONSUME_SPACE(true, true)
                 String tok;
@@ -371,7 +396,7 @@ namespace utils {
                     return nullptr;
                 }
                 CONSUME_SPACE(true, true)
-                auto res = internal::compile_oneline<Input, String, Kind, Vec>(tok, seq, fn);
+                auto res = internal::compile_oneline<Input, String, Kind, Vec>(tok, seq, fn, set);
                 if (!res) {
                     return nullptr;
                 }
@@ -379,7 +404,7 @@ namespace utils {
                 CONSUME_SPACE(false, false)
             }
             for (auto& v : desc) {
-                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn, std::get<0>(v))) {
+                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn, std::get<0>(v), set)) {
                     return nullptr;
                 }
             }
