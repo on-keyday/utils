@@ -9,9 +9,12 @@
 // insert_space - space of str
 #pragma once
 #include <limits>
+#include "radix.h"
 
 namespace utils {
     namespace number {
-
+        template <class Result, class T>
+        void insert_space(Result& result, T& input) {
+        }
     }  // namespace number
 }  // namespace utils

@@ -17,10 +17,17 @@
 
 namespace utils {
     namespace number {
+        enum class ToStrFlag {
+            none,
+            upper = 0x1,
+            no_minus = 0x2,
+        };
+
+        DEFINE_ENUM_FLAGOP(ToStrFlag)
 
         template <class Result, class T>
         requires std::is_integral_v<T>
-        constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false) {
+        constexpr NumErr to_string(Result& result, T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
             if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }
@@ -30,7 +37,9 @@ namespace utils {
             std::make_unsigned_t<T> calc;
             if (in < 0) {
                 calc = -in;
-                result.push_back('-');
+                if (!any(flag & ToStrFlag::no_minus)) {
+                    result.push_back('-');
+                }
             }
             else {
                 calc = in;
@@ -46,7 +55,7 @@ namespace utils {
                 minus += modulo * d;
                 modulo /= radix;
                 if (d || !first) {
-                    result.push_back(to_num_char(d, upper));
+                    result.push_back(to_num_char(d, any(flag & ToStrFlag::none)));
                     first = false;
                 }
             }
@@ -121,22 +130,23 @@ namespace utils {
             }
 
             template <class Result, class InT>
-            constexpr number::NumErr write_decimal(Result& result, InT value, int width, int radix, bool upper) {
+            constexpr number::NumErr write_decimal(Result& result, InT value, int width, int radix, ToStrFlag flag) {
                 while (value % radix == 0 && width > 0) {
                     value /= radix;
                     width--;
                 }
                 result.push_back('.');
-                return to_string(result, value, radix, upper);
+                return to_string(result, value, radix, flag);
             }
         }  // namespace internal
 
         template <class Result, class T, class InT = std::uint32_t, class Exp = std::int16_t>
         requires std::is_floating_point_v<T>
-        constexpr NumErr to_string(Result& result, T in, int radix = 10, bool upper = false, int decdigit = 9) {
+        constexpr NumErr to_string(Result& result, T in, int radix = 10, int decdigit = 9, ToStrFlag flag = ToStrFlag::none) {
             if (radix != 10 && radix != 16) {
                 return number::NumError::invalid;
             }
+            bool upper = any(flag & ToStrFlag::upper);
             if (in != in) {
                 if (upper) {
                     result.push_back('N');
@@ -151,7 +161,9 @@ namespace utils {
                 return true;
             }
             if (in < 0.0) {
-                result.push_back('-');
+                if (!any(flag & ToStrFlag::no_minus)) {
+                    result.push_back('-');
+                }
             }
             if (in == std::numeric_limits<T>::infinity() ||
                 in == -std::numeric_limits<T>::infinity()) {
@@ -173,12 +185,12 @@ namespace utils {
             auto p = internal::spow(10, decdigit);
             internal::split_float<InT, Exp>(in, integ, decimal, exp,
                                             1e7, 1e-5, p, p, 0.5);
-            auto err = to_string(result, integ, radix, upper);
+            auto err = to_string(result, integ, radix, flag);
             if (!err) {
                 return err;
             }
             if (decimal) {
-                err = internal::write_decimal(result, decimal, decdigit, radix, upper);
+                err = internal::write_decimal(result, decimal, decdigit, radix, flag);
                 if (!err) {
                     return err;
                 }
@@ -193,7 +205,7 @@ namespace utils {
                 if (exp < 0) {
                     result.push_back('-');
                 }
-                err = to_string(result, exp < 0 ? -exp : exp, radix, upper);
+                err = to_string(result, exp < 0 ? -exp : exp, radix, flag);
                 if (!err) {
                     return err;
                 }
@@ -202,17 +214,17 @@ namespace utils {
         }
 
         template <class Result, class T>
-        constexpr Result to_string(T in, int radix = 10, bool upper = false) {
+        constexpr Result to_string(T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
             Result result;
-            to_string(result, in, radix, upper);
+            to_string(result, in, radix, flag);
             return result;
         }
 
         template <class Result, class T, class InT = std::uint32_t, class Exp = std::int16_t>
         requires std::is_floating_point_v<T>
-        constexpr Result to_string(T in, int radix = 10, bool upper = false, int decdigit = 9) {
+        constexpr Result to_string(T in, int radix = 10, int decdigit = 9, ToStrFlag flag = ToStrFlag::none) {
             Result result;
-            to_string(result, in, radix, upper, decdigit);
+            to_string(result, in, radix, decdigit, flag);
             return result;
         }
 

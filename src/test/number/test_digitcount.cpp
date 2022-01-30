@@ -8,13 +8,13 @@
 
 #include <number/radix.h>
 
-template <class T = size_t>
 void test_digitcount() {
-#define RAD 16
-    constexpr auto v = utils::number::digit_bound<T>[RAD];
+    using T = size_t;
+    constexpr size_t rad = 10;
+    constexpr auto v = utils::number::digit_bound<T>[rad];
     constexpr auto d = v[0];
     constexpr auto size_ = sizeof(utils::number::digit_bound<T>);
-    static_assert(d == RAD, "expect 10 but not");
+    static_assert(d == rad, "expect 10 but not");
 }
 
 int main() {
