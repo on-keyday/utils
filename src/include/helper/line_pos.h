@@ -11,12 +11,16 @@
 #include "../core/sequencer.h"
 #include "appender.h"
 #include "readutil.h"
+#include "../number/to_string.h"
 
 namespace utils {
     namespace helper {
         template <class Out, class T>
         void write_pos(Out& w, Sequencer<T>& seq, char pos = '^') {
-            get_linepos();
+            size_t line, pos;
+            get_linepos(seq, line, pos);
+
+            number::to_string(w, line + 1);
         }
     }  // namespace helper
 }  // namespace utils
