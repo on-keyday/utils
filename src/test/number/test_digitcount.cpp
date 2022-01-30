@@ -7,6 +7,13 @@
 
 
 #include <number/radix.h>
+#include <number/insert_space.h>
+
+constexpr auto digit_value() {
+    utils::number::Array<63, char> value{};
+    utils::number::insert_space(value, 4, 0xff);
+    return value;
+}
 
 void test_digitcount() {
     using T = size_t;
@@ -15,6 +22,7 @@ void test_digitcount() {
     constexpr auto d = v[0];
     constexpr auto size_ = sizeof(utils::number::digit_bound<T>);
     static_assert(d == rad, "expect 10 but not");
+    constexpr auto val = digit_value();
 }
 
 int main() {
