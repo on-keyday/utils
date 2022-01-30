@@ -61,8 +61,11 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
                                                                                 },
                                                                                 "struct", TokKind::segment);
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
-    auto seq2 = utils::make_ref_seq(R"( string_quote:=)");
-    utils::parser::compile_parser<Input, string, TokKind, vector>(seq2);
+    auto seq2 = utils::make_ref_seq(R"( string_quote:="\""
+    DO:="1" "+" "1"
+    ROOT:=DO)");
+    auto res = utils::parser::compile_parser<Input, string, TokKind, vector>(seq2);
+    assert(res);
     return utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{struct_group, some_space, str}, "struct and str", TokKind::segment);
 }
 

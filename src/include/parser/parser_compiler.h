@@ -106,14 +106,13 @@ namespace utils {
             struct WeakRef : Parser<Input, String, Kind, Vec> {
                 Kind kind;
                 String tok;
-                wrap::weak_ptr<Parser<Input, String, Kind, Vec>> subparser;
+                wrap::shared_ptr<Parser<Input, String, Kind, Vec>> subparser;
 
                 ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
-                    auto l = subparser.lock();
-                    if (!l) {
+                    if (!subparser) {
                         return {.fatal = true};
                     }
-                    return l->parse(seq, pos);
+                    return subparser->parse(seq, pos);
                 }
 
                 ParserKind declkind() const override {
@@ -293,7 +292,7 @@ namespace utils {
                 else if (tok->declkind() == ParserKind::weak_ref) {
                     auto ref = static_cast<WeakRef<Input, String, Kind, Vec>*>(&*tok);
                     auto found = mp.find(ref->tok);
-                    if (found != mp.end()) {
+                    if (found == mp.end()) {
                         return false;
                     }
                     ref->subparser = std::get<1>(*found);
@@ -348,13 +347,18 @@ namespace utils {
                     return nullptr;
                 }
                 value = res;
+                CONSUME_SPACE(false, false)
             }
             for (auto& v : desc) {
                 if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc)) {
                     return nullptr;
                 }
             }
-            return nullptr;
+            auto found = desc.find("ROOT");
+            if (found == desc.end()) {
+                return nullptr;
+            }
+            return std::get<1>(*found);
         }
 #undef CONSUME_SPACE
     }  // namespace parser
