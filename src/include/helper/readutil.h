@@ -99,6 +99,24 @@ namespace utils {
             return 0;
         }
 
+        template <class T>
+        constexpr void get_linepos(Sequencer<T>& seq, size_t& line, size_t& pos) {
+            auto rptr = seq.rptr;
+            seq.rptr = 0;
+            line = 0;
+            pos = 0;
+            for (; seq.rptr < rptr;) {
+                if (match_eol<true>(seq)) {
+                    pos = 1;
+                    line++;
+                }
+                else {
+                    seq.consume();
+                }
+            }
+            seq.rptr = rptr;
+        }
+
         template <class T, class Result, class Else, class Func>
         constexpr bool append_if(Result& result, Else& els, Sequencer<T>& seq, Func&& func) {
             bool allmatch = true;

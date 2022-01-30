@@ -78,13 +78,16 @@ namespace utils {
             template <class Input, class String, class Kind, template <class...> class Vec>
             struct Config {
                 Sets<String> set;
-                IgnoreKind ignore;
+                IgnoreKind ignore = IgnoreKind::none;
+                size_t debug;
                 using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
                 parser_t space;
+                String errors;
 
                 bool from_json(auto& js) {
                     JSON_PARAM_BEGIN(*this, js)
                     FROM_JSON_OPT(ignore, "ignore")
+                    FROM_JSON_OPT(debug, "debug_level")
                     JSON_PARAM_END()
                 }
             };
@@ -156,6 +159,7 @@ namespace utils {
                 String str;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
                     seq.rptr = beg;
+                    cfg.errors = utf::convert<String>("string escape failed");
                     return nullptr;
                 }
                 auto kd = fn(str, KindMap::token);
