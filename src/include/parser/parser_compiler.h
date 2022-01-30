@@ -491,13 +491,17 @@ namespace utils {
                     return nullptr;
                 }
                 CONSUME_SPACE(true, true)
-                if (!cfg_set && helper::equal(tok, "config")) {
+                if (helper::equal(tok, "config")) {
+                    auto bf = cfg.ignore;
                     auto js = json::parse<json::JSON>(seq);
                     if (js.is_undef()) {
                         return nullptr;
                     }
                     if (!json::convert_from_json(js, cfg)) {
                         return nullptr;
+                    }
+                    if (cfg.ignore != bf) {
+                        cfg.space = nullptr;
                     }
                     cfg_set = true;
                 }
