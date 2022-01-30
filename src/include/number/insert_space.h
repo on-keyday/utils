@@ -13,8 +13,34 @@
 
 namespace utils {
     namespace number {
-        template <class Result, class T>
-        void insert_space(Result& result, T& input) {
+        template <class Result, class T, class Char = char>
+        constexpr NumErr insert_space(Result& result, size_t count, T input, int radix, Char c = ' ') {
+            if (!acceptable_radix(radix)) {
+                return NumError::invalid;
+            }
+            std::make_unsigned_t<T> calc;
+            if (input < 0) {
+                calc = -input;
+            }
+            else {
+                calc = input;
+            }
+            auto& v = digit_bound<T>[radix];
+            size_t digit = 0;
+            while (calc < v[digit]) {
+                digit++;
+            }
+            digit++;
+            if (count < digit) {
+                count = 0;
+            }
+            else {
+                count = count - digit;
+            }
+            for (size_t i = 0; i < count; i++) {
+                result.push_back(c);
+            }
+            return true;
         }
     }  // namespace number
 }  // namespace utils
