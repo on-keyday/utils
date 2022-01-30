@@ -9,7 +9,6 @@
 #include <number/radix.h>
 
 void test_digitcount() {
-    constexpr auto e = utils::number::get_digit_count<size_t>(10);
 }
 
 int main() {

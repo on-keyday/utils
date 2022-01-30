@@ -104,17 +104,17 @@ namespace utils {
 
         template <size_t mx, size_t radix, class T, size_t size = digit_count<T, radix>>
         constexpr Array<mx, T> get_digit_bound() {
-            Array<mx, T> res;
+            Array<mx, T> res{};
             auto base = radix;
             for (size_t i = 0; i < size; i++) {
                 res.push_back(base);
-                base *= base;
+                base *= radix;
             }
             return res;
         }
 
         template <class T, size_t mx = digit_count<T, 2>>
-        constexpr Array<mx, T> digit_bound[] = {
+        constexpr Array<mx, T> digit_bound[]{
             {},
             {},
             get_digit_bound<mx, 2, T>(),
