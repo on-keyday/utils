@@ -63,8 +63,8 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
     auto seq2 = utils::make_ref_seq(R"( string_quote:="\""
     DO:="1" SPACE "+" SPACE "1"
-    ROOT:=DO BLANK
-    STRUCT:="struct" BLANK     
+    ROOT:=DO BLANK STRUCT BLANK ID BLANK STRUCT
+    STRUCT:="struct" BLANK ID BLANK? "{" BLANK? "}" 
 )");
     auto res = utils::parser::compile_parser<Input, string, TokKind, vector>(seq2, [](auto& tok, utils::parser::KindMap kind) {
         using namespace utils::parser;
@@ -80,7 +80,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
 
 template <class Json>
 void to_json(const token_t& tok, Json& json) {
-    if (tok->kind == TokKind::space) {
+    if (!tok || tok->kind == TokKind::space) {
         return;
     }
     Json js;
@@ -98,7 +98,7 @@ void to_json(const token_t& tok, Json& json) {
 
 int main() {
     auto seq = utils::make_ref_seq(R"(1 + 1  struct Hello{}
-     "\\\"hey! "   )");
+     structs   struct ID{})");
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);

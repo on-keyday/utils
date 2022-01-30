@@ -320,7 +320,7 @@ namespace utils {
                         }
                         else if (helper::equal(ref->tok, "BLANK")) {
                             auto kd = fn("blank", KindMap::blank);
-                            ref->subparser = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, str, true, true);
+                            ref->subparser = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, str, false, true);
                         }
                         else if (helper::equal(ref->tok, "EOL")) {
                             auto kd = fn("eol", KindMap::eol);
