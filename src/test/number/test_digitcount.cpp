@@ -9,6 +9,7 @@
 #include <number/radix.h>
 #include <number/insert_space.h>
 #include <wrap/cout.h>
+#include <iomanip>
 
 constexpr auto digit_value() {
     utils::number::Array<63, char> value{};
@@ -26,7 +27,8 @@ void test_digitcount() {
     constexpr auto val = digit_value();
     auto ptr = reinterpret_cast<const std::uint8_t*>(utils::number::digit_bound<T>);
     for (size_t i = 0; i < size_; i++) {
-        utils::wrap::cout_wrap() << std::hex << size_t(ptr[i]) << ",";
+        if (ptr[i] == 0) continue;
+        utils::wrap::cout_wrap() << std::setw(2) << std::hex << size_t(ptr[i]) << ",";
     }
 }
 
