@@ -251,9 +251,10 @@ namespace utils {
                         cfg.space = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, tok, true, true);
                     }
                     else if (cfg.ignore == IgnoreKind::blank) {
-                        auto kd = fn("(space)", KindMap::space);
+                        auto kd = fn("(blank)", KindMap::blank);
                         cfg.space = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, tok, false, true);
                     }
+                    cfg.space = make_allownone<Input, String, Kind, Vec>(cfg.space);
                 }
             }
 

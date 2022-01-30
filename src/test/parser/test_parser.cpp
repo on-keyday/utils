@@ -63,7 +63,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
     auto seq2 = utils::make_ref_seq(R"(
     config:={
-        "ignore_space":true
+        "ignore": "line"
     }
     string_quote:="\""
     DO:="1" SPACE "+" SPACE "1"
