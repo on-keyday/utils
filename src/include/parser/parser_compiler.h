@@ -272,11 +272,11 @@ namespace utils {
                 return res;
             }
 
-            template <class Input, class String, class Kind, template <class...> class Vec, class Fn>
-            bool replace_weakref(auto& tok, auto& mp, Fn&& fn) {
+            template <class Input, class String, class Kind, template <class...> class Vec>
+            bool replace_weakref(auto& tok, auto& mp) {
                 auto rep_each = [&](auto ptr) {
                     for (auto& v : ptr->subparser) {
-                        if (!replace_weakref<Input, String, Kind, Vec>(v, mp, fn)) {
+                        if (!replace_weakref<Input, String, Kind, Vec>(v, mp)) {
                             return false;
                         }
                     }
@@ -306,16 +306,16 @@ namespace utils {
                     auto ref = static_cast<FuncParser<Input, String, Kind, Vec>*>(&*tok);
                     auto v = helper::iface_cast<FatalFunc<Input, String, Kind, Vec>>(&ref->func);
                     if (v) {
-                        return replace_weakref<Input, String, Kind, Vec>(v->subparser, mp, fn);
+                        return replace_weakref<Input, String, Kind, Vec>(v->subparser, mp);
                     }
                 }
                 else if (tok->declkind() == ParserKind::allow_none) {
                     auto ref = static_cast<AllowNoneParser<Input, String, Kind, Vec>*>(&*tok);
-                    return replace_weakref<Input, String, Kind, Vec>(ref->subparser);
+                    return replace_weakref<Input, String, Kind, Vec>(ref->subparser, mp);
                 }
                 else if (tok->declkind() == ParserKind::repeat) {
                     auto ref = static_cast<RepeatParser<Input, String, Kind, Vec>*>(&*tok);
-                    return replace_weakref<Input, String, Kind, Vec>(ref->subparser);
+                    return replace_weakref<Input, String, Kind, Vec>(ref->subparser, mp);
                 }
                 return true;
             }
@@ -350,7 +350,7 @@ namespace utils {
                 value = res;
             }
             for (auto& v : desc) {
-                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn)) {
+                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc)) {
                     return nullptr;
                 }
             }
