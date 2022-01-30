@@ -103,7 +103,8 @@ void to_json(const token_t& tok, Json& json) {
 
 int main() {
     auto seq = utils::make_ref_seq(R"(1 + 1  struct Hello{}
-     structs   struct ID{})");
+     structs   struct ID{}
+)");
     auto parser = make_parser(seq);
     utils::parser::Pos pos;
     auto res = parser->parse(seq, pos);

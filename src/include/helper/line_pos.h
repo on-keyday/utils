@@ -43,7 +43,7 @@ namespace utils {
             }
             if (posc != 0) {
                 c.push_back('\n');
-                for (size_t i = 0; i < bline + pos - 1; i++) {
+                for (size_t i = 0; i < bline + pos; i++) {
                     c.push_back(' ');
                 }
                 c.push_back(posc);
