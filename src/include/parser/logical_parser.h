@@ -100,7 +100,7 @@ namespace utils {
                 }
                 input.rptr = sucpos;
                 posctx = suc;
-                return ret;
+                return {ret};
             }
 
             ParserKind declkind() const override {
@@ -139,7 +139,7 @@ namespace utils {
                 }
                 input.rptr = begin;
                 posctx = postmp;
-                return ret;
+                return {ret};
             }
 
             ParserKind declkind() const override {
@@ -218,10 +218,10 @@ namespace utils {
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec, class String2>
-        wrap::shared_ptr<RepeatParser<Input, String, Kind, Vec>> make_repeat(wrap::shared_ptr<Parser<Input, String, Kind, Vec>> sub, String2 token, Kind kind) {
+        wrap::shared_ptr<RepeatParser<Input, String, Kind, Vec>> make_repeat(wrap::shared_ptr<Parser<Input, String, Kind, Vec>> sub, String2&& token, Kind kind) {
             auto ret = wrap::make_shared<RepeatParser<Input, String, Kind, Vec>>();
             ret->subparser = std::move(sub);
-            ret->token = std::move(token);
+            ret->token = std::forward<String2>(token);
             ret->kind = kind;
             return ret;
         }
@@ -241,10 +241,10 @@ namespace utils {
         }
 
         template <class Input, class String, class Kind, template <class...> class Vec, class String2>
-        wrap::shared_ptr<SomePatternParser<Input, String, Kind, Vec>> make_somepattern(Vec<wrap::shared_ptr<Parser<Input, String, Kind, Vec>>> sub, String2 token, Kind kind) {
-            auto ret = wrap::make_shared<OnlyOneParser<Input, String, Kind, Vec>>();
+        wrap::shared_ptr<SomePatternParser<Input, String, Kind, Vec>> make_somepattern(Vec<wrap::shared_ptr<Parser<Input, String, Kind, Vec>>> sub, const String2& token, Kind kind) {
+            auto ret = wrap::make_shared<SomePatternParser<Input, String, Kind, Vec>>();
             ret->subparser = std::move(sub);
-            ret->token = std::move(token);
+            ret->token = token;
             ret->kind = kind;
             return ret;
         }
@@ -257,10 +257,10 @@ namespace utils {
         }
 
         template <class Input, class String, class Kind, template <class...> class Vec, class String2>
-        wrap::shared_ptr<AndParser<Input, String, Kind, Vec>> make_and(Vec<wrap::shared_ptr<Parser<Input, String, Kind, Vec>>> sub, String2 token, Kind kind) {
+        wrap::shared_ptr<AndParser<Input, String, Kind, Vec>> make_and(Vec<wrap::shared_ptr<Parser<Input, String, Kind, Vec>>> sub, const String2& token, Kind kind) {
             auto ret = wrap::make_shared<AndParser<Input, String, Kind, Vec>>();
             ret->subparser = std::move(sub);
-            ret->token = std::move(token);
+            ret->token = token;
             ret->kind = kind;
             return ret;
         }

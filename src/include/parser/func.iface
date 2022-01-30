@@ -18,5 +18,13 @@ macro Seq Sequencer<Input>
 typeparam Input,String,Kind,^Vec
 interface Func {
     __call__(seq &Seq,tok &Tok,flag int,pos &Pos) bool = panic
+    decltype() type
 }
 
+typeparam Input,String,Kind,^Vec
+interface IParser {
+    parse(seq &Seq,pos &Pos) Tok
+    const none_is_not_error() bool
+    const declkind() ParserKind
+    decltype() type
+}

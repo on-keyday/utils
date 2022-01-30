@@ -34,7 +34,7 @@ namespace utils {
             allow_none,
             some_pattern,
             only_one,
-            week_ref,
+            weak_ref,
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
