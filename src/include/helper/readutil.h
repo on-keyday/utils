@@ -107,11 +107,12 @@ namespace utils {
             pos = 0;
             for (; seq.rptr < rptr;) {
                 if (match_eol<true>(seq)) {
-                    pos = 1;
+                    pos = 0;
                     line++;
                 }
                 else {
                     seq.consume();
+                    pos++;
                 }
             }
             seq.rptr = rptr;

@@ -12,15 +12,46 @@
 #include "appender.h"
 #include "readutil.h"
 #include "../number/to_string.h"
+#include "../number/insert_space.h"
+#include "pushbacker.h"
 
 namespace utils {
     namespace helper {
         template <class Out, class T>
-        void write_pos(Out& w, Sequencer<T>& seq, char pos = '^') {
+        void write_src_loc(Out& w, Sequencer<T>& seq, char posc = '^') {
+            CountPushBacker<Out&> c{w};
             size_t line, pos;
             get_linepos(seq, line, pos);
-
-            number::to_string(w, line + 1);
+            if (line + 1 < 1000) {
+                number::insert_space(c, 4, line + 1);
+            }
+            else if (line + 1 < 100000) {
+                number::insert_space(c, 7, line + 1);
+            }
+            number::to_string(c, line + 1);
+            c.push_back('|');
+            size_t bline = c.count;
+            size_t bs = seq.rptr;
+            seq.rptr = seq.rptr - pos;
+            while (seq.current() == '\r' || seq.current() == '\n') {
+                seq.consume();
+            }
+            size_t bptr = seq.rptr;
+            while (!seq.eos() && seq.current() != '\n' && seq.current() != '\r') {
+                c.push_back(seq.current());
+                seq.consume();
+            }
+            if (posc != 0) {
+                c.push_back('\n');
+                for (size_t i = 0; i < bline + pos - 1; i++) {
+                    c.push_back(' ');
+                }
+                c.push_back(posc);
+                if (seq.eos()) {
+                    append(c, " [EOS]");
+                }
+            }
+            seq.rptr = bs;
         }
     }  // namespace helper
 }  // namespace utils

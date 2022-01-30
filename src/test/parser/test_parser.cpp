@@ -15,6 +15,7 @@
 #include <wrap/cout.h>
 #include <parser/complex_parser.h>
 #include <parser/parser_compiler.h>
+#include <helper/line_pos.h>
 enum class TokKind {
     line,
     space,
@@ -108,6 +109,8 @@ int main() {
     auto res = parser->parse(seq, pos);
     utils::json::OrderedJSON js;
     to_json(res.tok, js);
-
+    utils::wrap::string str;
+    utils::helper::write_src_loc(str, seq);
+    utils::wrap::cout_wrap() << str << "\n";
     utils::wrap::cout_wrap() << utils::json::to_string<utils::wrap::string>(js);
 }
