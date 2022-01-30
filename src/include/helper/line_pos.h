@@ -47,6 +47,9 @@ namespace utils {
                     c.push_back(' ');
                 }
                 c.push_back(posc);
+                if (seq.current() == '\r' || seq.current() == '\n') {
+                    append(c, " [EOL]");
+                }
                 if (seq.eos()) {
                     append(c, " [EOS]");
                 }
