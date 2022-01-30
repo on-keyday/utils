@@ -114,7 +114,7 @@ namespace utils {
         }
 
         template <class T, size_t mx = digit_count<T, 2>>
-        constexpr Array<mx, T> digit_bound[]{
+        constexpr Array<mx, T> digit_bound[37]{
             {},
             {},
             get_digit_bound<mx, 2, T>(),
