@@ -18,7 +18,7 @@
 namespace utils {
     namespace helper {
         template <class Out, class T>
-        void write_src_loc(Out& w, Sequencer<T>& seq, char posc = '^') {
+        void write_src_loc(Out& w, Sequencer<T>& seq, char posc = '^', bool show_endof = true) {
             CountPushBacker<Out&> c{w};
             size_t line, pos;
             get_linepos(seq, line, pos);
@@ -47,11 +47,13 @@ namespace utils {
                     c.push_back(' ');
                 }
                 c.push_back(posc);
-                if (seq.current() == '\r' || seq.current() == '\n') {
-                    append(c, " [EOL]");
-                }
-                if (seq.eos()) {
-                    append(c, " [EOS]");
+                if (show_endof) {
+                    if (seq.current() == '\r' || seq.current() == '\n') {
+                        append(c, " [EOL]");
+                    }
+                    if (seq.eos()) {
+                        append(c, " [EOS]");
+                    }
                 }
             }
             seq.rptr = bs;
