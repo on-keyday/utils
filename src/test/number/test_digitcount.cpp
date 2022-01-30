@@ -28,7 +28,7 @@ void test_digitcount() {
     auto ptr = reinterpret_cast<const std::uint8_t*>(utils::number::digit_bound<T>);
     for (size_t i = 0; i < size_; i++) {
         if (ptr[i] == 0) continue;
-        utils::wrap::cout_wrap() << std::setw(2) << std::hex << size_t(ptr[i]) << ",";
+        utils::wrap::cout_wrap() << std::setfill(L'0') << std::setw(2) << std::hex << size_t(ptr[i]) << ",";
     }
 }
 

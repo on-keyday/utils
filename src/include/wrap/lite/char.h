@@ -13,8 +13,10 @@ namespace utils {
     namespace wrap {
 #ifdef _WIN32
         using path_char = wchar_t;
+#define TO_TCHAR(c) L##c
 #else
         using path_char = char;
+#define TO_TCHAR(c) c
 #endif
     }  // namespace wrap
 }  // namespace utils
