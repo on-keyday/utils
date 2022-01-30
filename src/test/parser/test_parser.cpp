@@ -62,15 +62,27 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
                                                                                 "struct", TokKind::segment);
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
     auto seq2 = utils::make_ref_seq(R"( string_quote:="\""
-    DO:="1" "+" "1"
-    ROOT:=DO)");
-    auto res = utils::parser::compile_parser<Input, string, TokKind, vector>(seq2);
+    DO:="1" SPACE "+" SPACE "1"
+    ROOT:=DO BLANK
+    STRUCT:="struct" BLANK     
+)");
+    auto res = utils::parser::compile_parser<Input, string, TokKind, vector>(seq2, [](auto& tok, utils::parser::KindMap kind) {
+        using namespace utils::parser;
+        if (kind == KindMap::space || kind == KindMap::blank) {
+            return TokKind::space;
+        }
+        return TokKind::symbol;
+    });
     assert(res);
-    return utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{struct_group, some_space, str}, "struct and str", TokKind::segment);
+    return res;
+    //return utils::parser::make_and<Input, string, TokKind, vector>(vector<parser_t<Input>>{struct_group, some_space, str}, "struct and str", TokKind::segment);
 }
 
 template <class Json>
 void to_json(const token_t& tok, Json& json) {
+    if (tok->kind == TokKind::space) {
+        return;
+    }
     Json js;
     js["token"] = tok->token;
     js["kind"] = to_string(tok->kind);
@@ -79,13 +91,13 @@ void to_json(const token_t& tok, Json& json) {
     pos["pos"] = tok->pos.pos;
     pos["rptr"] = tok->pos.rptr;
     for (auto i = 0; i < tok->child.size(); i++) {
-        to_json(tok->child[i], js["children"]);
+        to_json(tok->child[i], js["child"]);
     }
     json.push_back(std::move(js));
 }
 
 int main() {
-    auto seq = utils::make_ref_seq(R"(  struct Hello{}
+    auto seq = utils::make_ref_seq(R"(1 + 1  struct Hello{}
      "\\\"hey! "   )");
     auto parser = make_parser(seq);
     utils::parser::Pos pos;

@@ -17,3 +17,4 @@ UTILS_WRAP_WEAK_PTR_TEMPLATE         std::weak_ptr
 UTILS_WRAP_MAKE_SHARED_PTR_FUNC      std::make_shared
 UTILS_WRAP_MAP_TEMPLATE              std::map
 UTILS_WRAP_MULTIMAP_TEMPLATE         std::multimap
+UTILS_WRAP_SET_TEMPLATE              std::set
