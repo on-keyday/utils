@@ -239,6 +239,24 @@ namespace utils {
                 }
             }
 
+            template <class Input, class String, class Kind, template <class...> class Vec, class Fn>
+            void set_cfgspace(Config<Input, String, Kind, Vec>& cfg, auto& tok, Fn& fn) {
+                if (!cfg.space) {
+                    if (cfg.ignore == IgnoreKind::line) {
+                        auto kd = fn("(line)", KindMap::eol);
+                        cfg.space = make_line<Input, String, Kind, Vec>(kd);
+                    }
+                    else if (cfg.ignore == IgnoreKind::space) {
+                        auto kd = fn("(space)", KindMap::space);
+                        cfg.space = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, tok, true, true);
+                    }
+                    else if (cfg.ignore == IgnoreKind::blank) {
+                        auto kd = fn("(space)", KindMap::space);
+                        cfg.space = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, tok, false, true);
+                    }
+                }
+            }
+
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
             wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_seq(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto prim = [&] {
@@ -248,30 +266,51 @@ namespace utils {
                 using and_t = wrap::shared_ptr<AndParser<Input, String, Kind, Vec>>;
                 and_t and_;
                 parser_t root;
-                auto mkand = [&] {
+                auto mkand = [&](auto&&... v) {
                     if (!and_) {
                         auto kd = fn(tok, KindMap::and_);
-                        and_ = make_and<Input, String, Kind, Vec>(Vec<parser_t>{root}, tok, kd);
+                        and_ = make_and<Input, String, Kind, Vec>(Vec<parser_t>{v...}, tok, kd);
                         root = and_;
                     }
                 };
-                bool adjusent = false;
-                root = prim();
+                auto init_cfg = [&] {
+                    set_cfgspace<Input, String, Kind, Vec>(cfg, tok, fn);
+                };
+                bool adjacent = false;
+                auto prim_adj = [&]() -> parser_t {
+                    adjacent = false;
+                    if (cfg.ignore != IgnoreKind::none) {
+                        if (seq.consume_if('&')) {
+                            adjacent = true;
+                            CONSUME_SPACE(false, false)
+                        }
+                    }
+                    return prim();
+                };
+                auto non_adjacent = [&] {
+                    return !adjacent && cfg.ignore != IgnoreKind::none;
+                };
+                root = prim_adj();
                 if (!root) {
                     return nullptr;
                 }
-                if (cfg.ignore != IgnoreKind::none) {
-                    CONSUME_SPACE(false, false)
+                if (non_adjacent()) {
+                    init_cfg();
+                    mkand(cfg.space, root);
                 }
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
                     if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || helper::match_eol<false>(seq)) {
                         break;
                     }
-                    mkand();
-                    auto tmp = compile_primary<Input, String, Kind, Vec>(tok, seq, fn, cfg);
+                    mkand(root);
+                    auto tmp = prim_adj();
                     if (!tmp) {
                         return nullptr;
+                    }
+                    if (non_adjacent()) {
+                        init_cfg();
+                        and_->add_parser(cfg.space);
                     }
                     and_->add_parser(tmp);
                 }
