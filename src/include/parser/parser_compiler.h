@@ -12,6 +12,7 @@
 #include "logical_parser.h"
 #include "space_parser.h"
 #include "token_parser.h"
+#include "complex_parser.h"
 #include "../wrap/lite/map.h"
 #include "../escape/read_string.h"
 #include "../helper/iface_cast.h"
@@ -28,6 +29,9 @@ namespace utils {
             repeat,
             fatal,
             allow_none,
+            space,
+            blank,
+            eol,
         };
 #define CONSUME_SPACE(line, eof)             \
     helper::space::consume_space(seq, line); \
@@ -272,10 +276,13 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec>
-            bool replace_weakref(auto& tok, auto& mp) {
+            bool replace_weakref(auto& tok, auto& mp, auto& fn, auto& str) {
+                auto rep = [&](auto& v) {
+                    return replace_weakref<Input, String, Kind, Vec>(v, mp, fn, str);
+                };
                 auto rep_each = [&](auto ptr) {
                     for (auto& v : ptr->subparser) {
-                        if (!replace_weakref<Input, String, Kind, Vec>(v, mp)) {
+                        if (!rep(v)) {
                             return false;
                         }
                     }
@@ -293,7 +300,23 @@ namespace utils {
                     auto ref = static_cast<WeakRef<Input, String, Kind, Vec>*>(&*tok);
                     auto found = mp.find(ref->tok);
                     if (found == mp.end()) {
-                        return false;
+                        if (helper::equal(ref->tok, "SPACE")) {
+                            auto kd = fn("space", KindMap::space);
+                            ref->subparser = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, str);
+                        }
+                        else if (helper::equal(ref->tok, "BLANK")) {
+                            auto kd = fn("blank", KindMap::blank);
+                            ref->subparser = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, str, true, true);
+                        }
+                        else if (helper::equal(ref->tok, "EOL")) {
+                            auto kd = fn("eol", KindMap::eol);
+                            ref->subparser = make_line<Input, String, Kind, Vec>(kd);
+                        }
+                        else {
+                            return false;
+                        }
+                        mp[ref->tok] = ref->subparser;
+                        return true;
                     }
                     ref->subparser = std::get<1>(*found);
                 }
@@ -305,16 +328,16 @@ namespace utils {
                     auto ref = static_cast<FuncParser<Input, String, Kind, Vec>*>(&*tok);
                     auto v = helper::iface_cast<FatalFunc<Input, String, Kind, Vec>>(&ref->func);
                     if (v) {
-                        return replace_weakref<Input, String, Kind, Vec>(v->subparser, mp);
+                        return rep(v->subparser);
                     }
                 }
                 else if (tok->declkind() == ParserKind::allow_none) {
                     auto ref = static_cast<AllowNoneParser<Input, String, Kind, Vec>*>(&*tok);
-                    return replace_weakref<Input, String, Kind, Vec>(ref->subparser, mp);
+                    return rep(ref->subparser);
                 }
                 else if (tok->declkind() == ParserKind::repeat) {
                     auto ref = static_cast<RepeatParser<Input, String, Kind, Vec>*>(&*tok);
-                    return replace_weakref<Input, String, Kind, Vec>(ref->subparser, mp);
+                    return rep(ref->subparser);
                 }
                 return true;
             }
@@ -350,7 +373,7 @@ namespace utils {
                 CONSUME_SPACE(false, false)
             }
             for (auto& v : desc) {
-                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc)) {
+                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn, std::get<0>(v))) {
                     return nullptr;
                 }
             }
