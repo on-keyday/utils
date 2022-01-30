@@ -467,7 +467,7 @@ namespace utils {
 
             template <class OutStr>
             OutStr force_as_string() const {
-                T t = T{};
+                OutStr t = OutStr{};
                 force_as_string(t);
                 return t;
             }

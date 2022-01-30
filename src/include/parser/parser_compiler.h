@@ -48,14 +48,43 @@ namespace utils {
                 wrap::set<String> symbol;
             };
 
-            template <class String>
+            enum class IgnoreKind {
+                none,
+                line,
+                space,
+                blank,
+            };
+
+            bool from_json(IgnoreKind& kind, auto& js) {
+                if (!js.is_string()) {
+                    return false;
+                }
+                auto v = wrap::string(js);
+                if (v == "space") {
+                    kind = IgnoreKind::space;
+                }
+                else if (v == "line") {
+                    kind = IgnoreKind::line;
+                }
+                else if (v == "blank") {
+                    kind = IgnoreKind::blank;
+                }
+                else {
+                    kind = IgnoreKind::none;
+                }
+                return true;
+            }
+
+            template <class Input, class String, class Kind, template <class...> class Vec>
             struct Config {
                 Sets<String> set;
-                bool ignore_space = false;
+                IgnoreKind ignore;
+                using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
+                parser_t space;
 
                 bool from_json(auto& js) {
                     JSON_PARAM_BEGIN(*this, js)
-                    FROM_JSON_OPT(ignore_space, "ignore_space")
+                    FROM_JSON_OPT(ignore, "ignore")
                     JSON_PARAM_END()
                 }
             };
@@ -211,25 +240,36 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_seq(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
-                auto root = compile_primary<Input, String, Kind, Vec>(tok, seq, fn, set);
-                if (!root) {
-                    return nullptr;
-                }
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_seq(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
+                auto prim = [&] {
+                    return compile_primary<Input, String, Kind, Vec>(tok, seq, fn, cfg);
+                };
                 using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
                 using and_t = wrap::shared_ptr<AndParser<Input, String, Kind, Vec>>;
                 and_t and_;
-                while (!seq.eos()) {
-                    CONSUME_SPACE(false, false)
-                    if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || helper::match_eol<false>(seq)) {
-                        break;
-                    }
+                parser_t root;
+                auto mkand = [&] {
                     if (!and_) {
                         auto kd = fn(tok, KindMap::and_);
                         and_ = make_and<Input, String, Kind, Vec>(Vec<parser_t>{root}, tok, kd);
                         root = and_;
                     }
-                    auto tmp = compile_primary<Input, String, Kind, Vec>(tok, seq, fn, set);
+                };
+                bool adjusent = false;
+                root = prim();
+                if (!root) {
+                    return nullptr;
+                }
+                if (cfg.ignore != IgnoreKind::none) {
+                    CONSUME_SPACE(false, false)
+                }
+                while (!seq.eos()) {
+                    CONSUME_SPACE(false, false)
+                    if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || helper::match_eol<false>(seq)) {
+                        break;
+                    }
+                    mkand();
+                    auto tmp = compile_primary<Input, String, Kind, Vec>(tok, seq, fn, cfg);
                     if (!tmp) {
                         return nullptr;
                     }
@@ -335,7 +375,7 @@ namespace utils {
                     if (found == mp.end()) {
                         if (helper::equal(ref->tok, "SPACE")) {
                             auto kd = fn("space", KindMap::space);
-                            ref->subparser = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, str);
+                            ref->subparser = blank_parser<Input, String, Kind, Vec>(kd, kd, kd, str, true, true);
                         }
                         else if (helper::equal(ref->tok, "BLANK")) {
                             auto kd = fn("blank", KindMap::blank);
@@ -392,7 +432,7 @@ namespace utils {
         wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Sequencer<Src>& seq, Fn&& fn = internal::def_Fn<Kind>()) {
             using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
             wrap::map<String, parser_t> desc;
-            internal::Config<String> cfg;
+            internal::Config<Input, String, Kind, Vec> cfg;
             bool cfg_set = false;
             while (!seq.eos()) {
                 CONSUME_SPACE(true, true)
