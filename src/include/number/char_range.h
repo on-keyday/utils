@@ -55,6 +55,14 @@ namespace utils {
             return number_transform[c] < radix;
         }
 
+        template <class C>
+        constexpr bool is_symbol_char(C&& c) {
+            return c >= 0x21 && c <= 0x2f ||  // ! ~ /
+                   c >= 0x3a && c <= 0x40 ||  // : ~ @
+                   c >= 0x5b && c <= 0x60 ||  // [ ~ `
+                   c >= 0x7b && c <= 0x7e;    // { ~ ~
+        }
+
         constexpr bool is_digit(std::uint8_t c) {
             return is_radix_char(c, 10);
         }

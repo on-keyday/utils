@@ -39,6 +39,12 @@ namespace utils {
 
         namespace internal {
 
+            bool is_symbol(auto&& v) {
+                helper::is_valid(v, [](auto&& c) {
+                    number::is_in_visible_range(c);
+                });
+            }
+
             template <class Input, class String, class Kind, template <class...> class Vec>
             struct FatalFunc {
                 wrap::shared_ptr<Parser<Input, String, Kind, Vec>> subparser;
