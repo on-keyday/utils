@@ -105,6 +105,10 @@ namespace utils {
             }
         }
 
+        constexpr bool acceptable_radix(int radix) {
+            return radix >= 2 && radix <= 36;
+        }
+
         enum class NumError {
             none,
             not_match,

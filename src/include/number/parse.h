@@ -99,7 +99,7 @@ namespace utils {
 
         template <class Result, class T>
         constexpr NumErr read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr) {
-            if (radix < 2 || radix > 36) {
+            if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }
             bool zerosize = true;

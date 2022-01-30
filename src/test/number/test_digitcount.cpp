@@ -6,12 +6,12 @@
 */
 
 
-// insert_space - space of str
-#pragma once
-#include <limits>
+#include <number/radix.h>
 
-namespace utils {
-    namespace number {
+void test_digitcount() {
+    constexpr auto e = utils::number::get_digit_count<size_t>(10);
+}
 
-    }  // namespace number
-}  // namespace utils
+int main() {
+    test_digitcount();
+}
