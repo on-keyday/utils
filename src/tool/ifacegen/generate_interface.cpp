@@ -518,6 +518,7 @@ namespace ifacegen {
             hlp::append(str, "& operator=(");
             hlp::append(str, iface.first);
             hlp::append(str, R"(&& in) {
+        if(this==std::addressof(in))return *this;
         delete iface;
         iface=in.iface;
         in.iface=nullptr;
@@ -626,6 +627,7 @@ namespace ifacegen {
                     hlp::append(str, "& operator=(const ");
                     hlp::append(str, iface.first);
                     hlp::append(str, R"(& in) {
+        if(std::addressof(in)==this)return *this;
         delete iface;
         iface=nullptr;
         if(in.iface){

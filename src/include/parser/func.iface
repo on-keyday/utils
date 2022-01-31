@@ -20,7 +20,7 @@ interface error {
     Error() string
     pos() Pos
     decltype() type
-    __copy__() type
+   __copy__() type
 }
 
 typeparam Input,String,Kind,^Vec

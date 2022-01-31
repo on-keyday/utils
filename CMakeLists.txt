@@ -136,6 +136,8 @@ target_link_libraries(jsonpath utils)
 target_link_libraries(parser utils)
 target_link_libraries(digitcount utils)
 
+target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
+
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
 
