@@ -42,11 +42,11 @@ struct error {
         }
 
         const void* raw__(const std::type_info& info__) const override {
-                if(info__!=typeid(T__)) {
+            if(info__!=typeid(T__)) {
                 return nullptr;
             }
-                return reinterpret_cast<const void*>(std::addressof(t_holder_));
-            }
+            return reinterpret_cast<const void*>(std::addressof(t_holder_));
+        }
 
     };
 
@@ -139,11 +139,11 @@ struct Func {
         }
 
         const void* raw__(const std::type_info& info__) const override {
-                if(info__!=typeid(T__)) {
+            if(info__!=typeid(T__)) {
                 return nullptr;
             }
-                return reinterpret_cast<const void*>(std::addressof(t_holder_));
-            }
+            return reinterpret_cast<const void*>(std::addressof(t_holder_));
+        }
 
     };
 

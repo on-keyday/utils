@@ -415,7 +415,7 @@ namespace ifacegen {
                         hlp::append(str, "const std::type_info&");
                     }
                     hlp::appends(str, " info__) const override {\n",
-                                 "                ",
+                                 "            ",
                                  "if(info__!=");
                     if (has_other_typeinfo) {
                         hlp::append(str, data.typeid_func);
