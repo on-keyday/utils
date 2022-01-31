@@ -23,7 +23,24 @@ namespace utils {
         }
 
         template <class T, class In>
+        const T* iface_cast(const In* in) {
+            if (!in) {
+                return nullptr;
+            }
+            return in->template type_assert<T>();
+        }
+
+        template <class T, class In>
         T iface_cast(In& in) {
+            auto res = in.template type_assert<T>();
+            if (!res) {
+                throw std::bad_cast();
+            }
+            return *res;
+        }
+
+        template <class T, class In>
+        const T iface_cast(const In& in) {
             auto res = in.template type_assert<T>();
             if (!res) {
                 throw std::bad_cast();
