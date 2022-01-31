@@ -450,10 +450,7 @@ namespace utils {
                             auto kd = fn("eol", KindMap::eol);
                             ref->subparser = make_line<Input, String, Kind, Vec>(kd);
                         }
-                        else if (helper::equal(ref->tok, "STRING") || helper::ends_with(ref->tok, "_STRING")) {
-                            auto kd = fn(ref->tok, KindMap::string);
-                            // ref->subparser = string_parser<Input, String, Kind, Vec>(kd, kd, kd, ref->tok, cfg.quote, cfg.esc, cfg.allow_line);
-                        }
+
                         else if (helper::equal(ref->tok, "ID")) {
                             Vec<String> kwd, sym;
                             for (auto& k : cfg.set.keyword) {
@@ -466,7 +463,16 @@ namespace utils {
                             ref->subparser = make_anyother<Input, String, Kind, Vec>(kwd, sym, kd);
                         }
                         else {
-                            return false;
+                            for (auto& v : cfg.strconfig) {
+                                if (helper::equal(ref->tok, v.replace)) {
+                                    auto kd = fn(ref->tok, KindMap::string);
+                                    ref->subparser = string_parser<Input, String, Kind, Vec>(kd, kd, kd, ref->tok, v.quote, v.esc, v.allow_line);
+                                    break;
+                                }
+                            }
+                            if (!ref->subparser) {
+                                return false;
+                            }
                         }
                         mp[ref->tok] = ref->subparser;
                         return true;
