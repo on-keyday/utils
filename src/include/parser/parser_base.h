@@ -26,28 +26,43 @@ namespace utils {
         template <class String, class Str2>
         struct RawMsgError {
             Str2 msg;
+            Pos pos_;
             String Error() {
                 return utf::convert<String>(msg);
+            }
+
+            Pos pos() {
+                return pos_;
             }
         };
 
         template <class String>
         struct TokenNotMatchError {
             String tok;
+            Pos pos_;
             String Error() {
                 String msg;
                 helper::appends(msg, "expect ", tok, " but not");
                 return msg;
+            }
+
+            Pos pos() {
+                return pos_;
             }
         };
 
         template <class String>
         struct UnexpectedTokenError {
             String tok;
+            Pos pos_;
             String Error() {
                 String msg;
                 helper::appends(msg, "unexpected token ", tok);
                 return msg;
+            }
+
+            Pos pos() {
+                return pos_;
             }
         };
 
@@ -59,7 +74,7 @@ namespace utils {
                 bool f = false;
                 for (auto& v : list) {
                     if (f) {
-                        helper::append(msg, "\n");
+                        helper::append(msg, ": ");
                     }
                     helper::append(msg, v.Error());
                     f = true;
@@ -69,6 +84,10 @@ namespace utils {
 
             Vec<error<String>>* get_list() {
                 return std::addressof(list);
+            }
+
+            Pos pos() {
+                return {};
             }
         };
 

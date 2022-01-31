@@ -106,6 +106,7 @@ namespace utils {
                     auto tmp = subparser->parse(seq, pos);
                     if (!tmp.tok || tmp.fatal) {
                         flag = -1;
+                        err = std::move(tmp.err);
                         return false;
                     }
                     flag = 2;
@@ -180,7 +181,7 @@ namespace utils {
 
                 ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
                     if (!subparser) {
-                        return {.fatal = true};
+                        return {.fatal = true, .err = RawMsgError<String, const char*>{"unresolved weak ref:"}};
                     }
                     return subparser->parse(seq, pos);
                 }

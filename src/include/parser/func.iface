@@ -18,6 +18,7 @@ macro Err error<String>
 typeparam string
 interface error {
     Error() string
+    pos() Pos
     decltype() type
 }
 

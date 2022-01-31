@@ -32,7 +32,7 @@ namespace utils {
                     pos.rptr = seq.rptr;
                     return {ret};
                 }
-                return {.err = TokenNotMatchError<String>{token}};
+                return {.err = TokenNotMatchError<String>{token, pos}};
             }
 
             ParserKind declkind() const override {
@@ -83,7 +83,7 @@ namespace utils {
                 for (auto& k : keyword) {
                     if (helper::equal(k, ret->token)) {
                         seq.rptr = beg;
-                        return {.err = UnexpectedTokenError<String>{ret->token}};
+                        return {.err = UnexpectedTokenError<String>{ret->token, pos}};
                     }
                 }
                 pos.pos += seq.rptr - beg;
@@ -154,10 +154,14 @@ namespace utils {
 
         auto string_rule(auto& end, auto& esc, bool allow_line) {
             auto strreader = helper::string_reader(end, esc, allow_line);
-            return [strreader](auto& seq, auto& tok, int& flag, auto&, auto& err) {
+            return [strreader](auto& seq, auto& tok, int& flag, auto& pos, auto& err) {
                 if (!strreader(seq, tok->token)) {
                     flag = -1;
-                    err = RawMsgError<decltype(tok->token), const char*>{"unexpected string like"};
+                    pos.rptr = seq.rptr;
+                    err = RawMsgError<decltype(tok->token), const char*>{
+                        "unexpected string like",
+                        pos,
+                    };
                     return false;
                 }
                 flag = 1;

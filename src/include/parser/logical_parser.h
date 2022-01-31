@@ -93,8 +93,9 @@ namespace utils {
                     if (tmp.tok) {
                         if (ret) {
                             input.rptr = begin;
+                            auto bf = posctx;
                             posctx = postmp;
-                            return {.err = RawMsgError<String, const char*>{"expect one element but not"}};
+                            return {.err = RawMsgError<String, const char*>{"expect one element but not", bf}};
                         }
                         sucpos = input.rptr;
                         suc = posctx;
