@@ -35,6 +35,7 @@ namespace utils {
             blank,
             eol,
             id,
+            string,
         };
 #define CONSUME_SPACE(line, eof)             \
     helper::space::consume_space(seq, line); \
@@ -82,12 +83,16 @@ namespace utils {
                 size_t debug;
                 using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
                 parser_t space;
-                String errors;
+                String quote;
+                String esc;
+                error<String> err;
 
                 bool from_json(auto& js) {
                     JSON_PARAM_BEGIN(*this, js)
                     FROM_JSON_OPT(ignore, "ignore")
                     FROM_JSON_OPT(debug, "debug_level")
+                    FROM_JSON_OPT(quote, "quote")
+                    FROM_JSON_OPT(esc, "escape")
                     JSON_PARAM_END()
                 }
             };
@@ -160,7 +165,7 @@ namespace utils {
                 String str;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
                     seq.rptr = beg;
-                    cfg.errors = utf::convert<String>("string escape failed");
+                    cfg.err = RawMsgError<String, const char*>{"string escape failed"};
                     return nullptr;
                 }
                 auto kd = fn(str, KindMap::token);
@@ -429,6 +434,10 @@ namespace utils {
                         else if (helper::equal(ref->tok, "EOL")) {
                             auto kd = fn("eol", KindMap::eol);
                             ref->subparser = make_line<Input, String, Kind, Vec>(kd);
+                        }
+                        else if (helper::equal(ref->tok, "STRING")) {
+                            auto kd = fn(ref->tok, KindMap::string);
+                            ref->subparser = string_parser<Input, String, Kind, Vec>(kd, kd, kd, ref->tok, cfg.quote, cfg.esc);
                         }
                         else if (helper::equal(ref->tok, "ID")) {
                             Vec<String> kwd, sym;

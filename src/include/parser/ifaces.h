@@ -143,7 +143,7 @@ namespace utils {
         struct Func {
            private:
             struct NOVTABLE__ interface__ {
-                virtual bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag, Pos& pos, error<String>& err) = 0;
+                virtual bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int& flag, Pos& pos, error<String>& err) = 0;
                 virtual const void* raw__(const std::type_info&) const = 0;
 
                 virtual ~interface__() {}
@@ -157,7 +157,7 @@ namespace utils {
                 implements__(V__&& args)
                     : t_holder_(std::forward<V__>(args)) {}
 
-                bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag, Pos& pos, error<String>& err) override {
+                bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int& flag, Pos& pos, error<String>& err) override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
                         throw std::bad_function_call();
@@ -214,7 +214,7 @@ namespace utils {
                 delete iface;
             }
 
-            bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int flag, Pos& pos, error<String>& err) {
+            bool operator()(Sequencer<Input>& seq, wrap::shared_ptr<Token<String, Kind, Vec>>& tok, int& flag, Pos& pos, error<String>& err) {
                 return iface ? iface->operator()(seq, tok, flag, pos, err) : throw std::bad_function_call();
             }
 
