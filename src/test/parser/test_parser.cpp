@@ -115,4 +115,6 @@ int main() {
     utils::wrap::cout_wrap() << res.err.Error() << "\n"
                              << str << "\n";
     utils::wrap::cout_wrap() << utils::json::to_string<utils::wrap::string>(js);
+    utils::parser::error<utils::wrap::string> err, v;
+    err = v;
 }

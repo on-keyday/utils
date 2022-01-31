@@ -488,8 +488,8 @@ namespace ifacegen {
     )");
             hlp::append(str, iface.first);
             hlp::appends(str, R"a((T__&& t) {
-        static_assert(std::is_same_v<T__,)a",
-                         iface.first, R"a(>,"can't accept same type")
+        static_assert(!std::is_same_v<T__,)a",
+                         iface.first, R"a(>,"can't accept same type");
         )a");
             if (any(flag & GenFlag::not_accept_null)) {
                 hlp::append(str, R"(if(!)");
