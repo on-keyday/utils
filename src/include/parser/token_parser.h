@@ -16,7 +16,7 @@
 #include "../number/parse.h"
 #include "../number/prefix.h"
 #include "../helper/string_reader.h"
-#include "func.h"
+#include "ifaces.h"
 
 namespace utils {
     namespace parser {

@@ -11,6 +11,7 @@
 
 #include "../core/sequencer.h"
 #include "token.h"
+//#include "ifaces.h"
 
 namespace utils {
     namespace parser {
@@ -19,6 +20,7 @@ namespace utils {
             using token_t = Token<String, Kind, Vec>;
             wrap::shared_ptr<token_t> tok;
             bool fatal;
+            //error<String> err;
         };
 
         enum class ParserKind {

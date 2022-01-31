@@ -81,6 +81,10 @@ namespace utils {
                 return iface != nullptr;
             }
 
+            bool operator==(std::nullptr_t) const {
+                return iface == nullptr;
+            }
+
             ~Func() {
                 delete iface;
             }
@@ -197,6 +201,10 @@ namespace utils {
                 return iface != nullptr;
             }
 
+            bool operator==(std::nullptr_t) const {
+                return iface == nullptr;
+            }
+
             ~IParser() {
                 delete iface;
             }
@@ -241,6 +249,8 @@ namespace utils {
            private:
             struct interface__ {
                 virtual string Error() = 0;
+                virtual const void* raw__() const = 0;
+                virtual const std::type_info& type__() const = 0;
 
                 virtual ~interface__() {}
             };
@@ -259,6 +269,14 @@ namespace utils {
                         return string{};
                     }
                     return t_ptr_->Error();
+                }
+
+                const void* raw__() const override {
+                    return reinterpret_cast<const void*>(std::addressof(t_holder_));
+                }
+
+                const std::type_info& type__() const override {
+                    return typeid(T__);
                 }
             };
 
@@ -293,12 +311,38 @@ namespace utils {
                 return iface != nullptr;
             }
 
+            bool operator==(std::nullptr_t) const {
+                return iface == nullptr;
+            }
+
             ~error() {
                 delete iface;
             }
 
             string Error() {
                 return iface ? iface->Error() : string{};
+            }
+
+            template <class T__>
+            const T__* type_assert() const {
+                if (!iface) {
+                    return nullptr;
+                }
+                if (iface->type__() != typeid(T__)) {
+                    return nullptr;
+                }
+                return reinterpret_cast<const T__*>(iface->raw__());
+            }
+
+            template <class T__>
+            T__* type_assert() {
+                if (!iface) {
+                    return nullptr;
+                }
+                if (iface->type__() != typeid(T__)) {
+                    return nullptr;
+                }
+                return reinterpret_cast<T__*>(const_cast<void*>(iface->raw__()));
             }
         };
 
