@@ -145,7 +145,7 @@ namespace utils {
                 auto v = w;
                 if (fatal) {
                     auto kd = fn("(fatal)", KindMap::fatal);
-                    auto tmp = make_func<Input, String, Kind, Vec>(FatalFunc<Input, String, Kind, Vec>{}, kd);
+                    auto tmp = make_func<Input, String, Kind, Vec>(FatalFunc<Input, String, Kind, Vec>{v}, kd);
                     v = tmp;
                 }
                 if (repeat) {

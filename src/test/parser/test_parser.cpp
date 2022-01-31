@@ -67,8 +67,9 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
         "ignore": "blank"
     }
     string_quote:="\""
-    DO:="1" "+" "1"
-    ROOT:=DO STRUCT ID STRUCT
+    DO:="1" "+" "1" "?"!
+    ROOT:=&ACTION
+    ACTION:=DO STRUCT ID STRUCT
     STRUCT:="struct" &SPACE ID BLANK? "{" BLANK? "}" 
 )");
     auto res = utils::parser::compile_parser<Input, string, TokKind, vector>(seq2, [](auto& tok, utils::parser::KindMap kind) {
