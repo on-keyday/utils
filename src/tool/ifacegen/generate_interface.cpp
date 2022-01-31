@@ -662,6 +662,8 @@ namespace ifacegen {
                 hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) = delete;\n\n");
                 hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) = delete;\n\n");
             }
+            hlp::appends(str, "    ", iface.first, "(", iface.first, "&) = delete;\n\n");
+            hlp::appends(str, "    ", iface.first, "& operator=(", iface.first, "&) = delete;\n\n");
             hlp::append(str, "};\n\n");
         }
         if (data.pkgname.size()) {
