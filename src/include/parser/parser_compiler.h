@@ -543,5 +543,11 @@ namespace utils {
             return std::get<1>(*found);
         }
 #undef CONSUME_SPACE
+
+        template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn = decltype(internal::def_Fn<Kind>())>
+        wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Src&& seq, Fn&& fn = internal::def_Fn<Kind>()) {
+            auto v = make_ref_seq(src);
+            return compile_parser<Inout, String, Kind, Vec>(v, fn);
+        }
     }  // namespace parser
 }  // namespace utils
