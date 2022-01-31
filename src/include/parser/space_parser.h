@@ -39,7 +39,7 @@ namespace utils {
                     pos.rptr = seq.rptr;
                     return {ret};
                 }
-                return {};
+                return {.err = RawMsgError<String, const char*>{"expect line but not"}};
             }
         };
 
@@ -56,7 +56,7 @@ namespace utils {
                     pos.rptr = seq.rptr;
                     return {ret};
                 }
-                return {};
+                return {.err = RawMsgError<String, const char*>{"expect space but not"}};
             }
         };
 
@@ -78,7 +78,7 @@ namespace utils {
                     pos.rptr = seq.rptr;
                     return {ret};
                 }
-                return {};
+                return {.err = RawMsgError<String, const char*>{"expect space but not"}};
             }
         };
 
