@@ -487,7 +487,9 @@ namespace ifacegen {
     template <class T__>
     )");
             hlp::append(str, iface.first);
-            hlp::append(str, R"a((T__&& t) {
+            hlp::appends(str, R"a((T__&& t) {
+        static_assert(std::is_same_v<T__,)a",
+                         iface.first, R"a(>,"can't accept same type")
         )a");
             if (any(flag & GenFlag::not_accept_null)) {
                 hlp::append(str, R"(if(!)");
@@ -539,6 +541,7 @@ namespace ifacegen {
     }
 
 )");
+            bool has_cpy = false;
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
                     hlp::append(str, R"(    template<class T__>
@@ -607,6 +610,7 @@ namespace ifacegen {
 )");
                 }
                 else if (func.funcname == copy_func) {
+                    has_cpy = true;
                     hlp::append(str, "    ");
                     hlp::append(str, iface.first);
                     hlp::append(str, "(const ");
@@ -651,6 +655,10 @@ namespace ifacegen {
 
 )");
                 }
+            }
+            if (!has_cpy) {
+                hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) =delete;\n\n");
+                hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) =delete;\n\n");
             }
             hlp::append(str, "};\n\n");
         }

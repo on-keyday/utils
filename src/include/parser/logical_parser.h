@@ -29,7 +29,7 @@ namespace utils {
                     return tmp;
                 }
                 if (!tmp.tok) {
-                    return {.err = tmp.err};
+                    return {.err = std::move(tmp.err)};
                 }
                 ret->child.push_back(tmp.tok);
                 tmp.tok->parent = ret;
@@ -183,7 +183,7 @@ namespace utils {
                     }
                     vec->push_back(std::move(ret.err));
                 }
-                return {.err = err};
+                return {.err = std::move(err)};
             }
 
             ParserKind declkind() const override {
