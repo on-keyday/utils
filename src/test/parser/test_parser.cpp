@@ -67,7 +67,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
         "ignore": "blank"
     }
     string_quote:="\""
-    DO:="1" "+" "1" "?"!
+    DO:="1" "+" "1"
     ROOT:=&ACTION
     ACTION:=DO STRUCT ID STRUCT
     STRUCT:="struct" &SPACE ID BLANK? "{" BLANK? "}" 
@@ -116,4 +116,15 @@ int main() {
     utils::wrap::cout_wrap() << res.err.Error() << "\n"
                              << str << "\n";
     utils::wrap::cout_wrap() << utils::json::to_string<utils::wrap::string>(js);
+    utils::parser::error<utils::wrap::string> err;
+    struct {
+        utils::wrap::string Error() {
+            return "this error is msvc";
+        }
+        utils::parser::Pos pos() {
+            return {};
+        }
+    } v{};
+    err = &v;
+    auto& r = utils::helper::iface_cast<decltype(v)&>(err);
 }

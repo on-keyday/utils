@@ -27,12 +27,12 @@ namespace utils {
             if (!in) {
                 return nullptr;
             }
-            return in->template type_assert<T>();
+            return in->template type_assert<std::remove_cvref_t<T>>();
         }
 
         template <class T, class In>
         T iface_cast(In& in) {
-            auto res = in.template type_assert<T>();
+            auto res = in.template type_assert<std::remove_cvref_t<T>>();
             if (!res) {
                 throw std::bad_cast();
             }
