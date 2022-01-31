@@ -561,7 +561,7 @@ namespace ifacegen {
                         else {
                             hlp::append(str, "typeid(T__)");
                         }
-                        hlp::append(str, ");");
+                        hlp::append(str, "));");
                     }
                     hlp::append(str, R"(
     }
@@ -599,7 +599,7 @@ namespace ifacegen {
                         else {
                             hlp::append(str, "typeid(T__)");
                         }
-                        hlp::append(str, ");");
+                        hlp::append(str, ")));");
                     }
                     hlp::append(str, R"(
     }
