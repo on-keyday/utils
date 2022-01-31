@@ -29,7 +29,6 @@ namespace utils {
                 virtual string Error() = 0;
                 virtual Pos pos() = 0;
                 virtual const void* raw__(const std::type_info&) const = 0;
-                virtual interface__* copy__() const = 0;
 
                 virtual ~interface__() {}
             };
@@ -63,10 +62,6 @@ namespace utils {
                         return nullptr;
                     }
                     return reinterpret_cast<const void*>(std::addressof(t_holder_));
-                }
-
-                interface__* copy__() const override {
-                    return new implements__<T__>(t_holder_);
                 }
             };
 
@@ -134,20 +129,9 @@ namespace utils {
                 return reinterpret_cast<T__*>(const_cast<void*>(iface->raw__(typeid(T__))));
             }
 
-            error(const error& in) {
-                if (in.iface) {
-                    iface = in.iface->copy__();
-                }
-            }
+            error(const error&) = delete;
 
-            error& operator=(const error& in) {
-                delete iface;
-                iface = nullptr;
-                if (in.iface) {
-                    iface = in.iface->copy__();
-                }
-                return *this;
-            }
+            error& operator=(const error&) = delete;
         };
 
         template <typename Input, typename String, typename Kind, template <typename...> typename Vec>

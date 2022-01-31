@@ -657,8 +657,8 @@ namespace ifacegen {
                 }
             }
             if (!has_cpy) {
-                hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) =delete;\n\n");
-                hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) =delete;\n\n");
+                hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) = delete;\n\n");
+                hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) = delete;\n\n");
             }
             hlp::append(str, "};\n\n");
         }
