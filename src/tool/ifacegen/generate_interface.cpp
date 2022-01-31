@@ -505,7 +505,7 @@ namespace ifacegen {
     }
 
     )a");
-            hlp::append(str, iface.first);
+            hlp::appends(str, "constexpr ", iface.first);
             hlp::append(str, "(");
             hlp::append(str, iface.first);
             hlp::append(str, R"(&& in) {
@@ -626,7 +626,7 @@ namespace ifacegen {
                     hlp::append(str, iface.first);
                     hlp::append(str, "& operator=(const ");
                     hlp::append(str, iface.first);
-                    hlp::append(str, R"(& in) {
+                    hlp::appends(str, R"(& in) {
         if(std::addressof(in)==this)return *this;
         delete iface;
         iface=nullptr;
@@ -636,7 +636,11 @@ namespace ifacegen {
         return *this;
     }
 
-)");
+    )",
+                                 iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
+                                 "    ", iface.first, "& operator=(", iface.first, "& in){\n",
+                                 "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);",
+                                 "    }\n\n");
                 }
                 else {
                     hlp::append(str, "    ");
@@ -661,9 +665,9 @@ namespace ifacegen {
             if (!has_cpy) {
                 hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) = delete;\n\n");
                 hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) = delete;\n\n");
+                hlp::appends(str, "    ", iface.first, "(", iface.first, "&) = delete;\n\n");
+                hlp::appends(str, "    ", iface.first, "& operator=(", iface.first, "&) = delete;\n\n");
             }
-            hlp::appends(str, "    ", iface.first, "(", iface.first, "&) = delete;\n\n");
-            hlp::appends(str, "    ", iface.first, "& operator=(", iface.first, "&) = delete;\n\n");
             hlp::append(str, "};\n\n");
         }
         if (data.pkgname.size()) {

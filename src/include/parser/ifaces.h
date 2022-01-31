@@ -81,7 +81,7 @@ namespace utils {
                 iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
             }
 
-            error(error&& in) {
+            constexpr error(error&& in) {
                 iface = in.iface;
                 in.iface = nullptr;
             }
@@ -133,6 +133,10 @@ namespace utils {
             error(const error&) = delete;
 
             error& operator=(const error&) = delete;
+
+            error(error&) = delete;
+
+            error& operator=(error&) = delete;
         };
 
         template <typename Input, typename String, typename Kind, template <typename...> typename Vec>
@@ -185,7 +189,7 @@ namespace utils {
                 iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
             }
 
-            Func(Func&& in) {
+            constexpr Func(Func&& in) {
                 iface = in.iface;
                 in.iface = nullptr;
             }
@@ -233,6 +237,10 @@ namespace utils {
             Func(const Func&) = delete;
 
             Func& operator=(const Func&) = delete;
+
+            Func(Func&) = delete;
+
+            Func& operator=(Func&) = delete;
         };
 
     }  // namespace parser
