@@ -107,7 +107,7 @@ namespace utils {
                 using JSON = JSONBase<String, Vec, Object>;
 
                 SFINAE_BLOCK_T_BEGIN(has_array_interface, std::declval<T&>().push_back(std::declval<helper::append_size_t<T>>()))
-                static bool invoke(T& t, JSON& json, FromFlag flag) {
+                static bool invoke(T& t, const JSON& json, FromFlag flag) {
                     if (!json.is_array()) {
                         return false;
                     }

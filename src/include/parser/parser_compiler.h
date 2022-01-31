@@ -76,6 +76,23 @@ namespace utils {
                 return true;
             }
 
+            template <class String>
+            struct StrConfig {
+                String replace;
+                String quote = utf::convert<String>("\"");
+                String esc = utf::convert<String>("\\");
+                bool allow_line = false;
+
+                bool from_json(auto& js) {
+                    JSON_PARAM_BEGIN(*this, js)
+                    FROM_JSON_PARAM(replace, "name")
+                    FROM_JSON_OPT(quote, "quote")
+                    FROM_JSON_OPT(esc, "escape")
+                    FROM_JSON_OPT(allow_line, "allow_line")
+                    JSON_PARAM_END()
+                }
+            };
+
             template <class Input, class String, class Kind, template <class...> class Vec>
             struct Config {
                 Sets<String> set;
@@ -83,18 +100,14 @@ namespace utils {
                 size_t debug;
                 using parser_t = wrap::shared_ptr<Parser<Input, String, Kind, Vec>>;
                 parser_t space;
-                String quote = utf::convert<String>("\"");
-                String esc = utf::convert<String>("\\");
+                Vec<StrConfig<String>> strconfig;
                 error<String> err;
-                bool allow_line = false;
 
                 bool from_json(auto& js) {
                     JSON_PARAM_BEGIN(*this, js)
                     FROM_JSON_OPT(ignore, "ignore")
                     FROM_JSON_OPT(debug, "debug_level")
-                    FROM_JSON_OPT(quote, "quote")
-                    FROM_JSON_OPT(esc, "escape")
-                    FROM_JSON_OPT(allow_line, "allow_line")
+                    FROM_JSON_OPT(strconfig, "string")
                     JSON_PARAM_END()
                 }
             };
@@ -439,7 +452,7 @@ namespace utils {
                         }
                         else if (helper::equal(ref->tok, "STRING") || helper::ends_with(ref->tok, "_STRING")) {
                             auto kd = fn(ref->tok, KindMap::string);
-                            ref->subparser = string_parser<Input, String, Kind, Vec>(kd, kd, kd, ref->tok, cfg.quote, cfg.esc, cfg.allow_line);
+                            // ref->subparser = string_parser<Input, String, Kind, Vec>(kd, kd, kd, ref->tok, cfg.quote, cfg.esc, cfg.allow_line);
                         }
                         else if (helper::equal(ref->tok, "ID")) {
                             Vec<String> kwd, sym;

@@ -66,7 +66,6 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     config:={
         "ignore": "blank"
     }
-    string_quote:="\""
     DO:="1" "+" "1"
     ROOT:=&ACTION
     ACTION:=DO STRUCT ID STRUCT
@@ -125,6 +124,6 @@ int main() {
             return {};
         }
     } v{};
-    err = &v;
+    err = v;
     auto& r = utils::helper::iface_cast<decltype(v)&>(err);
 }
