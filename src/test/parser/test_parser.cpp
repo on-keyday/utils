@@ -112,6 +112,7 @@ int main() {
     to_json(res.tok, js);
     utils::wrap::string str;
     utils::helper::write_src_loc(str, seq);
-    utils::wrap::cout_wrap() << str << "\n";
+    utils::wrap::cout_wrap() << res.err.Error() << "\n"
+                             << str << "\n";
     utils::wrap::cout_wrap() << utils::json::to_string<utils::wrap::string>(js);
 }
