@@ -7,7 +7,7 @@
 package utils::parser
 
 #generate code
-# tool\ifacegen -i src/include/parser/func.iface -o src/include/parser/ifaces.h --license -Sen --helper-deref "\"../helper/deref.h\""
+# tool\ifacegen -i src/include/parser/func.iface -o src/include/parser/ifaces.h --license -SenV --helper-deref "\"../helper/deref.h\""
 
 import "token.h"
 

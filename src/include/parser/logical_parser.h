@@ -25,8 +25,11 @@ namespace utils {
             result_t parse(Sequencer<Input>& input, Pos& posctx) override {
                 auto ret = make_token<String, Kind, Vec>(token, kind, posctx);
                 auto tmp = subparser->parse(input, posctx);
+                if (tmp.fatal) {
+                    return tmp;
+                }
                 if (!tmp.tok) {
-                    return {};
+                    return {.err = tmp.err};
                 }
                 ret->child.push_back(tmp.tok);
                 tmp.tok->parent = ret;
@@ -91,7 +94,7 @@ namespace utils {
                         if (ret) {
                             input.rptr = begin;
                             posctx = postmp;
-                            return {};
+                            return {.err = RawMsgError<String, const char*>{"expect one element but not"}};
                         }
                         sucpos = input.rptr;
                         suc = posctx;
@@ -159,6 +162,8 @@ namespace utils {
             }
 
             result_t parse(Sequencer<Input>& input, Pos& posctx) override {
+                error<String> err;
+                Vec<error<String>>* vec = nullptr;
                 for (auto& p : subparser) {
                     auto ret = p->parse(input, posctx);
                     if (ret.tok) {
@@ -167,8 +172,17 @@ namespace utils {
                     if (ret.fatal) {
                         return ret;
                     }
+                    if (!vec) {
+                        ListError<String, Vec> e;
+                        err = std::move(e);
+                        auto l = helper::iface_cast<ListError<String, Vec>>(&err);
+                        assert(l);
+                        vec = l->get_list();
+                        assert(vec);
+                    }
+                    vec->push_back(std::move(ret.err));
                 }
-                return {};
+                return {.err = err};
             }
 
             ParserKind declkind() const override {
@@ -204,7 +218,7 @@ namespace utils {
                         }
                         input.rptr = begin;
                         posctx = std::move(postmp);
-                        return {};
+                        return {.err = std::move(tmp.err)};
                     }
                     ret->child.push_back(tmp.tok);
                     tmp.tok->parent = ret;

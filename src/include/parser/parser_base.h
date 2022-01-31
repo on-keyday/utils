@@ -51,6 +51,27 @@ namespace utils {
             }
         };
 
+        template <class String, template <class...> class Vec>
+        struct ListError {
+            Vec<error<String>> list;
+            String Error() {
+                String msg;
+                bool f = false;
+                for (auto& v : list) {
+                    if (f) {
+                        helper::append(msg, "\n");
+                    }
+                    helper::append(msg, v.Error());
+                    f = true;
+                }
+                return msg;
+            }
+
+            Vec<error<String>>* get_list() {
+                return std::addressof(list);
+            }
+        };
+
         enum class ParserKind {
             null,
             token,
