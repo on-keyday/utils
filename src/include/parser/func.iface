@@ -28,3 +28,9 @@ interface IParser {
     const declkind() ParserKind
     decltype() type
 }
+
+
+typeparam string
+interface error {
+    Error() string
+}

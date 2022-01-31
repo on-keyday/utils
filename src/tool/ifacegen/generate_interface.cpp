@@ -517,8 +517,13 @@ namespace ifacegen {
         return iface != nullptr;
     }
 
-    ~)");
-            hlp::append(str, iface.first);
+    )");
+            hlp::appends(str, R"(bool operator==(std::nullptr_t) const {
+        return iface == nullptr;
+    }
+    
+    )");
+            hlp::appends(str, "~", iface.first);
             hlp::append(str, R"(() {
         delete iface;
     }

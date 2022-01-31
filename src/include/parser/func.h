@@ -236,5 +236,71 @@ namespace utils {
             }
         };
 
+        template <typename string>
+        struct error {
+           private:
+            struct interface__ {
+                virtual string Error() = 0;
+
+                virtual ~interface__() {}
+            };
+
+            template <class T__>
+            struct implements__ : interface__ {
+                T__ t_holder_;
+
+                template <class V__>
+                implements__(V__&& args)
+                    : t_holder_(std::forward<V__>(args)) {}
+
+                string Error() override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return string{};
+                    }
+                    return t_ptr_->Error();
+                }
+            };
+
+            interface__* iface = nullptr;
+
+           public:
+            constexpr error() {}
+
+            constexpr error(std::nullptr_t) {}
+
+            template <class T__>
+            error(T__&& t) {
+                if (!utils::helper::deref(t)) {
+                    return;
+                }
+                iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
+            }
+
+            error(error&& in) {
+                iface = in.iface;
+                in.iface = nullptr;
+            }
+
+            error& operator=(error&& in) {
+                delete iface;
+                iface = in.iface;
+                in.iface = nullptr;
+                return *this;
+            }
+
+            explicit operator bool() const {
+                return iface != nullptr;
+            }
+
+            ~error() {
+                delete iface;
+            }
+
+            string Error() {
+                return iface ? iface->Error() : string{};
+            }
+        };
+
     }  // namespace parser
 }  // namespace utils
