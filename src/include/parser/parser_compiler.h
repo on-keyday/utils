@@ -101,7 +101,7 @@ namespace utils {
             template <class Input, class String, class Kind, template <class...> class Vec>
             struct FatalFunc {
                 wrap::shared_ptr<Parser<Input, String, Kind, Vec>> subparser;
-                bool operator()(auto& seq, auto& tok, auto& flag, auto& pos) {
+                bool operator()(auto& seq, auto& tok, auto& flag, auto& pos, auto& err) {
                     auto b = pos;
                     auto tmp = subparser->parse(seq, pos);
                     if (!tmp.tok || tmp.fatal) {

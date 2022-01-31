@@ -407,7 +407,7 @@ namespace ifacegen {
         }
         
         )");*/
-                    hlp::appends(str, "const void* raw__(");
+                    hlp::appends(str, "    const void* raw__(");
                     if (has_other_typeinfo) {
                         hlp::append(str, data.typeid_type);
                     }
@@ -415,7 +415,7 @@ namespace ifacegen {
                         hlp::append(str, "const std::type_info&");
                     }
                     hlp::appends(str, " info__) const override {\n",
-                                 "            ",
+                                 "                ",
                                  "if(info__!=");
                     if (has_other_typeinfo) {
                         hlp::append(str, data.typeid_func);
@@ -428,8 +428,8 @@ namespace ifacegen {
                                  "return nullptr;\n",
                                  "            }");
                     hlp::append(str, R"(
-                return reinterpret_cast<const void*>(std::addressof(t_holder_));
-            }
+            return reinterpret_cast<const void*>(std::addressof(t_holder_));
+        }
 
     )");
                     /*hlp::append(str, R"(;

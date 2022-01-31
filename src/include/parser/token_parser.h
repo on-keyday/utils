@@ -32,7 +32,7 @@ namespace utils {
                     pos.rptr = seq.rptr;
                     return {ret};
                 }
-                return {};
+                return {.err = TokenNotMatchError<String>{token}};
             }
 
             ParserKind declkind() const override {
@@ -83,7 +83,7 @@ namespace utils {
                 for (auto& k : keyword) {
                     if (helper::equal(k, ret->token)) {
                         seq.rptr = beg;
-                        return {};
+                        return {.err = UnexpectedTokenError<String>{ret->token}};
                     }
                 }
                 pos.pos += seq.rptr - beg;
@@ -107,10 +107,11 @@ namespace utils {
                 size_t beg = seq.rptr;
                 int flag = 0;
                 auto ret = make_token<String, Kind, Vec>(String{}, kind, pos);
-                if (!func(seq, ret, flag, pos)) {
+                error<String> err;
+                if (!func(seq, ret, flag, pos, err)) {
                     seq.rptr = beg;
                     if (flag <= 0) {
-                        return {.fatal = flag < 0};
+                        return {.fatal = flag < 0, .err = std::move(err)};
                     }
                 }
                 if (flag == 1) {
@@ -153,9 +154,10 @@ namespace utils {
 
         auto string_rule(auto& end, auto& esc, bool allow_line) {
             auto strreader = helper::string_reader(end, esc, allow_line);
-            return [strreader](auto& seq, auto& tok, int& flag, auto&) {
+            return [strreader](auto& seq, auto& tok, int& flag, auto&, auto& err) {
                 if (!strreader(seq, tok->token)) {
                     flag = -1;
+                    err = RawMsgError<decltype(tok->token), const char*>{"unexpected string like"};
                     return false;
                 }
                 flag = 1;
@@ -163,8 +165,16 @@ namespace utils {
             };
         }
 
+        template <class String>
+        struct NumberError {
+            number::NumErr err;
+            String Error() {
+                return utf::convert<String>(error_message(err))
+            }
+        };
+
         auto number_rule(bool only_int = false, bool none_prefix = false) {
-            return [=](auto& seq, auto& tok, int& flag, auto&) {
+            return [=](auto& seq, auto& tok, int& flag, auto&, auto& err) {
                 size_t beg = seq.rptr;
                 int radix = 10;
                 if (!none_prefix) {
@@ -175,16 +185,18 @@ namespace utils {
                     }
                 }
                 if (!only_int && (radix == 10 || radix == 16)) {
-                    if (!number::parse_float(seq, tok->token, radix)) {
+                    if (auto e = number::parse_float(seq, tok->token, radix); !e) {
                         seq.rptr = beg;
                         flag = 0;
+                        err = NumberError<decltype(tok->token)>{e};
                         return false;
                     }
                 }
                 else {
-                    if (!number::parse_integer(seq, tok->token, radix)) {
+                    if (auto e = number::parse_integer(seq, tok->token, radix); !e) {
                         seq.rptr = beg;
                         flag = 0;
+                        err = NumberError<decltype(tok->token)>{e};
                         return false;
                     }
                 }

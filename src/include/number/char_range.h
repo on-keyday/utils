@@ -117,6 +117,14 @@ namespace utils {
             not_eof,
         };
 
+        BEGIN_ENUM_ERROR_MSG(NumError)
+        ENUM_ERROR_MSG(NumError::none, "no error")
+        ENUM_ERROR_MSG(NumError::not_match, "not match number")
+        ENUM_ERROR_MSG(NumError::invalid, "invalid input")
+        ENUM_ERROR_MSG(NumError::overflow, "number overflow")
+        ENUM_ERROR_MSG(NumError::not_eof, "expect eof but not")
+        END_ENUM_ERROR_MSG
+
         using NumErr = wrap::EnumWrap<NumError, NumError::none, NumError::not_match>;
         namespace internal {
             // copied from other
