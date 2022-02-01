@@ -33,7 +33,7 @@ namespace utils {
         };
 
         template <class Input, class String, class Kind, template <class...> class Vec>
-        struct RegexParser {
+        struct RegexParser : Parser<Input, String, Kind, Vec> {
             String regstr;
             std::regex reg;
             size_t least_read = 0;
@@ -133,7 +133,7 @@ namespace utils {
                         pos = postmp;
                         return decltype(ps){.err = RegexNotMatch<String>{regstr, b}};
                     }
-                    return ps;
+                    return std::move(ps);
                 };
                 if constexpr (std::is_same_v<String, wrap::string>) {
                     return call_match(ps.tok->token);
@@ -148,5 +148,27 @@ namespace utils {
                 return ParserKind::reg_other;
             }
         };
+
+        template <class Input, class String, class Kind, template <class...> class Vec, class Reg>
+        wrap::shared_ptr<RegexParser<Input, String, Kind, Vec>> make_regex(auto& regstr, Reg&& reg, Kind kind) {
+            auto p = wrap::make_shared<RegexParser<Input, String, Kind, Vec>>();
+            p->regstr = utf::convert<String>(regstr);
+            p->reg = std::move(reg);
+            p->kind = kind;
+            return kind;
+        }
+
+        template <class Input, class String, class Kind, template <class...> class Vec>
+        wrap::shared_ptr<AnyOtherRegexParser<Input, String, Kind, Vec>> make_regother(auto&& regstr, auto&& reg, Vec<String> keyword, Vec<String> symbol, Kind kind, bool no_space = true, bool no_line = true) {
+            auto ret = wrap::make_shared<AnyOtherRegexParser<Input, String, Kind, Vec>>();
+            ret->kind = kind;
+            ret->keyword = std::move(keyword);
+            ret->symbol = std::move(symbol);
+            ret->no_space = no_space;
+            ret->no_line = no_line;
+            ret->regstr = utf::convert<String>(regstr);
+            ret->reg = std::move(reg);
+            return ret;
+        }
     }  // namespace parser
 }  // namespace utils

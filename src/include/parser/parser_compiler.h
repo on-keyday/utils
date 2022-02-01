@@ -13,6 +13,7 @@
 #include "space_parser.h"
 #include "token_parser.h"
 #include "complex_parser.h"
+#include "regex_parser.h"
 #include "../wrap/lite/map.h"
 #include "../wrap/lite/set.h"
 #include "../escape/read_string.h"
@@ -41,6 +42,9 @@ namespace utils {
 #define CONSUME_SPACE(line, eof)             \
     helper::space::consume_space(seq, line); \
     if (eof && seq.eos()) return nullptr;
+#define CONSUME_SPACE_B(line, eof)           \
+    helper::space::consume_space(seq, line); \
+    if (eof && seq.eos()) return false;
 
         namespace internal {
 
@@ -232,18 +236,66 @@ namespace utils {
                 return v;
             }
 
+            template <class Src, class Str>
+            bool read_regex_part(Sequencer<Src>& seq, Str& str) {
+                CONSUME_SPACE_B(false, false)
+                if (!seq.consume_if('(')) {
+                    return false;
+                }
+                size_t count = 0;
+                while (!count && !seq.consume_if(')')) {
+                    if (seq.eos() || helper::match_eol<false>(seq)) {
+                        return false;
+                    }
+                    auto c = seq.current();
+                    if (c == '(' && seq.current(-1) != '\\') {
+                        count++;
+                    }
+                    else if (c == ')' && seq.current(-1) != '\\') {
+                        if (count == 0) {
+                            return false;
+                        }
+                        count--;
+                    }
+                    str.push_back(seq.current());
+                }
+                return true;
+            }
+
+            auto internal_make_reg(auto& reg, auto& cfg, auto&& cb) {
+                std::regex re;
+                using ret_t = decltype(cb(re));
+                using String = std::remove_cvref_t<decltype(reg)>;
+                if (reg.size() == 0) {
+                    cfg.err = RawMsgError<String, const char*>{"expect regex part but no part exist"};
+                    return ret_t{nullptr};
+                }
+                try {
+                    re = utf::convert<wrap::string>(reg);
+                } catch (std::regex_error& e) {
+                    cfg.err = RawMsgError<String, String>{utf::convert<String>(e.what())};
+                    return ret_t{nullptr};
+                }
+                return cb(re);
+            }
+
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<AnyOtherParser<Input, String, Kind, Vec>> read_not(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> read_not(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto beg = seq.rptr;
                 cfg.err = nullptr;
+                bool is_regex = false;
                 if (!seq.seek_if("not")) {
                     return nullptr;
+                }
+                if (seq.seek_if("reg")) {
+                    is_regex = true;
                 }
                 CONSUME_SPACE(false, false)
                 if (!seq.consume_if('(')) {
                     seq.rptr = beg;
                     return nullptr;
                 }
+                String reg;
                 Vec<String> keyword, symbol;
                 bool no_space = false, no_line = false;
                 bool is_keyword = true;
@@ -273,9 +325,15 @@ namespace utils {
                         is_keyword = false;
                         continue;
                     }
+                    else if (is_regex && !reg.size() && seq.seek_if("regex")) {
+                        if (!read_regex_part(seq, reg)) {
+                            cfg.err = RawMsgError<String, const char*>{"expect regex part but no part or invald regix exist"};
+                            return nullptr;
+                        }
+                        continue;
+                    }
                     String str;
                     if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
-                        seq.rptr = beg;
                         cfg.err = RawMsgError<String, const char*>{"string escape failed"};
                         return nullptr;
                     }
@@ -286,8 +344,16 @@ namespace utils {
                         symbol.push_back(std::move(str));
                     }
                 }
-                auto kd = fn("not", KindMap::anyother);
-                return make_anyother<Input, String, Kind, Vec>(std::move(keyword), std::move(symbol), kd, no_space, no_line);
+                if (is_regex) {
+                    return internal_make_reg(reg, cfg, [&](auto& re) {
+                        auto kd = fn("regnot", KindMap::anyother);
+                        return make_regother<Input, String, Kind, Vec>(reg, std::move(re), std::move(keyword), std::move(symbol), kd, no_space, no_line);
+                    });
+                }
+                else {
+                    auto kd = fn("not", KindMap::anyother);
+                    return make_anyother<Input, String, Kind, Vec>(std::move(keyword), std::move(symbol), kd, no_space, no_line);
+                }
             }
 
             template <class Kind>
@@ -646,6 +712,7 @@ namespace utils {
             return std::get<1>(*found);
         }
 #undef CONSUME_SPACE
+#undef CONSUME_SPACE_B
 
         template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn = decltype(internal::def_Fn<Kind>())>
         wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Src&& src, Fn&& fn = internal::def_Fn<Kind>()) {
