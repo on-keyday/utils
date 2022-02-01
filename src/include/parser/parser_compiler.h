@@ -390,7 +390,7 @@ namespace utils {
                 }
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
-                    if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || helper::match_eol<false>(seq)) {
+                    if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || helper::match_eol<false>(seq) || seq.eos()) {
                         break;
                     }
                     mkand(root);
@@ -418,7 +418,7 @@ namespace utils {
                 or_t or_;
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
-                    if (seq.current() != '/' || seq.current() == ']' || helper::match_eol<false>(seq)) {
+                    if (seq.current() != '/' || seq.current() == ']' || helper::match_eol<false>(seq) || seq.eos()) {
                         break;
                     }
                     if (!seq.consume_if('|')) {
@@ -448,7 +448,7 @@ namespace utils {
                 or_t or_;
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
-                    if (seq.current() == ']' || helper::match_eol<false>(seq)) {
+                    if (seq.current() == ']' || helper::match_eol<false>(seq) || seq.eos()) {
                         break;
                     }
                     if (!seq.consume_if('/')) {

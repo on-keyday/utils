@@ -62,15 +62,22 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
                                                                                 },
                                                                                 "struct", TokKind::segment);
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
-    auto seq2 = utils::make_ref_seq(R"(
+    auto seq2 = utils::make_ref_seq(R"v(
     config:={
         "ignore": "blank"
     }
+    IS:=not(
+        symbol 
+        "{" 
+        "}"
+        "("
+        ")"
+    )
     DO:="1" "+" "1"
     ROOT:=&ACTION
     ACTION:=DO STRUCT ID STRUCT
     STRUCT:="struct" &SPACE ID BLANK? "{" BLANK? "}" 
-)");
+)v");
     auto res = utils::parser::compile_parser<Input, string, TokKind, vector>(seq2, [](auto& tok, utils::parser::KindMap kind) {
         using namespace utils::parser;
         if (kind == KindMap::space || kind == KindMap::blank) {
