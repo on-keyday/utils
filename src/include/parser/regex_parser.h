@@ -108,7 +108,7 @@ namespace utils {
                     pos = postmp;
                     return {.err = RegexNotMatch<String>{regstr, b}};
                 }
-                return make_token<String, Kind, Vec>(cpy, kind, pos);
+                return {make_token<String, Kind, Vec>(cpy, kind, pos)};
             }
 
             ParserKind declkind() const override {
@@ -155,7 +155,7 @@ namespace utils {
             p->regstr = utf::convert<String>(regstr);
             p->reg = std::move(reg);
             p->kind = kind;
-            return kind;
+            return p;
         }
 
         template <class Input, class String, class Kind, template <class...> class Vec>

@@ -298,7 +298,7 @@ namespace utils {
                 auto beg = seq.rptr;
                 cfg.err = nullptr;
                 if (seq.seek_if("regex")) {
-                    return read_regex(seq, fn, cfg, beg);
+                    return read_regex<Input, String, Kind, Vec>(seq, fn, cfg, beg);
                 }
                 bool is_regex = false;
                 if (!seq.seek_if("not")) {
