@@ -179,10 +179,8 @@ namespace utils {
             wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto beg = seq.rptr;
                 String str;
-                cfg.err = nullptr;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
                     seq.rptr = beg;
-                    cfg.err = RawMsgError<String, const char*>{"string escape failed"};
                     return nullptr;
                 }
                 auto kd = fn(str, KindMap::token);
@@ -237,6 +235,7 @@ namespace utils {
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
             wrap::shared_ptr<AnyOtherParser<Input, String, Kind, Vec>> read_not(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto beg = seq.rptr;
+                cfg.err = nullptr;
                 if (!seq.seek_if("not")) {
                     return nullptr;
                 }
