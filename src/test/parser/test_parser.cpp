@@ -65,8 +65,20 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     auto str = utils::parser::string_parser<Input, string, TokKind, vector>(TokKind::string, TokKind::symbol, TokKind::segment, "string", "\"", "\\");
     auto seq2 = utils::make_ref_seq(R"v(
     config:={
-        "ignore": "blank"
+        "ignore": "blank",
+        "comment": {
+            "regex": "generate parser using regex",
+            "not": "generate anyother parser",
+            "regnot": "complex parser of `regex` and `not`"
+        }
     }
+    identifier2:=not(
+        keyword
+        "friend"
+        "struct"
+        symbol
+        "@"
+    )
     identifier:=&regnot(
         regex ([_a-zA-Z][_a-zA-Z0-9]{0,30})
         symbol 
