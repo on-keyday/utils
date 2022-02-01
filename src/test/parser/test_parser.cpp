@@ -16,6 +16,7 @@
 #include <parser/complex_parser.h>
 #include <parser/parser_compiler.h>
 #include <helper/line_pos.h>
+#include <regex>
 enum class TokKind {
     line,
     space,
@@ -66,7 +67,7 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     config:={
         "ignore": "blank"
     }
-    IS:=not(
+    identifier:=&not(
         symbol 
         "{" 
         "}"

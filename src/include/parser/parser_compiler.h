@@ -18,6 +18,8 @@
 #include "../escape/read_string.h"
 #include "../helper/iface_cast.h"
 #include "../json/convert_json.h"
+#include "../utf/view.h"
+#include <regex>
 
 namespace utils {
     namespace parser {
@@ -231,6 +233,19 @@ namespace utils {
                 v->kind = kd;
                 return v;
             }
+
+            template <class Input, class String, class Kind, template <class...> class Vec>
+            struct RegexParser {
+                std::regex reg;
+
+                ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
+                    wrap::string in;
+                    utf::U8View<wrap::string&> vi(in);
+
+                    while (true) {
+                    }
+                }
+            };
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
             wrap::shared_ptr<AnyOtherParser<Input, String, Kind, Vec>> read_not(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {

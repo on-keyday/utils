@@ -98,6 +98,10 @@ namespace utils {
             template <class... Args>
             constexpr View(Args&&... args)
                 : sequence(std::forward<Args>(args)...) {
+                resize();
+            }
+
+            constexpr void resize() {
                 if (count_converted_size()) {
                     read_one();
                 }
