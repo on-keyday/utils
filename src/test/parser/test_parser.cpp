@@ -67,7 +67,8 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     config:={
         "ignore": "blank"
     }
-    identifier:=&not(
+    identifier:=&regnot(
+        regex ([_a-zA-Z][_a-zA-Z0-9]{0,30})
         symbol 
         "{" 
         "}"

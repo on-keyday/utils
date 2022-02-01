@@ -259,6 +259,7 @@ namespace utils {
                         count--;
                     }
                     str.push_back(seq.current());
+                    seq.consume();
                 }
                 return true;
             }
