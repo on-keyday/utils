@@ -38,6 +38,7 @@ namespace utils {
             id,
             string,
             eof,
+            regex,
         };
 #define CONSUME_SPACE(line, eof)             \
     helper::space::consume_space(seq, line); \
@@ -280,9 +281,25 @@ namespace utils {
             }
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> read_not(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> read_regex(Sequencer<Src>& seq, Fn&& fn, auto& cfg, size_t beg) {
+                String reg;
+                if (!read_regex_part(seq, reg)) {
+                    cfg.err = RawMsgError<String, const char*>{"expect regex part but no part or invald regix exist"};
+                    return nullptr;
+                }
+                return internal_make_reg(reg, cfg, [&](auto& re) {
+                    auto kd = fn("regex", KindMap::regex);
+                    return make_regex<Input, String, Kind, Vec>(reg, re, kd);
+                });
+            }
+
+            template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> read_special(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto beg = seq.rptr;
                 cfg.err = nullptr;
+                if (seq.seek_if("regex")) {
+                    return read_regex(seq, fn, cfg, beg);
+                }
                 bool is_regex = false;
                 if (!seq.seek_if("not")) {
                     return nullptr;
@@ -373,7 +390,7 @@ namespace utils {
                 if (auto p = read_str<Input, String, Kind, Vec>(seq, fn, cfg)) {
                     return wrap_code(p);
                 }
-                else if (auto p3 = read_not<Input, String, Kind, Vec>(seq, fn, cfg); p3 || cfg.err != nullptr) {
+                else if (auto p3 = read_special<Input, String, Kind, Vec>(seq, fn, cfg); p3 || cfg.err != nullptr) {
                     if (cfg.err != nullptr) {
                         return nullptr;
                     }
