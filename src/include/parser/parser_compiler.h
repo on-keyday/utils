@@ -301,11 +301,11 @@ namespace utils {
                     return read_regex<Input, String, Kind, Vec>(seq, fn, cfg, beg);
                 }
                 bool is_regex = false;
-                if (!seq.seek_if("not")) {
-                    return nullptr;
-                }
-                if (seq.seek_if("reg")) {
+                if (seq.seek_if("regnot")) {
                     is_regex = true;
+                }
+                else if (!seq.seek_if("not")) {
+                    return nullptr;
                 }
                 CONSUME_SPACE(false, false)
                 if (!seq.consume_if('(')) {
