@@ -233,6 +233,63 @@ namespace utils {
                 return v;
             }
 
+            template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
+            wrap::shared_ptr<AnyOtherParser<Input, String, Kind, Vec>> read_not(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
+                auto beg = seq.rptr;
+                if (!seq.seek_if("not")) {
+                    return nullptr;
+                }
+                CONSUME_SPACE(false, false)
+                if (!seq.consume_if('(')) {
+                    seq.rptr = beg;
+                    return nullptr;
+                }
+                Vec<String> keyword, symbol;
+                bool no_space = false, no_line = false;
+                bool is_keyword = true;
+                while (true) {
+                    CONSUME_SPACE(true, false)
+                    if (seq.consume_if(')')) {
+                        break;
+                    }
+                    if (seq.eos()) {
+                        cfg.err = RawMsgError<String, const char*>{"unexpected eof"};
+                        seq.rptr = beg;
+                        return nullptr;
+                    }
+                    if (seq.seek_if("line")) {
+                        no_line = true;
+                        continue;
+                    }
+                    else if (seq.seek_if("space")) {
+                        no_space = true;
+                        continue;
+                    }
+                    else if (seq.seek_if("keyword")) {
+                        is_keyword = true;
+                        continue;
+                    }
+                    else if (seq.seek_if("symbol")) {
+                        is_keyword = false;
+                        continue;
+                    }
+                    String str;
+                    if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
+                        seq.rptr = beg;
+                        cfg.err = RawMsgError<String, const char*>{"string escape failed"};
+                        return nullptr;
+                    }
+                    if (is_keyword) {
+                        keyword.push_back(std::move(str));
+                    }
+                    else {
+                        symbol.push_back(std::move(str));
+                    }
+                }
+                auto kd = fn("anyother", KindMap::anyother);
+                return make_anyother<Input, String, Kind, Vec>(std::move(keyword), std::move(symbol), kd, no_space, no_line);
+            }
+
             template <class Kind>
             constexpr auto def_Fn() {
                 return [](auto&&, auto&&) { return Kind{}; };
@@ -585,7 +642,7 @@ namespace utils {
 #undef CONSUME_SPACE
 
         template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn = decltype(internal::def_Fn<Kind>())>
-        wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Src&& seq, Fn&& fn = internal::def_Fn<Kind>()) {
+        wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Src&& src, Fn&& fn = internal::def_Fn<Kind>()) {
             auto v = make_ref_seq(src);
             return compile_parser<Inout, String, Kind, Vec>(v, fn);
         }
