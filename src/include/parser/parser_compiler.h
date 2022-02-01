@@ -179,6 +179,7 @@ namespace utils {
             wrap::shared_ptr<TokenParser<Input, String, Kind, Vec>> read_str(Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto beg = seq.rptr;
                 String str;
+                cfg.err = nullptr;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape, escape::go_prefix())) {
                     seq.rptr = beg;
                     cfg.err = RawMsgError<String, const char*>{"string escape failed"};
