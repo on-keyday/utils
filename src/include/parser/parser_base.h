@@ -106,6 +106,7 @@ namespace utils {
             only_one,
             weak_ref,
             regex,
+            reg_other,
             other,
         };
 

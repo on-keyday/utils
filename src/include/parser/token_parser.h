@@ -47,6 +47,7 @@ namespace utils {
             Vec<String> symbol;
             bool no_space = false;
             bool no_line = false;
+
             ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
                 size_t beg = seq.rptr;
                 wrap::shared_ptr<Token<String, Kind, Vec>> ret;

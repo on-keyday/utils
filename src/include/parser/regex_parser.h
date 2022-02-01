@@ -11,11 +11,30 @@
 #include <regex>
 #include "parser_base.h"
 #include "../wrap/lite/string.h"
+#include "token_parser.h"
+#include "../utf/convert.h"
 
 namespace utils {
     namespace parser {
+
+        template <class String>
+        struct RegexNotMatch {
+            String regstr;
+            Pos pos_;
+            String Error() {
+                String msg;
+                helper::appends(msg, "regex `", regstr, "` not matched");
+                return msg;
+            }
+
+            Pos pos() {
+                return pos_;
+            }
+        };
+
         template <class Input, class String, class Kind, template <class...> class Vec>
         struct RegexParser {
+            String regstr;
             std::regex reg;
             size_t least_read = 0;
             bool is_binary = false;
@@ -56,7 +75,9 @@ namespace utils {
                         if (is_binary) {
                             if constexpr (sizeof(c) != 1) {
                                 seq.rptr = beg;
-                                return {.err = RawMsgError<String, const char*>{"expect binary regex but input size is not 1"}};
+                                auto b = pos;
+                                pos = postmp;
+                                return {.err = RawMsgError<String, const char*>{"expect binary regex but input size is not 1", b}};
                             }
                             else {
                                 in.push_back(c);
@@ -65,7 +86,9 @@ namespace utils {
                         else {
                             if (!utf::convert_one(seq, in)) {
                                 seq.rptr = beg;
-                                return {.err = RawMsgError<String, const char*>{"unexpected utf code point"}};
+                                auto b = pos;
+                                pos = postmp;
+                                return {.err = RawMsgError<String, const char*>{"unexpected utf code point", b}};
                             }
                         }
                     }
@@ -81,14 +104,48 @@ namespace utils {
                     incrpos();
                 }
                 if (cpy.size() == 0 || count <= least_read) {
+                    auto b = pos;
                     pos = postmp;
-                    return nullptr;
+                    return {.err = RegexNotMatch<String>{regstr, b}};
                 }
                 return make_token<String, Kind, Vec>(cpy, kind, pos);
             }
 
             ParserKind declkind() const override {
                 return ParserKind::regex;
+            }
+        };
+
+        template <class Input, class String, class Kind, template <class...> class Vec>
+        struct AnyOtherRegexParser : AnyOtherParser<Input, String, Kind, Vec> {
+            String regstr;
+            std::regex reg;
+
+            ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
+                auto postmp = pos;
+                auto ps = AnyOtherParser<Input, String, Kind, Vec>::parse(seq, pos);
+                if (!ps.tok) {
+                    return ps;
+                }
+                auto call_match = [&](auto& v) {
+                    if (!std::regex_match(v, reg)) {
+                        auto b = pos;
+                        pos = postmp;
+                        return decltype(ps){.err = RegexNotMatch<String>{regstr, b}};
+                    }
+                    return ps;
+                };
+                if constexpr (std::is_same_v<String, wrap::string>) {
+                    return call_match(ps.tok->token);
+                }
+                else {
+                    auto tmp = utf::convert<wrap::string>(ps.tok->token);
+                    return call_match(tmp);
+                }
+            }
+
+            ParserKind declkind() const override {
+                return ParserKind::reg_other;
             }
         };
     }  // namespace parser
