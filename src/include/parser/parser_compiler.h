@@ -286,7 +286,7 @@ namespace utils {
                         symbol.push_back(std::move(str));
                     }
                 }
-                auto kd = fn("anyother", KindMap::anyother);
+                auto kd = fn("not", KindMap::anyother);
                 return make_anyother<Input, String, Kind, Vec>(std::move(keyword), std::move(symbol), kd, no_space, no_line);
             }
 
@@ -299,19 +299,25 @@ namespace utils {
             wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_some(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set);
 
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
-            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_primary(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
+            wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_primary(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& cfg) {
                 auto wrap_code = [&](auto& p) {
                     return wrap_elm<Input, String, Kind, Vec>(p, seq, fn);
                 };
                 CONSUME_SPACE(false, false)
-                if (auto p = read_str<Input, String, Kind, Vec>(seq, fn, set)) {
+                if (auto p = read_str<Input, String, Kind, Vec>(seq, fn, cfg)) {
                     return wrap_code(p);
+                }
+                else if (auto p3 = read_not<Input, String, Kind, Vec>(seq, fn, cfg); p3 || cfg.err != nullptr) {
+                    if (cfg.err != nullptr) {
+                        return nullptr;
+                    }
+                    return wrap_code(p3);
                 }
                 else if (auto p2 = read_anyother<Input, String, Kind, Vec>(seq, fn)) {
                     return wrap_code(p2);
                 }
                 else if (seq.consume_if('[')) {
-                    auto se = compile_some<Input, String, Kind, Vec>(tok, seq, fn, set);
+                    auto se = compile_some<Input, String, Kind, Vec>(tok, seq, fn, cfg);
                     if (!se || !seq.consume_if(']')) {
                         return nullptr;
                     }
