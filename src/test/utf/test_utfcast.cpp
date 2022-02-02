@@ -14,6 +14,9 @@ void test_utfcast() {
     utf::cast_fn<wrap::string>("invoke", [](auto& v) {
         static_assert(std::is_same_v<wrap::string, std::remove_reference_t<decltype(v)>>, "expect type but not");
     });
+    utf::cast_fn<wrap::string, true>("invoke", [](auto& v) {
+        static_assert(std::is_same_v<const char*, std::decay_t<decltype(v)>>, "expect type but not");
+    });
 }
 
 int main() {
