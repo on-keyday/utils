@@ -68,6 +68,7 @@ add_executable(to_json "src/test/json/test_to_json.cpp")
 add_executable(jsonpath "src/test/json/test_jsonpath.cpp")
 add_executable(parser "src/test/parser/test_parser")
 add_executable(digitcount "src/test/number/test_digitcount.cpp")
+add_executable(utfcast "src/test/utf/test_utfcast.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"

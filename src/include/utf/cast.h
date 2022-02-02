@@ -17,13 +17,13 @@ namespace utils {
 
             SFINAE_BLOCK_TU_BEGIN(is_constructible_by, std::declval<T&>() = std::declval<U>())
             template <bool, class Uv, class Fn>
-            static bool cast_fn(Uv&& u, Fn&& fn) {
+            constexpr static bool cast_fn(Uv&& u, Fn&& fn) {
                 fn(u);
                 return true;
             }
             SFINAE_BLOCK_TU_ELSE(is_constructible_by)
             template <bool mask_failure, class Uv, class Fn>
-            static bool cast_fn(Uv&& u, Fn&& fn) {
+            constexpr static bool cast_fn(Uv&& u, Fn&& fn) {
                 T v;
                 if (!utf::convert<mask_failure>(u, v)) {
                     return false;
@@ -34,15 +34,15 @@ namespace utils {
             SFINAE_BLOCK_TU_END()
 
             template <bool constructible, bool mask_failure, class Out, class In, class Fn>
-            bool cast_fn(std::enable_if_t<!constructible && std::is_same_v<Out, std::remove_cvref_t<In>>, In>&& in, Fn&& fn) {
+            constexpr bool cast_fn(std::enable_if_t<!constructible && std::is_same_v<Out, std::remove_cvref_t<In>>, In>&& in, Fn&& fn) {
                 fn(in);
                 return true;
             }
 
             template <bool constructible, bool mask_failure, class Out, class In, class Fn>
-            bool cast_fn(std::enable_if_t<!constructible && !std::is_same_v<Out, std::remove_cvref_t<In>>, In>&& in, Fn&& fn) {
+            constexpr bool cast_fn(std::enable_if_t<!constructible && !std::is_same_v<Out, std::remove_cvref_t<In>>, In>&& in, Fn&& fn) {
                 Out v;
-                if (!utf::convert<mask_failure>(u, v)) {
+                if (!utf::convert<mask_failure>(in, v)) {
                     return false;
                 }
                 fn(v);
@@ -50,15 +50,15 @@ namespace utils {
             }
 
             template <bool constructible, bool mask_failure, class Out, class In, class Fn>
-            bool cast_fn(std::enable_if_t<constructible, In>&& in, Fn&& fn) {
+            constexpr bool cast_fn(std::enable_if_t<constructible, In>&& in, Fn&& fn) {
                 return is_constructible_by<Out, std::remove_reference_t<In>>::template cast_fn<mask_failure>(in, fn);
             }
 
         }  // namespace internal
 
         template <class Out, bool constructible = false, bool mask_failure = false, class In, class Fn>
-        bool cast_fn(In&& in, Fn&& fn) {
-            return internal::cast_fn<constructible, mask_failure, Out, In, Fn>(in, fn);
+        constexpr bool cast_fn(In&& in, Fn&& fn) {
+            return internal::cast_fn<constructible, mask_failure, Out, In>(in, fn);
         }
     }  // namespace utf
 }  // namespace utils
