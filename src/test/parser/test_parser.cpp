@@ -67,12 +67,20 @@ parser_t<Input> make_parser(utils::Sequencer<Input>& seq) {
     config:={
         "ignore": "blank",
         "comment": {
+            "config": "config parameter",
             "regex": "generate parser using regex",
             "not": "generate anyother parser",
-            "regnot": "complex parser of `regex` and `not`"
+            "regnot": "complex parser of `regex` and `not`",
+            "&": "adjacent if ignore option is not none",
+            "*": "repeat",
+            "?": "allow none",
+            "[]": "block",
+            "\"`'":  "literal",
         }
     }
-    identifier2:=not(
+    identifier2:=&not(
+        space
+        line
         keyword
         "friend"
         "struct"
