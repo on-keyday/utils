@@ -249,7 +249,7 @@ namespace ifacegen {
                 return;
             }
             hlp::append(str, baseindent);
-            hlp::append(str, "virtual const char* raw__(");
+            hlp::append(str, "virtual const void* raw__(");
             if (!unsafe_raw) {
                 append_typeid();
             }
@@ -260,7 +260,7 @@ namespace ifacegen {
                 return;
             }
             hlp::append(str, baseindent);
-            hlp::append(str, "const char* raw__(");
+            hlp::append(str, "const void* raw__(");
             if (!unsafe_raw) {
                 append_typeid();
                 hlp::append(str, "info__");

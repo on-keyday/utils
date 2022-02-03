@@ -75,3 +75,7 @@ typeparam T
 interface Array {
     const __array__(index size_t) T
 }
+
+interface Unsafe {
+    __unsafe__() type
+}
