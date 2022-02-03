@@ -77,7 +77,6 @@ interface Array {
 }
 
 interface Unsafe {
-    decltype() type
     typeid() type
     __unsafe__() type
 }
