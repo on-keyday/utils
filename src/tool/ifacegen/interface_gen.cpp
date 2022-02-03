@@ -92,6 +92,7 @@ Special Value:
         __copy__ - generate copy constructor and copy assign ex) __copy__() type (`type` is placeholder)
         __call__ - generate `operator()` ex) __call__(num int) int 
         __array__ - generate `operator[]` ex)__array__(index size_t) char
+        __unsafe__ - generate unsafe raw pointer getter (short cut)
     Default Value:
         panic - generate throw std::bad_function_call()
 )";
