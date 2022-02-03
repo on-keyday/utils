@@ -20,6 +20,7 @@ namespace ifacegen {
     constexpr auto copy_func = "__copy__";
     constexpr auto call_func = "__call__";
     constexpr auto array_op = "__array__";
+    constexpr auto unsafe_func = "__unsafe__";
 
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, Alias>* alias) {
         if (alias) {
@@ -395,6 +396,10 @@ namespace ifacegen {
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
         auto typeid_fn = any(flag & GenFlag::need_typeidfun);
+        if (data.has_unsafe) {
+            flag |= GenFlag::unsafe_raw;
+            typeid_fn = true;
+        }
         auto append_typeid = [&] {
             if (has_other_typeinfo) {
                 hlp::append(str, data.typeid_type);
@@ -490,11 +495,21 @@ namespace ifacegen {
             }
             hlp::append(str, R"(interface__ {
 )");
+            bool raw_gened = false;
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
-                    render_cpp_raw__func("         ", flag, str, 0, append_typeid, append_typefn);
+                    if (!raw_gened) {
+                        render_cpp_raw__func("         ", flag, str, 0, append_typeid, append_typefn);
+                        raw_gened = true;
+                    }
                     if (typeid_fn) {
                         render_cpp_type__func("        ", flag, str, 0, append_typeid, append_typefn);
+                    }
+                }
+                else if (func.funcname == unsafe_func) {
+                    if (!raw_gened) {
+                        render_cpp_raw__func("        ", flag, str, 0, append_typeid, append_typefn);
+                        raw_gened = true;
                     }
                 }
                 else if (func.funcname == copy_func) {
@@ -519,11 +534,21 @@ namespace ifacegen {
             :t_holder_(std::forward<V__>(args)){}
 
 )");
+            raw_gened = false;
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
-                    render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
+                    if (!raw_gened) {
+                        render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
+                        raw_gened = true;
+                    }
                     if (typeid_fn) {
                         render_cpp_type__func("        ", flag, str, 1, append_typeid, append_typefn);
+                    }
+                }
+                else if (func.funcname == unsafe_func) {
+                    if (!raw_gened) {
+                        render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
+                        raw_gened = true;
                     }
                 }
                 else if (func.funcname == copy_func) {

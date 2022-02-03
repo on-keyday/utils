@@ -69,6 +69,9 @@ namespace ifacegen {
                 }
                 else {
                     state.iface.funcname = result.token();
+                    if (state.iface.funcname == "__unsafe__") {
+                        state.data.has_unsafe = true;
+                    }
                 }
                 return true;
             }
