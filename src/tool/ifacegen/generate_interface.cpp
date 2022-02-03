@@ -605,7 +605,7 @@ namespace ifacegen {
         return nullptr;)");
                     }
                     else {
-                        hlp::appends(str, R"(    return reinterpret_cast<T__*>(const_cast<void*>(iface->raw__()");
+                        hlp::appends(str, R"(return reinterpret_cast<T__*>(const_cast<void*>(iface->raw__()");
                         append_typefn();
                         hlp::append(str, ")));");
                     }
@@ -614,6 +614,7 @@ namespace ifacegen {
     
 )");
                     if (typeid_fn) {
+                        hlp::append(str, "    ");
                         append_typeid();
                         hlp::append(str, " type_id() const {");
                         hlp::append(str, R"(
