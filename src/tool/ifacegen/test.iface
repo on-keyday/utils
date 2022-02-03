@@ -78,4 +78,5 @@ interface Array {
 
 interface Unsafe {
     __unsafe__() type
+    decltype() type
 }

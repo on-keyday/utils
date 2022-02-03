@@ -508,7 +508,7 @@ namespace ifacegen {
                 }
                 else if (func.funcname == unsafe_func) {
                     if (!raw_gened) {
-                        render_cpp_raw__func("       ", flag, str, 0, append_typeid, append_typefn);
+                        render_cpp_raw__func("        ", flag, str, 0, append_typeid, append_typefn);
                         raw_gened = true;
                     }
                 }
