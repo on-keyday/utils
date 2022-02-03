@@ -499,7 +499,7 @@ namespace ifacegen {
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
                     if (!raw_gened) {
-                        render_cpp_raw__func("         ", flag, str, 0, append_typeid, append_typefn);
+                        render_cpp_raw__func("        ", flag, str, 0, append_typeid, append_typefn);
                         raw_gened = true;
                     }
                     if (typeid_fn) {
@@ -508,12 +508,12 @@ namespace ifacegen {
                 }
                 else if (func.funcname == unsafe_func) {
                     if (!raw_gened) {
-                        render_cpp_raw__func("        ", flag, str, 0, append_typeid, append_typefn);
+                        render_cpp_raw__func("       ", flag, str, 0, append_typeid, append_typefn);
                         raw_gened = true;
                     }
                 }
                 else if (func.funcname == copy_func) {
-                    hlp::append(str, "        virtual interface__* copy__() const = 0;\n    ");
+                    hlp::append(str, "        virtual interface__* copy__() const = 0;\n");
                 }
                 else {
                     hlp::append(str, "        virtual ");
@@ -552,10 +552,10 @@ namespace ifacegen {
                     }
                 }
                 else if (func.funcname == copy_func) {
-                    hlp::appends(str, R"(    interface__* copy__() const override {
+                    hlp::appends(str, R"(        interface__* copy__() const override {
             )",
                                  "return new implements__<T__>(t_holder_);", R"(
-            }
+        }
 
 )");
                 }
@@ -676,6 +676,23 @@ namespace ifacegen {
 
 )");
                     }
+                }
+                else if (func.funcname == unsafe_func) {
+                    hlp::append(str, R"(    const void* unsafe_cast() const {
+        if(!iface){
+            return nullptr;
+        }
+        return iface->raw__();
+    }
+
+    void* unsafe_cast() {
+        if(!iface){
+            return nullptr;
+        }
+        return const_cast<void*>(iface->raw__());
+    }
+
+)");
                 }
                 else if (func.funcname == copy_func) {
                     has_cpy = true;
