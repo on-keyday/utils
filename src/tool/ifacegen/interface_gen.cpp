@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
         .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd)
         .set("use-dynamic-cast,d", bool_option(true), "use dynamic cast for type assert", OptFlag::once_in_cmd)
         .set("separate,S", bool_option(true), "separate namespace by ::", OptFlag::once_in_cmd)
-        .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd);
+        .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd)
+        .set("need-typeid,T", bool_option(true), "add type id func with type assert func", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -131,6 +132,9 @@ Special Value:
     }
     if (auto v = result.is_set("independent"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::not_depend_lib;
+    }
+    if (result.is_true("need-typeid")) {
+        flag |= ifacegen::GenFlag::need_typeidfun;
     }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {

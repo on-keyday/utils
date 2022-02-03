@@ -6,7 +6,7 @@
 # test - ifacegen test
 
 # generate code
-# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -de
+# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -eT
 
 package test::util # `package` will be namespace
 
