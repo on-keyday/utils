@@ -15,9 +15,13 @@ namespace utils {
         struct LiteLock {
             std::atomic_flag flag;
             void lock() {
-                while (flag.test_and_set() == true) {
+                while (try_lock()) {
                     flag.wait(true);
                 }
+            }
+
+            bool try_lock() {
+                return flag.test_and_set() == true;
             }
 
             void unlock() {
