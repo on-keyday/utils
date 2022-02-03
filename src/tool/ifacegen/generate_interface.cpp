@@ -212,6 +212,107 @@ namespace ifacegen {
         hlp::appends(str, "} // namespace ", name, "\n");
     }
 
+    void render_cpp_typeidcond(auto& str, auto& cmpbase, auto&& baseindent, auto& append_typefn) {
+        hlp::appends(str, baseindent, "if (", cmpbase, "!=");
+        append_typefn();
+        hlp::appends(str, ") {\n", baseindent, "    return nullptr;\n");
+        hlp::appends(str, baseindent, "}\n");
+    }
+
+    void render_cpp_type__func(utw::string baseindent,
+                               GenFlag flag, auto& str, int place, auto& append_typeid, auto& append_typefn) {
+        if (place == 0) {
+            hlp::append(str, baseindent);
+            hlp::append(str, "virtual ");
+            append_typeid();
+            hlp::append(str, " type__() const = 0;\n");
+        }
+        else if (place == 1) {
+            hlp::append(str, baseindent);
+            append_typeid();
+            hlp::append(str, " type__() const override {\n");
+            hlp::appends(str, baseindent, "    return ");
+            append_typefn();
+            hlp::append(str, ";\n");
+            hlp::appends(str, baseindent, "}\n\n");
+        }
+    }
+
+    void render_cpp_raw__func(utw::string baseindent,
+                              GenFlag flag, auto& str, int place,
+                              auto& append_typeid, auto& append_typefn) {
+        auto use_dycast = any(flag & GenFlag::use_dyn_cast);
+        auto unsafe_raw = any(flag & GenFlag::unsafe_raw);
+        if (place == 0) {
+            if (use_dycast) {
+                return;
+            }
+            hlp::append(str, baseindent);
+            hlp::append(str, "virtual const char* raw__(");
+            if (!unsafe_raw) {
+                append_typeid();
+            }
+            hlp::append(str, ") const = 0;\n");
+        }
+        else if (place == 1) {
+            if (use_dycast) {
+                return;
+            }
+            hlp::append(str, baseindent);
+            hlp::append(str, "const char* raw__(");
+            if (!unsafe_raw) {
+                append_typeid();
+                hlp::append(str, "info__");
+            }
+            hlp::append(str, ") const override {\n");
+            if (!unsafe_raw) {
+                render_cpp_typeidcond(str, "info__", baseindent + "    ", append_typefn);
+            }
+            hlp::append(str, baseindent);
+            hlp::append(str, "    ");
+            hlp::append(str, "return reinterpret_cast<const void*>(std::addressof(t_holder_));\n");
+            hlp::append(str, baseindent);
+            hlp::append(str, "}\n\n");
+        }
+    }
+
+    void render_cpp_type_assert_func(bool is_const, auto& str, GenFlag flag, auto& append_typefn) {
+        auto use_dycast = any(flag & GenFlag::use_dyn_cast);
+        auto unsafe_raw = any(flag & GenFlag::unsafe_raw);
+        hlp::appends(str,
+                     "    template<class T__>\n    ",
+                     is_const ? "const " : "",
+                     "T__* type_assert()", is_const ? " const" : "", R"( {
+        if (!iface) {
+            return nullptr;
+        }
+)");
+        if (use_dycast) {
+            hlp::append(str, "        ");
+            hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
+            return std::addressof(ptr->t_holder_);
+        }
+        return nullptr;)");
+        }
+        else {
+            if (unsafe_raw) {
+                render_cpp_typeidcond(str, "iface->type__()", "        ", append_typefn);
+            }
+            hlp::append(str, "        ");
+            hlp::appends(str, "return reinterpret_cast",
+                         is_const ? "<const T__*>(" : "<T__*>(const_cast<void*>(",
+                         "iface->raw__(");
+            if (!unsafe_raw) {
+                append_typefn();
+            }
+            hlp::append(str, is_const ? "));" : ")));");
+        }
+        hlp::append(str, R"(
+    }
+
+)");
+    }
+
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
         if (any(flag & GenFlag::add_license)) {
             hlp::append(str, "/*license*/\n");
@@ -388,27 +489,19 @@ namespace ifacegen {
                 hlp::append(str, "NOVTABLE__ ");
             }
             hlp::append(str, R"(interface__ {
-    )");
+)");
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
-                    if (use_dycast) {
-                        continue;
-                    }
-                    hlp::append(str, R"(    virtual const void* raw__()");
-                    append_typeid();
-                    hlp::append(str, R"() const = 0;
-    )");
+                    render_cpp_raw__func("         ", flag, str, 0, append_typeid, append_typefn);
                     if (typeid_fn) {
-                        hlp::append(str, "    virtual ");
-                        append_typeid();
-                        hlp::append(str, " type__() const = 0;\n    ");
+                        render_cpp_type__func("        ", flag, str, 0, append_typeid, append_typefn);
                     }
                 }
                 else if (func.funcname == copy_func) {
-                    hlp::append(str, "    virtual interface__* copy__() const = 0;\n    ");
+                    hlp::append(str, "        virtual interface__* copy__() const = 0;\n    ");
                 }
                 else {
-                    hlp::append(str, "    virtual ");
+                    hlp::append(str, "        virtual ");
                     render_cpp_function(func, str, alias, true);
                     hlp::append(str, "= 0;\n    ");
                 }
@@ -425,42 +518,12 @@ namespace ifacegen {
         implements__(V__&& args)
             :t_holder_(std::forward<V__>(args)){}
 
-    )");
+)");
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
-                    if (use_dycast) {
-                        continue;
-                    }
-                    /*hlp::append(str,
-                                R"(    const void* raw__() const override {   
-            return reinterpret_cast<const void*>(std::addressof(t_holder_));
-        }
-        
-        )");*/
-                    hlp::appends(str, "    const void* raw__(");
-                    append_typeid();
-                    hlp::appends(str, " info__) const override {\n",
-                                 "            ",
-                                 "if(info__!=");
-
-                    hlp::appends(str, ") {\n",
-                                 "                ",
-                                 "return nullptr;\n",
-                                 "            }");
-                    hlp::append(str, R"(
-            return reinterpret_cast<const void*>(std::addressof(t_holder_));
-        }
-
-    )");
+                    render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
                     if (typeid_fn) {
-                        append_typeid();
-                        hlp::append(str, " type__() const override {\n");
-                        hlp::appends(str, "            ",
-                                     "return ");
-                        append_typefn();
-                        hlp::appends(str, ";\n",
-                                     "        }\n",
-                                     "    ");
+                        render_cpp_type__func("        ", flag, str, 1, append_typeid, append_typefn);
                     }
                 }
                 else if (func.funcname == copy_func) {
@@ -469,10 +532,10 @@ namespace ifacegen {
                                  "return new implements__<T__>(t_holder_);", R"(
             }
 
-    )");
+)");
                 }
                 else {
-                    hlp::append(str, "    ");
+                    hlp::append(str, "        ");
                     render_cpp_function(func, str, alias, true);
                     hlp::append(str, "override {\n");
                     hlp::append(str, "            ");
@@ -498,7 +561,7 @@ namespace ifacegen {
                     hlp::append(str, "\n        }\n\n    ");
                 }
             }
-            hlp::append(str, R"(};
+            hlp::append(str, R"(    };
 
     interface__* iface = nullptr;
 
@@ -571,48 +634,8 @@ namespace ifacegen {
             bool has_cpy = false;
             for (auto& func : iface.second.iface) {
                 if (func.funcname == decltype_func) {
-                    hlp::append(str, R"(    template<class T__>
-    const T__* type_assert() const {
-        if (!iface) {
-            return nullptr;
-        }
-        )");
-                    if (use_dycast) {
-                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;)");
-                    }
-                    else {
-                        hlp::appends(str, R"(return reinterpret_cast<const T__*>(iface->raw__()");
-                        append_typefn();
-                        hlp::append(str, "));");
-                    }
-                    hlp::append(str, R"(
-    }
-    
-)");
-                    hlp::append(str, R"(    template<class T__>
-    T__* type_assert() {
-        if (!iface) {
-            return nullptr;
-        }
-        )");
-                    if (use_dycast) {
-                        hlp::append(str, R"(if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;)");
-                    }
-                    else {
-                        hlp::appends(str, R"(return reinterpret_cast<T__*>(const_cast<void*>(iface->raw__()");
-                        append_typefn();
-                        hlp::append(str, ")));");
-                    }
-                    hlp::append(str, R"(
-    }
-    
-)");
+                    render_cpp_type_assert_func(true, str, flag, append_typefn);
+                    render_cpp_type_assert_func(false, str, flag, append_typefn);
                     if (typeid_fn) {
                         hlp::append(str, "    ");
                         append_typeid();
