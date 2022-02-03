@@ -584,7 +584,7 @@ namespace ifacegen {
         return nullptr;)");
                     }
                     else {
-                        hlp::appends(str, R"(    return reinterpret_cast<const T__*>(iface->raw__()");
+                        hlp::appends(str, R"(return reinterpret_cast<const T__*>(iface->raw__()");
                         append_typefn();
                         hlp::append(str, "));");
                     }
@@ -657,7 +657,7 @@ namespace ifacegen {
     )",
                                  iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
                                  "    ", iface.first, "& operator=(", iface.first, "& in){\n",
-                                 "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);",
+                                 "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);\n",
                                  "    }\n\n");
                 }
                 else {
