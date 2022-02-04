@@ -372,7 +372,7 @@ namespace ifacegen {
                 continue;
             }
             if (no_vtable) {
-                hlp::append(str, "    struct vtable__t {\n");
+                hlp::append(str, "\n    struct vtable__t {\n");
                 no_vtable = false;
             }
             hlp::append(str, "        ");
@@ -385,7 +385,6 @@ namespace ifacegen {
         }
         hlp::append(str, "    };\n\n");
         hlp::appends(str,
-                     "   private:",
                      "    template<class T__v>\n",
                      "    struct vtable__instance__ {\n",
                      "       private:\n",
@@ -740,17 +739,16 @@ namespace ifacegen {
                 render_cpp_template(str, iface.second.typeparam);
             }
             hlp::appends(str, "struct ", iface.first, " {\n");
-            bool private_written = false;
             if (iface.second.has_vtable) {
-                private_written = render_cpp_vtable__class(str, flag, iface, alias, nmspc);
+                render_cpp_vtable__class(str, flag, iface, alias, nmspc);
             }
-            if (!private_written) {
-                hlp::append(str,
-                            R"(
+
+            hlp::append(str,
+                        R"(
    private:
 
 )");
-            }
+
             render_cpp_interface__class(str, flag, iface, append_typeid, append_typefn, alias);
             render_cpp_implements__class(str, flag, iface, append_typeid, append_typefn, nmspc, alias);
             hlp::append(str, R"(
@@ -897,7 +895,18 @@ namespace ifacegen {
                                  "    }\n\n");
                 }
                 else if (func.funcname == vtable_func) {
-                    // ignore
+                    if (!iface.second.has_vtable) {
+                        continue;
+                    }
+                    hlp::appends(str,
+                                 "    vtable__t* get_self_vtable() const {\n",
+                                 "         return iface?iface->vtable__get__():nullptr;\n",
+                                 "    }\n\n");
+                    hlp::appends(str,
+                                 "    template<class T__v>",
+                                 "    static vtable__t* get_vtable(T__v&& v) const {\n",
+                                 "         return vtable__instance__<T__v>::instantiate();\n",
+                                 "    }\n\n");
                 }
                 else {
                     hlp::append(str, "    ");
