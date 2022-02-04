@@ -89,12 +89,14 @@ int main(int argc, char** argv) {
 
 Special Value:
     Func Name:
-        decltype - generate type assertion func ex) decltype() type (`type` is placeholder)
-        typeid - generate type id func ex) typeid() type (`type` is placeholder)
-        __copy__ - generate copy constructor and copy assign ex) __copy__() type (`type` is placeholder)
+        (`type` is placeholder)
+        decltype - generate type assertion func ex) decltype() type 
+        typeid - generate type id func ex) typeid() type
+        __copy__ - generate copy constructor and copy assign ex) __copy__() type
         __call__ - generate `operator()` ex) __call__(num int) int 
         __array__ - generate `operator[]` ex)__array__(index size_t) char
-        __unsafe__ - generate unsafe raw pointer getter (short cut) ex) __unsafe__() type (`type` is placeholder)
+        __unsafe__ - generate unsafe raw pointer getter (short cut) ex) __unsafe__() type
+        __vtable__ - generate vtable class and function (only member function) ex) __vtable__() type
     Default Value:
         panic - generate throw std::bad_function_call()
 )";
