@@ -520,7 +520,7 @@ namespace ifacegen {
                         render_cpp_raw__func("        ", f, str, 0, append_typeid, append_typefn);
                         raw_gened = true;
                     }
-                    if (!type_gened && iface.second.has_unsafe) {
+                    if (!use_dycast && !type_gened && iface.second.has_unsafe) {
                         render_cpp_type__func("        ", str, 0, append_typeid, append_typefn);
                         type_gened = true;
                     }
@@ -572,7 +572,7 @@ namespace ifacegen {
                         render_cpp_raw__func("        ", f, str, 1, append_typeid, append_typefn);
                         raw_gened = true;
                     }
-                    if (!type_gened && iface.second.has_unsafe) {
+                    if (!use_dycast && !type_gened && iface.second.has_unsafe) {
                         render_cpp_type__func("        ", str, 1, append_typeid, append_typefn);
                         type_gened = true;
                     }
