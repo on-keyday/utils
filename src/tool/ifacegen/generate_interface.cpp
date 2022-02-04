@@ -427,7 +427,7 @@ namespace ifacegen {
 
         hlp::appends(str,
                      "       public:\n",
-                     "        static vtable__t* instantiate() noexcept {\n",
+                     "        static const vtable__t* instantiate() noexcept {\n",
                      "            static vtable__t instance{\n");
         for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname)) {
@@ -487,7 +487,7 @@ namespace ifacegen {
                 if (!iface.second.has_vtable) {
                     continue;
                 }
-                hlp::append(str, "        virtual vtable__t* vtable__get__() const noexcept = 0;\n");
+                hlp::append(str, "        virtual const vtable__t* vtable__get__() const noexcept = 0;\n");
             }
             else {
                 hlp::append(str, "        virtual ");
@@ -557,7 +557,7 @@ namespace ifacegen {
                     continue;
                 }
                 hlp::appends(str,
-                             "        vtable__t* vtable__get__() const noexcept override {\n",
+                             "        const vtable__t* vtable__get__() const noexcept override {\n",
                              "            return vtable__instance__<T__>::instantiate();\n",
                              "        }\n\n");
             }
@@ -919,12 +919,12 @@ namespace ifacegen {
                         continue;
                     }
                     hlp::appends(str,
-                                 "    vtable__t* get_self_vtable() const noexcept {\n",
+                                 "    const vtable__t* get_self_vtable() const noexcept {\n",
                                  "         return iface?iface->vtable__get__():nullptr;\n",
                                  "    }\n\n");
                     hlp::appends(str,
                                  "    template<class T__v>\n",
-                                 "    static vtable__t* get_vtable(T__v&& v) noexcept {\n",
+                                 "    static const vtable__t* get_vtable(T__v&& v) noexcept {\n",
                                  "         return vtable__instance__<T__v>::instantiate();\n",
                                  "    }\n\n");
                 }
