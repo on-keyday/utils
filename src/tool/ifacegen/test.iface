@@ -84,3 +84,7 @@ interface Unsafe {
 interface NoExcept {
     noexcept __call__() int
 }
+
+interface Vtable {
+    
+}
