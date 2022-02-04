@@ -91,6 +91,6 @@ interface NoGenVtable {
 
 interface GenVtable {
     dummy() int
-    __vtable__() type
+    __vtable__() lastthis
     __unsafe__() type
 }

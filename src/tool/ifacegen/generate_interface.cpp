@@ -67,9 +67,10 @@ namespace ifacegen {
     }
 
     enum Vtable {
-        vnone,
-        vfuncptr,
-        vfuncsignature,
+        vnone = 0x0,
+        vfuncptr = 0x1,
+        vfuncsignature = 0x2,
+        vfunctail = 0x4,
     };
 
     void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, Vtable is_vtptr = vnone) {
@@ -87,22 +88,25 @@ namespace ifacegen {
             hlp::append(str, "operator[]");
         }
         else {
-            if (is_vtptr == vfuncptr) {
+            if (is_vtptr & vfuncptr) {
                 hlp::append(str, "(*");
             }
             hlp::append(str, func.funcname);
-            if (is_vtptr == vfuncptr) {
+            if (is_vtptr & vfuncptr) {
                 hlp::append(str, ")");
             }
         }
         hlp::append(str, "(");
         bool is_first = true;
-        if (is_vtptr) {
+        auto make_this = [&] {
             if (func.is_const) {
                 hlp::append(str, "const ");
             }
             hlp::append(str, "void* this__");
             is_first = false;
+        };
+        if (!(is_vtptr & vfunctail)) {
+            make_this();
         }
         for (auto& arg : func.args) {
             if (!is_first) {
@@ -111,6 +115,12 @@ namespace ifacegen {
             render_cpp_type(arg.type, str, alias, on_iface);
             hlp::append(str, arg.name);
             is_first = false;
+        }
+        if (is_vtptr & vfunctail) {
+            if (!is_first) {
+                hlp::append(str, ", ");
+            }
+            make_this();
         }
         hlp::append(str, ") ");
         if (!is_vtptr && func.is_const) {
@@ -367,6 +377,15 @@ namespace ifacegen {
 
     bool render_cpp_vtable__class(utw::string& str, GenFlag flag, auto& iface, auto& alias, auto& nmspc) {
         bool no_vtable = true;
+        Vtable tail = vnone;
+        for (Interface& func : iface.second.iface) {
+            if (func.funcname == vtable_func) {
+                if (func.type.prim == "lastthis") {
+                    tail = vfunctail;
+                    break;
+                }
+            }
+        }
         for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname)) {
                 continue;
@@ -376,7 +395,7 @@ namespace ifacegen {
                 no_vtable = false;
             }
             hlp::append(str, "        ");
-            render_cpp_function(func, str, alias, false, vfuncptr);
+            render_cpp_function(func, str, alias, false, Vtable(vfuncptr | tail));
             hlp::append(str, "= nullptr;\n");
         }
         if (no_vtable) {
@@ -397,7 +416,7 @@ namespace ifacegen {
                 continue;
             }
             hlp::append(str, "        static ");
-            render_cpp_function(func, str, alias, false, vfuncsignature);
+            render_cpp_function(func, str, alias, false, Vtable(vfuncsignature | tail));
             hlp::appends(str, "{\n",
                          "            ", "return static_cast<",
                          func.is_const ? "const " : "", "this_type*>(this__)->");
