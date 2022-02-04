@@ -66,7 +66,13 @@ namespace ifacegen {
         hlp::append(str, " ");
     }
 
-    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, bool is_vtptr = false) {
+    enum Vtable {
+        vnone,
+        vfuncptr,
+        vfuncsignature,
+    };
+
+    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, Vtable is_vtptr = vnone) {
         render_cpp_type(func.type, str, alias, on_iface);
         if (func.funcname == call_func) {
             if (is_vtptr) {
@@ -81,11 +87,11 @@ namespace ifacegen {
             hlp::append(str, "operator[]");
         }
         else {
-            if (is_vtptr) {
+            if (is_vtptr == vfuncptr) {
                 hlp::append(str, "(*");
             }
             hlp::append(str, func.funcname);
-            if (is_vtptr) {
+            if (is_vtptr == vfuncptr) {
                 hlp::append(str, ")");
             }
         }
