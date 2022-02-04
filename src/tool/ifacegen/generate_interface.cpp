@@ -388,7 +388,7 @@ namespace ifacegen {
                      "    template<class T__v>\n",
                      "    struct vtable__instance__ {\n",
                      "       private:\n",
-                     "        constexpr vtable_instance__() = default;\n",
+                     "        constexpr vtable__instance__() = default;\n",
                      //"     public:",
                      "        using this_type = std::remove_pointer_t<decltype(", nmspc, "deref(std::declval<std::remove_cvref<T__v>&>()))>;\n\n");
         for (Interface& func : iface.second.iface) {
