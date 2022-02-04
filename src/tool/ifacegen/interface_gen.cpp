@@ -46,8 +46,7 @@ int main(int argc, char** argv) {
         .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd)
         .set("use-dynamic-cast,d", bool_option(true), "use dynamic cast for type assert", OptFlag::once_in_cmd)
         .set("separate,S", bool_option(true), "separate namespace by ::", OptFlag::once_in_cmd)
-        .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd)
-        .set("need-typeid,T", bool_option(true), "add type id func with type assert func", OptFlag::once_in_cmd);
+        .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     utils::wrap::vector<wrap::string> arg;
@@ -66,7 +65,9 @@ int main(int argc, char** argv) {
     #COMMENT
     
     interface NAME{
-        const FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_RETURN_VALUE
+        const noexcept FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_RETURN_VALUE
+        FUNC2(ARG TYPE) TYPE
+        FUNC3() TYPE
     }
 
     typeparam T, ...Args
@@ -89,10 +90,11 @@ int main(int argc, char** argv) {
 Special Value:
     Func Name:
         decltype - generate type assertion func ex) decltype() type (`type` is placeholder)
+        typeid - generate type id func ex) typeid() type (`type` is placeholder)
         __copy__ - generate copy constructor and copy assign ex) __copy__() type (`type` is placeholder)
         __call__ - generate `operator()` ex) __call__(num int) int 
         __array__ - generate `operator[]` ex)__array__(index size_t) char
-        __unsafe__ - generate unsafe raw pointer getter (short cut)
+        __unsafe__ - generate unsafe raw pointer getter (short cut) ex) __unsafe__() type (`type` is placeholder)
     Default Value:
         panic - generate throw std::bad_function_call()
 )";
