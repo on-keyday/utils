@@ -548,7 +548,7 @@ namespace ifacegen {
             }
 
             hlp::append(str, R"(
-        virtual ~interface__(){}
+        virtual ~interface__() = default;
     };
     
     template<class T__>
