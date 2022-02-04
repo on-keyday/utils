@@ -66,19 +66,35 @@ namespace ifacegen {
         hlp::append(str, " ");
     }
 
-    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
+    void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, bool is_vtptr = false) {
         render_cpp_type(func.type, str, alias, on_iface);
         if (func.funcname == call_func) {
+            if (is_vtptr) {
+                return;
+            }
             hlp::append(str, "operator()");
         }
         else if (func.funcname == array_op) {
+            if (is_vtptr) {
+                return;
+            }
             hlp::append(str, "operator[]");
         }
         else {
+            if (is_vtptr) {
+                hlp::append(str, "(*");
+            }
             hlp::append(str, func.funcname);
+            if (is_vtptr) {
+                hlp::append(str, ")");
+            }
         }
         hlp::append(str, "(");
         bool is_first = true;
+        if (is_vtptr) {
+            hlp::append(str, "void* this__");
+            is_first = false;
+        }
         for (auto& arg : func.args) {
             if (!is_first) {
                 hlp::append(str, ", ");
@@ -88,7 +104,7 @@ namespace ifacegen {
             is_first = false;
         }
         hlp::append(str, ") ");
-        if (func.is_const) {
+        if (!is_vtptr && func.is_const) {
             hlp::append(str, "const ");
         }
         if (func.type.ref != RefKind::none ||
