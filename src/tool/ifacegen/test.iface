@@ -88,3 +88,8 @@ interface NoExcept {
 interface NoGenVtable {
     __vtable__() type
 }
+
+interface GenVtable {
+    dummy() int
+    __vtable__() type
+}
