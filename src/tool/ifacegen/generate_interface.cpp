@@ -899,12 +899,12 @@ namespace ifacegen {
                         continue;
                     }
                     hlp::appends(str,
-                                 "    vtable__t* get_self_vtable() const {\n",
+                                 "    vtable__t* get_self_vtable() const noexcept {\n",
                                  "         return iface?iface->vtable__get__():nullptr;\n",
                                  "    }\n\n");
                     hlp::appends(str,
-                                 "    template<class T__v>",
-                                 "    static vtable__t* get_vtable(T__v&& v) const {\n",
+                                 "    template<class T__v>\n",
+                                 "    static vtable__t* get_vtable(T__v&& v) noexcept {\n",
                                  "         return vtable__instance__<T__v>::instantiate();\n",
                                  "    }\n\n");
                 }
