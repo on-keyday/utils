@@ -99,6 +99,8 @@ Special Value:
         __vtable__ - generate vtable class and function (only member function) ex) __vtable__() type
     Default Value:
         panic - generate throw std::bad_function_call()
+    Return Type:
+        lastthis - use with __vtable__. generate this parameter at last of arg
 )";
         return 1;
     }
