@@ -390,7 +390,7 @@ namespace ifacegen {
                      "       private:\n",
                      "        constexpr vtable__instance__() = default;\n",
                      //"     public:",
-                     "        using this_type = std::remove_pointer_t<decltype(", nmspc, "deref(std::declval<std::remove_cvref<T__v>&>()))>;\n\n");
+                     "        using this_type = std::remove_pointer_t<decltype(", nmspc, "deref(std::declval<std::remove_cvref_t<T__v>&>()))>;\n\n");
         for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname)) {
                 continue;
@@ -537,7 +537,7 @@ namespace ifacegen {
                     continue;
                 }
                 hlp::appends(str,
-                             "        vtable__t* vtable__get__() const noexcept {\n",
+                             "        vtable__t* vtable__get__() const noexcept override {\n",
                              "            return vtable__instance__<T__>::instantiate();\n",
                              "        }\n\n");
             }
