@@ -385,7 +385,7 @@ namespace ifacegen {
         }
         hlp::append(str, "    };\n\n");
         hlp::appends(str,
-                     "   private:",
+                     "   private:\n",
                      "    template<class T__v>\n",
                      "    struct vtable__instance__ {\n",
                      "       private:\n",
