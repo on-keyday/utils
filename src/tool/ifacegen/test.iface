@@ -85,6 +85,6 @@ interface NoExcept {
     noexcept __call__() int
 }
 
-interface Vtable {
-    __vtable__()
+interface NoGenVtable {
+    __vtable__() type
 }

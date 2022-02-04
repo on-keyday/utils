@@ -365,7 +365,7 @@ namespace ifacegen {
                funcname == vtable_func;
     }
 
-    void render_cpp_vtable__class(utw::string& str, GenFlag flag, auto& iface, auto& alias, auto& nmspc) {
+    bool render_cpp_vtable__class(utw::string& str, GenFlag flag, auto& iface, auto& alias, auto& nmspc) {
         bool no_vtable = true;
         for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname)) {
@@ -381,9 +381,9 @@ namespace ifacegen {
         }
         if (no_vtable) {
             iface.second.has_vtable = false;
-            return;
+            return false;
         }
-        hlp::append("    };\n\n");
+        hlp::append(str, "    };\n\n");
         hlp::appends(str,
                      "    template<class T__v>\n",
                      "    struct vtable__instance__ {\n",
@@ -404,7 +404,9 @@ namespace ifacegen {
             hlp::appends(str, ";\n",
                          "        }\n\n");
         }
+
         hlp::appends(str,
+                     "       private:",
                      "        static vtable__t* instantiate() {\n",
                      "            static vtable__t instance{\n");
         for (Interface& func : iface.second.iface) {
@@ -417,7 +419,9 @@ namespace ifacegen {
         hlp::appends(str, "            ;\n");
         hlp::appends(str,
                      "            return &instance;\n",
-                     "        }\n");
+                     "        }\n",
+                     "    };\n\n");
+        return true;
     }
 
     void render_cpp_interface__class(utw::string& str, GenFlag flag, auto& iface,
@@ -463,7 +467,7 @@ namespace ifacegen {
                 if (!iface.second.has_vtable) {
                     continue;
                 }
-                hlp::append(str, "        virtual vtable__* vtable__get__() const = 0;\n");
+                hlp::append(str, "        virtual vtable__t* vtable__get__() const = 0;\n");
             }
             else {
                 hlp::append(str, "        virtual ");
@@ -734,11 +738,18 @@ namespace ifacegen {
             if (iface.second.typeparam.size()) {
                 render_cpp_template(str, iface.second.typeparam);
             }
-            hlp::appends(str, "struct ", iface.first, " {", R"(
+            hlp::appends(str, "struct ", iface.first, " {\n");
+            bool private_written = false;
+            if (iface.second.has_vtable) {
+                private_written = render_cpp_vtable__class(str, flag, iface, alias, nmspc);
+            }
+            if (!private_written) {
+                hlp::append(str,
+                            R"(
    private:
 
 )");
-
+            }
             render_cpp_interface__class(str, flag, iface, append_typeid, append_typefn, alias);
             render_cpp_implements__class(str, flag, iface, append_typeid, append_typefn, nmspc, alias);
             hlp::append(str, R"(
@@ -883,6 +894,9 @@ namespace ifacegen {
                                  "    ", iface.first, "& operator=(", iface.first, "& in){\n",
                                  "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);\n",
                                  "    }\n\n");
+                }
+                else if (func.funcname == vtable_func) {
+                    // ignore
                 }
                 else {
                     hlp::append(str, "    ");
