@@ -621,7 +621,7 @@ namespace ifacegen {
                     hlp::append(str, "return ");
                     render_cpp_t_ptr_call(str, alias, func);
                     hlp::append(str, ";");
-                    hlp::append(str, "\n        }\n\n    ");
+                    hlp::append(str, "\n        }\n\n");
                 }
             }
             hlp::append(str, R"(    };
