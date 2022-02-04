@@ -28,6 +28,7 @@ namespace utils {
             template <class Fn>
             void operator()(Fn&& fn) {
                 std::function<void()> f;
+                sizeof(f);
             }
         };
 

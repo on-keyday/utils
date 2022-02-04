@@ -42,6 +42,7 @@ namespace ifacegen {
         utw::string funcname;
         utw::vector<Arg> args;
         bool is_const = false;
+        bool is_noexcept = false;
         utw::string default_result;
     };
 

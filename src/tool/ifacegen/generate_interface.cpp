@@ -90,6 +90,13 @@ namespace ifacegen {
         if (func.is_const) {
             hlp::append(str, "const ");
         }
+        if (func.type.ref != RefKind::none ||
+            func.default_result == "panic") {
+            func.is_noexcept = false;
+        }
+        if (func.is_noexcept) {
+            hlp::append(str, "noexcept ");
+        }
     }
 
     void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
@@ -227,12 +234,12 @@ namespace ifacegen {
             hlp::append(str, baseindent);
             hlp::append(str, "virtual ");
             append_typeid();
-            hlp::append(str, " type__() const = 0;\n");
+            hlp::append(str, " type__() const noexcept = 0;\n");
         }
         else if (place == 1) {
             hlp::append(str, baseindent);
             append_typeid();
-            hlp::append(str, " type__() const override {\n");
+            hlp::append(str, " type__() const noexcept override {\n");
             hlp::appends(str, baseindent, "    return ");
             append_typefn();
             hlp::append(str, ";\n");
@@ -254,7 +261,7 @@ namespace ifacegen {
             if (!unsafe_raw) {
                 append_typeid();
             }
-            hlp::append(str, ") const = 0;\n");
+            hlp::append(str, ") const noexcept = 0;\n");
         }
         else if (place == 1) {
             if (use_dycast) {
@@ -266,13 +273,13 @@ namespace ifacegen {
                 append_typeid();
                 hlp::append(str, "info__");
             }
-            hlp::append(str, ") const override {\n");
+            hlp::append(str, ") const noexcept override {\n");
             if (!unsafe_raw) {
                 render_cpp_typeidcond(str, "info__", baseindent + "    ", append_typefn);
             }
             hlp::append(str, baseindent);
             hlp::append(str, "    ");
-            hlp::append(str, "return reinterpret_cast<const void*>(std::addressof(t_holder_));\n");
+            hlp::append(str, "return static_cast<const void*>(std::addressof(t_holder_));\n");
             hlp::append(str, baseindent);
             hlp::append(str, "}\n\n");
         }
@@ -301,7 +308,7 @@ namespace ifacegen {
                 render_cpp_typeidcond(str, "iface->type__()", "        ", append_typefn);
             }
             hlp::append(str, "        ");
-            hlp::appends(str, "return reinterpret_cast",
+            hlp::appends(str, "return static_cast",
                          is_const ? "<const T__*>(" : "<T__*>(const_cast<void*>(",
                          "iface->raw__(");
             if (!unsafe_raw) {
@@ -313,6 +320,16 @@ namespace ifacegen {
     }
 
 )");
+    }
+
+    void render_cpp_t_ptr_call(auto& str, auto& alias, Interface& func) {
+        if (func.funcname == call_func || func.funcname == array_op) {
+            hlp::append(str, "(*t_ptr_)");
+        }
+        else {
+            hlp::append(str, "t_ptr_->");
+        }
+        render_cpp_call(func, str, alias, true);
     }
 
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
@@ -589,6 +606,12 @@ namespace ifacegen {
                     hlp::append(str, nmspc);
                     hlp::append(str, "deref(this->t_holder_);\n");
                     hlp::append(str, "            ");
+                    if (func.is_noexcept) {
+                        hlp::appends(str, "static_assert(noexcept(");
+                        render_cpp_t_ptr_call(str, alias, func);
+                        hlp::appends(str, R"(),"expect noexcept function call but not");)", "\n");
+                        hlp::append(str, "            ");
+                    }
                     hlp::append(str, "if (!t_ptr_) {\n");
                     hlp::append(str, "                ");
                     render_cpp_default_value(func, str, true, alias);
@@ -596,18 +619,11 @@ namespace ifacegen {
                     hlp::append(str, "            }\n");
                     hlp::append(str, "            ");
                     hlp::append(str, "return ");
-                    if (func.funcname == call_func || func.funcname == array_op) {
-                        hlp::append(str, "(*t_ptr_)");
-                    }
-                    else {
-                        hlp::append(str, "t_ptr_->");
-                    }
-                    render_cpp_call(func, str, alias, true);
+                    render_cpp_t_ptr_call(str, alias, func);
                     hlp::append(str, ";");
                     hlp::append(str, "\n        }\n\n    ");
                 }
             }
-
             hlp::append(str, R"(    };
 
     interface__* iface = nullptr;

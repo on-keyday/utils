@@ -60,6 +60,10 @@ namespace ifacegen {
                 state.iface.is_const = true;
                 return true;
             }
+            if (result.token() == "noexcept") {
+                state.iface.is_noexcept = true;
+                return true;
+            }
             if (result.result.kind == us::KeyWord::id) {
                 if (state.iface.funcname.size()) {
                     state.iface.default_result = result.token();

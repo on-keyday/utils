@@ -173,7 +173,7 @@ Special Value:
         TYPENAME:="..." ID!|TYPEID DEFTYPE?
         TYPEID:="^"? ID 
         DEFTYPE:="=" ID
-        FUNCDEF:="const"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
+        FUNCDEF:="const"? "noexcept"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*
         FUNCLIST:=VARDEF ["," FUNCLIST! ]?
         VARDEF:=ID TYPE

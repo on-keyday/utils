@@ -80,3 +80,7 @@ interface Unsafe {
     typeid() type
     __unsafe__() type
 }
+
+interface NoExcept {
+    noexcept __call__() int
+}
