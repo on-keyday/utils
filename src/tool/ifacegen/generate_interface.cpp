@@ -105,7 +105,7 @@ namespace ifacegen {
             hlp::append(str, "void* this__");
             is_first = false;
         };
-        if (!(is_vtptr & vfunctail)) {
+        if (is_vtptr && !(is_vtptr & vfunctail)) {
             make_this();
         }
         for (auto& arg : func.args) {
@@ -116,7 +116,7 @@ namespace ifacegen {
             hlp::append(str, arg.name);
             is_first = false;
         }
-        if (is_vtptr & vfunctail) {
+        if (is_vtptr && is_vtptr & vfunctail) {
             if (!is_first) {
                 hlp::append(str, ", ");
             }
