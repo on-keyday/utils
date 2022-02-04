@@ -76,6 +76,9 @@ namespace ifacegen {
                     if (state.iface.funcname == "__unsafe__") {
                         state.data.ifaces[state.current_iface].has_unsafe = true;
                     }
+                    else if (state.iface.funcname == "__vtable__") {
+                        state.data.ifaces[state.current_iface].has_vtable = true;
+                    }
                 }
                 return true;
             }

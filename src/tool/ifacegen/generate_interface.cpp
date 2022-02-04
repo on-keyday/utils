@@ -22,6 +22,7 @@ namespace ifacegen {
     constexpr auto array_op = "__array__";
     constexpr auto unsafe_func = "__unsafe__";
     constexpr auto typeid_func = "typeid";
+    constexpr auto vtable_func = "__vtable__";
 
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, Alias>* alias) {
         if (alias) {
@@ -332,6 +333,139 @@ namespace ifacegen {
         render_cpp_call(func, str, alias, true);
     }
 
+    void render_cpp_interface__class(utw::string& str, GenFlag flag, auto& iface,
+                                     auto& append_typeid, auto& append_typefn, auto& alias) {
+        hlp::append(str, "    struct ");
+        if (any(flag & GenFlag::no_vtable)) {
+            hlp::append(str, "NOVTABLE__ ");
+        }
+        hlp::append(str, R"(interface__ {
+)");
+        bool raw_gened = false, type_gened = false;
+        for (auto& func : iface.second.iface) {
+            if (func.funcname == decltype_func) {
+                if (!raw_gened) {
+                    auto f = flag;
+                    if (iface.second.has_unsafe) {
+                        f |= GenFlag::unsafe_raw;
+                    }
+                    render_cpp_raw__func("        ", f, str, 0, append_typeid, append_typefn);
+                    raw_gened = true;
+                }
+                if (!any(flag & GenFlag::use_dyn_cast) && !type_gened && iface.second.has_unsafe) {
+                    render_cpp_type__func("        ", str, 0, append_typeid, append_typefn);
+                    type_gened = true;
+                }
+            }
+            else if (func.funcname == unsafe_func) {
+                if (!raw_gened) {
+                    render_cpp_raw__func("        ", flag | GenFlag::unsafe_raw, str, 0, append_typeid, append_typefn);
+                    raw_gened = true;
+                }
+            }
+            else if (func.funcname == copy_func) {
+                hlp::append(str, "        virtual interface__* copy__() const = 0;\n");
+            }
+            else if (func.funcname == typeid_func) {
+                if (!type_gened) {
+                    render_cpp_type__func("        ", str, 0, append_typeid, append_typefn);
+                    type_gened = true;
+                }
+            }
+            else {
+                hlp::append(str, "        virtual ");
+                render_cpp_function(func, str, alias, true);
+                hlp::append(str, "= 0;\n");
+            }
+        }
+
+        hlp::append(str, R"(
+        virtual ~interface__() = default;
+    };
+)");
+    }
+
+    void render_cpp_implements__class(std::string& str, GenFlag flag, auto& iface,
+                                      auto& append_typeid, auto& append_typefn,
+                                      auto& nmspc, auto& alias) {
+        hlp::append(str,
+                    R"(
+    template<class T__>
+    struct implements__ : interface__ {
+        T__ t_holder_;
+
+        template<class V__>
+        implements__(V__&& args)
+            :t_holder_(std::forward<V__>(args)){}
+
+)");
+        bool raw_gened = false, type_gened = false;
+        for (auto& func : iface.second.iface) {
+            if (func.funcname == decltype_func) {
+                if (!raw_gened) {
+                    auto f = flag;
+                    if (iface.second.has_unsafe) {
+                        f |= GenFlag::unsafe_raw;
+                    }
+                    render_cpp_raw__func("        ", f, str, 1, append_typeid, append_typefn);
+                    raw_gened = true;
+                }
+                if (!any(flag & GenFlag::use_dyn_cast) && !type_gened && iface.second.has_unsafe) {
+                    render_cpp_type__func("        ", str, 1, append_typeid, append_typefn);
+                    type_gened = true;
+                }
+            }
+            else if (func.funcname == unsafe_func) {
+                if (!raw_gened) {
+                    render_cpp_raw__func("        ", flag | GenFlag::unsafe_raw, str, 1, append_typeid, append_typefn);
+                    raw_gened = true;
+                }
+            }
+            else if (func.funcname == typeid_func) {
+                if (!type_gened) {
+                    render_cpp_type__func("        ", str, 1, append_typeid, append_typefn);
+                    type_gened = true;
+                }
+            }
+            else if (func.funcname == copy_func) {
+                hlp::appends(str, R"(        interface__* copy__() const override {
+            )",
+                             "return new implements__<T__>(t_holder_);", R"(
+        }
+
+)");
+            }
+            else {
+                hlp::append(str, "        ");
+                render_cpp_function(func, str, alias, true);
+                hlp::append(str, "override {\n");
+                hlp::append(str, "            ");
+                hlp::append(str, "auto t_ptr_ = ");
+                hlp::append(str, nmspc);
+                hlp::append(str, "deref(this->t_holder_);\n");
+                hlp::append(str, "            ");
+                if (func.is_noexcept) {
+                    hlp::appends(str, "static_assert(noexcept(");
+                    render_cpp_t_ptr_call(str, alias, func);
+                    hlp::appends(str, R"(),"expect noexcept function call but not");)", "\n");
+                    hlp::append(str, "            ");
+                }
+                hlp::append(str, "if (!t_ptr_) {\n");
+                hlp::append(str, "                ");
+                render_cpp_default_value(func, str, true, alias);
+                hlp::append(str, ";\n");
+                hlp::append(str, "            }\n");
+                hlp::append(str, "            ");
+                hlp::append(str, "return ");
+                render_cpp_t_ptr_call(str, alias, func);
+                hlp::append(str, ";");
+                hlp::append(str, "\n        }\n\n");
+            }
+        }
+        hlp::append(str, R"(    };
+)");
+    }
+
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
         if (any(flag & GenFlag::add_license)) {
             hlp::append(str, "/*license*/\n");
@@ -503,129 +637,9 @@ namespace ifacegen {
 
 )");
 
-            hlp::append(str, "    struct ");
-            if (any(flag & GenFlag::no_vtable)) {
-                hlp::append(str, "NOVTABLE__ ");
-            }
-            hlp::append(str, R"(interface__ {
-)");
-            bool raw_gened = false, type_gened = false;
-            for (auto& func : iface.second.iface) {
-                if (func.funcname == decltype_func) {
-                    if (!raw_gened) {
-                        auto f = flag;
-                        if (iface.second.has_unsafe) {
-                            f |= GenFlag::unsafe_raw;
-                        }
-                        render_cpp_raw__func("        ", f, str, 0, append_typeid, append_typefn);
-                        raw_gened = true;
-                    }
-                    if (!use_dycast && !type_gened && iface.second.has_unsafe) {
-                        render_cpp_type__func("        ", str, 0, append_typeid, append_typefn);
-                        type_gened = true;
-                    }
-                }
-                else if (func.funcname == unsafe_func) {
-                    if (!raw_gened) {
-                        render_cpp_raw__func("        ", flag | GenFlag::unsafe_raw, str, 0, append_typeid, append_typefn);
-                        raw_gened = true;
-                    }
-                }
-                else if (func.funcname == copy_func) {
-                    hlp::append(str, "        virtual interface__* copy__() const = 0;\n");
-                }
-                else if (func.funcname == typeid_func) {
-                    if (!type_gened) {
-                        render_cpp_type__func("        ", str, 0, append_typeid, append_typefn);
-                        type_gened = true;
-                    }
-                }
-                else {
-                    hlp::append(str, "        virtual ");
-                    render_cpp_function(func, str, alias, true);
-                    hlp::append(str, "= 0;\n    ");
-                }
-            }
-
+            render_cpp_interface__class(str, flag, iface, append_typeid, append_typefn, alias);
+            render_cpp_implements__class(str, flag, iface, append_typeid, append_typefn, nmspc, alias);
             hlp::append(str, R"(
-        virtual ~interface__() = default;
-    };
-    
-    template<class T__>
-    struct implements__ : interface__ {
-        T__ t_holder_;
-
-        template<class V__>
-        implements__(V__&& args)
-            :t_holder_(std::forward<V__>(args)){}
-
-)");
-            raw_gened = false;
-            type_gened = false;
-            for (auto& func : iface.second.iface) {
-                if (func.funcname == decltype_func) {
-                    if (!raw_gened) {
-                        auto f = flag;
-                        if (iface.second.has_unsafe) {
-                            f |= GenFlag::unsafe_raw;
-                        }
-                        render_cpp_raw__func("        ", f, str, 1, append_typeid, append_typefn);
-                        raw_gened = true;
-                    }
-                    if (!use_dycast && !type_gened && iface.second.has_unsafe) {
-                        render_cpp_type__func("        ", str, 1, append_typeid, append_typefn);
-                        type_gened = true;
-                    }
-                }
-                else if (func.funcname == unsafe_func) {
-                    if (!raw_gened) {
-                        render_cpp_raw__func("        ", flag | GenFlag::unsafe_raw, str, 1, append_typeid, append_typefn);
-                        raw_gened = true;
-                    }
-                }
-                else if (func.funcname == typeid_func) {
-                    if (!type_gened) {
-                        render_cpp_type__func("        ", str, 1, append_typeid, append_typefn);
-                        type_gened = true;
-                    }
-                }
-                else if (func.funcname == copy_func) {
-                    hlp::appends(str, R"(        interface__* copy__() const override {
-            )",
-                                 "return new implements__<T__>(t_holder_);", R"(
-        }
-
-)");
-                }
-                else {
-                    hlp::append(str, "        ");
-                    render_cpp_function(func, str, alias, true);
-                    hlp::append(str, "override {\n");
-                    hlp::append(str, "            ");
-                    hlp::append(str, "auto t_ptr_ = ");
-                    hlp::append(str, nmspc);
-                    hlp::append(str, "deref(this->t_holder_);\n");
-                    hlp::append(str, "            ");
-                    if (func.is_noexcept) {
-                        hlp::appends(str, "static_assert(noexcept(");
-                        render_cpp_t_ptr_call(str, alias, func);
-                        hlp::appends(str, R"(),"expect noexcept function call but not");)", "\n");
-                        hlp::append(str, "            ");
-                    }
-                    hlp::append(str, "if (!t_ptr_) {\n");
-                    hlp::append(str, "                ");
-                    render_cpp_default_value(func, str, true, alias);
-                    hlp::append(str, ";\n");
-                    hlp::append(str, "            }\n");
-                    hlp::append(str, "            ");
-                    hlp::append(str, "return ");
-                    render_cpp_t_ptr_call(str, alias, func);
-                    hlp::append(str, ";");
-                    hlp::append(str, "\n        }\n\n");
-                }
-            }
-            hlp::append(str, R"(    };
-
     interface__* iface = nullptr;
 
 )");
@@ -660,7 +674,7 @@ namespace ifacegen {
             hlp::appends(str, "constexpr ", iface.first);
             hlp::append(str, "(");
             hlp::append(str, iface.first);
-            hlp::append(str, R"(&& in) {
+            hlp::append(str, R"(&& in) noexcept {
         iface=in.iface;
         in.iface=nullptr;
     }
@@ -669,7 +683,7 @@ namespace ifacegen {
             hlp::append(str, iface.first);
             hlp::append(str, "& operator=(");
             hlp::append(str, iface.first);
-            hlp::append(str, R"(&& in) {
+            hlp::append(str, R"(&& in) noexcept {
         if(this==std::addressof(in))return *this;
         delete iface;
         iface=in.iface;
@@ -678,12 +692,12 @@ namespace ifacegen {
     }
 
     )");
-            hlp::append(str, R"(explicit operator bool() const {
+            hlp::append(str, R"(explicit operator bool() const noexcept {
         return iface != nullptr;
     }
 
     )");
-            hlp::appends(str, R"(bool operator==(std::nullptr_t) const {
+            hlp::appends(str, R"(bool operator==(std::nullptr_t) const noexcept {
         return iface == nullptr;
     }
     
