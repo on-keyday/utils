@@ -253,7 +253,7 @@ namespace ifacegen {
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
         auto unsafe_raw = any(flag & GenFlag::unsafe_raw);
         if (place == 0) {
-            if (use_dycast) {
+            if (!unsafe_raw && use_dycast) {
                 return;
             }
             hlp::append(str, baseindent);
@@ -264,7 +264,7 @@ namespace ifacegen {
             hlp::append(str, ") const noexcept = 0;\n");
         }
         else if (place == 1) {
-            if (use_dycast) {
+            if (!unsafe_raw && use_dycast) {
                 return;
             }
             hlp::append(str, baseindent);
