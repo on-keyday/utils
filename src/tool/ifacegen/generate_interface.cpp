@@ -135,7 +135,7 @@ namespace ifacegen {
         }
     }
 
-    void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface) {
+    void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, Vtable is_vtptr = vnone) {
         if (func.funcname == call_func || func.funcname == array_op) {
             //hlp::append(str, "operator()");
         }
@@ -149,6 +149,10 @@ namespace ifacegen {
             hlp::append(str, "(");
         }
         bool is_first = true;
+        if (is_vtptr && !(is_vtptr & vfunctail)) {
+            hlp::append(str, "this__");
+            is_first = false;
+        }
         for (auto& arg : func.args) {
             if (!is_first) {
                 hlp::append(str, ", ");
@@ -166,6 +170,13 @@ namespace ifacegen {
             if (arg.type.vararg) {
                 hlp::append(str, "...");
             }
+            is_first = false;
+        }
+        if (is_vtptr && (is_vtptr & vfunctail)) {
+            if (!is_first) {
+                hlp::append(str, ",");
+            }
+            hlp::append(str, "this__");
             is_first = false;
         }
         if (on_iface && func.funcname == array_op) {
@@ -391,7 +402,8 @@ namespace ifacegen {
                 continue;
             }
             if (no_vtable) {
-                hlp::append(str, "\n    struct vtable__t {\n");
+                hlp::append(str, "\n   private:\n");
+                hlp::append(str, "    struct vtable__t {\n");
                 no_vtable = false;
             }
             hlp::append(str, "        ");
@@ -404,7 +416,6 @@ namespace ifacegen {
         }
         hlp::append(str, "    };\n\n");
         hlp::appends(str,
-                     "   private:\n",
                      "    template<class T__v>\n",
                      "    struct vtable__instance__ {\n",
                      "       private:\n",
@@ -441,6 +452,32 @@ namespace ifacegen {
                      "            return &instance;\n",
                      "        }\n",
                      "    };\n\n");
+        hlp::appends(str,
+                     "   public:\n",
+                     "    struct vtable__interface__ {\n",
+                     "       private:\n",
+                     "        void* this__=nullptr;\n",
+                     "        const vtable__t* vtable__=nullptr;\n",
+                     "       public:\n",
+                     "        constexpr vtable__interface__() = default;\n",
+                     "        explicit operator bool() const {\n",
+                     "             return this__!=nullptr&&vtable__!=nullptr;\n",
+                     "        }\n"
+                     "        template<class T__v>\n",
+                     "        vtable__interface__(T__v& v__)\n",
+                     "            :this__(", nmspc, "deref(v__)),vtable__(vtable__instance__<T__v>::instantiate()){}\n\n");
+        for (Interface& func : iface.second.iface) {
+            if (is_special_name(func.funcname)) {
+                continue;
+            }
+            hlp::append(str, "        ");
+            render_cpp_function(func, str, alias, false);
+            hlp::append(str, "{\n");
+            hlp::appends(str, "            ", "return vtable__->");
+            render_cpp_call(func, str, alias, true, tail);
+            hlp::appends(str, ";\n", "        }\n\n");
+        }
+        hlp::append(str, "    };\n\n");
         return true;
     }
 
@@ -487,7 +524,7 @@ namespace ifacegen {
                 if (!iface.second.has_vtable) {
                     continue;
                 }
-                hlp::append(str, "        virtual const vtable__t* vtable__get__() const noexcept = 0;\n");
+                hlp::append(str, "        virtual vtable__interface__ vtable__get__() const noexcept = 0;\n");
             }
             else {
                 hlp::append(str, "        virtual ");
@@ -557,8 +594,8 @@ namespace ifacegen {
                     continue;
                 }
                 hlp::appends(str,
-                             "        const vtable__t* vtable__get__() const noexcept override {\n",
-                             "            return vtable__instance__<T__>::instantiate();\n",
+                             "        vtable_interface__ vtable__get__() const noexcept override {\n",
+                             "            return vtable__interface__(t_holder_);\n",
                              "        }\n\n");
             }
             else {
@@ -919,13 +956,13 @@ namespace ifacegen {
                         continue;
                     }
                     hlp::appends(str,
-                                 "    const vtable__t* get_self_vtable() const noexcept {\n",
-                                 "         return iface?iface->vtable__get__():nullptr;\n",
+                                 "    vtable__interface__ get_self_vtable() const noexcept {\n",
+                                 "         return iface?iface->vtable__get__():{};\n",
                                  "    }\n\n");
                     hlp::appends(str,
                                  "    template<class T__v>\n",
-                                 "    static const vtable__t* get_vtable(T__v&& v) noexcept {\n",
-                                 "         return vtable__instance__<T__v>::instantiate();\n",
+                                 "    static vtable__interface__ get_vtable(T__v& v) noexcept {\n",
+                                 "         return vtable__interface__(v);\n",
                                  "    }\n\n");
                 }
                 else {
