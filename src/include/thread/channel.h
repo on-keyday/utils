@@ -183,7 +183,7 @@ namespace utils {
 
             bool close() {
                 if (closed.test_and_set()) {
-                    return false;
+                    return true;
                 }
                 unlock_ioblocking();
                 lock_.unlock();
