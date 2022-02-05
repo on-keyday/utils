@@ -757,16 +757,32 @@ namespace ifacegen {
             hlp::appends(str,
                          "\n",
                          "    union {\n",
-                         "        char __dummy_object[sizeof(void*)*8];\n",
+                         "        char __storage_box[sizeof(void*)*8];\n",
                          "        struct {\n",
                          "            interface__* __place_holder[7]={};\n",
                          "            interface__* iface = nullptr;\n",
                          "        };",
                          "    };\n\n",
-                         "    template<class T__v>\n",
-                         "    void new___(T__v&& v) {\n",
-                         "        using type=std::decay_t<T__v>;\n",
-                         "        if constexpr (sizeof(type)<sizeof(void*)*7) {\n");
+                         "    template<class T__>\n",
+                         "    void new___(T__&& v) {\n",
+                         "        using gen_type= implements__<std::decay_t<T__>>;\n",
+                         "        if constexpr (sizeof(type)<=sizeof(void*)*7) {\n",
+                         "            iface = new (&__storage_box) gen_type(std::forward<T__>(t));\n",
+                         "        }\n",
+                         "        else {\n",
+                         "            iface = new gen_type(std::forward<T__>(t));\n",
+                         "        }\n",
+                         "    }\n\n",
+                         "    void delete___() {\n",
+                         "        if(!iface)return;\n"
+                         "        if(static_cast<void*>(&storage_box__)!=static_cast<void*>(iface)) {\n",
+                         "            delete iface;\n",
+                         "        }\n",
+                         "        else {\n",
+                         "            iface->~interface__();\n",
+                         "        }\n",
+                         "        iface=nullptr;\n",
+                         "    }\n\n");
         }
         hlp::append(str, R"(
     interface__* iface = nullptr;
@@ -809,18 +825,14 @@ namespace ifacegen {
     }
     
     )");
-        hlp::append(str, iface.first);
-        hlp::append(str, "& operator=(");
-        hlp::append(str, iface.first);
-        hlp::append(str, R"(&& in) noexcept {
-        if(this==std::addressof(in))return *this;
-        delete iface;
-        iface=in.iface;
-        in.iface=nullptr;
-        return *this;
-    }
-
-    )");
+        hlp::appends(str,
+                     iface.first, "& operator=(", iface.first, "&& in) noexcept {\n",
+                     "        if(this==std::addressof(in))return *this;\n"
+                     "        delete iface;\n",
+                     "        iface=in.iface;\n",
+                     "        in.iface=nullptr;\n",
+                     "        return *this;\n",
+                     "    }\n\n");
         hlp::append(str, R"(explicit operator bool() const noexcept {
         return iface != nullptr;
     }
@@ -830,13 +842,11 @@ namespace ifacegen {
         return iface == nullptr;
     }
     
-    )");
-        hlp::appends(str, "~", iface.first);
-        hlp::append(str, R"(() {
-        delete iface;
-    }
-
 )");
+        hlp::appends(str,
+                     "    ~", iface.first, "() {\n",
+                     "        delete iface;\n",
+                     "    }\n\n");
     }
 
     void render_cpp_single_struct(utw::string& str, GenFlag flag, utw::string& nmspc, auto& iface,
