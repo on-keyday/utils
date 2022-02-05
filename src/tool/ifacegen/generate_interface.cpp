@@ -456,13 +456,19 @@ namespace ifacegen {
                      "   public:\n",
                      "    struct vtable__interface__ {\n",
                      "       private:\n",
-                     "        void* this__=nullptr;\n",
-                     "        const vtable__t* vtable__=nullptr;\n",
+                     "        void* this__ = nullptr;\n",
+                     "        const vtable__t* vtable__ = nullptr;\n",
                      "       public:\n",
-                     "        constexpr vtable__interface__() = default;\n",
+                     "        constexpr vtable__interface__() = default;\n\n",
                      "        explicit operator bool() const {\n",
                      "             return this__!=nullptr&&vtable__!=nullptr;\n",
-                     "        }\n"
+                     "        }\n\n",
+                     "        const vtable__t* to_c_style_vtable() const {\n",
+                     "            return vtable__;\n",
+                     "        }\n\n",
+                     "        void* to_c_style_this() const {\n",
+                     "            return this__;\n",
+                     "        }\n\n",
                      "        template<class T__v>\n",
                      "        vtable__interface__(T__v& v__)\n",
                      "            :this__(", nmspc, "deref(v__)),vtable__(vtable__instance__<T__v>::instantiate()){}\n\n");
@@ -957,7 +963,7 @@ namespace ifacegen {
                     }
                     hlp::appends(str,
                                  "    vtable__interface__ get_self_vtable() const noexcept {\n",
-                                 "         return iface?iface->vtable__get__():{};\n",
+                                 "         return iface?iface->vtable__get__():vtable__interface__{};\n",
                                  "    }\n\n");
                     hlp::appends(str,
                                  "    template<class T__v>\n",
