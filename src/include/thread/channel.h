@@ -62,8 +62,14 @@ namespace utils {
                 return true;
             }
 
+            void unlock_ioblocking() {
+                write_blocking.unlock();
+                read_blocking.unlock();
+            }
+
             bool check_close() {
                 if (closed.test()) {
+                    unlock_ioblocking();
                     return false;
                 }
                 return true;
@@ -102,16 +108,14 @@ namespace utils {
             void change_limit(size_t limit) {
                 lock_.lock();
                 this->limit = limit;
-                read_blocking.unlock();
-                write_blocking.unlock();
+                unlock_ioblocking();
                 lock_.unlock();
             }
 
             void change_policy(ChanDisposePolicy policy) {
                 lock_.lock();
                 this->policy = policy;
-                read_blocking.unlock();
-                write_blocking.unlock();
+                unlock_ioblocking();
                 lock_.unlock();
             }
 
@@ -181,8 +185,7 @@ namespace utils {
                 if (closed.test_and_set()) {
                     return false;
                 }
-                read_blocking.unlock();
-                write_blocking.unlock();
+                unlock_ioblocking();
                 lock_.unlock();
                 return true;
             }
