@@ -635,7 +635,7 @@ namespace ifacegen {
 )");
     }
 
-    void render_cpp_public_members(std::string& str, GenFlag flag, auto& iface, auto& append_typeid, auto& append_typefn, auto& alias) {
+    void render_cpp_public_members(utw::string& str, GenFlag flag, auto& iface, auto& append_typeid, auto& append_typefn, auto& alias) {
         bool has_cpy = false;
         for (auto& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
@@ -750,6 +750,78 @@ namespace ifacegen {
             hlp::appends(str, "    ", iface.first, "(", iface.first, "&) = delete;\n\n");
             hlp::appends(str, "    ", iface.first, "& operator=(", iface.first, "&) = delete;\n\n");
         }
+    }
+
+    void render_cpp_common_members(utw::string& str, GenFlag flag, utw::string& nmspc, auto& iface) {
+        hlp::append(str, R"(
+    interface__* iface = nullptr;
+
+)");
+        hlp::append(str, R"(   public:
+    constexpr )");
+        hlp::append(str, iface.first);
+        hlp::append(str, "(){}\n\n    constexpr ");
+        hlp::append(str, iface.first);
+        hlp::append(str, "(std::nullptr_t){}\n");
+        hlp::append(str, R"(
+    template <class T__>
+    )");
+        hlp::append(str, iface.first);
+        hlp::appends(str, R"a((T__&& t) {
+        static_assert(!std::is_same<std::decay_t<T__>,)a",
+                     iface.first, R"a(>::value,"can't accept same type");
+        )a");
+        if (any(flag & GenFlag::not_accept_null)) {
+            hlp::append(str, R"(if(!)");
+            hlp::append(str, nmspc);
+            hlp::append(str, R"(deref(t)){
+            return;
+        }
+        )");
+        }
+        hlp::append(str, "iface=");
+        hlp::append(str, "new implements__<std::decay_t<T__>>(std::forward<T__>(t));");
+        hlp::append(str, R"a(
+    }
+
+    )a");
+        hlp::appends(str, "constexpr ", iface.first);
+        hlp::append(str, "(");
+        hlp::append(str, iface.first);
+        hlp::append(str, R"(&& in) noexcept {
+        iface=in.iface;
+        in.iface=nullptr;
+    }
+    
+    )");
+        hlp::append(str, iface.first);
+        hlp::append(str, "& operator=(");
+        hlp::append(str, iface.first);
+        hlp::append(str, R"(&& in) noexcept {
+        if(this==std::addressof(in))return *this;
+        delete iface;
+        iface=in.iface;
+        in.iface=nullptr;
+        return *this;
+    }
+
+    )");
+        hlp::append(str, R"(explicit operator bool() const noexcept {
+        return iface != nullptr;
+    }
+
+    )");
+        hlp::appends(str, R"(bool operator==(std::nullptr_t) const noexcept {
+        return iface == nullptr;
+    }
+    
+    )");
+        hlp::appends(str, "~", iface.first);
+        hlp::append(str, R"(() {
+        delete iface;
+    }
+
+)");
     }
 
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
@@ -931,75 +1003,7 @@ namespace ifacegen {
 
             render_cpp_interface__class(str, flag, iface, append_typeid, append_typefn, alias);
             render_cpp_implements__class(str, flag, iface, append_typeid, append_typefn, nmspc, alias);
-            hlp::append(str, R"(
-    interface__* iface = nullptr;
-
-)");
-            hlp::append(str, R"(   public:
-    constexpr )");
-            hlp::append(str, iface.first);
-            hlp::append(str, "(){}\n\n    constexpr ");
-            hlp::append(str, iface.first);
-            hlp::append(str, "(std::nullptr_t){}\n");
-            hlp::append(str, R"(
-    template <class T__>
-    )");
-            hlp::append(str, iface.first);
-            hlp::appends(str, R"a((T__&& t) {
-        static_assert(!std::is_same<std::decay_t<T__>,)a",
-                         iface.first, R"a(>::value,"can't accept same type");
-        )a");
-            if (any(flag & GenFlag::not_accept_null)) {
-                hlp::append(str, R"(if(!)");
-                hlp::append(str, nmspc);
-                hlp::append(str, R"(deref(t)){
-            return;
-        }
-        )");
-            }
-            hlp::append(str, "iface=");
-            hlp::append(str, "new implements__<std::decay_t<T__>>(std::forward<T__>(t));");
-            hlp::append(str, R"a(
-    }
-
-    )a");
-            hlp::appends(str, "constexpr ", iface.first);
-            hlp::append(str, "(");
-            hlp::append(str, iface.first);
-            hlp::append(str, R"(&& in) noexcept {
-        iface=in.iface;
-        in.iface=nullptr;
-    }
-    
-    )");
-            hlp::append(str, iface.first);
-            hlp::append(str, "& operator=(");
-            hlp::append(str, iface.first);
-            hlp::append(str, R"(&& in) noexcept {
-        if(this==std::addressof(in))return *this;
-        delete iface;
-        iface=in.iface;
-        in.iface=nullptr;
-        return *this;
-    }
-
-    )");
-            hlp::append(str, R"(explicit operator bool() const noexcept {
-        return iface != nullptr;
-    }
-
-    )");
-            hlp::appends(str, R"(bool operator==(std::nullptr_t) const noexcept {
-        return iface == nullptr;
-    }
-    
-    )");
-            hlp::appends(str, "~", iface.first);
-            hlp::append(str, R"(() {
-        delete iface;
-    }
-
-)");
+            render_cpp_common_members(str, flag, nmspc, iface);
             render_cpp_public_members(str, flag, iface, append_typeid, append_typefn, alias);
             hlp::append(str, "};\n\n");
         }
