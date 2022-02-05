@@ -753,6 +753,21 @@ namespace ifacegen {
     }
 
     void render_cpp_common_members(utw::string& str, GenFlag flag, utw::string& nmspc, auto& iface) {
+        if (any(flag & GenFlag::use_small_size_opt)) {
+            hlp::appends(str,
+                         "\n",
+                         "    union {\n",
+                         "        char __dummy_object[sizeof(void*)*8];\n",
+                         "        struct {\n",
+                         "            interface__* __place_holder[7]={};\n",
+                         "            interface__* iface = nullptr;\n",
+                         "        };",
+                         "    };\n\n",
+                         "    template<class T__v>\n",
+                         "    void new___(T__v&& v) {\n",
+                         "        using type=std::decay_t<T__v>;\n",
+                         "        if constexpr (sizeof(type)<sizeof(void*)*7) {\n");
+        }
         hlp::append(str, R"(
     interface__* iface = nullptr;
 
