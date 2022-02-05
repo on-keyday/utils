@@ -178,7 +178,7 @@ namespace utils {
             }
 
             bool close() {
-                lock_.lock();
+                //lock_.lock();
                 auto res = closed.test_and_set();
                 read_blocking.unlock();
                 write_blocking.unlock();
