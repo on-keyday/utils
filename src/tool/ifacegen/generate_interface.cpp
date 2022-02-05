@@ -407,7 +407,7 @@ namespace ifacegen {
                 no_vtable = false;
             }
             hlp::append(str, "        ");
-            render_cpp_function(func, str, alias, false, Vtable(vfuncptr | tail));
+            render_cpp_function(func, str, alias, true, Vtable(vfuncptr | tail));
             hlp::append(str, "= nullptr;\n");
         }
         if (no_vtable) {
@@ -427,7 +427,7 @@ namespace ifacegen {
                 continue;
             }
             hlp::append(str, "        static ");
-            render_cpp_function(func, str, alias, false, Vtable(vfuncsignature | tail));
+            render_cpp_function(func, str, alias, true, Vtable(vfuncsignature | tail));
             hlp::appends(str, "{\n",
                          "            ", "return static_cast<",
                          func.is_const ? "const " : "", "this_type*>(this__)->");
