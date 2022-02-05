@@ -600,7 +600,7 @@ namespace ifacegen {
                     continue;
                 }
                 hlp::appends(str,
-                             "        vtable_interface__ vtable__get__() const noexcept override {\n",
+                             "        vtable__interface__ vtable__get__() const noexcept override {\n",
                              "            return vtable__interface__(t_holder_);\n",
                              "        }\n\n");
             }
