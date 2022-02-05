@@ -22,6 +22,7 @@ namespace utils {
             closed,
             empty,
             full,
+            blocked,
         };
 
         enum class ChanDisposePolicy {
@@ -114,6 +115,24 @@ namespace utils {
                 lock_.unlock();
             }
 
+            ChanState try_store(T&& t) {
+                if (lock_.try_lock()) {
+                    auto res = unlock_store(std::move(t));
+                    lock_.unlock();
+                    return res;
+                }
+                return ChanStateValue::blocked;
+            }
+
+            ChanState try_load(T& t) {
+                if (lock_.try_lock()) {
+                    auto res = unlock_load(t);
+                    lock_.unlock();
+                    return res;
+                }
+                return ChanStateValue::blocked;
+            }
+
             ChanState store(T&& t) {
                 lock_.lock();
                 auto res = unlock_store(std::move(t));
@@ -172,12 +191,18 @@ namespace utils {
             }
         };
 
+        enum class BlockLevel {
+            normal,
+            force_block,
+            mustnot,
+        };
+
         template <class T, template <class...> class Que>
         struct ChanBase {
            protected:
             using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que>>;
             buffer_t buffer;
-            bool blocking = false;
+            BlockLevel blocking = BlockLevel::normal;
 
            public:
             constexpr ChanBase() {}
@@ -185,7 +210,11 @@ namespace utils {
                 : buffer(in) {}
 
             void set_blocking(bool flag) {
-                blocking = flag;
+                blocking = flag ? BlockLevel::force_block : BlockLevel::normal;
+            }
+
+            void set_blocking(BlockLevel level) {
+                blocking = level;
             }
 
             void change_limit(size_t limit) {
@@ -217,8 +246,11 @@ namespace utils {
                 if (!this->buffer) {
                     return false;
                 }
-                if (this->blocking) {
+                if (this->blocking == BlockLevel::force_block) {
                     return this->buffer->blocking_load(t);
+                }
+                else if (this->blocking == BlockLevel::mustnot) {
+                    return this->buffer->try_load(t);
                 }
                 else {
                     return this->buffer->load(t);
@@ -234,8 +266,11 @@ namespace utils {
                 if (!this->buffer) {
                     return false;
                 }
-                if (this->blocking) {
+                if (this->blocking == BlockLevel::force_block) {
                     return this->buffer->blocking_store(std::move(t));
+                }
+                else if (this->blocking == BlockLevel::mustnot) {
+                    return this->buffer->try_store(std::move(t));
                 }
                 else {
                     return this->buffer->store(std::move(t));

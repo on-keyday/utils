@@ -25,7 +25,7 @@ namespace utils {
             size_t index = 0;
             size_t limit = ~0;
             std::atomic_flag closed;
-            bool blocking = false;
+            BlockLevel blocking = BlockLevel::normal;
 
            public:
             ForkBuffer(size_t limit)
@@ -38,8 +38,15 @@ namespace utils {
             }
 
             void set_blocking(bool blocking) {
+                auto v = blocking ? BlockLevel::force_block : BlockLevel::normal;
                 lock_.lock();
-                this->blocking = blocking;
+                this->blocking = v;
+                lock_.unlock();
+            }
+
+            void set_blocking(BlockLevel level) {
+                lock_.lock();
+                this->blocking = level;
                 lock_.unlock();
             }
 
@@ -146,6 +153,12 @@ namespace utils {
             void set_blocking(bool flag) {
                 if (buffer) {
                     buffer->set_blocking(flag);
+                }
+            }
+
+            void set_blocking(BlockLevel level) {
+                if (buffer) {
+                    buffer->set_blocking(level);
                 }
             }
 
