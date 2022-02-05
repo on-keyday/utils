@@ -97,7 +97,7 @@ namespace ifacegen {
         use_dyn_cast = 0x10,
         sep_namespace = 0x20,
         not_depend_lib = 0x40,
-        need_typeidfun = 0x80,
+        use_small_size_opt = 0x80,
         unsafe_raw = 0x100,
     };
 

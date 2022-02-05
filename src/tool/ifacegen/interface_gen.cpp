@@ -140,9 +140,6 @@ Special Value:
     if (auto v = result.is_set("independent"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::not_depend_lib;
     }
-    if (result.is_true("need-typeid")) {
-        flag |= ifacegen::GenFlag::need_typeidfun;
-    }
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
         if (auto s = h->value<wrap::string>()) {

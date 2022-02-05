@@ -635,6 +635,123 @@ namespace ifacegen {
 )");
     }
 
+    void render_cpp_public_members(std::string& str, GenFlag flag, auto& iface, auto& append_typeid, auto& append_typefn, auto& alias) {
+        bool has_cpy = false;
+        for (auto& func : iface.second.iface) {
+            if (func.funcname == decltype_func) {
+                auto f = flag;
+                if (iface.second.has_unsafe) {
+                    f |= GenFlag::unsafe_raw;
+                }
+                render_cpp_type_assert_func(true, str, f, append_typefn);
+                render_cpp_type_assert_func(false, str, f, append_typefn);
+            }
+            else if (func.funcname == typeid_func) {
+                hlp::append(str, "    ");
+                append_typeid();
+                hlp::append(str, " type_id() const {");
+                hlp::append(str, R"(
+        if (!iface){
+            return )");
+                append_typefn(true);
+                hlp::append(str, R"(;
+        }
+        return iface->type__();
+    }
+
+)");
+            }
+            else if (func.funcname == unsafe_func) {
+                hlp::append(str, R"(    const void* unsafe_cast() const {
+        if(!iface){
+            return nullptr;
+        }
+        return iface->raw__();
+    }
+
+    void* unsafe_cast() {
+        if(!iface){
+            return nullptr;
+        }
+        return const_cast<void*>(iface->raw__());
+    }
+
+)");
+            }
+            else if (func.funcname == copy_func) {
+                has_cpy = true;
+                hlp::append(str, "    ");
+                hlp::append(str, iface.first);
+                hlp::append(str, "(const ");
+                hlp::append(str, iface.first);
+                hlp::append(str, R"(& in) {
+        if(in.iface){
+            iface=in.iface->copy__();
+        }
+    }
+    
+    )");
+                hlp::append(str, iface.first);
+                hlp::append(str, "& operator=(const ");
+                hlp::append(str, iface.first);
+                hlp::appends(str, R"(& in) {
+        if(std::addressof(in)==this)return *this;
+        delete iface;
+        iface=nullptr;
+        if(in.iface){
+            iface=in.iface->copy__();
+        }
+        return *this;
+    }
+
+    )",
+                             iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
+                             "    ", iface.first, "& operator=(", iface.first, "& in){\n",
+                             "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);\n",
+                             "    }\n\n");
+            }
+            else if (func.funcname == vtable_func) {
+                if (!iface.second.has_vtable) {
+                    continue;
+                }
+                hlp::appends(str,
+                             "    vtable__interface__ get_self_vtable() const noexcept {\n",
+                             "         return iface?iface->vtable__get__():vtable__interface__{};\n",
+                             "    }\n\n");
+                hlp::appends(str,
+                             "    template<class T__v>\n",
+                             "    static vtable__interface__ get_vtable(T__v& v) noexcept {\n",
+                             "         return vtable__interface__(v);\n",
+                             "    }\n\n");
+            }
+            else {
+                hlp::append(str, "    ");
+                render_cpp_function(func, str, alias, false);
+                hlp::append(str, R"({
+        return iface?iface->)");
+                if (func.funcname == call_func) {
+                    hlp::append(str, "operator()");
+                }
+                else if (func.funcname == array_op) {
+                    hlp::append(str, "operator[]");
+                }
+                render_cpp_call(func, str, alias, false);
+                hlp::append(str, ":");
+                render_cpp_default_value(func, str, false, alias);
+                hlp::append(str, R"(;
+    }
+
+)");
+            }
+        }
+        if (!has_cpy) {
+            hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) = delete;\n\n");
+            hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) = delete;\n\n");
+            hlp::appends(str, "    ", iface.first, "(", iface.first, "&) = delete;\n\n");
+            hlp::appends(str, "    ", iface.first, "& operator=(", iface.first, "&) = delete;\n\n");
+        }
+    }
+
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
         if (any(flag & GenFlag::add_license)) {
             hlp::append(str, "/*license*/\n");
@@ -883,120 +1000,7 @@ namespace ifacegen {
     }
 
 )");
-            bool has_cpy = false;
-            for (auto& func : iface.second.iface) {
-                if (func.funcname == decltype_func) {
-                    auto f = flag;
-                    if (iface.second.has_unsafe) {
-                        f |= GenFlag::unsafe_raw;
-                    }
-                    render_cpp_type_assert_func(true, str, f, append_typefn);
-                    render_cpp_type_assert_func(false, str, f, append_typefn);
-                }
-                else if (func.funcname == typeid_func) {
-                    hlp::append(str, "    ");
-                    append_typeid();
-                    hlp::append(str, " type_id() const {");
-                    hlp::append(str, R"(
-        if (!iface){
-            return )");
-                    append_typefn(true);
-                    hlp::append(str, R"(;
-        }
-        return iface->type__();
-    }
-
-)");
-                }
-                else if (func.funcname == unsafe_func) {
-                    hlp::append(str, R"(    const void* unsafe_cast() const {
-        if(!iface){
-            return nullptr;
-        }
-        return iface->raw__();
-    }
-
-    void* unsafe_cast() {
-        if(!iface){
-            return nullptr;
-        }
-        return const_cast<void*>(iface->raw__());
-    }
-
-)");
-                }
-                else if (func.funcname == copy_func) {
-                    has_cpy = true;
-                    hlp::append(str, "    ");
-                    hlp::append(str, iface.first);
-                    hlp::append(str, "(const ");
-                    hlp::append(str, iface.first);
-                    hlp::append(str, R"(& in) {
-        if(in.iface){
-            iface=in.iface->copy__();
-        }
-    }
-    
-    )");
-                    hlp::append(str, iface.first);
-                    hlp::append(str, "& operator=(const ");
-                    hlp::append(str, iface.first);
-                    hlp::appends(str, R"(& in) {
-        if(std::addressof(in)==this)return *this;
-        delete iface;
-        iface=nullptr;
-        if(in.iface){
-            iface=in.iface->copy__();
-        }
-        return *this;
-    }
-
-    )",
-                                 iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
-                                 "    ", iface.first, "& operator=(", iface.first, "& in){\n",
-                                 "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);\n",
-                                 "    }\n\n");
-                }
-                else if (func.funcname == vtable_func) {
-                    if (!iface.second.has_vtable) {
-                        continue;
-                    }
-                    hlp::appends(str,
-                                 "    vtable__interface__ get_self_vtable() const noexcept {\n",
-                                 "         return iface?iface->vtable__get__():vtable__interface__{};\n",
-                                 "    }\n\n");
-                    hlp::appends(str,
-                                 "    template<class T__v>\n",
-                                 "    static vtable__interface__ get_vtable(T__v& v) noexcept {\n",
-                                 "         return vtable__interface__(v);\n",
-                                 "    }\n\n");
-                }
-                else {
-                    hlp::append(str, "    ");
-                    render_cpp_function(func, str, alias, false);
-                    hlp::append(str, R"({
-        return iface?iface->)");
-                    if (func.funcname == call_func) {
-                        hlp::append(str, "operator()");
-                    }
-                    else if (func.funcname == array_op) {
-                        hlp::append(str, "operator[]");
-                    }
-                    render_cpp_call(func, str, alias, false);
-                    hlp::append(str, ":");
-                    render_cpp_default_value(func, str, false, alias);
-                    hlp::append(str, R"(;
-    }
-
-)");
-                }
-            }
-            if (!has_cpy) {
-                hlp::appends(str, "    ", iface.first, "(const ", iface.first, "&) = delete;\n\n");
-                hlp::appends(str, "    ", iface.first, "& operator=(const ", iface.first, "&) = delete;\n\n");
-                hlp::appends(str, "    ", iface.first, "(", iface.first, "&) = delete;\n\n");
-                hlp::appends(str, "    ", iface.first, "& operator=(", iface.first, "&) = delete;\n\n");
-            }
+            render_cpp_public_members(str, flag, iface, append_typeid, append_typefn, alias);
             hlp::append(str, "};\n\n");
         }
         if (data.pkgname.size()) {

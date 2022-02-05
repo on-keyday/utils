@@ -26,9 +26,8 @@ namespace utils {
         struct TaskPool {
             wrap::map<size_t, Worker> worker;
             template <class Fn>
-            void operator()(Fn&& fn) {
+            void post(Fn&& fn) {
                 std::function<void()> f;
-                sizeof(f);
             }
         };
 
