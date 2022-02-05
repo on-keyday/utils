@@ -96,7 +96,7 @@ Special Value:
         __call__ - generate `operator()` ex) __call__(num int) int 
         __array__ - generate `operator[]` ex)__array__(index size_t) char
         __unsafe__ - generate unsafe raw pointer getter (short cut) ex) __unsafe__() type
-        __vtable__ - generate vtable class and function (only member function) ex) __vtable__() type
+        __vtable__ - generate c-language style vtable class and function (only member function) ex) __vtable__() type
     Default Value:
         panic - generate throw std::bad_function_call()
     Return Type:
