@@ -107,8 +107,9 @@ namespace utils {
             }
 
             void close() {
-                lock_.lock();
-                closed.test_and_set();
+                if (closed.test_and_set()) {
+                    return;
+                }
                 for (auto& l : listener) {
                     std::get<1>(l).close();
                 }

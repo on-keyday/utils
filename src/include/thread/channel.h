@@ -178,12 +178,13 @@ namespace utils {
             }
 
             bool close() {
-                //lock_.lock();
-                auto res = closed.test_and_set();
+                if (closed.test_and_set()) {
+                    return false;
+                }
                 read_blocking.unlock();
                 write_blocking.unlock();
                 lock_.unlock();
-                return res;
+                return true;
             }
 
             bool is_closed() const {
