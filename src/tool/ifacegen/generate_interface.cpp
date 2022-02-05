@@ -824,6 +824,29 @@ namespace ifacegen {
 )");
     }
 
+    void render_cpp_single_struct(utw::string& str, GenFlag flag, utw::string& nmspc, auto& iface,
+                                  auto& alias, auto& append_typeid, auto& append_typefn) {
+        if (iface.second.typeparam.size()) {
+            render_cpp_template(str, iface.second.typeparam);
+        }
+        hlp::appends(str, "struct ", iface.first, " {\n");
+        if (iface.second.has_vtable) {
+            render_cpp_vtable__class(str, flag, iface, alias, nmspc);
+        }
+
+        hlp::append(str,
+                    R"(
+   private:
+
+)");
+
+        render_cpp_interface__class(str, flag, iface, append_typeid, append_typefn, alias);
+        render_cpp_implements__class(str, flag, iface, append_typeid, append_typefn, nmspc, alias);
+        render_cpp_common_members(str, flag, nmspc, iface);
+        render_cpp_public_members(str, flag, iface, append_typeid, append_typefn, alias);
+        hlp::append(str, "};\n\n");
+    }
+
     bool generate_cpp(FileData& data, utw::string& str, GenFlag flag) {
         if (any(flag & GenFlag::add_license)) {
             hlp::append(str, "/*license*/\n");
@@ -987,25 +1010,7 @@ namespace ifacegen {
                 continue;
             }
             auto& iface = *found;
-            if (iface.second.typeparam.size()) {
-                render_cpp_template(str, iface.second.typeparam);
-            }
-            hlp::appends(str, "struct ", iface.first, " {\n");
-            if (iface.second.has_vtable) {
-                render_cpp_vtable__class(str, flag, iface, alias, nmspc);
-            }
-
-            hlp::append(str,
-                        R"(
-   private:
-
-)");
-
-            render_cpp_interface__class(str, flag, iface, append_typeid, append_typefn, alias);
-            render_cpp_implements__class(str, flag, iface, append_typeid, append_typefn, nmspc, alias);
-            render_cpp_common_members(str, flag, nmspc, iface);
-            render_cpp_public_members(str, flag, iface, append_typeid, append_typefn, alias);
-            hlp::append(str, "};\n\n");
+            render_cpp_single_struct(str, flag, nmspc, iface, alias, append_typeid, append_typefn);
         }
         if (data.pkgname.size()) {
             bool viewed = false;
