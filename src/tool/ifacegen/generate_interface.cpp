@@ -601,7 +601,7 @@ namespace ifacegen {
                 }
                 hlp::appends(str,
                              "        vtable__interface__ vtable__get__() const noexcept override {\n",
-                             "            return vtable__interface__(t_holder_);\n",
+                             "            return vtable__interface__(const_cast<T__&>(t_holder_));\n",
                              "        }\n\n");
             }
             else {
