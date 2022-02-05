@@ -824,9 +824,9 @@ namespace ifacegen {
         in.iface=nullptr;
     }
     
-    )");
+)");
         hlp::appends(str,
-                     iface.first, "& operator=(", iface.first, "&& in) noexcept {\n",
+                     "    ", iface.first, "& operator=(", iface.first, "&& in) noexcept {\n",
                      "        if(this==std::addressof(in))return *this;\n"
                      "        delete iface;\n",
                      "        iface=in.iface;\n",
