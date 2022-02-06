@@ -713,18 +713,17 @@ namespace ifacegen {
                              "        }",
                              "    }\n\n");
                 hlp::appends(str,
-                             "    ", iface.first, "& operator=(const ");
-                hlp::append(str, iface.first);
-                hlp::appends(str, R"(& in) {
-        if(std::addressof(in)==this)return *this;
-        delete iface;
-        iface=nullptr;
-        if(in.iface){
-            iface=in.iface->copy__();
-        }
-        return *this;
-    }
-)",
+                             "    ", iface.first, "& operator=(const ", iface.first, "(& in) {\n", "        if(std::addressof(in)==this)return *this;\n");
+                hlp::appends(str,
+                             "        delete iface;\n");
+                hlp::appends(str,
+                             "        iface=nullptr;\n",
+                             "        if(in.iface){\n",
+                             "            iface=in.iface->copy__();\n",
+                             "        }\n",
+                             "        return *this;\n",
+                             "    }\n\n");
+                hlp::appends(str,
                              "    ", iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
                              "    ", iface.first, "& operator=(", iface.first, "& in){\n",
                              "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);\n",
