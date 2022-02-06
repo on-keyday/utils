@@ -8,7 +8,7 @@
 # generate code
 # tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -eDV
 
-package test::util # `package` will be namespace
+package reflect # `package` will be namespace
 
 # iface
 # const identifier(param type) rettype
@@ -69,7 +69,7 @@ alias TemplateS Template<T,int>
 
 
 typeparam ^T
-alias Value T<int>
+alias ValueA T<int>
 
 typeparam T
 interface Array {
@@ -99,4 +99,10 @@ interface UseSSO {
     __copy__() type
     decltype() type
     __sso__() type
+}
+
+interface Value {
+    decltype() type
+    typeid() type
+    __copy__() type
 }
