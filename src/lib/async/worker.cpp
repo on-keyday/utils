@@ -85,17 +85,25 @@ namespace utils {
             data->task.state = TaskState::wait_signal;
             data->task.sigid = ++data->work->sigidcount;
             SwitchToFiber(data->rootfiber);
-            data->task.state = data->task.state = TaskState::running;
+            data->task.state = TaskState::running;
             return true;
         }
 
         void Context::set_signal() {
+            if (!data->task.sigid) {
+                return;
+            }
             data->work->w << Signal{data->task.sigid, data->work};
+            data->task.sigid = 0;
         }
 
         void Context::cancel() {
             data->task.state = TaskState::cahceled;
             SwitchToFiber(data->rootfiber);
+        }
+
+        void Context::set_value(Any any) {
+            data->task.result = std::move(any);
         }
 
         void DoTask(void* pdata) {

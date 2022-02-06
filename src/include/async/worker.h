@@ -22,16 +22,33 @@ namespace utils {
             struct ContextHandle;
         }  // namespace internal
 
+        struct Context;
+
+        template <class Fn>
+        struct Canceler {
+            Fn fn;
+            Context* ptr = nullptr;
+            void operator()(Context& ctx) const {
+                fn(ctx);
+                ptr->set_signal();
+            }
+
+            ~Canceler() {
+                ptr->set_signal();
+            }
+        };
+
         struct DLL Context {
+            template <class Fn>
+            friend struct Canceler;
             void suspend();
             void cancel();
 
+            void set_value(Any any);
+
             template <class Fn>
             bool wait_task(Fn&& fn) {
-                Task<Context> c = [this, fn = std::move(fn)](auto& ctx) {
-                    fn(ctx);
-                    this->set_signal();
-                };
+                Task<Context> c = Canceler<std::decay_t<Fn>>{std::move(fn), this};
                 return wait_task(std::move(c));
             }
 
