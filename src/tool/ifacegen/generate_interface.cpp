@@ -781,18 +781,18 @@ namespace ifacegen {
             hlp::appends(str,
                          "\n",
                          "    union {\n",
-                         "        char __storage_box[sizeof(void*)*8];\n",
+                         "        char __storage_box[sizeof(void*)*8]{0};\n",
                          "        struct {\n",
-                         "            interface__* __place_holder[7]={};\n",
-                         "            interface__* iface = nullptr;\n",
-                         "        };",
+                         "            interface__* __place_holder[7];\n",
+                         "            interface__* iface;\n",
+                         "        };\n",
                          "    };\n\n",
                          "    template<class T__>\n",
                          "    void new___(T__&& v) {\n",
                          "        interface__* p = nullptr;",
                          "        using gen_type= implements__<std::decay_t<T__>>;\n",
                          "        if constexpr (sizeof(gen_type)<=sizeof(void*)*7) {\n",
-                         "            p = new (__storage_box) gen_type(std::forward<T__>(t));\n",
+                         "            p = new (__storage_box) gen_type(std::forward<T__>(v));\n",
                          "        }\n",
                          "        else {\n",
                          "            p = new gen_type(std::forward<T__>(t));\n",
@@ -800,7 +800,7 @@ namespace ifacegen {
                          "        iface = p;\n",
                          "    }\n\n",
                          "    bool is_local___() const {\n",
-                         "        return static_cast<void*>(&storage_box__)==static_cast<void*>(iface);\n",
+                         "        return static_cast<const void*>(__storage_box)==static_cast<const void*>(iface);\n",
                          "    }\n\n",
                          "    void delete___() {\n",
                          "        if(!iface)return;\n"
@@ -813,10 +813,12 @@ namespace ifacegen {
                          "        iface=nullptr;\n",
                          "    }\n\n");
         }
-        hlp::append(str, R"(
+        else {
+            hlp::append(str, R"(
     interface__* iface = nullptr;
 
 )");
+        }
         hlp::append(str, R"(   public:
     constexpr )");
         hlp::append(str, iface.first);

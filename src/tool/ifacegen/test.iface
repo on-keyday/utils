@@ -6,7 +6,7 @@
 # test - ifacegen test
 
 # generate code
-# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -eT
+# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -eDV
 
 package test::util # `package` will be namespace
 
@@ -93,4 +93,9 @@ interface NoGenVtable {
 interface GenVtable {
     dummy(i int) int
     __vtable__() lastthis
+}
+
+interface UseSSO {
+    dummy(i int) int
+    __sso__() type
 }
