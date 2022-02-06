@@ -496,6 +496,7 @@ namespace ifacegen {
         hlp::append(str, R"(interface__ {
 )");
         bool raw_gened = false, type_gened = false;
+        auto has_sso = any(flag & GenFlag::use_small_size_opt);
         for (Interface& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
                 if (!raw_gened) {
@@ -518,7 +519,10 @@ namespace ifacegen {
                 }
             }
             else if (func.funcname == copy_func) {
-                hlp::append(str, "        virtual interface__* copy__() const = 0;\n");
+                hlp::appends(str,
+                             "        virtual interface__* copy__(",
+                             has_sso ? "void* __storage_box" : "",
+                             ") const = 0;\n");
             }
             else if (func.funcname == typeid_func) {
                 if (!type_gened) {
@@ -538,7 +542,9 @@ namespace ifacegen {
                 hlp::append(str, "= 0;\n");
             }
         }
-
+        if (has_sso) {
+            hlp::append(str, "        virtual interface__* move__(void* __storage_box) = 0;\n");
+        }
         hlp::append(str, R"(
         virtual ~interface__() = default;
     };
@@ -560,6 +566,7 @@ namespace ifacegen {
 
 )");
         bool raw_gened = false, type_gened = false;
+        bool has_sso = any(flag & GenFlag::use_small_size_opt);
         for (auto& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
                 if (!raw_gened) {
@@ -588,12 +595,22 @@ namespace ifacegen {
                 }
             }
             else if (func.funcname == copy_func) {
-                hlp::appends(str, R"(        interface__* copy__() const override {
-            )",
-                             "return new implements__<T__>(t_holder_);", R"(
-        }
-
-)");
+                hlp::appends(str, "        interface__* copy__(",
+                             has_sso ? "void* __storage_box" : "", ") const override {\n");
+                if (has_sso) {
+                    hlp::appends(str,
+                                 "           using gen_type = implements__<T__>;\n",
+                                 "           if constexpr (sizeof(gen_type) <= sizeof(void*)*7) {\n",
+                                 "               return new(__storage_box) implements__<T__>(t_holder_);\n",
+                                 "           }\n",
+                                 "           else {\n",
+                                 "               return new implements__<T__>(t_holder_);\n",
+                                 "           }\n");
+                }
+                else {
+                    hlp::append(str, "            return new implements__<T__>(t_holder_);\n");
+                }
+                hlp::append(str, "        }\n\n");
             }
             else if (func.funcname == vtable_func) {
                 if (!iface.second.has_vtable) {
@@ -607,29 +624,41 @@ namespace ifacegen {
             else {
                 hlp::append(str, "        ");
                 render_cpp_function(func, str, alias, true);
-                hlp::append(str, "override {\n");
-                hlp::append(str, "            ");
-                hlp::append(str, "auto t_ptr_ = ");
-                hlp::append(str, nmspc);
-                hlp::append(str, "deref(this->t_holder_);\n");
-                hlp::append(str, "            ");
+                hlp::appends(str,
+                             "override {\n",
+                             "            auto t_ptr_ = ", nmspc, "deref(this->t_holder_);\n",
+                             "            ");
                 if (func.is_noexcept) {
                     hlp::appends(str, "static_assert(noexcept(");
                     render_cpp_t_ptr_call(str, alias, func);
                     hlp::appends(str, R"(),"expect noexcept function call but not");)", "\n");
                     hlp::append(str, "            ");
                 }
-                hlp::append(str, "if (!t_ptr_) {\n");
-                hlp::append(str, "                ");
+                hlp::appends(str,
+                             "if (!t_ptr_) {\n",
+                             "                ");
                 render_cpp_default_value(func, str, true, alias);
-                hlp::append(str, ";\n");
-                hlp::append(str, "            }\n");
-                hlp::append(str, "            ");
-                hlp::append(str, "return ");
+                hlp::appends(str,
+                             ";\n",
+                             "            }\n",
+                             "            return ");
                 render_cpp_t_ptr_call(str, alias, func);
-                hlp::append(str, ";");
-                hlp::append(str, "\n        }\n\n");
+                hlp::appends(str,
+                             ";\n",
+                             "        }\n\n");
             }
+        }
+        if (has_sso) {
+            hlp::appends(str,
+                         "        interface__* move__(void* __storage_box) override {\n",
+                         "           using gen_type = implements__<T__>;\n",
+                         "           if constexpr (sizeof(gen_type) <= sizeof(void*)*7) {\n",
+                         "               return new(__storage_box) implements__<T__>(std::move(t_holder_));\n",
+                         "           }\n",
+                         "           else {\n",
+                         "               return nullptr;\n",
+                         "           }\n",
+                         "        }\n\n");
         }
         hlp::append(str, R"(    };
 )");
@@ -753,7 +782,8 @@ namespace ifacegen {
     }
 
     void render_cpp_common_members(utw::string& str, GenFlag flag, utw::string& nmspc, auto& iface) {
-        if (any(flag & GenFlag::use_small_size_opt)) {
+        auto has_sso = any(flag & GenFlag::use_small_size_opt);
+        if (has_sso) {
             hlp::appends(str,
                          "\n",
                          "    union {\n",
@@ -775,9 +805,12 @@ namespace ifacegen {
                          "        }\n",
                          "        iface = p;\n",
                          "    }\n\n",
+                         "    bool is_local___() const {\n",
+                         "        return static_cast<void*>(&storage_box__)==static_cast<void*>(iface);\n",
+                         "    }\n\n",
                          "    void delete___() {\n",
                          "        if(!iface)return;\n"
-                         "        if(static_cast<void*>(&storage_box__)!=static_cast<void*>(iface)) {\n",
+                         "        if(!is_local___()) {\n",
                          "            delete iface;\n",
                          "        }\n",
                          "        else {\n",
@@ -812,35 +845,41 @@ namespace ifacegen {
         }
         )");
         }
-        hlp::append(str, "iface=");
-        hlp::append(str, "new implements__<std::decay_t<T__>>(std::forward<T__>(t));");
+        if (has_sso) {
+            hlp::append(str, "new___(std::forward<T__>(t));");
+        }
+        else {
+            hlp::append(str, "iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));");
+        }
         hlp::append(str, R"a(
     }
 
-    )a");
-        hlp::appends(str, "constexpr ", iface.first);
-        hlp::append(str, "(");
-        hlp::append(str, iface.first);
-        hlp::append(str, R"(&& in) noexcept {
-        iface=in.iface;
-        in.iface=nullptr;
-    }
-    
-)");
+)a");
         hlp::appends(str,
-                     "    ", iface.first, "& operator=(", iface.first, "&& in) noexcept {\n",
-                     "        if(this==std::addressof(in))return *this;\n"
-                     "        delete iface;\n",
+                     "    ", has_sso ? "" : "constexpr ",
+                     iface.first, "(", iface.first, "&& in) ",
+                     has_sso ? "" : "noexcept ",
+                     "{\n");
+        hlp::appends(str,
                      "        iface=in.iface;\n",
                      "        in.iface=nullptr;\n",
+                     "    }\n\n");
+        hlp::appends(str,
+                     "    ", iface.first, "& operator=(", iface.first, "&& in) noexcept {\n",
+                     "        if(this==std::addressof(in))return *this;\n");
+        hlp::appends(str,
+                     "        delete iface;\n",
+                     "        iface=in.iface;\n",
+                     "        in.iface=nullptr;\n");
+        hlp::appends(str,
                      "        return *this;\n",
                      "    }\n\n");
-        hlp::append(str, R"(explicit operator bool() const noexcept {
+        hlp::append(str, R"(    explicit operator bool() const noexcept {
         return iface != nullptr;
     }
 
     )");
-        hlp::appends(str, R"(bool operator==(std::nullptr_t) const noexcept {
+        hlp::appends(str, R"(    bool operator==(std::nullptr_t) const noexcept {
         return iface == nullptr;
     }
     
