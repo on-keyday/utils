@@ -8,26 +8,59 @@
 
 #pragma once
 #include <thread>
-#include "../thread/channel.h"
-#include "../wrap/lite/map.h"
-#include <functional>
+#include "../thread/lite_lock.h"
+#include "../wrap/lite/smart_ptr.h"
+#include "task.h"
 
 namespace utils {
     namespace async {
-        struct TaskState {
-            int state = 0;
+
+        namespace internal {
+            struct WorkerData;
+            struct ContextData;
+            struct ContextHandle;
+        }  // namespace internal
+
+        struct Context {
+            void suspend();
+            void cancel();
+
+            template <class Fn>
+            bool wait_task(Fn&& fn) {
+                Task<void, Context> c = [this, fn = std::move(fn)](auto& ctx) {
+                    fn(ctx);
+                    this->set_signal();
+                };
+                wait_task(c);
+            }
+
+           private:
+            friend struct internal::ContextHandle;
+            wrap::shared_ptr<internal::ContextData> data;
+            bool wait_task(Task<void, Context>&& task);
+            void set_signal();
         };
-        struct Worker {
-            size_t id = 0;
-            std::thread th;
-            TaskState state;
+
+        enum class TaskState {
+            prelaunch,
+            running,
+            suspend,
+            wait_signal,
+            done,
+            except,
+            cahceled,
         };
 
         struct TaskPool {
-            wrap::map<size_t, Worker> worker;
+           private:
+            thread::LiteLock initlock;
+            wrap::shared_ptr<internal::WorkerData> data;
+            void posting(Task<Any, Context>&& task);
+
+           public:
             template <class Fn>
             void post(Fn&& fn) {
-                std::function<void()> f;
+                posting(std::forward<Fn>(fn));
             }
         };
 

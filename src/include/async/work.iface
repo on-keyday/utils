@@ -1,0 +1,17 @@
+
+# worker - worker callback and any
+package utils::async
+
+#generate cood
+# tool\ifacegen -i src/include/async/work.iface -o src/include/async/task.h -eVSn --license --helper-deref "\"../helper/deref.h\"" 
+
+interface Any {
+    decltype() type
+    __copy__() type
+    __unsafe__() type
+}
+
+typeparam T,Ctx
+interface Task {
+    __call__(ctx &Ctx) T
+}
