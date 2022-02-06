@@ -90,6 +90,7 @@ namespace utils {
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));
             }
+            ~TaskPool();
         };
 
     }  // namespace async

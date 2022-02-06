@@ -205,5 +205,12 @@ namespace utils {
             data->w << std::move(task);
         }
 
+        TaskPool::~TaskPool() {
+            initlock.lock();
+            if (data) {
+                data->r.close();
+            }
+            initlock.unlock();
+        }
     }  // namespace async
 }  // namespace utils
