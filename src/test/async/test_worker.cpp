@@ -18,7 +18,7 @@ void test_worker() {
         ctx.wait_task([](async::Context& ctx) {
             //ctx.cancel();
             ctx.wait_task([](async::Context& ctx) {
-                for (auto i = 0; i < 10; i++) {
+                for (auto i = 0; i < 10000; i++) {
                     utils::wrap::cout_wrap() << utils::wrap::pack(i, "\n");
                     ctx.suspend();
                 }

@@ -30,6 +30,12 @@ namespace utils {
                 void* fiber;
                 Any result;
                 std::exception_ptr except;
+
+                ~TaskData() {
+                    if (fiber) {
+                        DeleteFiber(fiber);
+                    }
+                }
             };
 
             struct WorkerData {
@@ -38,6 +44,7 @@ namespace utils {
                 wrap::map<size_t, Any> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
+                bool diepool = false;
             };
 
             struct ContextData {
@@ -90,7 +97,7 @@ namespace utils {
         }
 
         void Context::set_signal() {
-            if (!data->task.sigid) {
+            if (data->work->diepool || !data->task.sigid) {
                 return;
             }
             data->work->w << Signal{data->task.sigid, data->work};
@@ -209,6 +216,7 @@ namespace utils {
             initlock.lock();
             if (data) {
                 data->r.close();
+                data->diepool = true;
             }
             initlock.unlock();
         }
