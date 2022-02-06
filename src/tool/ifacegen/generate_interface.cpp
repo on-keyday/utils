@@ -795,7 +795,7 @@ namespace ifacegen {
                          "            p = new (__storage_box) gen_type(std::forward<T__>(v));\n",
                          "        }\n",
                          "        else {\n",
-                         "            p = new gen_type(std::forward<T__>(t));\n",
+                         "            p = new gen_type(std::forward<T__>(v));\n",
                          "        }\n",
                          "        iface = p;\n",
                          "    }\n\n",
