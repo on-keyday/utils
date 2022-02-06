@@ -74,6 +74,7 @@ namespace ifacegen {
         utw::vector<utw::string> headernames;
         utw::map<utw::string, Alias> aliases;
         bool has_ref_ret = false;
+        bool has_sso_align = false;
         utw::string typeid_func;
         utw::string typeid_type;
         utw::string helper_deref;

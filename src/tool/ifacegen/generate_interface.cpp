@@ -786,6 +786,7 @@ namespace ifacegen {
                          "\n",
                          "    union {\n",
                          "        char __storage_box[sizeof(void*)*8]{0};\n",
+                         "        std::max_align_t __align_of;\n",
                          "        struct {\n",
                          "            interface__* __place_holder[7];\n",
                          "            interface__* iface;\n",
@@ -940,6 +941,9 @@ namespace ifacegen {
 #pragma once
 )");
         utw::string nmspc;
+        if (data.has_sso_align) {
+            hlp::append(str, "#include<cstddef>\n");
+        }
         if (any(flag & GenFlag::not_depend_lib)) {
             hlp::append(str, "#include<memory>\n");
             hlp::append(str, "#include<type_traits>\n");

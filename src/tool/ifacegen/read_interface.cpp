@@ -81,6 +81,7 @@ namespace ifacegen {
                     }
                     else if (state.iface.funcname == "__sso__") {
                         state.data.ifaces[state.current_iface].has_sso = true;
+                        state.data.has_sso_align = true;
                     }
                 }
                 return true;
