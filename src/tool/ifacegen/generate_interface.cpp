@@ -793,7 +793,7 @@ namespace ifacegen {
                          "    };\n\n",
                          "    template<class T__>\n",
                          "    void new___(T__&& v) {\n",
-                         "        interface__* p = nullptr;",
+                         "        interface__* p = nullptr;\n",
                          "        using gen_type= implements__<std::decay_t<T__>>;\n",
                          "        if constexpr (sizeof(gen_type)<=sizeof(void*)*7) {\n",
                          "            p = new (__storage_box) gen_type(std::forward<T__>(v));\n",
@@ -858,7 +858,7 @@ namespace ifacegen {
         hlp::appends(str,
                      "    ", has_sso ? "" : "constexpr ",
                      iface.first, "(", iface.first, "&& in) ",
-                     has_sso ? "" : "noexcept ",
+                     "noexcept ",
                      "{\n");
         auto write_moveimpl = [&] {
             if (has_sso) {

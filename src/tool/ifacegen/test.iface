@@ -96,7 +96,7 @@ interface GenVtable {
 }
 
 interface UseSSO {
-    dummy(i int) int
     __copy__() type
+    decltype() type
     __sso__() type
 }
