@@ -25,7 +25,6 @@ namespace utils {
             struct NOVTABLE__ interface__ {
                 virtual const void* raw__() const noexcept = 0;
                 virtual const std::type_info& type__() const noexcept = 0;
-                virtual interface__* copy__() const = 0;
 
                 virtual ~interface__() = default;
             };
@@ -44,10 +43,6 @@ namespace utils {
 
                 const std::type_info& type__() const noexcept override {
                     return typeid(T__);
-                }
-
-                interface__* copy__() const override {
-                    return new implements__<T__>(t_holder_);
                 }
             };
 
@@ -114,29 +109,6 @@ namespace utils {
                 return static_cast<T__*>(const_cast<void*>(iface->raw__()));
             }
 
-            Any(const Any& in) {
-                if (in.iface) {
-                    iface = in.iface->copy__();
-                }
-            }
-
-            Any& operator=(const Any& in) {
-                if (std::addressof(in) == this) return *this;
-                delete iface;
-                iface = nullptr;
-                if (in.iface) {
-                    iface = in.iface->copy__();
-                }
-                return *this;
-            }
-
-            Any(Any& in)
-                : Any(const_cast<const Any&>(in)) {}
-
-            Any& operator=(Any& in) {
-                return *this = const_cast<const Any&>(in);
-            }
-
             const void* unsafe_cast() const {
                 if (!iface) {
                     return nullptr;
@@ -150,13 +122,21 @@ namespace utils {
                 }
                 return const_cast<void*>(iface->raw__());
             }
+
+            Any(const Any&) = delete;
+
+            Any& operator=(const Any&) = delete;
+
+            Any(Any&) = delete;
+
+            Any& operator=(Any&) = delete;
         };
 
-        template <typename T, typename Ctx>
+        template <typename Ctx>
         struct Task {
            private:
             struct NOVTABLE__ interface__ {
-                virtual T operator()(Ctx& ctx) = 0;
+                virtual void operator()(Ctx& ctx) = 0;
 
                 virtual ~interface__() = default;
             };
@@ -169,10 +149,10 @@ namespace utils {
                 implements__(V__&& args)
                     : t_holder_(std::forward<V__>(args)) {}
 
-                T operator()(Ctx& ctx) override {
+                void operator()(Ctx& ctx) override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
-                        return T{};
+                        return (void)0;
                     }
                     return (*t_ptr_)(ctx);
                 }
@@ -219,8 +199,8 @@ namespace utils {
                 delete iface;
             }
 
-            T operator()(Ctx& ctx) {
-                return iface ? iface->operator()(ctx) : T{};
+            void operator()(Ctx& ctx) {
+                return iface ? iface->operator()(ctx) : (void)0;
             }
 
             Task(const Task&) = delete;

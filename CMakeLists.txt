@@ -114,6 +114,12 @@ PRIVATE
 "src/lib/wrap/iocommon.cpp"
 "src/lib/wrap/cin.cpp"
 )
+if(WIN32)
+target_sources(utils
+PRIVATE
+"src/lib/async/worker.cpp"
+)
+endif()
 
 
 target_link_libraries(fileview utils)

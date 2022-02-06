@@ -19,7 +19,7 @@
 
 namespace utils {
     namespace async {
-        using Atask = Task<void, Context>;
+        using Atask = Task<Context>;
         namespace internal {
             struct TaskData {
                 Atask task;
@@ -76,7 +76,7 @@ namespace utils {
             data->task.state = TaskState::running;
         }
 
-        bool Context::wait_task(Task<void, Context>&& task) {
+        bool Context::wait_task(Task<Context>&& task) {
             if (!task) {
                 return false;
             }
@@ -181,7 +181,7 @@ namespace utils {
             }
         }
 
-        void TaskPool::posting(Task<Any, Context>&& task) {
+        void TaskPool::posting(Task<Context>&& task) {
             initlock.lock();
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();

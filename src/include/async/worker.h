@@ -27,7 +27,7 @@ namespace utils {
 
             template <class Fn>
             bool wait_task(Fn&& fn) {
-                Task<void, Context> c = [this, fn = std::move(fn)](auto& ctx) {
+                Task<Context> c = [this, fn = std::move(fn)](auto& ctx) {
                     fn(ctx);
                     this->set_signal();
                 };
@@ -37,7 +37,7 @@ namespace utils {
            private:
             friend struct internal::ContextHandle;
             wrap::shared_ptr<internal::ContextData> data;
-            bool wait_task(Task<void, Context>&& task);
+            bool wait_task(Task<Context>&& task);
             void set_signal();
         };
 
@@ -55,7 +55,7 @@ namespace utils {
            private:
             thread::LiteLock initlock;
             wrap::shared_ptr<internal::WorkerData> data;
-            void posting(Task<Any, Context>&& task);
+            void posting(Task<Context>&& task);
 
            public:
             template <class Fn>

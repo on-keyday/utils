@@ -7,11 +7,10 @@ package utils::async
 
 interface Any {
     decltype() type
-    __copy__() type
     __unsafe__() type
 }
 
-typeparam T,Ctx
+typeparam Ctx
 interface Task {
-    __call__(ctx &Ctx) T
+    __call__(ctx &Ctx) void
 }
