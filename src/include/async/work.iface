@@ -15,5 +15,5 @@ interface Any {
 
 typeparam Ctx
 interface Task {
-    __call__(ctx &Ctx) void
+    const __call__(ctx &Ctx) void
 }

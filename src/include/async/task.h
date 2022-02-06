@@ -136,7 +136,7 @@ namespace utils {
         struct Task {
            private:
             struct NOVTABLE__ interface__ {
-                virtual void operator()(Ctx& ctx) = 0;
+                virtual void operator()(Ctx& ctx) const = 0;
 
                 virtual ~interface__() = default;
             };
@@ -149,7 +149,7 @@ namespace utils {
                 implements__(V__&& args)
                     : t_holder_(std::forward<V__>(args)) {}
 
-                void operator()(Ctx& ctx) override {
+                void operator()(Ctx& ctx) const override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
                         return (void)0;
@@ -199,7 +199,7 @@ namespace utils {
                 delete iface;
             }
 
-            void operator()(Ctx& ctx) {
+            void operator()(Ctx& ctx) const {
                 return iface ? iface->operator()(ctx) : (void)0;
             }
 

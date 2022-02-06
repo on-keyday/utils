@@ -32,7 +32,7 @@ namespace utils {
                     fn(ctx);
                     this->set_signal();
                 };
-                wait_task(c);
+                return wait_task(c);
             }
 
            private:
