@@ -58,6 +58,7 @@ namespace ifacegen {
         utw::vector<Interface> iface;
         bool has_unsafe = false;
         bool has_vtable = false;
+        bool has_sso = false;
     };
 
     struct Alias {

@@ -500,11 +500,7 @@ namespace ifacegen {
         for (Interface& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
                 if (!raw_gened) {
-                    auto f = flag;
-                    if (iface.second.has_unsafe) {
-                        f |= GenFlag::unsafe_raw;
-                    }
-                    render_cpp_raw__func("        ", f, str, 0, append_typeid, append_typefn);
+                    render_cpp_raw__func("        ", flag, str, 0, append_typeid, append_typefn);
                     raw_gened = true;
                 }
                 if (!any(flag & GenFlag::use_dyn_cast) && !type_gened && iface.second.has_unsafe) {
@@ -514,7 +510,7 @@ namespace ifacegen {
             }
             else if (func.funcname == unsafe_func) {
                 if (!raw_gened) {
-                    render_cpp_raw__func("        ", flag | GenFlag::unsafe_raw, str, 0, append_typeid, append_typefn);
+                    render_cpp_raw__func("        ", flag, str, 0, append_typeid, append_typefn);
                     raw_gened = true;
                 }
             }
@@ -570,11 +566,7 @@ namespace ifacegen {
         for (auto& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
                 if (!raw_gened) {
-                    auto f = flag;
-                    if (iface.second.has_unsafe) {
-                        f |= GenFlag::unsafe_raw;
-                    }
-                    render_cpp_raw__func("        ", f, str, 1, append_typeid, append_typefn);
+                    render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
                     raw_gened = true;
                 }
                 if (!any(flag & GenFlag::use_dyn_cast) && !type_gened && iface.second.has_unsafe) {
@@ -584,7 +576,7 @@ namespace ifacegen {
             }
             else if (func.funcname == unsafe_func) {
                 if (!raw_gened) {
-                    render_cpp_raw__func("        ", flag | GenFlag::unsafe_raw, str, 1, append_typeid, append_typefn);
+                    render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
                     raw_gened = true;
                 }
             }
@@ -666,14 +658,11 @@ namespace ifacegen {
 
     void render_cpp_public_members(utw::string& str, GenFlag flag, auto& iface, auto& append_typeid, auto& append_typefn, auto& alias) {
         bool has_cpy = false;
+        auto has_sso = any(flag & GenFlag::use_small_size_opt);
         for (auto& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
-                auto f = flag;
-                if (iface.second.has_unsafe) {
-                    f |= GenFlag::unsafe_raw;
-                }
-                render_cpp_type_assert_func(true, str, f, append_typefn);
-                render_cpp_type_assert_func(false, str, f, append_typefn);
+                render_cpp_type_assert_func(true, str, flag, append_typefn);
+                render_cpp_type_assert_func(false, str, flag, append_typefn);
             }
             else if (func.funcname == typeid_func) {
                 hlp::append(str, "    ");
@@ -709,19 +698,15 @@ namespace ifacegen {
             }
             else if (func.funcname == copy_func) {
                 has_cpy = true;
-                hlp::append(str, "    ");
-                hlp::append(str, iface.first);
-                hlp::append(str, "(const ");
-                hlp::append(str, iface.first);
-                hlp::append(str, R"(& in) {
-        if(in.iface){
-            iface=in.iface->copy__();
-        }
-    }
-    
-    )");
-                hlp::append(str, iface.first);
-                hlp::append(str, "& operator=(const ");
+                hlp::appends(str,
+                             "    ", iface.first, "(const ", iface.first, "& in) {\n",
+                             "        if(in.iface){\n",
+                             "            iface=in.iface->copy__(",
+                             has_sso ? "__storage_box" : "", ");\n",
+                             "        }",
+                             "    }\n\n");
+                hlp::appends(str,
+                             "    ", iface.first, "& operator=(const ");
                 hlp::append(str, iface.first);
                 hlp::appends(str, R"(& in) {
         if(std::addressof(in)==this)return *this;
@@ -732,9 +717,8 @@ namespace ifacegen {
         }
         return *this;
     }
-
-    )",
-                             iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
+)",
+                             "    ", iface.first, "(", iface.first, "& in) : ", iface.first, "(const_cast<const ", iface.first, "&>(in)) {}\n\n",
                              "    ", iface.first, "& operator=(", iface.first, "& in){\n",
                              "        ", "return ", "*this = ", "const_cast<const ", iface.first, "&>(in);\n",
                              "    }\n\n");
@@ -798,7 +782,7 @@ namespace ifacegen {
                          "        interface__* p = nullptr;",
                          "        using gen_type= implements__<std::decay_t<T__>>;\n",
                          "        if constexpr (sizeof(gen_type)<=sizeof(void*)*7) {\n",
-                         "            p = new (&__storage_box) gen_type(std::forward<T__>(t));\n",
+                         "            p = new (__storage_box) gen_type(std::forward<T__>(t));\n",
                          "        }\n",
                          "        else {\n",
                          "            p = new gen_type(std::forward<T__>(t));\n",
@@ -865,7 +849,7 @@ namespace ifacegen {
                 hlp::appends(str,
                              "        // reference implementation: MSVC std::function\n",
                              "        if (in.is_local___()) {\n",
-                             "            iface = in.iface->move__(&__storage_box);\n",
+                             "            iface = in.iface->move__(__storage_box);\n",
                              "            in.delete___();\n",
                              "        }\n",
                              "        else {\n"
@@ -1094,7 +1078,14 @@ namespace ifacegen {
                 continue;
             }
             auto& iface = *found;
-            render_cpp_single_struct(str, flag, nmspc, iface, alias, append_typeid, append_typefn);
+            auto f = flag;
+            if (iface.second.has_unsafe) {
+                f |= GenFlag::unsafe_raw;
+            }
+            if (iface.second.has_sso) {
+                f |= GenFlag::use_small_size_opt;
+            }
+            render_cpp_single_struct(str, f, nmspc, iface, alias, append_typeid, append_typefn);
         }
         if (data.pkgname.size()) {
             bool viewed = false;
