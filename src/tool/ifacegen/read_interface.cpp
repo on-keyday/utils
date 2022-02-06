@@ -79,6 +79,9 @@ namespace ifacegen {
                     else if (state.iface.funcname == "__vtable__") {
                         state.data.ifaces[state.current_iface].has_vtable = true;
                     }
+                    else if (state.iface.funcname == "__sso__") {
+                        state.data.ifaces[state.current_iface].has_sso = true;
+                    }
                 }
                 return true;
             }

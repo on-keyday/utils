@@ -23,6 +23,7 @@ namespace ifacegen {
     constexpr auto unsafe_func = "__unsafe__";
     constexpr auto typeid_func = "typeid";
     constexpr auto vtable_func = "__vtable__";
+    constexpr auto sso_func = "__sso__";
 
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, Alias>* alias) {
         if (alias) {
@@ -383,7 +384,7 @@ namespace ifacegen {
         return funcname == copy_func || funcname == array_op ||
                funcname == array_op || funcname == unsafe_func ||
                funcname == decltype_func || funcname == typeid_func ||
-               funcname == vtable_func;
+               funcname == vtable_func || funcname == sso_func;
     }
 
     bool render_cpp_vtable__class(utw::string& str, GenFlag flag, auto& iface, auto& alias, auto& nmspc) {
@@ -532,6 +533,9 @@ namespace ifacegen {
                 }
                 hlp::append(str, "        virtual vtable__interface__ vtable__get__() const noexcept = 0;\n");
             }
+            else if (func.funcname == sso_func) {
+                // ignore
+            }
             else {
                 hlp::append(str, "        virtual ");
                 render_cpp_function(func, str, alias, true);
@@ -612,6 +616,9 @@ namespace ifacegen {
                              "        vtable__interface__ vtable__get__() const noexcept override {\n",
                              "            return vtable__interface__(const_cast<T__&>(t_holder_));\n",
                              "        }\n\n");
+            }
+            else if (func.funcname == sso_func) {
+                // ignore
             }
             else {
                 hlp::append(str, "        ");
@@ -736,6 +743,9 @@ namespace ifacegen {
                              "    static vtable__interface__ get_vtable(T__v& v) noexcept {\n",
                              "         return vtable__interface__(v);\n",
                              "    }\n\n");
+            }
+            else if (func.funcname == sso_func) {
+                // ignore
             }
             else {
                 hlp::append(str, "    ");
