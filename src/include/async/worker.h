@@ -8,6 +8,7 @@
 
 #pragma once
 #include <thread>
+#include "../platform/windows/dllexport_header.h"
 #include "../thread/lite_lock.h"
 #include "../wrap/lite/smart_ptr.h"
 #include "task.h"
@@ -21,7 +22,7 @@ namespace utils {
             struct ContextHandle;
         }  // namespace internal
 
-        struct Context {
+        struct DLL Context {
             void suspend();
             void cancel();
 
@@ -51,7 +52,7 @@ namespace utils {
             cahceled,
         };
 
-        struct TaskPool {
+        struct DLL TaskPool {
            private:
             thread::LiteLock initlock;
             wrap::shared_ptr<internal::WorkerData> data;

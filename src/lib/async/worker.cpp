@@ -5,6 +5,10 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+#include "../../include/platform/windows/dllexport_source.h"
 
 #include "../../include/async/worker.h"
 #include "../../include/wrap/lite/lite.h"
@@ -12,9 +16,6 @@
 #include "../../include/helper/iface_cast.h"
 #include <exception>
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 #include <thread>
 
 namespace utils {
