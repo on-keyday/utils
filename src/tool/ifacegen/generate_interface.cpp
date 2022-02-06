@@ -860,17 +860,34 @@ namespace ifacegen {
                      iface.first, "(", iface.first, "&& in) ",
                      has_sso ? "" : "noexcept ",
                      "{\n");
-        hlp::appends(str,
-                     "        iface=in.iface;\n",
-                     "        in.iface=nullptr;\n",
-                     "    }\n\n");
+        auto write_moveimpl = [&] {
+            if (has_sso) {
+                hlp::appends(str,
+                             "        // reference implementation: MSVC std::function\n",
+                             "        if (in.is_local___()) {\n",
+                             "            iface = in.iface->move__(&__storage_box);\n",
+                             "            in.delete___();\n",
+                             "        }\n",
+                             "        else {\n"
+                             "            iface = in.iface;\n",
+                             "            in.iface = nullptr;\n",
+                             "        }\n");
+            }
+            else {
+                hlp::appends(str,
+                             "        iface=in.iface;\n",
+                             "        in.iface=nullptr;\n");
+            }
+        };
+        write_moveimpl();
+        hlp::append(str,
+                    "    }\n\n");
         hlp::appends(str,
                      "    ", iface.first, "& operator=(", iface.first, "&& in) noexcept {\n",
                      "        if(this==std::addressof(in))return *this;\n");
-        hlp::appends(str,
-                     "        delete iface;\n",
-                     "        iface=in.iface;\n",
-                     "        in.iface=nullptr;\n");
+        hlp::appends(str, "        ",
+                     has_sso ? "delete___();\n" : "delete iface;\n");
+        write_moveimpl();
         hlp::appends(str,
                      "        return *this;\n",
                      "    }\n\n");
@@ -878,16 +895,17 @@ namespace ifacegen {
         return iface != nullptr;
     }
 
-    )");
+)");
         hlp::appends(str, R"(    bool operator==(std::nullptr_t) const noexcept {
         return iface == nullptr;
     }
     
 )");
         hlp::appends(str,
-                     "    ~", iface.first, "() {\n",
-                     "        delete iface;\n",
-                     "    }\n\n");
+                     "    ~", iface.first, "() {\n");
+        hlp::appends(str, "        ",
+                     has_sso ? "delete___();" : "delete iface;\n");
+        hlp::append(str, "    }\n\n");
     }
 
     void render_cpp_single_struct(utw::string& str, GenFlag flag, utw::string& nmspc, auto& iface,
