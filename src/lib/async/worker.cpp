@@ -119,13 +119,12 @@ namespace utils {
             return data.get();
         }
 
-        internal::ContextData* make_fiber(internal::ThreadToFiber& self, Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
+        internal::ContextData* make_fiber(Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
             Context* ctx;
             auto c = make_context(place, ctx);
             c->task.task = std::move(post);
             c->task.fiber = CreateFiber(0, DoTask, ctx);
             c->task.state = TaskState::prelaunch;
-            c->rootfiber = self.rootfiber;
             c->work = std::move(work);
             return c;
         }
@@ -137,6 +136,7 @@ namespace utils {
             r.set_blocking(true);
             Any event;
             auto handle_fiber = [&](Any& place, internal::ContextData* c) {
+                c->rootfiber = self.rootfiber;
                 SwitchToFiber(c->task.fiber);
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
@@ -158,7 +158,7 @@ namespace utils {
             while (r >> event) {
                 if (auto post = event.type_assert<Atask>()) {
                     Any place;
-                    auto c = make_fiber(self, place, std::move(*post), wd);
+                    auto c = make_fiber(place, std::move(*post), wd);
                     handle_fiber(place, c);
                 }
                 else if (auto ctx = event.type_assert<Context>()) {
