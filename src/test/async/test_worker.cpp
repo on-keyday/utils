@@ -16,11 +16,23 @@ void test_worker() {
     done.clear();
     pool.post([&](async::Context& ctx) {
         ctx.wait_task([](async::Context& ctx) {
-            ctx.cancel();
+            //ctx.cancel();
+            ctx.wait_task([](async::Context& ctx) {
+                for (auto i = 0; i < 10; i++) {
+                    utils::wrap::cout_wrap() << utils::wrap::pack(i, "\n");
+                    ctx.suspend();
+                }
+            });
             utils::wrap::cout_wrap() << "hello guy\n";
         });
         done.test_and_set();
         done.notify_all();
+    });
+    pool.post([&](async::Context& ctx) {
+        while (done.test() == false) {
+            utils::wrap::cout_wrap() << "async\n";
+            ctx.suspend();
+        }
     });
     done.wait(false);
     utils::wrap::cout_wrap() << "done!\n";
