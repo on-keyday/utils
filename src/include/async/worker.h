@@ -33,8 +33,18 @@ namespace utils {
                 ptr->set_signal();
             }
 
+            Canceler(Fn&& fn, Context* ptr)
+                : fn(std::move(fn)), ptr(ptr) {}
+
+            Canceler(Canceler&& c) {
+                fn = std::move(c.fn);
+                ptr = c.ptr;
+                c.ptr = nullptr;
+            }
+
             ~Canceler() {
-                ptr->set_signal();
+                if (ptr)
+                    ptr->set_signal();
             }
         };
 

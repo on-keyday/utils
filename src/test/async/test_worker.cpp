@@ -16,6 +16,7 @@ void test_worker() {
     done.clear();
     pool.post([&](async::Context& ctx) {
         ctx.wait_task([](async::Context& ctx) {
+            ctx.cancel();
             utils::wrap::cout_wrap() << "hello guy\n";
         });
         done.test_and_set();
