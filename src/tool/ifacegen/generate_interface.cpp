@@ -713,13 +713,18 @@ namespace ifacegen {
                              "        }",
                              "    }\n\n");
                 hlp::appends(str,
-                             "    ", iface.first, "& operator=(const ", iface.first, "(& in) {\n", "        if(std::addressof(in)==this)return *this;\n");
+                             "    ", iface.first, "& operator=(const ", iface.first, "& in) {\n", "        if(std::addressof(in)==this)return *this;\n");
+                if (has_sso) {
+                    hlp::append(str, "        delete___();\n");
+                }
+                else {
+                    hlp::appends(str,
+                                 "        delete iface;\n",
+                                 "        iface=nullptr;\n");
+                }
                 hlp::appends(str,
-                             "        delete iface;\n");
-                hlp::appends(str,
-                             "        iface=nullptr;\n",
                              "        if(in.iface){\n",
-                             "            iface=in.iface->copy__();\n",
+                             "            iface=in.iface->copy__(", has_sso ? "__storage_box" : "", ");\n",
                              "        }\n",
                              "        return *this;\n",
                              "    }\n\n");
