@@ -203,6 +203,7 @@ namespace utils {
                     auto found = signal->work->wait_signal.find(signal->sig);
                     if (found != signal->work->wait_signal.end()) {
                         sig = std::move(found->second);
+                        signal->work->wait_signal.erase(signal->sig);
                     }
                     signal->work->lock_.unlock();
                     auto ctx = sig.type_assert<Context>();
