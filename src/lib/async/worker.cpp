@@ -143,23 +143,29 @@ namespace utils {
             SwitchToFiber(data->rootfiber);
         }
 
-        internal::ContextData* make_context(Any& holder, Context*& ctx) {
+        auto& make_context(Any& holder, Context*& ctx) {
             holder = Context{};
             ctx = holder.type_assert<Context>();
             auto& data = internal::ContextHandle::get(*ctx);
             data = wrap::make_shared<internal::ContextData>();
-            return data.get();
+            return data;
         }
 
-        internal::ContextData* make_fiber(Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
+        auto& make_fiber(Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
             Context* ctx;
-            auto c = make_context(place, ctx);
+            auto& c = make_context(place, ctx);
             c->task.task = std::move(post);
             c->task.fiber = CreateFiber(0, DoTask, ctx);
             c->task.state = TaskState::prelaunch;
             c->work = std::move(work);
             return c;
         }
+
+        struct SignalBack {
+            std::atomic_flag sig;
+            wrap::shared_ptr<internal::ContextData> data;
+            Atask task;
+        };
 
         void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
             internal::ThreadToFiber self;
@@ -190,12 +196,21 @@ namespace utils {
             while (r >> event) {
                 if (auto post = event.type_assert<Atask>()) {
                     Any place;
-                    auto c = make_fiber(place, std::move(*post), wd);
-                    handle_fiber(place, c);
+                    auto& c = make_fiber(place, std::move(*post), wd);
+                    handle_fiber(place, c.get());
                 }
                 else if (auto ctx = event.type_assert<Context>()) {
                     auto c = internal::ContextHandle::get(*ctx).get();
                     handle_fiber(event, c);
+                }
+                else if (auto sigback = event.type_assert<SignalBack*>()) {
+                    Any place;
+                    auto p = *sigback;
+                    auto& c = make_fiber(place, std::move(p->task), wd);
+                    p->data = c;
+                    p->sig.clear();
+                    p->sig.notify_all();
+                    handle_fiber(place, c.get());
                 }
                 else if (auto signal = event.type_assert<Signal>()) {
                     Any sig;
@@ -214,7 +229,7 @@ namespace utils {
             }
         }
 
-        void TaskPool::posting(Task<Context>&& task) {
+        void TaskPool::init() {
             initlock.lock();
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
@@ -226,7 +241,22 @@ namespace utils {
                 }
             }
             initlock.unlock();
+        }
+
+        void TaskPool::posting(Task<Context>&& task) {
+            init();
             data->w << std::move(task);
+        }
+
+        Future TaskPool::starting(Task<Context>&& task) {
+            SignalBack back;
+            back.task = std::move(task);
+            back.sig.test_and_set();
+            data->w << &back;
+            back.sig.wait(true);
+            Future f;
+            f.data = back.data;
+            return f;
         }
 
         TaskPool::~TaskPool() {

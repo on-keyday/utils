@@ -22,6 +22,7 @@ void test_worker() {
                     utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();
                 }
+                ctx.cancel();
             });
             utils::wrap::cout_wrap() << "hello guy\n";
         });

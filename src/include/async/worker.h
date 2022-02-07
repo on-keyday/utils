@@ -70,17 +70,33 @@ namespace utils {
             cahceled,
         };
 
+        struct TaskPool;
+
+        struct Future {
+           private:
+            wrap::shared_ptr<internal::ContextData> data;
+            friend struct TaskPool;
+        };
+
         struct DLL TaskPool {
            private:
             thread::LiteLock initlock;
             wrap::shared_ptr<internal::WorkerData> data;
+            void init();
             void posting(Task<Context>&& task);
+            Future starting(Task<Context>&& task);
 
            public:
             template <class Fn>
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));
             }
+
+            template <class Fn>
+            Future start(Fn&& fn) {
+                startting(std::forward<Fn>(fn));
+            }
+
             ~TaskPool();
         };
 
