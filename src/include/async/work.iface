@@ -16,4 +16,5 @@ interface Any {
 typeparam Ctx
 interface Task {
     const __call__(ctx &Ctx) void
+    decltype() type
 }

@@ -19,7 +19,7 @@ void test_worker() {
             //ctx.cancel();
             ctx.wait_task([](async::Context& ctx) {
                 for (auto i = 0; i < 10000; i++) {
-                    utils::wrap::cout_wrap() << utils::wrap::pack(i, "\n");
+                    utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();
                 }
             });

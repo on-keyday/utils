@@ -78,6 +78,11 @@ namespace utils {
             wrap::shared_ptr<internal::WorkerData> work;
         };
 
+        void Canceler::operator()(Context& ctx) const {
+            fn(ctx);
+            ptr->set_signal();
+        }
+
         void Context::suspend() {
             data->task.state = TaskState::suspend;
             SwitchToFiber(data->rootfiber);
@@ -106,6 +111,10 @@ namespace utils {
 
         void Context::cancel() {
             data->task.state = TaskState::cahceled;
+            auto canceler = data->task.task.type_assert<Canceler>();
+            if (canceler && canceler->ptr) {
+                canceler->ptr->set_signal();
+            }
             SwitchToFiber(data->rootfiber);
         }
 

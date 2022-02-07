@@ -23,16 +23,12 @@ namespace utils {
         }  // namespace internal
 
         struct Context;
-
-        template <class Fn>
-        struct Canceler {
-            Fn fn;
+        struct DLL Canceler {
+            Task<Context> fn;
             Context* ptr = nullptr;
-            void operator()(Context& ctx) const {
-                fn(ctx);
-                ptr->set_signal();
-            }
+            void operator()(Context& ctx) const;
 
+            template <class Fn>
             Canceler(Fn&& fn, Context* ptr)
                 : fn(std::move(fn)), ptr(ptr) {}
 
@@ -41,15 +37,9 @@ namespace utils {
                 ptr = c.ptr;
                 c.ptr = nullptr;
             }
-
-            ~Canceler() {
-                if (ptr)
-                    ptr->set_signal();
-            }
         };
 
         struct DLL Context {
-            template <class Fn>
             friend struct Canceler;
             void suspend();
             void cancel();
@@ -58,7 +48,7 @@ namespace utils {
 
             template <class Fn>
             bool wait_task(Fn&& fn) {
-                Task<Context> c = Canceler<std::decay_t<Fn>>{std::move(fn), this};
+                Task<Context> c = Canceler{std::move(fn), this};
                 return wait_task(std::move(c));
             }
 
