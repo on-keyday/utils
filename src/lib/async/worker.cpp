@@ -73,14 +73,24 @@ namespace utils {
 
         }  // namespace internal
 
+        struct CancelExcept {
+        };
+
         struct Signal {
             size_t sig;
             wrap::shared_ptr<internal::WorkerData> work;
         };
 
+        struct DefferCancel {
+            Context* ptr;
+            ~DefferCancel() {
+                ptr->set_signal();
+            }
+        };
+
         void Canceler::operator()(Context& ctx) const {
+            DefferCancel _{ptr};
             fn(ctx);
-            ptr->set_signal();
         }
 
         void Context::suspend() {
@@ -110,12 +120,7 @@ namespace utils {
         }
 
         void Context::cancel() {
-            data->task.state = TaskState::cahceled;
-            auto canceler = data->task.task.type_assert<Canceler>();
-            if (canceler && canceler->ptr) {
-                canceler->ptr->set_signal();
-            }
-            SwitchToFiber(data->rootfiber);
+            throw CancelExcept{};
         }
 
         void Context::set_value(Any any) {
@@ -129,6 +134,8 @@ namespace utils {
             try {
                 data->task.task(*ctx);
                 data->task.state = TaskState::done;
+            } catch (CancelExcept& cancel) {
+                data->task.state = TaskState::cahceled;
             } catch (...) {
                 data->task.except = std::current_exception();
                 data->task.state = TaskState::except;

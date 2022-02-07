@@ -23,6 +23,7 @@ namespace utils {
         }  // namespace internal
 
         struct Context;
+        struct DefferCancel;
         struct DLL Canceler {
             Task<Context> fn;
             Context* ptr = nullptr;
@@ -40,7 +41,7 @@ namespace utils {
         };
 
         struct DLL Context {
-            friend struct Canceler;
+            friend struct DefferCancel;
             void suspend();
             void cancel();
 
