@@ -30,7 +30,7 @@ void test_worker() {
         });
     });
     pool.post([&](async::Context& ctx) {
-        while (done.test() == false) {
+        while (task.is_done()) {
             utils::wrap::cout_wrap() << "async\n";
             ctx.suspend();
         }

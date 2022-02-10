@@ -207,6 +207,7 @@ namespace utils {
                 wd->accepting--;
                 SwitchToFiber(c->task.fiber);
                 wd->accepting++;
+                c->rootfiber = nullptr;
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
                     c->task.state == TaskState::cahceled) {

@@ -57,6 +57,12 @@ namespace utils {
 
             TaskState state() const;
 
+            bool is_done() const {
+                auto st = state();
+                return st == TaskState::done || st == TaskState::except ||
+                       st == TaskState::cahceled;
+            }
+
            private:
             wrap::shared_ptr<internal::ContextData> data;
             friend struct TaskPool;
