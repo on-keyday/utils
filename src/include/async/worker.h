@@ -30,7 +30,7 @@ namespace utils {
             wait_signal,
             done,
             except,
-            cahceled,
+            canceled,
         };
 
         struct Context;
@@ -60,7 +60,7 @@ namespace utils {
             bool is_done() const {
                 auto st = state();
                 return st == TaskState::done || st == TaskState::except ||
-                       st == TaskState::cahceled;
+                       st == TaskState::canceled;
             }
 
            private:

@@ -170,7 +170,7 @@ namespace utils {
                 data->task.task(*ctx);
                 data->task.state = TaskState::done;
             } catch (CancelExcept& cancel) {
-                data->task.state = TaskState::cahceled;
+                data->task.state = TaskState::canceled;
             } catch (...) {
                 data->task.except = std::current_exception();
                 data->task.state = TaskState::except;
@@ -210,7 +210,7 @@ namespace utils {
                 c->rootfiber = nullptr;
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
-                    c->task.state == TaskState::cahceled) {
+                    c->task.state == TaskState::canceled) {
                     DeleteFiber(c->task.fiber);
                     c->task.fiber = nullptr;
                     c->waiter_flag.clear();
