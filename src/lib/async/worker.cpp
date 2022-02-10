@@ -101,6 +101,11 @@ namespace utils {
             fn(ctx);
         }
 
+        void Future::wait() {
+            if (!data) return;
+            data->waiter_flag.wait(true);
+        }
+
         Any Future::get() {
             if (!data) return nullptr;
             data->waiter_flag.wait(true);

@@ -16,7 +16,7 @@ void test_worker() {
     async::TaskPool pool;
     std::atomic_flag done;
     done.clear();
-    pool.post([&](async::Context& ctx) {
+    auto task = pool.start([&](async::Context& ctx) {
         ctx.wait_task([](async::Context& ctx) {
             //ctx.cancel();
             ctx.wait_task([](async::Context& ctx) {

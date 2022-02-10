@@ -52,6 +52,7 @@ namespace utils {
         };
 
         struct DLL Future {
+            void wait();
             Any get();
 
             TaskState state() const;
