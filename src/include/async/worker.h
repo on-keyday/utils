@@ -22,6 +22,17 @@ namespace utils {
             struct ContextHandle;
         }  // namespace internal
 
+        enum class TaskState {
+            invalid,
+            prelaunch,
+            running,
+            suspend,
+            wait_signal,
+            done,
+            except,
+            cahceled,
+        };
+
         struct Context;
         struct DefferCancel;
         struct DLL Canceler {
@@ -38,6 +49,17 @@ namespace utils {
                 ptr = c.ptr;
                 c.ptr = nullptr;
             }
+        };
+
+        struct DLL Future {
+            Any get();
+
+            TaskState state() const;
+
+           private:
+            wrap::shared_ptr<internal::ContextData> data;
+            friend struct TaskPool;
+            friend struct Context;
         };
 
         struct DLL Context {
@@ -58,25 +80,10 @@ namespace utils {
             wrap::shared_ptr<internal::ContextData> data;
             bool wait_task(Task<Context>&& task);
             void set_signal();
-        };
-
-        enum class TaskState {
-            prelaunch,
-            running,
-            suspend,
-            wait_signal,
-            done,
-            except,
-            cahceled,
+            Future start_task(Task<Context>&& task);
         };
 
         struct TaskPool;
-
-        struct Future {
-           private:
-            wrap::shared_ptr<internal::ContextData> data;
-            friend struct TaskPool;
-        };
 
         struct DLL TaskPool {
            private:
@@ -94,7 +101,7 @@ namespace utils {
 
             template <class Fn>
             Future start(Fn&& fn) {
-                startting(std::forward<Fn>(fn));
+                return starting(std::forward<Fn>(fn));
             }
 
             ~TaskPool();

@@ -44,6 +44,7 @@ namespace utils {
                 wrap::map<size_t, Any> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
+                std::atomic_uint32_t accepting;
                 bool diepool = false;
             };
 
@@ -51,6 +52,7 @@ namespace utils {
                 void* rootfiber;
                 TaskData task;
                 wrap::shared_ptr<WorkerData> work;
+                std::atomic_flag waiter_flag;
             };
 
             struct ContextHandle {
@@ -81,6 +83,12 @@ namespace utils {
             wrap::shared_ptr<internal::WorkerData> work;
         };
 
+        struct SignalBack {
+            std::atomic_flag sig;
+            wrap::shared_ptr<internal::ContextData> data;
+            Atask task;
+        };
+
         struct DefferCancel {
             Context* ptr;
             ~DefferCancel() {
@@ -91,6 +99,17 @@ namespace utils {
         void Canceler::operator()(Context& ctx) const {
             DefferCancel _{ptr};
             fn(ctx);
+        }
+
+        Any Future::get() {
+            if (!data) return nullptr;
+            data->waiter_flag.wait(true);
+            return std::move(data->task.result);
+        }
+
+        TaskState Future::state() const {
+            if (!data) return TaskState::invalid;
+            return data->task.state;
         }
 
         void Context::suspend() {
@@ -112,7 +131,7 @@ namespace utils {
         }
 
         void Context::set_signal() {
-            if (data->work->diepool || !data->task.sigid) {
+            if (!data->task.sigid) {
                 return;
             }
             data->work->w << Signal{data->task.sigid, data->work};
@@ -125,6 +144,17 @@ namespace utils {
 
         void Context::set_value(Any any) {
             data->task.result = std::move(any);
+        }
+
+        Future Context::start_task(Task<Context>&& task) {
+            auto v = SignalBack{};
+            v.task = std::move(task);
+            v.sig.test_and_set();
+            data->work->w << &v;
+            v.sig.wait(true);
+            Future f;
+            f.data = v.data;
+            return f;
         }
 
         void DoTask(void* pdata) {
@@ -161,12 +191,6 @@ namespace utils {
             return c;
         }
 
-        struct SignalBack {
-            std::atomic_flag sig;
-            wrap::shared_ptr<internal::ContextData> data;
-            Atask task;
-        };
-
         void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
             internal::ThreadToFiber self;
             auto r = wd->r;
@@ -175,12 +199,16 @@ namespace utils {
             Any event;
             auto handle_fiber = [&](Any& place, internal::ContextData* c) {
                 c->rootfiber = self.rootfiber;
+                wd->accepting--;
                 SwitchToFiber(c->task.fiber);
+                wd->accepting++;
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
                     c->task.state == TaskState::cahceled) {
                     DeleteFiber(c->task.fiber);
                     c->task.fiber = nullptr;
+                    c->waiter_flag.clear();
+                    c->waiter_flag.notify_all();
                 }
                 else if (c->task.state == TaskState::suspend) {
                     w << std::move(place);
@@ -193,6 +221,7 @@ namespace utils {
                     w << std::move(wait);
                 }
             };
+            wd->accepting++;
             while (r >> event) {
                 if (auto post = event.type_assert<Atask>()) {
                     Any place;
@@ -207,6 +236,7 @@ namespace utils {
                     Any place;
                     auto p = *sigback;
                     auto& c = make_fiber(place, std::move(p->task), wd);
+                    c->waiter_flag.test_and_set();
                     p->data = c;
                     p->sig.clear();
                     p->sig.notify_all();
@@ -227,6 +257,7 @@ namespace utils {
                     }
                 }
             }
+            wd->accepting--;
         }
 
         void TaskPool::init() {
@@ -249,6 +280,7 @@ namespace utils {
         }
 
         Future TaskPool::starting(Task<Context>&& task) {
+            init();
             SignalBack back;
             back.task = std::move(task);
             back.sig.test_and_set();

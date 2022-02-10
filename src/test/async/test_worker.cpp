@@ -9,6 +9,8 @@
 #include <async/worker.h>
 #include <wrap/cout.h>
 
+#include <variant>
+
 void test_worker() {
     using namespace utils;
     async::TaskPool pool;
@@ -35,8 +37,12 @@ void test_worker() {
             ctx.suspend();
         }
     });
+    auto v = pool.start([](async::Context& ctx) {
+        ctx.set_value("called");
+    });
     done.wait(false);
     utils::wrap::cout_wrap() << "done!\n";
+    utils::wrap::cout_wrap() << *v.get().type_assert<const char*>();
 }
 
 int main() {
