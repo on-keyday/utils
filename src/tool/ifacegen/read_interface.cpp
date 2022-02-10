@@ -70,6 +70,9 @@ namespace ifacegen {
                     if (state.iface.default_result == "panic") {
                         state.data.has_ref_ret = true;
                     }
+                    else if (state.iface.funcname == "__sso__") {
+                        state.data.ifaces[state.current_iface].sso_bufsize = state.iface.default_result;
+                    }
                 }
                 else {
                     state.iface.funcname = result.token();

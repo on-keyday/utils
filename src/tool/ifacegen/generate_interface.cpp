@@ -596,7 +596,7 @@ namespace ifacegen {
                 if (has_sso) {
                     hlp::appends(str,
                                  "           using gen_type = implements__<T__>;\n",
-                                 "           if constexpr (sizeof(gen_type) <= sizeof(void*)*7) {\n",
+                                 "           if constexpr (sizeof(gen_type) <= sizeof(void*)*", iface.second.sso_bufsize, ") {\n",
                                  "               return new(__storage_box) implements__<T__>(t_holder_);\n",
                                  "           }\n",
                                  "           else {\n",
@@ -651,7 +651,7 @@ namespace ifacegen {
             hlp::appends(str,
                          "        interface__* move__(void* __storage_box) override {\n",
                          "           using gen_type = implements__<T__>;\n",
-                         "           if constexpr (sizeof(gen_type) <= sizeof(void*)*7) {\n",
+                         "           if constexpr (sizeof(gen_type) <= sizeof(void*)*", iface.second.sso_bufsize, ") {\n",
                          "               return new(__storage_box) implements__<T__>(std::move(t_holder_));\n",
                          "           }\n",
                          "           else {\n",
@@ -785,10 +785,10 @@ namespace ifacegen {
             hlp::appends(str,
                          "\n",
                          "    union {\n",
-                         "        char __storage_box[sizeof(void*)*8]{0};\n",
+                         "        char __storage_box[sizeof(void*)*(1+(", iface.second.sso_bufsize, "))]{0};\n",
                          "        std::max_align_t __align_of;\n",
                          "        struct {\n",
-                         "            interface__* __place_holder[7];\n",
+                         "            interface__* __place_holder[", iface.second.sso_bufsize, "];\n",
                          "            interface__* iface;\n",
                          "        };\n",
                          "    };\n\n",
@@ -796,7 +796,7 @@ namespace ifacegen {
                          "    void new___(T__&& v) {\n",
                          "        interface__* p = nullptr;\n",
                          "        using gen_type= implements__<std::decay_t<T__>>;\n",
-                         "        if constexpr (sizeof(gen_type)<=sizeof(void*)*7) {\n",
+                         "        if constexpr (sizeof(gen_type)<=sizeof(void*)*", iface.second.sso_bufsize, ") {\n",
                          "            p = new (__storage_box) gen_type(std::forward<T__>(v));\n",
                          "        }\n",
                          "        else {\n",
@@ -1104,6 +1104,9 @@ namespace ifacegen {
             }
             if (iface.second.has_sso) {
                 f |= GenFlag::use_small_size_opt;
+                if (!iface.second.sso_bufsize.size()) {
+                    iface.second.sso_bufsize = "7";
+                }
             }
             render_cpp_single_struct(str, f, nmspc, iface, alias, append_typeid, append_typefn);
         }

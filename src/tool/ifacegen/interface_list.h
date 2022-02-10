@@ -59,6 +59,7 @@ namespace ifacegen {
         bool has_unsafe = false;
         bool has_vtable = false;
         bool has_sso = false;
+        utw::string sso_bufsize;
     };
 
     struct Alias {

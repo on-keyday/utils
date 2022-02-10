@@ -100,6 +100,7 @@ Special Value:
         __sso__ - generate code using small size optimization ex) __sso__() type
     Default Value:
         panic - generate throw std::bad_function_call()
+        (default of __sso__()) - set sso buffer size (default: 7 -> sizeof(void*)*(1+7) -> sizeof(<generated>) == 64)
     Return Type:
         lastthis - use with __vtable__. generate this parameter at last of arg
 )";
