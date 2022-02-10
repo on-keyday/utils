@@ -11,7 +11,7 @@
 
 #include <variant>
 
-void test_worker() {
+utils::async::Any test_worker() {
     using namespace utils;
     async::TaskPool pool;
     std::atomic_flag done;
@@ -36,15 +36,20 @@ void test_worker() {
         }
     });
     auto v = pool.start([](async::Context& ctx) {
-        ctx.set_value("called");
+        ctx.set_value("calling convertion is stdcall");
     });
     task.wait();
     auto result = v.get();
     utils::wrap::cout_wrap() << "done!\n";
     utils::wrap::cout_wrap() << *result.type_assert<const char*>();
-    ((const char*)result.unsafe_cast())[0];
+    auto str = ((const char**)result.unsafe_cast())[0];
+    return result;
 }
 
 int main() {
-    test_worker();
+    auto result = test_worker();
+    auto edit = *(char**)result.unsafe_cast();
+    while (*edit) {
+        edit++;
+    }
 }
