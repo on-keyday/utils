@@ -28,8 +28,6 @@ void test_worker() {
             });
             utils::wrap::cout_wrap() << "hello guy\n";
         });
-        done.test_and_set();
-        done.notify_all();
     });
     pool.post([&](async::Context& ctx) {
         while (done.test() == false) {
@@ -40,7 +38,7 @@ void test_worker() {
     auto v = pool.start([](async::Context& ctx) {
         ctx.set_value("called");
     });
-    done.wait(false);
+    task.wait();
     utils::wrap::cout_wrap() << "done!\n";
     utils::wrap::cout_wrap() << *v.get().type_assert<const char*>();
 }
