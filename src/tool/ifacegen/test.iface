@@ -98,7 +98,7 @@ interface GenVtable {
 interface UseSSO {
     __copy__() type
     decltype() type
-    __sso__() type = 1
+    __sso__() type
 }
 
 interface Value {
