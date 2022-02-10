@@ -39,8 +39,10 @@ void test_worker() {
         ctx.set_value("called");
     });
     task.wait();
+    auto result = v.get();
     utils::wrap::cout_wrap() << "done!\n";
-    utils::wrap::cout_wrap() << *v.get().type_assert<const char*>();
+    utils::wrap::cout_wrap() << *result.type_assert<const char*>();
+    ((const char*)result.unsafe_cast())[0];
 }
 
 int main() {
