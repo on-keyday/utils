@@ -14,8 +14,6 @@
 utils::async::Any test_worker() {
     using namespace utils;
     async::TaskPool pool;
-    std::atomic_flag done;
-    done.clear();
     auto task = pool.start([&](async::Context& ctx) {
         ctx.wait_task([](async::Context& ctx) {
             //ctx.cancel();
