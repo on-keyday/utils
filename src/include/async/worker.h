@@ -59,7 +59,7 @@ namespace utils {
             }
         };
 
-        struct DLL Future {
+        struct DLL AnyFuture {
             void wait();
             Any get();
 
@@ -77,12 +77,34 @@ namespace utils {
             friend struct Context;
         };
 
+        template <class T>
+        struct Future {
+            AnyFuture future;
+            T get() {
+                return *future.get().template type_assert<T>();
+            }
+
+            void wait() {
+                future.wait();
+            }
+
+            bool is_done() const {
+                return future.is_done();
+            }
+
+            TaskState state() const {
+                return future.state();
+            }
+        };
+
         struct DLL Context {
             friend struct DefferCancel;
             void suspend();
             void cancel();
 
             void set_value(Any any);
+
+            Any& value();
 
             template <class Fn>
             bool wait_task(Fn&& fn) {
@@ -95,7 +117,7 @@ namespace utils {
             wrap::shared_ptr<internal::ContextData> data;
             bool wait_task(Task<Context>&& task);
             void set_signal();
-            Future start_task(Task<Context>&& task);
+            AnyFuture start_task(Task<Context>&& task);
         };
 
         struct TaskPool;
@@ -106,7 +128,7 @@ namespace utils {
             wrap::shared_ptr<internal::WorkerData> data;
             void init();
             void posting(Task<Context>&& task);
-            Future starting(Task<Context>&& task);
+            AnyFuture starting(Task<Context>&& task, const std::type_info* ptr = nullptr);
 
            public:
             template <class Fn>
@@ -115,8 +137,20 @@ namespace utils {
             }
 
             template <class Fn>
-            Future start(Fn&& fn) {
+            AnyFuture start(Fn&& fn) {
                 return starting(std::forward<Fn>(fn));
+            }
+
+            template <class T, class Fn>
+            Future<T> start(Fn&& fn) {
+                auto f = [=](auto& ctx) {
+                    fn(ctx);
+                    if (!ctx.value().template type_assert<T>()) {
+                        ctx.set_value(T{});
+                    }
+                };
+                auto fu = starting(std::move(f), &typeid(T));
+                return Future<T>{std::move(fu)};
             }
 
             ~TaskPool();

@@ -53,6 +53,7 @@ namespace utils {
                 TaskData task;
                 wrap::shared_ptr<WorkerData> work;
                 std::atomic_flag waiter_flag;
+                const std::type_info* future_info = nullptr;
             };
 
             struct ContextHandle {
@@ -87,20 +88,21 @@ namespace utils {
             std::atomic_flag sig;
             wrap::shared_ptr<internal::ContextData> data;
             Atask task;
+            const std::type_info* p;
         };
 
-        void Future::wait() {
+        void AnyFuture::wait() {
             if (!data) return;
             data->waiter_flag.wait(true);
         }
 
-        Any Future::get() {
+        Any AnyFuture::get() {
             if (!data) return nullptr;
             data->waiter_flag.wait(true);
             return std::move(data->task.result);
         }
 
-        TaskState Future::state() const {
+        TaskState AnyFuture::state() const {
             if (!data) return TaskState::invalid;
             return data->task.state;
         }
@@ -145,13 +147,17 @@ namespace utils {
             data->task.result = std::move(any);
         }
 
-        Future Context::start_task(Task<Context>&& task) {
+        Any& Context::value() {
+            return data->task.result;
+        }
+
+        AnyFuture Context::start_task(Task<Context>&& task) {
             auto v = SignalBack{};
             v.task = std::move(task);
             v.sig.test_and_set();
             data->work->w << &v;
             v.sig.wait(true);
-            Future f;
+            AnyFuture f;
             f.data = v.data;
             return f;
         }
@@ -279,14 +285,14 @@ namespace utils {
             data->w << std::move(task);
         }
 
-        Future TaskPool::starting(Task<Context>&& task) {
+        AnyFuture TaskPool::starting(Task<Context>&& task, const std::type_info* ptr) {
             init();
             SignalBack back;
             back.task = std::move(task);
             back.sig.test_and_set();
             data->w << &back;
             back.sig.wait(true);
-            Future f;
+            AnyFuture f;
             f.data = back.data;
             return f;
         }
