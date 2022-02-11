@@ -34,7 +34,7 @@ utils::async::Any test_worker() {
         }
     });
     auto v = pool.start([](async::Context& ctx) {
-        ctx.set_value("That calling convertion is stdcall is not true");
+        ctx.set_value("That calling convertion is stdcall is not true, but it used to be true.");
     });
     task.wait();
     auto result = v.get();

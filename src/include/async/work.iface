@@ -5,7 +5,7 @@
 # worker - worker callback and any
 package utils::async
 
-#generate cood
+#generate code
 # tool\ifacegen -i src/include/async/work.iface -o src/include/async/task.h -eVSn --license --helper-deref "\"../helper/deref.h\"" 
 
 interface Any {

@@ -384,7 +384,8 @@ namespace ifacegen {
         return funcname == copy_func || funcname == array_op ||
                funcname == array_op || funcname == unsafe_func ||
                funcname == decltype_func || funcname == typeid_func ||
-               funcname == vtable_func || funcname == sso_func;
+               funcname == vtable_func || funcname == sso_func ||
+               funcname == call_func;
     }
 
     bool render_cpp_vtable__class(utw::string& str, GenFlag flag, auto& iface, auto& alias, auto& nmspc) {
@@ -394,11 +395,9 @@ namespace ifacegen {
             if (func.funcname == vtable_func) {
                 if (func.type.prim == "lastthis") {
                     tail = vfunctail;
-                    break;
                 }
+                continue;
             }
-        }
-        for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname)) {
                 continue;
             }

@@ -105,4 +105,5 @@ interface Value {
     decltype() type
     typeid() type
     __copy__() type
+    __vtable__() type
 }
