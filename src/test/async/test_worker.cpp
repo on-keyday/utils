@@ -9,7 +9,7 @@
 #include <async/worker.h>
 #include <wrap/cout.h>
 
-#include <variant>
+#include <functional>
 
 utils::async::Any test_worker() {
     using namespace utils;
@@ -41,6 +41,8 @@ utils::async::Any test_worker() {
     utils::wrap::cout_wrap() << "done!\n";
     utils::wrap::cout_wrap() << *result.type_assert<const char*>();
     auto str = ((const char**)result.unsafe_cast())[0];
+    auto ifaceptr = ((void**)&result)[2];
+    auto eq = &result == ifaceptr;
     return result;
 }
 

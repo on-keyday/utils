@@ -49,7 +49,9 @@ namespace utils {
 
                 interface__* move__(void* __storage_box) override {
                     using gen_type = implements__<T__>;
-                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2) {
+                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                                  alignof(gen_type) <= alignof(std::max_align_t) &&
+                                  std::is_nothrow_move_constructible<T__>::value) {
                         return new (__storage_box) implements__<T__>(std::move(t_holder_));
                     }
                     else {
@@ -70,8 +72,11 @@ namespace utils {
             template <class T__>
             void new___(T__&& v) {
                 interface__* p = nullptr;
-                using gen_type = implements__<std::decay_t<T__>>;
-                if constexpr (sizeof(gen_type) <= sizeof(void*) * 2) {
+                using decay_T__ = std::decay_t<T__>;
+                using gen_type = implements__<decay_T__>;
+                if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                              alignof(gen_type) <= alignof(std::max_align_t) &&
+                              std::is_nothrow_move_constructible<decay_T__>::value) {
                     p = new (__storage_box) gen_type(std::forward<T__>(v));
                 }
                 else {
@@ -229,7 +234,9 @@ namespace utils {
 
                 interface__* move__(void* __storage_box) override {
                     using gen_type = implements__<T__>;
-                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2) {
+                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                                  alignof(gen_type) <= alignof(std::max_align_t) &&
+                                  std::is_nothrow_move_constructible<T__>::value) {
                         return new (__storage_box) implements__<T__>(std::move(t_holder_));
                     }
                     else {
@@ -250,8 +257,11 @@ namespace utils {
             template <class T__>
             void new___(T__&& v) {
                 interface__* p = nullptr;
-                using gen_type = implements__<std::decay_t<T__>>;
-                if constexpr (sizeof(gen_type) <= sizeof(void*) * 2) {
+                using decay_T__ = std::decay_t<T__>;
+                using gen_type = implements__<decay_T__>;
+                if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                              alignof(gen_type) <= alignof(std::max_align_t) &&
+                              std::is_nothrow_move_constructible<decay_T__>::value) {
                     p = new (__storage_box) gen_type(std::forward<T__>(v));
                 }
                 else {
