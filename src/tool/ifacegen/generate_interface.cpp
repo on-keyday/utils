@@ -791,7 +791,7 @@ namespace ifacegen {
                          "        char __storage_box[sizeof(void*)*(1+(", iface.second.sso_bufsize, "))]{0};\n",
                          "        std::max_align_t __align_of;\n",
                          "        struct {\n",
-                         "            interface__* __place_holder[", iface.second.sso_bufsize, "];\n",
+                         "            void* __place_holder[", iface.second.sso_bufsize, "];\n",
                          "            interface__* iface;\n",
                          "        };\n",
                          "    };\n\n",
