@@ -905,7 +905,7 @@ namespace ifacegen {
         hlp::appends(str,
                      "    ~", iface.first, "() {\n");
         hlp::appends(str, "        ",
-                     has_sso ? "delete___();" : "delete iface;\n");
+                     has_sso ? "delete___();\n" : "delete iface;\n");
         hlp::append(str, "    }\n\n");
     }
 

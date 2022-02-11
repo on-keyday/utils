@@ -11,10 +11,12 @@ package utils::async
 interface Any {
     decltype() type
     __unsafe__() type
+    __sso__() type = 2
 }
 
 typeparam Ctx
 interface Task {
     const __call__(ctx &Ctx) void
     decltype() type
+    __sso__() type = 2
 }
