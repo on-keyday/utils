@@ -89,18 +89,6 @@ namespace utils {
             Atask task;
         };
 
-        struct DefferCancel {
-            Context* ptr;
-            ~DefferCancel() {
-                ptr->set_signal();
-            }
-        };
-
-        void Canceler::operator()(Context& ctx) const {
-            DefferCancel _{ptr};
-            fn(ctx);
-        }
-
         void Future::wait() {
             if (!data) return;
             data->waiter_flag.wait(true);
@@ -115,6 +103,12 @@ namespace utils {
         TaskState Future::state() const {
             if (!data) return TaskState::invalid;
             return data->task.state;
+        }
+
+        DefferCancel::~DefferCancel() {
+            if (ptr) {
+                ptr->set_signal();
+            }
         }
 
         void Context::suspend() {

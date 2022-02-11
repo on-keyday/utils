@@ -64,7 +64,7 @@ namespace utils {
                 char __storage_box[sizeof(void*) * (1 + (2))]{0};
                 std::max_align_t __align_of;
                 struct {
-                    interface__* __place_holder[2];
+                    void* __place_holder[2];
                     interface__* iface;
                 };
             };
@@ -249,7 +249,7 @@ namespace utils {
                 char __storage_box[sizeof(void*) * (1 + (2))]{0};
                 std::max_align_t __align_of;
                 struct {
-                    interface__* __place_holder[2];
+                    void* __place_holder[2];
                     interface__* iface;
                 };
             };
