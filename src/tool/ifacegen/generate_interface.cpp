@@ -76,10 +76,7 @@ namespace ifacegen {
 
     void render_cpp_function(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, Vtable is_vtptr = vnone) {
         render_cpp_type(func.type, str, alias, on_iface);
-        if (func.funcname == call_func) {
-            if (is_vtptr) {
-                return;
-            }
+        if (func.funcname == call_func && !is_vtptr) {
             hlp::append(str, "operator()");
         }
         else if (func.funcname == array_op) {
@@ -92,7 +89,12 @@ namespace ifacegen {
             if (is_vtptr & vfuncptr) {
                 hlp::append(str, "(*");
             }
-            hlp::append(str, func.funcname);
+            if (func.funcname == call_func) {
+                hlp::append(str, "invoke__");
+            }
+            else {
+                hlp::append(str, func.funcname);
+            }
             if (is_vtptr & vfuncptr) {
                 hlp::append(str, ")");
             }
@@ -139,6 +141,9 @@ namespace ifacegen {
     void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, Vtable is_vtptr = vnone) {
         if (func.funcname == call_func || func.funcname == array_op) {
             //hlp::append(str, "operator()");
+            if (func.funcname == call_func && is_vtptr) {
+                hlp::append(str, "invoke__");
+            }
         }
         else {
             hlp::append(str, func.funcname);
@@ -396,9 +401,11 @@ namespace ifacegen {
                 if (func.type.prim == "lastthis") {
                     tail = vfunctail;
                 }
-                continue;
+                break;
             }
-            if (is_special_name(func.funcname)) {
+        }
+        for (Interface& func : iface.second.iface) {
+            if (is_special_name(func.funcname) && func.funcname != call_func) {
                 continue;
             }
             if (no_vtable) {
@@ -423,14 +430,15 @@ namespace ifacegen {
                      //"     public:",
                      "        using this_type = std::remove_pointer_t<decltype(", nmspc, "deref(std::declval<std::decay_t<T__v>&>()))>;\n\n");
         for (Interface& func : iface.second.iface) {
-            if (is_special_name(func.funcname)) {
+            if (is_special_name(func.funcname) && func.funcname != call_func) {
                 continue;
             }
+            bool is_fn = func.funcname == call_func;
             hlp::append(str, "        static ");
             render_cpp_function(func, str, alias, true, Vtable(vfuncsignature | tail));
             hlp::appends(str, "{\n",
-                         "            ", "return static_cast<",
-                         func.is_const ? "const " : "", "this_type*>(this__)->");
+                         "            ", "return ", is_fn ? "(*" : "", "static_cast<",
+                         func.is_const ? "const " : "", "this_type*>(this__)", is_fn ? ")" : "->");
             render_cpp_call(func, str, alias, true);
             hlp::appends(str, ";\n",
                          "        }\n\n");
@@ -441,11 +449,11 @@ namespace ifacegen {
                      "        static const vtable__t* instantiate() noexcept {\n",
                      "            static vtable__t instance{\n");
         for (Interface& func : iface.second.iface) {
-            if (is_special_name(func.funcname)) {
+            if (is_special_name(func.funcname) && func.funcname != call_func) {
                 continue;
             }
             hlp::appends(str, "                ",
-                         "&vtable__instance__::", func.funcname, ",\n");
+                         "&vtable__instance__::", func.funcname == call_func ? "invoke__" : func.funcname, ",\n");
         }
         hlp::appends(str, "            };\n");
         hlp::appends(str,
@@ -473,7 +481,7 @@ namespace ifacegen {
                      "        vtable__interface__(T__v& v__)\n",
                      "            :this__(", nmspc, "deref(v__)),vtable__(vtable__instance__<T__v>::instantiate()){}\n\n");
         for (Interface& func : iface.second.iface) {
-            if (is_special_name(func.funcname)) {
+            if (is_special_name(func.funcname) && func.funcname != call_func) {
                 continue;
             }
             hlp::append(str, "        ");
