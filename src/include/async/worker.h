@@ -141,11 +141,16 @@ namespace utils {
            private:
             thread::LiteLock initlock;
             wrap::shared_ptr<internal::WorkerData> data;
+            void init_data();
             void init();
             void posting(Task<Context>&& task);
             AnyFuture starting(Task<Context>&& task, const std::type_info* ptr = nullptr);
 
            public:
+            size_t reduce_thread();
+
+            void set_maxthread(size_t sz);
+
             template <class Fn>
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));

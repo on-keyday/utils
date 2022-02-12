@@ -47,6 +47,7 @@ namespace utils {
                 std::atomic_uint32_t accepting;
                 bool diepool = false;
                 size_t detached = 0;
+                std::atomic_size_t maxthread;
             };
 
             struct ContextData {
@@ -90,6 +91,9 @@ namespace utils {
             wrap::shared_ptr<internal::ContextData> data;
             Atask task;
             const std::type_info* p;
+        };
+
+        struct EndTask {
         };
 
         void AnyFuture::wait() {
@@ -263,27 +267,50 @@ namespace utils {
                         handle_fiber(sig, internal::ContextHandle::get(*ctx).get());
                     }
                 }
+                else if (auto _ = event.type_assert<EndTask>()) {
+                    break;
+                }
             }
             wd->accepting--;
         }
 
-        void TaskPool::init() {
-            initlock.lock();
+        void TaskPool::init_data() {
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
                 auto [w, r] = thread::make_chan<Any>();
                 data->w = w;
                 data->r = r;
-                std::thread(task_handler, data).detach();
-                data->detached = 1;
             }
-            else if (data->accepting == 0) {
-                if (data->detached < std::thread::hardware_concurrency() / 2) {
+        }
+
+        void TaskPool::init() {
+            initlock.lock();
+            init_data();
+            if (data->accepting == 0) {
+                if (data->detached < data->maxthread) {
                     std::thread(task_handler, data).detach();
                     data->detached++;
                 }
             }
             initlock.unlock();
+        }
+
+        void TaskPool::set_maxthread(size_t sz) {
+            initlock.lock();
+            init_data();
+            data->maxthread = sz;
+            initlock.unlock();
+        }
+
+        size_t TaskPool::reduce_thread() {
+            initlock.lock();
+            init_data();
+            initlock.unlock();
+            auto r = data->accepting.load();
+            if (r) {
+                data->w << EndTask{};
+            }
+            return r;
         }
 
         void TaskPool::posting(Task<Context>&& task) {
