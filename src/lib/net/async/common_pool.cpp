@@ -14,5 +14,8 @@ namespace utils {
     namespace net {
         async::TaskPool netpool;
 
-    }
+        async::TaskPool& get_pool() {
+            return netpool;
+        }
+    }  // namespace net
 }  // namespace utils

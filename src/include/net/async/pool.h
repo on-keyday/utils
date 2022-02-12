@@ -6,15 +6,14 @@
 */
 
 
-// dns - async task dns
+// pool - net woker pool
 #pragma once
 
 #include "../../platform/windows/dllexport_header.h"
 #include "../../async/worker.h"
-#include "../dns/dns.h"
 
 namespace utils {
     namespace net {
-        DLL async::Future<wrap::shared_ptr<Address>> STDCALL query(const char* host, const char* port);
-    }  // namespace net
+        DLL async::TaskPool& STDCALL get_pool();
+    }
 }  // namespace utils

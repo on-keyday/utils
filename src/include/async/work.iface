@@ -6,7 +6,7 @@
 package utils::async
 
 #generate code
-# tool\ifacegen -i src/include/async/work.iface -o src/include/async/task.h -eVSn --license --helper-deref "\"../helper/deref.h\"" 
+# tool\ifacegen -i src/include/async/work.iface -o src/include/async/task.h -eVS --license --helper-deref "\"../helper/deref.h\"" 
 
 interface Any {
     decltype() type
@@ -19,4 +19,5 @@ interface Task {
     const __call__(ctx &Ctx) void
     decltype() type
     __sso__() type = 2
+    __nonnull__() type
 }

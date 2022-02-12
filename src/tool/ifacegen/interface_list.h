@@ -59,6 +59,7 @@ namespace ifacegen {
         bool has_unsafe = false;
         bool has_vtable = false;
         bool has_sso = false;
+        bool has_nonnull = false;
         utw::string sso_bufsize;
     };
 

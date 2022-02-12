@@ -88,6 +88,7 @@ namespace utils {
             Any place;
 
            public:
+            constexpr Future(std::nullptr_t) {}
             Future(AnyFuture&& p)
                 : future(std::move(p)) {}
 

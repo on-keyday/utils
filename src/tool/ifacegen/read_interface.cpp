@@ -86,6 +86,9 @@ namespace ifacegen {
                         state.data.ifaces[state.current_iface].has_sso = true;
                         state.data.has_sso_align = true;
                     }
+                    else if (state.iface.funcname == "__nonnull__") {
+                        state.data.ifaces[state.current_iface].has_nonnull = true;
+                    }
                 }
                 return true;
             }

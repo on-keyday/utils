@@ -24,6 +24,7 @@ namespace ifacegen {
     constexpr auto typeid_func = "typeid";
     constexpr auto vtable_func = "__vtable__";
     constexpr auto sso_func = "__sso__";
+    constexpr auto nonnull_func = "__nonnull__";
 
     void resolve_alias(utw::string& str, utw::string& prim, utw::map<utw::string, Alias>* alias) {
         if (alias) {
@@ -140,7 +141,7 @@ namespace ifacegen {
 
     void render_cpp_call(Interface& func, utw::string& str, utw::map<utw::string, Alias>* alias, bool on_iface, Vtable is_vtptr = vnone) {
         if (func.funcname == call_func || func.funcname == array_op) {
-            //hlp::append(str, "operator()");
+            // hlp::append(str, "operator()");
             if (func.funcname == call_func && is_vtptr) {
                 hlp::append(str, "invoke__");
             }
@@ -390,7 +391,7 @@ namespace ifacegen {
                funcname == array_op || funcname == unsafe_func ||
                funcname == decltype_func || funcname == typeid_func ||
                funcname == vtable_func || funcname == sso_func ||
-               funcname == call_func;
+               funcname == call_func || funcname == nonnull_func;
     }
 
     bool render_cpp_vtable__class(utw::string& str, GenFlag flag, auto& iface, auto& alias, auto& nmspc) {
@@ -540,7 +541,7 @@ namespace ifacegen {
                 }
                 hlp::append(str, "        virtual vtable__interface__ vtable__get__() const noexcept = 0;\n");
             }
-            else if (func.funcname == sso_func) {
+            else if (func.funcname == sso_func || func.funcname == nonnull_func) {
                 // ignore
             }
             else {
@@ -626,7 +627,7 @@ namespace ifacegen {
                              "            return vtable__interface__(const_cast<T__&>(t_holder_));\n",
                              "        }\n\n");
             }
-            else if (func.funcname == sso_func) {
+            else if (func.funcname == sso_func || func.funcname == nonnull_func) {
                 // ignore
             }
             else {
@@ -759,7 +760,7 @@ namespace ifacegen {
                              "         return vtable__interface__(v);\n",
                              "    }\n\n");
             }
-            else if (func.funcname == sso_func) {
+            else if (func.funcname == sso_func || func.funcname == nonnull_func) {
                 // ignore
             }
             else {
@@ -1030,7 +1031,7 @@ namespace ifacegen {
         }
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);
-        //auto typeid_fn = any(flag & GenFlag::need_typeidfun);
+        // auto typeid_fn = any(flag & GenFlag::need_typeidfun);
         auto append_typeid = [&] {
             if (has_other_typeinfo) {
                 hlp::append(str, data.typeid_type);
@@ -1059,7 +1060,7 @@ namespace ifacegen {
                 }
             }
         };
-        //auto has_alloc = any(flag & GenFlag::use_allocator);
+        // auto has_alloc = any(flag & GenFlag::use_allocator);
         if (data.has_ref_ret) {
             hlp::append(str, "#include<functional>\n");
         }
@@ -1121,6 +1122,9 @@ namespace ifacegen {
                 if (!iface.second.sso_bufsize.size()) {
                     iface.second.sso_bufsize = "7";
                 }
+            }
+            if (iface.second.has_nonnull) {
+                f |= GenFlag::not_accept_null;
             }
             render_cpp_single_struct(str, f, nmspc, iface, alias, append_typeid, append_typefn);
         }
