@@ -114,6 +114,8 @@ PRIVATE
 "src/lib/json/json_object.cpp"
 "src/lib/wrap/iocommon.cpp"
 "src/lib/wrap/cin.cpp"
+"src/lib/net/async/async_dns.cpp"
+"src/lib/net/async/common_pool.cpp"
 )
 if(WIN32)
 target_sources(utils

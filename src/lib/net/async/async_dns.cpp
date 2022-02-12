@@ -6,6 +6,7 @@
 */
 
 
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/async/dns.h"
 #include "../../../include/net/async/pool.h"
 #include "../../../include/wrap/lite/string.h"
@@ -28,7 +29,10 @@ namespace utils {
                     if (result.failed()) {
                         return;
                     }
+                    ctx.suspend();
+                    p = result.get_address();
                 }
+                ctx.set_value(std::move(p));
             });
         }
     }  // namespace net
