@@ -280,6 +280,7 @@ namespace utils {
                 auto [w, r] = thread::make_chan<Any>();
                 data->w = w;
                 data->r = r;
+                data->maxthread = std::thread::hardware_concurrency() / 2;
             }
         }
 
