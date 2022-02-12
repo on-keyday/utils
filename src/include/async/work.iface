@@ -23,4 +23,4 @@ interface Task {
 }
 
 typeparam Ctx
-alias TaskV decltype(Task<Ctx>::get_vtable(std::declval<int>()))
+alias TaskV decltype(Task<Ctx>::get_vtable(std::declval<void(*&)(Ctx&)>()))
