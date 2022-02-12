@@ -60,6 +60,7 @@ namespace utils {
         };
 
         struct DLL AnyFuture {
+            void wait_or_suspend(Context& ctx);
             void wait();
             Any get();
 
@@ -135,8 +136,6 @@ namespace utils {
             void set_signal();
             AnyFuture start_task(Task<Context>&& task);
         };
-
-        struct TaskPool;
 
         struct DLL TaskPool {
            private:

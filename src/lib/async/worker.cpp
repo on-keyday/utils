@@ -96,6 +96,15 @@ namespace utils {
         struct EndTask {
         };
 
+        void AnyFuture::wait_or_suspend(Context& ctx) {
+            while (true) {
+                if (is_done()) {
+                    return;
+                }
+                ctx.suspend();
+            }
+        }
+
         void AnyFuture::wait() {
             if (!data) return;
             data->waiter_flag.wait(true);
