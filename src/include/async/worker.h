@@ -71,6 +71,10 @@ namespace utils {
                        st == TaskState::canceled;
             }
 
+            void clear() {
+                data = nullptr;
+            }
+
            private:
             wrap::shared_ptr<internal::ContextData> data;
             friend struct TaskPool;
@@ -79,9 +83,20 @@ namespace utils {
 
         template <class T>
         struct Future {
+           private:
             AnyFuture future;
+            Any place;
+
+           public:
+            Future(AnyFuture&& p)
+                : future(std::move(p)) {}
+
             T get() {
-                return *future.get().template type_assert<T>();
+                if (!place) {
+                    place = future.get();
+                    future.clear();
+                }
+                return *place.template type_assert<T>();
             }
 
             void wait() {

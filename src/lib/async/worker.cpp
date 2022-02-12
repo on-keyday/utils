@@ -46,6 +46,7 @@ namespace utils {
                 std::atomic_size_t sigidcount = 0;
                 std::atomic_uint32_t accepting;
                 bool diepool = false;
+                size_t detached = 0;
             };
 
             struct ContextData {
@@ -103,7 +104,7 @@ namespace utils {
         }
 
         TaskState AnyFuture::state() const {
-            if (!data) return TaskState::invalid;
+            if (!data) return TaskState::done;
             return data->task.state;
         }
 
@@ -273,8 +274,13 @@ namespace utils {
                 auto [w, r] = thread::make_chan<Any>();
                 data->w = w;
                 data->r = r;
-                for (std::uint32_t i = 0; i < std::thread::hardware_concurrency() / 2; i++) {
+                std::thread(task_handler, data).detach();
+                data->detached = 1;
+            }
+            else if (data->accepting == 0) {
+                if (data->detached < std::thread::hardware_concurrency() / 2) {
                     std::thread(task_handler, data).detach();
+                    data->detached++;
                 }
             }
             initlock.unlock();
