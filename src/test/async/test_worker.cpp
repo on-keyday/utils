@@ -46,6 +46,7 @@ utils::async::Any test_worker() {
     auto ifaceptr = ((void**)&result)[2];
     auto eq = &result == ifaceptr;
     return result;
+    //async::TaskV<async::Context> t;
 }
 
 int main() {

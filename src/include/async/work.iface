@@ -19,4 +19,8 @@ interface Task {
     const __call__(ctx &Ctx) void
     decltype() type
     __sso__() type = 2
+    __vtable__() type
 }
+
+typeparam Ctx
+alias TaskV decltype(Task<Ctx>::get_vtable(std::declval<int>()))

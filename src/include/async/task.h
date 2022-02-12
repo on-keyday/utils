@@ -201,9 +201,64 @@ namespace utils {
         template <typename Ctx>
         struct Task {
            private:
+            struct vtable__t {
+                void (*invoke__)(const void* this__, Ctx& ctx) = nullptr;
+            };
+
+            template <class T__v>
+            struct vtable__instance__ {
+               private:
+                constexpr vtable__instance__() = default;
+                using this_type = std::remove_pointer_t<decltype(utils::helper::deref(std::declval<std::decay_t<T__v>&>()))>;
+
+                static void invoke__(const void* this__, Ctx& ctx) {
+                    return (*static_cast<const this_type*>(this__))(ctx);
+                }
+
+               public:
+                static const vtable__t* instantiate() noexcept {
+                    static vtable__t instance{
+                        &vtable__instance__::invoke__,
+                    };
+                    return &instance;
+                }
+            };
+
+           public:
+            struct vtable__interface__ {
+               private:
+                void* this__ = nullptr;
+                const vtable__t* vtable__ = nullptr;
+
+               public:
+                constexpr vtable__interface__() = default;
+
+                explicit operator bool() const {
+                    return this__ != nullptr && vtable__ != nullptr;
+                }
+
+                const vtable__t* to_c_style_vtable() const {
+                    return vtable__;
+                }
+
+                void* to_c_style_this() const {
+                    return this__;
+                }
+
+                template <class T__v>
+                vtable__interface__(T__v& v__)
+                    : this__(static_cast<void*>(utils::helper::deref(v__))), vtable__(vtable__instance__<T__v>::instantiate()) {}
+
+                void operator()(Ctx& ctx) const {
+                    return vtable__->invoke__(this__, ctx);
+                }
+            };
+
+           private:
             struct NOVTABLE__ interface__ {
                 virtual void operator()(Ctx& ctx) const = 0;
                 virtual const void* raw__(const std::type_info&) const noexcept = 0;
+                virtual vtable__interface__ vtable__get__() const noexcept = 0;
                 virtual interface__* move__(void* __storage_box) = 0;
 
                 virtual ~interface__() = default;
@@ -230,6 +285,10 @@ namespace utils {
                         return nullptr;
                     }
                     return static_cast<const void*>(std::addressof(t_holder_));
+                }
+
+                vtable__interface__ vtable__get__() const noexcept override {
+                    return vtable__interface__(const_cast<T__&>(t_holder_));
                 }
 
                 interface__* move__(void* __storage_box) override {
@@ -358,6 +417,15 @@ namespace utils {
                 return static_cast<T__*>(const_cast<void*>(iface->raw__(typeid(T__))));
             }
 
+            vtable__interface__ get_self_vtable() const noexcept {
+                return iface ? iface->vtable__get__() : vtable__interface__{};
+            }
+
+            template <class T__v>
+            static vtable__interface__ get_vtable(T__v& v) noexcept {
+                return vtable__interface__(v);
+            }
+
             Task(const Task&) = delete;
 
             Task& operator=(const Task&) = delete;
@@ -366,6 +434,9 @@ namespace utils {
 
             Task& operator=(Task&) = delete;
         };
+
+        template <typename Ctx>
+        using TaskV = decltype(Task<Ctx>::get_vtable(std::declval<int>()));
 
     }  // namespace async
 }  // namespace utils

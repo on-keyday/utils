@@ -479,7 +479,7 @@ namespace ifacegen {
                      "        }\n\n",
                      "        template<class T__v>\n",
                      "        vtable__interface__(T__v& v__)\n",
-                     "            :this__(", nmspc, "deref(v__)),vtable__(vtable__instance__<T__v>::instantiate()){}\n\n");
+                     "            :this__(static_cast<void*>(", nmspc, "deref(v__))),vtable__(vtable__instance__<T__v>::instantiate()){}\n\n");
         for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname) && func.funcname != call_func) {
                 continue;
@@ -488,7 +488,7 @@ namespace ifacegen {
             render_cpp_function(func, str, alias, false);
             hlp::append(str, "{\n");
             hlp::appends(str, "            ", "return vtable__->");
-            render_cpp_call(func, str, alias, true, tail);
+            render_cpp_call(func, str, alias, true, Vtable(vfuncsignature | tail));
             hlp::appends(str, ";\n", "        }\n\n");
         }
         hlp::append(str, "    };\n\n");
