@@ -49,6 +49,7 @@ namespace utils {
                 auto p = async_open(std::move(addr));
                 p.wait_or_suspend(ctx);
                 ctx.set_value(std::move(p.get()));
+                get_pool().reduce_thread();
             });
         }
     }  // namespace net

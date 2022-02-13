@@ -26,6 +26,7 @@ void test_asynctcp() {
             auto time = [&] {
                 return duration_cast<milliseconds>(end - begin);
             };
+            pack << "host: " << host << "\n";
             pack << "query:\n"
                  << time() << "\n";
             begin = system_clock::now();
@@ -43,9 +44,11 @@ void test_asynctcp() {
             }
             wrap::string data;
             st = net::read(data, *conn);
-            while (st == net::State::running) {
+            size_t count = 0;
+            while (count <= 100000 && st == net::State::running) {
                 ctx.suspend();
                 st = net::read(data, *conn);
+                count++;
             }
             end = system_clock::now();
             pack << "data:\n"
@@ -53,6 +56,8 @@ void test_asynctcp() {
             pack << "time:\n"
                  << time() << "\n\n";
             utils::wrap::cout_wrap() << std::move(pack);
+            net::get_pool().reduce_thread();
+            net::get_pool().reduce_thread();
         });
     };
     auto v = spawn("google.com");
