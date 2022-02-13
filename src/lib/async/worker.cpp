@@ -47,6 +47,7 @@ namespace utils {
                 std::atomic_uint32_t accepting = 0;
                 std::atomic_bool diepool = false;
                 std::atomic_size_t detached = 0;
+                std::atomic_size_t totaldetached = 0;
                 std::atomic_size_t maxthread = 0;
                 std::atomic_bool do_yield = false;
             };
@@ -196,11 +197,13 @@ namespace utils {
             return data;
         }
 
+        constexpr size_t initial_stack_size = 1024 * 2;
+
         auto& make_fiber(Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
             Context* ctx;
             auto& c = make_context(place, ctx);
             c->task.task = std::move(post);
-            c->task.fiber = CreateFiber(0, DoTask, ctx);
+            c->task.fiber = CreateFiber(initial_stack_size, DoTask, ctx);
             c->task.state = TaskState::prelaunch;
             c->work = std::move(work);
             return c;
@@ -302,6 +305,7 @@ namespace utils {
                 if (data->detached < data->maxthread) {
                     std::thread(task_handler, data).detach();
                     data->detached++;
+                    data->totaldetached++;
                 }
             }
             initlock.unlock();
@@ -325,11 +329,13 @@ namespace utils {
             initlock.lock();
             init_data();
             initlock.unlock();
+            size_t c = 0;
             auto r = data->accepting.load();
             if (r) {
                 data->w << EndTask{};
+                c++;
             }
-            return r;
+            return c;
         }
 
         void TaskPool::posting(Task<Context>&& task) {

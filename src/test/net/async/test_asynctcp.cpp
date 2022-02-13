@@ -39,6 +39,7 @@ void test_asynctcp() {
             text += "\r\n\r\n";
             auto st = conn->write(text.c_str(), text.size());
             while (st == net::State::running) {
+                std::this_thread::yield();
                 ctx.suspend();
                 st = conn->write(text.c_str(), text.size());
             }
@@ -46,6 +47,7 @@ void test_asynctcp() {
             st = net::read(data, *conn);
             size_t count = 0;
             while (count <= 100000 && st == net::State::running) {
+                std::this_thread::yield();
                 ctx.suspend();
                 st = net::read(data, *conn);
                 count++;
@@ -56,8 +58,8 @@ void test_asynctcp() {
             pack << "time:\n"
                  << time() << "\n\n";
             utils::wrap::cout_wrap() << std::move(pack);
-            net::get_pool().reduce_thread();
-            net::get_pool().reduce_thread();
+            auto& pool = net::get_pool();
+            // pool.reduce_thread(3);
         });
     };
     auto v = spawn("google.com");
