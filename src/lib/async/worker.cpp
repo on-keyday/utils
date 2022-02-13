@@ -106,21 +106,20 @@ namespace utils {
             c->work->lock_.unlock();
         }
 
-        size_t AnyFuture::wait_or_suspend(Context& ctx) {
-            size_t count = 0;
-            while (!is_done()) {
-                auto ptr = internal::ContextHandle::get(ctx);
-                ptr->ctxlock_.lock();
+        void AnyFuture::wait_or_suspend(Context& ctx) {
+            if (!is_done()) {
+                auto c = internal::ContextHandle::get(ctx);
+                data->ctxlock_.lock();
                 if (is_done()) {
-                    ptr->ctxlock_.unlock();
-                    break;
+                    data->ctxlock_.unlock();
+                    return;
                 }
-                ptr->ptr = &ctx;
-                append_to_wait(ptr.get());
-                ptr->ctxlock_.unlock();
-                SwitchToFiber(ptr->rootfiber);
+                data->ptr = &ctx;
+                append_to_wait(c.get());
+                data->ctxlock_.unlock();
+                SwitchToFiber(c->rootfiber);
+                c->task.state = TaskState::running;
             }
-            return count;
         }
 
         void AnyFuture::wait() {
