@@ -24,7 +24,7 @@ namespace utils {
         namespace internal {
             struct TaskData {
                 Atask task;
-                Atask reserved;
+                Any* placedata = nullptr;
                 size_t sigid = 0;
                 TaskState state;
                 void* fiber;
@@ -56,6 +56,8 @@ namespace utils {
                 void* rootfiber;
                 TaskData task;
                 wrap::shared_ptr<WorkerData> work;
+                thread::LiteLock ctxlock_;
+                Context* ptr = nullptr;
                 std::atomic_flag waiter_flag;
             };
 
@@ -96,11 +98,27 @@ namespace utils {
         struct EndTask {
         };
 
+        void append_to_wait(internal::ContextData* c) {
+            c->task.state = TaskState::wait_signal;
+            c->task.sigid = ++c->work->sigidcount;
+            c->work->lock_.lock();
+            c->work->wait_signal.emplace(c->task.sigid, std::move(*c->task.placedata));
+            c->work->lock_.unlock();
+        }
+
         size_t AnyFuture::wait_or_suspend(Context& ctx) {
             size_t count = 0;
             while (!is_done()) {
-                ctx.suspend();
-                count++;
+                auto ptr = internal::ContextHandle::get(ctx);
+                ptr->ctxlock_.lock();
+                if (is_done()) {
+                    ptr->ctxlock_.unlock();
+                    break;
+                }
+                ptr->ptr = &ctx;
+                append_to_wait(ptr.get());
+                ptr->ctxlock_.unlock();
+                SwitchToFiber(ptr->rootfiber);
             }
             return count;
         }
@@ -137,8 +155,8 @@ namespace utils {
             if (!task) {
                 return false;
             }
-            data->task.reserved = std::move(task);
-            data->task.state = TaskState::wait_signal;
+            append_to_wait(data.get());
+            data->work->w << std::move(task);
             SwitchToFiber(data->rootfiber);
             data->task.state = TaskState::running;
             return true;
@@ -219,13 +237,21 @@ namespace utils {
             Any event;
             auto handle_fiber = [&](Any& place, internal::ContextData* c) {
                 c->rootfiber = self.rootfiber;
+                c->task.placedata = &place;
                 wd->accepting--;
                 SwitchToFiber(c->task.fiber);
                 wd->accepting++;
+                c->task.placedata = nullptr;
                 c->rootfiber = nullptr;
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
                     c->task.state == TaskState::canceled) {
+                    c->ctxlock_.lock();
+                    if (c->ptr) {
+                        DefferCancel _{c->ptr};
+                        c->ptr = nullptr;
+                    }
+                    c->ctxlock_.unlock();
                     DeleteFiber(c->task.fiber);
                     c->task.fiber = nullptr;
                     c->waiter_flag.clear();
@@ -235,12 +261,7 @@ namespace utils {
                     w << std::move(place);
                 }
                 else if (c->task.state == TaskState::wait_signal) {
-                    c->task.sigid = ++c->work->sigidcount;
-                    Atask wait = std::move(c->task.reserved);
-                    c->work->lock_.lock();
-                    c->work->wait_signal.emplace(c->task.sigid, std::move(place));
-                    c->work->lock_.unlock();
-                    w << std::move(wait);
+                    // nothing to do
                 }
             };
             wd->accepting++;
