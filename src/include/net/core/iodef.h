@@ -58,9 +58,9 @@ namespace utils {
                 return t.read(byte, size, red);
             }
             SFINAE_BLOCK_T_ELSE(readable)
-            constexpr static State read(T& t, const char* byte, size_t size, size_t* red) {
+            /*constexpr static State read(T& t, const char* byte, size_t size, size_t* red) {
                 return State::undefined;
-            }
+            }*/
             SFINAE_BLOCK_T_END()
         }  // namespace internal
 

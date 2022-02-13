@@ -13,6 +13,8 @@
 void test_asynctcp() {
     using namespace utils;
     using namespace std::chrono;
+    auto& pool = net::get_pool();
+    pool.set_yield(true);
     auto co = net::async_open("google.com", "http");
     auto begin = system_clock::now();
     co.wait();
@@ -27,16 +29,19 @@ void test_asynctcp() {
         utils::wrap::cout_wrap() << "failed\n";
         return;
     }
-    auto& pool = net::get_pool();
-    pool.set_yield(true);
     auto v = pool.start([=](async::Context& ctx) mutable {
         auto text = "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n";
-        while (conn->write(text, strlen(text)) == net::State::running) {
+        auto len = strlen(text);
+        auto st = conn->write(text, len);
+        while (st == net::State::running) {
             ctx.suspend();
+            st = conn->write(text, len);
         }
-        wrap::string data;
-        while (net::read(data, conn) == net::State::running) {
+        wrap::string data = "data:\n";
+        st = net::read(data, *conn);
+        while (st == net::State::running) {
             ctx.suspend();
+            st = net::read(data, *conn);
         }
         utils::wrap::cout_wrap() << data;
     });
