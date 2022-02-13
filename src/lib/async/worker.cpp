@@ -139,7 +139,6 @@ namespace utils {
             }
             data->task.reserved = std::move(task);
             data->task.state = TaskState::wait_signal;
-            data->task.sigid = ++data->work->sigidcount;
             SwitchToFiber(data->rootfiber);
             data->task.state = TaskState::running;
             return true;
@@ -236,6 +235,7 @@ namespace utils {
                     w << std::move(place);
                 }
                 else if (c->task.state == TaskState::wait_signal) {
+                    c->task.sigid = ++c->work->sigidcount;
                     Atask wait = std::move(c->task.reserved);
                     c->work->lock_.lock();
                     c->work->wait_signal.emplace(c->task.sigid, std::move(place));
