@@ -239,7 +239,7 @@ namespace utils {
 
             size_t peek_queue() const {
                 if (buffer) {
-                    return buffer->peek_quque();
+                    return buffer->peek_queue();
                 }
                 return 0;
             }
