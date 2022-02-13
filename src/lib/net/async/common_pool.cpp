@@ -7,14 +7,14 @@
 
 
 #include "../../../include/platform/windows/dllexport_source.h"
-#include "../../../include/net/async/dns.h"
+#include "../../../include/net/async/pool.h"
 #include "../../../include/async/worker.h"
 
 namespace utils {
     namespace net {
         async::TaskPool netpool;
 
-        async::TaskPool& get_pool() {
+        async::TaskPool& STDCALL get_pool() {
             return netpool;
         }
     }  // namespace net
