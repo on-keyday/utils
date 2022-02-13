@@ -15,8 +15,8 @@ void test_asynctcp() {
     using namespace std::chrono;
     auto& pool = net::get_pool();
     pool.set_yield(true);
-    auto spawn = [&](const char* host) {
-        return pool.start([host](async::Context& ctx) mutable {
+    auto spawn = [&](const char* host, const char* path = "/") {
+        return pool.start([host, path](async::Context& ctx) mutable {
             auto pack = utils::wrap::pack();
             auto co = net::async_open(host, "http");
             assert(co.state() != async::TaskState::invalid);
@@ -31,7 +31,9 @@ void test_asynctcp() {
             begin = system_clock::now();
             auto conn = co.get();
             assert(conn);
-            wrap::string text = "GET / HTTP/1.1\r\nHost: ";
+            wrap::string text = "GET ";
+            text += path;
+            text += " HTTP/1.1\r\nHost: ";
             text += host;
             text += "\r\n\r\n";
             auto st = conn->write(text.c_str(), text.size());
@@ -54,7 +56,7 @@ void test_asynctcp() {
         });
     };
     auto v = spawn("google.com");
-    auto u = spawn("httpbin.org");
+    auto u = spawn("httpbin.org", "/get");
     auto begin = system_clock::now();
     v.wait();
     u.wait();
