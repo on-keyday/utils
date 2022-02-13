@@ -155,6 +155,8 @@ namespace utils {
 
             void set_maxthread(size_t sz);
 
+            void set_yield(bool do_flag);
+
             template <class Fn>
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));

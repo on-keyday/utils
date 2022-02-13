@@ -93,7 +93,7 @@ namespace utils {
                 ctx->handle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL,
                                                        0, 0);
                 assert(ctx->handle);
-                for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
+                for (auto i = 0; i < std::thread::hardware_concurrency() / 2; i++) {
                     std::thread(iocp_thread, ctx).detach();
                 }
             }

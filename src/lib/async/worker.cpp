@@ -44,10 +44,11 @@ namespace utils {
                 wrap::map<size_t, Any> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
-                std::atomic_uint32_t accepting;
-                bool diepool = false;
-                size_t detached = 0;
-                std::atomic_size_t maxthread;
+                std::atomic_uint32_t accepting = 0;
+                std::atomic_bool diepool = false;
+                std::atomic_size_t detached = 0;
+                std::atomic_size_t maxthread = 0;
+                std::atomic_bool do_yield = false;
             };
 
             struct ContextData {
@@ -89,7 +90,6 @@ namespace utils {
             std::atomic_flag sig;
             wrap::shared_ptr<internal::ContextData> data;
             Atask task;
-            const std::type_info* p;
         };
 
         struct EndTask {
@@ -275,8 +275,12 @@ namespace utils {
                 else if (auto _ = event.type_assert<EndTask>()) {
                     break;
                 }
+                if (wd->do_yield) {
+                    std::this_thread::yield();
+                }
             }
             wd->accepting--;
+            wd->detached--;
         }
 
         void TaskPool::init_data() {
@@ -305,6 +309,13 @@ namespace utils {
             initlock.lock();
             init_data();
             data->maxthread = sz;
+            initlock.unlock();
+        }
+
+        void TaskPool::set_yield(bool do_flag) {
+            initlock.lock();
+            init_data();
+            data->do_yield = do_flag;
             initlock.unlock();
         }
 
