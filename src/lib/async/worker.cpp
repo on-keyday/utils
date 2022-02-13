@@ -329,13 +329,12 @@ namespace utils {
             initlock.lock();
             init_data();
             initlock.unlock();
-            size_t c = 0;
             auto r = data->accepting.load();
             if (r) {
                 data->w << EndTask{};
-                c++;
+                return 1;
             }
-            return c;
+            return 0;
         }
 
         void TaskPool::posting(Task<Context>&& task) {
