@@ -12,7 +12,7 @@
 #include "../../../include/net/core/platform.h"
 #include "../../../include/net/core/init_net.h"
 #ifdef _WIN32
-#define USE_IOCP
+//#define USE_IOCP
 #endif
 #ifdef USE_IOCP
 #include "../../../include/platform/windows/io_completetion_port.h"
