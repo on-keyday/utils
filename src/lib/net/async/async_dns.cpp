@@ -20,7 +20,7 @@ namespace utils {
             }
             wrap::string host_ = host, port_ = port;
             return get_pool().start<wrap::shared_ptr<Address>>([host_, port_, timeout_sec, address_family, socket_type, protocol, flags](async::Context& ctx) {
-                auto result = query_dns(host_.c_str(), port_.c_str());
+                auto result = query_dns(host_.c_str(), port_.c_str(), timeout_sec, address_family, socket_type, protocol, flags);
                 auto p = result.get_address();
                 if (p) {
                     ctx.set_value(std::move(p));

@@ -55,7 +55,6 @@ namespace utils {
                 TaskData task;
                 wrap::shared_ptr<WorkerData> work;
                 std::atomic_flag waiter_flag;
-                const std::type_info* future_info = nullptr;
             };
 
             struct ContextHandle {
@@ -114,7 +113,7 @@ namespace utils {
         }
 
         TaskState AnyFuture::state() const {
-            if (!data) return TaskState::done;
+            if (!data) return TaskState::invalid;
             return data->task.state;
         }
 

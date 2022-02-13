@@ -33,5 +33,23 @@ namespace utils {
                 ctx.set_value(std::move(p));
             });
         }
+
+        async::Future<wrap::shared_ptr<TCPConn>> STDCALL async_open(const char* host, const char* port, time_t timeout_sec,
+                                                                    int address_family, int socket_type, int protocol, int flags) {
+            auto addr = query(host, port, timeout_sec, address_family, socket_type, protocol, flags);
+            if (addr.state() == async::TaskState::invalid) {
+                return nullptr;
+            }
+            return get_pool().start([a = std::move(addr)](async::Context& ctx) mutable {
+                a.wait_or_suspend(ctx);
+                auto addr = std::move(a.get());
+                if (!addr) {
+                    return;
+                }
+                auto p = async_open(std::move(addr));
+                p.wait_or_suspend(ctx);
+                ctx.set_value(std::move(p.get()));
+            });
+        }
     }  // namespace net
 }  // namespace utils

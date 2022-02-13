@@ -69,7 +69,7 @@ namespace utils {
             bool is_done() const {
                 auto st = state();
                 return st == TaskState::done || st == TaskState::except ||
-                       st == TaskState::canceled;
+                       st == TaskState::canceled || st == TaskState::invalid;
             }
 
             void clear() {
@@ -111,6 +111,10 @@ namespace utils {
 
             TaskState state() const {
                 return future.state();
+            }
+
+            void wait_or_suspend(async::Context& ctx) {
+                future.wait_or_suspend(ctx);
             }
         };
 
