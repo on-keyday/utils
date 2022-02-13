@@ -49,7 +49,7 @@ void test_asynctcp() {
             st = net::read(data, *conn);
             size_t count = 0;
             while (count <= 100000 && st == net::State::running) {
-                // std::this_thread::yield();
+                std::this_thread::yield();
                 ctx.suspend();
                 suspend++;
                 st = net::read(data, *conn);
@@ -67,16 +67,28 @@ void test_asynctcp() {
             // pool.reduce_thread(3);
         });
     };
+    utils::wrap::cout_wrap() << "single:\n";
+    auto s = spawn("gmail.com");
+    auto begin = system_clock::now();
+    s.wait();
+    auto end = system_clock::now();
+    auto print_time = [&] {
+        utils::wrap::cout_wrap() << "total time\n"
+                                 << duration_cast<milliseconds>(end - begin) << "\n\n";
+    };
+    print_time();
+    utils::wrap::cout_wrap() << "multi:\n";
     auto v = spawn("google.com");
     auto u = spawn("httpbin.org", "/get");
     auto a = spawn("amazon.com");
-    auto begin = system_clock::now();
+    auto d = spawn("syosetu.com");
+    begin = system_clock::now();
     v.wait();
     u.wait();
     a.wait();
-    auto end = system_clock::now();
-    utils::wrap::cout_wrap() << "total time\n"
-                             << duration_cast<milliseconds>(end - begin) << "\n";
+    d.wait();
+    end = system_clock::now();
+    print_time();
 }
 
 int main() {
