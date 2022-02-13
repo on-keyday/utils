@@ -16,7 +16,7 @@ interface Any {
 
 typeparam Ctx
 interface Task {
-    const __call__(ctx &Ctx) void
+    __call__(ctx &Ctx) void
     decltype() type
     __sso__() type = 2
     __nonnull__() type

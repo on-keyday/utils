@@ -97,10 +97,7 @@ namespace utils {
         };
 
         void AnyFuture::wait_or_suspend(Context& ctx) {
-            while (true) {
-                if (is_done()) {
-                    return;
-                }
+            while (!is_done()) {
                 ctx.suspend();
             }
         }

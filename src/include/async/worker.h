@@ -163,7 +163,7 @@ namespace utils {
 
             template <class T, class Fn>
             Future<T> start(Fn&& fn) {
-                auto f = [=](auto& ctx) {
+                auto f = [=](auto& ctx) mutable {
                     fn(ctx);
                     if (!ctx.value().template type_assert<T>()) {
                         ctx.set_value(T{});

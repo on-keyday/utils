@@ -117,6 +117,7 @@ PRIVATE
 "src/lib/wrap/cin.cpp"
 "src/lib/net/async/async_dns.cpp"
 "src/lib/net/async/common_pool.cpp"
+"src/lib/net/async/async_tcp.cpp"
 )
 if(WIN32)
 target_sources(utils
