@@ -96,10 +96,13 @@ namespace utils {
         struct EndTask {
         };
 
-        void AnyFuture::wait_or_suspend(Context& ctx) {
+        size_t AnyFuture::wait_or_suspend(Context& ctx) {
+            size_t count = 0;
             while (!is_done()) {
                 ctx.suspend();
+                count++;
             }
+            return count;
         }
 
         void AnyFuture::wait() {

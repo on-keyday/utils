@@ -20,8 +20,9 @@ void test_asynctcp() {
             auto pack = utils::wrap::pack();
             auto co = net::async_open(host, "http");
             assert(co.state() != async::TaskState::invalid);
+            size_t suspend = 0;
             auto begin = system_clock::now();
-            co.wait_or_suspend(ctx);
+            suspend = co.wait_or_suspend(ctx);
             auto end = system_clock::now();
             auto time = [&] {
                 return duration_cast<milliseconds>(end - begin);
@@ -41,6 +42,7 @@ void test_asynctcp() {
             while (st == net::State::running) {
                 // std::this_thread::yield();
                 ctx.suspend();
+                suspend++;
                 st = conn->write(text.c_str(), text.size());
             }
             wrap::string data;
@@ -49,12 +51,15 @@ void test_asynctcp() {
             while (count <= 100000 && st == net::State::running) {
                 // std::this_thread::yield();
                 ctx.suspend();
+                suspend++;
                 st = net::read(data, *conn);
                 count++;
             }
             end = system_clock::now();
             pack << "data:\n"
                  << data << "\n";
+            pack << "suspend:\n"
+                 << suspend << "\n";
             pack << "time:\n"
                  << time() << "\n\n";
             utils::wrap::cout_wrap() << std::move(pack);
