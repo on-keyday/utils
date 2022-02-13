@@ -137,8 +137,10 @@ namespace utils {
                 return State::failed;
             }
             impl->io_mode = internal::IOMode::close;
-            if (!force && impl->connected) {
+            if (impl->connected) {
+                size_t times = 0;
             BEGIN:
+                times++;
                 auto res = ::SSL_shutdown(impl->ssl);
                 if (res < 0) {
                     if (need_io(impl->ssl)) {
@@ -147,12 +149,16 @@ namespace utils {
                             return State::running;
                         }
                         else if (err == State::complete) {
-                            goto BEGIN;
+                            if (times <= 10) {
+                                goto BEGIN;
+                            }
                         }
                     }
                 }
                 else if (res == 0) {
-                    goto BEGIN;
+                    if (times <= 10) {
+                        goto BEGIN;
+                    }
                 }
             }
             impl->clear();
@@ -160,7 +166,7 @@ namespace utils {
         }
 
         SSLConn::~SSLConn() {
-            close();
+            close(true);
             delete impl;
         }
 

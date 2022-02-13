@@ -105,6 +105,10 @@ namespace utils {
                 : limit(limit), policy(policy) {
             }
 
+            size_t peek_queue() const {
+                return que.size();
+            }
+
             void change_limit(size_t limit) {
                 lock_.lock();
                 this->limit = limit;
@@ -231,6 +235,13 @@ namespace utils {
                 if (buffer) {
                     buffer->change_policy(policy);
                 }
+            }
+
+            size_t peek_queue() const {
+                if (buffer) {
+                    return buffer->peek_quque();
+                }
+                return 0;
             }
 
             bool is_closed() const {

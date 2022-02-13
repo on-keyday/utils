@@ -273,7 +273,9 @@ namespace utils {
                     }
                 }
                 else if (auto _ = event.type_assert<EndTask>()) {
-                    break;
+                    if (r.peek_queue() == 0) {
+                        break;
+                    }
                 }
                 if (wd->do_yield) {
                     std::this_thread::yield();

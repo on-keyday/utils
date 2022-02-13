@@ -51,17 +51,19 @@ void test_asynctcp() {
             pack << "data:\n"
                  << data << "\n";
             pack << "time:\n"
-                 << time() << "\n";
+                 << time() << "\n\n";
             utils::wrap::cout_wrap() << std::move(pack);
         });
     };
     auto v = spawn("google.com");
     auto u = spawn("httpbin.org", "/get");
+    auto a = spawn("amazon.com");
     auto begin = system_clock::now();
     v.wait();
     u.wait();
+    a.wait();
     auto end = system_clock::now();
-    utils::wrap::cout_wrap() << "\ntotal time\n"
+    utils::wrap::cout_wrap() << "total time\n"
                              << duration_cast<milliseconds>(end - begin) << "\n";
 }
 
