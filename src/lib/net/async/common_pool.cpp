@@ -12,9 +12,9 @@
 
 namespace utils {
     namespace net {
-        async::TaskPool netpool;
 
         async::TaskPool& STDCALL get_pool() {
+            static async::TaskPool netpool;
             return netpool;
         }
     }  // namespace net

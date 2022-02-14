@@ -365,7 +365,7 @@ namespace utils {
             data->w << std::move(task);
         }
 
-        AnyFuture TaskPool::starting(Task<Context>&& task, const std::type_info* ptr) {
+        AnyFuture TaskPool::starting(Task<Context>&& task) {
             init();
             SignalBack back;
             back.task = std::move(task);

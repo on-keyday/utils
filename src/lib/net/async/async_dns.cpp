@@ -18,20 +18,23 @@ namespace utils {
             if (!host || !port) {
                 return nullptr;
             }
-            wrap::string host_ = host, port_ = port;
-            return get_pool().start<wrap::shared_ptr<Address>>([host_, port_, timeout_sec, address_family, socket_type, protocol, flags](async::Context& ctx) {
-                auto result = query_dns(host_.c_str(), port_.c_str(), timeout_sec, address_family, socket_type, protocol, flags);
-                auto p = result.get_address();
+            auto result = query_dns(host, port, timeout_sec, address_family, socket_type, protocol, flags);
+            if (result.failed()) {
+                return nullptr;
+            }
+            return get_pool().start<wrap::shared_ptr<Address>>([res = std::move(result)](async::Context& ctx) mutable {
+                auto p = res.get_address();
                 if (p) {
                     ctx.set_value(std::move(p));
                     return;
                 }
                 while (!p) {
-                    if (result.failed()) {
+                    if (res.failed()) {
                         return;
                     }
                     ctx.suspend();
-                    p = result.get_address();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    p = res.get_address();
                 }
                 ctx.set_value(std::move(p));
             });

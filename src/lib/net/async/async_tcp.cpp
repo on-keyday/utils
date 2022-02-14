@@ -28,6 +28,7 @@ namespace utils {
                         return;
                     }
                     ctx.suspend();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     p = res.connect();
                 }
                 ctx.set_value(std::move(p));

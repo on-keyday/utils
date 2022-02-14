@@ -15,8 +15,9 @@ void test_asynctcp() {
     using namespace std::chrono;
     auto& pool = net::get_pool();
     pool.set_yield(true);
+    std::atomic_size_t logicaltime;
     auto spawn = [&](const char* host, const char* path = "/") {
-        return pool.start([host, path](async::Context& ctx) mutable {
+        return pool.start([host, path, &logicaltime](async::Context& ctx) mutable {
             auto pack = utils::wrap::pack();
             auto co = net::async_open(host, "http");
             assert(co.state() != async::TaskState::invalid);
@@ -28,8 +29,10 @@ void test_asynctcp() {
                 return duration_cast<milliseconds>(end - begin);
             };
             pack << "host: " << host << "\n";
+            auto t = time();
             pack << "query:\n"
-                 << time() << "\n";
+                 << t << "\n";
+            logicaltime += t.count();
             begin = system_clock::now();
             auto conn = co.get();
             assert(conn);
@@ -42,6 +45,7 @@ void test_asynctcp() {
             while (st == net::State::running) {
                 // std::this_thread::yield();
                 ctx.suspend();
+
                 suspend++;
                 st = conn->write(text.c_str(), text.size());
             }
@@ -60,8 +64,10 @@ void test_asynctcp() {
                  << data << "\n";
             pack << "suspend:\n"
                  << suspend << "\n";
+            t = time();
             pack << "time:\n"
-                 << time() << "\n\n";
+                 << t << "\n\n";
+            logicaltime += t.count();
             utils::wrap::cout_wrap() << std::move(pack);
             auto& pool = net::get_pool();
             // pool.reduce_thread(3);
@@ -73,10 +79,14 @@ void test_asynctcp() {
     s.wait();
     auto end = system_clock::now();
     auto print_time = [&] {
+        utils::wrap::cout_wrap() << "sequential time:\n"
+                                 << logicaltime << "ms\n";
         utils::wrap::cout_wrap() << "total time\n"
                                  << duration_cast<milliseconds>(end - begin) << "\n\n";
     };
     print_time();
+    logicaltime = 0;
+    // std::this_thread::sleep_for(seconds(3));
     utils::wrap::cout_wrap() << "multi:\n";
     auto v = spawn("google.com");
     auto u = spawn("httpbin.org", "/get");

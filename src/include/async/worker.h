@@ -148,7 +148,7 @@ namespace utils {
             void init_data();
             void init();
             void posting(Task<Context>&& task);
-            AnyFuture starting(Task<Context>&& task, const std::type_info* ptr = nullptr);
+            AnyFuture starting(Task<Context>&& task);
 
            public:
             size_t reduce_thread();
@@ -169,13 +169,13 @@ namespace utils {
 
             template <class T, class Fn>
             Future<T> start(Fn&& fn) {
-                auto f = [=](auto& ctx) mutable {
+                auto f = [fn = std::forward<Fn>(fn)](auto& ctx) mutable {
                     fn(ctx);
                     if (!ctx.value().template type_assert<T>()) {
                         ctx.set_value(T{});
                     }
                 };
-                auto fu = starting(std::move(f), &typeid(T));
+                auto fu = starting(std::move(f));
                 return Future<T>{std::move(fu)};
             }
 
