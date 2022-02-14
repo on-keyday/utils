@@ -69,7 +69,7 @@ namespace utils {
                     }
 
                     template <class T__v>
-                    vtable__interface__(T__v& v__)
+                    vtable__interface__(T__v&& v__)
                         : this__(static_cast<void*>(utils::helper::deref(v__))), vtable__(vtable__instance__<T__v>::instantiate()) {}
 
                     void operator()(void* ol, size_t com) {

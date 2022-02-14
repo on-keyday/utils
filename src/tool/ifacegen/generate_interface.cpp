@@ -479,7 +479,7 @@ namespace ifacegen {
                      "            return this__;\n",
                      "        }\n\n",
                      "        template<class T__v>\n",
-                     "        vtable__interface__(T__v& v__)\n",
+                     "        vtable__interface__(T__v&& v__)\n",
                      "            :this__(static_cast<void*>(", nmspc, "deref(v__))),vtable__(vtable__instance__<T__v>::instantiate()){}\n\n");
         for (Interface& func : iface.second.iface) {
             if (is_special_name(func.funcname) && func.funcname != call_func) {

@@ -9,7 +9,6 @@
 #include <async/worker.h>
 #include <wrap/cout.h>
 #include <net/tcp/tcp.h>
-#include <Windows.h>
 #include <net/core/platform.h>
 #include <platform/windows/io_completetion_port.h>
 
@@ -61,6 +60,7 @@ void test_externaltask() {
             err = ::GetLastError();
             if (err == WSA_IO_PENDING) {
                 ctx.wait_externaltask();
+                utils::wrap::cout_wrap() << "external job finished";
             }
         }
     });
@@ -79,6 +79,7 @@ void test_externaltask() {
                 8, INFINITE);
         }
     }).detach();
+    v.wait();
 }
 
 int main() {
