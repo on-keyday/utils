@@ -15,21 +15,35 @@
 namespace utils {
     namespace platform {
         namespace windows {
+            template <class Fn>
+            struct CompletionCallback {
+                Fn& fn;
+                CompletionCallback(Fn& f)
+                    : fn(f) {}
+                void call(void* ol, size_t sz) {
+                    fn(ol, sz);
+                }
+            };
 
             struct IOCPContext;
             struct DLL IOCPObject {
-                friend DLL IOCPObject* STDCALL start_iocp();
+                friend DLL IOCPObject* STDCALL get_iocp();
 
                 bool register_handle(void* handle);
 
-                void wait_completion(CompletionCallback cb, size_t maxcount, int wait);
+                template <class Fn>
+                void wait_completion(Fn&& cb, size_t maxcount, int wait) {
+                    auto fn = CompletionCallback{cb};
+                    wait_completion_impl(fn, maxcount, wait);
+                }
 
                private:
                 IOCPObject();
                 ~IOCPObject();
+                void wait_completion_impl(CCBInvoke cb, size_t maxcount, int wait);
                 IOCPContext* ctx;
             };
-            DLL IOCPObject* STDCALL start_iocp();
+            DLL IOCPObject* STDCALL get_iocp();
 
         }  // namespace windows
 

@@ -50,7 +50,7 @@ void test_externaltask() {
         constexpr auto text = "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n";
         auto res = c->write(text, ::strlen(text));
         assert(res == net::State::complete);
-        auto iocp = platform::windows::start_iocp();
+        auto iocp = platform::windows::get_iocp();
         iocp->register_handle((void*)sock);
         auto will = ctx.clone();
         OutParam param;
@@ -60,12 +60,13 @@ void test_externaltask() {
             err = ::GetLastError();
             if (err == WSA_IO_PENDING) {
                 ctx.wait_externaltask();
-                utils::wrap::cout_wrap() << "external job finished";
+                utils::wrap::cout_wrap() << "external job finished\n";
             }
         }
+        utils::wrap::cout_wrap() << param.alloc;
     });
     std::thread([&]() {
-        auto iocp = platform::windows::start_iocp();
+        auto iocp = platform::windows::get_iocp();
         while (true) {
             iocp->wait_completion(
                 [](void* ol, size_t count) {

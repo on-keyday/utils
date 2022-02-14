@@ -37,7 +37,7 @@ auto get_tcp() {
 }
 
 void test_io_completion_port() {
-    auto iocp = utils::platform::windows::start_iocp();
+    auto iocp = utils::platform::windows::get_iocp();
     auto tcp = get_tcp();
     ::SOCKET sock = tcp->get_raw();
     bool sent = false;

@@ -37,18 +37,18 @@ namespace utils {
                     }
                 }
                 for (auto p = 0; p < removed; p++) {
-                    fn(entry[p].lpOverlapped, entry[p].dwNumberOfBytesTransferred);
+                    fn.call(entry[p].lpOverlapped, entry[p].dwNumberOfBytesTransferred);
                 }
             }
 
-            void IOCPObject::wait_completion(CompletionCallback cb, size_t maxcount, int wait) {
+            void IOCPObject::wait_completion_impl(CCBInvoke cb, size_t maxcount, int wait) {
                 if (maxcount > 64) {
                     maxcount = 8;
                 }
                 iocp_poll(cb, maxcount, wait);
             }
 
-            IOCPObject* start_iocp() {
+            IOCPObject* get_iocp() {
                 static IOCPObject obj;
                 return &obj;
             }

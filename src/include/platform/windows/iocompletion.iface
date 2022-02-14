@@ -8,9 +8,9 @@ package utils::platform::windows
 # tool\ifacegen -i src/include/platform/windows/iocompletion.iface -o src/include/platform/windows/iocompletion.h --license --helper-deref "\"../../helper/deref.h\"" -nVeS
 
 interface CCBImpl {
-    __call__(ol *void,com size_t) void
+    call(ol *void,com size_t) void
     __sso__() type = 3
     __vtable__() type
 }
 
-alias CompletionCallback decltype(std::declval<CCBImpl>().get_self_vtable())
+alias CCBInvoke decltype(std::declval<CCBImpl>().get_self_vtable())
