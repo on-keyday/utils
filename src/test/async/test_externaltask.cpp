@@ -11,9 +11,11 @@
 #include <net/tcp/tcp.h>
 #include <net/core/platform.h>
 #include <platform/windows/io_completetion_port.h>
+#include <chrono>
 
 void test_externaltask() {
     using namespace utils;
+    using namespace std::chrono;
     async::TaskPool pool;
     struct OutParam {
         ::OVERLAPPED ol;
@@ -29,42 +31,54 @@ void test_externaltask() {
             return &buf;
         }
     };
-    auto v = pool.start([](async::Context& ctx) {
-        auto q = net::query_dns("google.com", "http");
-        auto r = q.get_address();
-        while (!r) {
-            if (q.failed()) {
-                assert(false && "failed");
+    auto spawn = [&](const char* host, const char* path = "/") {
+        return pool.start([=](async::Context& ctx) {
+            auto q = net::query_dns(host, "http");
+            auto r = q.get_address();
+            while (!r) {
+                if (q.failed()) {
+                    assert(false && "failed");
+                }
+                r = q.get_address();
             }
-            r = q.get_address();
-        }
-        auto op = net::open(std::move(r));
-        auto c = op.connect();
-        while (!c) {
-            if (op.failed()) {
-                assert(false && "failed");
+            auto op = net::open(std::move(r));
+            auto c = op.connect();
+            while (!c) {
+                if (op.failed()) {
+                    assert(false && "failed");
+                }
+                c = op.connect();
             }
-            c = op.connect();
-        }
-        ::SOCKET sock = (::SOCKET)c->get_raw();
-        constexpr auto text = "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n";
-        auto res = c->write(text, ::strlen(text));
-        assert(res == net::State::complete);
-        auto iocp = platform::windows::get_iocp();
-        iocp->register_handle((void*)sock);
-        auto will = ctx.clone();
-        OutParam param;
-        param.f = std::move(will);
-        auto err = ::WSARecv(sock, param.set_buf(), 1, (LPDWORD)&param.recved, (LPDWORD)&param.flags, &param.ol, nullptr);
-        if (err == SOCKET_ERROR) {
-            err = ::GetLastError();
-            if (err == WSA_IO_PENDING) {
-                ctx.wait_externaltask();
-                utils::wrap::cout_wrap() << "external job finished\n";
+            ::SOCKET sock = (::SOCKET)c->get_raw();
+            wrap::string text = "GET ";
+            text += path;
+            text += " HTTP/1.1\r\nHost: ";
+            text += host;
+            text += "\r\n\r\n";
+            auto res = c->write(text.c_str(), text.size());
+            assert(res == net::State::complete);
+            auto iocp = platform::windows::get_iocp();
+            iocp->register_handle((void*)sock);
+            auto will = ctx.clone();
+            OutParam param;
+            param.f = std::move(will);  // pass external task
+            auto err = ::WSARecv(sock, param.set_buf(), 1, (LPDWORD)&param.recved, (LPDWORD)&param.flags, &param.ol, nullptr);
+            auto out = utils::wrap::pack();
+            if (err == SOCKET_ERROR) {
+                err = ::GetLastError();
+                if (err == WSA_IO_PENDING) {
+                    auto begin = system_clock::now();
+                    ctx.wait_externaltask();
+                    auto end = system_clock::now();
+                    auto time = duration_cast<milliseconds>(end - begin);
+                    out << "external job finished\n"
+                        << "time:" << time << "\n";
+                }
             }
-        }
-        utils::wrap::cout_wrap() << param.alloc;
-    });
+            out << param.alloc;
+            utils::wrap::cout_wrap() << out.pack();
+        });
+    };
     std::thread([&]() {
         auto iocp = platform::windows::get_iocp();
         while (true) {
@@ -80,7 +94,16 @@ void test_externaltask() {
                 8, INFINITE);
         }
     }).detach();
-    v.wait();
+    auto g = spawn("google.com");
+    auto s = spawn("syosetu.com");
+    auto a = spawn("amazon.com");
+    auto b = spawn("httpbin.org", "/get");
+    auto u = spawn("youtube.com");
+    g.wait();
+    s.wait();
+    a.wait();
+    b.wait();
+    u.wait();
 }
 
 int main() {
