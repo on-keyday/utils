@@ -26,14 +26,26 @@ namespace utils {
 
             ::HANDLE iocp = INVALID_HANDLE_VALUE;
 
-            void iocp_pool(size_t handlecount, int wait) {
+            template <class Func>
+            void iocp_poll(Func&& fn, size_t handlecount, int wait) {
                 OVERLAPPED_ENTRY entry[64];
-                DWORD transfered = 0;
                 ULONG removed;
-                BOOL bRet;
                 if (!::GetQueuedCompletionStatusEx(iocp, entry, handlecount, &removed, wait, false)) {
                     auto err = ::GetLastError();
+                    if (err == WAIT_TIMEOUT) {
+                        return;
+                    }
                 }
+                for (auto p = 0; p < removed; p++) {
+                    fn(entry[p].lpOverlapped, entry[p].dwNumberOfBytesTransferred);
+                }
+            }
+
+            void IOCPObject::wait_completion(CompletionCallback cb, size_t maxcount, int wait) {
+                if (maxcount > 64) {
+                    maxcount = 8;
+                }
+                iocp_poll(cb, maxcount, wait);
             }
 
             IOCPObject* start_iocp() {

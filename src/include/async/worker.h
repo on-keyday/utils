@@ -100,6 +100,7 @@ namespace utils {
 
            private:
             wrap::shared_ptr<internal::ContextData> data;
+            bool not_own = false;
             friend struct TaskPool;
             friend struct Context;
         };
@@ -119,6 +120,9 @@ namespace utils {
                 if (!place) {
                     place = future.get();
                     future.clear();
+                    if (!place) {
+                        place = T{};
+                    }
                 }
                 return *place.template type_assert<T>();
             }
@@ -157,12 +161,13 @@ namespace utils {
 
             void wait_externaltask(void* param = nullptr);
 
+            AnyFuture clone() const;
+
            private:
             friend struct internal::ContextHandle;
             wrap::shared_ptr<internal::ContextData> data;
             bool wait_task(Task<Context>&& task);
             void set_signal();
-            AnyFuture start_task(Task<Context>&& task);
         };
 
         struct DLL TaskPool {

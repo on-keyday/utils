@@ -108,7 +108,7 @@ namespace utils {
         }
 
         void AnyFuture::wait_or_suspend(Context& ctx) {
-            if (!is_done()) {
+            if (!not_own && !is_done()) {
                 auto c = internal::ContextHandle::get(ctx);
                 data->ctxlock_.lock();
                 if (is_done()) {
@@ -132,12 +132,12 @@ namespace utils {
         }
 
         void AnyFuture::wait() {
-            if (!data) return;
+            if (!data || not_own) return;
             data->waiter_flag.wait(true);
         }
 
         Any AnyFuture::get() {
-            if (!data) return nullptr;
+            if (!data || not_own) return nullptr;
             data->waiter_flag.wait(true);
             return std::move(data->task.result);
         }
@@ -202,14 +202,11 @@ namespace utils {
             return data->task.result;
         }
 
-        AnyFuture Context::start_task(Task<Context>&& task) {
-            auto v = SignalBack{};
-            v.task = std::move(task);
-            v.sig.test_and_set();
-            data->work->w << &v;
-            v.sig.wait(true);
+        AnyFuture Context::clone() const {
+            if (!data) return {};
             AnyFuture f;
-            f.data = v.data;
+            f.data = data;
+            f.not_own = true;
             return f;
         }
 

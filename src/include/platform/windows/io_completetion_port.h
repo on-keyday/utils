@@ -10,15 +10,19 @@
 #pragma once
 
 #include "dllexport_header.h"
+#include "iocompletion.h"
 
 namespace utils {
     namespace platform {
         namespace windows {
+
             struct IOCPContext;
             struct DLL IOCPObject {
                 friend DLL IOCPObject* STDCALL start_iocp();
 
                 bool register_handle(void* handle);
+
+                void wait_completion(CompletionCallback cb, size_t maxcount, int wait);
 
                private:
                 IOCPObject();
