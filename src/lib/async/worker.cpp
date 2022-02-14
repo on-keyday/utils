@@ -59,7 +59,7 @@ namespace utils {
                 thread::LiteLock ctxlock_;
                 Context* ptr = nullptr;
                 std::atomic_flag waiter_flag;
-                std::atomic<OuterTask*> outer = nullptr;
+                std::atomic<ExternalTask*> outer = nullptr;
             };
 
             struct ContextHandle {
@@ -123,7 +123,7 @@ namespace utils {
             }
         }
 
-        OuterTask* AnyFuture::get_outertask() {
+        ExternalTask* AnyFuture::get_taskrequest() {
             if (!data) {
                 return nullptr;
             }
@@ -170,8 +170,8 @@ namespace utils {
             return true;
         }
 
-        void Context::wait_outertask(void* param) {
-            OuterTask task;
+        void Context::wait_externaltask(void* param) {
+            ExternalTask task;
             task.ptr = this;
             task.param = param;
             append_to_wait(data.get());

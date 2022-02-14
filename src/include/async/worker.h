@@ -59,14 +59,14 @@ namespace utils {
             }
         };
 
-        struct OuterTask {
+        struct ExternalTask {
            private:
             Context* ptr = nullptr;
             void* param = nullptr;
             friend struct Context;
 
            public:
-            constexpr OuterTask() {}
+            constexpr ExternalTask() {}
 
             void* get_param() {
                 return param;
@@ -86,7 +86,7 @@ namespace utils {
 
             TaskState state() const;
 
-            OuterTask* get_outertask();
+            ExternalTask* get_taskrequest();
 
             bool is_done() const {
                 auto st = state();
@@ -155,7 +155,7 @@ namespace utils {
                 return wait_task(std::move(c));
             }
 
-            void wait_outertask(void* param = nullptr);
+            void wait_externaltask(void* param = nullptr);
 
            private:
             friend struct internal::ContextHandle;
