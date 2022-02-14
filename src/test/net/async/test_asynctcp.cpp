@@ -43,9 +43,8 @@ void test_asynctcp() {
             text += "\r\n\r\n";
             auto st = conn->write(text.c_str(), text.size());
             while (st == net::State::running) {
-                // std::this_thread::yield();
+                std::this_thread::yield();
                 ctx.suspend();
-
                 suspend++;
                 st = conn->write(text.c_str(), text.size());
             }

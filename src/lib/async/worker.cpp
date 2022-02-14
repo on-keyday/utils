@@ -59,6 +59,7 @@ namespace utils {
                 thread::LiteLock ctxlock_;
                 Context* ptr = nullptr;
                 std::atomic_flag waiter_flag;
+                std::atomic<OuterTask*> outer = nullptr;
             };
 
             struct ContextHandle {
@@ -122,6 +123,14 @@ namespace utils {
             }
         }
 
+        OuterTask* AnyFuture::get_outertask() {
+            if (!data) {
+                return nullptr;
+            }
+            data->outer.wait(nullptr);
+            return data->outer.load();
+        }
+
         void AnyFuture::wait() {
             if (!data) return;
             data->waiter_flag.wait(true);
@@ -159,6 +168,18 @@ namespace utils {
             SwitchToFiber(data->rootfiber);
             data->task.state = TaskState::running;
             return true;
+        }
+
+        void Context::wait_outertask(void* param) {
+            OuterTask task;
+            task.ptr = this;
+            task.param = param;
+            append_to_wait(data.get());
+            data->outer = &task;
+            data->outer.notify_all();
+            SwitchToFiber(data->rootfiber);
+            data->outer = nullptr;
+            data->task.state = TaskState::running;
         }
 
         void Context::set_signal() {

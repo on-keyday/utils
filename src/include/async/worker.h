@@ -59,12 +59,34 @@ namespace utils {
             }
         };
 
+        struct OuterTask {
+           private:
+            Context* ptr = nullptr;
+            void* param = nullptr;
+            friend struct Context;
+
+           public:
+            constexpr OuterTask() {}
+
+            void* get_param() {
+                return param;
+            }
+
+            void complete() {
+                DefferCancel _{ptr};
+                ptr = nullptr;
+                param = nullptr;
+            }
+        };
+
         struct DLL AnyFuture {
             void wait_or_suspend(Context& ctx);
             void wait();
             Any get();
 
             TaskState state() const;
+
+            OuterTask* get_outertask();
 
             bool is_done() const {
                 auto st = state();
@@ -132,6 +154,8 @@ namespace utils {
                 Task<Context> c = Canceler<std::decay_t<Fn>>(std::move(fn), this);
                 return wait_task(std::move(c));
             }
+
+            void wait_outertask(void* param = nullptr);
 
            private:
             friend struct internal::ContextHandle;

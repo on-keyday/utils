@@ -10,7 +10,6 @@
 #pragma once
 
 #include "dllexport_header.h"
-#include "callback.h"
 
 namespace utils {
     namespace platform {
@@ -19,7 +18,7 @@ namespace utils {
             struct DLL IOCPObject {
                 friend DLL IOCPObject* STDCALL start_iocp();
 
-                bool register_handler(void* handle, Complete&& complete);
+                bool register_handle(void* handle);
 
                private:
                 IOCPObject();
