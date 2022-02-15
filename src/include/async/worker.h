@@ -154,19 +154,19 @@ namespace utils {
             Any& value();
 
             template <class Fn>
-            bool wait_task(Fn&& fn) {
+            bool task_wait(Fn&& fn) {
                 Task<Context> c = Canceler<std::decay_t<Fn>>(std::move(fn), this);
-                return wait_task(std::move(c));
+                return task_wait(std::move(c));
             }
 
-            void wait_externaltask(void* param = nullptr);
+            void externaltask_wait(void* param = nullptr);
 
             AnyFuture clone() const;
 
            private:
             friend struct internal::ContextHandle;
             wrap::shared_ptr<internal::ContextData> data;
-            bool wait_task(Task<Context>&& task);
+            bool task_wait(Task<Context>&& task);
             void set_signal();
         };
 

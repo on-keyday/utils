@@ -17,9 +17,9 @@ void test_worker() {
     using namespace utils;
     async::TaskPool pool;
     auto task = pool.start([&](async::Context& ctx) {
-        ctx.wait_task([](async::Context& ctx) {
-            //ctx.cancel();
-            ctx.wait_task([](async::Context& ctx) {
+        ctx.task_wait([](async::Context& ctx) {
+            // ctx.cancel();
+            ctx.task_wait([](async::Context& ctx) {
                 for (auto i = 0; i < 10000; i++) {
                     utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();

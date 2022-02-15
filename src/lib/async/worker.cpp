@@ -159,7 +159,7 @@ namespace utils {
             data->task.state = TaskState::running;
         }
 
-        bool Context::wait_task(Task<Context>&& task) {
+        bool Context::task_wait(Task<Context>&& task) {
             if (!task) {
                 return false;
             }
@@ -170,7 +170,7 @@ namespace utils {
             return true;
         }
 
-        void Context::wait_externaltask(void* param) {
+        void Context::externaltask_wait(void* param) {
             ExternalTask task;
             task.ptr = this;
             task.param = param;

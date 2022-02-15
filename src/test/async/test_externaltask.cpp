@@ -68,7 +68,7 @@ void test_externaltask() {
                 err = ::GetLastError();
                 if (err == WSA_IO_PENDING) {
                     auto begin = system_clock::now();
-                    ctx.wait_externaltask();
+                    ctx.externaltask_wait();
                     auto end = system_clock::now();
                     auto time = duration_cast<milliseconds>(end - begin);
                     out << "external job finished\n"
