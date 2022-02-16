@@ -45,9 +45,7 @@ namespace utils {
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
                 std::atomic_uint32_t accepting = 0;
-                std::atomic_bool diepool = false;
                 std::atomic_size_t detached = 0;
-                std::atomic_size_t totaldetached = 0;
                 std::atomic_size_t maxthread = 0;
                 std::atomic_bool do_yield = false;
             };
@@ -87,7 +85,6 @@ namespace utils {
 
         struct Signal {
             size_t sig;
-            wrap::shared_ptr<internal::WorkerData> work;
         };
 
         struct SignalBack {
@@ -107,6 +104,10 @@ namespace utils {
             c->work->lock_.unlock();
         }
 
+        void context_switch(auto& data) {
+            SwitchToFiber(data->rootfiber);
+        }
+
         void AnyFuture::wait_or_suspend(Context& ctx) {
             if (!not_own && !is_done()) {
                 auto c = internal::ContextHandle::get(ctx);
@@ -118,7 +119,7 @@ namespace utils {
                 data->ptr = &ctx;
                 append_to_wait(c.get());
                 data->ctxlock_.unlock();
-                SwitchToFiber(c->rootfiber);
+                context_switch(c);
                 c->task.state = TaskState::running;
             }
         }
@@ -155,7 +156,7 @@ namespace utils {
 
         void Context::suspend() {
             data->task.state = TaskState::suspend;
-            SwitchToFiber(data->rootfiber);
+            context_switch(data);
             data->task.state = TaskState::running;
         }
 
@@ -165,19 +166,19 @@ namespace utils {
             }
             append_to_wait(data.get());
             data->work->w << std::move(task);
-            SwitchToFiber(data->rootfiber);
+            context_switch(data);
             data->task.state = TaskState::running;
             return true;
         }
 
-        void Context::externaltask_wait(void* param) {
+        void Context::externaltask_wait(Any param) {
             ExternalTask task;
             task.ptr = this;
-            task.param = param;
+            task.param = std::move(param);
             append_to_wait(data.get());
             data->outer = &task;
             data->outer.notify_all();
-            SwitchToFiber(data->rootfiber);
+            context_switch(data);
             data->outer = nullptr;
             data->task.state = TaskState::running;
         }
@@ -186,7 +187,7 @@ namespace utils {
             if (!data->task.sigid) {
                 return;
             }
-            data->work->w << Signal{data->task.sigid, data->work};
+            data->work->w << Signal{data->task.sigid};
             data->task.sigid = 0;
         }
 
@@ -223,7 +224,7 @@ namespace utils {
                 data->task.except = std::current_exception();
                 data->task.state = TaskState::except;
             }
-            SwitchToFiber(data->rootfiber);
+            context_switch(data);
         }
 
         auto& make_context(Any& holder, Context*& ctx) {
@@ -304,13 +305,13 @@ namespace utils {
                 }
                 else if (auto signal = event.type_assert<Signal>()) {
                     Any sig;
-                    signal->work->lock_.lock();
-                    auto found = signal->work->wait_signal.find(signal->sig);
-                    if (found != signal->work->wait_signal.end()) {
+                    wd->lock_.lock();
+                    auto found = wd->wait_signal.find(signal->sig);
+                    if (found != wd->wait_signal.end()) {
                         sig = std::move(found->second);
-                        signal->work->wait_signal.erase(signal->sig);
+                        wd->wait_signal.erase(signal->sig);
                     }
-                    signal->work->lock_.unlock();
+                    wd->lock_.unlock();
                     auto ctx = sig.type_assert<Context>();
                     if (ctx) {
                         handle_fiber(sig, internal::ContextHandle::get(*ctx).get());
@@ -346,7 +347,6 @@ namespace utils {
                 if (data->detached < data->maxthread) {
                     std::thread(task_handler, data).detach();
                     data->detached++;
-                    data->totaldetached++;
                 }
             }
             initlock.unlock();
@@ -399,7 +399,6 @@ namespace utils {
             initlock.lock();
             if (data) {
                 data->r.close();
-                data->diepool = true;
             }
             initlock.unlock();
         }

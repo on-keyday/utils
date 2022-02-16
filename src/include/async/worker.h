@@ -62,13 +62,13 @@ namespace utils {
         struct ExternalTask {
            private:
             Context* ptr = nullptr;
-            void* param = nullptr;
+            Any param = nullptr;
             friend struct Context;
 
            public:
             constexpr ExternalTask() {}
 
-            void* get_param() {
+            Any& get_param() {
                 return param;
             }
 
@@ -159,7 +159,7 @@ namespace utils {
                 return task_wait(std::move(c));
             }
 
-            void externaltask_wait(void* param = nullptr);
+            void externaltask_wait(Any param = nullptr);
 
             AnyFuture clone() const;
 

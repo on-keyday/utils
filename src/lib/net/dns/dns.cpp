@@ -59,15 +59,18 @@ namespace utils {
 
                 bool complete_query() {
 #ifdef _WIN32
-                    auto res = ::GetAddrInfoExOverlappedResult(&overlapped);
-                    if (res != WSAEINPROGRESS) {
-                        running = false;
-                        ::ResetEvent(overlapped.hEvent);
-                        if (res != NO_ERROR) {
-                            failed = true;
-                            return false;
+                    auto done = ::WaitForSingleObject(overlapped.hEvent, 2);
+                    if (done == WAIT_OBJECT_0) {
+                        auto res = ::GetAddrInfoExOverlappedResult(&overlapped);
+                        if (res != WSAEINPROGRESS) {
+                            running = false;
+                            ::ResetEvent(overlapped.hEvent);
+                            if (res != NO_ERROR) {
+                                failed = true;
+                                return false;
+                            }
+                            return true;
                         }
-                        return true;
                     }
 #endif
                     return false;
