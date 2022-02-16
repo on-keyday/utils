@@ -184,7 +184,7 @@ namespace utils {
         }
 
         void Context::set_signal() {
-            if (!data->task.sigid) {
+            if (!data || !data->task.sigid) {
                 return;
             }
             data->work->w << Signal{data->task.sigid};
