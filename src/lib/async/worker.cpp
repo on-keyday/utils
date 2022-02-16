@@ -41,7 +41,7 @@ namespace utils {
             struct WorkerData {
                 thread::SendChan<Any> w;
                 thread::RecvChan<Any> r;
-                wrap::map<size_t, Any> wait_signal;
+                wrap::hash_map<size_t, Any> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
                 std::atomic_uint32_t accepting = 0;
