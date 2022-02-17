@@ -505,7 +505,9 @@ namespace binred {
             render_cpp_succeed_res(str, st.errtype);
             hlp::append(str, ";\n");
             hlp::append(str, "}\n\n");
-            hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output");
+            hlp::appends(str, "template<class Input>\n",
+                         st.errtype, " decode(Input&& input,",
+                         d.first, "& output");
             if (has_base) {
                 hlp::append(str, ",bool base_set=false");
             }
