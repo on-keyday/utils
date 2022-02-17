@@ -22,7 +22,9 @@ namespace binred {
             render_tree(str, tree->left, rel);
         }
         if (tree->kw == us::KeyWord::id) {
-            if (tree->token != "true" && tree->token != "false" && tree->token != "nullptr" && rel.size() && str.back() != '.') {
+            if (tree->token != "true" && tree->token != "false" &&
+                tree->token != "nullptr" && rel.size() && str.back() != '.' &&
+                !hlp::contains(str, "::")) {
                 hlp::appends(str, rel, ".");
             }
         }
@@ -137,13 +139,13 @@ namespace binred {
         }
         if (data.structs.find(memb.type.name) != data.structs.end()) {
             if (hlp::equal(coder, "decode")) {
-                hlp::appends(str, "if(auto e__ =", coder, "(", target, ",", out, ".", memb.name, ";");
+                hlp::appends(str, "if(auto e__ =", coder, "(", target, ",", out, ".", memb.name, ");");
             }
             else {
-                hlp::appends(str, "if(auto e__ =", coder, "(", out, ".", memb.name, ",", target, ";");
+                hlp::appends(str, "if(auto e__ =", coder, "(", out, ".", memb.name, ",", target, ");");
             }
             render_cpp_cond_err(str, st.errtype, data);
-            hlp::append(str, ")){\n");
+            hlp::append(str, "){\n");
             hlp::append(str, "return e__;\n");
             hlp::append(str, "}\n");
         }

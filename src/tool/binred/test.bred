@@ -72,11 +72,15 @@ struct PingFrame - H2Frame ^ type == 6 ? len == 8 ? id == 0 {
 }
 
 struct GoAwayFrame - H2Frame ^ type == 7 {
-    id std::int32_t ? id >= 0
+    processed std::int32_t ? id >= 0
     code std::uint32_t
     data std::string $ len - 8
 }
 
 struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 ? id > 0 {
     increment std::int32_t ? increment > 0
+}
+
+struct Continuation - H2Frame ^ type == 9 {
+    data std::string $ len
 }

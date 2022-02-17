@@ -4,53 +4,54 @@
 #    https://opensource.org/licenses/mit-license.php
 # frame - http2 frame definition
 #generate code
-# tool\binred -i src/include/net/http2/frame.bred -o src/include/net/http2/frame.h -pS
+# tool\binred -i src/include/net/http2/frame.bred -o src/include/net/http2/frame.h -p -e none unknown
 
-package uitls::net::http2
+package utils::net::http2
 
 import <cstdint>
 import <string>
+import "error_type.h"
 
-struct H2Frame , int {
-    len int $ 3
-    type std::uint8_t
-    flag std::uint8_t
-    id std::int32_t ? id >= 0
+struct H2Frame , H2Error {
+    len int $ 3 ! H2Error::read_len = 0
+    type std::uint8_t ! H2Error::read_type
+    flag std::uint8_t ! H2Error::read_flag = 0
+    id std::int32_t ? id > 0 @ H2Error::internal ! H2Error::read_id
 }
 
-struct Priority {
-    depend std::uint32_t = 0 
-    wight std::uint8_t = 0
+struct Priority , H2Error {
+    depend std::uint32_t ! H2Error::read_depend = 0 
+    weight std::uint8_t ! H2Error::read_weight = 0
 }
 
-struct DataFrame - H2Frame ^ type == 0 {
-    padding std::uint8_t ^ flag & 0x8 = 0 
-    data std::string $ len - padding
-    pad std::string $ padding
+struct DataFrame - H2Frame ^ type == 0 ? id != 0 @ H2Error::protocol , H2Error {
+    padding std::uint8_t ^ flag & 0x8 ! H2Error::read_padding = 0 
+    data std::string $ len - padding ! H2Error::read_data
+    pad std::string $ padding  ! H2Error::read_padding
 }
 
-struct HeaderFrame - H2Frame ^ type == 1 {
-    padding std::uint8_t ^ flag & 0x8 = 0
+struct HeaderFrame - H2Frame ^ type == 1 , H2Error {
+    padding std::uint8_t ^ flag & 0x8 ! H2Error::read_padding = 0
     priority Priority ^ flag & 0x20
-    data std::string $ len - padding 
-    pad std::string $ padding
+    data std::string $ len - padding ! H2Error::read_data
+    pad std::string $ padding ! H2Error::read_padding
 }
 
-struct PriorityFrame - H2Frame ^ type == 2 ? len == 5 {
+struct PriorityFrame - H2Frame ^ type == 2 ? len == 5 , H2Error {
     priority Priority
 }
 
-struct RstStreamFrame - H2Frame ^ type == 3 ? len == 4 {
-    code std::uint32_t
+struct RstStreamFrame - H2Frame ^ type == 3 ? len == 4 , H2Error {
+    code std::uint32_t ! H2Error::read_code
 }
 
-struct SetingsFrame - H2Frame ^ type == 4 ? len % 6 == 0 {
-    setting std::string $ len ^ flag & 0x1
+struct SetingsFrame - H2Frame ^ type == 4 ? len % 6 == 0 @ H2Error::frame_size , H2Error {
+    setting std::string $ len ^ flag & 0x1 ! H2Error::read_data
 }
 
-struct PushPromiseFrame - H2Frame ^ type == 5 {
+struct PushPromiseFrame - H2Frame ^ type == 5 , H2Error {
     padding std::uint8_t ^ flag & 0x8 = 0
-    promise std::int32_t ? promise > 0
+    promise std::int32_t ? promise > 0 ! H2Error::internal
     data std::string $ len - padding
     pad std::string $ padding 
 }
@@ -67,4 +68,8 @@ struct GoAwayFrame - H2Frame ^ type == 7 {
 
 struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 ? id > 0 {
     increment std::int32_t ? increment > 0
+}
+
+struct Continuation - H2Frame ^ type == 9 {
+    data std::string $ len
 }
