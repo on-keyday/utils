@@ -307,12 +307,13 @@ namespace utils {
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
                     c->task.state == TaskState::canceled) {
-                    c->ctxlock_.lock();
-                    if (c->ptr) {
-                        DefferCancel _{c->ptr};
-                        c->ptr = nullptr;
+                    {
+                        std::scoped_lock _{c->ctxlock_};
+                        if (c->ptr) {
+                            DefferCancel _{c->ptr};
+                            c->ptr = nullptr;
+                        }
                     }
-                    c->ctxlock_.unlock();
                     delete_context(c);
                     c->work->pooling_task--;
                     c->waiter_flag.clear();
@@ -321,6 +322,7 @@ namespace utils {
                 else if (c->task.state == TaskState::term) {
                     // no signal is handled
                     delete_context(c);
+                    c->work->pooling_task--;
                 }
                 else if (c->task.state == TaskState::suspend) {
                     w << std::move(place);
@@ -350,6 +352,7 @@ namespace utils {
                                     handle_fiber(w.second, internal::ContextHandle::get(*ctx).get());
                                 }
                             }
+                            tmp.clear();
                         }
                         if (wd->r.peek_queue() == 0) {
                             wd->r.close();
