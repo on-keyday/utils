@@ -1,0 +1,63 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+# frame - 
+
+struct H2Frame {
+    len int $ 3
+    type std::uint8_t
+    flag std::uint8_t
+    id std::int32_t ? id >= 0
+}
+
+struct Priority {
+    depend std::uint32_t = 0 
+    wight std::uint8_t = 0
+}
+
+struct DataFrame - H2Frame ^ type == 0 {
+    padding std::uint8_t ^ flag & 0x8 = 0 
+    data std::string $ len - padding
+    pad std::string $ padding
+}
+
+struct HeaderFrame - H2Frame ^ type == 1 {
+    padding std::uint8_t ^ flag & 0x8 = 0
+    priority Priority ^ flag & 0x20
+    data std::string $ len - padding 
+    pad std::string $ padding
+}
+
+struct PriorityFrame - H2Frame ^ type == 2 ? len == 5 {
+    priority Priority
+}
+
+struct RstStreamFrame - H2Frame ^ type == 3 ? len == 4 {
+    code std::uint32_t
+}
+
+struct SetingsFrame - H2Frame ^ type == 4 ? len % 6 == 0 {
+    setting std::string $ len ^ flag & 0x1
+}
+
+struct PushPromiseFrame - H2Frame ^ type == 5 {
+    padding std::uint8_t ^ flag & 0x8 = 0
+    promise std::int32_t ? promise > 0
+    data std::string $ len - padding
+    pad std::string $ padding 
+}
+
+struct PingFrame - H2Frame ^ type == 6 ? len == 8 {
+    opeque std::uint64_t ? id == 0
+}
+
+struct GoAwayFrame - H2Frame ^ type == 7 {
+    id std::int32_t ? id >= 0
+    code std::uint32_t
+    data std::string $ len - 8
+}
+
+struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 ? id > 0 {
+    increment std::int32_t ? increment > 0
+}

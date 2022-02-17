@@ -41,7 +41,9 @@ int main(int argc, char** argv) {
         .set("import,I", uc::str_option(""), "set additional import header", uc::OptFlag::none, "imports")
         .set("write-method,w", uc::str_option("write"), "set write method", uc::OptFlag::once_in_cmd, "funcname")
         .set("read-method,r", uc::str_option("read"), "set read method", uc::OptFlag::once_in_cmd, "funcname")
-        .set("syntax,s", uc::bool_option(true), "syntax help", uc::OptFlag::once_in_cmd);
+        .set("syntax,s", uc::bool_option(true), "syntax help", uc::OptFlag::once_in_cmd)
+        .set("license", uc::bool_option(true), "add /*license*/", uc::OptFlag::once_in_cmd)
+        .set("separate,p", uc::bool_option(true), "separate namespace", uc::OptFlag::once_in_cmd);
     uc::DefaultSet result;
     utw::vector<utw::string> arg;
     auto err = uc::parse(idx, argc, argv, desc, result, uc::ParseFlag::optget_mode, &arg);
@@ -163,9 +165,16 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
+    binred::GenFlag flag = {};
+    if (result.is_true("separate")) {
+        flag |= binred::GenFlag::sep_namespace;
+    }
+    if (result.is_true("license")) {
+        flag |= binred::GenFlag::add_license;
+    }
     // return 0;
     utw::string str;
-    binred::generate_cpp(str, state.data, {});
+    binred::generate_cpp(str, state.data, flag);
     if (result.is_true("verbose")) {
         cout << "generated code:\n";
         cout << str;

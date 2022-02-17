@@ -119,6 +119,7 @@ namespace binred {
 
     enum class GenFlag {
         sep_namespace,
+        add_license,
     };
 
     DEFINE_ENUM_FLAGOP(GenFlag)
