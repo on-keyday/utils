@@ -73,7 +73,7 @@ namespace binred {
         }
     }
 
-    void render_cpp_cond_err(utw::string& str, utw::string& errtype) {
+    void render_cpp_cond_err(utw::string& str, utw::string& errtype, FileData& data) {
         if (errtype == "bool") {
             hlp::append(str, "!e__");
         }
@@ -81,7 +81,7 @@ namespace binred {
             hlp::append(str, "e__!=0");
         }
         else {
-            hlp::appends(str, errtype, "::none!=e__");
+            hlp::appends(str, errtype, "::", data.defnone, "!=e__");
         }
     }
 
@@ -142,7 +142,7 @@ namespace binred {
             else {
                 hlp::appends(str, "if(auto e__ =", coder, "(", out, ".", memb.name, ",", target, ";");
             }
-            render_cpp_cond_err(str, st.errtype);
+            render_cpp_cond_err(str, st.errtype, data);
             hlp::append(str, ")){\n");
             hlp::append(str, "return e__;\n");
             hlp::append(str, "}\n");
@@ -236,10 +236,14 @@ namespace binred {
             bool first = true;
             bool not_match = false;
             tree_t cond;
-            utw::string errtype;
             auto& bsst = *data.structs.find(d.first);
+            utw::string& errtype = bsst.second.errtype;
             for (auto& i : d.second) {
                 auto& st = *data.structs.find(i);
+                if (errtype != st.second.errtype) {
+                    not_match = true;
+                    break;
+                }
                 if (!st.second.base.type.existcond.size()) {
                     not_match = true;
                     break;
@@ -250,13 +254,8 @@ namespace binred {
                         not_match = true;
                         break;
                     }
-                    errtype = st.second.errtype;
                 }
                 else {
-                    if (errtype != st.second.errtype) {
-                        not_match = true;
-                        break;
-                    }
                     auto cmp = st.second.base.type.existcond[0];
                     if (!cmp.tree->right || !cmp.tree->left) {
                         not_match = true;
@@ -267,6 +266,7 @@ namespace binred {
                         break;
                     }
                 }
+                first = false;
             }
             if (not_match) {
                 continue;
@@ -280,10 +280,10 @@ namespace binred {
             hlp::appends(str, d.first, " judgement;\n");
             write_indent(str, 1);
             hlp::append(str, "if (auto e__ = decode(input,judgement);");
-            render_cpp_cond_err(str, bsst.second.errtype);
+            render_cpp_cond_err(str, bsst.second.errtype, data);
             hlp::append(str, ") {\n");
             write_indent(str, 2);
-            hlp::append(str, "return false;\n");
+            hlp::append(str, "return e__;\n");
             write_indent(str, 1);
             hlp::append(str, "}\n");
             write_indent(str, 1);
@@ -302,7 +302,7 @@ namespace binred {
                 }
                 write_indent(str, 2);
                 hlp::append(str, "if(auto e__ = decode(input,*p,true);");
-                render_cpp_cond_err(str, st.second.errtype);
+                render_cpp_cond_err(str, st.second.errtype, data);
                 hlp::append(str, ") {\n");
                 write_indent(str, 3);
                 generate_delete_ptr_obj(str, data, "p");
@@ -408,7 +408,7 @@ namespace binred {
                 gen_base_flag(st.base.type.existcond, "input");
                 write_indent(str, 1);
                 hlp::appends(str, "if (auto e__ = encode(static_cast<const ", st.base.type.name, "&>(input),output);");
-                render_cpp_cond_err(str, st.errtype);
+                render_cpp_cond_err(str, st.errtype, data);
                 hlp::appends(str, ") { \n");
                 write_indent(str, 2);
                 hlp::appends(str, "return e__;\n");
@@ -437,9 +437,11 @@ namespace binred {
                 write_indent(str, offset);
                 hlp::appends(str, "if (!base_set) {\n");
                 write_indent(str, offset + 1);
-                hlp::appends(str, "if (!decode(input,static_cast<", st.base.type.name, "&>(output))) { \n");
+                hlp::appends(str, "if (auto e__ = decode(input,static_cast<", st.base.type.name, "&>(output));");
+                render_cpp_cond_err(str, st.errtype, data);
+                hlp::append(str, ") { \n");
                 write_indent(str, offset + 2);
-                hlp::append(str, "return false;\n");
+                hlp::append(str, "return e__;\n");
                 write_indent(str, offset + 1);
                 hlp::append(str, "}\n");
                 gen_base_flag(st.base.type.existcond, "output");
