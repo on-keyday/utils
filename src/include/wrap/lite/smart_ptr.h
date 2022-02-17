@@ -9,10 +9,12 @@
 // smart_ptr - wrap default smart pointer
 #pragma once
 
-#if !defined(UTILS_WRAP_SHARED_PTR_TEMPLATE) || !defined(UTILS_WRAP_MAKE_SHARED_PTR_FUNC) || !defined(UTILS_WRAP_WEAK_PTR_TEMPLATE)
+#if !defined(UTILS_WRAP_UNIQUE_PTR_TEMPLATE) || !defined(UTILS_WRAP_MAKE_UNIQUE_PTR_FUNC) || !defined(UTILS_WRAP_SHARED_PTR_TEMPLATE) || !defined(UTILS_WRAP_MAKE_SHARED_PTR_FUNC) || !defined(UTILS_WRAP_WEAK_PTR_TEMPLATE)
 #include <memory>
 #define UTILS_WRAP_SHARED_PTR_TEMPLATE std::shared_ptr
+#define UTILS_WRAP_UNIQUE_PTR_TEMPLATE std::unique_ptr
 #define UTILS_WRAP_MAKE_SHARED_PTR_FUNC std::make_shared
+#define UTILS_WRAP_MAKE_UNIQUE_PTR_FUNC std::make_unique
 #define UTILS_WRAP_WEAK_PTR_TEMPLATE std::weak_ptr
 #endif
 
@@ -22,11 +24,19 @@ namespace utils {
         using shared_ptr = UTILS_WRAP_SHARED_PTR_TEMPLATE<T>;
 
         template <class T>
+        using unique_ptr = UTILS_WRAP_UNIQUE_PTR_TEMPLATE<T>;
+
+        template <class T>
         using weak_ptr = UTILS_WRAP_WEAK_PTR_TEMPLATE<T>;
 
         template <class T, class... Args>
         shared_ptr<T> make_shared(Args&&... args) {
             return UTILS_WRAP_MAKE_SHARED_PTR_FUNC<T>(std::forward<Args>(args)...);
+        }
+
+        template <class T, class... Args>
+        unique_ptr<T> make_unique(Args&&... args) {
+            return UTILS_WRAP_MAKE_UNIQUE_PTR_FUNC<T>(std::forward<Args>(args)...);
         }
     }  // namespace wrap
 }  // namespace utils
