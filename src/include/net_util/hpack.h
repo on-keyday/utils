@@ -819,7 +819,7 @@ namespace utils {
                         auto update_dymap = [&] {
                             size_t tablesize = calc_table_size(dymap);
                             while (tablesize > maxtablesize) {
-                                if (tablesize == 32) break;  //TODO: check what written in RFC means
+                                if (tablesize == 32) break;  // TODO: check what written in RFC means
                                 if (!dymap.size()) {
                                     return false;
                                 }
@@ -886,8 +886,8 @@ namespace utils {
                                 dymap.push_front({key, value});
                                 TRY(update_dymap());
                             }
-                            else if (tmp & 0x20) {  //dynamic table size change
-                                //unimplemented
+                            else if (tmp & 0x20) {  // dynamic table size change
+                                // unimplemented
                                 size_t sz = 0;
                                 TRY(integer_coder::template decode<5>(se, sz, tmp));
                                 if (maxtablesize > 0x80000000) {
@@ -916,6 +916,11 @@ namespace utils {
             template <class Table, class Header, class String>
             HpkErr encode(String& str, Table& table, Header& header, std::uint32_t maxtablesize, bool adddymap = false) {
                 return internal::Hpack<String, Table, Header>::encode(adddymap, header, str, table, maxtablesize);
+            }
+
+            template <class Table, class Header, class String>
+            HpkErr decode(String& str, Table& table, Header& header, std::uint32_t& maxtablesize) {
+                return internal::Hpack<String, Table, Header>::decode(header, str, table, maxtablesize);
             }
         }  // namespace hpack
 

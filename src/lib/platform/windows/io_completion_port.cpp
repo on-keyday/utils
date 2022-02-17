@@ -31,10 +31,7 @@ namespace utils {
                 OVERLAPPED_ENTRY entry[64];
                 ULONG removed;
                 if (!::GetQueuedCompletionStatusEx(iocp, entry, handlecount, &removed, wait, false)) {
-                    auto err = ::GetLastError();
-                    if (err == WAIT_TIMEOUT) {
-                        return;
-                    }
+                    return;
                 }
                 for (auto p = 0; p < removed; p++) {
                     fn.call(entry[p].lpOverlapped, entry[p].dwNumberOfBytesTransferred);

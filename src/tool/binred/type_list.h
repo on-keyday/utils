@@ -67,7 +67,7 @@ namespace binred {
         utw::string name;
         utw::vector<tree_t> prevcond;
         utw::vector<tree_t> existcond;
-        //utw::vector<tree_t> aftercond;
+        // utw::vector<tree_t> aftercond;
         tree_t size;
     };
 
@@ -118,8 +118,10 @@ namespace binred {
     };
 
     enum class GenFlag {
-
+        sep_namespace,
     };
+
+    DEFINE_ENUM_FLAGOP(GenFlag)
 
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
     void generate_cpp(utw::string& str, FileData& data, GenFlag flag);

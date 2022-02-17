@@ -40,7 +40,8 @@ int main(int argc, char** argv) {
         .set("smart-ptr,S", uc::multi_option<utw::string>(2, 2), "set ptr-like object template and function", uc::OptFlag::once_in_cmd, "template funcname")
         .set("import,I", uc::str_option(""), "set additional import header", uc::OptFlag::none, "imports")
         .set("write-method,w", uc::str_option("write"), "set write method", uc::OptFlag::once_in_cmd, "funcname")
-        .set("read-method,r", uc::str_option("read"), "set read method", uc::OptFlag::once_in_cmd, "funcname");
+        .set("read-method,r", uc::str_option("read"), "set read method", uc::OptFlag::once_in_cmd, "funcname")
+        .set("syntax,s", uc::bool_option(true), "syntax help", uc::OptFlag::once_in_cmd);
     uc::DefaultSet result;
     utw::vector<utw::string> arg;
     auto err = uc::parse(idx, argc, argv, desc, result, uc::ParseFlag::optget_mode, &arg);
@@ -51,6 +52,21 @@ int main(int argc, char** argv) {
     if (result.is_true("help")) {
         cout << desc.help(argv[0]);
         return 1;
+    }
+    if (result.is_true("syntax")) {
+        cout << R"(Syntax:
+    
+    # COMMENT
+    package NAMESPACE_NAME
+    
+    import <HEADER_NAME>
+    import "HEADER_NAME"
+    
+    struct STRUCT_NAME - BASE_STRUCT {
+        MEMBER TYPE ? MEMBER != 98 ! 0 ^ true||false
+        MEMBER2 TYPE2 $ 30 = DEFAULT_VALUE
+    }
+)";
     }
     constexpr auto def = R"a(
         ROOT:=PACKAGE? [STRUCT|IMPORT]*? EOF
@@ -146,14 +162,14 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-    //return 0;
+    // return 0;
     utw::string str;
     binred::generate_cpp(str, state.data, {});
     if (result.is_true("verbose")) {
         cout << "generated code:\n";
         cout << str;
     }
-    //return 0;
+    // return 0;
     {
         std::ofstream fs(*outfile);
         if (!fs.is_open()) {
