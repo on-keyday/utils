@@ -323,6 +323,9 @@ namespace utils {
                     // no signal is handled
                     delete_context(c);
                     c->work->pooling_task--;
+                    if (c->work->pooling_task == 0) {
+                        c->work->r.close();
+                    }
                 }
                 else if (c->task.state == TaskState::suspend) {
                     w << std::move(place);
@@ -353,9 +356,6 @@ namespace utils {
                                 }
                             }
                             tmp.clear();
-                        }
-                        if (wd->r.peek_queue() == 0) {
-                            wd->r.close();
                         }
                         continue;
                     }
