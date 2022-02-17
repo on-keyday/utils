@@ -82,7 +82,8 @@ int main(int argc, char** argv) {
         FLAG:="?" FLAG_DETAIL!
         BIND:="!" FLAG_DETAIL!
         PREV:="^" FLAG_DETAIL!
-        FLAG_DETAIL:=EXPR EOS
+        FLAG_DETAIL:=EXPR EOS AS_RESULT?
+        AS_RESULT:="@" [INTEGER|ID]!
         SIZE:="$" EXPR EOS
 
         EXPR:=OR

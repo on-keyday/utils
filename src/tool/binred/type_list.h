@@ -62,11 +62,17 @@ namespace binred {
         utw::shared_ptr<Tree> right;
     };
 
+    using tree_t = utw::shared_ptr<Tree>;
+
+    struct Cond {
+        tree_t tree;
+        utw::string errvalue;
+    };
+
     struct Type {
-        using tree_t = utw::shared_ptr<Tree>;
         utw::string name;
-        utw::vector<tree_t> prevcond;
-        utw::vector<tree_t> existcond;
+        utw::vector<Cond> prevcond;
+        utw::vector<Cond> existcond;
         // utw::vector<tree_t> aftercond;
         tree_t size;
     };

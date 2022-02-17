@@ -22,6 +22,7 @@ namespace binred {
     constexpr auto bind_def = "BIND";
     constexpr auto prev_def = "PREV";
     constexpr auto expr_def = "EXPR";
+    constexpr auto as_result_def = "AS_RESULT";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         constexpr auto is_expr = us::filter::stack_order(1, expr_def);
         if (is_expr(result)) {
@@ -71,11 +72,37 @@ namespace binred {
             }
             return true;
         }
+        if (result.top() == as_result_def) {
+            if (result.kind() == us::KeyWord::id ||
+                result.kind() == us::KeyWord::integer) {
+                auto set_to_flag = [&](utw::vector<Cond>& cond) {
+                    cond.back().errvalue = result.token();
+                };
+                auto under_disp = [&](Type& type) {
+                    if (result.under(prev_def)) {
+                        set_to_flag(type.existcond);
+                    }
+                    /*else if (result.under(bind_def)) {
+                        set_to_flag(type.aftercond);
+                    }*/
+                    else {
+                        set_to_flag(type.prevcond);
+                    }
+                };
+                if (result.under(base_def)) {
+                    under_disp(cst.base.type);
+                }
+                else {
+                    under_disp(memb().back().type);
+                }
+                return true;
+            }
+        }
         if (result.top() == flag_def) {
             auto set_to_flag = [&](auto& cond) {
-                cond.push_back(std::move(state.tree.current));
+                cond.push_back({std::move(state.tree.current)});
             };
-            auto under_disp = [&](auto& type) {
+            auto under_disp = [&](Type& type) {
                 if (result.under(prev_def)) {
                     set_to_flag(type.existcond);
                 }

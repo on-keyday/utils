@@ -81,7 +81,7 @@ namespace binred {
             if (not_) {
                 hlp::append(str, "!(");
             }
-            render_tree(str, m, out);
+            render_tree(str, m.tree, out);
             if (not_) {
                 hlp::append(str, ")");
             }
@@ -282,7 +282,7 @@ namespace binred {
                     break;
                 }
                 if (first) {
-                    cond = st.second.base.type.existcond[0];
+                    cond = st.second.base.type.existcond[0].tree;
                     if (!cond->right || !cond->left) {
                         not_match = true;
                         break;
@@ -290,11 +290,11 @@ namespace binred {
                 }
                 else {
                     auto cmp = st.second.base.type.existcond[0];
-                    if (!cmp->right || !cmp->left) {
+                    if (!cmp.tree->right || !cmp.tree->left) {
                         not_match = true;
                         break;
                     }
-                    if (!compare_tree(cmp->left, cond->left) || compare_tree(cmp->right, cond->right)) {
+                    if (!compare_tree(cmp.tree->left, cond->left) || compare_tree(cmp.tree->right, cond->right)) {
                         not_match = true;
                         break;
                     }
@@ -318,7 +318,7 @@ namespace binred {
             auto gen_decode = [&](auto& st) {
                 auto cond = st.second.base.type.existcond[0];
                 hlp::append(str, "if(");
-                render_tree(str, cond, "judgement");
+                render_tree(str, cond.tree, "judgement");
                 hlp::append(str, "){\n");
                 write_indent(str, 1);
                 hlp::appends(str, "auto p = ");
@@ -416,7 +416,7 @@ namespace binred {
             auto gen_base_flag = [&](auto& flag, auto& io) {
                 for (auto& m : flag) {
                     hlp::append(str, "if(!(");
-                    render_tree(str, m, io);
+                    render_tree(str, m.tree, io);
                     hlp::append(str, ")){\n");
                     hlp::append(str, "return false;\n");
                     hlp::append(str, "}\n");
