@@ -43,7 +43,8 @@ int main(int argc, char** argv) {
         .set("read-method,r", uc::str_option("read"), "set read method", uc::OptFlag::once_in_cmd, "funcname")
         .set("syntax,s", uc::bool_option(true), "syntax help", uc::OptFlag::once_in_cmd)
         .set("license", uc::bool_option(true), "add /*license*/", uc::OptFlag::once_in_cmd)
-        .set("separate,p", uc::bool_option(true), "separate namespace", uc::OptFlag::once_in_cmd);
+        .set("separate,p", uc::bool_option(true), "separate namespace", uc::OptFlag::once_in_cmd)
+        .set("none-error,e", uc::multi_option<utw::string>(2, 2), "set default `none` and `error` enum name", uc::OptFlag::once_in_cmd, "none error");
     uc::DefaultSet result;
     utw::vector<utw::string> arg;
     auto err = uc::parse(idx, argc, argv, desc, result, uc::ParseFlag::optget_mode, &arg);
@@ -148,6 +149,10 @@ int main(int argc, char** argv) {
     if (auto ptr = result.has_value<utw::vector<utw::string>>("smart-ptr")) {
         state.data.ptr_type = ptr->at(0);
         state.data.make_ptr = ptr->at(1);
+    }
+    if (auto nonerr = result.has_value<utw::vector<utw::string>>("none-error")) {
+        state.data.defnone = nonerr->at(0);
+        state.data.deferror = nonerr->at(1);
     }
     size_t i = 0;
     while (auto arg = result.arg<utw::string>("import", i)) {

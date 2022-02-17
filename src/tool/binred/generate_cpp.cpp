@@ -54,24 +54,8 @@ namespace binred {
         }
         hlp::appends(str, val.val);
     }
-    /*
-    void set_size(utw::string& str, Size& size, auto& in) {
-        set_val(str, size.size1, in);
-        if (size.op != Op::none) {
-            if (size.op == Op::add) {
-                hlp::append(str, " + ");
-            }
-            else if (size.op == Op::sub) {
-                hlp::append(str, " - ");
-            }
-            else if (size.op == Op::mod) {
-                hlp::append(str, " % ");
-            }
-            set_val(str, size.size2, in);
-        }
-    }*/
 
-    void render_cpp_errorcode(utw::string& str, Struct& st, Cond* cond, Member* memb) {
+    void render_cpp_errorcode(utw::string& str, Struct& st, Cond* cond, Member* memb, FileData& data) {
         if (cond && cond->errvalue.size()) {
             hlp::append(str, cond->errvalue);
         }
@@ -85,7 +69,7 @@ namespace binred {
             hlp::append(str, "-1");
         }
         else {
-            hlp::appends(str, st.errtype, "::error");
+            hlp::appends(str, st.errtype, "::", data.deferror);
         }
     }
 
@@ -101,7 +85,7 @@ namespace binred {
         }
     }
 
-    void render_cpp_succeed_res(utw::string& str, utw::string& errtype) {
+    void render_cpp_succeed_res(utw::string& str, utw::string& errtype, FileData& data) {
         if (errtype == "bool") {
             hlp::append(str, "true");
         }
@@ -109,7 +93,7 @@ namespace binred {
             hlp::append(str, "0");
         }
         else {
-            hlp::appends(str, errtype, "::none");
+            hlp::appends(str, errtype, "::", data.defnone);
         }
     }
 
@@ -143,7 +127,7 @@ namespace binred {
             for (auto& m : memb.type.prevcond) {
                 cond_begin_one(m, true);
                 hlp::append(str, "return ");
-                render_cpp_errorcode(str, st, &m, &memb);
+                render_cpp_errorcode(str, st, &m, &memb, data);
                 hlp::append(str, ";\n");
                 hlp::append(str, "}\n");
             }
@@ -175,7 +159,7 @@ namespace binred {
             if (check_failed) {
                 hlp::append(str, ")){\n");
                 hlp::append(str, "return ");
-                render_cpp_errorcode(str, st, nullptr, &memb);
+                render_cpp_errorcode(str, st, nullptr, &memb, data);
                 hlp::append(str, ";\n");
                 hlp::append(str, "}\n");
             }
@@ -187,7 +171,7 @@ namespace binred {
             for (Cond& m : memb.type.prevcond) {
                 cond_begin_one(m, true);
                 hlp::append(str, "return ");
-                render_cpp_errorcode(str, st, &m, &memb);
+                render_cpp_errorcode(str, st, &m, &memb, data);
                 hlp::append(str, ";\n");
                 hlp::append(str, "}\n");
             }
@@ -331,7 +315,7 @@ namespace binred {
                 hlp::append(str, "output=p;\n");
                 write_indent(str, 2);
                 hlp::append(str, "return ");
-                render_cpp_succeed_res(str, st.second.errtype);
+                render_cpp_succeed_res(str, st.second.errtype, data);
                 hlp::append(str, ";\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
@@ -344,7 +328,7 @@ namespace binred {
             hlp::append(str, "{\n");
             write_indent(str, 2);
             hlp::append(str, "return ");
-            render_cpp_errorcode(str, bsst.second, nullptr, nullptr);
+            render_cpp_errorcode(str, bsst.second, nullptr, nullptr, data);
             hlp::append(str, ";\n");
             write_indent(str, 1);
             hlp::append(str, "}\n}\n\n");
@@ -415,7 +399,7 @@ namespace binred {
                     render_tree(str, m.tree, io);
                     hlp::append(str, ")){\n");
                     hlp::appends(str, "return ");
-                    render_cpp_errorcode(str, st, &m, nullptr);
+                    render_cpp_errorcode(str, st, &m, nullptr, data);
                     hlp::appends(str, ";\n", "}\n");
                 }
             };
@@ -438,7 +422,7 @@ namespace binred {
             }
             write_indent(str, 1);
             hlp::append(str, "return ");
-            render_cpp_succeed_res(str, st.errtype);
+            render_cpp_succeed_res(str, st.errtype, data);
             hlp::append(str, ";\n");
             hlp::append(str, "}\n\n");
             hlp::appends(str, "template<class Input>\n",
@@ -469,7 +453,7 @@ namespace binred {
             }
             write_indent(str, 1);
             hlp::append(str, "return ");
-            render_cpp_succeed_res(str, st.errtype);
+            render_cpp_succeed_res(str, st.errtype, data);
             hlp::append(str, ";\n");
             hlp::append(str, "}\n\n");
         }

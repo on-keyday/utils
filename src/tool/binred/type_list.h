@@ -103,6 +103,8 @@ namespace binred {
         utw::string read_method;
         utw::string make_ptr;
         utw::string ptr_type;
+        utw::string defnone = "none";
+        utw::string deferror = "error";
         utw::vector<utw::string> imports;
     };
 
