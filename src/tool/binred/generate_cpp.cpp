@@ -24,7 +24,7 @@ namespace binred {
         if (tree->kw == us::KeyWord::id) {
             if (tree->token != "true" && tree->token != "false" &&
                 tree->token != "nullptr" && rel.size() && str.back() != '.' &&
-                !hlp::contains(str, "::")) {
+                !hlp::contains(tree->token, "::")) {
                 hlp::appends(str, rel, ".");
             }
         }
