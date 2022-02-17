@@ -197,78 +197,6 @@ namespace binred {
         }
     }
 
-    /*
-    void generate_with_flag(FileData& data, utw::string& str, Member& memb, auto& in, auto& out, auto& method, bool is_enc, bool check_succeed) {
-        auto& type = memb.type;
-        //auto has_flag = type.flag.type != FlagType::none;
-        //auto has_bind = type.bind.type != FlagType::none;
-        auto check_before = memb.type.flag.depend != memb.name;
-        int plus = 0;
-        auto check_self = [&](auto& flag) {
-            write_indent(str, 1);
-            generate_flag_cond_begin(str, in, flag, true);
-            write_indent(str, 1);
-            hlp::append(str, "return false;\n");
-            write_indent(str, 1);
-            hlp::append(str, "}\n");
-        };
-        if (has_flag) {
-            if (check_before) {
-                write_indent(str, 1);
-                generate_flag_cond_begin(str, in, type.flag);
-                plus = 1;
-            }
-            else if (!check_succeed) {
-                check_self(type.flag);
-            }
-        }
-        if (has_bind && !check_succeed) {
-            check_self(type.bind);
-        }
-        write_indent(str, 1);
-        if (check_succeed) {
-            hlp::append(str, "if(!");
-        }
-        if (data.structs.count(memb.type.name)) {
-            if (is_enc) {
-                hlp::appends(str, "encode(", in, ".", memb.name, ", ", out, ")");
-            }
-            else {
-                hlp::appends(str, "decode(", in, ", ", out, ".", memb.name, ")");
-            }
-        }
-        else {
-            hlp::appends(str, out, ".", method, "(", in, ".", memb.name);
-            if (memb.type.flag.size.size1.val.size()) {
-                hlp::append(str, ",");
-                set_size(str, memb.type.flag.size, in);
-            }
-            hlp::append(str, ")");
-        }
-        if (check_succeed) {
-            hlp::append(str, ") {\n");
-            write_indent(str, 2 + plus);
-            hlp::append(str, "return false;\n");
-            write_indent(str, 1 + plus);
-            hlp::append(str, "}\n");
-        }
-        else {
-            hlp::append(str, ";\n");
-        }
-        if (has_flag) {
-            if (check_before) {
-                write_indent(str, 1);
-                hlp::append(str, "}\n");
-            }
-            else if (check_succeed) {
-                check_self(type.flag);
-            }
-        }
-        if (has_bind && check_succeed) {
-            check_self(type.bind);
-        }
-    }
-*/
     void generate_ptr_obj(utw::string& str, FileData& data, auto& obj) {
         if (data.ptr_type.size()) {
             hlp::appends(str, data.ptr_type, "<", obj, ">");
@@ -324,6 +252,7 @@ namespace binred {
             bool first = true;
             bool not_match = false;
             tree_t cond;
+            utw::string errtype;
             auto& bsst = *data.structs.find(d.first);
             for (auto& i : d.second) {
                 auto& st = *data.structs.find(i);
@@ -337,8 +266,13 @@ namespace binred {
                         not_match = true;
                         break;
                     }
+                    errtype = st.second.errtype;
                 }
                 else {
+                    if (errtype != st.second.errtype) {
+                        not_match = true;
+                        break;
+                    }
                     auto cmp = st.second.base.type.existcond[0];
                     if (!cmp.tree->right || !cmp.tree->left) {
                         not_match = true;
@@ -353,7 +287,9 @@ namespace binred {
             if (not_match) {
                 continue;
             }
-            hlp::appends(str, "template<class Input>\nbool decode(Input&& input,");
+            hlp::appends(str,
+                         "template<class Input>\n",
+                         bsst.second.errtype, " decode(Input&& input,");
             generate_ptr_obj(str, data, d.first);
             hlp::append(str, "& output) {\n");
             write_indent(str, 1);
