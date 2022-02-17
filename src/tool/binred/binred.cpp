@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
         STRUCT:="struct" ID BASE? ERRTYPE? "{" MEMBER*? "}" EOS
         BASE:="-" TYPE!
         ERRTYPE:="," ID!
-        MEMBER:=ID TYPE! ["=" [INTEGER|STRING]!]? ["!" AS_RESULT]?
+        MEMBER:=ID TYPE! ["!" AS_RESULT]? ["=" [INTEGER|STRING]!]? 
         TYPE:=ID SIZE? [PREV|EXIST]*?
         PREV:="?" FLAG_DETAIL! ["@" AS_RESULT]?
         EXIST:="^" FLAG_DETAIL! 

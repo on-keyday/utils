@@ -12,7 +12,7 @@ import <string>
 struct ID , int {
     A int = 0
     B int ^ A == 0x20 = 0
-    C int ? C & 0x20 @ 3 = 0 ! 2
+    C int ? C & 0x20 @ 3 ! 2 = 0
 }
 
 struct Foo {
