@@ -9,10 +9,10 @@ package utils
 import <cstdint>
 import <string>
 
-struct ID {
+struct ID , int {
     A int = 0
     B int ^ A == 0x20 = 0
-    C int ? C & 0x20 = 0
+    C int ? C & 0x20 @ 3 = 0 ! 2
 }
 
 struct Foo {
@@ -67,8 +67,8 @@ struct PushPromiseFrame - H2Frame ^ type == 5 {
     pad std::string $ padding 
 }
 
-struct PingFrame - H2Frame ^ type == 6 ? len == 8 {
-    opeque std::uint64_t ? id == 0
+struct PingFrame - H2Frame ^ type == 6 ? len == 8 ? id == 0 {
+    opeque std::uint64_t
 }
 
 struct GoAwayFrame - H2Frame ^ type == 7 {

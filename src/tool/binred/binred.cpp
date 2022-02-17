@@ -75,15 +75,15 @@ int main(int argc, char** argv) {
         ROOT:=PACKAGE? [STRUCT|IMPORT]*? EOF
         PACKAGE:="package" ID!
         IMPORT:="import" UNTILEOL
-        STRUCT:="struct" ID BASE? "{" MEMBER*? "}" EOS
+        STRUCT:="struct" ID BASE? ERRTYPE? "{" MEMBER*? "}" EOS
         BASE:="-" TYPE!
-        MEMBER:=ID TYPE! ["=" [INTEGER|STRING]!]?
-        TYPE:=ID SIZE? [FLAG|PREV]*?
-        FLAG:="?" FLAG_DETAIL!
-        BIND:="!" FLAG_DETAIL!
-        PREV:="^" FLAG_DETAIL!
-        FLAG_DETAIL:=EXPR EOS AS_RESULT?
-        AS_RESULT:="@" [INTEGER|ID]!
+        ERRTYPE:="," ID!
+        MEMBER:=ID TYPE! ["=" [INTEGER|STRING]!]? ["!" AS_RESULT]?
+        TYPE:=ID SIZE? [PREV|EXIST]*?
+        PREV:="?" FLAG_DETAIL! ["@" AS_RESULT]?
+        EXIST:="^" FLAG_DETAIL! 
+        FLAG_DETAIL:=EXPR EOS 
+        AS_RESULT:=[INTEGER|ID]!
         SIZE:="$" EXPR EOS
 
         EXPR:=OR

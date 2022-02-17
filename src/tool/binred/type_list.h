@@ -82,6 +82,7 @@ namespace binred {
         Type type;
         utw::string defval;
         utils::syntax::KeyWord kind = {};
+        utw::string errvalue;
     };
 
     struct Base {
@@ -90,6 +91,7 @@ namespace binred {
 
     struct Struct {
         Base base;
+        utw::string errtype;
         utw::vector<Member> member;
     };
 

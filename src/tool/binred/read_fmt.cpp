@@ -19,10 +19,10 @@ namespace binred {
     constexpr auto import_def = "IMPORT";
     constexpr auto size_def = "SIZE";
     constexpr auto base_def = "BASE";
-    constexpr auto bind_def = "BIND";
     constexpr auto prev_def = "PREV";
     constexpr auto expr_def = "EXPR";
     constexpr auto as_result_def = "AS_RESULT";
+    constexpr auto errtype_def = "ERRTYPE";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         constexpr auto is_expr = us::filter::stack_order(1, expr_def);
         if (is_expr(result)) {
@@ -61,6 +61,12 @@ namespace binred {
         auto is_rval = [&] {
             return result.kind() == us::KeyWord::id || result.kind() == us::KeyWord::string || result.kind() == us::KeyWord::integer;
         };
+        if (result.top() == errtype_def) {
+            if (result.kind() == us::KeyWord::id) {
+                cst.errtype = result.token();
+            }
+            return true;
+        }
         if (result.top() == member_def) {
             if (result.kind() == us::KeyWord::id) {
                 memb().push_back({.name = result.token()});
@@ -79,21 +85,16 @@ namespace binred {
                     cond.back().errvalue = result.token();
                 };
                 auto under_disp = [&](Type& type) {
-                    if (result.under(prev_def)) {
-                        set_to_flag(type.existcond);
-                    }
-                    /*else if (result.under(bind_def)) {
-                        set_to_flag(type.aftercond);
-                    }*/
-                    else {
-                        set_to_flag(type.prevcond);
-                    }
+                    set_to_flag(type.prevcond);
                 };
                 if (result.under(base_def)) {
                     under_disp(cst.base.type);
                 }
-                else {
+                else if (result.under(prev_def)) {
                     under_disp(memb().back().type);
+                }
+                else if (result.under(member_def)) {
+                    memb().back().errvalue = result.token();
                 }
                 return true;
             }
@@ -104,13 +105,13 @@ namespace binred {
             };
             auto under_disp = [&](Type& type) {
                 if (result.under(prev_def)) {
-                    set_to_flag(type.existcond);
+                    set_to_flag(type.prevcond);
                 }
                 /*else if (result.under(bind_def)) {
                     set_to_flag(type.aftercond);
                 }*/
                 else {
-                    set_to_flag(type.prevcond);
+                    set_to_flag(type.existcond);
                 }
             };
             if (result.under(base_def)) {

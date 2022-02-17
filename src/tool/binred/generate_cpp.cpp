@@ -71,7 +71,49 @@ namespace binred {
         }
     }*/
 
-    void generate_with_cond(FileData& data, utw::string& str, Member& memb, auto& target,
+    void render_cpp_errorcode(utw::string& str, Struct& st, Cond* cond, Member* memb) {
+        if (cond && cond->errvalue.size()) {
+            hlp::append(str, cond->errvalue);
+        }
+        else if (memb && memb->errvalue.size()) {
+            hlp::append(str, memb->errvalue);
+        }
+        else if (st.errtype == "bool") {
+            hlp::append(str, "false");
+        }
+        else if (st.errtype == "int") {
+            hlp::append(str, "-1");
+        }
+        else {
+            hlp::appends(str, st.errtype, "::error");
+        }
+    }
+
+    void render_cpp_cond_err(utw::string& str, utw::string& errtype) {
+        if (errtype == "bool") {
+            hlp::append(str, "!e__");
+        }
+        else if (errtype == "int") {
+            hlp::append(str, "e__!=0");
+        }
+        else {
+            hlp::appends(str, errtype, "::none!=e__");
+        }
+    }
+
+    void render_cpp_succeed_res(utw::string& str, utw::string& errtype) {
+        if (errtype == "bool") {
+            hlp::append(str, "true");
+        }
+        else if (errtype == "int") {
+            hlp::append(str, "0");
+        }
+        else {
+            hlp::appends(str, errtype, "::none");
+        }
+    }
+
+    void generate_with_cond(FileData& data, utw::string& str, Struct& st, Member& memb, auto& target,
                             auto& method, auto& out, auto& coder, bool check_after, bool check_failed) {
         auto has_prev = memb.type.prevcond.size() != 0 && !check_after;
         auto has_exist = memb.type.existcond.size() != 0;
@@ -100,7 +142,9 @@ namespace binred {
         if (has_prev) {
             for (auto& m : memb.type.prevcond) {
                 cond_begin_one(m, true);
-                hlp::append(str, "return false;\n");
+                hlp::append(str, "return ");
+                render_cpp_errorcode(str, st, &m, &memb);
+                hlp::append(str, ";\n");
                 hlp::append(str, "}\n");
             }
         }
@@ -109,12 +153,14 @@ namespace binred {
         }
         if (data.structs.find(memb.type.name) != data.structs.end()) {
             if (hlp::equal(coder, "decode")) {
-                hlp::appends(str, "if(!", coder, "(", target, ",", out, ".", memb.name, ")){\n");
+                hlp::appends(str, "if(auto e__ =", coder, "(", target, ",", out, ".", memb.name, ";");
             }
             else {
-                hlp::appends(str, "if(!", coder, "(", out, ".", memb.name, ",", target, ")){\n");
+                hlp::appends(str, "if(auto e__ =", coder, "(", out, ".", memb.name, ",", target, ";");
             }
-            hlp::append(str, "return false;\n");
+            render_cpp_cond_err(str, st.errtype);
+            hlp::append(str, ")){\n");
+            hlp::append(str, "return e__;\n");
             hlp::append(str, "}\n");
         }
         else {
@@ -128,7 +174,9 @@ namespace binred {
             }
             if (check_failed) {
                 hlp::append(str, ")){\n");
-                hlp::append(str, "return false;\n");
+                hlp::append(str, "return ");
+                render_cpp_errorcode(str, st, nullptr, &memb);
+                hlp::append(str, ";\n");
                 hlp::append(str, "}\n");
             }
             else {
@@ -136,9 +184,11 @@ namespace binred {
             }
         }
         if (has_after) {
-            for (auto& m : memb.type.prevcond) {
+            for (Cond& m : memb.type.prevcond) {
                 cond_begin_one(m, true);
-                hlp::append(str, "return false;\n");
+                hlp::append(str, "return ");
+                render_cpp_errorcode(str, st, &m, &memb);
+                hlp::append(str, ";\n");
                 hlp::append(str, "}\n");
             }
         }
@@ -309,7 +359,9 @@ namespace binred {
             write_indent(str, 1);
             hlp::appends(str, d.first, " judgement;\n");
             write_indent(str, 1);
-            hlp::append(str, "if (!decode(input,judgement)) {\n");
+            hlp::append(str, "if (auto e__ = decode(input,judgement);");
+            render_cpp_cond_err(str, bsst.second.errtype);
+            hlp::append(str, ") {\n");
             write_indent(str, 2);
             hlp::append(str, "return false;\n");
             write_indent(str, 1);
@@ -329,18 +381,22 @@ namespace binred {
                     hlp::appends(str, "p->", memb.name, " = std::move(judgement.", memb.name, ");\n");
                 }
                 write_indent(str, 2);
-                hlp::append(str, "if(decode(input,*p,true)) {\n");
+                hlp::append(str, "if(auto e__ = decode(input,*p,true);");
+                render_cpp_cond_err(str, st.second.errtype);
+                hlp::append(str, ") {\n");
                 write_indent(str, 3);
                 generate_delete_ptr_obj(str, data, "p");
                 hlp::append(str, "\n");
                 write_indent(str, 3);
-                hlp::append(str, "return false;\n");
+                hlp::append(str, "return e__;\n");
                 write_indent(str, 2);
                 hlp::append(str, "}\n");
                 write_indent(str, 2);
                 hlp::append(str, "output=p;\n");
                 write_indent(str, 2);
-                hlp::append(str, "return true;\n");
+                hlp::append(str, "return ");
+                render_cpp_succeed_res(str, st.second.errtype);
+                hlp::append(str, ";\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
                 write_indent(str, 1);
@@ -351,7 +407,9 @@ namespace binred {
             }
             hlp::append(str, "{\n");
             write_indent(str, 2);
-            hlp::append(str, "return false;\n");
+            hlp::append(str, "return ");
+            render_cpp_errorcode(str, bsst.second, nullptr, nullptr);
+            hlp::append(str, ";\n");
             write_indent(str, 1);
             hlp::append(str, "}\n}\n\n");
         }
@@ -391,9 +449,6 @@ namespace binred {
                 render_cpp_namespace_begin(str, data.pkgname);
             }
         }
-        if (data.pkgname.size()) {
-            hlp::appends(str, "namespace ", data.pkgname, " {\n\n");
-        }
         for (auto& def : data.defvec) {
             auto& d = *data.structs.find(def);
             auto& st = d.second;
@@ -412,33 +467,43 @@ namespace binred {
                 hlp::append(str, ";\n");
             }
             hlp::append(str, "};\n\n");
-            hlp::appends(str, "template<class Output>\nbool encode(const ", d.first, "& input,Output& output){\n");
+            if (!st.errtype.size()) {
+                st.errtype = "bool";
+            }
+            hlp::appends(str,
+                         "template<class Output>\n",
+                         st.errtype, " encode(const ", d.first, "& input,Output& output){\n");
             auto gen_base_flag = [&](auto& flag, auto& io) {
-                for (auto& m : flag) {
+                for (Cond& m : flag) {
                     hlp::append(str, "if(!(");
                     render_tree(str, m.tree, io);
                     hlp::append(str, ")){\n");
-                    hlp::append(str, "return false;\n");
-                    hlp::append(str, "}\n");
+                    hlp::appends(str, "return ");
+                    render_cpp_errorcode(str, st, &m, nullptr);
+                    hlp::appends(str, ";\n", "}\n");
                 }
             };
             if (has_base) {
                 gen_base_flag(st.base.type.prevcond, "input");
                 gen_base_flag(st.base.type.existcond, "input");
                 write_indent(str, 1);
-                hlp::appends(str, "if (!encode(static_cast<const ", st.base.type.name, "&>(input),output)) { \n");
+                hlp::appends(str, "if (auto e__ = encode(static_cast<const ", st.base.type.name, "&>(input),output);");
+                render_cpp_cond_err(str, st.errtype);
+                hlp::appends(str, ") { \n");
                 write_indent(str, 2);
-                hlp::appends(str, "return false;\n");
+                hlp::appends(str, "return e__;\n");
                 write_indent(str, 1);
                 hlp::append(str, "}\n");
                 // gen_base_flag(st.base.type.aftercond, "input");
             }
-            for (auto& memb : d.second.member) {
-                generate_with_cond(data, str, memb, "output", data.write_method, "input", "encode", false, false);
+            for (auto& memb : st.member) {
+                generate_with_cond(data, str, st, memb, "output", data.write_method, "input", "encode", false, false);
                 // generate_with_flag(data, str, memb, "input", "output", data.write_method, true, false);
             }
             write_indent(str, 1);
-            hlp::append(str, "return true;\n");
+            hlp::append(str, "return ");
+            render_cpp_succeed_res(str, st.errtype);
+            hlp::append(str, ";\n");
             hlp::append(str, "}\n\n");
             hlp::appends(str, "template<class Input>\nbool decode(Input&& input,", d.first, "& output");
             if (has_base) {
@@ -460,12 +525,14 @@ namespace binred {
                 hlp::appends(str, "}\n");
                 gen_base_flag(st.base.type.prevcond, "output");
             }
-            for (auto& memb : d.second.member) {
-                generate_with_cond(data, str, memb, "input", data.read_method, "output", "decode", true, true);
+            for (auto& memb : st.member) {
+                generate_with_cond(data, str, st, memb, "input", data.read_method, "output", "decode", true, true);
                 // generate_with_flag(data, str, memb, "output", "input", data.read_method, false, true);
             }
             write_indent(str, 1);
-            hlp::append(str, "return true;\n");
+            hlp::append(str, "return ");
+            render_cpp_succeed_res(str, st.errtype);
+            hlp::append(str, ";\n");
             hlp::append(str, "}\n\n");
         }
         generate_dependency(dependency, str, data, flag);
