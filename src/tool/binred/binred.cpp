@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
     struct STRUCT_NAME - BASE_STRUCT {
         MEMBER TYPE ? MEMBER != 98 ! 0 ^ true||false
         MEMBER2 TYPE2 $ 30 = DEFAULT_VALUE
+        MEMBER3 TYPE3 ? COND @ COND_ERROR_VALUE ! READ_ERROR_VALUE
     }
 )";
         return 1;
