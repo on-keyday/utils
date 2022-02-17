@@ -31,6 +31,7 @@ namespace utils {
             done,
             except,
             canceled,
+            term,
         };
 
         struct Context;

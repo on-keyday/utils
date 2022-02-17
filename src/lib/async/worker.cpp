@@ -15,6 +15,7 @@
 #include "../../include/thread/channel.h"
 #include "../../include/helper/iface_cast.h"
 #include <exception>
+#include <mutex>
 
 #include <thread>
 
@@ -49,6 +50,7 @@ namespace utils {
                 std::atomic_size_t maxthread = 0;
                 std::atomic_size_t pooling_task = 0;
                 std::atomic_bool do_yield = false;
+                std::atomic_bool diepool = false;
             };
 
             struct ContextData {
@@ -84,6 +86,9 @@ namespace utils {
         struct CancelExcept {
         };
 
+        struct TerminateExcept {
+        };
+
         struct Signal {
             size_t sig;
         };
@@ -97,29 +102,47 @@ namespace utils {
         struct EndTask {
         };
 
+        void check_term(auto& data) {
+            if (data->task.state == TaskState::term) {
+                throw TerminateExcept{};
+            }
+            if (data->work->diepool) {
+                data->task.state = TaskState::term;
+                throw TerminateExcept{};
+            }
+        }
+
         void append_to_wait(internal::ContextData* c) {
+            check_term(c);
             c->task.state = TaskState::wait_signal;
             c->task.sigid = ++c->work->sigidcount;
-            c->work->lock_.lock();
-            c->work->wait_signal.emplace(c->task.sigid, std::move(*c->task.placedata));
-            c->work->lock_.unlock();
+            {
+                std::scoped_lock _{c->work->lock_};
+                if (c->work->diepool) {
+                    check_term(c);
+                }
+                c->work->wait_signal.emplace(c->task.sigid, std::move(*c->task.placedata));
+            }
         }
 
         void context_switch(auto& data) {
             SwitchToFiber(data->rootfiber);
+            check_term(data);
         }
 
         void AnyFuture::wait_or_suspend(Context& ctx) {
+            check_term(data);
             if (!not_own && !is_done()) {
                 auto c = internal::ContextHandle::get(ctx);
-                data->ctxlock_.lock();
-                if (is_done()) {
-                    data->ctxlock_.unlock();
-                    return;
+                {
+                    std::scoped_lock _{data->ctxlock_};
+                    data->ctxlock_.lock();
+                    if (is_done()) {
+                        return;
+                    }
+                    data->ptr = &ctx;
+                    append_to_wait(c.get());
                 }
-                data->ptr = &ctx;
-                append_to_wait(c.get());
-                data->ctxlock_.unlock();
                 context_switch(c);
                 c->task.state = TaskState::running;
             }
@@ -185,7 +208,7 @@ namespace utils {
         }
 
         void Context::set_signal() {
-            if (!data || !data->task.sigid) {
+            if (!data->task.sigid) {
                 return;
             }
             data->work->w << Signal{data->task.sigid};
@@ -193,19 +216,23 @@ namespace utils {
         }
 
         void Context::cancel() {
+            check_term(data);
             throw CancelExcept{};
         }
 
         void Context::set_value(Any any) {
+            check_term(data);
             data->task.result = std::move(any);
         }
 
         Any& Context::value() {
+            check_term(data);
             return data->task.result;
         }
 
         AnyFuture Context::clone() const {
             if (!data) return {};
+            check_term(data);
             AnyFuture f;
             f.data = data;
             f.not_own = true;
@@ -215,17 +242,23 @@ namespace utils {
         void DoTask(void* pdata) {
             Context* ctx = static_cast<Context*>(pdata);
             auto data = internal::ContextHandle::get(*ctx).get();
+            if (data->task.state == TaskState::term) {
+                context_switch(data);
+                std::terminate();  // unreachable
+            }
             data->task.state = TaskState::running;
             try {
                 data->task.task(*ctx);
                 data->task.state = TaskState::done;
             } catch (CancelExcept& cancel) {
                 data->task.state = TaskState::canceled;
+            } catch (TerminateExcept& term) {
             } catch (...) {
                 data->task.except = std::current_exception();
                 data->task.state = TaskState::except;
             }
             context_switch(data);
+            std::terminate();  // unreachable
         }
 
         auto& make_context(Any& holder, Context*& ctx) {
@@ -249,6 +282,11 @@ namespace utils {
             return c;
         }
 
+        void delete_context(auto& c) {
+            DeleteFiber(c->task.fiber);
+            c->task.fiber = nullptr;
+        }
+
         void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
             internal::ThreadToFiber self;
             auto r = wd->r;
@@ -258,6 +296,9 @@ namespace utils {
             auto handle_fiber = [&](Any& place, internal::ContextData* c) {
                 c->rootfiber = self.rootfiber;
                 c->task.placedata = &place;
+                if (wd->diepool) {
+                    c->task.state = TaskState::term;
+                }
                 wd->accepting--;
                 SwitchToFiber(c->task.fiber);
                 wd->accepting++;
@@ -272,11 +313,14 @@ namespace utils {
                         c->ptr = nullptr;
                     }
                     c->ctxlock_.unlock();
-                    DeleteFiber(c->task.fiber);
-                    c->task.fiber = nullptr;
+                    delete_context(c);
                     c->work->pooling_task--;
                     c->waiter_flag.clear();
                     c->waiter_flag.notify_all();
+                }
+                else if (c->task.state == TaskState::term) {
+                    // no signal is handled
+                    delete_context(c);
                 }
                 else if (c->task.state == TaskState::suspend) {
                     w << std::move(place);
@@ -287,42 +331,64 @@ namespace utils {
             };
             wd->accepting++;
             while (r >> event) {
-                if (auto post = event.type_assert<Atask>()) {
-                    Any place;
-                    auto& c = make_fiber(place, std::move(*post), wd);
-                    handle_fiber(place, c.get());
-                }
-                else if (auto ctx = event.type_assert<Context>()) {
+                if (auto ctx = event.type_assert<Context>()) {
                     auto c = internal::ContextHandle::get(*ctx).get();
                     handle_fiber(event, c);
                 }
-                else if (auto sigback = event.type_assert<SignalBack*>()) {
-                    Any place;
-                    auto p = *sigback;
-                    auto& c = make_fiber(place, std::move(p->task), wd);
-                    c->waiter_flag.test_and_set();
-                    p->data = c;
-                    p->sig.clear();
-                    p->sig.notify_all();
-                    handle_fiber(place, c.get());
-                }
-                else if (auto signal = event.type_assert<Signal>()) {
-                    Any sig;
-                    wd->lock_.lock();
-                    auto found = wd->wait_signal.find(signal->sig);
-                    if (found != wd->wait_signal.end()) {
-                        sig = std::move(found->second);
-                        wd->wait_signal.erase(signal->sig);
+                else {
+                    if (wd->diepool) {
+                        decltype(wd->wait_signal) tmp;
+                        wd->lock_.lock();
+                        if (wd->wait_signal.size()) {
+                            tmp = std::move(wd->wait_signal);
+                        }
+                        wd->lock_.unlock();
+                        if (tmp.size()) {
+                            for (auto&& w : std::move(tmp)) {
+                                auto ctx = w.second.type_assert<Context>();
+                                if (ctx) {
+                                    handle_fiber(w.second, internal::ContextHandle::get(*ctx).get());
+                                }
+                            }
+                        }
+                        if (wd->r.peek_queue() == 0) {
+                            wd->r.close();
+                        }
+                        continue;
                     }
-                    wd->lock_.unlock();
-                    auto ctx = sig.type_assert<Context>();
-                    if (ctx) {
-                        handle_fiber(sig, internal::ContextHandle::get(*ctx).get());
+                    if (auto post = event.type_assert<Atask>()) {
+                        Any place;
+                        auto& c = make_fiber(place, std::move(*post), wd);
+                        handle_fiber(place, c.get());
                     }
-                }
-                else if (auto _ = event.type_assert<EndTask>()) {
-                    if (r.peek_queue() == 0) {
-                        break;
+                    else if (auto sigback = event.type_assert<SignalBack*>()) {
+                        Any place;
+                        auto p = *sigback;
+                        auto& c = make_fiber(place, std::move(p->task), wd);
+                        c->waiter_flag.test_and_set();
+                        p->data = c;
+                        p->sig.clear();
+                        p->sig.notify_all();
+                        handle_fiber(place, c.get());
+                    }
+                    else if (auto signal = event.type_assert<Signal>()) {
+                        Any sig;
+                        wd->lock_.lock();
+                        auto found = wd->wait_signal.find(signal->sig);
+                        if (found != wd->wait_signal.end()) {
+                            sig = std::move(found->second);
+                            wd->wait_signal.erase(signal->sig);
+                        }
+                        wd->lock_.unlock();
+                        auto ctx = sig.type_assert<Context>();
+                        if (ctx) {
+                            handle_fiber(sig, internal::ContextHandle::get(*ctx).get());
+                        }
+                    }
+                    else if (auto _ = event.type_assert<EndTask>()) {
+                        if (r.peek_queue() == 0) {
+                            break;
+                        }
                     }
                 }
                 if (wd->do_yield) {
@@ -406,7 +472,12 @@ namespace utils {
         TaskPool::~TaskPool() {
             initlock.lock();
             if (data) {
-                data->r.close();
+                data->lock_.lock();
+                data->diepool = true;
+                data->lock_.unlock();
+                if (!data->pooling_task) {
+                    data->r.close();
+                }
             }
             initlock.unlock();
         }
