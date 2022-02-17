@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
         MEMBER2 TYPE2 $ 30 = DEFAULT_VALUE
     }
 )";
+        return 1;
     }
     constexpr auto def = R"a(
         ROOT:=PACKAGE? [STRUCT|IMPORT]*? EOF
