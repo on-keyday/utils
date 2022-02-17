@@ -47,6 +47,7 @@ namespace utils {
                 std::atomic_uint32_t accepting = 0;
                 std::atomic_size_t detached = 0;
                 std::atomic_size_t maxthread = 0;
+                std::atomic_size_t pooling_task = 0;
                 std::atomic_bool do_yield = false;
             };
 
@@ -243,6 +244,7 @@ namespace utils {
             c->task.task = std::move(post);
             c->task.fiber = CreateFiber(initial_stack_size, DoTask, ctx);
             c->task.state = TaskState::prelaunch;
+            work->pooling_task++;
             c->work = std::move(work);
             return c;
         }
@@ -272,6 +274,7 @@ namespace utils {
                     c->ctxlock_.unlock();
                     DeleteFiber(c->task.fiber);
                     c->task.fiber = nullptr;
+                    c->work->pooling_task--;
                     c->waiter_flag.clear();
                     c->waiter_flag.notify_all();
                 }
@@ -340,15 +343,19 @@ namespace utils {
             }
         }
 
-        void TaskPool::init() {
-            initlock.lock();
-            init_data();
+        void TaskPool::init_thread() {
             if (data->accepting == 0) {
                 if (data->detached < data->maxthread) {
                     std::thread(task_handler, data).detach();
                     data->detached++;
                 }
             }
+        }
+
+        void TaskPool::init() {
+            initlock.lock();
+            init_data();
+            init_thread();
             initlock.unlock();
         }
 
@@ -356,6 +363,7 @@ namespace utils {
             initlock.lock();
             init_data();
             data->maxthread = sz;
+            init_thread();
             initlock.unlock();
         }
 

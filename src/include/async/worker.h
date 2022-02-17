@@ -175,6 +175,7 @@ namespace utils {
             thread::LiteLock initlock;
             wrap::shared_ptr<internal::WorkerData> data;
             void init_data();
+            void init_thread();
             void init();
             void posting(Task<Context>&& task);
             AnyFuture starting(Task<Context>&& task);
