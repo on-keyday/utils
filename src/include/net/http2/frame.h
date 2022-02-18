@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include "error_type.h"
+#include "../../wrap/lite/smart_ptr.h"
 
 namespace utils {
     namespace net {
@@ -20,7 +21,7 @@ namespace utils {
                 output.write(input.len, 3);
                 output.write(input.type);
                 output.write(input.flag);
-                if (!((id > 0))) {
+                if (!(input.id >= 0)) {
                     return H2Error::internal;
                 }
                 output.write(input.id);
@@ -41,7 +42,7 @@ namespace utils {
                 if (!input.read(output.id)) {
                     return H2Error::read_id;
                 }
-                if (!((id > 0))) {
+                if (!(output.id >= 0)) {
                     return H2Error::internal;
                 }
                 return H2Error::none;
@@ -78,20 +79,20 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const DataFrame& input, Output& output) {
-                if (!((id != 0))) {
+                if (!(input.id != 0)) {
                     return H2Error::protocol;
                 }
-                if (!((type == 0))) {
+                if (!(input.type == 0)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if ((flag & 0x8)) {
+                if (input.flag & 0x8) {
                     output.write(input.padding);
                 }
-                output.write(input.data, (len - padding));
-                output.write(input.pad, padding);
+                output.write(input.data, input.len - input.padding);
+                output.write(input.pad, input.padding);
                 return H2Error::none;
             }
 
@@ -101,22 +102,22 @@ namespace utils {
                     if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 0))) {
+                    if (!(output.type == 0)) {
                         return H2Error::unknown;
                     }
                 }
-                if (!((id != 0))) {
+                if (!(output.id != 0)) {
                     return H2Error::protocol;
                 }
-                if ((flag & 0x8)) {
+                if (output.flag & 0x8) {
                     if (!input.read(output.padding)) {
                         return H2Error::read_padding;
                     }
                 }
-                if (!input.read(output.data, (len - padding))) {
+                if (!input.read(output.data, output.len - output.padding)) {
                     return H2Error::read_data;
                 }
-                if (!input.read(output.pad, padding)) {
+                if (!input.read(output.pad, output.padding)) {
                     return H2Error::read_padding;
                 }
                 return H2Error::none;
@@ -131,22 +132,22 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const HeaderFrame& input, Output& output) {
-                if (!((type == 1))) {
+                if (!(input.type == 1)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if ((flag & 0x8)) {
+                if (input.flag & 0x8) {
                     output.write(input.padding);
                 }
-                if ((flag & 0x20)) {
+                if (input.flag & 0x20) {
                     if (auto e__ = encode(input.priority, output); H2Error::none != e__) {
                         return e__;
                     }
                 }
-                output.write(input.data, (len - padding));
-                output.write(input.pad, padding);
+                output.write(input.data, input.len - input.padding);
+                output.write(input.pad, input.padding);
                 return H2Error::none;
             }
 
@@ -156,24 +157,24 @@ namespace utils {
                     if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 1))) {
+                    if (!(output.type == 1)) {
                         return H2Error::unknown;
                     }
                 }
-                if ((flag & 0x8)) {
+                if (output.flag & 0x8) {
                     if (!input.read(output.padding)) {
                         return H2Error::read_padding;
                     }
                 }
-                if ((flag & 0x20)) {
+                if (output.flag & 0x20) {
                     if (auto e__ = decode(input, output.priority); H2Error::none != e__) {
                         return e__;
                     }
                 }
-                if (!input.read(output.data, (len - padding))) {
+                if (!input.read(output.data, output.len - output.padding)) {
                     return H2Error::read_data;
                 }
-                if (!input.read(output.pad, padding)) {
+                if (!input.read(output.pad, output.padding)) {
                     return H2Error::read_padding;
                 }
                 return H2Error::none;
@@ -185,10 +186,10 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const PriorityFrame& input, Output& output) {
-                if (!((len == 5))) {
+                if (!(input.len == 5)) {
                     return H2Error::unknown;
                 }
-                if (!((type == 2))) {
+                if (!(input.type == 2)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
@@ -206,11 +207,11 @@ namespace utils {
                     if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 2))) {
+                    if (!(output.type == 2)) {
                         return H2Error::unknown;
                     }
                 }
-                if (!((len == 5))) {
+                if (!(output.len == 5)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = decode(input, output.priority); H2Error::none != e__) {
@@ -225,10 +226,10 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const RstStreamFrame& input, Output& output) {
-                if (!((len == 4))) {
+                if (!(input.len == 4)) {
                     return H2Error::unknown;
                 }
-                if (!((type == 3))) {
+                if (!(input.type == 3)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
@@ -244,11 +245,11 @@ namespace utils {
                     if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 3))) {
+                    if (!(output.type == 3)) {
                         return H2Error::unknown;
                     }
                 }
-                if (!((len == 4))) {
+                if (!(output.len == 4)) {
                     return H2Error::unknown;
                 }
                 if (!input.read(output.code)) {
@@ -259,22 +260,30 @@ namespace utils {
 
             struct SetingsFrame : H2Frame {
                 std::string setting;
+                Dummy dummy;
             };
 
             template <class Output>
             H2Error encode(const SetingsFrame& input, Output& output) {
-                if (!(((len % 6) == 0))) {
+                if (!((input.len % 6) == 0)) {
                     return H2Error::frame_size;
                 }
-                if (!((type == 4))) {
+                if (!(input.id == 0)) {
+                    return H2Error::protocol;
+                }
+                if (!(input.type == 4)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if ((flag & 0x1)) {
-                    output.write(input.setting, len);
+                if ((input.flag & 0x1) == 0) {
+                    output.write(input.setting, input.len);
                 }
+                if (!(((input.flag & 0x1) == 0) || (input.len == 0))) {
+                    return H2Error::frame_size;
+                }
+                output.write(input.dummy);
                 return H2Error::none;
             }
 
@@ -284,17 +293,26 @@ namespace utils {
                     if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 4))) {
+                    if (!(output.type == 4)) {
                         return H2Error::unknown;
                     }
                 }
-                if (!(((len % 6) == 0))) {
+                if (!((output.len % 6) == 0)) {
                     return H2Error::frame_size;
                 }
-                if ((flag & 0x1)) {
-                    if (!input.read(output.setting, len)) {
+                if (!(output.id == 0)) {
+                    return H2Error::protocol;
+                }
+                if ((output.flag & 0x1) == 0) {
+                    if (!input.read(output.setting, output.len)) {
                         return H2Error::read_data;
                     }
+                }
+                if (!input.read(output.dummy)) {
+                    return H2Error::unknown;
+                }
+                if (!(((output.flag & 0x1) == 0) || (output.len == 0))) {
+                    return H2Error::frame_size;
                 }
                 return H2Error::none;
             }
@@ -308,21 +326,21 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const PushPromiseFrame& input, Output& output) {
-                if (!((type == 5))) {
+                if (!(input.type == 5)) {
                     return H2Error::unknown;
                 }
                 if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if ((flag & 0x8)) {
+                if (input.flag & 0x8) {
                     output.write(input.padding);
                 }
-                if (!((promise > 0))) {
+                if (!(input.promise > 0)) {
                     return H2Error::internal;
                 }
                 output.write(input.promise);
-                output.write(input.data, (len - padding));
-                output.write(input.pad, padding);
+                output.write(input.data, input.len - input.padding);
+                output.write(input.pad, input.padding);
                 return H2Error::none;
             }
 
@@ -332,11 +350,11 @@ namespace utils {
                     if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 5))) {
+                    if (!(output.type == 5)) {
                         return H2Error::unknown;
                     }
                 }
-                if ((flag & 0x8)) {
+                if (output.flag & 0x8) {
                     if (!input.read(output.padding)) {
                         return H2Error::unknown;
                     }
@@ -344,13 +362,13 @@ namespace utils {
                 if (!input.read(output.promise)) {
                     return H2Error::internal;
                 }
-                if (!((promise > 0))) {
+                if (!(output.promise > 0)) {
                     return H2Error::internal;
                 }
-                if (!input.read(output.data, (len - padding))) {
+                if (!input.read(output.data, output.len - output.padding)) {
                     return H2Error::unknown;
                 }
-                if (!input.read(output.pad, padding)) {
+                if (!input.read(output.pad, output.padding)) {
                     return H2Error::unknown;
                 }
                 return H2Error::none;
@@ -361,43 +379,43 @@ namespace utils {
             };
 
             template <class Output>
-            bool encode(const PingFrame& input, Output& output) {
-                if (!((len == 8))) {
-                    return false;
+            H2Error encode(const PingFrame& input, Output& output) {
+                if (!(input.len == 8)) {
+                    return H2Error::unknown;
                 }
-                if (!((type == 6))) {
-                    return false;
+                if (!(input.type == 6)) {
+                    return H2Error::unknown;
                 }
-                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); !e__) {
+                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (!((id == 0))) {
-                    return false;
+                if (!(input.id == 0)) {
+                    return H2Error::unknown;
                 }
                 output.write(input.opeque);
-                return true;
+                return H2Error::none;
             }
 
             template <class Input>
-            bool decode(Input&& input, PingFrame& output, bool base_set = false) {
+            H2Error decode(Input&& input, PingFrame& output, bool base_set = false) {
                 if (!base_set) {
-                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); !e__) {
+                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 6))) {
-                        return false;
+                    if (!(output.type == 6)) {
+                        return H2Error::unknown;
                     }
                 }
-                if (!((len == 8))) {
-                    return false;
+                if (!(output.len == 8)) {
+                    return H2Error::unknown;
                 }
                 if (!input.read(output.opeque)) {
-                    return false;
+                    return H2Error::unknown;
                 }
-                if (!((id == 0))) {
-                    return false;
+                if (!(output.id == 0)) {
+                    return H2Error::unknown;
                 }
-                return true;
+                return H2Error::none;
             }
 
             struct GoAwayFrame : H2Frame {
@@ -407,45 +425,45 @@ namespace utils {
             };
 
             template <class Output>
-            bool encode(const GoAwayFrame& input, Output& output) {
-                if (!((type == 7))) {
-                    return false;
+            H2Error encode(const GoAwayFrame& input, Output& output) {
+                if (!(input.type == 7)) {
+                    return H2Error::unknown;
                 }
-                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); !e__) {
+                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (!((id >= 0))) {
-                    return false;
+                if (!(input.id >= 0)) {
+                    return H2Error::unknown;
                 }
                 output.write(input.id);
                 output.write(input.code);
-                output.write(input.data, (len - 8));
-                return true;
+                output.write(input.data, input.len - 8);
+                return H2Error::none;
             }
 
             template <class Input>
-            bool decode(Input&& input, GoAwayFrame& output, bool base_set = false) {
+            H2Error decode(Input&& input, GoAwayFrame& output, bool base_set = false) {
                 if (!base_set) {
-                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); !e__) {
+                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 7))) {
-                        return false;
+                    if (!(output.type == 7)) {
+                        return H2Error::unknown;
                     }
                 }
                 if (!input.read(output.id)) {
-                    return false;
+                    return H2Error::unknown;
                 }
-                if (!((id >= 0))) {
-                    return false;
+                if (!(output.id >= 0)) {
+                    return H2Error::unknown;
                 }
                 if (!input.read(output.code)) {
-                    return false;
+                    return H2Error::unknown;
                 }
-                if (!input.read(output.data, (len - 8))) {
-                    return false;
+                if (!input.read(output.data, output.len - 8)) {
+                    return H2Error::unknown;
                 }
-                return true;
+                return H2Error::none;
             }
 
             struct WindowUpdateFrame : H2Frame {
@@ -453,49 +471,49 @@ namespace utils {
             };
 
             template <class Output>
-            bool encode(const WindowUpdateFrame& input, Output& output) {
-                if (!((len == 4))) {
-                    return false;
+            H2Error encode(const WindowUpdateFrame& input, Output& output) {
+                if (!(input.len == 4)) {
+                    return H2Error::unknown;
                 }
-                if (!((id > 0))) {
-                    return false;
+                if (!(input.id > 0)) {
+                    return H2Error::unknown;
                 }
-                if (!((type == 8))) {
-                    return false;
+                if (!(input.type == 8)) {
+                    return H2Error::unknown;
                 }
-                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); !e__) {
+                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (!((increment > 0))) {
-                    return false;
+                if (!(input.increment > 0)) {
+                    return H2Error::unknown;
                 }
                 output.write(input.increment);
-                return true;
+                return H2Error::none;
             }
 
             template <class Input>
-            bool decode(Input&& input, WindowUpdateFrame& output, bool base_set = false) {
+            H2Error decode(Input&& input, WindowUpdateFrame& output, bool base_set = false) {
                 if (!base_set) {
-                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); !e__) {
+                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 8))) {
-                        return false;
+                    if (!(output.type == 8)) {
+                        return H2Error::unknown;
                     }
                 }
-                if (!((len == 4))) {
-                    return false;
+                if (!(output.len == 4)) {
+                    return H2Error::unknown;
                 }
-                if (!((id > 0))) {
-                    return false;
+                if (!(output.id > 0)) {
+                    return H2Error::unknown;
                 }
                 if (!input.read(output.increment)) {
-                    return false;
+                    return H2Error::unknown;
                 }
-                if (!((increment > 0))) {
-                    return false;
+                if (!(output.increment > 0)) {
+                    return H2Error::unknown;
                 }
-                return true;
+                return H2Error::none;
             }
 
             struct Continuation : H2Frame {
@@ -503,31 +521,162 @@ namespace utils {
             };
 
             template <class Output>
-            bool encode(const Continuation& input, Output& output) {
-                if (!((type == 9))) {
-                    return false;
+            H2Error encode(const Continuation& input, Output& output) {
+                if (!(input.type == 9)) {
+                    return H2Error::unknown;
                 }
-                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); !e__) {
+                if (auto e__ = encode(static_cast<const H2Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                output.write(input.data, len);
-                return true;
+                output.write(input.data, input.len);
+                return H2Error::none;
             }
 
             template <class Input>
-            bool decode(Input&& input, Continuation& output, bool base_set = false) {
+            H2Error decode(Input&& input, Continuation& output, bool base_set = false) {
                 if (!base_set) {
-                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); !e__) {
+                    if (auto e__ = decode(input, static_cast<H2Frame&>(output)); H2Error::none != e__) {
                         return e__;
                     }
-                    if (!((type == 9))) {
-                        return false;
+                    if (!(output.type == 9)) {
+                        return H2Error::unknown;
                     }
                 }
-                if (!input.read(output.data, len)) {
-                    return false;
+                if (!input.read(output.data, output.len)) {
+                    return H2Error::unknown;
                 }
-                return true;
+                return H2Error::none;
+            }
+
+            template <class Input>
+            H2Error decode(Input&& input, wrap::shared_ptr<H2Frame>& output) {
+                H2Frame judgement;
+                if (auto e__ = decode(input, judgement); H2Error::none != e__) {
+                    return e__;
+                }
+                if (judgement.type == 0) {
+                    auto p = wrap::make_shared<DataFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 1) {
+                    auto p = wrap::make_shared<HeaderFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 2) {
+                    auto p = wrap::make_shared<PriorityFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 3) {
+                    auto p = wrap::make_shared<RstStreamFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 4) {
+                    auto p = wrap::make_shared<SetingsFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 5) {
+                    auto p = wrap::make_shared<PushPromiseFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 6) {
+                    auto p = wrap::make_shared<PingFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 7) {
+                    auto p = wrap::make_shared<GoAwayFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 8) {
+                    auto p = wrap::make_shared<WindowUpdateFrame>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else if (judgement.type == 9) {
+                    auto p = wrap::make_shared<Continuation>();
+                    p->len = std::move(judgement.len);
+                    p->type = std::move(judgement.type);
+                    p->flag = std::move(judgement.flag);
+                    p->id = std::move(judgement.id);
+                    if (auto e__ = decode(input, *p, true); H2Error::none != e__) {
+                        return e__;
+                    }
+                    output = p;
+                    return H2Error::none;
+                }
+                else {
+                    return H2Error::unknown;
+                }
             }
 
         }  // namespace http2

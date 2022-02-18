@@ -40,5 +40,7 @@ namespace utils {
                 read_code,
             };
         }
+
+        struct Dummy {};
     }  // namespace net
 }  // namespace utils

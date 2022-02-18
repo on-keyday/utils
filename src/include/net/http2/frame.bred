@@ -4,19 +4,20 @@
 #    https://opensource.org/licenses/mit-license.php
 # frame - http2 frame definition
 #generate code
-# tool\binred -i src/include/net/http2/frame.bred -o src/include/net/http2/frame.h -p -e none unknown
+# tool\binred -i src/include/net/http2/frame.bred -o src/include/net/http2/frame.h -p -e none unknown -S wrap::shared_ptr wrap::make_shared 
 
 package utils::net::http2
 
 import <cstdint>
 import <string>
 import "error_type.h"
+import "../../wrap/lite/smart_ptr.h"
 
 struct H2Frame , H2Error {
     len int $ 3 ! H2Error::read_len = 0
     type std::uint8_t ! H2Error::read_type
     flag std::uint8_t ! H2Error::read_flag = 0
-    id std::int32_t ? id > 0 @ H2Error::internal ! H2Error::read_id
+    id std::int32_t ? id >= 0 @ H2Error::internal ! H2Error::read_id
 }
 
 struct Priority , H2Error {
@@ -45,8 +46,9 @@ struct RstStreamFrame - H2Frame ^ type == 3 ? len == 4 , H2Error {
     code std::uint32_t ! H2Error::read_code
 }
 
-struct SetingsFrame - H2Frame ^ type == 4 ? len % 6 == 0 @ H2Error::frame_size , H2Error {
-    setting std::string $ len ^ flag & 0x1 ! H2Error::read_data
+struct SetingsFrame - H2Frame ^ type == 4 ? len % 6 == 0 @ H2Error::frame_size ? id == 0 @ H2Error::protocol , H2Error {
+    setting std::string $ len ^ (flag & 0x1) == 0 ! H2Error::read_data
+    dummy Dummy ? (flag&0x1==0)||len==0 @ H2Error::frame_size
 }
 
 struct PushPromiseFrame - H2Frame ^ type == 5 , H2Error {
@@ -56,20 +58,20 @@ struct PushPromiseFrame - H2Frame ^ type == 5 , H2Error {
     pad std::string $ padding 
 }
 
-struct PingFrame - H2Frame ^ type == 6 ? len == 8 {
+struct PingFrame - H2Frame ^ type == 6 ? len == 8 , H2Error {
     opeque std::uint64_t ? id == 0
 }
 
-struct GoAwayFrame - H2Frame ^ type == 7 {
+struct GoAwayFrame - H2Frame ^ type == 7 , H2Error {
     id std::int32_t ? id >= 0
     code std::uint32_t
     data std::string $ len - 8
 }
 
-struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 ? id > 0 {
+struct WindowUpdateFrame - H2Frame ^ type == 8 ? len == 4 ? id > 0 , H2Error {
     increment std::int32_t ? increment > 0
 }
 
-struct Continuation - H2Frame ^ type == 9 {
+struct Continuation - H2Frame ^ type == 9 , H2Error {
     data std::string $ len
 }

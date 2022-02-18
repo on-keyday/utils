@@ -14,12 +14,12 @@ namespace binred {
     namespace hlp = utils::helper;
     using tree_t = utw::shared_ptr<Tree>;
 
-    void render_tree(utw::string& str, tree_t& tree, const utw::string& rel) {
-        if (tree->left || tree->right) {
+    void render_tree(utw::string& str, tree_t& tree, const utw::string& rel, bool outer = true) {
+        if (!outer && (tree->left || tree->right)) {
             hlp::append(str, "(");
         }
         if (tree->left) {
-            render_tree(str, tree->left, rel);
+            render_tree(str, tree->left, rel, false);
         }
         if (tree->kw == us::KeyWord::id) {
             if (tree->token != "true" && tree->token != "false" &&
@@ -30,9 +30,9 @@ namespace binred {
         }
         hlp::append(str, tree->token);
         if (tree->right) {
-            render_tree(str, tree->right, rel);
+            render_tree(str, tree->right, rel, false);
         }
-        if (tree->left || tree->right) {
+        if (!outer && (tree->left || tree->right)) {
             hlp::append(str, ")");
         }
     }
