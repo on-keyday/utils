@@ -51,8 +51,8 @@ void test_http2frame() {
     using namespace utils;
     wrap::shared_ptr<net::http2::H2Frame> frame;
     Input input;
-    char v[] = {0x00, 0x00, 0x06, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00,
-                0, 0, 0, 0, 0, 0};
+    char v[] = {0x00, 0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00,
+                /*0, 0, 0, 0, 0, 0*/};
     input.str = std::string(v, sizeof(v));
     net::http2::decode(input, frame);
 }

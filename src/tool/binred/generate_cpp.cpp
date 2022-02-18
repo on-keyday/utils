@@ -14,23 +14,35 @@ namespace binred {
     namespace hlp = utils::helper;
     using tree_t = utw::shared_ptr<Tree>;
 
-    void render_tree(utw::string& str, tree_t& tree, const utw::string& rel, bool outer = true) {
+    bool find_name(const utw::string& name, Struct& st) {
+        for (auto& m : st.member) {
+            if (m.name == name) {
+                return true;
+            }
+        }
+        if (st.base.ptr) {
+            return find_name(name, *st.base.ptr);
+        }
+        return true;
+    }
+
+    void render_tree(utw::string& str, tree_t& tree, const utw::string& rel, Struct& st, bool outer = true) {
         if (!outer && (tree->left || tree->right)) {
             hlp::append(str, "(");
         }
         if (tree->left) {
-            render_tree(str, tree->left, rel, false);
+            render_tree(str, tree->left, rel, st, false);
         }
         if (tree->kw == us::KeyWord::id) {
             if (tree->token != "true" && tree->token != "false" &&
                 tree->token != "nullptr" && rel.size() && str.back() != '.' &&
-                !hlp::contains(tree->token, "::")) {
+                !hlp::contains(tree->token, "::") && find_name(tree->token, st)) {
                 hlp::appends(str, rel, ".");
             }
         }
         hlp::append(str, tree->token);
         if (tree->right) {
-            render_tree(str, tree->right, rel, false);
+            render_tree(str, tree->right, rel, st, false);
         }
         if (!outer && (tree->left || tree->right)) {
             hlp::append(str, ")");
@@ -109,7 +121,7 @@ namespace binred {
             if (not_) {
                 hlp::append(str, "!(");
             }
-            render_tree(str, m.tree, out);
+            render_tree(str, m.tree, out, st);
             if (not_) {
                 hlp::append(str, ")");
             }
@@ -156,7 +168,7 @@ namespace binred {
             hlp::appends(str, target, ".", method, "(", out, ".", memb.name);
             if (memb.type.size) {
                 hlp::append(str, ",");
-                render_tree(str, memb.type.size, out);
+                render_tree(str, memb.type.size, out, st);
             }
             if (check_failed) {
                 hlp::append(str, ")){\n");
@@ -292,7 +304,7 @@ namespace binred {
             auto gen_decode = [&](auto& st) {
                 auto cond = st.second.base.type.existcond[0];
                 hlp::append(str, "if(");
-                render_tree(str, cond.tree, "judgement");
+                render_tree(str, cond.tree, "judgement", st.second);
                 hlp::append(str, "){\n");
                 write_indent(str, 1);
                 hlp::appends(str, "auto p = ");
@@ -379,6 +391,10 @@ namespace binred {
             if (has_base) {
                 hlp::appends(str, " : ", st.base.type.name);
                 dependency[st.base.type.name].push_back(d.first);
+                auto n = data.structs.find(st.base.type.name);
+                if (n != data.structs.end()) {
+                    st.base.ptr = &n->second;
+                }
             }
             hlp::append(str, " {\n");
             for (auto& memb : st.member) {
@@ -398,7 +414,7 @@ namespace binred {
             auto gen_base_flag = [&](auto& flag, auto& io) {
                 for (Cond& m : flag) {
                     hlp::append(str, "if(!(");
-                    render_tree(str, m.tree, io);
+                    render_tree(str, m.tree, io, st);
                     hlp::append(str, ")){\n");
                     hlp::appends(str, "return ");
                     render_cpp_errorcode(str, st, &m, nullptr, data);

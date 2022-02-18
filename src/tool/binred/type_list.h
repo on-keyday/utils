@@ -85,8 +85,11 @@ namespace binred {
         utw::string errvalue;
     };
 
+    struct Struct;
+
     struct Base {
         Type type;
+        Struct* ptr = nullptr;
     };
 
     struct Struct {
