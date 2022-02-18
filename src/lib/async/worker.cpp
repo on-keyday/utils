@@ -7,6 +7,9 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#else
+#include <ucontext.h>
+#include <cassert>
 #endif
 #include "../../include/platform/windows/dllexport_source.h"
 
@@ -22,19 +25,100 @@
 namespace utils {
     namespace async {
         using Atask = Task<Context>;
+
+        void DoTask(void*);
+        void check_term(auto& data);
+#ifdef _WIN32
+        using native_t = void*;
+        // platform dependency
+        void context_switch(native_t handle) {
+            SwitchToFiber(handle);
+        }
+
+        void context_switch(auto& data) {
+            SwitchToFiber(data->roothandle);
+            check_term(data);
+        }
+
+        constexpr size_t initial_stack_size = 1024 * 2;
+
+        void delete_context(native_t& c) {
+            DeleteFiber(c);
+            c = nullptr;
+        }
+
+        native_t create_context(Context* ctx) {
+            return CreateFiber(initial_stack_size, DoTask, ctx);
+        }
+
+        struct ThreadToFiber {
+            native_t roothandle;
+
+            ThreadToFiber() {
+                roothandle = ConvertThreadToFiber(nullptr);
+            }
+
+            ~ThreadToFiber() {
+                ConvertFiberToThread();
+            }
+        };
+
+        void set_roothandle(native_t& handle, ThreadToFiber& self) {
+            handle = self.roothandle;
+        }
+#else
+        using native_t = ucontext_t*;
+        void context_switch(native_t handle) {
+            ::setcontext(handle);
+        }
+
+        void context_switch(auto& data) {
+            check_term(data);
+        }
+
+        constexpr size_t initial_stack_size = 1024 * 2;
+
+        void delete_context(native_t& c) {
+            delete c;
+            c = nullptr;
+        }
+
+        native_t create_context(Context* ctx) {
+            assert(false && "uninplemented");
+            auto res = new ucontext_t{};
+            ::makecontext(res, (void (*)())DoTask, 1, ctx);
+        }
+
+        struct ThreadToFiber {
+            ucontext_t ctx;
+            ucontext_t* roothandle;
+
+            ThreadToFiber() {
+                ::getcontext(&ctx);
+                roothandle = &ctx;
+            }
+
+            ~ThreadToFiber() {
+            }
+        };
+
+        void set_roothandle(native_t& handle, ThreadToFiber& self) {
+            handle->uc_link = self.roothandle;
+        }
+#endif
         namespace internal {
             struct TaskData {
                 Atask task;
                 Any* placedata = nullptr;
                 size_t sigid = 0;
                 TaskState state;
-                void* fiber;
+                native_t handle;
                 Any result;
                 std::exception_ptr except;
 
                 ~TaskData() {
-                    if (fiber) {
-                        DeleteFiber(fiber);
+                    if (handle) {
+                        delete_context(handle);
                     }
                 }
             };
@@ -54,7 +138,7 @@ namespace utils {
             };
 
             struct ContextData {
-                void* rootfiber;
+                native_t roothandle;
                 TaskData task;
                 wrap::shared_ptr<WorkerData> work;
                 thread::LiteLock ctxlock_;
@@ -66,18 +150,6 @@ namespace utils {
             struct ContextHandle {
                 static wrap::shared_ptr<ContextData>& get(Context& ctx) {
                     return ctx.data;
-                }
-            };
-
-            struct ThreadToFiber {
-                void* rootfiber;
-
-                ThreadToFiber() {
-                    rootfiber = ConvertThreadToFiber(nullptr);
-                }
-
-                ~ThreadToFiber() {
-                    ConvertFiberToThread();
                 }
             };
 
@@ -102,6 +174,28 @@ namespace utils {
         struct EndTask {
         };
 
+        void DoTask(void* pdata) {
+            Context* ctx = static_cast<Context*>(pdata);
+            auto data = internal::ContextHandle::get(*ctx).get();
+            if (data->task.state == TaskState::term) {
+                context_switch(data);
+                std::terminate();  // unreachable
+            }
+            data->task.state = TaskState::running;
+            try {
+                data->task.task(*ctx);
+                data->task.state = TaskState::done;
+            } catch (CancelExcept& cancel) {
+                data->task.state = TaskState::canceled;
+            } catch (TerminateExcept& term) {
+            } catch (...) {
+                data->task.except = std::current_exception();
+                data->task.state = TaskState::except;
+            }
+            context_switch(data);
+            std::terminate();  // unreachable
+        }
+
         void check_term(auto& data) {
             if (data->task.state == TaskState::term) {
                 throw TerminateExcept{};
@@ -123,11 +217,6 @@ namespace utils {
                 }
                 c->work->wait_signal.emplace(c->task.sigid, std::move(*c->task.placedata));
             }
-        }
-
-        void context_switch(auto& data) {
-            SwitchToFiber(data->rootfiber);
-            check_term(data);
         }
 
         void AnyFuture::wait_or_suspend(Context& ctx) {
@@ -239,28 +328,6 @@ namespace utils {
             return f;
         }
 
-        void DoTask(void* pdata) {
-            Context* ctx = static_cast<Context*>(pdata);
-            auto data = internal::ContextHandle::get(*ctx).get();
-            if (data->task.state == TaskState::term) {
-                context_switch(data);
-                std::terminate();  // unreachable
-            }
-            data->task.state = TaskState::running;
-            try {
-                data->task.task(*ctx);
-                data->task.state = TaskState::done;
-            } catch (CancelExcept& cancel) {
-                data->task.state = TaskState::canceled;
-            } catch (TerminateExcept& term) {
-            } catch (...) {
-                data->task.except = std::current_exception();
-                data->task.state = TaskState::except;
-            }
-            context_switch(data);
-            std::terminate();  // unreachable
-        }
-
         auto& make_context(Any& holder, Context*& ctx) {
             holder = Context{};
             ctx = holder.type_assert<Context>();
@@ -269,41 +336,34 @@ namespace utils {
             return data;
         }
 
-        constexpr size_t initial_stack_size = 1024 * 2;
-
         auto& make_fiber(Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
             Context* ctx;
             auto& c = make_context(place, ctx);
             c->task.task = std::move(post);
-            c->task.fiber = CreateFiber(initial_stack_size, DoTask, ctx);
+            c->task.handle = create_context(ctx);
             c->task.state = TaskState::prelaunch;
             work->pooling_task++;
             c->work = std::move(work);
             return c;
         }
 
-        void delete_context(auto& c) {
-            DeleteFiber(c->task.fiber);
-            c->task.fiber = nullptr;
-        }
-
         void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
-            internal::ThreadToFiber self;
+            ThreadToFiber self;
             auto r = wd->r;
             auto w = wd->w;
             r.set_blocking(true);
             Any event;
             auto handle_fiber = [&](Any& place, internal::ContextData* c) {
-                c->rootfiber = self.rootfiber;
+                set_roothandle(c->roothandle, self);
                 c->task.placedata = &place;
                 if (wd->diepool) {
                     c->task.state = TaskState::term;
                 }
                 wd->accepting--;
-                SwitchToFiber(c->task.fiber);
+                context_switch(c->task.handle);
                 wd->accepting++;
                 c->task.placedata = nullptr;
-                c->rootfiber = nullptr;
+                c->roothandle = nullptr;
                 if (c->task.state == TaskState::done ||
                     c->task.state == TaskState::except ||
                     c->task.state == TaskState::canceled) {
@@ -314,14 +374,14 @@ namespace utils {
                             c->ptr = nullptr;
                         }
                     }
-                    delete_context(c);
+                    delete_context(c->task.handle);
                     c->work->pooling_task--;
                     c->waiter_flag.clear();
                     c->waiter_flag.notify_all();
                 }
                 else if (c->task.state == TaskState::term) {
                     // no signal is handled
-                    delete_context(c);
+                    delete_context(c->task.handle);
                     c->work->pooling_task--;
                     if (c->work->pooling_task == 0) {
                         c->work->r.close();
