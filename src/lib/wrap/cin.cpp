@@ -169,8 +169,8 @@ namespace utils {
 #else
                 ::fd_set set{0};
                 ::timeval tv{0};
-                FD_ZERO(set, 0)
-                FD_SET(set, 0)::select();
+                FD_ZERO(&set);
+                FD_SET(0, &set);
                 auto e = ::select(1, &set, nullptr, nullptr, &tv);
                 return e != 0;
 #endif

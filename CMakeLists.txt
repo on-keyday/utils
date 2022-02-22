@@ -122,12 +122,12 @@ PRIVATE
 "src/lib/net/async/common_pool.cpp"
 "src/lib/net/async/async_tcp.cpp"
 )
-if(WIN32)
+#if(WIN32)
 target_sources(utils
 PRIVATE
 "src/lib/async/worker.cpp"
 )
-endif()
+#endif()
 
 
 target_link_libraries(fileview utils)

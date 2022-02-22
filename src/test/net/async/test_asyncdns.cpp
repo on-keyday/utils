@@ -17,7 +17,7 @@ void test_asyncdns() {
     auto address = result.get();
     auto end = std::chrono::system_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
-    utils::wrap::cout_wrap() << time;
+    utils::wrap::cout_wrap() << time.count() << "ms";
 }
 
 int main() {

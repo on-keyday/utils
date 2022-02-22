@@ -31,7 +31,7 @@ void test_asynctcp() {
             pack << "host: " << host << "\n";
             auto t = time();
             pack << "query:\n"
-                 << t << "\n";
+                 << t.count() << "ms\n";
             logicaltime += t.count();
             begin = system_clock::now();
             auto conn = co.get();
@@ -65,7 +65,7 @@ void test_asynctcp() {
                  << suspend << "\n";
             t = time();
             pack << "time:\n"
-                 << t << "\n\n";
+                 << t.count() << "ms\n\n";
             logicaltime += t.count();
             utils::wrap::cout_wrap() << std::move(pack);
             auto& pool = net::get_pool();
@@ -81,7 +81,7 @@ void test_asynctcp() {
         utils::wrap::cout_wrap() << "sequential time:\n"
                                  << logicaltime << "ms\n";
         utils::wrap::cout_wrap() << "total time\n"
-                                 << duration_cast<milliseconds>(end - begin) << "\n\n";
+                                 << duration_cast<milliseconds>(end - begin).count() << "ms\n\n";
     };
     print_time();
     logicaltime = 0;

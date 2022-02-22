@@ -735,7 +735,7 @@ namespace utils {
         template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn = decltype(internal::def_Fn<Kind>())>
         wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_parser(Src&& src, Fn&& fn = internal::def_Fn<Kind>()) {
             auto v = make_ref_seq(src);
-            return compile_parser<Inout, String, Kind, Vec>(v, fn);
+            return compile_parser<Input, String, Kind, Vec>(v, fn);
         }
     }  // namespace parser
 }  // namespace utils

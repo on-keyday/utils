@@ -55,9 +55,9 @@ namespace binred {
         }
     }
 
-    void generate_flag_cond_begin(utw::string& str, auto& in, tree_t& flag, bool not_ = false) {
+    void generate_flag_cond_begin(utw::string& str, auto& in, tree_t& flag, Struct& st, bool not_ = false) {
         hlp::append(str, "if (");
-        render_tree(str, flag);
+        render_tree(str, flag, in, st);
         hlp::append(str, ") {\n");
         write_indent(str, 1);
     }

@@ -17,6 +17,7 @@
 #include "../number/prefix.h"
 #include "../helper/string_reader.h"
 #include "ifaces.h"
+#include "../helper/equal.h"
 
 namespace utils {
     namespace parser {
@@ -174,7 +175,7 @@ namespace utils {
         struct NumberError {
             number::NumErr err;
             String Error() {
-                return utf::convert<String>(error_message(err))
+                return utf::convert<String>(error_message(err));
             }
         };
 
