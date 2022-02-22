@@ -33,7 +33,7 @@ namespace utils {
 #ifdef _WIN32
         using native_t = void*;
         // platform dependency
-        void context_switch(native_t handle, native_t from) {
+        void context_switch(native_t handle, native_t) {
             SwitchToFiber(handle);
         }
 
@@ -102,6 +102,7 @@ namespace utils {
                     ucontext_t c;
                 };
                 auto p = reinterpret_cast<std::uintptr_t>(stack_ptr()) - reinterpret_cast<std::uintptr_t>(sizeof(nct));
+                p &= ~static_cast<std::uintptr_t>(0xff);
                 return reinterpret_cast<void*>(p);
             }
 
@@ -110,7 +111,7 @@ namespace utils {
                 return reinterpret_cast<void*>(p);
             }
 
-            bool init(size_t times = 1) {
+            bool init(size_t times = 2) {
                 if (map_root) {
                     return false;
                 }
@@ -121,6 +122,7 @@ namespace utils {
                     return false;
                 }
                 ::mprotect(p, page_size_, PROT_NONE);
+                map_root = p;
                 return true;
             }
 
@@ -142,6 +144,11 @@ namespace utils {
 
             size_t size() const {
                 return size_;
+            }
+
+            size_t func_stack_size() const {
+                auto res = reinterpret_cast<std::uintptr_t>(func_stack_root()) - reinterpret_cast<std::uintptr_t>(root_ptr());
+                return res;
             }
         };
 
@@ -181,8 +188,11 @@ namespace utils {
 
         using native_t = native_context*;
 
-        void context_switch(native_t handle, native_t from) {
-            ::swapcontext(&from->ctx, &handle->ctx);
+        void context_switch(native_t to, native_t from) {
+            // glock_.lock();
+            auto res = ::swapcontext(&from->ctx, &to->ctx);
+            assert(res == 0);
+            // glock_.unlock();
         }
 
         void context_switch(auto& data) {
@@ -200,7 +210,6 @@ namespace utils {
         }
 
         native_t create_native_context(Context* ctx) {
-            assert(false && "uninplemented");
             native_stack stack;
             if (!stack.init()) {
                 return nullptr;
@@ -213,7 +222,7 @@ namespace utils {
                 return nullptr;
             }
             res->ctx.uc_stack.ss_sp = res->stack.root_ptr();
-            res->ctx.uc_stack.ss_size = res->stack.size();
+            res->ctx.uc_stack.ss_size = res->stack.func_stack_size();
             res->ctx.uc_link = nullptr;
             ::makecontext(&res->ctx, (void (*)())DoTask, 1, ctx);
             return res;
@@ -233,6 +242,7 @@ namespace utils {
         };
 
         void set_roothandle(native_t& handle, ThreadToFiber& self) {
+            //::getcontext(&self.roothandle->ctx);
             handle = self.roothandle;
         }
 #endif

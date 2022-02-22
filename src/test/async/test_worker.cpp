@@ -16,6 +16,7 @@
 void test_worker() {
     using namespace utils;
     async::TaskPool pool;
+    pool.set_maxthread(1);
     auto task = pool.start([&](async::Context& ctx) {
         ctx.task_wait([](async::Context& ctx) {
             // ctx.cancel();
@@ -24,7 +25,7 @@ void test_worker() {
                     utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();
                 }
-                ctx.cancel();
+                // ctx.cancel();
             });
             utils::wrap::cout_wrap() << "hello guy\n";
         });
