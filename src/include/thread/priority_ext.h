@@ -70,6 +70,7 @@ namespace utils {
                 push_count++;
                 if (push_count > 100) {
                     changer(que);
+                    push_count = 0;
                 }
                 if (priority_mode) {
                     check_make_heap(que);
