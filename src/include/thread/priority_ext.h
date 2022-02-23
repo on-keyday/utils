@@ -50,14 +50,14 @@ namespace utils {
                     que.push(std::move(t));
                 }
                 else {
-                    que.container().push_back(std::move());
+                    que.container().push_back(std::move(t));
                 }
             }
 
             template <class T, class Container, class Compare>
             void pop(WithRawContainer<T, Container, Compare>& que, T& t) {
                 if (priority_mode) {
-                    t = std::move(const_cast<T>(que.top()));
+                    t = std::move(const_cast<T&>(que.top()));
                     que.pop();
                 }
                 else {

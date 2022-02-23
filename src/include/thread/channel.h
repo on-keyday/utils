@@ -73,7 +73,7 @@ namespace utils {
 
             template <class Que, class T>
             void pop(Que& que, T& t) {
-                t = std::move(const_cast<T>(que.top()));
+                t = std::move(const_cast<T&>(que.top()));
                 que.pop();
             }
         };

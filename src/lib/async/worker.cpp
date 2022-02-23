@@ -19,6 +19,7 @@
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/thread/channel.h"
 #include "../../include/helper/iface_cast.h"
+#include "../../include/thread/priority_ext.h"
 #include <exception>
 #include <mutex>
 
@@ -246,6 +247,16 @@ namespace utils {
             handle = self.roothandle;
         }
 #endif
+
+        struct compare_type {
+            bool operator()(auto& a, auto& b) {
+                return a.priority() < b.priority();
+            }
+        };
+
+        template <class T>
+        using queue_type = thread::WithRawContainer<T, wrap::queue<T>, compare_type>;
+
         namespace internal {
             struct TaskData {
                 Atask task;
@@ -264,8 +275,8 @@ namespace utils {
             };
 
             struct WorkerData {
-                thread::SendChan<Event> w;
-                thread::RecvChan<Event> r;
+                thread::SendChan<Event, queue_type, thread::DualModeHandler> w;
+                thread::RecvChan<Event, queue_type, thread::DualModeHandler> r;
                 wrap::hash_map<size_t, Event> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
@@ -626,7 +637,8 @@ namespace utils {
         void TaskPool::init_data() {
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
-                auto [w, r] = thread::make_chan<Event>();
+
+                auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler>();
                 data->w = w;
                 data->r = r;
                 data->maxthread = std::thread::hardware_concurrency() / 2;
