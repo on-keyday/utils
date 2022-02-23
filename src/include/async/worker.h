@@ -53,8 +53,8 @@ namespace utils {
             Canceler(F&& f, Context* ptr)
                 : fn(std::move(f)), ptr(ptr) {}
 
-            Canceler(Canceler&& c) {
-                fn = std::move(c.fn);
+            Canceler(Canceler&& c)
+                : fn(std::move(c.fn)) {
                 ptr = c.ptr;
                 c.ptr = nullptr;
             }

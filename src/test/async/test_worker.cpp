@@ -16,15 +16,17 @@
 void test_worker() {
     using namespace utils;
     async::TaskPool pool;
+    std::atomic_size_t count = 0;
     pool.set_priority_mode(true);
     auto task = pool.start([&](async::Context& ctx) {
-        ctx.task_wait([](async::Context& ctx) {
+        ctx.task_wait([&](async::Context& ctx) {
             // ctx.cancel();
-            ctx.task_wait([](async::Context& ctx) {
+            ctx.task_wait([&](async::Context& ctx) {
                 for (auto i = 0; i < 10000; i++) {
                     utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();
                 }
+                ctx.set_priority(0);
                 ctx.cancel();
             });
             utils::wrap::cout_wrap() << "hello guy\n";
@@ -32,6 +34,7 @@ void test_worker() {
     });
     pool.post([&](async::Context& ctx) {
         while (!task.is_done()) {
+            count++;
             utils::wrap::cout_wrap() << "async\n";
             ctx.suspend();
         }
