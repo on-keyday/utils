@@ -247,10 +247,11 @@ namespace utils {
             handle = self.roothandle;
         }
 #endif
+        constexpr auto default_priority = 0x7f;
 
         struct compare_type {
             bool operator()(auto& a, auto& b) {
-                return a.priority() < b.priority();
+                return a.priority() > b.priority();
             }
         };
 
@@ -259,9 +260,9 @@ namespace utils {
 
         struct PriorityReset {
             void operator()(queue_type<Event>& que) {
-                for (auto& v : que.container()) {
-                    v.set_priority(0x7f);
-                }
+                /*for (auto& v : que.container()) {
+                    v.set_priority(default_priority);
+                }*/
             }
         };
 
@@ -274,7 +275,7 @@ namespace utils {
                 native_t handle;
                 Any result;
                 std::exception_ptr except;
-                size_t priority = 0x7f;
+                size_t priority = default_priority;
 
                 ~TaskData() {
                     if (handle) {
@@ -321,13 +322,18 @@ namespace utils {
         struct TerminateExcept {
         };
 
+        constexpr auto priority_sigback = 0;
+        constexpr auto priority_signal = 1;
+        constexpr auto priority_taskpost = 2;
+        constexpr auto priority_endtask = ~0;
+
         struct SignalBack {
             std::atomic_flag sig;
             wrap::shared_ptr<internal::ContextData> data;
             Atask task;
 
             constexpr size_t priority() const {
-                return 0;
+                return priority_sigback;
             }
             constexpr void set_priority(size_t) const {}
         };
@@ -335,7 +341,7 @@ namespace utils {
         struct Signal {
             size_t sig;
             constexpr size_t priority() const {
-                return 1;
+                return priority_signal;
             }
             constexpr void set_priority(size_t) const {}
         };
@@ -343,7 +349,7 @@ namespace utils {
         struct TaskPost {
             Atask task;
             constexpr size_t priority() const {
-                return 2;
+                return priority_taskpost;
             }
 
             constexpr void set_priority(size_t) const {}
@@ -359,7 +365,7 @@ namespace utils {
 
         struct EndTask {
             constexpr size_t priority() const {
-                return ~0;
+                return priority_endtask;
             }
             constexpr void set_priority(size_t) const {}
         };

@@ -9,15 +9,12 @@
 #include <async/worker.h>
 #include <wrap/cout.h>
 
-#include <functional>
-
-#include <any>
-
 void test_worker() {
     using namespace utils;
     async::TaskPool pool;
     std::atomic_size_t count = 0;
     pool.set_priority_mode(true);
+    pool.set_maxthread(1);
     auto task = pool.start([&](async::Context& ctx) {
         ctx.task_wait([&](async::Context& ctx) {
             // ctx.cancel();
@@ -26,7 +23,7 @@ void test_worker() {
                     utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();
                 }
-                ctx.set_priority(0);
+                // ctx.set_priority(0);
                 ctx.cancel();
             });
             utils::wrap::cout_wrap() << "hello guy\n";
