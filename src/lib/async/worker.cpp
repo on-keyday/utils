@@ -117,7 +117,7 @@ namespace utils {
                 }
                 size_ = page_size_ * (times + 1);
                 auto p = ::mmap(nullptr, size_,
-                                PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+                                PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK | MAP_GROWSDOWN, -1, 0);
                 if (!p || p == MAP_FAILED) {
                     return false;
                 }
