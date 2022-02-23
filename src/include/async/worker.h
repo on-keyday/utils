@@ -190,6 +190,8 @@ namespace utils {
 
             void set_yield(bool do_flag);
 
+            void set_priority_mode(bool priority_mode);
+
             template <class Fn>
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));

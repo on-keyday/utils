@@ -688,6 +688,15 @@ namespace utils {
             return 0;
         }
 
+        void TaskPool::set_priority_mode(bool priority_mode) {
+            initlock.lock();
+            init_data();
+            data->w.set_handler([&](thread::DualModeHandler& h) {
+                h.priority_mode = priority_mode;
+            });
+            initlock.unlock();
+        }
+
         void TaskPool::posting(Task<Context>&& task) {
             init();
             data->w << TaskPost{std::move(task)};
