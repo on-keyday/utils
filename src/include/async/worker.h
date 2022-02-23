@@ -89,6 +89,8 @@ namespace utils {
 
             ExternalTask* get_taskrequest();
 
+            bool cancel();
+
             bool is_done() const {
                 auto st = state();
                 return st == TaskState::done || st == TaskState::except ||
@@ -164,7 +166,7 @@ namespace utils {
 
             AnyFuture clone() const;
 
-            size_t priority();
+            size_t priority() const;
 
             void set_priority(size_t e);
 

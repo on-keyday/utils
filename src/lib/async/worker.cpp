@@ -306,6 +306,7 @@ namespace utils {
                 Context* ptr = nullptr;
                 std::atomic_flag waiter_flag;
                 std::atomic<ExternalTask*> outer = nullptr;
+                std::atomic_bool reqcancel;
             };
 
             struct ContextHandle {
@@ -355,7 +356,7 @@ namespace utils {
             constexpr void set_priority(size_t) const {}
         };
 
-        size_t Context::priority() {
+        size_t Context::priority() const {
             return data->task.priority;
         }
 
@@ -400,6 +401,9 @@ namespace utils {
                 data->task.state = TaskState::term;
                 throw TerminateExcept{};
             }
+            if (data->reqcancel) {
+                throw CancelExcept{};
+            }
         }
 
         void append_to_wait(internal::ContextData* c) {
@@ -415,13 +419,18 @@ namespace utils {
             }
         }
 
+        bool AnyFuture::cancel() {
+            if (!data) return false;
+            data->reqcancel = true;
+            return true;
+        }
+
         void AnyFuture::wait_or_suspend(Context& ctx) {
             check_term(data);
             if (!not_own && !is_done()) {
                 auto c = internal::ContextHandle::get(ctx);
                 {
                     std::scoped_lock _{data->ctxlock_};
-                    data->ctxlock_.lock();
                     if (is_done()) {
                         return;
                     }
