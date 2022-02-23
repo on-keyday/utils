@@ -60,6 +60,24 @@ namespace utils {
             }
         };
 
+        struct PriorityHandler {
+            template <class Que>
+            bool remove(Que& que, ChanDisposePolicy policy) {
+                return false;
+            }
+
+            template <class Que, class T>
+            void push(Que& que, T&& t) {
+                que.push(std::move(t));
+            }
+
+            template <class Que, class T>
+            void pop(Que& que, T& t) {
+                t = std::move(const_cast<T>(que.top()));
+                que.pop();
+            }
+        };
+
         template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler>
         struct ChanBuffer {
            private:
@@ -128,6 +146,14 @@ namespace utils {
 
             size_t peek_queue() const {
                 return que.size();
+            }
+
+            template <class Fn>
+            bool set_handler(Fn&& fn) {
+                lock_.lock();
+                fn(this->handler);
+                lock_.unlock();
+                return true;
             }
 
             void change_limit(size_t limit) {
@@ -271,6 +297,11 @@ namespace utils {
 
             bool close() {
                 return buffer ? buffer->close() : true;
+            }
+
+            template <class Fn>
+            bool set_handler(Fn&& fn) {
+                return buffer ? buffer->set_handler(fn) : false;
             }
         };
 
