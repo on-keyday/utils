@@ -4,7 +4,7 @@
 #    https://opensource.org/licenses/mit-license.php
 # frame - http2 frame definition
 #generate code
-# tool\binred -i src/include/net/http2/frame.bred -o src/include/net/http2/frame.h -p -e none unknown -S wrap::shared_ptr wrap::make_shared 
+# tool\binred -i src/include/net/http2/frame.bred -o src/include/net/http2/frame.h -p -e none unknown -S wrap::shared_ptr wrap::make_shared --license
 
 package utils::net::http2
 
