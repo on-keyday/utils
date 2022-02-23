@@ -249,7 +249,7 @@ namespace utils {
         namespace internal {
             struct TaskData {
                 Atask task;
-                Any* placedata = nullptr;
+                Event* placedata = nullptr;
                 size_t sigid = 0;
                 TaskState state;
                 native_t handle;
@@ -264,9 +264,9 @@ namespace utils {
             };
 
             struct WorkerData {
-                thread::SendChan<Any> w;
-                thread::RecvChan<Any> r;
-                wrap::hash_map<size_t, Any> wait_signal;
+                thread::SendChan<Event> w;
+                thread::RecvChan<Event> r;
+                wrap::hash_map<size_t, Event> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
                 std::atomic_uint32_t accepting = 0;
@@ -301,17 +301,38 @@ namespace utils {
         struct TerminateExcept {
         };
 
-        struct Signal {
-            size_t sig;
-        };
-
         struct SignalBack {
             std::atomic_flag sig;
             wrap::shared_ptr<internal::ContextData> data;
             Atask task;
+
+            constexpr size_t priority() const {
+                return 0;
+            }
         };
 
+        struct Signal {
+            size_t sig;
+            constexpr size_t priority() const {
+                return 1;
+            }
+        };
+
+        struct TaskPost {
+            Atask task;
+            constexpr size_t priority() const {
+                return 2;
+            }
+        };
+
+        size_t Context::priority() const {
+            return 0x7f;
+        }
+
         struct EndTask {
+            constexpr size_t priority() const {
+                return 0xff;
+            }
         };
 
         void DoTask(void* pdata) {
@@ -418,7 +439,7 @@ namespace utils {
                 return false;
             }
             append_to_wait(data.get());
-            data->work->w << std::move(task);
+            data->work->w << TaskPost{std::move(task)};
             context_switch(data);
             data->task.state = TaskState::running;
             return true;
@@ -468,7 +489,7 @@ namespace utils {
             return f;
         }
 
-        auto& make_context(Any& holder, Context*& ctx) {
+        auto& make_context(Event& holder, Context*& ctx) {
             holder = Context{};
             ctx = holder.type_assert<Context>();
             auto& data = internal::ContextHandle::get(*ctx);
@@ -476,7 +497,7 @@ namespace utils {
             return data;
         }
 
-        auto& make_fiber(Any& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
+        auto& make_fiber(Event& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
             Context* ctx;
             auto& c = make_context(place, ctx);
             c->task.task = std::move(post);
@@ -492,8 +513,8 @@ namespace utils {
             auto r = wd->r;
             auto w = wd->w;
             r.set_blocking(true);
-            Any event;
-            auto handle_fiber = [&](Any& place, internal::ContextData* c) {
+            Event event;
+            auto handle_fiber = [&](Event& place, internal::ContextData* c) {
                 set_roothandle(c->roothandle, self);
                 c->task.placedata = &place;
                 if (wd->diepool) {
@@ -559,13 +580,13 @@ namespace utils {
                         }
                         continue;
                     }
-                    if (auto post = event.type_assert<Atask>()) {
-                        Any place;
-                        auto& c = make_fiber(place, std::move(*post), wd);
+                    if (auto post = event.type_assert<TaskPost>()) {
+                        Event place;
+                        auto& c = make_fiber(place, std::move(post->task), wd);
                         handle_fiber(place, c.get());
                     }
                     else if (auto sigback = event.type_assert<SignalBack*>()) {
-                        Any place;
+                        Event place;
                         auto p = *sigback;
                         auto& c = make_fiber(place, std::move(p->task), wd);
                         c->waiter_flag.test_and_set();
@@ -575,7 +596,7 @@ namespace utils {
                         handle_fiber(place, c.get());
                     }
                     else if (auto signal = event.type_assert<Signal>()) {
-                        Any sig;
+                        Event sig;
                         wd->lock_.lock();
                         auto found = wd->wait_signal.find(signal->sig);
                         if (found != wd->wait_signal.end()) {
@@ -605,7 +626,7 @@ namespace utils {
         void TaskPool::init_data() {
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
-                auto [w, r] = thread::make_chan<Any>();
+                auto [w, r] = thread::make_chan<Event>();
                 data->w = w;
                 data->r = r;
                 data->maxthread = std::thread::hardware_concurrency() / 2;
@@ -657,7 +678,7 @@ namespace utils {
 
         void TaskPool::posting(Task<Context>&& task) {
             init();
-            data->w << std::move(task);
+            data->w << TaskPost{std::move(task)};
         }
 
         AnyFuture TaskPool::starting(Task<Context>&& task) {

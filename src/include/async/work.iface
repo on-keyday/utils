@@ -14,6 +14,13 @@ interface Any {
     __sso__() type = 2
 }
 
+interface Event {
+    decltype() type
+    __unsafe__() type
+    __sso__() type = 2
+    const priority() size_t
+}
+
 typeparam Ctx
 interface Task {
     __call__(ctx &Ctx) void

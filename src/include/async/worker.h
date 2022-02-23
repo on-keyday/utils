@@ -164,6 +164,8 @@ namespace utils {
 
             AnyFuture clone() const;
 
+            size_t priority() const;
+
            private:
             friend struct internal::ContextHandle;
             wrap::shared_ptr<internal::ContextData> data;
