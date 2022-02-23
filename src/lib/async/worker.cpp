@@ -350,8 +350,7 @@ namespace utils {
         };
 
         size_t Context::priority() {
-            auto p = data->task.priority++;
-            return p;
+            return data->task.priority;
         }
 
         void Context::set_priority(size_t e) {
