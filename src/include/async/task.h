@@ -200,7 +200,8 @@ namespace utils {
             struct NOVTABLE__ interface__ {
                 virtual const void* raw__() const noexcept = 0;
                 virtual const std::type_info& type__() const noexcept = 0;
-                virtual size_t priority() const = 0;
+                virtual size_t priority() = 0;
+                virtual void set_priority(size_t p) = 0;
                 virtual interface__* move__(void* __storage_box) = 0;
 
                 virtual ~interface__() = default;
@@ -222,12 +223,20 @@ namespace utils {
                     return typeid(T__);
                 }
 
-                size_t priority() const override {
+                size_t priority() override {
                     auto t_ptr_ = utils::helper::deref(this->t_holder_);
                     if (!t_ptr_) {
                         return size_t{};
                     }
                     return t_ptr_->priority();
+                }
+
+                void set_priority(size_t p) override {
+                    auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                    if (!t_ptr_) {
+                        return (void)0;
+                    }
+                    return t_ptr_->set_priority(p);
                 }
 
                 interface__* move__(void* __storage_box) override {
@@ -369,8 +378,12 @@ namespace utils {
                 return const_cast<void*>(iface->raw__());
             }
 
-            size_t priority() const {
+            size_t priority() {
                 return iface ? iface->priority() : size_t{};
+            }
+
+            void set_priority(size_t p) {
+                return iface ? iface->set_priority(p) : (void)0;
             }
 
             Event(const Event&) = delete;

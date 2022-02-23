@@ -164,7 +164,9 @@ namespace utils {
 
             AnyFuture clone() const;
 
-            size_t priority() const;
+            size_t priority();
+
+            void set_priority(size_t e);
 
            private:
             friend struct internal::ContextHandle;

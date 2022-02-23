@@ -16,7 +16,7 @@
 void test_worker() {
     using namespace utils;
     async::TaskPool pool;
-    // pool.set_maxthread(1);
+    pool.set_priority_mode(true);
     auto task = pool.start([&](async::Context& ctx) {
         ctx.task_wait([](async::Context& ctx) {
             // ctx.cancel();

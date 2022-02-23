@@ -257,6 +257,14 @@ namespace utils {
         template <class T>
         using queue_type = thread::WithRawContainer<T, wrap::queue<T>, compare_type>;
 
+        struct PriorityReset {
+            void operator()(queue_type<Event>& que) {
+                for (auto& v : que.container()) {
+                    v.set_priority(0x7f);
+                }
+            }
+        };
+
         namespace internal {
             struct TaskData {
                 Atask task;
@@ -266,6 +274,7 @@ namespace utils {
                 native_t handle;
                 Any result;
                 std::exception_ptr except;
+                size_t priority = 0x7f;
 
                 ~TaskData() {
                     if (handle) {
@@ -275,8 +284,8 @@ namespace utils {
             };
 
             struct WorkerData {
-                thread::SendChan<Event, queue_type, thread::DualModeHandler> w;
-                thread::RecvChan<Event, queue_type, thread::DualModeHandler> r;
+                thread::SendChan<Event, queue_type, thread::DualModeHandler<PriorityReset>> w;
+                thread::RecvChan<Event, queue_type, thread::DualModeHandler<PriorityReset>> r;
                 wrap::hash_map<size_t, Event> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
@@ -320,6 +329,7 @@ namespace utils {
             constexpr size_t priority() const {
                 return 0;
             }
+            constexpr void set_priority(size_t) const {}
         };
 
         struct Signal {
@@ -327,6 +337,7 @@ namespace utils {
             constexpr size_t priority() const {
                 return 1;
             }
+            constexpr void set_priority(size_t) const {}
         };
 
         struct TaskPost {
@@ -334,16 +345,24 @@ namespace utils {
             constexpr size_t priority() const {
                 return 2;
             }
+
+            constexpr void set_priority(size_t) const {}
         };
 
-        size_t Context::priority() const {
-            return 0x7f;
+        size_t Context::priority() {
+            auto p = data->task.priority++;
+            return p;
+        }
+
+        void Context::set_priority(size_t e) {
+            data->task.priority = e;
         }
 
         struct EndTask {
             constexpr size_t priority() const {
-                return 0xff;
+                return ~0;
             }
+            constexpr void set_priority(size_t) const {}
         };
 
         void DoTask(void* pdata) {
@@ -638,7 +657,7 @@ namespace utils {
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
 
-                auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler>();
+                auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler<PriorityReset>>();
                 data->w = w;
                 data->r = r;
                 data->maxthread = std::thread::hardware_concurrency() / 2;
@@ -691,7 +710,7 @@ namespace utils {
         void TaskPool::set_priority_mode(bool priority_mode) {
             initlock.lock();
             init_data();
-            data->w.set_handler([&](thread::DualModeHandler& h) {
+            data->w.set_handler([&](auto& h) {
                 h.priority_mode = priority_mode;
             });
             initlock.unlock();

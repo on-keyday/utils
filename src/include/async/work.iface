@@ -18,7 +18,8 @@ interface Event {
     decltype() type
     __unsafe__() type
     __sso__() type = 2
-    const priority() size_t
+    priority() size_t
+    set_priority(p size_t) void
 }
 
 typeparam Ctx
