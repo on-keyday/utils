@@ -33,7 +33,23 @@ namespace utils {
 
         using ChanState = wrap::EnumWrap<ChanStateValue, ChanStateValue::enable, ChanStateValue::closed>;
 
-        template <class T, template <class...> class Que = wrap::queue>
+        struct PolicyHandler {
+            template <class Que>
+            bool operator()(Que& que, ChanDisposePolicy policy) {
+                if (policy == ChanDisposePolicy::dispose_front) {
+                    que.pop_front();
+                }
+                else if (policy == ChanDisposePolicy::dispose_back) {
+                    que.pop_back();
+                }
+                else {
+                    return false;
+                }
+                return true;
+            }
+        };
+
+        template <class T, template <class...> class Que = wrap::queue, class Policy = PolicyHandler>
         struct ChanBuffer {
            private:
             Que<T> que;
@@ -48,14 +64,9 @@ namespace utils {
                 if (limit == 0) {
                     return false;
                 }
+                auto polobj = Policy{};
                 while (que.size() >= limit) {
-                    if (policy == ChanDisposePolicy::dispose_front) {
-                        que.pop_front();
-                    }
-                    else if (policy == ChanDisposePolicy::dispose_back) {
-                        que.pop_back();
-                    }
-                    else {
+                    if (!polobj(que, policy)) {
                         return false;
                     }
                 }
