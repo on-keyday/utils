@@ -33,9 +33,9 @@ namespace utils {
 
         using ChanState = wrap::EnumWrap<ChanStateValue, ChanStateValue::enable, ChanStateValue::closed>;
 
-        struct PolicyHandler {
+        struct ContainerHandler {
             template <class Que>
-            bool operator()(Que& que, ChanDisposePolicy policy) {
+            bool remove(Que& que, ChanDisposePolicy policy) {
                 if (policy == ChanDisposePolicy::dispose_front) {
                     que.pop_front();
                 }
@@ -47,9 +47,20 @@ namespace utils {
                 }
                 return true;
             }
+
+            template <class Que, class T>
+            void push(Que& que, T&& t) {
+                que.push_back(std::move(t));
+            }
+
+            template <class Que, class T>
+            void pop(Que& que, T& t) {
+                t = std::move(que.front());
+                que.pop_front();
+            }
         };
 
-        template <class T, template <class...> class Que = wrap::queue, class Policy = PolicyHandler>
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler>
         struct ChanBuffer {
            private:
             Que<T> que;
@@ -59,14 +70,14 @@ namespace utils {
             LiteLock read_blocking;
             LiteLock write_blocking;
             ChanDisposePolicy policy = ChanDisposePolicy::dispose_new;
+            Handler handler;
 
             bool check_limit() {
                 if (limit == 0) {
                     return false;
                 }
-                auto polobj = Policy{};
                 while (que.size() >= limit) {
-                    if (!polobj(que, policy)) {
+                    if (!handler.remove(que, policy)) {
                         return false;
                     }
                 }
@@ -93,8 +104,7 @@ namespace utils {
                 if (que.size() == 0) {
                     return ChanStateValue::empty;
                 }
-                t = std::move(que.front());
-                que.pop_front();
+                handler.pop(que, t);
                 write_blocking.unlock();
                 return true;
             }
@@ -106,7 +116,7 @@ namespace utils {
                 if (!check_limit()) {
                     return ChanStateValue::full;
                 }
-                que.push_back(std::move(t));
+                handler.push(que, std::move(t));
                 read_blocking.unlock();
                 return true;
             }
@@ -216,10 +226,10 @@ namespace utils {
             mustnot,
         };
 
-        template <class T, template <class...> class Que>
+        template <class T, template <class...> class Que, class Handler>
         struct ChanBase {
            protected:
-            using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que>>;
+            using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que, Handler>>;
             buffer_t buffer;
             BlockLevel blocking = BlockLevel::normal;
 
@@ -264,9 +274,9 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue>
-        struct RecvChan : ChanBase<T, Que> {
-            using ChanBase<T, Que>::ChanBase;
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler>
+        struct RecvChan : ChanBase<T, Que, Handler> {
+            using ChanBase<T, Que, Handler>::ChanBase;
 
             ChanState operator>>(T& t) {
                 if (!this->buffer) {
@@ -284,9 +294,9 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue>
-        struct SendChan : ChanBase<T, Que> {
-            using ChanBase<T, Que>::ChanBase;
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler>
+        struct SendChan : ChanBase<T, Que, Handler> {
+            using ChanBase<T, Que, Handler>::ChanBase;
 
             ChanState operator<<(T&& t) {
                 if (!this->buffer) {
@@ -304,10 +314,10 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue>
-        std::pair<SendChan<T, Que>, RecvChan<T, Que>> make_chan(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new) {
-            auto buffer = wrap::make_shared<ChanBuffer<T, Que>>(limit, policy);
-            return {SendChan<T, Que>(buffer), RecvChan<T, Que>(buffer)};
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler>
+        std::pair<SendChan<T, Que, Handler>, RecvChan<T, Que, Handler>> make_chan(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new) {
+            auto buffer = wrap::make_shared<ChanBuffer<T, Que, Handler>>(limit, policy);
+            return {SendChan<T, Que, Handler>(buffer), RecvChan<T, Que, Handler>(buffer)};
         }
 
     }  // namespace thread
