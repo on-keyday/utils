@@ -1125,7 +1125,7 @@ namespace ifacegen {
             }
             if (iface.second.has_nonnull) {
                 if (any(flag & GenFlag::not_accept_null)) {
-                    f |= ~GenFlag::not_accept_null;
+                    f &= ~GenFlag::not_accept_null;
                 }
                 else {
                     f |= GenFlag::not_accept_null;
