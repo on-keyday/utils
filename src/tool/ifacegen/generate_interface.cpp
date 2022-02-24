@@ -1124,7 +1124,12 @@ namespace ifacegen {
                 }
             }
             if (iface.second.has_nonnull) {
-                f |= GenFlag::not_accept_null;
+                if (any(flag & GenFlag::not_accept_null)) {
+                    f |= ~GenFlag::not_accept_null;
+                }
+                else {
+                    f |= GenFlag::not_accept_null;
+                }
             }
             render_cpp_single_struct(str, f, nmspc, iface, alias, append_typeid, append_typefn);
         }

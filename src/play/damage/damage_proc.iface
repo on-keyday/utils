@@ -1,0 +1,16 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+
+# damage_proc - damage process
+package play::damage
+
+#generate code
+# tool\ifacegen -i src/play/damage/damage_proc.iface -o src/play/damage/damage_proc.h --license -Ven
+
+import "damage.h"
+
+interface ProcDamage {
+    proc_damage(from &const Target,to &const Target,damage &Damage) void
+}

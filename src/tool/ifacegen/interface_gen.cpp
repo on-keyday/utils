@@ -98,6 +98,7 @@ Special Value:
         __unsafe__ - generate unsafe raw pointer getter (short cut) ex) __unsafe__() type
         __vtable__ - generate c-language style vtable class and function (only member function) ex) __vtable__() type
         __sso__ - generate code using small size optimization ex) __sso__() type
+        __nonnull__ - reverse behaviour of `not accept null` flag: -n.
     Default Value:
         panic - generate throw std::bad_function_call()
         (default of __sso__()) - set sso buffer size 
