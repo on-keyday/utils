@@ -13,13 +13,13 @@ void test_worker() {
     using namespace utils;
     async::TaskPool pool;
     std::atomic_size_t count = 0;
-    pool.set_priority_mode(false);
+    pool.set_priority_mode(true);
     pool.set_maxthread(1);
     auto task = pool.start([&](async::Context& ctx) {
         ctx.task_wait([&](async::Context& ctx) {
             // ctx.cancel();
             ctx.task_wait([&](async::Context& ctx) {
-                ctx.set_priority(10);
+                // ctx.set_priority(10);
                 for (auto i = 0; i < 10000; i++) {
                     utils::wrap::cout_wrap() << utils::wrap::pack(std::this_thread::get_id(), ":", i, "\n");
                     ctx.suspend();

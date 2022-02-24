@@ -45,7 +45,7 @@ namespace utils {
                 }*/
                 SFINAE_BLOCK_T_END()
 
-                SFINAE_BLOCK_T_BEGIN(has_map_interface, (std::get<1>(*std::declval<T&>().begin()), std::declval<T&>.end()))
+                SFINAE_BLOCK_T_BEGIN(has_map_interface, (std::get<1>(*std::declval<T&>().begin()), std::declval<T&>().end()))
                 static bool invoke(T& t, JSON& json) {
                     json.init_obj();
                     for (auto& v : t) {

@@ -20,7 +20,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 set(CMAKE_CXX_FLAGS "-nostdinc++ -nodefaultlibs -isystem /lib/llvm-12/include/c++/v1 -fuse-ld=lld")
-set(CMAKE_EXE_LINKER_FLAGS  "-lc++ -lc++abi -lm -lc -lgcc_s -lgcc")
+set(CMAKE_EXE_LINKER_FLAGS  "-lc++ -lc++abi -lm -lc -lgcc_s -lgcc -lpthread")
 endif()
 endif()
 
