@@ -18,6 +18,7 @@ namespace utils {
         DLL extern bool sync_stdio;
         DLL extern bool no_change_mode;
         DLL extern bool out_virtual_terminal;
+        DLL extern bool need_cr_for_return;
         DLL extern bool in_virtual_terminal;
         DLL void STDCALL force_init_io();
     }  // namespace wrap

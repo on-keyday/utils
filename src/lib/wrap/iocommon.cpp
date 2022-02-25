@@ -30,6 +30,7 @@ namespace utils {
         int stderrmode = _O_U8TEXT;
         bool sync_stdio = false;
         bool out_virtual_terminal = false;
+        bool need_cr_for_return = false;
         bool in_virtual_terminal = false;
         bool no_change_mode = false;
 
@@ -75,7 +76,10 @@ namespace utils {
             if (!GetConsoleMode(handle, &original)) {
                 return false;
             }
-            ::DWORD require = ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN;
+            ::DWORD require = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            if(need_cr_for_return){
+                require|=DISABLE_NEWLINE_AUTO_RETURN;
+            }
             if (!SetConsoleMode(handle, original | require)) {
                 require = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
                 if (!SetConsoleMode(handle, original | require)) {

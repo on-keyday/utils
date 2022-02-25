@@ -447,7 +447,7 @@ namespace utils {
                 return nullptr;
             }
             data->outer.wait(nullptr);
-            return data->outer.load();
+            return data->outer.exchange(nullptr);
         }
 
         void AnyFuture::wait() {
