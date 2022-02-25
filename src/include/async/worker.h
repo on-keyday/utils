@@ -196,6 +196,8 @@ namespace utils {
 
             void set_priority_mode(bool priority_mode);
 
+            void force_run_max_thread();
+
             template <class Fn>
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));

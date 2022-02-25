@@ -678,11 +678,15 @@ namespace utils {
             }
         }
 
+        void detach_thread(wrap::shared_ptr<internal::WorkerData>& data){
+            std::thread(task_handler, data).detach();
+            data->detached++;
+        }
+
         void TaskPool::init_thread() {
             if (data->accepting == 0) {
                 if (data->detached < data->maxthread) {
-                    std::thread(task_handler, data).detach();
-                    data->detached++;
+                    detach_thread(data);
                 }
             }
         }
@@ -719,6 +723,15 @@ namespace utils {
                 return 1;
             }
             return 0;
+        }
+
+        void TaskPool::force_run_max_thread(){
+            initlock.lock();
+            init_data();
+            while(data->detached<data->maxthread){
+                detach_thread(data);
+            }
+            initlock.unlock();
         }
 
         void TaskPool::set_priority_mode(bool priority_mode) {
