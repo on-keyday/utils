@@ -10,6 +10,7 @@
 #include "../../../include/net/async/dns.h"
 #include "../../../include/net/async/pool.h"
 #include "../../../include/wrap/lite/string.h"
+#include <thread>
 
 namespace utils {
     namespace net {

@@ -9,6 +9,7 @@
 #include <net/async/pool.h>
 #include <wrap/cout.h>
 #include <chrono>
+#include <thread>
 
 void test_asynctcp() {
     using namespace utils;

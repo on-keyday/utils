@@ -8,6 +8,7 @@
 
 #include <async/worker.h>
 #include <wrap/cout.h>
+#include <thread>
 
 void test_worker() {
     using namespace utils;

@@ -12,6 +12,7 @@
 #include <net/core/platform.h>
 #include <platform/windows/io_completetion_port.h>
 #include <chrono>
+#include <thread>
 
 void test_externaltask() {
     using namespace utils;

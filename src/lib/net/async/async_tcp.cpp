@@ -9,6 +9,7 @@
 #include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/async/tcp.h"
 #include "../../../include/net/async/pool.h"
+#include <thread>
 
 namespace utils {
     namespace net {

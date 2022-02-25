@@ -22,7 +22,6 @@
 #include "../../include/thread/priority_ext.h"
 #include <exception>
 #include <mutex>
-
 #include <thread>
 
 namespace utils {
@@ -678,7 +677,7 @@ namespace utils {
             }
         }
 
-        void detach_thread(wrap::shared_ptr<internal::WorkerData>& data){
+        void detach_thread(wrap::shared_ptr<internal::WorkerData>& data) {
             std::thread(task_handler, data).detach();
             data->detached++;
         }
@@ -725,10 +724,10 @@ namespace utils {
             return 0;
         }
 
-        void TaskPool::force_run_max_thread(){
+        void TaskPool::force_run_max_thread() {
             initlock.lock();
             init_data();
-            while(data->detached<data->maxthread){
+            while (data->detached < data->maxthread) {
                 detach_thread(data);
             }
             initlock.unlock();

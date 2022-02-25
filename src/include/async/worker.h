@@ -7,7 +7,6 @@
 
 
 #pragma once
-#include <thread>
 #include "../platform/windows/dllexport_header.h"
 #include "../thread/lite_lock.h"
 #include "../wrap/lite/smart_ptr.h"
