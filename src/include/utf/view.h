@@ -19,7 +19,7 @@ namespace utils {
     namespace utf {
         template <class Buf, class Char>
         class View {
-            mutable Sequencer<Buf> sequence;
+            mutable Sequencer<buffer_t<Buf>> sequence;
             mutable Minibuffer<Char> view;
             mutable size_t viewptr = 0;
             mutable size_t virtual_ptr = 0;
