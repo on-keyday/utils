@@ -42,6 +42,8 @@ namespace utils {
                 not_found_ignore = 0x80,
                 // use `/` like windows if only pf_short is set
                 use_slash = 0x100,
+                // use `:` like windows if sf_assign is set
+                use_colon = 0x200,
             };
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
@@ -75,8 +77,12 @@ namespace utils {
                 bool fassign = any(ParseFlag::sf_assign & flag);
                 bool fall = any(ParseFlag::parse_all & flag);
                 const char* one_prefix = "-";
+                const char* assign_symbol = "=";
                 if (any(ParseFlag::use_slash)) {
                     one_prefix = "/";
+                }
+                if (any(ParseFlag::use_colon)) {
+                    assign_symbol = ":";
                 }
                 auto suspend_or_arg = [&] {
                     if (fall) {
@@ -88,7 +94,7 @@ namespace utils {
                 };
                 auto check_assign = [&](FlagType assign, FlagType ornot) {
                     if (fassign) {
-                        if (helper::contains(argv[index], "=")) {
+                        if (helper::contains(argv[index], assign_symbol)) {
                             return assign;
                         }
                     }
@@ -102,7 +108,7 @@ namespace utils {
                 };
                 auto handle_pf_short = [&](FlagType assign, FlagType ornot) {
                     if (fvalue) {
-                        if (argv[index][2] == '=') {
+                        if (argv[index][2] == assign_symbol[0]) {
                             return FlagType::pf_one_assign;
                         }
                         else {
