@@ -14,6 +14,7 @@
 
 namespace utils {
     namespace helper {
+
         template <class In, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool equal(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
             Sequencer<buffer_t<In&>> intmp(in);

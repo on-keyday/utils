@@ -1,0 +1,24 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+
+# optparser - option value interface
+package utils::cmdline::option
+# generate code
+# tool\ifacegen -i src/include/cmdline/option/optparser.iface -o src/include/cmdline/option/optparser.h -VeSn --license --helper-deref "\"../../helper/deref.h\""
+
+import "flag.h"
+import "../../wrap/lite/string.h"
+
+typeparam Ctx
+interface OptParser {
+    is_parsable(index int,argc int,argv **char,optname &const wrap::string) bool
+    parse(index &int,argc int,argv **char,ctx &Ctx) bool
+}
+
+interface Value {
+    decltype() type
+    __copy__() type
+    __sso__() type = 2
+}
