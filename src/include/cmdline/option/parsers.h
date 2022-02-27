@@ -168,12 +168,15 @@ namespace utils {
                     }
                     T tmp;
                     SafeVal<Value> v(&tmp, true);
+                    if (ptr->size() < len) {
+                        ptr->resize(len);
+                    }
                     for (size_t i = 0; i < len; i++) {
                         if (state.val) {
                             if (!parser.parse(v, state, true, len)) {
                                 return false;
                             }
-                            ptr->push_back(std::move(tmp));
+                            (*ptr)[i] = std::move(tmp);
                         }
                         else {
                             state.val = state.argv[state.arg_track_index];
@@ -185,7 +188,7 @@ namespace utils {
                             if (!parser.parse(v, state, true, len)) {
                                 return false;
                             }
-                            ptr->push_back(std::move(tmp));
+                            (*ptr)[i] = std::move(tmp);
                         }
                         state.val = nullptr;
                     }
