@@ -177,6 +177,10 @@ namespace utils {
                         }
                         else {
                             state.val = state.argv[state.arg_track_index];
+                            if (!state.val) {
+                                state.state = FlagType::require_more_argument;
+                                return false;
+                            }
                             state.arg_track_index++;
                             if (!parser.parse(v, state, true, len)) {
                                 return false;
