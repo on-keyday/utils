@@ -54,12 +54,11 @@ namespace utils {
                         auto reserved = result.reserved.find(option->mainname);
                         if (reserved != result.reserved.end()) {
                             auto& place = std::get<1>(*reserved);
-                            auto pre_count = place.set_count;
                             if (!option->parser.parse(place.value, state, true)) {
                                 set_user_err();
                                 return false;
                             }
-                            place.set_count = pre_count + 1;
+                            place.set_count++;
                             return true;
                         }
                         result.result.push_back({});
@@ -76,6 +75,11 @@ namespace utils {
                 };
                 auto err = parse(argc, argv, proc, flag, start_index);
                 return err;
+            }
+            template <class Ctx, class Arg = decltype(helper::nop)>
+            FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg = helper::nop,
+                           ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
+                return parse(argc, argv, ctx.desc, ctx.result, arg, flag, start_index);
             }
         }  // namespace option
     }      // namespace cmdline

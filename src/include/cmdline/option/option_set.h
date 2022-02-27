@@ -14,7 +14,7 @@
 #include "../../wrap/lite/smart_ptr.h"
 #include "../../wrap/lite/vector.h"
 #include "optparser.h"
-#include "utf/convert.h"
+#include "../../utf/convert.h"
 
 namespace utils {
     namespace cmdline {
@@ -31,8 +31,8 @@ namespace utils {
             struct Description {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
 
-                bool set(wrap::string& name, OptParser parser) {
-                    auto spltview = helper::make_ref_splitview(name, ",");
+                bool set(auto& option, OptParser parser, auto&& help = "", auto&& argdesc = "") {
+                    auto spltview = helper::make_ref_splitview(option, ",");
                     auto mainname = utf::convert<wrap::string>(spltview[0]);
                     if (desc.find(mainname) != desc.end()) {
                         return false;
@@ -49,6 +49,8 @@ namespace utils {
                     opt->mainname = std::move(mainname);
                     opt->aliases = std::move(cvtvec);
                     opt->parser = std::move(parser);
+                    opt->help = utf::convert<wrap::string>(help);
+                    opt->argdesc = utf::convert<wrap::string>(argdesc);
                     desc[opt->mainname] = opt;
                     for (size_t i = 1; i < opt->aliases.size(); i++) {
                         desc[opt->aliases[i]] = opt;
@@ -72,7 +74,7 @@ namespace utils {
 
             struct Context {
                 Description desc;
-                Results results;
+                Results result;
             };
         }  // namespace option
     }      // namespace cmdline

@@ -157,6 +157,7 @@ namespace utils {
                 require_more_argument,
                 too_many_argument,
                 not_accepted,
+                type_not_match,
             };
 
             DEFINE_ENUM_FLAGOP(FlagType)
@@ -173,6 +174,7 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::require_more_argument, "option requires more argument")
             ENUM_STRING_MSG(FlagType::too_many_argument, "too many argument was provided")
             ENUM_STRING_MSG(FlagType::not_accepted, "argument value is not acceptable")
+            ENUM_STRING_MSG(FlagType::type_not_match, "argument ype not matched")
             END_ENUM_STRING_MSG(nullptr)
 
             struct CmdParseState {

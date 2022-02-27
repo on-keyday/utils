@@ -221,7 +221,7 @@ namespace utils {
             struct OptParser {
                private:
                 struct NOVTABLE__ interface__ {
-                    virtual bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved) = 0;
+                    virtual bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved, size_t count) = 0;
                     virtual interface__* move__(void* __storage_box) = 0;
 
                     virtual ~interface__() = default;
@@ -235,12 +235,12 @@ namespace utils {
                     implements__(V__&& args)
                         : t_holder_(std::forward<V__>(args)) {}
 
-                    bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved) override {
+                    bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved, size_t count) override {
                         auto t_ptr_ = utils::helper::deref(this->t_holder_);
                         if (!t_ptr_) {
                             return bool{};
                         }
-                        return t_ptr_->parse(val, ctx, reserved);
+                        return t_ptr_->parse(val, ctx, reserved, count);
                     }
 
                     interface__* move__(void* __storage_box) override {
@@ -349,8 +349,8 @@ namespace utils {
                     delete___();
                 }
 
-                bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved) {
-                    return iface ? iface->parse(val, ctx, reserved) : bool{};
+                bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved, size_t count) {
+                    return iface ? iface->parse(val, ctx, reserved, count) : bool{};
                 }
 
                 OptParser(const OptParser&) = delete;
