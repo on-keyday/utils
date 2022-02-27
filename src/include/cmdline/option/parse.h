@@ -73,7 +73,7 @@ namespace utils {
                         return true;
                     }
                 };
-                auto err = parse(argc, argv, proc, flag, start_index);
+                auto err = parse(argc, argv, flag, start_index, proc);
                 return err;
             }
             template <class Ctx, class Arg = decltype(helper::nop)>
