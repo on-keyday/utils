@@ -55,7 +55,7 @@ namespace utils {
 
                 optget_mode = pf_short | pf_long | pf_value | sf_assign | sf_ignore | parse_all,
 
-                windows_mode = pf_short | use_slash | use_colon | parse_all,
+                windows_mode = pf_short | use_slash | use_colon | sf_assign | parse_all,
             };
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
