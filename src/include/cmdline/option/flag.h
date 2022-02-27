@@ -40,30 +40,93 @@ namespace utils {
                 // this has potential risk similar
                 // that programs continue on broken state will make undefined behaviour
                 not_found_ignore = 0x80,
-                // use `/` like windows if only pf_short is set
+                // use `/` like windows command instead of `-` if only pf_short is set
                 use_slash = 0x100,
-                // use `:` like windows if sf_assign is set
+                // use `:` like windows command instead of `=` if sf_assign is set
                 use_colon = 0x200,
+                // if sf_assign is set and `=` exists,
+                // argument is interpreted as a option name and value
+                assign_anyway_val = 0x400,
+
+                default_mode = pf_short | pf_long,
+
+                golang_mode = pf_short | sf_assign,
+
+                optget_mode = pf_short | pf_long | pf_value | sf_assign | sf_ignore,
+
+                windows_mode = pf_short | use_slash | use_colon,
             };
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
 
             enum class FlagType {
-                invalid,
                 arg,
-                suspend,
+                ignore,
+
                 pf_one_many,
                 pf_one_one,
                 pf_one_val,
                 pf_one_assign,
                 pf_two_one,
                 pf_two_assign,
-                ignore,
+
+                result_bit = 0x400,
+                suspend,
+                end_of_arg,
+
+                error_bit = 0x800,
+                unknown,
+                invalid_arg,
+                equal_long_pf,
+                equal_short_pf,
+                assign_on_short_pf,
+                equal_one_pf,
+
+                user_error = 0x1000 | error_bit,
+                option_not_found,
             };
 
+            DEFINE_ENUM_FLAGOP(FlagType)
+
+            BEGIN_ENUM_STRING_MSG(FlagType, error_msg)
+            ENUM_STRING_MSG(FlagType::invalid_arg, "invalid argument. this may be error by developer")
+            ENUM_STRING_MSG(FlagType::equal_long_pf, "expect string starts with long prefix, but string is equal to long prefix")
+            ENUM_STRING_MSG(FlagType::equal_short_pf, "expect string starts with short prefix, but string is equal to short prefix")
+            ENUM_STRING_MSG(FlagType::assign_on_short_pf, "assignment operator is not allowed with short prefix")
+            ENUM_STRING_MSG(FlagType::equal_one_pf, "expect string starts with short prefix, but string is equal to short prefix")
+            ENUM_STRING_MSG(FlagType::unknown, "unknown state")
+            ENUM_STRING_MSG(FlagType::user_error, "user defined error. developer must show error reason")
+            ENUM_STRING_MSG(FlagType::option_not_found, "option not found")
+            END_ENUM_STRING_MSG(nullptr)
+
+            struct CmdParseState {
+                FlagType state;
+                int index;
+                int col;
+                int arg_track_index;
+                size_t opt_begin;
+                size_t opt_end;
+                const char* arg;
+                const char* val;
+                char** argv;
+                int argc;
+                ParseFlag flag;
+            };
+
+            constexpr const char* get_prefix(ParseFlag flag) {
+                return any(ParseFlag::use_slash) ? "/" : "-";
+            }
+
+            constexpr const char* get_assignment(ParseFlag flag) {
+                return any(ParseFlag::use_colon) ? ":" : "=";
+            }
+
             inline FlagType judge_flag_type(int index, int argc, char** argv, ParseFlag flag) {
-                if (index >= argc || index < 0 || argc <= 0 || !argv) {
-                    return FlagType::invalid;
+                if (index >= argc) {
+                    return FlagType::end_of_arg;
+                }
+                if (index < 0 || argc <= 0 || !argv) {
+                    return FlagType::invalid_arg;
                 }
                 auto equal_ = [&](auto str) {
                     return helper::equal(argv[index], str);
@@ -76,14 +139,6 @@ namespace utils {
                 bool fvalue = any(ParseFlag::pf_value & flag);
                 bool fassign = any(ParseFlag::sf_assign & flag);
                 bool fall = any(ParseFlag::parse_all & flag);
-                const char* one_prefix = "-";
-                const char* assign_symbol = "=";
-                if (any(ParseFlag::use_slash)) {
-                    one_prefix = "/";
-                }
-                if (any(ParseFlag::use_colon)) {
-                    assign_symbol = ":";
-                }
                 auto suspend_or_arg = [&] {
                     if (fall) {
                         return FlagType::arg;
@@ -94,7 +149,7 @@ namespace utils {
                 };
                 auto check_assign = [&](FlagType assign, FlagType ornot) {
                     if (fassign) {
-                        if (helper::contains(argv[index], assign_symbol)) {
+                        if (helper::contains(argv[index], get_assignment(flag))) {
                             return assign;
                         }
                     }
@@ -102,13 +157,13 @@ namespace utils {
                 };
                 auto handle_pf_long = [&] {
                     if (equal_("--")) {
-                        return FlagType::invalid;
+                        return FlagType::equal_long_pf;
                     }
                     return check_assign(FlagType::pf_two_assign, FlagType::pf_two_one);
                 };
                 auto handle_pf_short = [&](FlagType assign, FlagType ornot) {
                     if (fvalue) {
-                        if (argv[index][2] == assign_symbol[0]) {
+                        if (argv[index][2] == get_assignment(flag)[0]) {
                             return FlagType::pf_one_assign;
                         }
                         else {
@@ -128,16 +183,19 @@ namespace utils {
                     }
                     if (helper::starts_with(argv[index], "-")) {
                         if (equal_("-")) {
-                            return FlagType::invalid;
+                            return FlagType::equal_short_pf;
                         }
-                        return handle_pf_short(FlagType::invalid, FlagType::pf_one_many);
+                        FlagType assign = any(ParseFlag::assign_anyway_val & flag)
+                                              ? FlagType::pf_one_assign
+                                              : FlagType::assign_on_short_pf;
+                        return handle_pf_short(assign, FlagType::pf_one_many);
                     }
                     return suspend_or_arg();
                 }
                 else if (fshort) {
-                    if (helper::starts_with(argv[index], one_prefix)) {
-                        if (equal_(one_prefix)) {
-                            return FlagType::invalid;
+                    if (helper::starts_with(argv[index], get_prefix(flag))) {
+                        if (equal_(get_prefix(flag))) {
+                            return FlagType::equal_one_pf;
                         }
                         return handle_pf_short(FlagType::pf_one_assign, FlagType::pf_one_one);
                     }
@@ -150,6 +208,7 @@ namespace utils {
                     return suspend_or_arg();
                 }
             }
+
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils
