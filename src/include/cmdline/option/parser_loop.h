@@ -104,7 +104,9 @@ namespace utils {
                     else if (state == FlagType::pf_one_val) {
                         char buf[2] = {argv[index][col], 0};
                         pass.arg = buf;
-                        pass.val = argv[index] + col + 1;
+                        if (argv[index][col + 1]) {
+                            pass.val = argv[index] + col + 1;
+                        }
                         if (!invoke_callback()) {
                             return state;
                         }
@@ -122,7 +124,9 @@ namespace utils {
                         auto tmp = argv[index][end];
                         argv[index][end] = 0;
                         pass.arg = argv[index] + begin;
-                        pass.val = argv[index] + end + 1;
+                        if (argv[index][end + 1]) {
+                            pass.val = argv[index] + end + 1;
+                        }
                         if (!invoke_callback()) {
                             return state;
                         }
