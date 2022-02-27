@@ -69,6 +69,7 @@ namespace utils {
             state.state = FlagType::type_not_match; \
             return false;                           \
         }                                           \
+        return true;                                \
     }
 
             struct IntParser {
@@ -112,10 +113,9 @@ namespace utils {
 #ifdef __cpp_char8_t
                     GET_VALUE(char8_t)
 #endif
-                    else {
-                        state.state = FlagType::type_not_match;
-                        return false;
-                    }
+
+                    state.state = FlagType::type_not_match;
+                    return false;
                 }
             };
 #undef GET_VALUE

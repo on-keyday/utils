@@ -319,6 +319,7 @@ namespace utils {
                     val = std::move(m.val);
                     reserved = m.reserved;
                     m.reserved = false;
+                    return *this;
                 }
 
                 template <class T>
@@ -346,6 +347,7 @@ namespace utils {
                     else {
                         val = std::forward<T>(t);
                     }
+                    return true;
                 }
             };
 

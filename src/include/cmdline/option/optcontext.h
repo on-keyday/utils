@@ -17,15 +17,15 @@ namespace utils {
                 Description desc;
                 Results result;
 
-                bool custom_option(auto&& option, OptParser parser, auto&& help = "", auto&& argdesc = "") {
+                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
                     return desc.set(option, std::move(parser), help, argdesc) != nullptr;
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help = "", auto&& argdesc = "") {
-                    auto opt = desc.set(option, parser, help, argdesc);
+                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
+                    auto opt = desc.set(option, std::move(parser), help, argdesc);
                     if (!opt) {
-                        return false;
+                        return nullptr;
                     }
                     Result& area = result.reserved[opt->mainname];
                     area.desc = opt;
@@ -38,7 +38,7 @@ namespace utils {
                     return p;
                 }
 
-                bool VarBool(bool* ptr, auto& option, bool rough = false, auto& help = "", auto& argdesc = "") {
+                bool VarBool(bool* ptr, auto& option, auto&& help, auto&& argdesc, bool rough = true) {
                     if (!ptr) {
                         return false;
                     }
@@ -48,7 +48,7 @@ namespace utils {
                 }
 
                 template <std::integral T = std::int64_t>
-                bool VarInt(T* ptr, auto& option, int radix = 10, auto& help = "", auto& argdesc = "") {
+                bool VarInt(T* ptr, auto& option, auto&& help, auto&& argdesc, int radix = 10) {
                     if (!ptr) {
                         return false;
                     }
@@ -58,14 +58,14 @@ namespace utils {
                 }
 
                 template <class Str>
-                bool VarStr(Str* ptr, auto&& option, auto& help = "", auto& argdesc = "") {
+                bool VarStr(Str* ptr, auto&& option, auto&& help, auto&& argdesc) {
                     return (bool)custom_option_reserved(
                         ptr, option,
                         StringParser<Str>{},
                         help, argdesc);
                 }
 
-                bool* Bool(auto& option, bool defaultv, bool rough = false, auto& help = "", auto& argdesc = "") {
+                bool* Bool(auto&& option, bool defaultv, auto&& help, auto&& argdesc, bool rough = true) {
                     return custom_option_reserved(
                         defaultv, option,
                         BoolParser{.to_set = !defaultv, .rough = rough},
@@ -73,14 +73,14 @@ namespace utils {
                 }
 
                 template <std::integral T = std::int64_t>
-                T* Int(auto& option, T defaultv, int radix = 10, auto& help = "", auto& argdesc = "") {
+                T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10) {
                     return custom_option_reserved(
                         defaultv, option,
                         IntParser{.radix = radix}, help, argdesc);
                 }
 
                 template <class Str = wrap::string>
-                Str* String(auto& option, Str defaultv, auto& help = "", auto& argdesc = "") {
+                Str* String(auto&& option, Str defaultv, auto&& help, auto&& argdesc) {
                     return custom_option_reserved(
                         std::move(defaultv), option,
                         StringParser<Str>{}, help, argdesc);

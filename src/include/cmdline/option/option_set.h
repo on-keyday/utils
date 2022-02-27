@@ -30,7 +30,7 @@ namespace utils {
             struct Description {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
 
-                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help = "", auto&& argdesc = "") {
+                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc) {
                     auto spltview = helper::make_ref_splitview(option, ",");
                     auto mainname = utf::convert<wrap::string>(spltview[0]);
                     if (desc.find(mainname) != desc.end()) {

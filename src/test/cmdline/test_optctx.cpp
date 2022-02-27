@@ -12,5 +12,11 @@
 void test_optctx(int argc, char** argv) {
     using namespace utils::cmdline;
     option::Context ctx;
-    option::parse(argc, argv, ctx, utils::helper::nop, option::ParseFlag::optget_ext_mode);
+    auto test = ctx.Bool("test,t", false, "test flag", "");
+    auto str = ctx.String("str,s", utils::wrap::string("default"), "help", "VALUE");
+    auto err = option::parse(argc, argv, ctx, utils::helper::nop, option::ParseFlag::optget_ext_mode);
+}
+
+int main(int argc, char** argv) {
+    test_optctx(argc, argv);
 }

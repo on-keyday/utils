@@ -15,11 +15,10 @@
 namespace utils {
     namespace cmdline {
         namespace option {
-            template <class Desc, class Result, class Arg = decltype(helper::nop)>
-            FlagType parse(int argc, char** argv,
-                           Desc& desc, Result& result, Arg& arg = helper::nop,
-                           ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
-                auto proc = [&](option::CmdParseState& state) {
+
+            template <class Desc, class Result, class Arg>
+            auto parse_default_proc(Desc& desc, Result& result, Arg& arg) {
+                return [&](option::CmdParseState& state) {
                     auto set_err = [&](FlagType err) {
                         state.state = err;
                         result.index = state.index;
@@ -41,7 +40,7 @@ namespace utils {
                     };
                     if (state.err) {
                         result.index = state.index;
-                        result.erropt = argv[result.index];
+                        result.erropt = state.argv[state.index];
                         return false;
                     }
                     else if (state.state == FlagType::arg) {
@@ -57,11 +56,11 @@ namespace utils {
                     else {
                         auto found = desc.desc.find(state.arg);
                         if (found != desc.desc.end()) {
-                            if (any(flag & ParseFlag::not_found_arg)) {
+                            if (any(state.flag & ParseFlag::not_found_arg)) {
                                 push_current();
                                 return true;
                             }
-                            else if (any(flag & ParseFlag::not_found_ignore)) {
+                            else if (any(state.flag & ParseFlag::not_found_ignore)) {
                                 return true;
                             }
                             set_err(FlagType::option_not_found);
@@ -71,7 +70,7 @@ namespace utils {
                         auto reserved = result.reserved.find(option->mainname);
                         if (reserved != result.reserved.end()) {
                             auto& place = std::get<1>(*reserved);
-                            if (!option->parser.parse(place.value, state, true)) {
+                            if (!option->parser.parse(place.value, state, true, place.set_count)) {
                                 set_user_err();
                                 return false;
                             }
@@ -82,7 +81,7 @@ namespace utils {
                         auto& added = result.result.back();
                         added.as_name = state.arg;
                         added.desc = option;
-                        if (!option->parser.parse(added.value, state, false)) {
+                        if (!option->parser.parse(added.value, state, false, 1)) {
                             set_user_err();
                             return false;
                         }
@@ -90,6 +89,13 @@ namespace utils {
                         return true;
                     }
                 };
+            }
+
+            template <class Desc, class Result, class Arg = decltype(helper::nop)>
+            FlagType parse(int argc, char** argv,
+                           Desc& desc, Result& result, Arg& arg = helper::nop,
+                           ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
+                auto proc = parse_default_proc(desc, result, arg);
                 auto err = parse(argc, argv, flag, start_index, proc);
                 return err;
             }
