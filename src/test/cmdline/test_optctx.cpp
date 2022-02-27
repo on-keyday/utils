@@ -14,6 +14,8 @@ void test_optctx(int argc, char** argv) {
     option::Context ctx;
     auto test = ctx.Bool("test,t", false, "test flag", "");
     auto str = ctx.String("str,s", utils::wrap::string("default"), "help", "VALUE");
+    bool test2 = false;
+    ctx.VarBool(&test2, "test2,2", "test flag 2", "");
     auto err = option::parse(argc, argv, ctx, utils::helper::nop, option::ParseFlag::optget_ext_mode);
 }
 

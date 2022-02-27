@@ -51,7 +51,7 @@ namespace utils {
                     opt->help = utf::convert<wrap::string>(help);
                     opt->argdesc = utf::convert<wrap::string>(argdesc);
                     desc[opt->mainname] = opt;
-                    for (size_t i = 1; i < opt->aliases.size(); i++) {
+                    for (size_t i = 0; i < opt->aliases.size(); i++) {
                         desc[opt->aliases[i]] = opt;
                     }
                     return opt;

@@ -55,7 +55,7 @@ namespace utils {
                     }
                     else {
                         auto found = desc.desc.find(state.arg);
-                        if (found != desc.desc.end()) {
+                        if (found == desc.desc.end()) {
                             if (any(state.flag & ParseFlag::not_found_arg)) {
                                 push_current();
                                 return true;
