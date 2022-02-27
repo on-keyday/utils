@@ -49,13 +49,13 @@ namespace utils {
                 // argument is interpreted as a option name and value
                 assign_anyway_val = 0x400,
 
-                default_mode = pf_short | pf_long,
+                default_mode = pf_short | pf_long | parse_all,
 
-                golang_mode = pf_short | sf_assign,
+                golang_mode = pf_short | sf_assign | parse_all,
 
-                optget_mode = pf_short | pf_long | pf_value | sf_assign | sf_ignore,
+                optget_mode = pf_short | pf_long | pf_value | sf_assign | sf_ignore | parse_all,
 
-                windows_mode = pf_short | use_slash | use_colon,
+                windows_mode = pf_short | use_slash | use_colon | parse_all,
             };
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
