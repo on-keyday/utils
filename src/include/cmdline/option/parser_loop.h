@@ -50,7 +50,7 @@ namespace utils {
             }
 
             template <class Callback>
-            FlagType parse(int argc, char** argv, Callback&& callback, ParseFlag flag = ParseFlag::default_mode, int start_index = 0) {
+            FlagType parse(int argc, char** argv, Callback&& callback, ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
                 FlagType state = FlagType::unknown;
                 int index = start_index, col = 0, arg_track_index = start_index;
                 size_t begin = 0, end = 0;
