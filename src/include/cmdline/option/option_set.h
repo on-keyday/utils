@@ -49,6 +49,10 @@ namespace utils {
                     opt->mainname = std::move(mainname);
                     opt->aliases = std::move(cvtvec);
                     opt->parser = std::move(parser);
+                    desc[opt->mainname] = opt;
+                    for (size_t i = 1; i < opt->aliases.size(); i++) {
+                        desc[opt->aliases[i]] = opt;
+                    }
                 }
             };
 
