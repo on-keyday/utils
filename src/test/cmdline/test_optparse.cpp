@@ -12,8 +12,10 @@
 
 auto& cout = utils::wrap::cout_wrap();
 
-int test_optparse(int argc, char** argv) {
+void test_optparse(int argc, char** argv) {
     using namespace utils::cmdline;
+    cout << option::get_flag_state<utils::wrap::string>(option::ParseFlag::default_mode)
+         << "\n";
     option::parse(argc, argv, [](option::CmdParseState& state) {
         if (state.state == option::FlagType::arg) {
             assert(state.arg);
@@ -39,4 +41,5 @@ int test_optparse(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    test_optparse(argc, argv);
 }

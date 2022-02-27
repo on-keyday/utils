@@ -86,9 +86,9 @@ namespace utils {
                     add("windows_mode =");
                     added = false;
                 }
-#define ADD(FLAG)                       \
-    if (any(flag & ParserFlag::FLAG)) { \
-        add(#FLAG)                      \
+#define ADD(FLAG)                      \
+    if (any(flag & ParseFlag::FLAG)) { \
+        add(#FLAG);                    \
     }
                 ADD(pf_short)
                 ADD(pf_long)

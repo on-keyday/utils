@@ -74,6 +74,7 @@ add_executable(utfcast "src/test/utf/test_utfcast.cpp")
 add_executable(asyncdns "src/test/net/async/test_asyncdns.cpp")
 add_executable(asynctcp "src/test/net/async/test_asynctcp.cpp")
 add_executable(http2frame "src/test/net/test_http2frame.cpp")
+add_executable(optparse "src/test/cmdline/test_optparse.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -154,6 +155,7 @@ target_link_libraries(parser utils)
 target_link_libraries(digitcount utils)
 target_link_libraries(asyncdns utils)
 target_link_libraries(asynctcp utils)
+target_link_libraries(optparse utils)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
