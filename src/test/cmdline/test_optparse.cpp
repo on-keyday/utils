@@ -18,7 +18,7 @@ void test_optparse(int argc, char** argv, option::ParseFlag flag) {
     cout << option::get_flag_state<utils::wrap::string>(flag)
          << "\n";
     auto result = option::parse(
-        argc, argv, [](option::CmdParseState& state) {
+        argc, argv, flag, 1, [](option::CmdParseState& state) {
             if (state.state == option::FlagType::arg) {
                 assert(state.arg);
                 cout << "arg: "
@@ -39,8 +39,7 @@ void test_optparse(int argc, char** argv, option::ParseFlag flag) {
                 }
             }
             return true;
-        },
-        flag);
+        });
     if (auto c = error_msg(result)) {
         cout << "error: " << c << "\n";
     }
