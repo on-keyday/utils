@@ -144,6 +144,10 @@ namespace utils {
                         return FlagType::unknown;
                     }
                 }
+                if (state == FlagType::suspend) {
+                    set_common_param();
+                    invoke_callback(pass);
+                }
                 return state;
             }
 
