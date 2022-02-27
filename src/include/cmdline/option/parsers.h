@@ -154,6 +154,40 @@ namespace utils {
                     return parser.parse(val, state, reserved, count);
                 }
             };
+
+            template <class T, template <class...> class Vec>
+            struct VectorParser {
+                OptParser parser;
+                size_t len = 0;
+
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    auto ptr = val.get_ptr<Vec<T>>();
+                    if (!ptr) {
+                        state.state = FlagType::type_not_match;
+                        return false;
+                    }
+                    T tmp;
+                    SafeVal<Value> v(&tmp, true);
+                    for (size_t i = 0; i < len; i++) {
+                        if (state.val) {
+                            if (!parser.parse(v, state, true, len)) {
+                                return false;
+                            }
+                            ptr->push_back(std::move(tmp));
+                        }
+                        else {
+                            state.val = state.argv[state.arg_track_index];
+                            state.arg_track_index++;
+                            if (!parser.parse(v, state, true, len)) {
+                                return false;
+                            }
+                            ptr->push_back(std::move(tmp));
+                        }
+                        state.val = nullptr;
+                    }
+                    return true;
+                }
+            };
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils
