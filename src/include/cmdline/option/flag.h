@@ -55,6 +55,8 @@ namespace utils {
 
                 optget_mode = pf_short | pf_long | pf_value | sf_assign | sf_ignore | parse_all,
 
+                optget_ext_mode = optget_mode | assign_anyway_val,
+
                 windows_mode = pf_short | use_slash | use_colon | sf_assign | parse_all,
 
                 assignable_mode = pf_short | pf_long | parse_all | sf_assign,
@@ -84,6 +86,10 @@ namespace utils {
                 }
                 else if (flag == ParseFlag::optget_mode) {
                     add("optget_mode = ");
+                    added = false;
+                }
+                else if (flag == ParseFlag::optget_ext_mode) {
+                    add("optget_ext_mode = ");
                     added = false;
                 }
                 else if (flag == ParseFlag::windows_mode) {
