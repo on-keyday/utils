@@ -69,6 +69,9 @@ namespace utils {
 
                 template <class Str>
                 bool VarStr(Str* ptr, auto&& option, auto&& help, auto&& argdesc, bool once = false) {
+                    if (!ptr) {
+                        return false;
+                    }
                     return (bool)value(
                         option, ptr,
                         StringParser<Str>{},
