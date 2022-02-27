@@ -30,9 +30,12 @@ namespace utils {
                                                                         : FlagType::not_accepted);
                     };
                     auto push_current = [&] {
+                        if (state.state == FlagType::pf_one_many) {
+                            return;
+                        }
                         auto v = state.argv[state.index];
-                        if (state.state != FlagType::pf_one_many && state.replaced) {
-                            state.argv[state.index][state.opt_end] = state.replaced;
+                        if (state.replaced) {
+                            v[state.opt_end] = state.replaced;
                         }
                         arg.push_back(state.argv[state.index]);
                     };
