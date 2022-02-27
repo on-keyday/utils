@@ -166,11 +166,11 @@ namespace utils {
             };
 
             constexpr const char* get_prefix(ParseFlag flag) {
-                return any(ParseFlag::use_slash) ? "/" : "-";
+                return any(ParseFlag::use_slash & flag) ? "/" : "-";
             }
 
             constexpr const char* get_assignment(ParseFlag flag) {
-                return any(ParseFlag::use_colon) ? ":" : "=";
+                return any(ParseFlag::use_colon & flag) ? ":" : "=";
             }
 
             inline FlagType judge_flag_type(int index, int argc, char** argv, ParseFlag flag) {
