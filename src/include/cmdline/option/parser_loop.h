@@ -146,7 +146,7 @@ namespace utils {
                 }
                 if (state == FlagType::suspend) {
                     set_common_param();
-                    invoke_callback(pass);
+                    invoke_callback();
                 }
                 return state;
             }
