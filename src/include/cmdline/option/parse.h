@@ -68,7 +68,11 @@ namespace utils {
                         added.as_name = state.arg;
                         added.desc = option;
                         if (!option->parser.parse(added.value, state, false)) {
+                            set_user_err();
+                            return false;
                         }
+                        added.set_count = 1;
+                        return true;
                     }
                 };
                 auto err = parse(argc, argv, proc, flag, start_index);
