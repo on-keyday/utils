@@ -50,5 +50,6 @@ int main(int argc, char** argv) {
     test_optparse(argc, argv, option::ParseFlag::default_mode);
     test_optparse(argc, argv, option::ParseFlag::golang_mode);
     test_optparse(argc, argv, option::ParseFlag::optget_mode);
+    test_optparse(argc, argv, option::ParseFlag::optget_mode | option::ParseFlag::pf_value | option::ParseFlag::assign_anyway_val);
     test_optparse(argc, argv, option::ParseFlag::windows_mode);
 }

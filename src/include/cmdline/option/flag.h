@@ -199,9 +199,12 @@ namespace utils {
                         return FlagType::suspend;
                     }
                 };
+                auto contains_assign = [&] {
+                    return helper::contains(argv[index], get_assignment(flag));
+                };
                 auto check_assign = [&](FlagType assign, FlagType ornot) {
                     if (fassign) {
-                        if (helper::contains(argv[index], get_assignment(flag))) {
+                        if (contains_assign()) {
                             return assign;
                         }
                     }
@@ -215,7 +218,14 @@ namespace utils {
                 };
                 auto handle_pf_short = [&](FlagType assign, FlagType ornot) {
                     if (fvalue) {
-                        if (argv[index][2] == get_assignment(flag)[0]) {
+                        bool fassign2 = false;
+                        if (any(ParseFlag::assign_anyway_val & flag)) {
+                            fassign2 = contains_assign();
+                        }
+                        else {
+                            fassign2 = argv[index][2] == get_assignment(flag)[0];
+                        }
+                        if (fassign && fassign2) {
                             return FlagType::pf_one_assign;
                         }
                         else {
