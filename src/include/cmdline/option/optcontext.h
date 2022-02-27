@@ -50,6 +50,12 @@ namespace utils {
                         defaultv, option,
                         IntParser{.radix = radix}, help, argdesc);
                 }
+
+                template <class Str = wrap::string>
+                Str* String(auto& option, Str defaultv, int radix = 10, auto& help = "", auto& argdesc = "") {
+                    return custom_option_reserved(std::move(defaultv), option,
+                                                  StringParser<Str>{}, help, argdesc);
+                }
             };
         }  // namespace option
     }      // namespace cmdline
