@@ -6,7 +6,7 @@
 */
 
 
-// parser_loop - parser loop
+// parser_loop - parser loop implementation
 #pragma once
 #include "flag.h"
 

@@ -154,6 +154,8 @@ namespace utils {
 
                 user_error = 0x1000 | error_bit,
                 option_not_found,
+                require_more_argument,
+                too_many_argument,
             };
 
             DEFINE_ENUM_FLAGOP(FlagType)
@@ -167,6 +169,8 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::unknown, "unknown state")
             ENUM_STRING_MSG(FlagType::user_error, "user defined error. developer must show error reason")
             ENUM_STRING_MSG(FlagType::option_not_found, "option not found")
+            ENUM_STRING_MSG(FlagType::require_more_argument, "option requires more argument")
+            ENUM_STRING_MSG(FlagType::too_many_argument, "too many argument was provided")
             END_ENUM_STRING_MSG(nullptr)
 
             struct CmdParseState {

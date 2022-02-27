@@ -9,6 +9,7 @@
 #include <cmdline/option/parser_loop.h>
 
 #include <wrap/cout.h>
+#include <wrap/argv.h>
 
 auto& cout = utils::wrap::cout_wrap();
 using namespace utils::cmdline;
@@ -47,6 +48,7 @@ void test_optparse(int argc, char** argv, option::ParseFlag flag) {
 }
 
 int main(int argc, char** argv) {
+    utils::wrap::U8Arg _(argc, argv);
     test_optparse(argc, argv, option::ParseFlag::default_mode);
     test_optparse(argc, argv, option::ParseFlag::golang_mode);
     test_optparse(argc, argv, option::ParseFlag::optget_mode);
