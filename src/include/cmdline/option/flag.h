@@ -12,6 +12,7 @@
 #include "../../wrap/lite/enum.h"
 #include "../../helper/equal.h"
 #include "../../helper/strutil.h"
+#include "../../helper/appender.h"
 
 namespace utils {
     namespace cmdline {
@@ -58,6 +59,50 @@ namespace utils {
             };
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
+
+            template <class Result>
+            void get_flag_state(Result& result, ParseFlag flag) {
+                bool added = false;
+                auto add = [&](auto c) {
+                    if (added) {
+                        helper::append(result, " | ");
+                    }
+                    helper::append(result, c);
+                    added = true;
+                };
+                if (flag == ParseFlag::default_mode) {
+                    add("default_mode = ");
+                    added = false;
+                }
+                else if (flag == ParseFlag::golang_mode) {
+                    add("golang_mode = ");
+                    added = false;
+                }
+                else if (flag == ParseFlag::optget_mode) {
+                    add("optget_mode = ");
+                    added = false;
+                }
+                else if (flag == ParseFlag::windows_mode) {
+                    add("windows_mode =");
+                    added = false;
+                }
+#define ADD(FLAG)                       \
+    if (any(flag & ParserFlag::FLAG)) { \
+        add(#FLAG)                      \
+    }
+                ADD(pf_short)
+                ADD(pf_long)
+                ADD(pf_value)
+                ADD(sf_assign)
+                ADD(sf_ignore)
+                ADD(parse_all)
+                ADD(not_found_arg)
+                ADD(not_found_ignore)
+                ADD(use_slash)
+                ADD(use_colon)
+                ADD(assign_anyway_val)
+#undef ADD
+            }
 
             enum class FlagType {
                 arg,
