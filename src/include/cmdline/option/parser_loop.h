@@ -67,6 +67,7 @@ namespace utils {
                     pass.opt_end = end;
                     pass.arg = nullptr;
                     pass.val = nullptr;
+                    pass.err = any(state & FlagType::error_bit);
                 };
                 auto set_arg_track_index = [&] {
                     if (pass.arg_track_index > arg_track_index) {
@@ -144,7 +145,7 @@ namespace utils {
                         return FlagType::unknown;
                     }
                 }
-                if (state == FlagType::suspend) {
+                if (state == FlagType::suspend || any(state & FlagType::error_bit)) {
                     set_common_param();
                     invoke_callback();
                 }

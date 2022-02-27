@@ -21,7 +21,7 @@ namespace utils {
             struct Result;
             struct Option {
                 wrap::string mainname;
-                OptParser<Result> parser;
+                OptParser parser;
             };
 
             struct Description {

@@ -11,14 +11,15 @@ package utils::cmdline::option
 import "flag.h"
 import "../../wrap/lite/string.h"
 
-typeparam Ctx
-interface OptParser {
-    is_parsable(index int,argc int,argv **char,optname &const wrap::string) bool
-    parse(index &int,argc int,argv **char,ctx &Ctx) bool
-}
-
 interface Value {
     decltype() type
+    typeid() type
     __copy__() type
     __sso__() type = 2
 }
+
+interface OptParser {
+    is_parsable(ctx &const CmdParseState) bool
+    parse(val &Value,ctx &CmdParseState) bool
+}
+
