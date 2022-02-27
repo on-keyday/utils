@@ -21,10 +21,13 @@ namespace utils {
                            Description& desc, Results& result,
                            ParseFlag flag = ParseFlag::default_mode, int start_index = 1,
                            Arg& arg = helper::nop) {
-                return parse(
+                auto err = parse(
                     argc, argv,
                     [&](option::CmdParseState& state) {
                         if (state.err) {
+                            result.index = state.index;
+                            result.erropt = argv[result.index];
+                            return false;
                         }
                         else if (state.state == FlagType::arg) {
                             arg.push_back(state.arg);
@@ -40,11 +43,19 @@ namespace utils {
                             auto found = desc.desc.find(state.arg);
                             if (found != desc.desc.end()) {
                                 state.state = FlagType::option_not_found;
+
                                 return false;
+                            }
+                            auto option = std::get<1>(*found);
+                            auto reserved = result.reserved.find(option->mainname);
+                            if (reserved != result.reserved.end()) {
+                                auto& place = std::get<1>(*reserved);
+                                auto pre_count = place.set_count;
                             }
                         }
                     },
                     flag, start_index);
+                return err;
             }
         }  // namespace option
     }      // namespace cmdline

@@ -32,10 +32,15 @@ namespace utils {
                 wrap::string as_name;
                 wrap::shared_ptr<Option> desc;
                 Value value;
+                size_t set_count = 0;
+                bool reserved = false;
             };
 
             struct Results {
+                wrap::map<wrap::string, Result> reserved;
                 wrap::vector<Result> result;
+                wrap::string erropt;
+                int index = 0;
             };
 
             struct Context {

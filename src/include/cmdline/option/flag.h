@@ -156,6 +156,7 @@ namespace utils {
                 option_not_found,
                 require_more_argument,
                 too_many_argument,
+                not_accepted,
             };
 
             DEFINE_ENUM_FLAGOP(FlagType)
@@ -171,6 +172,7 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::option_not_found, "option not found")
             ENUM_STRING_MSG(FlagType::require_more_argument, "option requires more argument")
             ENUM_STRING_MSG(FlagType::too_many_argument, "too many argument was provided")
+            ENUM_STRING_MSG(FlagType::not_accepted, "argument value is not acceptable")
             END_ENUM_STRING_MSG(nullptr)
 
             struct CmdParseState {
