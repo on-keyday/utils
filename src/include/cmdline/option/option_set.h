@@ -19,7 +19,6 @@
 namespace utils {
     namespace cmdline {
         namespace option {
-            struct Result;
             struct Option {
                 wrap::string mainname;
                 wrap::vector<wrap::string> aliases;
@@ -31,18 +30,18 @@ namespace utils {
             struct Description {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
 
-                bool set(auto& option, OptParser parser, auto&& help = "", auto&& argdesc = "") {
+                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help = "", auto&& argdesc = "") {
                     auto spltview = helper::make_ref_splitview(option, ",");
                     auto mainname = utf::convert<wrap::string>(spltview[0]);
                     if (desc.find(mainname) != desc.end()) {
-                        return false;
+                        return nullptr;
                     }
                     wrap::vector<wrap::string> cvtvec;
                     auto sz = spltview.size();
                     for (size_t i = 1; i < sz; i++) {
                         cvtvec.push_back(utf::convert<wrap::string>(spltview[i]));
                         if (desc.find(cvtvec.back()) != desc.end()) {
-                            return false;
+                            return nullptr;
                         }
                     }
                     auto opt = wrap::make_shared<Option>();
@@ -55,6 +54,7 @@ namespace utils {
                     for (size_t i = 1; i < opt->aliases.size(); i++) {
                         desc[opt->aliases[i]] = opt;
                     }
+                    return opt;
                 }
             };
 
@@ -72,10 +72,6 @@ namespace utils {
                 int index = 0;
             };
 
-            struct Context {
-                Description desc;
-                Results result;
-            };
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils
