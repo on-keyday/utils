@@ -104,6 +104,13 @@ namespace utils {
 #undef ADD
             }
 
+            template <class Result>
+            Result get_flag_state(ParseFlag flag) {
+                Result result;
+                get_flag_state(result, flag);
+                return result;
+            }
+
             enum class FlagType {
                 arg,
                 ignore,
