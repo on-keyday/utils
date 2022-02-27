@@ -334,14 +334,14 @@ namespace utils {
                 template <class T>
                 bool set_value(T&& t) {
                     if (reserved) {
-                        auto ptr = get_ptr();
+                        auto ptr = get_ptr<std::remove_cvref_t<T>>();
                         if (!ptr) {
                             return false;
                         }
                         *ptr = std::forward<T>(t);
                     }
                     else {
-                        val = t;
+                        val = std::forward<T>(t);
                     }
                 }
             };

@@ -9,16 +9,15 @@
 // parsers - standard parsers
 #pragma once
 
-#include "option_set.h"
 #include "parser_loop.h"
 #include "../../helper/pushbacker.h"
 
 namespace utils {
     namespace cmdline {
         namespace option {
-            template <class Arg = decltype(helper::nop)>
+            template <class Desc, class Result, class Arg = decltype(helper::nop)>
             FlagType parse(int argc, char** argv,
-                           Description& desc, Results& result, Arg& arg = helper::nop,
+                           Desc& desc, Result& result, Arg& arg = helper::nop,
                            ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
                 auto proc = [&](option::CmdParseState& state) {
                     auto set_err = [&](FlagType err) {

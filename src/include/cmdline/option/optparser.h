@@ -222,6 +222,7 @@ namespace utils {
                private:
                 struct NOVTABLE__ interface__ {
                     virtual bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved) = 0;
+                    virtual interface__* move__(void* __storage_box) = 0;
 
                     virtual ~interface__() = default;
                 };
@@ -241,9 +242,59 @@ namespace utils {
                         }
                         return t_ptr_->parse(val, ctx, reserved);
                     }
+
+                    interface__* move__(void* __storage_box) override {
+                        using gen_type = implements__<T__>;
+                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                                      alignof(gen_type) <= alignof(std::max_align_t) &&
+                                      std::is_nothrow_move_constructible<T__>::value) {
+                            return new (__storage_box) implements__<T__>(std::move(t_holder_));
+                        }
+                        else {
+                            return nullptr;
+                        }
+                    }
                 };
 
-                interface__* iface = nullptr;
+                union {
+                    char __storage_box[sizeof(void*) * (1 + (2))]{0};
+                    std::max_align_t __align_of;
+                    struct {
+                        void* __place_holder[2];
+                        interface__* iface;
+                    };
+                };
+
+                template <class T__>
+                void new___(T__&& v) {
+                    interface__* p = nullptr;
+                    using decay_T__ = std::decay_t<T__>;
+                    using gen_type = implements__<decay_T__>;
+                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                                  alignof(gen_type) <= alignof(std::max_align_t) &&
+                                  std::is_nothrow_move_constructible<decay_T__>::value) {
+                        p = new (__storage_box) gen_type(std::forward<T__>(v));
+                    }
+                    else {
+                        p = new gen_type(std::forward<T__>(v));
+                    }
+                    iface = p;
+                }
+
+                bool is_local___() const {
+                    return static_cast<const void*>(__storage_box) == static_cast<const void*>(iface);
+                }
+
+                void delete___() {
+                    if (!iface) return;
+                    if (!is_local___()) {
+                        delete iface;
+                    }
+                    else {
+                        iface->~interface__();
+                    }
+                    iface = nullptr;
+                }
 
                public:
                 constexpr OptParser() {}
@@ -256,19 +307,33 @@ namespace utils {
                     if (!utils::helper::deref(t)) {
                         return;
                     }
-                    iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
+                    new___(std::forward<T__>(t));
                 }
 
-                constexpr OptParser(OptParser&& in) noexcept {
-                    iface = in.iface;
-                    in.iface = nullptr;
+                OptParser(OptParser&& in) noexcept {
+                    // reference implementation: MSVC std::function
+                    if (in.is_local___()) {
+                        iface = in.iface->move__(__storage_box);
+                        in.delete___();
+                    }
+                    else {
+                        iface = in.iface;
+                        in.iface = nullptr;
+                    }
                 }
 
                 OptParser& operator=(OptParser&& in) noexcept {
                     if (this == std::addressof(in)) return *this;
-                    delete iface;
-                    iface = in.iface;
-                    in.iface = nullptr;
+                    delete___();
+                    // reference implementation: MSVC std::function
+                    if (in.is_local___()) {
+                        iface = in.iface->move__(__storage_box);
+                        in.delete___();
+                    }
+                    else {
+                        iface = in.iface;
+                        in.iface = nullptr;
+                    }
                     return *this;
                 }
 
@@ -281,7 +346,7 @@ namespace utils {
                 }
 
                 ~OptParser() {
-                    delete iface;
+                    delete___();
                 }
 
                 bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved) {

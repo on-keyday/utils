@@ -20,5 +20,6 @@ interface Value {
 
 interface OptParser {
     parse(val &SafeVal<Value>,ctx &CmdParseState,reserved bool) bool
+    __sso__() type = 2
 }
 
