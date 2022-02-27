@@ -18,43 +18,60 @@ namespace utils {
         namespace option {
             template <class Arg = decltype(helper::nop)>
             FlagType parse(int argc, char** argv,
-                           Description& desc, Results& result,
-                           ParseFlag flag = ParseFlag::default_mode, int start_index = 1,
-                           Arg& arg = helper::nop) {
-                auto err = parse(
-                    argc, argv,
-                    [&](option::CmdParseState& state) {
-                        if (state.err) {
-                            result.index = state.index;
-                            result.erropt = argv[result.index];
+                           Description& desc, Results& result, Arg& arg = helper::nop,
+                           ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
+                auto proc = [&](option::CmdParseState& state) {
+                    auto set_err = [&](FlagType err) {
+                        state.state = err;
+                        result.index = state.index;
+                        result.erropt = state.arg;
+                    };
+                    auto set_user_err = [&]() {
+                        set_err(any(state.state & FlagType::user_error) ? state.state
+                                                                        : FlagType::not_accepted);
+                    };
+                    if (state.err) {
+                        result.index = state.index;
+                        result.erropt = argv[result.index];
+                        return false;
+                    }
+                    else if (state.state == FlagType::arg) {
+                        arg.push_back(state.arg);
+                        return true;
+                    }
+                    else if (state.state == FlagType::ignore) {
+                        for (auto i = state.arg_track_index; i < state.argc; i++) {
+                            arg.push_back(state.arg);
+                        }
+                        return true;
+                    }
+                    else {
+                        auto found = desc.desc.find(state.arg);
+                        if (found != desc.desc.end()) {
+                            set_err(FlagType::option_not_found);
                             return false;
                         }
-                        else if (state.state == FlagType::arg) {
-                            arg.push_back(state.arg);
-                            return true;
-                        }
-                        else if (state.state == FlagType::ignore) {
-                            for (auto i = state.arg_track_index; i < state.argc; i++) {
-                                arg.push_back(state.arg);
-                            }
-                            return true;
-                        }
-                        else {
-                            auto found = desc.desc.find(state.arg);
-                            if (found != desc.desc.end()) {
-                                state.state = FlagType::option_not_found;
-
+                        auto option = std::get<1>(*found);
+                        auto reserved = result.reserved.find(option->mainname);
+                        if (reserved != result.reserved.end()) {
+                            auto& place = std::get<1>(*reserved);
+                            auto pre_count = place.set_count;
+                            if (!option->parser.parse(place.value, state, true)) {
+                                set_user_err();
                                 return false;
                             }
-                            auto option = std::get<1>(*found);
-                            auto reserved = result.reserved.find(option->mainname);
-                            if (reserved != result.reserved.end()) {
-                                auto& place = std::get<1>(*reserved);
-                                auto pre_count = place.set_count;
-                            }
+                            place.set_count = pre_count + 1;
+                            return true;
                         }
-                    },
-                    flag, start_index);
+                        result.result.push_back({});
+                        auto& added = result.result.back();
+                        added.as_name = state.arg;
+                        added.desc = option;
+                        if (!option->parser.parse(added.value, state, false)) {
+                        }
+                    }
+                };
+                auto err = parse(argc, argv, proc, flag, start_index);
                 return err;
             }
         }  // namespace option

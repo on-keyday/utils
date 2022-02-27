@@ -296,6 +296,56 @@ namespace utils {
                 }
             }
 
+            template <class Val>
+            struct SafeVal {
+               private:
+                Val val;
+                bool reserved;
+
+               public:
+                constexpr SafeVal() {}
+                SafeVal(Val&& val, bool reserved)
+                    : val(std::move(val)), reserved(reserved) {}
+
+                SafeVal(SafeVal&& m)
+                    : val(std::move(m.val)), reserved(m.reserved) {
+                    m.reserved = false;
+                }
+
+                SafeVal& operator=(SafeVal&& m) {
+                    val = std::move(m.val);
+                    reserved = m.reserved;
+                    m.reserved = false;
+                }
+
+                template <class T>
+                T* get_ptr() {
+                    auto ptrdir = val.template type_assert<T>();
+                    if (ptrdir) {
+                        return ptrdir;
+                    }
+                    auto ptrindir = val.template type_assert<T*>();
+                    if (ptrindir) {
+                        return *ptrindir;
+                    }
+                    return nullptr;
+                }
+
+                template <class T>
+                bool set_value(T&& t) {
+                    if (reserved) {
+                        auto ptr = get_ptr();
+                        if (!ptr) {
+                            return false;
+                        }
+                        *ptr = std::forward<T>(t);
+                    }
+                    else {
+                        val = t;
+                    }
+                }
+            };
+
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils

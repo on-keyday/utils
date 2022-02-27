@@ -31,9 +31,8 @@ namespace utils {
             struct Result {
                 wrap::string as_name;
                 wrap::shared_ptr<Option> desc;
-                Value value;
+                SafeVal<Value> value;
                 size_t set_count = 0;
-                bool reserved = false;
             };
 
             struct Results {

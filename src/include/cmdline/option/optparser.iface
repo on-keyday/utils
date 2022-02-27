@@ -19,7 +19,6 @@ interface Value {
 }
 
 interface OptParser {
-    is_parsable(ctx &const CmdParseState) bool
-    parse(val &Value,ctx &CmdParseState) bool
+    parse(val &SafeVal<Value>,ctx &CmdParseState,reserved bool) bool
 }
 
