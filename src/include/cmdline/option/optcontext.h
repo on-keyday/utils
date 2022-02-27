@@ -48,31 +48,31 @@ namespace utils {
                         std::move(ps), help, argdesc);
                 }
 
-                bool VarBool(bool* ptr, auto& option, auto&& help, auto&& argdesc, bool rough = true) {
+                bool VarBool(bool* ptr, auto& option, auto&& help, auto&& argdesc, bool rough = true, bool once = false) {
                     if (!ptr) {
                         return false;
                     }
-                    return (bool)custom_option_reserved(
-                        ptr, option, BoolParser{.to_set = !*ptr, .rough = rough},
-                        help, argdesc);
+                    return (bool)value(
+                        option, ptr, BoolParser{.to_set = !*ptr, .rough = rough},
+                        help, argdesc, once);
                 }
 
                 template <std::integral T = std::int64_t>
-                bool VarInt(T* ptr, auto& option, auto&& help, auto&& argdesc, int radix = 10) {
+                bool VarInt(T* ptr, auto& option, auto&& help, auto&& argdesc, int radix = 10, bool once = false) {
                     if (!ptr) {
                         return false;
                     }
-                    return (bool)custom_option_reserved(
+                    return (bool)value(
                         ptr, option, IntParser{.radix = radix},
-                        help, argdesc);
+                        help, argdesc, once);
                 }
 
                 template <class Str>
-                bool VarStr(Str* ptr, auto&& option, auto&& help, auto&& argdesc) {
-                    return (bool)custom_option_reserved(
-                        ptr, option,
+                bool VarStr(Str* ptr, auto&& option, auto&& help, auto&& argdesc, bool once = false) {
+                    return (bool)value(
+                        option, ptr,
                         StringParser<Str>{},
-                        help, argdesc);
+                        help, argdesc, once);
                 }
 
                 bool* Bool(auto&& option, bool defaultv, auto&& help, auto&& argdesc, bool rough = true, bool once = false) {
