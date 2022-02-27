@@ -29,6 +29,13 @@ namespace utils {
                         set_err(any(state.state & FlagType::user_error) ? state.state
                                                                         : FlagType::not_accepted);
                     };
+                    auto push_current = [&] {
+                        auto v = state.argv[state.index];
+                        if (state.state != FlagType::pf_one_many && state.replaced) {
+                            state.argv[state.index][state.opt_end] = state.replaced;
+                        }
+                        arg.push_back(state.argv[state.index]);
+                    };
                     if (state.err) {
                         result.index = state.index;
                         result.erropt = argv[result.index];
@@ -47,6 +54,13 @@ namespace utils {
                     else {
                         auto found = desc.desc.find(state.arg);
                         if (found != desc.desc.end()) {
+                            if (any(flag & ParseFlag::not_found_arg)) {
+                                push_current();
+                                return true;
+                            }
+                            else if (any(flag & ParseFlag::not_found_ignore)) {
+                                return true;
+                            }
                             set_err(FlagType::option_not_found);
                             return false;
                         }

@@ -190,6 +190,7 @@ namespace utils {
                 int argc;
                 ParseFlag flag;
                 bool err;
+                char replaced;
             };
 
             constexpr const char* get_prefix(ParseFlag flag) {

@@ -12,5 +12,5 @@
 void test_optctx(int argc, char** argv) {
     using namespace utils::cmdline;
     option::Context ctx;
-    option::parse(argc, argv, ctx);
+    option::parse(argc, argv, ctx, utils::helper::nop, option::ParseFlag::optget_ext_mode);
 }

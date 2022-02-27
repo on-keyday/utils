@@ -68,6 +68,7 @@ namespace utils {
                     pass.arg = nullptr;
                     pass.val = nullptr;
                     pass.err = any(state & FlagType::error_bit);
+                    pass.replaced = 0;
                 };
                 auto set_arg_track_index = [&] {
                     if (pass.arg_track_index > arg_track_index) {
@@ -124,6 +125,7 @@ namespace utils {
                     else if (state == FlagType::pf_one_assign || state == FlagType::pf_two_assign) {
                         auto tmp = argv[index][end];
                         argv[index][end] = 0;
+                        pass.replaced = tmp;
                         pass.arg = argv[index] + begin;
                         if (argv[index][end + 1]) {
                             pass.val = argv[index] + end + 1;
