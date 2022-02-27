@@ -56,6 +56,10 @@ namespace utils {
                 optget_mode = pf_short | pf_long | pf_value | sf_assign | sf_ignore | parse_all,
 
                 windows_mode = pf_short | use_slash | use_colon | sf_assign | parse_all,
+
+                assignable_mode = pf_short | pf_long | parse_all | sf_assign,
+
+                assign_val_mode = pf_short | pf_long | parse_all | sf_assign | pf_value | assign_anyway_val,
             };
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
@@ -84,6 +88,14 @@ namespace utils {
                 }
                 else if (flag == ParseFlag::windows_mode) {
                     add("windows_mode =");
+                    added = false;
+                }
+                else if (flag == ParseFlag::assignable_mode) {
+                    add("assignable_mode = ");
+                    added = false;
+                }
+                else if (flag == ParseFlag::assign_val_mode) {
+                    add("assign_val_mode = ");
                     added = false;
                 }
 #define ADD(FLAG)                      \
