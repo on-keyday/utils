@@ -38,10 +38,38 @@ namespace utils {
                     return p;
                 }
 
+                bool VarBool(bool* ptr, auto& option, bool rough = false, auto& help = "", auto& argdesc = "") {
+                    if (!ptr) {
+                        return false;
+                    }
+                    return (bool)custom_option_reserved(
+                        ptr, option, BoolParser{.to_set = !*ptr, .rough = rough},
+                        help, argdesc);
+                }
+
+                template <std::integral T = std::int64_t>
+                bool VarInt(T* ptr, auto& option, int radix = 10, auto& help = "", auto& argdesc = "") {
+                    if (!ptr) {
+                        return false;
+                    }
+                    return (bool)custom_option_reserved(
+                        ptr, option, IntParser{.radix = radix},
+                        help, argdesc);
+                }
+
+                template <class Str>
+                bool VarStr(Str* ptr, auto&& option, auto& help = "", auto& argdesc = "") {
+                    return (bool)custom_option_reserved(
+                        ptr, option,
+                        StringParser<Str>{},
+                        help, argdesc);
+                }
+
                 bool* Bool(auto& option, bool defaultv, bool rough = false, auto& help = "", auto& argdesc = "") {
-                    return custom_option_reserved(defaultv, option,
-                                                  BoolParser{.to_set = !defaultv, .rough = rough},
-                                                  help, argdesc);
+                    return custom_option_reserved(
+                        defaultv, option,
+                        BoolParser{.to_set = !defaultv, .rough = rough},
+                        help, argdesc);
                 }
 
                 template <std::integral T = std::int64_t>
@@ -52,9 +80,10 @@ namespace utils {
                 }
 
                 template <class Str = wrap::string>
-                Str* String(auto& option, Str defaultv, int radix = 10, auto& help = "", auto& argdesc = "") {
-                    return custom_option_reserved(std::move(defaultv), option,
-                                                  StringParser<Str>{}, help, argdesc);
+                Str* String(auto& option, Str defaultv, auto& help = "", auto& argdesc = "") {
+                    return custom_option_reserved(
+                        std::move(defaultv), option,
+                        StringParser<Str>{}, help, argdesc);
                 }
             };
         }  // namespace option
