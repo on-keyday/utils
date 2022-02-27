@@ -142,6 +142,18 @@ namespace utils {
                     return true;
                 }
             };
+
+            struct OnceParser {
+                OptParser parser;
+
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    if (count) {
+                        state.state = FlagType::require_once;
+                        return false;
+                    }
+                    return parser.parse(val, state, reserved, count);
+                }
+            };
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils
