@@ -10,6 +10,7 @@
 #include <cmdline/option/parse.h>
 #include <cmdline/option/help.h>
 #include <wrap/cout.h>
+#include <wrap/argv.h>
 
 void test_optctx(int argc, char** argv) {
     using namespace utils::cmdline;
@@ -18,8 +19,8 @@ void test_optctx(int argc, char** argv) {
     auto str = ctx.String<utils::wrap::string>("str,s", "default", "help", "VALUE");
     bool test2 = false;
     ctx.VarBool(&test2, "test2,2", "test flag 2", "");
-    auto vec = ctx.VecString("vector,v", 2, "vector", "");
-    auto veci = ctx.VecInt("int,i", 2, "int vector", "");
+    auto vec = ctx.VecString("vector,v", 2, "vector", "STR1 STR2");
+    auto veci = ctx.VecInt("int,i", 2, "int vector", "INT1 INT2");
     auto v = option::ParseFlag::optget_ext_mode;
     auto& cout = utils::wrap::cout_wrap();
     cout << option::desc<utils::wrap::string>(v, ctx.desc.list);
@@ -44,5 +45,6 @@ void test_optctx(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    utils::wrap::U8Arg _(argc, argv);
     test_optctx(argc, argv);
 }
