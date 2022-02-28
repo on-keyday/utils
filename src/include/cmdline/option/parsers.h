@@ -19,7 +19,8 @@ namespace utils {
             struct BoolParser {
                 bool to_set = true;
                 bool rough = false;
-                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+
+                static bool parse(bool& val, CmdParseState& state, bool to_set, bool rough) {
                     auto set = [&] {
                         if (state.val) {
                             if (helper::equal(state.val, "true")) {
@@ -46,12 +47,21 @@ namespace utils {
                             return to_set ? 1 : 0;
                         }
                     };
-                    auto t = set();
-                    if (t == -1) {
+                    auto i = set();
+                    if (i == -1) {
+                        return false;
+                    }
+                    val = i == 1;
+                    return true;
+                }
+
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    bool flag = false;
+                    if (!parse(flag, state, to_set, rough)) {
                         state.state = FlagType::not_accepted;
                         return false;
                     }
-                    if (!val.set_value(t == 1)) {
+                    if (!val.set_value(flag)) {
                         state.state = FlagType::type_not_match;
                         return false;
                     }
@@ -191,6 +201,30 @@ namespace utils {
                             (*ptr)[i] = std::move(tmp);
                         }
                         state.val = nullptr;
+                    }
+                    return true;
+                }
+            };
+
+            template <class Flag>
+            struct FlagMaskParser {
+                Flag mask;
+                bool rough = false;
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    bool flag = false;
+                    if (!BoolParser::parse(flag, state, true, rough)) {
+                        return false;
+                    }
+                    auto ptr = val.get_ptr<Flag>();
+                    if (!ptr) {
+                        state.state = FlagType::type_not_match;
+                        return false;
+                    }
+                    if (flag) {
+                        *ptr |= mask;
+                    }
+                    else {
+                        *ptr &= ~mask;
                     }
                     return true;
                 }

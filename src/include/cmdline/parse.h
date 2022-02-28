@@ -60,10 +60,10 @@ namespace utils {
         }  // namespace internal
 
         template <class String, class Char, template <class...> class Map, template <class...> class Vec, class Arg = Vec<String>>
-        ParseError parse(int& index, int argc, Char** argv,
-                         OptionDesc<String, Vec, Map>& desc,
-                         OptionSet<String, Vec, Map>& result,
-                         ParseFlag flag, Arg* arg = nullptr) {
+        [[deprecated]] ParseError parse(int& index, int argc, Char** argv,
+                                        OptionDesc<String, Vec, Map>& desc,
+                                        OptionSet<String, Vec, Map>& result,
+                                        ParseFlag flag, Arg* arg = nullptr) {
             using option_t = typename OptionDesc<String, Vec, Map>::option_t;
             bool nooption = false;
             ParseError ret = ParseError::none;

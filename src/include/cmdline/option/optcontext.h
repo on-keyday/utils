@@ -117,6 +117,22 @@ namespace utils {
                                  VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
                                  help, argdesc, once);
                 }
+
+                template <class Flag>
+                Flag* FlagSet(auto&& option, Flag mask, auto&& help, auto&& argdesc, bool rough = true, bool once = false, Flag defaultv = Flag{}) {
+                    return value(
+                        option, std::move(defaultv),
+                        FlagMaskParser<Flag>{.mask = mask, .rough = rough},
+                        help, argdesc, once);
+                }
+
+                template <class Flag>
+                bool VarFlagSet(Flag* ptr, Flag mask, auto&& option, auto&& help, auto&& argdesc, bool rough = true, bool once = false) {
+                    return (bool)value(
+                        option, ptr,
+                        FlagMaskParser<Flag>{.mask = mask, .rough = rough},
+                        help, argdesc, once);
+                }
             };
         }  // namespace option
     }      // namespace cmdline
