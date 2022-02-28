@@ -29,6 +29,7 @@ namespace utils {
 
             struct Description {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
+                wrap::vector<wrap::shared_ptr<Option>> list;
 
                 wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc) {
                     auto spltview = helper::make_ref_splitview(option, ",");
@@ -54,6 +55,7 @@ namespace utils {
                     for (size_t i = 0; i < opt->aliases.size(); i++) {
                         desc[opt->aliases[i]] = opt;
                     }
+                    list.push_back(opt);
                     return opt;
                 }
             };
