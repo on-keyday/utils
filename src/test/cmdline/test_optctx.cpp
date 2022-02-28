@@ -50,4 +50,5 @@ int main(int argc, char** argv) {
     utils::wrap::U8Arg _(argc, argv);
     test_optctx(argc, argv, option::ParseFlag::golang_mode);
     test_optctx(argc, argv, option::ParseFlag::optget_ext_mode);
+    test_optctx(argc, argv, option::ParseFlag::assignable_mode);
 }
