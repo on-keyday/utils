@@ -22,6 +22,9 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
     ctx.VarBool(&test2, "test2,2", "test flag 2", "");
     auto vec = ctx.VecString("vector,v", 2, "vector", "STR1 STR2");
     auto veci = ctx.VecInt("int,i", 2, "int vector", "INT1 INT2");
+    ctx.UnboundBool("unbound,u", "unbound option", "");
+    ctx.UnboundInt("int-unbound,B", "unbound int", "INT");
+    ctx.UnboundString<utils::wrap::string>("str-unbound,b", "unbound string", "STRING");
     auto& cout = utils::wrap::cout_wrap();
     cout << option::desc<utils::wrap::string>(flag, ctx.desc.list);
     auto err = option::parse(argc, argv, ctx, utils::helper::nop, flag);
@@ -43,6 +46,9 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         }
         cout << "long and short: " << option::get_flag_state<utils::wrap::string>(*flagset)
              << "\n";
+        auto unbound = ctx.result.find("unbound");
+        if (unbound.first != unbound.second) {
+        }
     }
 }
 
