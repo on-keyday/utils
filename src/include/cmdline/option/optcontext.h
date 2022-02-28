@@ -100,8 +100,21 @@ namespace utils {
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
                 Vec<Str>* VecString(auto&& option, size_t len, auto&& help, auto&& argdesc, bool once = false, Vec<Str>&& defaultv = Vec<Str>{}) {
+                    if (defaultv.size() < len) {
+                        defaultv.resize(len);
+                    }
                     return value(option, std::move(defaultv),
                                  VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                 help, argdesc, once);
+                }
+
+                template <std::integral T = std::int64_t, template <class...> class Vec = wrap::vector>
+                Vec<T>* VecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, bool once = false, int radix = 0, Vec<T>&& defaultv = Vec<T>{}) {
+                    if (defaultv.size() < len) {
+                        defaultv.resize(len);
+                    }
+                    return value(option, std::move(defaultv),
+                                 VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
                                  help, argdesc, once);
                 }
             };
