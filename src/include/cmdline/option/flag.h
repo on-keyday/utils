@@ -179,7 +179,7 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::require_more_argument, "option requires more argument")
             ENUM_STRING_MSG(FlagType::too_many_argument, "too many argument was provided")
             ENUM_STRING_MSG(FlagType::not_accepted, "argument value is not acceptable")
-            ENUM_STRING_MSG(FlagType::type_not_match, "argument ype not matched")
+            ENUM_STRING_MSG(FlagType::type_not_match, "argument type not matched")
             ENUM_STRING_MSG(FlagType::require_once, "option must be only once in command line")
             END_ENUM_STRING_MSG(nullptr)
 

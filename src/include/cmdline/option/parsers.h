@@ -107,6 +107,7 @@ namespace utils {
                             state.state = FlagType::type_not_match;
                             return false;
                         }
+                        return true;
                     }
                     GET_VALUE(signed char)
                     GET_VALUE(unsigned char)
