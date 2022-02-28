@@ -17,6 +17,7 @@ void test_optctx(int argc, char** argv) {
     bool test2 = false;
     ctx.VarBool(&test2, "test2,2", "test flag 2", "");
     auto vec = ctx.VecString("vector,v", 2, "vector", "");
+    auto veci = ctx.VecInt("int,i", 2, "int vector", "");
     auto err = option::parse(argc, argv, ctx, utils::helper::nop, option::ParseFlag::optget_ext_mode);
 }
 
