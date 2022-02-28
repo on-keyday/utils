@@ -127,7 +127,7 @@ namespace utils {
                 }
 
                 template <class Flag>
-                bool VarFlagSet(Flag* ptr, Flag mask, auto&& option, auto&& help, auto&& argdesc, bool rough = true, bool once = false) {
+                bool VarFlagSet(Flag* ptr, auto&& option, Flag mask, auto&& help, auto&& argdesc, bool rough = true, bool once = false) {
                     return (bool)value(
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
