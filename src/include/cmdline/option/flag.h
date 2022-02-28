@@ -18,6 +18,7 @@ namespace utils {
     namespace cmdline {
         namespace option {
             enum class ParseFlag {
+                none = 0,
                 // use `-` for one char and string
                 // if pf_long is set, this works for only one char
                 pf_short = 0x1,
@@ -76,6 +77,9 @@ namespace utils {
                     helper::append(result, c);
                     added = true;
                 };
+                if (flag == ParseFlag::none) {
+                    return add("none");
+                }
                 if (flag == ParseFlag::default_mode) {
                     add("default_mode = ");
                     added = false;

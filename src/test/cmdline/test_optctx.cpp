@@ -41,6 +41,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         for (auto& i : *veci) {
             cout << i << "\n";
         }
+        cout << "long and short: " << option::get_flag_state<utils::wrap::string>(*flagset);
     }
 }
 
