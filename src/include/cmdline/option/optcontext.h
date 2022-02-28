@@ -106,6 +106,31 @@ namespace utils {
                         help, argdesc, flag);
                 }
 
+                template <std::integral T, template <class...> class Vec>
+                bool VarVecInt(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    if (!ptr) {
+                        return false;
+                    }
+                    if (ptr->size() < len) {
+                        ptr->resize(len);
+                    }
+                    return (bool)value(option, ptr, VectorParser{.parser = IntParser{.radix = radix}, .len = len},
+                                       help, argdesc, flag);
+                }
+
+                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
+                bool VecString(Vec<Str>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
+                    if (!ptr) {
+                        return false;
+                    }
+                    if (ptr->size() < len) {
+                        ptr->resize(len);
+                    }
+                    return (bool)value(option, ptr,
+                                       VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                       help, argdesc, flag);
+                }
+
                 bool* Bool(auto&& option, bool defaultv, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
                     return value(
                         option, defaultv,
