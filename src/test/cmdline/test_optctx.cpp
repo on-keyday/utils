@@ -47,6 +47,38 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         cout << "long and short: " << option::get_flag_state<utils::wrap::string>(*flagset)
              << "\n";
         auto unbound = ctx.result.find("unbound");
+        cout << "unbound:\n";
+        for (auto& it : unbound) {
+            auto v = it.value.get_ptr<bool>();
+            if (!v) {
+                cout << "(not bool value)\n";
+            }
+            else {
+                cout << std::boolalpha << *v << "\n";
+            }
+        }
+        auto int_unbound = ctx.result.find("int-unbound");
+        cout << "int-unbound:\n";
+        for (auto& it : int_unbound) {
+            auto v = it.value.get_ptr<std::int64_t>();
+            if (!v) {
+                cout << "(not int value)\n";
+            }
+            else {
+                cout << *v << "\n";
+            }
+        }
+        auto str_unbound = ctx.result.find("str-unbound");
+        cout << "str-unbound:\n";
+        for (auto& it : str_unbound) {
+            auto v = it.value.get_ptr<utils::wrap::string>();
+            if (!v) {
+                cout << "(not string value)\n";
+            }
+            else {
+                cout << *v << "\n";
+            }
+        }
     }
 }
 
