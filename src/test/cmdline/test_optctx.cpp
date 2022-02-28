@@ -21,8 +21,26 @@ void test_optctx(int argc, char** argv) {
     auto vec = ctx.VecString("vector,v", 2, "vector", "");
     auto veci = ctx.VecInt("int,i", 2, "int vector", "");
     auto v = option::ParseFlag::optget_ext_mode;
-    utils::wrap::cout_wrap() << option::desc<utils::wrap::string>(v, ctx.desc.list);
+    auto& cout = utils::wrap::cout_wrap();
+    cout << option::desc<utils::wrap::string>(v, ctx.desc.list);
     auto err = option::parse(argc, argv, ctx, utils::helper::nop, v);
+    if (auto val = error_msg(err)) {
+        cout << "error: " << ctx.result.erropt << ": " << val;
+    }
+    else {
+        cout << "parse succeeded\n";
+        cout << "test: " << std::boolalpha << *test << "\n";
+        cout << "str: " << *str << "\n";
+        cout << "test2: " << std::boolalpha << test2 << "\n";
+        cout << "vector:\n";
+        for (auto& v : *vec) {
+            cout << v << "\n";
+        }
+        cout << "int:\n";
+        for (auto& i : *veci) {
+            cout << i << "\n";
+        }
+    }
 }
 
 int main(int argc, char** argv) {
