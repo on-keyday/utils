@@ -245,7 +245,7 @@ namespace utils {
 
                     interface__* move__(void* __storage_box) override {
                         using gen_type = implements__<T__>;
-                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 3 &&
                                       alignof(gen_type) <= alignof(std::max_align_t) &&
                                       std::is_nothrow_move_constructible<T__>::value) {
                             return new (__storage_box) implements__<T__>(std::move(t_holder_));
@@ -257,10 +257,10 @@ namespace utils {
                 };
 
                 union {
-                    char __storage_box[sizeof(void*) * (1 + (2))]{0};
+                    char __storage_box[sizeof(void*) * (1 + (3))]{0};
                     std::max_align_t __align_of;
                     struct {
-                        void* __place_holder[2];
+                        void* __place_holder[3];
                         interface__* iface;
                     };
                 };
@@ -270,7 +270,7 @@ namespace utils {
                     interface__* p = nullptr;
                     using decay_T__ = std::decay_t<T__>;
                     using gen_type = implements__<decay_T__>;
-                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 3 &&
                                   alignof(gen_type) <= alignof(std::max_align_t) &&
                                   std::is_nothrow_move_constructible<decay_T__>::value) {
                         p = new (__storage_box) gen_type(std::forward<T__>(v));
