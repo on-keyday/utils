@@ -47,8 +47,6 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         cout << "long and short: " << option::get_flag_state<utils::wrap::string>(*flagset)
              << "\n";
         auto unbound = ctx.result.find("unbound");
-        if (unbound.first != unbound.second) {
-        }
     }
 }
 

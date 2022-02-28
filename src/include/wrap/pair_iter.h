@@ -11,7 +11,7 @@ namespace utils {
     namespace wrap {
         template <class Wrap>
         struct PairIter {
-            Wrap& it;
+            Wrap it;
 
             auto begin() {
                 return get<0>(it);
@@ -23,7 +23,12 @@ namespace utils {
         };
 
         template <class T>
-        PairIter<T> iter(T& t) {
+        PairIter<T&> iter(T& t) {
+            return PairIter<T&>{t};
+        }
+
+        template <class T>
+        PairIter<T> iter(T&& t) {
             return PairIter<T>{t};
         }
     }  // namespace wrap

@@ -32,7 +32,7 @@ namespace utils {
                 Results result;
 
                 bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
-                    return (bool)desc.set(option, std::move(parser), help, argdesc) != nullptr;
+                    return desc.set(option, std::move(parser), help, argdesc) != nullptr;
                 }
 
                 template <class T>

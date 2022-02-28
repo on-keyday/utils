@@ -13,6 +13,7 @@
 #include "../../wrap/lite/string.h"
 #include "../../wrap/lite/smart_ptr.h"
 #include "../../wrap/lite/vector.h"
+#include "../../wrap/pair_iter.h"
 #include "optparser.h"
 #include "../../utf/convert.h"
 
@@ -76,19 +77,35 @@ namespace utils {
                 int index = 0;
 
                private:
+                auto sorter() {
+                    return [](auto& a, auto& b) {
+                        return a.desc->mainname < b.desc->mainname;
+                    };
+                }
                 void sort_result() {
-                    if (!std::is_sorted(result.begin(), result.end())) {
-                        auto sorter = [](auto& a, auto& b) {
-                            return a.desc->mainname < b.desc->mainname;
-                        };
-                        std::sort(result.begin(), result.end(), sorter);
+                    if (!std::is_sorted(result.begin(), result.end(), sorter())) {
+                        std::sort(result.begin(), result.end(), sorter());
                     }
                 }
 
                public:
                 auto find(auto&& name) {
                     sort_result();
-                    return std::equal_range(result.begin(), result.end(), name);
+                    auto check = [&](auto&& v) {
+                        return helper::equal(v.desc->mainname, name);
+                    };
+                    auto begiter = std::find_if(result.begin(), result.end(), check);
+                    if (begiter == result.end()) {
+                        return wrap::iter(std::pair{begiter, begiter});
+                    }
+                    auto enditer = begiter;
+                    enditer++;
+                    for (; enditer != result.end(); enditer++) {
+                        if (!check(*enditer)) {
+                            break;
+                        }
+                    }
+                    return wrap::iter(std::pair{begiter, enditer});
                 }
             };
 
