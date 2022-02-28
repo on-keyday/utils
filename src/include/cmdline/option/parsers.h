@@ -171,7 +171,14 @@ namespace utils {
                 size_t len = 0;
 
                 bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
-                    auto ptr = val.get_ptr<Vec<T>>();
+                    Vec<T>* ptr = nullptr;
+                    if (!reserved) {
+                        ptr = val.get_ptr<Vec<T>>();
+                        if (!ptr) {
+                            val.set_value(Vec<T>{});
+                        }
+                    }
+                    ptr = val.get_ptr<Vec<T>>();
                     if (!ptr) {
                         state.state = FlagType::type_not_match;
                         return false;

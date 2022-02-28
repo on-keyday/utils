@@ -56,6 +56,7 @@ namespace utils {
                     else {
                         auto found = desc.desc.find(state.opt);
                         if (found == desc.desc.end()) {
+                            set_err(FlagType::option_not_found);
                             if (any(state.flag & ParseFlag::not_found_arg)) {
                                 push_current();
                                 return true;
@@ -63,7 +64,6 @@ namespace utils {
                             else if (any(state.flag & ParseFlag::not_found_ignore)) {
                                 return true;
                             }
-                            set_err(FlagType::option_not_found);
                             return false;
                         }
                         auto option = std::get<1>(*found);
