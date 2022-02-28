@@ -74,6 +74,8 @@ namespace utils {
                 wrap::vector<Result> result;
                 wrap::string erropt;
                 int index = 0;
+
+               private:
                 void sort_result() {
                     if (!std::is_sorted(result.begin(), result.end())) {
                         auto sorter = [](auto& a, auto& b) {
@@ -81,6 +83,12 @@ namespace utils {
                         };
                         std::sort(result.begin(), result.end(), sorter);
                     }
+                }
+
+               public:
+                auto find(auto&& name) {
+                    sort_result();
+                    return std::equal_range(result.begin(), result.end(), name);
                 }
             };
 
