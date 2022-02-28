@@ -20,6 +20,10 @@ namespace utils {
             auto end() {
                 return get<1>(it);
             }
+
+            bool exists() {
+                return begin() != end();
+            }
         };
 
         template <class T>
