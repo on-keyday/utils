@@ -131,6 +131,7 @@ namespace utils {
                             pass.val = argv[index] + end + 1;
                         }
                         if (!invoke_callback()) {
+                            argv[index][end] = tmp;
                             return state;
                         }
                         argv[index][end] = tmp;
