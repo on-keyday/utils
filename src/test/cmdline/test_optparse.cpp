@@ -20,9 +20,9 @@ void test_optparse(int argc, char** argv, option::ParseFlag flag) {
     auto result = option::parse(
         argc, argv, flag, 1, [](option::CmdParseState& state) {
             if (state.state == option::FlagType::arg) {
-                assert(state.arg);
+                assert(state.val);
                 cout << "arg: "
-                     << state.arg << "\n";
+                     << state.val << "\n";
             }
             else if (state.state == option::FlagType::ignore) {
                 cout << "remain args:\n";
@@ -31,8 +31,8 @@ void test_optparse(int argc, char** argv, option::ParseFlag flag) {
                 }
             }
             else {
-                if (state.arg) {
-                    cout << "flag: " << state.arg << "\n";
+                if (state.opt) {
+                    cout << "flag: " << state.opt << "\n";
                 }
                 if (state.val) {
                     cout << "value: " << state.val << "\n";

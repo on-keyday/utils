@@ -190,7 +190,7 @@ namespace utils {
                 int arg_track_index;
                 size_t opt_begin;
                 size_t opt_end;
-                const char* arg;
+                const char* opt;
                 const char* val;
                 char** argv;
                 int argc;

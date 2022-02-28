@@ -65,7 +65,7 @@ namespace utils {
                     pass.col = col;
                     pass.opt_begin = begin;
                     pass.opt_end = end;
-                    pass.arg = nullptr;
+                    pass.opt = nullptr;
                     pass.val = nullptr;
                     pass.err = any(state & FlagType::error_bit);
                     pass.replaced = 0;
@@ -91,7 +91,7 @@ namespace utils {
                                    begin, end, state, argc, argv, flag)) {
                     set_common_param();
                     if (state == FlagType::arg) {
-                        pass.arg = argv[index];
+                        pass.val = argv[index];
                         if (!invoke_callback()) {
                             return state;
                         }
@@ -105,7 +105,7 @@ namespace utils {
                     }
                     else if (state == FlagType::pf_one_val) {
                         char buf[2] = {argv[index][col], 0};
-                        pass.arg = buf;
+                        pass.opt = buf;
                         if (argv[index][col + 1]) {
                             pass.val = argv[index] + col + 1;
                         }
@@ -116,7 +116,7 @@ namespace utils {
                     }
                     else if (state == FlagType::pf_one_many) {
                         char buf[2] = {argv[index][col], 0};
-                        pass.arg = buf;
+                        pass.opt = buf;
                         if (!invoke_callback()) {
                             return state;
                         }
@@ -126,7 +126,7 @@ namespace utils {
                         auto tmp = argv[index][end];
                         argv[index][end] = 0;
                         pass.replaced = tmp;
-                        pass.arg = argv[index] + begin;
+                        pass.opt = argv[index] + begin;
                         if (argv[index][end + 1]) {
                             pass.val = argv[index] + end + 1;
                         }
@@ -138,7 +138,7 @@ namespace utils {
                         set_arg_track_index();
                     }
                     else if (state == FlagType::pf_one_one || state == FlagType::pf_two_one) {
-                        pass.arg = argv[index] + begin;
+                        pass.opt = argv[index] + begin;
                         if (!invoke_callback()) {
                             return state;
                         }

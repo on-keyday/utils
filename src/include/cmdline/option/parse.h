@@ -22,7 +22,7 @@ namespace utils {
                     auto set_err = [&](FlagType err) {
                         state.state = err;
                         result.index = state.index;
-                        result.erropt = state.arg;
+                        result.erropt = state.opt;
                     };
                     auto set_user_err = [&]() {
                         set_err(any(state.state & FlagType::user_error) ? state.state
@@ -44,17 +44,17 @@ namespace utils {
                         return false;
                     }
                     else if (state.state == FlagType::arg) {
-                        arg.push_back(state.arg);
+                        arg.push_back(state.val);
                         return true;
                     }
                     else if (state.state == FlagType::ignore) {
                         for (auto i = state.arg_track_index; i < state.argc; i++) {
-                            arg.push_back(state.arg);
+                            arg.push_back(state.argv[i]);
                         }
                         return true;
                     }
                     else {
-                        auto found = desc.desc.find(state.arg);
+                        auto found = desc.desc.find(state.opt);
                         if (found == desc.desc.end()) {
                             if (any(state.flag & ParseFlag::not_found_arg)) {
                                 push_current();
@@ -79,7 +79,7 @@ namespace utils {
                         }
                         result.result.push_back({});
                         auto& added = result.result.back();
-                        added.as_name = state.arg;
+                        added.as_name = state.opt;
                         added.desc = option;
                         if (!option->parser.parse(added.value, state, false, 1)) {
                             set_user_err();
