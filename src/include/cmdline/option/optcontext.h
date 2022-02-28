@@ -97,6 +97,13 @@ namespace utils {
                     return value(option, std::move(defaultv),
                                  StringParser<Str>{}, help, argdesc, once);
                 }
+
+                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
+                Vec<Str>* VecString(auto&& option, size_t len, auto&& help, auto&& argdesc, bool once = false, Vec<Str>&& defaultv = Vec<Str>{}) {
+                    return value(option, std::move(defaultv),
+                                 VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                 help, argdesc, once);
+                }
             };
         }  // namespace option
     }      // namespace cmdline
