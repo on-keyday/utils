@@ -81,7 +81,7 @@ namespace utils {
                 size_t maxlen = 0;
                 auto tmp = opts_write(push);
                 for (wrap::shared_ptr<Option>& opt : vec) {
-                    helper::append(result, indent);
+                    helper::append(push, indent);
                     tmp(flag, opt);
                     if (maxlen < push.count) {
                         maxlen = push.count;
@@ -99,6 +99,7 @@ namespace utils {
                     helper::append(result, " : ");
                     helper::append(result, opt->help);
                     helper::append(result, "\n");
+                    cb.count = 0;
                 }
             }
             template <class Result, class OptVec>
