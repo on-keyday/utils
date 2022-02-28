@@ -312,7 +312,8 @@ namespace utils {
                 bool reserved;
 
                public:
-                constexpr SafeVal() {}
+                constexpr SafeVal()
+                    : reserved(false) {}
                 SafeVal(Val&& val, bool reserved)
                     : val(std::move(val)), reserved(reserved) {}
 
