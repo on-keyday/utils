@@ -9,7 +9,7 @@
 // help - show option help
 #pragma once
 #include "option_set.h"
-#include "pushbacker.h"
+#include "../../helper/pushbacker.h"
 
 namespace utils {
     namespace cmdline {
@@ -76,7 +76,7 @@ namespace utils {
             }
 
             template <class Result, class OptVec>
-            bool desc(Result& result, ParseFlag flag, OptVec& vec, const char* indent = "    ") {
+            void desc(Result& result, ParseFlag flag, OptVec& vec, const char* indent = "    ") {
                 helper::CountPushBacker push;
                 size_t maxlen = 0;
                 auto tmp = opts_write(push);
@@ -100,6 +100,12 @@ namespace utils {
                     helper::append(result, opt->help);
                     helper::append(result, "\n");
                 }
+            }
+            template <class Result, class OptVec>
+            Result desc(ParseFlag flag, OptVec& vec, const char* indent = "    ") {
+                Result result;
+                desc(result, flag, vec, indent);
+                return result;
             }
         }  // namespace option
     }      // namespace cmdline
