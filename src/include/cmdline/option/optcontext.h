@@ -76,6 +76,20 @@ namespace utils {
                     return unbound_value(option, StringParser<Str>{}, help, argdesc, flag);
                 }
 
+                template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
+                bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    return unbound_value(
+                        option, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
+                        help, argdesc, flag);
+                }
+
+                template <class Str, template <class...> class Vec = wrap::vector>
+                bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    return unbound_value(
+                        option, VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                        help, argdesc, flag);
+                }
+
                 bool VarBool(bool* ptr, auto& option, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
@@ -85,7 +99,7 @@ namespace utils {
                         help, argdesc, flag);
                 }
 
-                template <std::integral T = std::int64_t>
+                template <std::integral T>
                 bool VarInt(T* ptr, auto& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;

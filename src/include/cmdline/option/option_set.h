@@ -16,6 +16,8 @@
 #include "optparser.h"
 #include "../../utf/convert.h"
 
+#include <algorithm>
+
 namespace utils {
     namespace cmdline {
         namespace option {
@@ -72,6 +74,14 @@ namespace utils {
                 wrap::vector<Result> result;
                 wrap::string erropt;
                 int index = 0;
+                void sort_result() {
+                    if (!std::is_sorted(result.begin(), result.end())) {
+                        auto sorter = [](auto& a, auto& b) {
+                            return a.desc->mainname < b.desc->mainname;
+                        };
+                        std::sort(result.begin(), result.end(), sorter);
+                    }
+                }
             };
 
         }  // namespace option
