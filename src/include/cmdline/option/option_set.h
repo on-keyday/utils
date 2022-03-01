@@ -30,23 +30,31 @@ namespace utils {
                 wrap::string argdesc;
             };
 
+            bool make_cvtvec(auto& option, auto& mainname, auto& desc, auto& cvtvec) {
+                auto spltview = helper::make_ref_splitview(option, ",");
+                mainname = utf::convert<wrap::string>(spltview[0]);
+                if (desc.find(mainname) != desc.end()) {
+                    return false;
+                }
+                auto sz = spltview.size();
+                for (size_t i = 1; i < sz; i++) {
+                    cvtvec.push_back(utf::convert<wrap::string>(spltview[i]));
+                    if (desc.find(cvtvec.back()) != desc.end()) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
             struct Description {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
                 wrap::vector<wrap::shared_ptr<Option>> list;
 
                 wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc) {
-                    auto spltview = helper::make_ref_splitview(option, ",");
-                    auto mainname = utf::convert<wrap::string>(spltview[0]);
-                    if (desc.find(mainname) != desc.end()) {
-                        return nullptr;
-                    }
+                    wrap::string mainname;
                     wrap::vector<wrap::string> cvtvec;
-                    auto sz = spltview.size();
-                    for (size_t i = 1; i < sz; i++) {
-                        cvtvec.push_back(utf::convert<wrap::string>(spltview[i]));
-                        if (desc.find(cvtvec.back()) != desc.end()) {
-                            return nullptr;
-                        }
+                    if (!make_cvtvec(option, mainname, desc, cvtvec)) {
+                        return nullptr;
                     }
                     auto opt = wrap::make_shared<Option>();
                     opt->mainname = std::move(mainname);

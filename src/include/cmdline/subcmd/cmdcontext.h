@@ -16,7 +16,7 @@ namespace utils {
 
             struct Command {
                protected:
-                wrap::string name_;
+                wrap::string mainname;
                 wrap::string desc;
                 wrap::string usage;
                 Command* parent = nullptr;
@@ -24,6 +24,8 @@ namespace utils {
                 option::Context ctx;
                 bool need_subcommand = false;
                 wrap::map<wrap::string, wrap::shared_ptr<Command>> subcommand;
+                wrap::vector<wrap::shared_ptr<Command>> list;
+                wrap::vector<wrap::string> alias;
 
                 void update_reached(Command* p) {
                     reached_child = p;
@@ -46,7 +48,7 @@ namespace utils {
 
                public:
                 const wrap::string& name() {
-                    return name_;
+                    return mainname;
                 }
 
                 virtual wrap::vector<wrap::string>& arg() {
@@ -76,15 +78,21 @@ namespace utils {
 
                 template <class Usage = const char*>
                 wrap::shared_ptr<Command> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
-                    if (subcommand.find(name) != subcommand.end()) {
+                    wrap::string mainname;
+                    wrap::vector<wrap::string> alias;
+                    if (!option::make_cvtvec(name, mainname, subcommand, alias)) {
                         return nullptr;
                     }
                     auto sub = wrap::make_shared<Command>();
-                    sub->name_ = utf::convert<wrap::string>(name);
+                    sub->mainname = std::move(mainname);
+                    sub->alias = std::move(alias);
                     sub->desc = utf::convert<wrap::string>(desc);
                     sub->usage = utf::convert<wrap::string>(usage);
                     sub->need_subcommand = need_subcommand;
-                    subcommand.emplace(name, sub);
+                    subcommand.emplace(sub->mainname, sub);
+                    for (auto& s : sub->alias) {
+                        subcommand.emplace(s, sub);
+                    }
                     return sub;
                 }
             };
