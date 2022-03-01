@@ -127,11 +127,17 @@ namespace utils {
             };
 
             struct RunCommand : public CommandBase<RunCommand> {
-                CommandRunner<RunCommand> Run;
+                using runner_t = CommandRunner<RunCommand>;
+                runner_t Run;
 
                 template <class Usage = const char*>
-                wrap::shared_ptr<RunCommand> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
-                    return this->make_subcommand<RunCommand>(name, desc, usage, need_subcommand);
+                wrap::shared_ptr<RunCommand> SubCommand(auto&& name, runner_t runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    auto ptr = this->make_subcommand<RunCommand>(name, desc, usage, need_subcommand);
+                    if (!ptr) {
+                        return nullptr;
+                    }
+                    ptr->Run = std::move(runner);
+                    return ptr;
                 }
             };
 
