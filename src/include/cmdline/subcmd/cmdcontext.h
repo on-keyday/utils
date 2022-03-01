@@ -17,6 +17,8 @@ namespace utils {
             struct Command {
                protected:
                 wrap::string name_;
+                wrap::string desc;
+                wrap::string usage;
                 Command* parent = nullptr;
                 Command* reached_child = nullptr;
                 option::Context ctx;
@@ -48,6 +50,7 @@ namespace utils {
                 }
 
                 virtual wrap::vector<wrap::string>& arg() {
+                    assert(parent);
                     return parent->arg();
                 }
 
@@ -69,6 +72,20 @@ namespace utils {
 
                 bool need_sub() const {
                     return need_subcommand;
+                }
+
+                template <class Usage = const char*>
+                wrap::shared_ptr<Command> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    if (subcommand.find(name) != subcommand.end()) {
+                        return nullptr;
+                    }
+                    auto sub = wrap::make_shared<Command>();
+                    sub->name_ = utf::convert<wrap::string>(name);
+                    sub->desc = utf::convert<wrap::string>(desc);
+                    sub->usage = utf::convert<wrap::string>(usage);
+                    sub->need_subcommand = need_subcommand;
+                    subcommand.emplace(name, sub);
+                    return sub;
                 }
             };
 
