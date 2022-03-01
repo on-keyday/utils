@@ -230,6 +230,11 @@ namespace utils {
                 auto find(auto&& optname) {
                     return result.find(optname);
                 }
+
+                template <class T>
+                T value_or_not(auto&& name, T or_not = {}, size_t index = 0) {
+                    return result.value_or_not<T>(name, std::forward<T>(or_not), index);
+                }
             };
         }  // namespace option
     }      // namespace cmdline
