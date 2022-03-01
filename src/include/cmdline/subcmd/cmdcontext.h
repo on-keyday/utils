@@ -13,15 +13,17 @@
 namespace utils {
     namespace cmdline {
         namespace subcmd {
-            struct Context {
-               private:
-                Context* parent = nullptr;
-                Context* reached_child = nullptr;
-                option::Context ctx;
-                bool need_subcommand;
-                wrap::map<wrap::string, Context> subcommand;
 
-                void update_reached(Context* p) {
+            struct Command {
+               protected:
+                wrap::string name_;
+                Command* parent = nullptr;
+                Command* reached_child = nullptr;
+                option::Context ctx;
+                bool need_subcommand = false;
+                wrap::map<wrap::string, wrap::shared_ptr<Command>> subcommand;
+
+                void update_reached(Command* p) {
                     reached_child = p;
                     if (parent) {
                         parent->update_reached(p);
@@ -41,20 +43,42 @@ namespace utils {
                                               int start_index);
 
                public:
+                const wrap::string& name() {
+                    return name_;
+                }
+
+                virtual wrap::vector<wrap::string>& arg() {
+                    return parent->arg();
+                }
+
                 option::Context& get_option() {
                     return ctx;
                 }
 
-                auto find_cmd(auto&& name) {
-                    return subcommand.find(name);
+                wrap::shared_ptr<Command> find_cmd(auto&& name) {
+                    auto found = subcommand.find(name);
+                    if (found == subcommand.end()) {
+                        return nullptr;
+                    }
+                    return *found;
                 }
 
                 auto cmd_end() {
-                    return subcommand.end();
+                    return nullptr;
                 }
 
                 bool need_sub() const {
                     return need_subcommand;
+                }
+            };
+
+            struct Context : public Command {
+               private:
+                wrap::vector<wrap::string> arg_;
+
+               public:
+                wrap::vector<wrap::string>& arg() override {
+                    return arg_;
                 }
             };
         }  // namespace subcmd
