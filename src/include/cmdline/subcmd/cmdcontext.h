@@ -9,10 +9,18 @@
 // cmdcontext - subcommand context
 #pragma once
 #include "../option/optcontext.h"
+#include "cmdrunner.h"
 
 namespace utils {
     namespace cmdline {
         namespace subcmd {
+
+            enum class CmdType {
+                command,
+                context,
+                runcommand,
+                runcontext,
+            };
 
             struct Command {
                protected:
@@ -76,8 +84,12 @@ namespace utils {
                     return need_subcommand;
                 }
 
+                auto SubCommand() {
+                }
+
+               protected:
                 template <class CmdType = Command, class Usage = const char*>
-                wrap::shared_ptr<CmdType> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                wrap::shared_ptr<CmdType> make_subcommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     wrap::string mainname;
                     wrap::vector<wrap::string> alias;
                     if (!option::make_cvtvec(name, mainname, subcommand, alias)) {
@@ -105,6 +117,13 @@ namespace utils {
                public:
                 wrap::vector<wrap::string>& arg() override {
                     return arg_;
+                }
+            };
+
+            struct RunContext;
+
+            struct RunCommand : public Command {
+                void run() {
                 }
             };
         }  // namespace subcmd
