@@ -17,14 +17,27 @@ void test_subcommand(int argc, char** argv) {
     ctx.Set(
         argv[0], [&](subcmd::RunCommand& ctx) {
             for (auto& a : ctx.arg()) {
-                cout << "arg: " << a;
+                cout << "arg: " << a << "\n";
             }
             return 0;
         },
         "subcommand test");
+    bool* upper = nullptr;
+    auto go = ctx.SubCommand(
+        "go", [&](subcmd::RunCommand& ctx) {
+            if (*upper) {
+                cout << "GO GO GO!\n";
+            }
+            else {
+                cout << "go go go!\n";
+            }
+            return 0;
+        },
+        "go go go!");
+    upper = go->option().Bool("upper,u", false, "option", "");
     auto err = subcmd::parse(argc, argv, ctx);
     if (auto msg = error_msg(err)) {
-        cout << "erorr: " << ctx.get_option().erropt() << ": " << msg << "\n";
+        cout << "erorr: " << ctx.erropt() << ": " << msg << "\n";
         return;
     }
     ctx.run();

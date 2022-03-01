@@ -109,7 +109,7 @@ namespace utils {
                     for (auto& kv : *o) {
                         write_comma(first);
                         out.write_raw("\"");
-                        auto e1 = escape(std::get<0>(kv));
+                        auto e1 = escape(get<0>(kv));
                         if (!e1) {
                             return JSONError::invalid_escape;
                         }
@@ -117,7 +117,7 @@ namespace utils {
                         if (!any(flag & FmtFlag::no_space_key_value)) {
                             out.t.push_back(' ');
                         }
-                        auto e2 = to_string_detail(std::get<1>(kv), out, flag);
+                        auto e2 = to_string_detail(get<1>(kv), out, flag);
                         if (!e2) {
                             return e2;
                         }

@@ -216,9 +216,9 @@ namespace utils {
                     template <class Header, class URL, class Cookies>
                     static CookieErr parse_set_cookie(Header& header, Cookies& cookies, const URL& url) {
                         for (auto& h : header) {
-                            if (helper::equal(std::get<0>(h), "Set-Cookie", helper::ignore_case())) {
+                            if (helper::equal(get<0>(h), "Set-Cookie", helper::ignore_case())) {
                                 cookie_t cookie;
-                                auto err = parse(std::get<1>(h), cookie, url);
+                                auto err = parse(get<1>(h), cookie, url);
                                 if (!err) return err;
                                 cookies.push_back(std::move(cookie));
                             }

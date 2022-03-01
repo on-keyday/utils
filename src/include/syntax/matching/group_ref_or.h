@@ -172,7 +172,7 @@ namespace utils {
                     push(nullptr, v);
                     stack.current().on_repeat = on_repeat;
                     virtual_stack.push_back(seg);
-                    auto e = std::get<1>(*found);
+                    auto e = get<1>(*found);
                     if (e->type == SyntaxType::or_) {
                         return start_or(e);
                     }

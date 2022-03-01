@@ -161,7 +161,7 @@ namespace utils {
 
             constexpr auto default_validator() {
                 return [](auto&& keyval) {
-                    return is_valid_key(std::get<0>(keyval)) && is_valid_value(std::get<1>(keyval));
+                    return is_valid_key(get<0>(keyval)) && is_valid_value(get<1>(keyval));
                 };
             }
 
@@ -174,9 +174,9 @@ namespace utils {
                         }
                         continue;
                     }
-                    helper::append(str, std::get<0>(keyval));
+                    helper::append(str, get<0>(keyval));
                     helper::append(str, ": ");
-                    helper::append(str, std::get<1>(keyval));
+                    helper::append(str, get<1>(keyval));
                     helper::append(str, "\r\n");
                 }
                 helper::append(str, "\r\n");

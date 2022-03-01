@@ -21,8 +21,8 @@ namespace utils {
                 return get<1>(it);
             }
 
-            bool exists() {
-                return begin() != end();
+            bool empty() {
+                return begin() == end();
             }
         };
 

@@ -91,7 +91,7 @@ namespace utils {
                 }
                 T copy(std::move(t));
                 std::erase_if(listener, [&](auto& v) {
-                    SendChan<T, Que>& c = std::get<1>(v);
+                    SendChan<T, Que>& c = get<1>(v);
                     if (c.is_closed()) {
                         return true;
                     }
@@ -112,7 +112,7 @@ namespace utils {
                 }
                 lock_.lock();
                 for (auto& l : listener) {
-                    std::get<1>(l).close();
+                    get<1>(l).close();
                 }
                 listener.clear();
                 lock_.unlock();

@@ -645,7 +645,7 @@ namespace utils {
                         mp[ref->tok] = ref->subparser;
                         return true;
                     }
-                    ref->subparser = std::get<1>(*found);
+                    ref->subparser = get<1>(*found);
                 }
                 else if (tok->declkind() == ParserKind::some_pattern) {
                     auto ref = static_cast<SomePatternParser<Input, String, Kind, Vec>*>(&*tok);
@@ -719,7 +719,7 @@ namespace utils {
                 CONSUME_SPACE(false, false)
             }
             for (auto& v : desc) {
-                if (!internal::replace_weakref<Input, String, Kind, Vec>(std::get<1>(v), desc, fn, std::get<0>(v), cfg)) {
+                if (!internal::replace_weakref<Input, String, Kind, Vec>(get<1>(v), desc, fn, get<0>(v), cfg)) {
                     return nullptr;
                 }
             }
@@ -727,7 +727,7 @@ namespace utils {
             if (found == desc.end()) {
                 return nullptr;
             }
-            return std::get<1>(*found);
+            return get<1>(*found);
         }
 #undef CONSUME_SPACE
 #undef CONSUME_SPACE_B

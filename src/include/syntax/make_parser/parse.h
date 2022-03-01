@@ -33,7 +33,7 @@ namespace utils {
                     return false;
                 }
                 auto res = result.insert({segname, group});
-                if (!std::get<1>(res)) {
+                if (!get<1>(res)) {
                     ctx.err.packln("error: element `", segname, "` is already exists");
                     return false;
                 }

@@ -97,9 +97,9 @@ namespace utils {
                 auto c = seq.current();
                 bool done = false;
                 for (auto& s : esc) {
-                    if (std::get<0>(s) == c) {
+                    if (get<0>(s) == c) {
                         out.push_back('\\');
-                        out.push_back(std::get<1>(s));
+                        out.push_back(get<1>(s));
                         done = true;
                         break;
                     }
@@ -186,8 +186,8 @@ namespace utils {
                     c = seq.current();
                     bool done = false;
                     for (auto& s : esc) {
-                        if (std::get<1>(s) == c) {
-                            out.push_back(std::get<0>(s));
+                        if (get<1>(s) == c) {
+                            out.push_back(get<0>(s));
                             done = true;
                             break;
                         }

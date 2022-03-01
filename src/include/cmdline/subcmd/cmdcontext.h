@@ -62,20 +62,20 @@ namespace utils {
                     return need_subcommand;
                 }
 
-                template <class CmdType = Derived, class Usage = const char*>
-                wrap::shared_ptr<CmdType> make_subcommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                template <class Usage = const char*>
+                wrap::shared_ptr<Derived> make_subcommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     wrap::string mainname;
                     wrap::vector<wrap::string> alias;
                     if (!option::make_cvtvec(name, mainname, subcommand, alias)) {
                         return nullptr;
                     }
-                    auto sub = wrap::make_shared<CmdType>();
+                    auto sub = wrap::make_shared<Derived>();
                     sub->mainname = std::move(mainname);
                     sub->alias = std::move(alias);
                     sub->desc = utf::convert<wrap::string>(desc);
                     sub->usage = utf::convert<wrap::string>(usage);
                     sub->need_subcommand = need_subcommand;
-                    sub->parent = this;
+                    sub->parent_ = static_cast<Derived*>(this);
                     subcommand.emplace(sub->mainname, sub);
                     for (auto& s : sub->alias) {
                         subcommand.emplace(s, sub);
@@ -101,8 +101,18 @@ namespace utils {
                     return parent_->arg();
                 }
 
-                option::Context& get_option() {
+                option::Context& option() {
                     return ctx;
+                }
+
+                wrap::string erropt() {
+                    if (ctx.erropt().size()) {
+                        return ctx.erropt();
+                    }
+                    if (parent_) {
+                        return parent_->erropt();
+                    }
+                    return {};
                 }
 
                 Derived* parent() {
@@ -121,7 +131,7 @@ namespace utils {
             struct Command : public CommandBase<Command> {
                 template <class Usage = const char*>
                 wrap::shared_ptr<Command> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
-                    return this->make_subcommand<Command>(name, desc, usage, need_subcommand);
+                    return this->make_subcommand(name, desc, usage, need_subcommand);
                 }
             };
 
@@ -149,7 +159,7 @@ namespace utils {
                public:
                 template <class Usage = const char*>
                 wrap::shared_ptr<RunCommand> SubCommand(auto&& name, runner_t runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
-                    auto ptr = this->make_subcommand<RunCommand>(name, desc, usage, need_subcommand);
+                    auto ptr = this->make_subcommand(name, desc, usage, need_subcommand);
                     if (!ptr) {
                         return nullptr;
                     }

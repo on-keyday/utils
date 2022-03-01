@@ -99,6 +99,19 @@ namespace utils {
                 }
 
                public:
+                template <class T>
+                T value_or_not(auto&& name, T or_not = T{}, size_t index = 0) {
+                    auto found = reserved.find(name);
+                    if (found != reserved.end()) {
+                        Result& place = get<1>(found);
+                        auto ptr = place.value.get_ptr<T>();
+                        if (ptr) {
+                            return *ptr;
+                        }
+                    }
+                    auto it = find(name);
+                }
+
                 auto find(auto&& name) {
                     sort_result();
                     auto check = [&](auto&& v) {

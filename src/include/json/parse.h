@@ -148,7 +148,7 @@ namespace utils {
                         return false;
                     }
                     auto res = ptr->emplace(std::move(key), std::move(value));
-                    if (!std::get<1>(res)) {
+                    if (!get<1>(res)) {
                         return JSONError::emplace_error;
                     }
                     first = false;

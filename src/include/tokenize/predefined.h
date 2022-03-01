@@ -38,10 +38,10 @@ namespace utils {
             template <class T>
             size_t match(Sequencer<T>& seq, String& matched, size_t* layer = nullptr) const {
                 for (auto& v : predef) {
-                    if (auto n = seq.match_n(std::get<0>(v))) {
-                        matched = std::get<0>(v);
+                    if (auto n = seq.match_n(get<0>(v))) {
+                        matched = get<0>(v);
                         if (layer) {
-                            *layer = std::get<1>(v);
+                            *layer = get<1>(v);
                         }
                         return n;
                     }

@@ -193,7 +193,7 @@ namespace utils {
             bool find(const auto& name, auto* opt) {
                 static_assert(std::is_same_v<decltype(opt), option_t*>, "i don't like msvc");
                 if (auto found = desc.find(name); found != desc.end()) {
-                    auto idx = std::get<1>(*found);
+                    auto idx = get<1>(*found);
                     assert(idx < vec.size());
                     *opt = vec[idx];
                     return true;
@@ -301,7 +301,7 @@ namespace utils {
             bool find(auto& name, auto** opt) {
                 static_assert(std::is_same_v<decltype(opt), result_t**>, "I don't like msvc");
                 if (auto found = result.find(name); found != result.end()) {
-                    *opt = &std::get<1>(*found);
+                    *opt = &get<1>(*found);
                     return true;
                 }
                 return false;
