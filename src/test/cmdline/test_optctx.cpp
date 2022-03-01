@@ -12,6 +12,7 @@
 using namespace utils::cmdline;
 void test_optctx(int argc, char** argv, option::ParseFlag flag) {
     option::Context ctx;
+
     auto flagset = ctx.FlagSet("long,l", option::ParseFlag::pf_long, "long flag", "");
     ctx.VarFlagSet(flagset, "short,S", option::ParseFlag::pf_short, "short flag", "");
     auto test = ctx.Bool("test,t", false, "test flag", "");
