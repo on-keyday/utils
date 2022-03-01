@@ -76,19 +76,20 @@ namespace utils {
                     return need_subcommand;
                 }
 
-                template <class Usage = const char*>
-                wrap::shared_ptr<Command> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                template <class CmdType = Command, class Usage = const char*>
+                wrap::shared_ptr<CmdType> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     wrap::string mainname;
                     wrap::vector<wrap::string> alias;
                     if (!option::make_cvtvec(name, mainname, subcommand, alias)) {
                         return nullptr;
                     }
-                    auto sub = wrap::make_shared<Command>();
+                    auto sub = wrap::make_shared<CmdType>();
                     sub->mainname = std::move(mainname);
                     sub->alias = std::move(alias);
                     sub->desc = utf::convert<wrap::string>(desc);
                     sub->usage = utf::convert<wrap::string>(usage);
                     sub->need_subcommand = need_subcommand;
+                    sub->parent = this;
                     subcommand.emplace(sub->mainname, sub);
                     for (auto& s : sub->alias) {
                         subcommand.emplace(s, sub);
