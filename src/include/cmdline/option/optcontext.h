@@ -8,6 +8,7 @@
 
 // optcontext - option context
 #pragma once
+#include "parse.h"
 #include "option_set.h"
 #include "parsers.h"
 #include "help.h"
@@ -28,9 +29,6 @@ namespace utils {
                 }
                 return std::move(ps);
             }
-
-            template <class Ctx, class Arg>
-            FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg, ParseFlag flag, int start_index);
 
             struct Context {
                private:

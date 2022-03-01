@@ -49,7 +49,7 @@ namespace utils {
                         return option::parse(argc, argv, cur, ctx.arg(), flag, idx + 1);
                     }
                     auto& next = *found;
-                    return parse(argc, argc, next, flag, idx + 1);
+                    return parse(argc, argv, next, flag, idx + 1);
                 }
                 else {
                     return err;

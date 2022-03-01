@@ -7,10 +7,15 @@
 
 
 #include <cmdline/subcmd/cmdcontext.h>
+#include <cmdline/subcmd/parse.h>
 
 using namespace utils::cmdline;
 void test_subcommand(int argc, char** argv) {
     subcmd::RunContext ctx;
+    auto err = subcmd::parse(argc, argv, ctx);
+    if (auto msg = error_msg(err)) {
+        return;
+    }
     ctx.run();
 }
 

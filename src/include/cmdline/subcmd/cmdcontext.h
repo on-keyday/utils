@@ -8,6 +8,7 @@
 
 // cmdcontext - subcommand context
 #pragma once
+#include "parse.h"
 #include "../option/optcontext.h"
 #include "cmdrunner.h"
 
@@ -44,7 +45,7 @@ namespace utils {
 
                 option::Context& context() {
                     if (parent_) {
-                        parent_->update_reached(this);
+                        parent_->update_reached(static_cast<Derived*>(this));
                     }
                     return ctx;
                 }
@@ -113,7 +114,7 @@ namespace utils {
                     if (found == subcommand.end()) {
                         return nullptr;
                     }
-                    return *found;
+                    return get<1>(*found);
                 }
             };
 
