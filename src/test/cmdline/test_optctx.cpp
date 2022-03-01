@@ -5,10 +5,8 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-
-#include <cmdline/option/optcontext.h>
 #include <cmdline/option/parse.h>
-#include <cmdline/option/help.h>
+#include <cmdline/option/optcontext.h>
 #include <wrap/cout.h>
 #include <wrap/argv.h>
 using namespace utils::cmdline;
@@ -26,10 +24,10 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
     ctx.UnboundInt("int-unbound,B", "unbound int", "INT");
     ctx.UnboundString<utils::wrap::string>("str-unbound,b", "unbound string", "STRING");
     auto& cout = utils::wrap::cout_wrap();
-    cout << option::desc<utils::wrap::string>(flag, ctx.desc.list);
+    cout << ctx.help<utils::wrap::string>(flag);
     auto err = option::parse(argc, argv, ctx, utils::helper::nop, flag);
     if (auto val = error_msg(err)) {
-        cout << "error: " << ctx.result.erropt << ": " << val << "\n";
+        cout << "error: " << ctx.erropt() << ": " << val << "\n";
     }
     else {
         cout << "parse succeeded:\n";
@@ -46,7 +44,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         }
         cout << "long and short: " << option::get_flag_state<utils::wrap::string>(*flagset)
              << "\n";
-        auto unbound = ctx.result.find("unbound");
+        auto unbound = ctx.find("unbound");
         cout << "unbound:\n";
         for (auto& it : unbound) {
             auto v = it.value.get_ptr<bool>();
@@ -57,7 +55,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
                 cout << std::boolalpha << *v << "\n";
             }
         }
-        auto int_unbound = ctx.result.find("int-unbound");
+        auto int_unbound = ctx.find("int-unbound");
         cout << "int-unbound:\n";
         for (auto& it : int_unbound) {
             auto v = it.value.get_ptr<std::int64_t>();
@@ -68,7 +66,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
                 cout << *v << "\n";
             }
         }
-        auto str_unbound = ctx.result.find("str-unbound");
+        auto str_unbound = ctx.find("str-unbound");
         cout << "str-unbound:\n";
         for (auto& it : str_unbound) {
             auto v = it.value.get_ptr<utils::wrap::string>();

@@ -10,6 +10,7 @@
 #pragma once
 #include "option_set.h"
 #include "parsers.h"
+#include "help.h"
 namespace utils {
     namespace cmdline {
         namespace option {
@@ -27,9 +28,31 @@ namespace utils {
                 return std::move(ps);
             }
 
+            template <class Ctx, class Arg>
+            FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg, ParseFlag flag, int start_index);
+
             struct Context {
+               private:
                 Description desc;
                 Results result;
+
+                template <class Ctx, class Arg>
+                friend FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg, ParseFlag flag, int start_index);
+
+               public:
+                template <class Str>
+                void help(Str& str, ParseFlag flag, const char* indent = "    ") {
+                    option::desc(str, flag, desc.list, indent);
+                }
+
+                template <class Str>
+                Str help(ParseFlag flag, const char* indent = "    ") {
+                    return option::desc<Str>(flag, desc.list, indent);
+                }
+
+                auto& erropt() {
+                    return result.erropt;
+                }
 
                 bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
                     return desc.set(option, std::move(parser), help, argdesc) != nullptr;
@@ -199,6 +222,10 @@ namespace utils {
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
                         help, argdesc, flag);
+                }
+
+                auto find(auto&& optname) {
+                    return result.find(optname);
                 }
             };
         }  // namespace option
