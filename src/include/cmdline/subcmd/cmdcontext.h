@@ -82,6 +82,14 @@ namespace utils {
                     return sub;
                 }
 
+                template <class Usage = const char*>
+                void set_self(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    this->mainname = utf::convert<wrap::string>(name);
+                    this->desc = utf::convert<wrap::string>(desc);
+                    this->usage = utf::convert<wrap::string>(usage);
+                    this->need_subcommand = need_subcommand;
+                }
+
                public:
                 const wrap::string& name() {
                     return mainname;
@@ -121,6 +129,11 @@ namespace utils {
                 wrap::vector<wrap::string> arg_;
 
                public:
+                template <class Usage = const char*>
+                void Set(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    set_self(name, desc, usage, need_subcommand);
+                }
+
                 wrap::vector<wrap::string>& arg() override {
                     return arg_;
                 }
@@ -164,6 +177,12 @@ namespace utils {
                public:
                 wrap::vector<wrap::string>& arg() override {
                     return arg_;
+                }
+
+                template <class Usage = const char*>
+                void Set(auto&& name, CommandRunner<RunCommand> runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    set_self(name, desc, usage, need_subcommand);
+                    this->Run = std::move(runner);
                 }
             };
         }  // namespace subcmd
