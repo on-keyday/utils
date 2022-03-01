@@ -235,6 +235,11 @@ namespace utils {
                 T value_or_not(auto&& name, T or_not = {}, size_t index = 0) {
                     return result.value_or_not<T>(name, std::forward<T>(or_not), index);
                 }
+
+                template <class T>
+                T value(auto&& name, size_t index = 0) {
+                    return value_or_not(name, {}, index);
+                }
             };
         }  // namespace option
     }      // namespace cmdline
