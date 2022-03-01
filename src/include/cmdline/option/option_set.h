@@ -28,6 +28,7 @@ namespace utils {
                 OptParser parser;
                 wrap::string help;
                 wrap::string argdesc;
+                bool bindonce = false;
             };
 
             bool make_cvtvec(auto& option, auto& mainname, auto& desc, auto& cvtvec) {
@@ -50,7 +51,7 @@ namespace utils {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
                 wrap::vector<wrap::shared_ptr<Option>> list;
 
-                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc) {
+                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc, bool bindonce) {
                     wrap::string mainname;
                     wrap::vector<wrap::string> cvtvec;
                     if (!make_cvtvec(option, mainname, desc, cvtvec)) {
@@ -62,6 +63,7 @@ namespace utils {
                     opt->parser = std::move(parser);
                     opt->help = utf::convert<wrap::string>(help);
                     opt->argdesc = utf::convert<wrap::string>(argdesc);
+                    opt->bindonce = bindonce;
                     desc[opt->mainname] = opt;
                     for (size_t i = 0; i < opt->aliases.size(); i++) {
                         desc[opt->aliases[i]] = opt;

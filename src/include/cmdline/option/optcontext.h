@@ -16,13 +16,14 @@ namespace utils {
         namespace option {
             enum class CustomFlag {
                 none = 0,
-                with_once = 0x1,
+                appear_once = 0x1,
+                bind_once = 0x2,
             };
 
             DEFINE_ENUM_FLAGOP(CustomFlag)
 
             inline OptParser bind_custom(OptParser&& ps, CustomFlag flag) {
-                if (any(CustomFlag::with_once & flag)) {
+                if (any(CustomFlag::appear_once & flag)) {
                     ps = OnceParser{std::move(ps)};
                 }
                 return std::move(ps);
@@ -58,13 +59,13 @@ namespace utils {
                     return result.index;
                 }
 
-                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
-                    return desc.set(option, std::move(parser), help, argdesc) != nullptr;
+                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc, bool bindonce) {
+                    return desc.set(option, std::move(parser), help, argdesc, bindonce) != nullptr;
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
-                    auto opt = desc.set(option, std::move(parser), help, argdesc);
+                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc, bool bindonce) {
+                    auto opt = desc.set(option, std::move(parser), help, argdesc, bindonce);
                     if (!opt) {
                         return nullptr;
                     }
@@ -83,11 +84,11 @@ namespace utils {
                 std::remove_pointer_t<T>* value(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
                     return custom_option_reserved(
                         std::move(defaultv), option,
-                        bind_custom(std::move(ps), flag), help, argdesc);
+                        bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
                 }
 
                 bool unbound_value(auto&& option, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
-                    return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc);
+                    return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
                 }
 
                 bool UnboundBool(auto&& option, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {

@@ -81,12 +81,14 @@ namespace utils {
                         auto reserved = result.reserved.find(option->mainname);
                         if (reserved != result.reserved.end()) {
                             auto& place = std::get<1>(*reserved);
-                            if (!option->parser.parse(place.value, state, true, place.set_count)) {
-                                set_user_err();
-                                return false;
+                            if (!option->bindonce || place.set_count == 0) {
+                                if (!option->parser.parse(place.value, state, true, place.set_count)) {
+                                    set_user_err();
+                                    return false;
+                                }
+                                place.set_count++;
+                                return true;
                             }
-                            place.set_count++;
-                            return true;
                         }
                         result.result.push_back({});
                         auto& added = result.result.back();
