@@ -43,11 +43,19 @@ namespace utils {
                         result.erropt = state.argv[state.index];
                         return false;
                     }
+                    else if (state.state == FlagType::suspend) {
+                        result.index = state.index;
+                        result.erropt = state.argv[state.index];
+                        return true;
+                    }
                     else if (state.state == FlagType::arg) {
                         arg.push_back(state.val);
                         return true;
                     }
                     else if (state.state == FlagType::ignore) {
+                        if (!any(state.flag & ParseFlag::parse_all)) {
+                            return true;
+                        }
                         for (auto i = state.arg_track_index; i < state.argc; i++) {
                             arg.push_back(state.argv[i]);
                         }

@@ -54,6 +54,10 @@ namespace utils {
                     return result.erropt;
                 }
 
+                int errindex() {
+                    return result.index;
+                }
+
                 bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc) {
                     return desc.set(option, std::move(parser), help, argdesc) != nullptr;
                 }
