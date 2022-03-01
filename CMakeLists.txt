@@ -159,6 +159,7 @@ target_link_libraries(asyncdns utils)
 target_link_libraries(asynctcp utils)
 target_link_libraries(optparse utils)
 target_link_libraries(optctx utils)
+target_link_libraries(subcmd utils)
 
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")

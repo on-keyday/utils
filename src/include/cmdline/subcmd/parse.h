@@ -46,7 +46,7 @@ namespace utils {
                         if (ctx.need_sub()) {
                             return option::FlagType::subcmd_not_found;
                         }
-                        return option::parse(argc, argv, cur, ctx.arg(), flag, idx + 1);
+                        return option::parse(argc, argv, cur, ctx.arg(), flag, idx);
                     }
                     auto& next = *found;
                     return parse(argc, argv, next, flag, idx + 1);
