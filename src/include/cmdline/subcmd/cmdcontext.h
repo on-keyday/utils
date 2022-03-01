@@ -21,30 +21,30 @@ namespace utils {
                 runcommand,
                 runcontext,
             };
-
-            struct Command {
+            template <class Derived>
+            struct CommandBase {
                protected:
                 wrap::string mainname;
                 wrap::string desc;
                 wrap::string usage;
-                Command* parent = nullptr;
-                Command* reached_child = nullptr;
+                Derived* parent_ = nullptr;
+                Derived* reached_child = nullptr;
                 option::Context ctx;
                 bool need_subcommand = false;
-                wrap::map<wrap::string, wrap::shared_ptr<Command>> subcommand;
-                wrap::vector<wrap::shared_ptr<Command>> list;
+                wrap::map<wrap::string, wrap::shared_ptr<Derived>> subcommand;
+                wrap::vector<wrap::shared_ptr<Derived>> list;
                 wrap::vector<wrap::string> alias;
 
                 void update_reached(Command* p) {
                     reached_child = p;
-                    if (parent) {
-                        parent->update_reached(p);
+                    if (parent_) {
+                        parent_->update_reached(p);
                     }
                 }
 
                 option::Context& context() {
-                    if (parent) {
-                        parent->update_reached(this);
+                    if (parent_) {
+                        parent_->update_reached(this);
                     }
                     return ctx;
                 }
@@ -53,29 +53,6 @@ namespace utils {
                 friend option::FlagType parse(int argc, char** argv, Ctx& ctx,
                                               option::ParseFlag flag,
                                               int start_index);
-
-               public:
-                const wrap::string& name() {
-                    return mainname;
-                }
-
-                virtual wrap::vector<wrap::string>& arg() {
-                    assert(parent);
-                    return parent->arg();
-                }
-
-                option::Context& get_option() {
-                    return ctx;
-                }
-
-                wrap::shared_ptr<Command> find_cmd(auto&& name) {
-                    auto found = subcommand.find(name);
-                    if (found == subcommand.end()) {
-                        return nullptr;
-                    }
-                    return *found;
-                }
-
                 auto cmd_end() {
                     return nullptr;
                 }
@@ -84,11 +61,7 @@ namespace utils {
                     return need_subcommand;
                 }
 
-                auto SubCommand() {
-                }
-
-               protected:
-                template <class CmdType = Command, class Usage = const char*>
+                template <class CmdType = Derived, class Usage = const char*>
                 wrap::shared_ptr<CmdType> make_subcommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     wrap::string mainname;
                     wrap::vector<wrap::string> alias;
@@ -108,6 +81,39 @@ namespace utils {
                     }
                     return sub;
                 }
+
+               public:
+                const wrap::string& name() {
+                    return mainname;
+                }
+
+                virtual wrap::vector<wrap::string>& arg() {
+                    assert(parent_);
+                    return parent_->arg();
+                }
+
+                option::Context& get_option() {
+                    return ctx;
+                }
+
+                Derived* parent() {
+                    return parent_;
+                }
+
+                wrap::shared_ptr<Command> find_cmd(auto&& name) {
+                    auto found = subcommand.find(name);
+                    if (found == subcommand.end()) {
+                        return nullptr;
+                    }
+                    return *found;
+                }
+            };
+
+            struct Command : public CommandBase<Command> {
+                template <class Usage = const char*>
+                wrap::shared_ptr<Command> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    return this->make_subcommand<Command>(name, desc, usage, need_subcommand);
+                }
             };
 
             struct Context : public Command {
@@ -120,10 +126,35 @@ namespace utils {
                 }
             };
 
-            struct RunContext;
+            struct RunCommand : public CommandBase<RunCommand> {
+                CommandRunner<RunCommand> Run;
 
-            struct RunCommand : public Command {
-                void run() {
+                template <class Usage = const char*>
+                wrap::shared_ptr<RunCommand> SubCommand(auto&& name, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                    return this->make_subcommand<RunCommand>(name, desc, usage, need_subcommand);
+                }
+            };
+
+            struct RunContext : public RunCommand {
+               private:
+                wrap::vector<wrap::string> arg_;
+
+               public:
+                wrap::vector<wrap::string>& arg() override {
+                    return arg_;
+                }
+
+                int run() {
+                    if (!this->reached_child) {
+                        if (!this->Run) {
+                            return -1;
+                        }
+                        return this->Run(*this);
+                    }
+                    if (!this->reached_child->Run) {
+                        return -1;
+                    }
+                    return this->reached_child->Run(*this->reached_child);
                 }
             };
         }  // namespace subcmd
