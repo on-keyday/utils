@@ -163,6 +163,8 @@ namespace utils {
                 not_accepted,
                 type_not_match,
                 require_once,
+                subcmd_not_found,
+                require_subcmd,
             };
 
             DEFINE_ENUM_FLAGOP(FlagType)
@@ -181,6 +183,8 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::not_accepted, "argument value is not acceptable")
             ENUM_STRING_MSG(FlagType::type_not_match, "argument type not matched")
             ENUM_STRING_MSG(FlagType::require_once, "option must be only once in command line")
+            ENUM_STRING_MSG(FlagType::subcmd_not_found, "subcommand not found")
+            ENUM_STRING_MSG(FlagType::require_subcmd, "require subcommand")
             END_ENUM_STRING_MSG(nullptr)
 
             struct CmdParseState {

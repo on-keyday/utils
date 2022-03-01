@@ -38,14 +38,16 @@ namespace utils {
                         }
                         arg.push_back(state.argv[state.index]);
                     };
-                    if (state.err) {
+                    auto push_argv_index = [&] {
                         result.index = state.index;
                         result.erropt = state.argv[state.index];
+                    };
+                    if (state.err) {
+                        push_argv_index();
                         return false;
                     }
                     else if (state.state == FlagType::suspend) {
-                        result.index = state.index;
-                        result.erropt = state.argv[state.index];
+                        push_argv_index();
                         return true;
                     }
                     else if (state.state == FlagType::arg) {
@@ -54,6 +56,7 @@ namespace utils {
                     }
                     else if (state.state == FlagType::ignore) {
                         if (!any(state.flag & ParseFlag::parse_all)) {
+                            push_argv_index();
                             return true;
                         }
                         for (auto i = state.arg_track_index; i < state.argc; i++) {
