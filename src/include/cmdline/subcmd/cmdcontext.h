@@ -35,7 +35,7 @@ namespace utils {
                 wrap::vector<wrap::shared_ptr<Derived>> list;
                 wrap::vector<wrap::string> alias;
 
-                void update_reached(Command* p) {
+                void update_reached(Derived* p) {
                     reached_child = p;
                     if (parent_) {
                         parent_->update_reached(p);
@@ -100,7 +100,7 @@ namespace utils {
                     return parent_;
                 }
 
-                wrap::shared_ptr<Command> find_cmd(auto&& name) {
+                wrap::shared_ptr<Derived> find_cmd(auto&& name) {
                     auto found = subcommand.find(name);
                     if (found == subcommand.end()) {
                         return nullptr;
@@ -128,8 +128,11 @@ namespace utils {
 
             struct RunCommand : public CommandBase<RunCommand> {
                 using runner_t = CommandRunner<RunCommand>;
+
+               protected:
                 runner_t Run;
 
+               public:
                 template <class Usage = const char*>
                 wrap::shared_ptr<RunCommand> SubCommand(auto&& name, runner_t runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     auto ptr = this->make_subcommand<RunCommand>(name, desc, usage, need_subcommand);
@@ -138,16 +141,6 @@ namespace utils {
                     }
                     ptr->Run = std::move(runner);
                     return ptr;
-                }
-            };
-
-            struct RunContext : public RunCommand {
-               private:
-                wrap::vector<wrap::string> arg_;
-
-               public:
-                wrap::vector<wrap::string>& arg() override {
-                    return arg_;
                 }
 
                 int run() {
@@ -161,6 +154,16 @@ namespace utils {
                         return -1;
                     }
                     return this->reached_child->Run(*this->reached_child);
+                }
+            };
+
+            struct RunContext : public RunCommand {
+               private:
+                wrap::vector<wrap::string> arg_;
+
+               public:
+                wrap::vector<wrap::string>& arg() override {
+                    return arg_;
                 }
             };
         }  // namespace subcmd

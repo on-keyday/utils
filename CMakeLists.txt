@@ -76,6 +76,7 @@ add_executable(asynctcp "src/test/net/async/test_asynctcp.cpp")
 add_executable(http2frame "src/test/net/test_http2frame.cpp")
 add_executable(optparse "src/test/cmdline/test_optparse.cpp")
 add_executable(optctx "src/test/cmdline/test_optctx.cpp")
+add_executable(subcmd "src/test/cmdline/test_subcmd.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
