@@ -110,6 +110,19 @@ namespace utils {
                         }
                     }
                     auto it = find(name);
+                    if (!it.empty()) {
+                        auto d = it.begin();
+                        for (size_t i = 0; i < index && d != it.end(); i++, d++)
+                            ;
+                        if (d != it.end()) {
+                            Result& place = *d;
+                            auto ptr = place.value.get_ptr<T>();
+                            if (ptr) {
+                                return *ptr;
+                            }
+                        }
+                    }
+                    return or_not;
                 }
 
                 auto find(auto&& name) {
