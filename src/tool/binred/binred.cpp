@@ -74,14 +74,15 @@ int main(int argc, char** argv) {
         cout << "binred: error: " << uc::error_message(err) << "\n";
         return -1;
     }*/
-    auto err = uc::option::parse(argc, argv, opt, utils::helper::nop, uc::option::ParseFlag::optget_ext_mode);
+    auto parse_mode = uc::option::ParseFlag::assignable_mode | uc::option::ParseFlag::assign_anyway_val;
+    auto err = uc::option::parse(argc, argv, opt, utils::helper::nop, parse_mode);
     if (auto msg = error_msg(err)) {
         cout << "binred: error: " << opt.erropt() << ": " << msg << "\n";
         return -1;
     }
     if (*help) {
         // cout << desc.help(argv[0]);
-        cout << opt.Usage<utw::string>(uc::option::ParseFlag::optget_ext_mode, argv[0]);
+        cout << opt.Usage<utw::string>(parse_mode, argv[0]);
         return 1;
     }
     if (*syntax) {
