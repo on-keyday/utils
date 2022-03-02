@@ -16,14 +16,14 @@
 #if !defined(_WIN32) || !defined(__clang__)
 #if __has_include(<coroutine>)
 #include <coroutine>
-#define UTILS_COROUTINE_ExISTS
+#define UTILS_COROUTINE_EXISTS 1
 #endif
 #endif
 #endif
 
 namespace utils {
     namespace async {
-#ifdef UTILS_COROUTINE_ExISTS
+#ifdef UTILS_COROUTINE_EXISTS
         namespace coro_ns = std;
 #endif
 

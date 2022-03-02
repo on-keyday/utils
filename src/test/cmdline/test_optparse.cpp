@@ -17,7 +17,7 @@ using namespace utils::cmdline;
 void test_optparse(int argc, char** argv, option::ParseFlag flag) {
     cout << option::get_flag_state<utils::wrap::string>(flag)
          << "\n";
-    auto result = option::parse(
+    auto result = option::do_parse(
         argc, argv, flag, 1, [](option::CmdParseState& state) {
             if (state.state == option::FlagType::arg) {
                 assert(state.val);

@@ -109,7 +109,7 @@ namespace utils {
                            Desc& desc, Result& result, Arg& arg = helper::nop,
                            ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
                 auto proc = parse_default_proc(desc, result, arg);
-                return parse(argc, argv, flag, start_index, proc);
+                return do_parse(argc, argv, flag, start_index, proc);
             }
             template <class Ctx, class Arg = decltype(helper::nop)>
             FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg = helper::nop,
