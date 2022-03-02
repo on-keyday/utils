@@ -7,23 +7,37 @@
 
 
 #include <async/coroutine/task.h>
+#include <async/worker.h>
+#include <wrap/cout.h>
+using namespace utils;
 #ifdef UTILS_COROUTINE_NAMESPACE
 
-using namespace utils;
-async::coro::Task<bool> task2() {
-    co_return true;
-}
+async::TaskPool pool;
 
 async::coro::Task<int> task() {
-    auto v = task2();
-    auto u = v.get();
-    co_return 0;
+    auto t = pool.start<int>([](async::Context& ctx) {
+        auto i = 0;
+        for (; i < 100000; i++) {
+            wrap::cout_wrap() << i << "\n";
+        }
+        ctx.set_value(i);
+    });
+
+    int v = co_await t;
+    wrap::cout_wrap() << "done";
+    co_return v;
 }
+
 #else
-void task() {}
+#warning "coroutine not compiled"
+async::Future<int> task() {
+    return nullptr;
+}
 #endif
+
 void test_coroutine() {
-    task();
+    auto t = task();
+    auto result = t.get();
 }
 
 int main() {

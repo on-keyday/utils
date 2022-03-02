@@ -16,7 +16,14 @@
 #define UTILS_COROUTINE_NAMESPACE std
 #elif __has_include(<experimental/coroutine>)
 #include <experimental/coroutine>
-#define UTiLS_COROUTINE_NAMESPACE std::experimental
+#define UTILS_COROUTINE_NAMESPACE std::experimental
 #endif
 #endif
+#endif
+#ifdef UTILS_COROUTINE_NAMESPACE
+namespace utils {
+    namespace async {
+        namespace coro_ns = UTILS_COROUTINE_NAMESPACE;
+    }
+}  // namespace utils
 #endif

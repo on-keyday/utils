@@ -22,10 +22,10 @@ namespace utils {
                         return Task{*this};
                     }
                     auto initial_suspend() {
-                        return std::suspend_never{};
+                        return coro_ns::suspend_never{};
                     }
                     auto final_suspend() noexcept {
-                        return std::suspend_always{};
+                        return coro_ns::suspend_always{};
                     }
                     void return_value(T x) {
                         value_ = x;
@@ -48,9 +48,9 @@ namespace utils {
 
                private:
                 explicit Task(promise_type& p)
-                    : handle(std::coroutine_handle<promise_type>::from_promise(p)) {}
+                    : handle(coro_ns::coroutine_handle<promise_type>::from_promise(p)) {}
 
-                std::coroutine_handle<promise_type> handle;
+                coro_ns::coroutine_handle<promise_type> handle;
             };
 #endif
         }  // namespace coro

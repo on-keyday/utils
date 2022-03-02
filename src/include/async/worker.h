@@ -15,9 +15,6 @@
 
 namespace utils {
     namespace async {
-#ifdef UTILS_COROUTINE_NAMESPACE
-        namespace coro_ns = UTILS_COROUTINE_NAMESPACE;
-#endif
 
         namespace internal {
             struct WorkerData;
