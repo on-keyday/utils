@@ -17,6 +17,8 @@
 
 #include "../../include/file/file_view.h"
 
+#include "../../include/cmdline/option/optcontext.h"
+
 #include <fstream>
 
 int main(int argc, char** argv) {
@@ -31,6 +33,14 @@ int main(int argc, char** argv) {
              << "please report bug to "
              << "https://github.com/on-keyday/utils \n";
     };
+    uc::option::Context opt;
+    uc::option::CustomFlag cu = uc::option::CustomFlag::appear_once;
+    binred::State state;
+    auto help = opt.Bool("help,h", false, "show option help", "", true, cu);
+    opt.VarString(&state.data.write_method, "write-method,w", "set write method", "METHOD", cu);
+    opt.VarString(&state.data.read_method, "read-method,r", "set read method", "METHOD", cu);
+    auto syntax = opt.Bool("syntax,s", false, "show syntax help", "", true, cu);
+
     uc::DefaultDesc desc;
     desc
         .set("help,h", uc::bool_option(true), "show option help", uc::OptFlag::once_in_cmd)
@@ -52,11 +62,11 @@ int main(int argc, char** argv) {
         cout << "binred: error: " << uc::error_message(err) << "\n";
         return -1;
     }
-    if (result.is_true("help")) {
+    if (*help) {
         cout << desc.help(argv[0]);
         return 1;
     }
-    if (result.is_true("syntax")) {
+    if (*syntax) {
         cout << R"(Syntax:
     
     # COMMENT
@@ -137,7 +147,7 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-    binred::State state;
+
     state.data.write_method = "write";
     state.data.read_method = "read";
     if (auto wm = result.has_value<utw::string>("write-method")) {

@@ -49,6 +49,20 @@ namespace utils {
                     return option::desc<Str>(flag, desc.list, indent);
                 }
 
+                template <class Str>
+                void usage(Str& str, ParseFlag flag, const char* cmdname, const char* indent = "    ") {
+                    helper::appends(str, "Usage:\n",
+                                    indent, cmdname, "\nOption:\n");
+                    help(str, flag, indent);
+                }
+
+                template <class Str>
+                Str usage(ParseFlag flag, const char* cmdname, const char* indent = "    ") {
+                    Str str;
+                    usage(str, flag, cmdname, indent);
+                    return str;
+                }
+
                 auto& erropt() {
                     return result.erropt;
                 }
@@ -136,7 +150,7 @@ namespace utils {
                 }
 
                 template <class Str>
-                bool VarStr(Str* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
+                bool VarString(Str* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
                     }
