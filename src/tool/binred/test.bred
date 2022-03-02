@@ -4,7 +4,7 @@
 #    https://opensource.org/licenses/mit-license.php
 # generate code
 # tool\binred -i src/tool/binred/test.bred -o generated/binred.h -S std::shared_ptr std::make_shared -I "<memory>"
-package utils
+package utils::test
 
 import <cstdint>
 import <string>
