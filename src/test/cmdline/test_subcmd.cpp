@@ -14,13 +14,14 @@ using namespace utils::cmdline;
 void test_subcommand(int argc, char** argv) {
     auto& cout = utils::wrap::cout_wrap();
     subcmd::RunContext ctx;
+    auto default_runner = [&](subcmd::RunCommand& ctx) {
+        for (auto& a : ctx.arg()) {
+            cout << "arg: " << a << "\n";
+        }
+        return 0;
+    };
     ctx.Set(
-        argv[0], [&](subcmd::RunCommand& ctx) {
-            for (auto& a : ctx.arg()) {
-                cout << "arg: " << a << "\n";
-            }
-            return 0;
-        },
+        argv[0], default_runner,
         "subcommand test");
     bool* upper = nullptr;
     auto go = ctx.SubCommand(
@@ -33,6 +34,7 @@ void test_subcommand(int argc, char** argv) {
             else {
                 cout << "go go go!\n";
             }
+            default_runner(ctx);
             return 0;
         },
         "go go go!");
@@ -46,6 +48,7 @@ void test_subcommand(int argc, char** argv) {
             else {
                 cout << "oh no!\n";
             }
+            default_runner(ctx);
             return 0;
         },
         "oh no!");
