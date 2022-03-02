@@ -30,23 +30,30 @@ namespace utils {
                 wrap::string usage;
                 Derived* parent_ = nullptr;
                 Derived* reached_child = nullptr;
+                Derived* final_reached = nullptr;
                 option::Context ctx;
                 bool need_subcommand = false;
                 wrap::map<wrap::string, wrap::shared_ptr<Derived>> subcommand;
                 wrap::vector<wrap::shared_ptr<Derived>> list;
                 wrap::vector<wrap::string> alias;
 
-                void update_reached(Derived* p) {
-                    reached_child = p;
-                    if (parent_) {
-                        parent_->update_reached(p);
+                void update_reached(Derived* p = nullptr) {
+                    if (p) {
+                        final_reached = p;
+                        if (parent_) {
+                            parent_->update_reached(p);
+                        }
+                    }
+                    else {
+                        if (parent_) {
+                            parent_->reached_child = static_cast<Derived*>(this);
+                            parent_->update_reached(static_cast<Derived*>(this));
+                        }
                     }
                 }
 
                 option::Context& context() {
-                    if (parent_) {
-                        parent_->update_reached(static_cast<Derived*>(this));
-                    }
+                    update_reached();
                     return ctx;
                 }
 
@@ -106,13 +113,15 @@ namespace utils {
                 }
 
                 wrap::string erropt() {
+                    wrap::string ret;
                     if (ctx.erropt().size()) {
-                        return ctx.erropt();
+                        ret = ctx.erropt();
                     }
-                    if (parent_) {
-                        return parent_->erropt();
+                    if (reached_child) {
+                        ret += ": ";
+                        ret += reached_child->erropt();
                     }
-                    return {};
+                    return ret;
                 }
 
                 Derived* parent() {
@@ -168,16 +177,16 @@ namespace utils {
                 }
 
                 int run() {
-                    if (!this->reached_child) {
+                    if (!this->final_reached) {
                         if (!this->Run) {
                             return -1;
                         }
                         return this->Run(*this);
                     }
-                    if (!this->reached_child->Run) {
+                    if (!this->final_reached->Run) {
                         return -1;
                     }
-                    return this->reached_child->Run(*this->reached_child);
+                    return this->final_reached->Run(*this->final_reached);
                 }
             };
 
