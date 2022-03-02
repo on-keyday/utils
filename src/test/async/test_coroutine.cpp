@@ -7,6 +7,7 @@
 
 
 #include <async/coroutine/task.h>
+#ifdef UTILS_COROUTINE_NAMESPACE
 
 using namespace utils;
 async::coro::Task<bool> task2() {
@@ -15,8 +16,16 @@ async::coro::Task<bool> task2() {
 
 async::coro::Task<int> task() {
     auto v = task2();
-    auto v = v.get();
+    auto u = v.get();
+    co_return 0;
+}
+#else
+void task() {}
+#endif
+void test_coroutine() {
+    task();
 }
 
-void test_coroutine() {
+int main() {
+    test_coroutine();
 }

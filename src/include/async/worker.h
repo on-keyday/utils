@@ -11,20 +11,12 @@
 #include "../thread/lite_lock.h"
 #include "../wrap/lite/smart_ptr.h"
 #include "task.h"
-
-#ifdef __cpp_coroutines
-#if !defined(_WIN32) || !defined(__clang__)
-#if __has_include(<coroutine>)
-#include <coroutine>
-#define UTILS_COROUTINE_EXISTS 1
-#endif
-#endif
-#endif
+#include "coroutine/detect.h"
 
 namespace utils {
     namespace async {
-#ifdef UTILS_COROUTINE_EXISTS
-        namespace coro_ns = std;
+#ifdef UTILS_COROUTINE_NAMESPACE
+        namespace coro_ns = UTILS_COROUTINE_NAMESPACE;
 #endif
 
         namespace internal {
@@ -111,7 +103,7 @@ namespace utils {
             void clear() {
                 data = nullptr;
             }
-#ifdef UTILS_COROUTINE_EXISTS
+#ifdef UTILS_COROUTINE_NAMESPACE
             bool await_ready() {
                 return is_done();
             }
@@ -169,7 +161,7 @@ namespace utils {
                 future.wait_or_suspend(ctx);
             }
 
-#ifdef UTILS_COROUTINE_EXISTS
+#ifdef UTILS_COROUTINE_NAMESPACE
             bool await_ready() {
                 return is_done();
             }

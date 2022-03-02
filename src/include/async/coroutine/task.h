@@ -8,11 +8,12 @@
 
 // task - task object with cpp coroutine
 #pragma once
-#include <coroutine>
+#include "detect.h"
 
 namespace utils {
     namespace async {
         namespace coro {
+#ifdef UTILS_COROUTINE_NAMESPACE
             template <class T>
             struct Task {
                 struct promise_type {
@@ -51,6 +52,7 @@ namespace utils {
 
                 std::coroutine_handle<promise_type> handle;
             };
+#endif
         }  // namespace coro
     }      // namespace async
 }  // namespace utils
