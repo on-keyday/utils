@@ -240,6 +240,11 @@ namespace utils {
                 T value(auto&& name, size_t index = 0) {
                     return value_or_not(name, {}, index);
                 }
+
+                template <class T>
+                T* value_ptr(auto&& name, size_t index = 0) {
+                    return result.value_ptr<T>(name, index);
+                }
             };
         }  // namespace option
     }      // namespace cmdline

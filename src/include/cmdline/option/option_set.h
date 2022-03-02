@@ -100,13 +100,13 @@ namespace utils {
 
                public:
                 template <class T>
-                T value_or_not(auto&& name, T or_not = T{}, size_t index = 0) {
+                T* value_ptr(auto&& name, size_t index = 0) {
                     auto found = reserved.find(name);
                     if (found != reserved.end()) {
                         Result& place = get<1>(found);
                         auto ptr = place.value.get_ptr<T>();
                         if (ptr) {
-                            return *ptr;
+                            return ptr;
                         }
                     }
                     auto it = find(name);
@@ -118,11 +118,20 @@ namespace utils {
                             Result& place = *d;
                             auto ptr = place.value.get_ptr<T>();
                             if (ptr) {
-                                return *ptr;
+                                return ptr;
                             }
                         }
                     }
-                    return or_not;
+                    return nullptr;
+                }
+
+                template <class T>
+                T value_or_not(auto&& name, T or_not = T{}, size_t index = 0) {
+                    auto ptr = value_ptr<std::remove_cvref_t<T>>(name, index);
+                    if (!ptr) {
+                        return or_not;
+                    }
+                    return *ptr;
                 }
 
                 auto find(auto&& name) {
