@@ -168,6 +168,20 @@ namespace utils {
             void wait_or_suspend(async::Context& ctx) {
                 future.wait_or_suspend(ctx);
             }
+
+#ifdef UTILS_COROUTINE_EXISTS
+            bool await_ready() {
+                return is_done();
+            }
+
+            bool await_suspend(coro_ns::coroutine_handle<void> handle) {
+                return !is_done();
+            }
+
+            T await_resume() {
+                return get();
+            }
+#endif
         };
 
         struct DLL Context {
