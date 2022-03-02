@@ -79,39 +79,39 @@ namespace utils {
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* value(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
+                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
                     return custom_option_reserved(
                         std::move(defaultv), option,
                         bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
                 }
 
-                bool unbound_value(auto&& option, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
+                bool UnboundOption(auto&& option, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
                     return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
                 }
 
                 bool UnboundBool(auto&& option, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
-                    return unbound_value(option, BoolParser{.to_set = true, .rough = rough}, help, argdesc, flag);
+                    return UnboundOption(option, BoolParser{.to_set = true, .rough = rough}, help, argdesc, flag);
                 }
 
                 bool UnboundInt(auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
-                    return unbound_value(option, IntParser{.radix = radix}, help, argdesc, flag);
+                    return UnboundOption(option, IntParser{.radix = radix}, help, argdesc, flag);
                 }
 
                 template <class Str>
                 bool UnboundString(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
-                    return unbound_value(option, StringParser<Str>{}, help, argdesc, flag);
+                    return UnboundOption(option, StringParser<Str>{}, help, argdesc, flag);
                 }
 
                 template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
                 bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
-                    return unbound_value(
+                    return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
                         help, argdesc, flag);
                 }
 
                 template <class Str, template <class...> class Vec = wrap::vector>
                 bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
-                    return unbound_value(
+                    return UnboundOption(
                         option, VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
                         help, argdesc, flag);
                 }
@@ -120,7 +120,7 @@ namespace utils {
                     if (!ptr) {
                         return false;
                     }
-                    return (bool)value(
+                    return (bool)Option(
                         option, ptr, BoolParser{.to_set = !*ptr, .rough = rough},
                         help, argdesc, flag);
                 }
@@ -130,7 +130,7 @@ namespace utils {
                     if (!ptr) {
                         return false;
                     }
-                    return (bool)value(
+                    return (bool)Option(
                         ptr, option, IntParser{.radix = radix},
                         help, argdesc, flag);
                 }
@@ -140,7 +140,7 @@ namespace utils {
                     if (!ptr) {
                         return false;
                     }
-                    return (bool)value(
+                    return (bool)Option(
                         option, ptr,
                         StringParser<Str>{},
                         help, argdesc, flag);
@@ -154,8 +154,8 @@ namespace utils {
                     if (ptr->size() < len) {
                         ptr->resize(len);
                     }
-                    return (bool)value(option, ptr, VectorParser{.parser = IntParser{.radix = radix}, .len = len},
-                                       help, argdesc, flag);
+                    return (bool)Option(option, ptr, VectorParser{.parser = IntParser{.radix = radix}, .len = len},
+                                        help, argdesc, flag);
                 }
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
@@ -166,13 +166,13 @@ namespace utils {
                     if (ptr->size() < len) {
                         ptr->resize(len);
                     }
-                    return (bool)value(option, ptr,
-                                       VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
-                                       help, argdesc, flag);
+                    return (bool)Option(option, ptr,
+                                        VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                        help, argdesc, flag);
                 }
 
                 bool* Bool(auto&& option, bool defaultv, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
-                    return value(
+                    return Option(
                         option, defaultv,
                         BoolParser{.to_set = !defaultv, .rough = rough},
                         help, argdesc, flag);
@@ -180,15 +180,15 @@ namespace utils {
 
                 template <std::integral T = std::int64_t>
                 T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
-                    return value(
+                    return Option(
                         option, defaultv,
                         IntParser{.radix = radix}, help, argdesc, flag);
                 }
 
                 template <class Str = wrap::string>
                 Str* String(auto&& option, Str defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
-                    return value(option, std::move(defaultv),
-                                 StringParser<Str>{}, help, argdesc, flag);
+                    return Option(option, std::move(defaultv),
+                                  StringParser<Str>{}, help, argdesc, flag);
                 }
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
@@ -196,9 +196,9 @@ namespace utils {
                     if (defaultv.size() < len) {
                         defaultv.resize(len);
                     }
-                    return value(option, std::move(defaultv),
-                                 VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
-                                 help, argdesc, flag);
+                    return Option(option, std::move(defaultv),
+                                  VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                  help, argdesc, flag);
                 }
 
                 template <std::integral T = std::int64_t, template <class...> class Vec = wrap::vector>
@@ -206,14 +206,14 @@ namespace utils {
                     if (defaultv.size() < len) {
                         defaultv.resize(len);
                     }
-                    return value(option, std::move(defaultv),
-                                 VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
-                                 help, argdesc, flag);
+                    return Option(option, std::move(defaultv),
+                                  VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
+                                  help, argdesc, flag);
                 }
 
                 template <class Flag>
                 Flag* FlagSet(auto&& option, Flag mask, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none, Flag defaultv = Flag{}) {
-                    return value(
+                    return Option(
                         option, std::move(defaultv),
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
                         help, argdesc, flag);
@@ -221,7 +221,7 @@ namespace utils {
 
                 template <class Flag>
                 bool VarFlagSet(Flag* ptr, auto&& option, Flag mask, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
-                    return (bool)value(
+                    return (bool)Option(
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
                         help, argdesc, flag);
