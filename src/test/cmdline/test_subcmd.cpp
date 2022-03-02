@@ -26,6 +26,7 @@ void test_subcommand(int argc, char** argv) {
     auto go = ctx.SubCommand(
         "go", [&](subcmd::RunCommand& ctx) {
             auto v = ctx.option().value<bool>("upper");
+            assert(*upper ? v : true);
             if (*upper) {
                 cout << "GO GO GO!\n";
             }
