@@ -103,7 +103,7 @@ namespace utils {
                 T* value_ptr(auto&& name, size_t index = 0) {
                     auto found = reserved.find(name);
                     if (found != reserved.end()) {
-                        Result& place = get<1>(found);
+                        Result& place = get<1>(*found);
                         auto ptr = place.value.get_ptr<T>();
                         if (ptr) {
                             return ptr;

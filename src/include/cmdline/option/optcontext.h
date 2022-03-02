@@ -238,7 +238,7 @@ namespace utils {
 
                 template <class T>
                 T value(auto&& name, size_t index = 0) {
-                    return value_or_not(name, {}, index);
+                    return value_or_not<T>(name, {}, index);
                 }
 
                 template <class T>
