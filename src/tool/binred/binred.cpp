@@ -21,7 +21,11 @@
 
 #include <fstream>
 
+#include <functional>
+
 int main(int argc, char** argv) {
+    auto f = std::bind([](int) {}, 2);
+    f();
     namespace us = utils::syntax;
     namespace uc = utils::cmdline;
     namespace utw = utils::wrap;

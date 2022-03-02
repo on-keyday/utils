@@ -12,8 +12,18 @@
 #include "../wrap/lite/smart_ptr.h"
 #include "task.h"
 
+#ifdef __cpp_coroutines
+#if !defined(_WIN32) || !defined(__clang__)
+#include <coroutine>
+#define UTILS_COROUTINE_ExISTS
+#endif
+#endif
+
 namespace utils {
     namespace async {
+#ifdef UTILS_COROUTINE_ExISTS
+        namespace coro_ns = std;
+#endif
 
         namespace internal {
             struct WorkerData;
@@ -99,7 +109,19 @@ namespace utils {
             void clear() {
                 data = nullptr;
             }
+#ifdef UTILS_COROUTINE_EXISTS
+            bool await_ready() {
+                return is_done();
+            }
 
+            bool await_suspend(coro_ns::coroutine_handle<void> handle) {
+                return !is_done();
+            }
+
+            Any await_resume() {
+                return get();
+            }
+#endif
            private:
             wrap::shared_ptr<internal::ContextData> data;
             bool not_own = false;
