@@ -12,6 +12,7 @@
 #include "option_set.h"
 #include "parsers.h"
 #include "help.h"
+#include <concepts>
 namespace utils {
     namespace cmdline {
         namespace option {
@@ -139,7 +140,8 @@ namespace utils {
                         help, "", flag);
                 }
 
-                template <std::integral T>
+                template <class T>
+                requires std::is_integral_v<T>
                 bool VarInt(T* ptr, auto& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
@@ -160,7 +162,8 @@ namespace utils {
                         help, argdesc, flag);
                 }
 
-                template <std::integral T, template <class...> class Vec>
+                template <class T, template <class...> class Vec>
+                requires std::is_integral_v<T>
                 bool VarVecInt(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
@@ -168,7 +171,7 @@ namespace utils {
                     if (ptr->size() < len) {
                         ptr->resize(len);
                     }
-                    return (bool)Option(option, ptr, VectorParser{.parser = IntParser{.radix = radix}, .len = len},
+                    return (bool)Option(option, ptr, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
                                         help, argdesc, flag);
                 }
 
@@ -192,8 +195,9 @@ namespace utils {
                         help, "", flag);
                 }
 
-                template <std::integral T = std::int64_t>
-                T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                template <class T = std::int64_t>
+                requires std::is_integral_v<T>
+                    T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     return Option(
                         option, defaultv,
                         IntParser{.radix = radix}, help, argdesc, flag);
@@ -215,8 +219,10 @@ namespace utils {
                                   help, argdesc, flag);
                 }
 
-                template <std::integral T = std::int64_t, template <class...> class Vec = wrap::vector>
-                Vec<T>* VecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
+                template <class T = std::int64_t, template <class...> class Vec = wrap::vector>
+                requires std::is_integral_v<T>
+                    Vec<T>
+                *VecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
                     if (defaultv.size() < len) {
                         defaultv.resize(len);
                     }

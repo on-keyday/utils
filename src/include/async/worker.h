@@ -14,8 +14,10 @@
 
 #ifdef __cpp_coroutines
 #if !defined(_WIN32) || !defined(__clang__)
+#if __has_include(<coroutine>)
 #include <coroutine>
 #define UTILS_COROUTINE_ExISTS
+#endif
 #endif
 #endif
 
