@@ -26,7 +26,7 @@ void test_subcommand(int argc, char** argv) {
     auto go = ctx.SubCommand(
         "go", [&](subcmd::RunCommand& ctx) {
             auto v = ctx.option().value<bool>("upper");
-            if (v) {
+            if (*upper) {
                 cout << "GO GO GO!\n";
             }
             else {
@@ -36,6 +36,18 @@ void test_subcommand(int argc, char** argv) {
         },
         "go go go!");
     upper = go->option().Bool("upper,u", false, "option", "");
+    ctx.option().VarBool(upper, "upper,u", "upper option", "");
+    ctx.SubCommand(
+        "ohno", [&](subcmd::RunCommand& ctx) {
+            if (*upper) {
+                cout << "OH NO!\n";
+            }
+            else {
+                cout << "oh no!\n";
+            }
+            return 0;
+        },
+        "oh no!");
     auto err = subcmd::parse(argc, argv, ctx);
     if (auto msg = error_msg(err)) {
         cout << "erorr: " << ctx.erropt() << ": " << msg << "\n";
