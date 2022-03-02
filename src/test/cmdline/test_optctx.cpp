@@ -13,15 +13,15 @@ using namespace utils::cmdline;
 void test_optctx(int argc, char** argv, option::ParseFlag flag) {
     option::Context ctx;
 
-    auto flagset = ctx.FlagSet("long,l", option::ParseFlag::pf_long, "long flag", "");
-    ctx.VarFlagSet(flagset, "short,S", option::ParseFlag::pf_short, "short flag", "");
-    auto test = ctx.Bool("test,t", false, "test flag", "");
+    auto flagset = ctx.FlagSet("long,l", option::ParseFlag::pf_long, "long flag");
+    ctx.VarFlagSet(flagset, "short,S", option::ParseFlag::pf_short, "short flag");
+    auto test = ctx.Bool("test,t", false, "test flag");
     auto str = ctx.String<utils::wrap::string>("str,s", "default", "help", "VALUE");
     bool test2 = false;
-    ctx.VarBool(&test2, "test2,2", "test flag 2", "");
+    ctx.VarBool(&test2, "test2,2", "test flag 2");
     auto vec = ctx.VecString("vector,v", 2, "vector", "STR1 STR2");
     auto veci = ctx.VecInt("int,i", 2, "int vector", "INT1 INT2");
-    ctx.UnboundBool("unbound,u", "unbound option", "");
+    ctx.UnboundBool("unbound,u", "unbound option");
     ctx.UnboundInt("int-unbound,B", "unbound int", "INT");
     ctx.UnboundString<utils::wrap::string>("str-unbound,b", "unbound string", "STRING");
     auto& cout = utils::wrap::cout_wrap();

@@ -36,10 +36,11 @@ int main(int argc, char** argv) {
     uc::option::Context opt;
     uc::option::CustomFlag cu = uc::option::CustomFlag::appear_once;
     binred::State state;
-    auto help = opt.Bool("help,h", false, "show option help", "", true, cu);
+    auto help = opt.Bool("help,h", false, "show option help", true, cu);
     opt.VarString(&state.data.write_method, "write-method,w", "set write method", "METHOD", cu);
     opt.VarString(&state.data.read_method, "read-method,r", "set read method", "METHOD", cu);
-    auto syntax = opt.Bool("syntax,s", false, "show syntax help", "", true, cu);
+    auto syntax = opt.Bool("syntax,s", false, "show syntax help", true, cu);
+    auto verbose = opt.Bool("verbose,v", false, "verbose help", "");
 
     uc::DefaultDesc desc;
     desc

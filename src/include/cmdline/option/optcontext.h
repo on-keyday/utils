@@ -103,8 +103,8 @@ namespace utils {
                     return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
                 }
 
-                bool UnboundBool(auto&& option, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
-                    return UnboundOption(option, BoolParser{.to_set = true, .rough = rough}, help, argdesc, flag);
+                bool UnboundBool(auto&& option, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                    return UnboundOption(option, BoolParser{.to_set = true, .rough = rough}, help, "", flag);
                 }
 
                 bool UnboundInt(auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
@@ -130,13 +130,13 @@ namespace utils {
                         help, argdesc, flag);
                 }
 
-                bool VarBool(bool* ptr, auto& option, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool VarBool(bool* ptr, auto& option, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
                     }
                     return (bool)Option(
                         option, ptr, BoolParser{.to_set = !*ptr, .rough = rough},
-                        help, argdesc, flag);
+                        help, "", flag);
                 }
 
                 template <std::integral T>
@@ -185,11 +185,11 @@ namespace utils {
                                         help, argdesc, flag);
                 }
 
-                bool* Bool(auto&& option, bool defaultv, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool* Bool(auto&& option, bool defaultv, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
                     return Option(
                         option, defaultv,
                         BoolParser{.to_set = !defaultv, .rough = rough},
-                        help, argdesc, flag);
+                        help, "", flag);
                 }
 
                 template <std::integral T = std::int64_t>
@@ -226,19 +226,19 @@ namespace utils {
                 }
 
                 template <class Flag>
-                Flag* FlagSet(auto&& option, Flag mask, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none, Flag defaultv = Flag{}) {
+                Flag* FlagSet(auto&& option, Flag mask, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none, Flag defaultv = Flag{}) {
                     return Option(
                         option, std::move(defaultv),
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
-                        help, argdesc, flag);
+                        help, "", flag);
                 }
 
                 template <class Flag>
-                bool VarFlagSet(Flag* ptr, auto&& option, Flag mask, auto&& help, auto&& argdesc, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool VarFlagSet(Flag* ptr, auto&& option, Flag mask, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
                     return (bool)Option(
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
-                        help, argdesc, flag);
+                        help, "", flag);
                 }
 
                 auto find(auto&& optname) {

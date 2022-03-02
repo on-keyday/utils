@@ -38,8 +38,8 @@ void test_subcommand(int argc, char** argv) {
             return 0;
         },
         "go go go!");
-    upper = go->option().Bool("upper,u", false, "option", "");
-    ctx.option().VarBool(upper, "upper,u", "upper option", "");
+    upper = go->option().Bool("upper,u", false, "option");
+    ctx.option().VarBool(upper, "upper,u", "upper option");
     ctx.SubCommand(
         "ohno", [&](subcmd::RunCommand& ctx) {
             if (*upper) {
