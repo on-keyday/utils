@@ -50,16 +50,16 @@ namespace utils {
                 }
 
                 template <class Str>
-                void usage(Str& str, ParseFlag flag, const char* cmdname, const char* indent = "    ") {
+                void Usage(Str& str, ParseFlag flag, const char* cmdname, const char* usage = "[option]", const char* indent = "    ") {
                     helper::appends(str, "Usage:\n",
-                                    indent, cmdname, "\nOption:\n");
+                                    indent, cmdname, " ", usage, "\nOption:\n");
                     help(str, flag, indent);
                 }
 
                 template <class Str>
-                Str usage(ParseFlag flag, const char* cmdname, const char* indent = "    ") {
+                Str Usage(ParseFlag flag, const char* cmdname, const char* usage = "[option]", const char* indent = "    ") {
                     Str str;
-                    usage(str, flag, cmdname, indent);
+                    Usage(str, flag, cmdname, usage, indent);
                     return str;
                 }
 
@@ -173,7 +173,7 @@ namespace utils {
                 }
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
-                bool VecString(Vec<Str>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
+                bool VarVecString(Vec<Str>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
                     }

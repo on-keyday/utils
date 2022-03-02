@@ -36,12 +36,21 @@ int main(int argc, char** argv) {
     uc::option::Context opt;
     uc::option::CustomFlag cu = uc::option::CustomFlag::appear_once;
     binred::State state;
+    state.data.write_method = "write";
+    state.data.read_method = "read";
     auto help = opt.Bool("help,h", false, "show option help", true, cu);
+    auto infile = opt.String<utw::string>("input,i", "", "input file", "FILE", cu);
+    auto outfile = opt.String<utw::string>("output,o", "", "output file", "FILE", cu);
+    auto verbose = opt.Bool("verbose,v", false, "verbose help", "");
+    auto smart_ptr = opt.VecString<utw::string>("smart-ptr,S", 2, "set ptr-like object template and function", "TEMPLATE FUNC", cu);
+    opt.UnboundString<utw::string>("import,I", "set additional import header", "FILE");
     opt.VarString(&state.data.write_method, "write-method,w", "set write method", "METHOD", cu);
     opt.VarString(&state.data.read_method, "read-method,r", "set read method", "METHOD", cu);
     auto syntax = opt.Bool("syntax,s", false, "show syntax help", true, cu);
-    auto verbose = opt.Bool("verbose,v", false, "verbose help", "");
-
+    auto genflag = opt.FlagSet("license", binred::GenFlag::add_license, "add /*license*/", true, cu);
+    opt.VarFlagSet(genflag, "separate,p", binred::GenFlag::sep_namespace, "separate namespace", true, cu);
+    auto none_error = opt.VecString<utw::string>("none-error,e", 2, "set default `none` and `error` enum name", "NONE ERROR", cu);
+    /*
     uc::DefaultDesc desc;
     desc
         .set("help,h", uc::bool_option(true), "show option help", uc::OptFlag::once_in_cmd)
@@ -53,29 +62,37 @@ int main(int argc, char** argv) {
         .set("write-method,w", uc::str_option("write"), "set write method", uc::OptFlag::once_in_cmd, "funcname")
         .set("read-method,r", uc::str_option("read"), "set read method", uc::OptFlag::once_in_cmd, "funcname")
         .set("syntax,s", uc::bool_option(true), "syntax help", uc::OptFlag::once_in_cmd)
-        .set("license", uc::bool_option(true), "add /*license*/", uc::OptFlag::once_in_cmd)
+        .set("license", uc::bool_option(true), "add *license*
+    ", uc::OptFlag::once_in_cmd)
         .set("separate,p", uc::bool_option(true), "separate namespace", uc::OptFlag::once_in_cmd)
         .set("none-error,e", uc::multi_option<utw::string>(2, 2), "set default `none` and `error` enum name", uc::OptFlag::once_in_cmd, "none error");
     uc::DefaultSet result;
     utw::vector<utw::string> arg;
     auto err = uc::parse(idx, argc, argv, desc, result, uc::ParseFlag::optget_mode, &arg);
+    *
     if (err != uc::ParseError::none) {
         cout << "binred: error: " << uc::error_message(err) << "\n";
         return -1;
+    }*/
+    auto err = uc::option::parse(argc, argv, opt, utils::helper::nop, uc::option::ParseFlag::optget_ext_mode);
+    if (auto msg = error_msg(err)) {
+        cout << "binred: error: " << opt.erropt() << ": " << msg << "\n";
+        return -1;
     }
     if (*help) {
-        cout << desc.help(argv[0]);
+        // cout << desc.help(argv[0]);
+        cout << opt.Usage<utw::string>(uc::option::ParseFlag::optget_ext_mode, argv[0]);
         return 1;
     }
     if (*syntax) {
         cout << R"(Syntax:
-    
+
     # COMMENT
     package NAMESPACE_NAME
-    
+
     import <HEADER_NAME>
     import "HEADER_NAME"
-    
+
     struct STRUCT_NAME - BASE_STRUCT {
         MEMBER TYPE ? MEMBER != 98 ! 0 ^ true||false
         MEMBER2 TYPE2 $ 30 = DEFAULT_VALUE
@@ -91,16 +108,16 @@ int main(int argc, char** argv) {
         STRUCT:="struct" ID BASE? ERRTYPE? "{" MEMBER*? "}" EOS
         BASE:="-" TYPE!
         ERRTYPE:="," ID!
-        MEMBER:=ID TYPE! ["!" AS_RESULT]? ["=" [INTEGER|STRING]!]? 
+        MEMBER:=ID TYPE! ["!" AS_RESULT]? ["=" [INTEGER|STRING]!]?
         TYPE:=ID SIZE? [PREV|EXIST]*?
         PREV:="?" FLAG_DETAIL! ["@" AS_RESULT]?
-        EXIST:="^" FLAG_DETAIL! 
-        FLAG_DETAIL:=EXPR EOS 
+        EXIST:="^" FLAG_DETAIL!
+        FLAG_DETAIL:=EXPR EOS
         AS_RESULT:=[INTEGER|ID]!
         SIZE:="$" EXPR EOS
 
         EXPR:=OR
-        OR:=BOS AND ["||" AND!]*? EOS 
+        OR:=BOS AND ["||" AND!]*? EOS
         AND:=BOS EQ ["&&" EQ!]*? EOS
         EQ:=BOS ADD [["=="|"!="|">="|"<="|">"|"<"] ADD!]*? EOS
         ADD:=BOS MUL [["+"|"-"|"&"|"|"] MUL!]*? EOS
@@ -119,9 +136,9 @@ int main(int argc, char** argv) {
 
     s.symbol.predef.push_back("#");
     decltype(s)::token_t tok;
-    auto infile = result.has_value<utw::string>("input");
-    auto outfile = result.has_value<utw::string>("output");
-    if (!infile || !outfile) {
+    /*auto infile = result.has_value<utw::string>("input");
+    auto outfile = result.has_value<utw::string>("output");*/
+    if (!infile->size() || !outfile->size()) {
         cerr << "binred: error: need --input and --output\ntry binred -h for help\n";
         return -1;
     }
@@ -148,30 +165,15 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-
-    state.data.write_method = "write";
-    state.data.read_method = "read";
-    if (auto wm = result.has_value<utw::string>("write-method")) {
-        state.data.write_method = *wm;
-    }
-    if (auto rm = result.has_value<utw::string>("read-method")) {
-        state.data.read_method = *rm;
-    }
-    if (auto ptr = result.has_value<utw::vector<utw::string>>("smart-ptr")) {
-        state.data.ptr_type = ptr->at(0);
-        state.data.make_ptr = ptr->at(1);
-    }
-    if (auto nonerr = result.has_value<utw::vector<utw::string>>("none-error")) {
-        state.data.defnone = nonerr->at(0);
-        state.data.deferror = nonerr->at(1);
-    }
-    size_t i = 0;
-    while (auto arg = result.arg<utw::string>("import", i)) {
-        state.data.imports.push_back(*arg);
-        i++;
+    state.data.ptr_type = smart_ptr->at(0);
+    state.data.make_ptr = smart_ptr->at(1);
+    state.data.defnone = none_error->at(0);
+    state.data.deferror = none_error->at(1);
+    for (auto& arg : opt.find("import")) {
+        state.data.imports.push_back(*arg.value.get_ptr<utw::string>());
     }
     c->cb = [&](auto& ctx) {
-        if (result.is_true("verbose")) {
+        if (*verbose) {
             cout << ctx.top() << ":" << us::keywordv(ctx.kind()) << ":" << ctx.token() << "\n";
         }
         return binred::read_fmt(ctx, state) ? us::MatchState::succeed : us::MatchState::fatal;
@@ -183,17 +185,10 @@ int main(int argc, char** argv) {
             return -1;
         }
     }
-    binred::GenFlag flag = {};
-    if (result.is_true("separate")) {
-        flag |= binred::GenFlag::sep_namespace;
-    }
-    if (result.is_true("license")) {
-        flag |= binred::GenFlag::add_license;
-    }
     // return 0;
     utw::string str;
-    binred::generate_cpp(str, state.data, flag);
-    if (result.is_true("verbose")) {
+    binred::generate_cpp(str, state.data, *genflag);
+    if (*verbose) {
         cout << "generated code:\n";
         cout << str;
     }

@@ -38,7 +38,7 @@ namespace utils {
                         if (sht && log) {
                             if (bufsize(opt) == 1) {
                                 write("-", opt);
-                                if (val) {
+                                if (val && !any(flag & ParseFlag::assign_anyway_val)) {
                                     if (bufsize(argdesc)) {
                                         write(argdesc);
                                     }
