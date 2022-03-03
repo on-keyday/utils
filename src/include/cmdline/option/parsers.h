@@ -129,6 +129,53 @@ namespace utils {
                     return false;
                 }
             };
+#define GET_VALUE(TYPE)                             \
+    else if (val.get_ptr<TYPE>()) {                 \
+        TYPE t = 0;                                 \
+        if (!number::parse_float(v, t, radix)) {    \
+            state.state = FlagType::not_accepted;   \
+            return false;                           \
+        }                                           \
+        if (!val.set_value(t)) {                    \
+            state.state = FlagType::type_not_match; \
+            return false;                           \
+        }                                           \
+        return true;                                \
+    }
+            struct FloatParser {
+                int radix = 0;
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    const char* v = nullptr;
+                    if (state.val) {
+                        v = state.val;
+                    }
+                    else {
+                        v = state.argv[state.arg_track_index];
+                        state.arg_track_index++;
+                    }
+                    if (!v) {
+                        state.state = FlagType::require_more_argument;
+                        return false;
+                    }
+                    if (!reserved) {
+                        double i = 0;
+                        if (!number::parse_float(v, i, radix)) {
+                            state.state = FlagType::not_accepted;
+                            return false;
+                        }
+                        if (!val.set_value(i)) {
+                            state.state = FlagType::type_not_match;
+                            return false;
+                        }
+                        return true;
+                    }
+                    GET_VALUE(float)
+                    GET_VALUE(double)
+                    GET_VALUE(long double)
+                    state.state = FlagType::type_not_match;
+                    return false;
+                }
+            };
 #undef GET_VALUE
 
             template <class String>

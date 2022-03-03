@@ -112,19 +112,32 @@ namespace utils {
                     return UnboundOption(option, IntParser{.radix = radix}, help, argdesc, flag);
                 }
 
-                template <class Str>
+                bool UnboundFloat(auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    return UnboundOption(option, FloatParser{.radix = radix}, help, argdesc, flag);
+                }
+
+                template <class Str = wrap::string>
                 bool UnboundString(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     return UnboundOption(option, StringParser<Str>{}, help, argdesc, flag);
                 }
 
                 template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
+                requires std::is_integral_v<T>
                 bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
                         help, argdesc, flag);
                 }
 
-                template <class Str, template <class...> class Vec = wrap::vector>
+                template <class T = double, template <class...> class Vec = wrap::vector>
+                requires std::is_floating_point_v<T>
+                bool UnboundVecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    return UnboundOption(
+                        option, VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
+                        help, argdesc, flag);
+                }
+
+                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
                 bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     return UnboundOption(
                         option, VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
@@ -142,12 +155,23 @@ namespace utils {
 
                 template <class T>
                 requires std::is_integral_v<T>
-                bool VarInt(T* ptr, auto& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool VarInt(T* ptr, auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
                     }
                     return (bool)Option(
                         ptr, option, IntParser{.radix = radix},
+                        help, argdesc, flag);
+                }
+
+                template <class T>
+                requires std::is_floating_point_v<T>
+                bool VarFloat(T* ptr, auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    if (!ptr) {
+                        return false;
+                    }
+                    return (bool)Option(
+                        ptr, option, FloatParser{.radix = radix},
                         help, argdesc, flag);
                 }
 
@@ -175,7 +199,20 @@ namespace utils {
                                         help, argdesc, flag);
                 }
 
-                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
+                template <class T, template <class...> class Vec>
+                requires std::is_floating_point_v<T>
+                bool VarVecFloat(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    if (!ptr) {
+                        return false;
+                    }
+                    if (ptr->size() < len) {
+                        ptr->resize(len);
+                    }
+                    return (bool)Option(option, ptr, VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
+                                        help, argdesc, flag);
+                }
+
+                template <class Str, template <class...> class Vec>
                 bool VarVecString(Vec<Str>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
@@ -203,20 +240,18 @@ namespace utils {
                         IntParser{.radix = radix}, help, argdesc, flag);
                 }
 
+                template <class T = double>
+                requires std::is_floating_point_v<T>
+                    T* Float(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    return Option(
+                        option, defaultv,
+                        FloatParser{.radix = radix}, help, argdesc, flag);
+                }
+
                 template <class Str = wrap::string>
                 Str* String(auto&& option, Str defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     return Option(option, std::move(defaultv),
                                   StringParser<Str>{}, help, argdesc, flag);
-                }
-
-                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
-                Vec<Str>* VecString(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, Vec<Str>&& defaultv = Vec<Str>{}) {
-                    if (defaultv.size() < len) {
-                        defaultv.resize(len);
-                    }
-                    return Option(option, std::move(defaultv),
-                                  VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
-                                  help, argdesc, flag);
                 }
 
                 template <class T = std::int64_t, template <class...> class Vec = wrap::vector>
@@ -228,6 +263,28 @@ namespace utils {
                     }
                     return Option(option, std::move(defaultv),
                                   VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
+                                  help, argdesc, flag);
+                }
+
+                template <class T = double, template <class...> class Vec = wrap::vector>
+                requires std::is_floating_point_v<T>
+                    Vec<T>
+                *VecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
+                    if (defaultv.size() < len) {
+                        defaultv.resize(len);
+                    }
+                    return Option(option, std::move(defaultv),
+                                  VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
+                                  help, argdesc, flag);
+                }
+
+                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
+                Vec<Str>* VecString(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, Vec<Str>&& defaultv = Vec<Str>{}) {
+                    if (defaultv.size() < len) {
+                        defaultv.resize(len);
+                    }
+                    return Option(option, std::move(defaultv),
+                                  VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
                                   help, argdesc, flag);
                 }
 

@@ -16,6 +16,7 @@
 #include "../../include/wrap/cout.h"
 
 #include "../../include/file/file_view.h"
+#include "../../include/cmdline/option/optcontext.h"
 
 #include "interface_list.h"
 
@@ -31,6 +32,11 @@ int main(int argc, char** argv) {
         cerr << "please report bug to ";
         cerr << "https://github.com/on-keyday/utils\n";
     };
+    option::Context opt;
+    auto cu = option::CustomFlag::appear_once;
+    auto outfile = opt.String<wrap::string>("output-file,o", "", "set output file", "FILENAME", cu);
+    auto infile = opt.String<wrap::string>("input-file,i", "", "set input file", "FILENAME", cu);
+    auto verbose = opt.Bool("verbose,v", false, "verbose log", true, cu);
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
@@ -120,9 +126,6 @@ Special Value:
     auto& outfile = *out->value<wrap::string>();
     bool verbose = false;
     ifacegen::GenFlag flag = {};
-    if (auto v = result.is_set("verbose"); v && *v->value<bool>()) {
-        verbose = true;
-    }
     if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::expand_alias;
     }
@@ -190,7 +193,7 @@ Special Value:
     tokenize::Tokenizer<wrap::string, wrap::vector> token;
 
     stxc->cb = [&](auto& ctx) {
-        if (verbose) {
+        if (*verbose) {
             cout << ctx.stack.back() << ":" << syntax::keywordv(ctx.result.kind) << ":" << ctx.result.token << "\n";
         }
         if (!ifacegen::read_callback(ctx, state)) {
@@ -244,9 +247,9 @@ Special Value:
         cout << got;
     }
     {
-        std::ofstream fs(outfile);
+        std::ofstream fs(*outfile);
         if (!fs.is_open()) {
-            cerr << "ifacegen: error:file `" << outfile << "` couldn't open\n";
+            cerr << "ifacegen: error:file `" << *outfile << "` couldn't open\n";
             return -1;
         }
         fs << got;

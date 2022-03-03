@@ -9,6 +9,7 @@
 #include <async/worker.h>
 #include <wrap/cout.h>
 #include <net/tcp/tcp.h>
+#include <net/http/http1.h>
 #include <net/core/platform.h>
 #include <platform/windows/io_completetion_port.h>
 #include <chrono>
@@ -18,7 +19,7 @@ void test_externaltask() {
     using namespace utils;
     using namespace std::chrono;
     async::TaskPool pool;
-    pool.set_yield(false);
+    //  pool.set_yield(false);
     struct OutParam {
         ::OVERLAPPED ol;
         const char* host_;
