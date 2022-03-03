@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     opt.VarFlagSet(flag, "license", GF::add_license, "add /*license*/", cu);
     opt.VarFlagSet(flag, "not-accept-null,n", GF::not_accept_null, "not accept nullptr-object", cu);
     opt.VarString(&state.data.helper_deref, "helper-deref", "helper deref location", "FILE", cu);
-    opt.VarFlagSet(flag, "use-dynamic-cast", GF::use_dyn_cast, "use dynamic cast for type assert", cu);
+    opt.VarFlagSet(flag, "use-dynamic-cast,d", GF::use_dyn_cast, "use dynamic cast for type assert", cu);
     opt.VarFlagSet(flag, "separate,S", GF::sep_namespace, "separate namespace by ::", cu);
     opt.VarFlagSet(flag, "independent,D", GF::not_depend_lib, "insert deref code not to depend utils", cu);
     /*

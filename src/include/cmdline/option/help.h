@@ -91,7 +91,7 @@ namespace utils {
                 helper::CountPushBacker<Result&> cb{result};
                 auto actual = opts_write(cb);
                 for (wrap::shared_ptr<Option>& opt : vec) {
-                    helper::append(result, indent);
+                    helper::append(cb, indent);
                     actual(flag, opt);
                     while (maxlen > cb.count) {
                         cb.push_back(' ');
