@@ -18,7 +18,7 @@ void test_externaltask() {
     using namespace utils;
     using namespace std::chrono;
     async::TaskPool pool;
-    pool.set_maxthread(1);
+    // pool.set_maxthread(1);
     struct OutParam {
         ::OVERLAPPED ol;
         const char* host_;
@@ -37,23 +37,34 @@ void test_externaltask() {
     std::atomic_size_t seqtime = 0;
     auto spawn = [&](const char* host, const char* path = "/") {
         return pool.start([=, &seqtime](async::Context& ctx) {
+            auto out = utils::wrap::pack();
             auto begin = system_clock::now();
             auto q = net::query_dns(host, "http");
             auto r = q.get_address();
+            auto prev = begin;
             while (!r) {
                 if (q.failed()) {
                     assert(false && "failed");
                 }
                 ctx.suspend();
+                out << host << ":wait dns...\n";
+                auto n = system_clock::now();
+                out << "delta:" << duration_cast<milliseconds>(n - prev) << "\n";
+                prev = n;
                 r = q.get_address();
             }
             auto op = net::open(std::move(r));
             auto c = op.connect();
+            prev = system_clock::now();
             while (!c) {
                 if (op.failed()) {
                     assert(false && "failed");
                 }
                 ctx.suspend();
+                out << host << ":wait connect...\n";
+                auto n = system_clock::now();
+                out << "delta:" << duration_cast<milliseconds>(n - prev) << "\n";
+                prev = n;
                 c = op.connect();
             }
             ::SOCKET sock = (::SOCKET)c->get_raw();
@@ -72,7 +83,7 @@ void test_externaltask() {
             param.host_ = host;
             param.f = std::move(will);  // pass external task
             auto err = ::WSARecv(sock, param.set_buf(), 1, (LPDWORD)&param.recved, (LPDWORD)&param.flags, &param.ol, nullptr);
-            auto out = utils::wrap::pack();
+
             if (err == SOCKET_ERROR) {
                 err = ::GetLastError();
                 if (err == WSA_IO_PENDING) {
@@ -116,6 +127,7 @@ void test_externaltask() {
     auto q = spawn("qiita.com");
     auto d = spawn("docs.microsoft.com");
     auto h = spawn("github.com");
+    auto x = spawn("example.com");
     g.wait();
     s.wait();
     a.wait();
@@ -127,6 +139,7 @@ void test_externaltask() {
     q.wait();
     d.wait();
     h.wait();
+    x.wait();
     auto end = system_clock::now();
     auto time = duration_cast<milliseconds>(end - begin);
     utils::wrap::cout_wrap() << "seqtime: " << seqtime << "ms\n";
