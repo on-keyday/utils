@@ -237,7 +237,7 @@ Special Value:
     {
         file::View view;
         if (!view.open(*infile)) {
-            cerr << "ifacegen: error: file `" << infile << "` couldn't open\n";
+            cerr << "ifacegen: error: file `" << *infile << "` couldn't open\n";
             return -1;
         }
         auto sv = make_ref_seq(view);
