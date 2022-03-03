@@ -38,7 +38,13 @@ int main(int argc, char** argv) {
     auto infile = opt.String<wrap::string>("input-file,i", "", "set input file", "FILENAME", cu);
     auto verbose = opt.Bool("verbose,v", false, "verbose log", cu);
     auto help = opt.Bool("help,h", false, "show option help", cu);
-
+    auto syntax = opt.Bool("syntax,s", false, "show syntax help", cu);
+    opt.UnboundString("header,H", "additional header file", "FILE");
+    using GF = ifacegen::GenFlag;
+    auto flag = opt.FlagSet("expand,e", GF::expand_alias, "expand macro (alias is not expanded)", cu);
+    opt.VarFlagSet(flag, "no-vtable,V", GF::no_vtable, "add __declspec(novtable) (for windows)", cu);
+    auto nortti = opt.VecString<wrap::string>("no-rtti", 2, "use type and func instead of `const std::type_info&` and `typeid(T__)`", "TYPE FUNC", cu);
+    opt.VarFlagSet(flag, "license", GF::add_license, "add /*license*/", cu);
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
@@ -128,7 +134,7 @@ Special Value:
     /*
     auto& infile = *in->value<wrap::string>();
     auto& outfile = *out->value<wrap::string>();*/
-
+    /*
     ifacegen::GenFlag flag = {};
     if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::expand_alias;
@@ -150,7 +156,7 @@ Special Value:
     }
     if (auto v = result.is_set("independent"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::not_depend_lib;
-    }
+    }*/
     ifacegen::State state;
     if (auto h = result.is_set("header")) {
         if (auto s = h->value<wrap::string>()) {
@@ -245,7 +251,7 @@ Special Value:
         }
     }
     wrap::string got;
-    ifacegen::generate(state.data, got, ifacegen::Language::cpp, flag);
+    ifacegen::generate(state.data, got, ifacegen::Language::cpp, *flag);
     if (verbose) {
         cout << "generated code:\n";
         cout << got;
