@@ -15,14 +15,15 @@ using namespace utils;
 async::TaskPool pool;
 
 async::coro::Task<int> task() {
+    pool.set_yield(true);
     auto t = pool.start<int>([](async::Context& ctx) {
         auto i = 0;
         for (; i < 100000; i++) {
             wrap::cout_wrap() << i << "\n";
+            ctx.suspend();
         }
         ctx.set_value(i);
     });
-
     int v = co_await t;
     wrap::cout_wrap() << "done\n";
     co_return v;
