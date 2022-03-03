@@ -33,6 +33,8 @@ int main(int argc, char** argv) {
         cerr << "https://github.com/on-keyday/utils\n";
     };
     option::Context opt;
+    ifacegen::State state;
+    state.data.helper_deref = "<helper/deref>";
     auto cu = option::CustomFlag::appear_once;
     auto outfile = opt.String<wrap::string>("output-file,o", "", "set output file", "FILENAME", cu);
     auto infile = opt.String<wrap::string>("input-file,i", "", "set input file", "FILENAME", cu);
@@ -45,6 +47,12 @@ int main(int argc, char** argv) {
     opt.VarFlagSet(flag, "no-vtable,V", GF::no_vtable, "add __declspec(novtable) (for windows)", cu);
     auto nortti = opt.VecString<wrap::string>("no-rtti", 2, "use type and func instead of `const std::type_info&` and `typeid(T__)`", "TYPE FUNC", cu);
     opt.VarFlagSet(flag, "license", GF::add_license, "add /*license*/", cu);
+    opt.VarFlagSet(flag, "not-accept-null,n", GF::not_accept_null, "not accept nullptr-object", cu);
+    opt.VarString(&state.data.helper_deref, "helper-deref", "helper deref location", "FILE", cu);
+    opt.VarFlagSet(flag, "use-dynamic-cast", GF::use_dyn_cast, "use dynamic cast for type assert", cu);
+    opt.VarFlagSet(flag, "separate,S", GF::sep_namespace, "separate namespace by ::", cu);
+    opt.VarFlagSet(flag, "independent,D", GF::not_depend_lib, "insert deref code not to depend utils", cu);
+    /*
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
@@ -55,7 +63,7 @@ int main(int argc, char** argv) {
         .set("expand,e", bool_option(true), "expand macro (alias is not expanded)", OptFlag::once_in_cmd)
         .set("no-vtable,V", bool_option(true), "add __declspec(novtable) (for windows)", OptFlag::once_in_cmd)
         .set("no-rtti", multi_option<wrap::string>(2), "use type and func instead of `const std::type_info&` and `typeid(T__)`", OptFlag::once_in_cmd, "type func")
-        .set("license", bool_option(true), "add /*license*/", OptFlag::once_in_cmd)
+        .set("license", bool_option(true), "add *license*", OptFlag::once_in_cmd)
         .set("not-accept-null,n", bool_option(true), "not accept nullptr-object", OptFlag::once_in_cmd)
         .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd)
         .set("use-dynamic-cast,d", bool_option(true), "use dynamic cast for type assert", OptFlag::once_in_cmd)
@@ -63,18 +71,27 @@ int main(int argc, char** argv) {
         .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
-    utils::wrap::vector<wrap::string> arg;
     auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
     if (err != ParseError::none) {
         cerr << "ifacegen: error: " << argv[index] << ": " << error_message(err) << "\n"
              << "try `ifacegen -h` for more info\n";
         return -1;
+    }*/
+    utils::wrap::vector<wrap::string> arg;
+    auto mode = option::ParseFlag::assignable_mode;
+    auto err = option::parse(argc, argv, opt, helper::nop, mode);
+    if (auto msg = error_msg(err)) {
+        cerr << "ifacegen: error: " << opt.erropt() << ": " << msg << "\n"
+             << "try `ifacegen -h` for more info\n";
+        return -1;
     }
-    if (result.is_set("help")) {
-        cout << desc.help(argv[0]);
+    if (*help) {
+        cout << "ifacegen - generate c++ interface\nCopyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)\n";
+        cout << opt.Usage<wrap::string>(mode, argv[0]);
+        // cout << desc.help(argv[0]);
         return 1;
     }
-    if (result.is_set("syntax")) {
+    if (*syntax) {
         cout << R"(Syntax:
     #COMMENT
     
@@ -133,8 +150,7 @@ Special Value:
     }
     /*
     auto& infile = *in->value<wrap::string>();
-    auto& outfile = *out->value<wrap::string>();*/
-    /*
+    auto& outfile = *out->value<wrap::string>();
     ifacegen::GenFlag flag = {};
     if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::expand_alias;
@@ -156,8 +172,7 @@ Special Value:
     }
     if (auto v = result.is_set("independent"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::not_depend_lib;
-    }*/
-    ifacegen::State state;
+    }
     if (auto h = result.is_set("header")) {
         if (auto s = h->value<wrap::string>()) {
             state.data.headernames.push_back(*s);
@@ -174,13 +189,12 @@ Special Value:
         if (auto s = h->value<wrap::string>()) {
             state.data.helper_deref = *s;
         }
+    }*/
+    for (auto&& h : opt.find("header")) {
+        state.data.headernames.push_back(*h.value.get_ptr<wrap::string>());
     }
-    if (auto h = result.is_set("no-rtti")) {
-        if (auto s = h->value<wrap::vector<wrap::string>>()) {
-            state.data.typeid_type = s->at(0);
-            state.data.typeid_func = s->at(1);
-        }
-    }
+    state.data.typeid_type = nortti->at(0);
+    state.data.typeid_func = nortti->at(1);
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
         ROOT:=PACKAGE? [TYPEPARAM? [INTERFACE|ALIAS]|MACRO|IMPORT]*? EOF
