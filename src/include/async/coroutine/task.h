@@ -35,6 +35,12 @@ namespace utils {
                     }
                 };
 
+                void operator()() {
+                    if (!handle.done()) {
+                        handle.resume();
+                    }
+                }
+
                 T get() {
                     if (!handle.done()) {
                         handle.resume();

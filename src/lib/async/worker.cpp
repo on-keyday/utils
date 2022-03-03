@@ -293,7 +293,7 @@ namespace utils {
                 std::atomic_size_t detached = 0;
                 std::atomic_size_t maxthread = 0;
                 std::atomic_size_t pooling_task = 0;
-                std::atomic_bool do_yield = false;
+                std::atomic_bool do_yield = true;
                 std::atomic_bool diepool = false;
             };
 

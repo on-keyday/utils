@@ -24,7 +24,7 @@ async::coro::Task<int> task() {
     });
 
     int v = co_await t;
-    wrap::cout_wrap() << "done";
+    wrap::cout_wrap() << "done\n";
     co_return v;
 }
 
@@ -35,11 +35,13 @@ async::Future<int> task() {
 }
 #endif
 
-void test_coroutine() {
+auto test_coroutine() {
     auto t = task();
-    auto result = t.get();
+    wrap::cout_wrap() << "ask task\n";
+    return t;
 }
 
 int main() {
-    test_coroutine();
+    auto coro = test_coroutine();
+    coro.get();
 }
