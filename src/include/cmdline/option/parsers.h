@@ -129,6 +129,7 @@ namespace utils {
                     return false;
                 }
             };
+#undef GET_VALUE
 #define GET_VALUE(TYPE)                             \
     else if (val.get_ptr<TYPE>()) {                 \
         TYPE t = 0;                                 \

@@ -104,15 +104,15 @@ namespace utils {
                     return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
                 }
 
-                bool UnboundBool(auto&& option, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool UnboundBool(auto&& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     return UnboundOption(option, BoolParser{.to_set = true, .rough = rough}, help, "", flag);
                 }
 
-                bool UnboundInt(auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool UnboundInt(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(option, IntParser{.radix = radix}, help, argdesc, flag);
                 }
 
-                bool UnboundFloat(auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool UnboundFloat(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(option, FloatParser{.radix = radix}, help, argdesc, flag);
                 }
 
@@ -123,7 +123,7 @@ namespace utils {
 
                 template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
                 requires std::is_integral_v<T>
-                bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
                         help, argdesc, flag);
@@ -131,20 +131,20 @@ namespace utils {
 
                 template <class T = double, template <class...> class Vec = wrap::vector>
                 requires std::is_floating_point_v<T>
-                bool UnboundVecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool UnboundVecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
                         help, argdesc, flag);
                 }
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
-                bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
                         help, argdesc, flag);
                 }
 
-                bool VarBool(bool* ptr, auto& option, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool VarBool(bool* ptr, auto& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     if (!ptr) {
                         return false;
                     }
@@ -155,7 +155,7 @@ namespace utils {
 
                 template <class T>
                 requires std::is_integral_v<T>
-                bool VarInt(T* ptr, auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool VarInt(T* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
                     }
@@ -166,7 +166,7 @@ namespace utils {
 
                 template <class T>
                 requires std::is_floating_point_v<T>
-                bool VarFloat(T* ptr, auto&& option, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool VarFloat(T* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
                     }
@@ -188,7 +188,7 @@ namespace utils {
 
                 template <class T, template <class...> class Vec>
                 requires std::is_integral_v<T>
-                bool VarVecInt(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool VarVecInt(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
                     }
@@ -201,7 +201,7 @@ namespace utils {
 
                 template <class T, template <class...> class Vec>
                 requires std::is_floating_point_v<T>
-                bool VarVecFloat(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                bool VarVecFloat(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
                     }
@@ -225,7 +225,7 @@ namespace utils {
                                         help, argdesc, flag);
                 }
 
-                bool* Bool(auto&& option, bool defaultv, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool* Bool(auto&& option, bool defaultv, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     return Option(
                         option, defaultv,
                         BoolParser{.to_set = !defaultv, .rough = rough},
@@ -234,7 +234,7 @@ namespace utils {
 
                 template <class T = std::int64_t>
                 requires std::is_integral_v<T>
-                    T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return Option(
                         option, defaultv,
                         IntParser{.radix = radix}, help, argdesc, flag);
@@ -242,7 +242,7 @@ namespace utils {
 
                 template <class T = double>
                 requires std::is_floating_point_v<T>
-                    T* Float(auto&& option, T defaultv, auto&& help, auto&& argdesc, int radix = 10, CustomFlag flag = CustomFlag::none) {
+                    T* Float(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return Option(
                         option, defaultv,
                         FloatParser{.radix = radix}, help, argdesc, flag);
@@ -289,7 +289,7 @@ namespace utils {
                 }
 
                 template <class Flag>
-                Flag* FlagSet(auto&& option, Flag mask, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none, Flag defaultv = Flag{}) {
+                Flag* FlagSet(auto&& option, Flag mask, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true, Flag defaultv = Flag{}) {
                     return Option(
                         option, std::move(defaultv),
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
@@ -297,7 +297,7 @@ namespace utils {
                 }
 
                 template <class Flag>
-                bool VarFlagSet(Flag* ptr, auto&& option, Flag mask, auto&& help, bool rough = true, CustomFlag flag = CustomFlag::none) {
+                bool VarFlagSet(Flag* ptr, auto&& option, Flag mask, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     return (bool)Option(
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},

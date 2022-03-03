@@ -36,7 +36,9 @@ int main(int argc, char** argv) {
     auto cu = option::CustomFlag::appear_once;
     auto outfile = opt.String<wrap::string>("output-file,o", "", "set output file", "FILENAME", cu);
     auto infile = opt.String<wrap::string>("input-file,i", "", "set input file", "FILENAME", cu);
-    auto verbose = opt.Bool("verbose,v", false, "verbose log", true, cu);
+    auto verbose = opt.Bool("verbose,v", false, "verbose log", cu);
+    auto help = opt.Bool("help,h", false, "show option help", cu);
+
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
         .set("input-file,i", str_option(""), "set input file", OptFlag::need_value, "filename")
@@ -114,17 +116,19 @@ Special Value:
 )";
         return 1;
     }
+    /*
     auto in = result.is_set("input-file");
-    auto out = result.is_set("output-file");
-    if (!in || !out) {
+    auto out = result.is_set("output-file");*/
+    if (!infile->size() || !outfile->size()) {
         cerr << "ifacegen: error: need --input-file and --output-file option\n"
              << "try `ifacegen -h` for more info\n";
 
         return -1;
     }
+    /*
     auto& infile = *in->value<wrap::string>();
-    auto& outfile = *out->value<wrap::string>();
-    bool verbose = false;
+    auto& outfile = *out->value<wrap::string>();*/
+
     ifacegen::GenFlag flag = {};
     if (auto v = result.is_set("expand"); v && *v->value<bool>()) {
         flag |= ifacegen::GenFlag::expand_alias;
@@ -213,7 +217,7 @@ Special Value:
     decltype(token)::token_t tok;
     {
         file::View view;
-        if (!view.open(infile)) {
+        if (!view.open(*infile)) {
             cerr << "ifacegen: error: file `" << infile << "` couldn't open\n";
             return -1;
         }

@@ -42,17 +42,17 @@ int main(int argc, char** argv) {
     binred::State state;
     state.data.write_method = "write";
     state.data.read_method = "read";
-    auto help = opt.Bool("help,h", false, "show option help", true, cu);
+    auto help = opt.Bool("help,h", false, "show option help", cu);
     auto infile = opt.String<utw::string>("input,i", "", "input file", "FILE", cu);
     auto outfile = opt.String<utw::string>("output,o", "", "output file", "FILE", cu);
-    auto verbose = opt.Bool("verbose,v", false, "verbose help", "");
+    auto verbose = opt.Bool("verbose,v", false, "verbose help");
     auto smart_ptr = opt.VecString<utw::string>("smart-ptr,S", 2, "set ptr-like object template and function", "TEMPLATE FUNC", cu);
     opt.UnboundString<utw::string>("import,I", "set additional import header", "FILE");
     opt.VarString(&state.data.write_method, "write-method,w", "set write method", "METHOD", cu);
     opt.VarString(&state.data.read_method, "read-method,r", "set read method", "METHOD", cu);
-    auto syntax = opt.Bool("syntax,s", false, "show syntax help", true, cu);
-    auto genflag = opt.FlagSet("license", binred::GenFlag::add_license, "add /*license*/", true, cu);
-    opt.VarFlagSet(genflag, "separate,p", binred::GenFlag::sep_namespace, "separate namespace", true, cu);
+    auto syntax = opt.Bool("syntax,s", false, "show syntax help", cu);
+    auto genflag = opt.FlagSet("license", binred::GenFlag::add_license, "add /*license*/", cu);
+    opt.VarFlagSet(genflag, "separate,p", binred::GenFlag::sep_namespace, "separate namespace", cu);
     auto none_error = opt.VecString<utw::string>("none-error,e", 2, "set default `none` and `error` enum name", "NONE ERROR", cu);
     /*
     uc::DefaultDesc desc;
