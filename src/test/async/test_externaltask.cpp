@@ -18,7 +18,7 @@ void test_externaltask() {
     using namespace utils;
     using namespace std::chrono;
     async::TaskPool pool;
-    // pool.set_maxthread(1);
+    pool.set_yield(false);
     struct OutParam {
         ::OVERLAPPED ol;
         const char* host_;
