@@ -34,7 +34,6 @@ int main(int argc, char** argv) {
     };
     option::Context opt;
     ifacegen::State state;
-    state.data.helper_deref = "<helper/deref>";
     auto cu = option::CustomFlag::appear_once;
     auto outfile = opt.String<wrap::string>("output-file,o", "", "set output file", "FILENAME", cu);
     auto infile = opt.String<wrap::string>("input-file,i", "", "set input file", "FILENAME", cu);
