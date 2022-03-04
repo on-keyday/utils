@@ -40,7 +40,7 @@ void test_asynctcp2() {
             // assert(f.is_done());
             f.wait_or_suspend(ctx);
             wrap::string buf;
-            buf.resize(1024);
+            buf.resize(2048);
             auto v = conn->read(buf.data(), buf.size());
             v.wait_or_suspend(ctx);
             auto red = v.get();
@@ -54,7 +54,7 @@ void test_asynctcp2() {
             iocp->wait_callbacks(8, ~0);
         }
     }).detach();
-    utils::wrap::cout_wrap() << fetch("example.com").get() << "\ndone\n";
+    utils::wrap::cout_wrap() << fetch("syosetu.com").get() << "\ndone\n";
 }
 
 int main(int argc, char** argv) {

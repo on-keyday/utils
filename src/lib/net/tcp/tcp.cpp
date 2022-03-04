@@ -140,7 +140,7 @@ namespace utils {
                 impl->iocp.f = ctx.clone();
                 auto res = ::WSARecv(impl->sock, &buf, 1, &red, &flag, &impl->iocp.ol, nullptr);
                 if (res == SOCKET_ERROR) {
-                    auto err = ::GetLastError();
+                    auto err = ::WSAGetLastError();
                     if (err != WSA_IO_PENDING) {
                         info.err = err;
                         ctx.set_value(info);
