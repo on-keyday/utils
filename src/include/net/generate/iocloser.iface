@@ -7,9 +7,9 @@
 
 # generate command
 # release
-# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V -dS
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V -S
 # debug
-# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -dS
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -S
 
 package utils::net
 
@@ -17,14 +17,14 @@ import "../core/iodef.h"
 import "../../async/worker.h"
 
 interface IOClose {
-    write(ptr *const char,size size_t) State = panic
+    write(ptr *const char,size size_t,written *size_t) State = panic
     read(ptr *char,size size_t,red *size_t) State = panic
     close(force bool) State = panic
     decltype() type
 }
 
 interface IO {
-    write(ptr *const char,size size_t) State = panic
+    write(ptr *const char,size size_t,written *size_t) State = panic
     read(ptr *char,size size_t,red *size_t) State = panic
     decltype() type
 }
@@ -32,6 +32,6 @@ interface IO {
 interface AsyncIOClose {
     read(ptr *char,size size_t) async::Future<ReadInfo>
     write(ptr *const char,size size_t) async::Future<WriteInfo>
-    close(force bool) bool
+    close(force bool) State
     decltype() tpe
 }

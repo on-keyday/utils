@@ -15,13 +15,19 @@
 namespace utils {
     namespace platform {
         namespace windows {
-            template <class Fn>
+            enum class CompletionType {
+                tcp_read,
+            };
+
+            template <class Fn, class Ret = void>
             struct CompletionCallback {
-                Fn& fn;
-                CompletionCallback(Fn& f)
+                using remref = std::remove_reference_t<Fn>;
+                using type = std::conditional_t<std::is_same_v<Ret, void>, remref&, remref>;
+                type fn;
+                CompletionCallback(type& f)
                     : fn(f) {}
-                void call(void* ol, size_t sz) {
-                    fn(ol, sz);
+                Ret call(void* ol, size_t sz) {
+                    return fn(ol, sz);
                 }
             };
 
@@ -33,14 +39,22 @@ namespace utils {
 
                 template <class Fn>
                 void wait_completion(Fn&& cb, size_t maxcount, int wait) {
-                    auto fn = CompletionCallback{cb};
+                    auto fn = CompletionCallback<Fn>{cb};
                     wait_completion_impl(fn, maxcount, wait);
                 }
+                template <class Fn>
+                void register_callback(Fn&& cb) {
+                    auto fn = CompletionCallback<Fn, bool>{cb};
+                    register_callback_impl(fn);
+                }
+
+                void wait_callbacks(size_t maxcount, int wait);
 
                private:
                 IOCPObject();
                 ~IOCPObject();
                 void wait_completion_impl(CCBInvoke cb, size_t maxcount, int wait);
+                void register_callback_impl(CCBRegistered cb);
                 IOCPContext* ctx;
             };
             DLL IOCPObject* STDCALL get_iocp();

@@ -20,9 +20,10 @@ struct IOClose {
    private:
 
     struct interface__ {
-        virtual State write(const char* ptr, size_t size) = 0;
+        virtual State write(const char* ptr, size_t size, size_t* written) = 0;
         virtual State read(char* ptr, size_t size, size_t* red) = 0;
         virtual State close(bool force) = 0;
+        virtual const void* raw__(const std::type_info&) const noexcept = 0;
 
         virtual ~interface__() = default;
     };
@@ -35,12 +36,12 @@ struct IOClose {
         implements__(V__&& args)
             :t_holder_(std::forward<V__>(args)){}
 
-        State write(const char* ptr, size_t size) override {
+        State write(const char* ptr, size_t size, size_t* written) override {
             auto t_ptr_ = utils::helper::deref(this->t_holder_);
             if (!t_ptr_) {
                 throw std::bad_function_call();
             }
-            return t_ptr_->write(ptr, size);
+            return t_ptr_->write(ptr, size, written);
         }
 
         State read(char* ptr, size_t size, size_t* red) override {
@@ -57,6 +58,13 @@ struct IOClose {
                 throw std::bad_function_call();
             }
             return t_ptr_->close(force);
+        }
+
+        const void* raw__(const std::type_info&info__) const noexcept override {
+            if (info__!=typeid(T__)) {
+                return nullptr;
+            }
+            return static_cast<const void*>(std::addressof(t_holder_));
         }
 
     };
@@ -102,8 +110,8 @@ struct IOClose {
         delete iface;
     }
 
-    State write(const char* ptr, size_t size) {
-        return iface?iface->write(ptr, size):throw std::bad_function_call();
+    State write(const char* ptr, size_t size, size_t* written) {
+        return iface?iface->write(ptr, size, written):throw std::bad_function_call();
     }
 
     State read(char* ptr, size_t size, size_t* red) {
@@ -119,10 +127,7 @@ struct IOClose {
         if (!iface) {
             return nullptr;
         }
-        if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;
+        return static_cast<const T__*>(iface->raw__(typeid(T__)));
     }
 
     template<class T__>
@@ -130,10 +135,7 @@ struct IOClose {
         if (!iface) {
             return nullptr;
         }
-        if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;
+        return static_cast<T__*>(const_cast<void*>(iface->raw__(typeid(T__))));
     }
 
     IOClose(const IOClose&) = delete;
@@ -151,8 +153,9 @@ struct IO {
    private:
 
     struct interface__ {
-        virtual State write(const char* ptr, size_t size) = 0;
+        virtual State write(const char* ptr, size_t size, size_t* written) = 0;
         virtual State read(char* ptr, size_t size, size_t* red) = 0;
+        virtual const void* raw__(const std::type_info&) const noexcept = 0;
 
         virtual ~interface__() = default;
     };
@@ -165,12 +168,12 @@ struct IO {
         implements__(V__&& args)
             :t_holder_(std::forward<V__>(args)){}
 
-        State write(const char* ptr, size_t size) override {
+        State write(const char* ptr, size_t size, size_t* written) override {
             auto t_ptr_ = utils::helper::deref(this->t_holder_);
             if (!t_ptr_) {
                 throw std::bad_function_call();
             }
-            return t_ptr_->write(ptr, size);
+            return t_ptr_->write(ptr, size, written);
         }
 
         State read(char* ptr, size_t size, size_t* red) override {
@@ -179,6 +182,13 @@ struct IO {
                 throw std::bad_function_call();
             }
             return t_ptr_->read(ptr, size, red);
+        }
+
+        const void* raw__(const std::type_info&info__) const noexcept override {
+            if (info__!=typeid(T__)) {
+                return nullptr;
+            }
+            return static_cast<const void*>(std::addressof(t_holder_));
         }
 
     };
@@ -224,8 +234,8 @@ struct IO {
         delete iface;
     }
 
-    State write(const char* ptr, size_t size) {
-        return iface?iface->write(ptr, size):throw std::bad_function_call();
+    State write(const char* ptr, size_t size, size_t* written) {
+        return iface?iface->write(ptr, size, written):throw std::bad_function_call();
     }
 
     State read(char* ptr, size_t size, size_t* red) {
@@ -237,10 +247,7 @@ struct IO {
         if (!iface) {
             return nullptr;
         }
-        if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;
+        return static_cast<const T__*>(iface->raw__(typeid(T__)));
     }
 
     template<class T__>
@@ -248,10 +255,7 @@ struct IO {
         if (!iface) {
             return nullptr;
         }
-        if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;
+        return static_cast<T__*>(const_cast<void*>(iface->raw__(typeid(T__))));
     }
 
     IO(const IO&) = delete;
@@ -271,7 +275,8 @@ struct AsyncIOClose {
     struct interface__ {
         virtual async::Future<ReadInfo> read(char* ptr, size_t size) = 0;
         virtual async::Future<WriteInfo> write(const char* ptr, size_t size) = 0;
-        virtual bool close(bool force) = 0;
+        virtual State close(bool force) = 0;
+        virtual const void* raw__(const std::type_info&) const noexcept = 0;
 
         virtual ~interface__() = default;
     };
@@ -300,12 +305,19 @@ struct AsyncIOClose {
             return t_ptr_->write(ptr, size);
         }
 
-        bool close(bool force) override {
+        State close(bool force) override {
             auto t_ptr_ = utils::helper::deref(this->t_holder_);
             if (!t_ptr_) {
-                return bool{};
+                return State{};
             }
             return t_ptr_->close(force);
+        }
+
+        const void* raw__(const std::type_info&info__) const noexcept override {
+            if (info__!=typeid(T__)) {
+                return nullptr;
+            }
+            return static_cast<const void*>(std::addressof(t_holder_));
         }
 
     };
@@ -359,8 +371,8 @@ struct AsyncIOClose {
         return iface?iface->write(ptr, size):async::Future<WriteInfo>{};
     }
 
-    bool close(bool force) {
-        return iface?iface->close(force):bool{};
+    State close(bool force) {
+        return iface?iface->close(force):State{};
     }
 
     template<class T__>
@@ -368,10 +380,7 @@ struct AsyncIOClose {
         if (!iface) {
             return nullptr;
         }
-        if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;
+        return static_cast<const T__*>(iface->raw__(typeid(T__)));
     }
 
     template<class T__>
@@ -379,10 +388,7 @@ struct AsyncIOClose {
         if (!iface) {
             return nullptr;
         }
-        if(auto ptr=dynamic_cast<implements__<T__>*>(iface)){
-            return std::addressof(ptr->t_holder_);
-        }
-        return nullptr;
+        return static_cast<T__*>(const_cast<void*>(iface->raw__(typeid(T__))));
     }
 
     AsyncIOClose(const AsyncIOClose&) = delete;

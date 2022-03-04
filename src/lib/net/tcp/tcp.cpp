@@ -14,33 +14,61 @@
 #ifdef _WIN32
 //#define USE_IOCP
 #endif
-#ifdef USE_IOCP
+//#ifdef USE_IOCP
 #include "../../../include/platform/windows/io_completetion_port.h"
-#endif
+//#endif
+
+#include "../../../include/net/async/pool.h"
 
 namespace utils {
     namespace net {
         namespace internal {
             constexpr ::SOCKET invalid_socket = ~0;
-#ifdef USE_IOCP
+#ifdef _WIN32
             struct TCPIOCP {
-                ::WSABUF buf;
-                char buffer[1024] = {0};
-                ::OVERLAPPED ol;
-                bool iocprunning = false;
-                bool done = false;
-                size_t size = 0;
-                wrap::weak_ptr<TCPConn> self;
+                ::OVERLAPPED ol{0};
+                platform::windows::CompletionType type = platform::windows::CompletionType::tcp_read;
+                ReadInfo* info = nullptr;
+                async::AnyFuture f;
+                wrap::weak_ptr<TCPConn> conn;
+                bool already_set = false;
             };
+
+            bool tcp_callback() {
+                auto iocp = platform::windows::get_iocp();
+                iocp->register_callback([](void* ol, size_t t) {
+                    auto ptr = static_cast<TCPIOCP*>(ol);
+                    if (ptr->type != platform::windows::CompletionType::tcp_read) {
+                        return false;
+                    }
+                    auto req = ptr->f.get_taskrequest();
+                    if (ptr->info) {
+                        ptr->info->read = t;
+                    }
+                    req->complete();
+                    return true;
+                });
+                return true;
+            }
+
+            void tcp_iocp_init(SOCKET sock, TCPIOCP* ptr) {
+                static bool ini = tcp_callback();
+                if (ptr && !ptr->already_set) {
+                    platform::windows::get_iocp()->register_handle(reinterpret_cast<void*>(sock));
+                    ptr->already_set = true;
+                }
+            }
 #endif
+
             struct TCPImpl {
                 wrap::shared_ptr<Address> addr;
                 addrinfo* selected = nullptr;
                 ::SOCKET sock = invalid_socket;
                 bool connected = false;
-#ifdef USE_IOCP
+#ifdef _WIN32
                 TCPIOCP iocp;
 #endif
+
                 void close() {
                     if (sock != invalid_socket) {
                         if (connected) {
@@ -94,54 +122,40 @@ namespace utils {
             return impl->sock;
         }
 
-#ifdef USE_IOCP
-        auto io_complete_callback(wrap::weak_ptr<TCPConn>& self, internal::TCPImpl* impl) {
-            return [=](size_t size) {
-                auto conn = self.lock();
-                if (!conn) {
-                    return;
-                }
-                impl->iocp.size += size;
-                impl->iocp.done = true;
-            };
-        }
-
-        State handle_iocp(internal::TCPImpl* impl, char* ptr, size_t size, size_t* red) {
-        BEGIN:
-            if (impl->iocp.iocprunning) {
-                if (impl->iocp.done) {
-                    auto cpy = size >= impl->iocp.size ? impl->iocp.size : size;
-                    ::memcpy(ptr, impl->iocp.buffer, cpy);
-                    impl->iocp.size -= cpy;
-                    ::memmove(impl->iocp.buffer, impl->iocp.buffer + cpy, cpy);
-                    *red = cpy;
-                    if (impl->iocp.size == 0) {
-                        impl->iocp.done = false;
-                        impl->iocp.size = 0;
-                        ::CloseHandle(impl->iocp.ol.hEvent);
-                        impl->iocp.iocprunning = false;
+        async::Future<ReadInfo> TCPConn::read(char* ptr, size_t size) {
+            if (!ptr || !size) {
+                return nullptr;
+            }
+            return get_pool().start<ReadInfo>([=, this, lock = impl->iocp.conn.lock()](async::Context& ctx) {
+#ifdef _WIN32
+                ::WSABUF buf;
+                buf.buf = ptr;
+                buf.len = size;
+                ::DWORD red;
+                internal::tcp_iocp_init(impl->sock, &impl->iocp);
+                ReadInfo info;
+                info.byte = ptr;
+                info.size = size;
+                impl->iocp.info = &info;
+                impl->iocp.f = ctx.clone();
+                auto res = ::WSARecv(impl->sock, &buf, 1, &red, 0, &impl->iocp.ol, nullptr);
+                if (res == SOCKET_ERROR) {
+                    auto err = ::GetLastError();
+                    if (err == WSA_IO_PENDING) {
+                        ctx.externaltask_wait();
                     }
-                    return State::complete;
+                    else {
+                        info.err = err;
+                        ctx.set_value(info);
+                        return;
+                    }
                 }
-                return State::running;
-            }
-            impl->iocp.buf.buf = impl->iocp.buffer;
-            impl->iocp.buf.len = 1024;
-            impl->iocp.iocprunning = true;
-            impl->iocp.ol = {};
-            impl->iocp.ol.hEvent = ::CreateEventW(nullptr, true, false, nullptr);
-            DWORD flagset = 0;
-            auto res = ::WSARecv(impl->sock, &impl->iocp.buf, 1, nullptr, &flagset, &impl->iocp.ol, nullptr);
-            auto err = ::WSAGetLastError();
-            if (err != NO_ERROR && err != WSA_IO_PENDING) {
-                return State::failed;
-            }
-            if (err == NO_ERROR) {
-                goto BEGIN;
-            }
-            return State::running;
-        }
+                impl->iocp.info = nullptr;
+                impl->iocp.f.clear();
+                ctx.set_value(info);
 #endif
+            });
+        }
 
         State TCPConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl || impl->is_closed()) {
@@ -153,9 +167,6 @@ namespace utils {
             if (size > (std::numeric_limits<int>::max)()) {
                 size = (std::numeric_limits<int>::max)();
             }
-#ifdef USE_IOCP
-            return handle_iocp(impl, ptr, size, red);
-#else
             auto res = ::recv(impl->sock, ptr, int(size), 0);
             if (res < 0) {
                 if (is_blocking()) {
@@ -167,10 +178,9 @@ namespace utils {
                 *red = size_t(res);
             }
             return State::complete;
-#endif
         }
 
-        State TCPConn::write(const char* ptr, size_t size) {
+        State TCPConn::write(const char* ptr, size_t size, size_t* written) {
             if (!impl || impl->is_closed()) {
                 return State::failed;
             }
@@ -183,6 +193,9 @@ namespace utils {
                     return State::running;
                 }
                 return State::failed;
+            }
+            if (written) {
+                *written = size;
             }
             return State::complete;
         }
@@ -238,12 +251,8 @@ namespace utils {
                 auto conn = wrap::make_shared<TCPConn>();
                 conn->impl = impl;
                 conn->impl->connected = true;
-#ifdef USE_IOCP
-                conn->impl->iocp.self = conn;
-                auto iocp = platform::windows::start_iocp();
-                auto s = iocp->register_handler(reinterpret_cast<void*>(conn->impl->sock),
-                                                io_complete_callback(conn->impl->iocp.self, conn->impl));
-                assert(s);
+#ifdef _WIN32
+                conn->impl->iocp.conn = conn;
 #endif
                 impl = nullptr;
                 return conn;

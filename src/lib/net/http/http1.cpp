@@ -154,7 +154,7 @@ namespace utils {
                 return res != State::complete && res != State::running;
             };
             if (impl->state == HttpState::requesting) {
-                auto res = impl->io.write(impl->buf.c_str(), impl->buf.size());
+                auto res = impl->io.write(impl->buf.c_str(), impl->buf.size(), nullptr);
                 if (is_failed(res)) {
                     failed_clean();
                     return nullptr;
@@ -166,7 +166,7 @@ namespace utils {
             }
             if (impl->state == HttpState::body_sending) {
                 if (impl->header->body.size()) {
-                    auto res = impl->io.write(impl->header->body.c_str(), impl->header->body.size());
+                    auto res = impl->io.write(impl->header->body.c_str(), impl->header->body.size(), nullptr);
                     if (is_failed(res)) {
                         failed_clean();
                         return nullptr;
@@ -278,7 +278,7 @@ namespace utils {
             }
             HttpResponse response;
             response.impl = new internal::HttpResponseImpl{};
-            auto done = io.write(buf.c_str(), buf.size());
+            auto done = io.write(buf.c_str(), buf.size(), nullptr);
             if (done != State::complete && done != State::running) {
                 return HttpResponse{};
             }
@@ -302,7 +302,7 @@ namespace utils {
             if (!render_request(buf, io.impl->hostname.c_str(), method, path, header.impl)) {
                 return HttpResponse{};
             }
-            auto done = io.impl->io.write(buf.c_str(), buf.size());
+            auto done = io.impl->io.write(buf.c_str(), buf.size(), nullptr);
             if (done != State::complete && done != State::running) {
                 return HttpResponse{};
             }

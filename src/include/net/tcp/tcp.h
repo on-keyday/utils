@@ -12,6 +12,8 @@
 #include "../dns/dns.h"
 #include "../core/iodef.h"
 
+#include "../../../include/async/worker.h"
+
 namespace utils {
     namespace net {
         namespace internal {
@@ -23,9 +25,12 @@ namespace utils {
             friend struct DLL TCPServer;
             constexpr TCPConn() {}
 
-            State write(const char* ptr, size_t size);
+            State write(const char* ptr, size_t size, size_t* written);
             State read(char* ptr, size_t size, size_t* red);
             State close(bool);
+
+            async::Future<ReadInfo> read(char* ptr, size_t size);
+            async::Future<WriteInfo> write(const char* ptr, size_t size);
 
             size_t get_raw() const;
 

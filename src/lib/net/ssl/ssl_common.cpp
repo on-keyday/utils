@@ -39,7 +39,7 @@ namespace utils {
                 }
                 if (iophase == SSLIOPhase::write_to_conn) {
                     if (buffer.size()) {
-                        auto e = io.write(buffer.c_str(), buffer.size());
+                        auto e = io.write(buffer.c_str(), buffer.size(), nullptr);
                         if (e != State::complete) {
                             return e;
                         }

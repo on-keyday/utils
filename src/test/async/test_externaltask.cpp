@@ -75,7 +75,7 @@ void test_externaltask() {
             text += host;
             text += "\r\n\r\n";
 
-            auto res = c->write(text.c_str(), text.size());
+            auto res = c->write(text.c_str(), text.size(), nullptr);
             assert(res == net::State::complete);
             auto iocp = platform::windows::get_iocp();
             iocp->register_handle((void*)sock);

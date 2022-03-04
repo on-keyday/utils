@@ -49,7 +49,7 @@ namespace utils {
         }
 #else
 
-        State SSLConn::write(const char* ptr, size_t size) {
+        State SSLConn::write(const char* ptr, size_t size, size_t* written) {
             if (!impl) {
                 return State::failed;
             }
@@ -79,6 +79,9 @@ namespace utils {
                 if (impl->iostate == State::complete) {
                     if (impl->io_progress == size) {
                         impl->io_progress = 0;
+                        if (written) {
+                            *written = size;
+                        }
                         impl->io_mode = internal::IOMode::idle;
                         return State::complete;
                     }

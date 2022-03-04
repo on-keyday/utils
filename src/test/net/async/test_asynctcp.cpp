@@ -42,12 +42,12 @@ void test_asynctcp() {
             text += " HTTP/1.1\r\nHost: ";
             text += host;
             text += "\r\n\r\n";
-            auto st = conn->write(text.c_str(), text.size());
+            auto st = conn->write(text.c_str(), text.size(), nullptr);
             while (st == net::State::running) {
                 std::this_thread::yield();
                 ctx.suspend();
                 suspend++;
-                st = conn->write(text.c_str(), text.size());
+                st = conn->write(text.c_str(), text.size(), nullptr);
             }
             wrap::string data;
             st = net::read(data, *conn);

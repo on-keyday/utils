@@ -13,7 +13,7 @@
 
 #include "../../../include/helper/iface_cast.h"
 
-#include "../../../include/wrap/lite/map.h"
+#include "../../../include/wrap/lite/vector.h"
 
 #include <windows.h>
 #include <cassert>
@@ -25,6 +25,8 @@ namespace utils {
         namespace windows {
 
             ::HANDLE iocp = INVALID_HANDLE_VALUE;
+
+            wrap::vector<CCBRegistered> callbacks;
 
             template <class Func>
             void iocp_poll(Func&& fn, size_t handlecount, int wait) {
@@ -43,6 +45,25 @@ namespace utils {
                     maxcount = 8;
                 }
                 iocp_poll(cb, maxcount, wait);
+            }
+
+            void IOCPObject::register_callback_impl(CCBRegistered cb) {
+                callbacks.push_back(std::move(cb));
+            }
+
+            void IOCPObject::wait_callbacks(size_t maxcount, int wait) {
+                if (maxcount > 64) {
+                    maxcount = 8;
+                }
+                auto fn = [](void* ol, size_t maxcount) {
+                    for (auto& cb : callbacks) {
+                        if (cb.call(ol, maxcount)) {
+                            return;
+                        }
+                    }
+                };
+                iocp_poll(CompletionCallback<decltype(fn)>{fn},
+                          maxcount, wait);
             }
 
             IOCPObject* get_iocp() {

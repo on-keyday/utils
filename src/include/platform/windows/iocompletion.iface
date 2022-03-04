@@ -13,4 +13,11 @@ interface CCBImpl {
     __vtable__() type
 }
 
+interface CCBRegistered {
+    call(ol *void,com size_t) bool 
+    __sso__() type =3
+    __vtable__() type
+}
+
 alias CCBInvoke decltype(std::declval<CCBImpl>().get_self_vtable())
+#alias CCBRegistered decltype(std::declval<CCBRegisteredImpl>().get_self_vtable())

@@ -27,7 +27,7 @@ namespace utils {
 
             constexpr SSLConn() {}
 
-            State write(const char* ptr, size_t size);
+            State write(const char* ptr, size_t size,size_t* written);
             State read(char* ptr, size_t size, size_t* red);
             State close(bool force = false);
 
