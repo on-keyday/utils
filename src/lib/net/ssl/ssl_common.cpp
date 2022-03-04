@@ -19,6 +19,40 @@ namespace utils {
             void SSLImpl::clear() {}
             SSLImpl::~SSLImpl() {}
 #else
+
+            size_t SSLImpl::read_from_ssl(wrap::string& buffer) {
+                while (true) {
+                    char tmpbuf[1024];
+                    size_t red;
+                    auto result = ::BIO_read_ex(bio, tmpbuf, 1024, &red);
+                    buffer.append(tmpbuf, red);
+                    if (!result || red < 1024) {
+                        break;
+                    }
+                }
+                return buffer.size();
+            }
+
+            size_t SSLImpl::write_to_ssl(wrap::string& buffer) {
+                if (buffer.size()) {
+                    size_t w = 0;
+                    auto err = ::BIO_write_ex(bio, buffer.c_str(), buffer.size(), &w);
+                    if (!err) {
+                        if (!::BIO_should_retry(bio)) {
+                            return szfailed;
+                        }
+                    }
+                    else {
+                        if (w < buffer.size()) {
+                            buffer.erase(0, w);
+                            return w;
+                        }
+                        buffer.clear();
+                    }
+                }
+                return 0;
+            }
+
             State SSLSyncImpl::do_IO() {
                 bool has_wbuf = buffer.size() != 0;
                 if (has_wbuf) {
@@ -26,15 +60,7 @@ namespace utils {
                 }
             BEGIN:
                 if (iophase == SSLIOPhase::read_from_ssl) {
-                    while (true) {
-                        char tmpbuf[1024];
-                        size_t red = 0;
-                        auto result = ::BIO_read_ex(bio, tmpbuf, 1024, &red);
-                        buffer.append(tmpbuf, red);
-                        if (!result || red < 1024) {
-                            break;
-                        }
-                    }
+                    read_from_ssl(buffer);
                     iophase = SSLIOPhase::write_to_conn;
                 }
                 if (iophase == SSLIOPhase::write_to_conn) {
@@ -60,19 +86,9 @@ namespace utils {
                     }
                 }
                 if (iophase == SSLIOPhase::write_to_ssl) {
-                    size_t w = 0;
-                    auto err = ::BIO_write_ex(bio, buffer.c_str(), buffer.size(), &w);
-                    if (!err) {
-                        if (!::BIO_should_retry(bio)) {
-                            return State::failed;
-                        }
-                    }
-                    else {
-                        if (w < buffer.size()) {
-                            buffer.erase(0, w);
-                            return State::complete;
-                        }
-                        buffer.clear();
+                    auto res = write_to_ssl(buffer);
+                    if (res == szfailed) {
+                        return State::failed;
                     }
                     iophase = SSLIOPhase::read_from_ssl;
                     if (has_wbuf) {
@@ -103,29 +119,61 @@ namespace utils {
 
 #ifdef USE_OPENSSL
 
+        State close_impl(internal::SSLSyncImpl* impl) {
+            if (!impl) {
+                return State::failed;
+            }
+            impl->io_mode = internal::IOMode::close;
+            if (impl->connected) {
+                size_t times = 0;
+            BEGIN:
+                times++;
+                auto res = ::SSL_shutdown(impl->ssl);
+                if (res < 0) {
+                    if (need_io(impl->ssl)) {
+                        auto err = impl->do_IO();
+                        if (err == State::running) {
+                            return State::running;
+                        }
+                        else if (err == State::complete) {
+                            if (times <= 10) {
+                                goto BEGIN;
+                            }
+                        }
+                    }
+                }
+                else if (res == 0) {
+                    if (times <= 10) {
+                        goto BEGIN;
+                    }
+                }
+            }
+            impl->clear();
+            return State::complete;
+        }
+
         bool need_io(::SSL* ssl) {
             auto errcode = ::SSL_get_error(ssl, -1);
             return errcode == SSL_ERROR_WANT_READ || errcode == SSL_ERROR_WANT_WRITE || errcode == SSL_ERROR_SYSCALL;
         }
 
-        bool setup_ssl(internal::SSLSyncImpl* impl) {
-            if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
+        bool setup_ssl(internal::SSLImpl* impl) {
+            ::BIO* tmpbio = nullptr;
+            if (!::BIO_new_bio_pair(&impl->bio, 0, &tmpbio, 0)) {
                 return false;
             }
             impl->ssl = ::SSL_new(impl->ctx);
             if (!impl->ssl) {
                 ::BIO_free_all(impl->bio);
                 impl->bio = nullptr;
-                impl->tmpbio = nullptr;
+                // impl->tmpbio = nullptr;
                 return false;
             }
-            ::SSL_set_bio(impl->ssl, impl->tmpbio, impl->tmpbio);
-            impl->tmpbio = nullptr;
+            ::SSL_set_bio(impl->ssl, tmpbio, tmpbio);
             return true;
         }
 
-        bool common_setup(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
-                          const char* selfcert, const char* selfprivate) {
+        bool common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {
                 impl->ctx = ::SSL_CTX_new(::TLS_method());
                 if (!impl->ctx) {
@@ -152,12 +200,10 @@ namespace utils {
                     return false;
                 }
             }
-            if (io) {
-                if (!setup_ssl(impl)) {
-                    return false;
-                }
-                impl->io = std::move(io);
-            }
+            return true;
+        }
+
+        bool common_setup_ssl(internal::SSLImpl* impl, const char* alpn, const char* host) {
             if (alpn) {
                 if (::SSL_set_alpn_protos(impl->ssl, (const unsigned char*)alpn, ::strlen(alpn)) != 0) {
                     return false;
@@ -169,6 +215,23 @@ namespace utils {
                 if (!X509_VERIFY_PARAM_add1_host(param, host, ::strlen(host))) {
                     return false;
                 }
+            }
+            return true;
+        }
+
+        bool common_setup_sync(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
+                               const char* selfcert, const char* selfprivate) {
+            if (!common_setup_sslctx(impl, cert, selfcert, selfprivate)) {
+                return false;
+            }
+            if (io) {
+                if (!setup_ssl(impl)) {
+                    return false;
+                }
+                impl->io = std::move(io);
+            }
+            if (!common_setup_ssl(impl, alpn, host)) {
+                return false;
             }
             return true;
         }

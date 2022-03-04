@@ -131,25 +131,23 @@ namespace utils {
                 ::WSABUF buf;
                 buf.buf = ptr;
                 buf.len = size;
-                ::DWORD red;
+                ::DWORD red, flag;
                 internal::tcp_iocp_init(impl->sock, &impl->iocp);
                 ReadInfo info;
                 info.byte = ptr;
                 info.size = size;
                 impl->iocp.info = &info;
                 impl->iocp.f = ctx.clone();
-                auto res = ::WSARecv(impl->sock, &buf, 1, &red, 0, &impl->iocp.ol, nullptr);
+                auto res = ::WSARecv(impl->sock, &buf, 1, &red, &flag, &impl->iocp.ol, nullptr);
                 if (res == SOCKET_ERROR) {
                     auto err = ::GetLastError();
-                    if (err == WSA_IO_PENDING) {
-                        ctx.externaltask_wait();
-                    }
-                    else {
+                    if (err != WSA_IO_PENDING) {
                         info.err = err;
                         ctx.set_value(info);
                         return;
                     }
                 }
+                ctx.externaltask_wait();
                 impl->iocp.info = nullptr;
                 impl->iocp.f.clear();
                 ctx.set_value(info);

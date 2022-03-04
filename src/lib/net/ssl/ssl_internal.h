@@ -39,7 +39,6 @@ namespace utils {
                 ::SSL* ssl = nullptr;
                 ::SSL_CTX* ctx = nullptr;
                 ::BIO* bio = nullptr;
-                ::BIO* tmpbio = nullptr;
 
                 wrap::string buffer;
                 SSLIOPhase iophase = SSLIOPhase::read_from_ssl;
@@ -48,6 +47,10 @@ namespace utils {
                 size_t io_progress = 0;
                 bool connected = false;
                 bool is_server = false;
+                wrap::weak_ptr<SSLConn> conn;
+
+                size_t read_from_ssl(wrap::string& buffer);
+                size_t write_to_ssl(wrap::string& buffer);
 
                 void clear();
 
@@ -59,13 +62,24 @@ namespace utils {
                 IO io;
                 State do_IO();
             };
+
+            struct SSLAsyncImpl : SSLImpl {
+                AsyncIOClose io;
+                bool do_IO(async::Context&);
+            };
         }  // namespace internal
 #ifdef USE_OPENSSL
+        constexpr size_t szfailed = ~0;
         bool need_io(::SSL*);
-        bool setup_ssl(internal::SSLSyncImpl* impl);
-        bool common_setup(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
-                          const char* selfcert, const char* selfprivate);
+        bool setup_ssl(internal::SSLImpl* impl);
+        bool common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate);
+        bool common_setup_ssl(internal::SSLImpl* impl, const char* alpn, const char* host);
+        bool common_setup_sync(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
+                               const char* selfcert, const char* selfprivate);
+        bool common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,
+                                const char* selfcert, const char* selfprivate);
         State connecting(internal::SSLSyncImpl* impl);
+        State close_impl(internal::SSLImpl* impl);
 #endif
     }  // namespace net
 }  // namespace utils

@@ -91,13 +91,6 @@ namespace utils {
             return impl->iostate;
         }
 
-        async::Future<ReadInfo> SSLAsyncConn::read(char* ptr, size_t size) {
-            if (!ptr || !size) {
-                return nullptr;
-            }
-        }
-        async::Future<WriteInfo> write(const char* ptr, size_t size);
-
         State SSLConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl) {
                 return State::failed;
@@ -143,36 +136,7 @@ namespace utils {
         }
 
         State SSLConn::close(bool force) {
-            if (!impl) {
-                return State::failed;
-            }
-            impl->io_mode = internal::IOMode::close;
-            if (impl->connected) {
-                size_t times = 0;
-            BEGIN:
-                times++;
-                auto res = ::SSL_shutdown(impl->ssl);
-                if (res < 0) {
-                    if (need_io(impl->ssl)) {
-                        auto err = impl->do_IO();
-                        if (err == State::running) {
-                            return State::running;
-                        }
-                        else if (err == State::complete) {
-                            if (times <= 10) {
-                                goto BEGIN;
-                            }
-                        }
-                    }
-                }
-                else if (res == 0) {
-                    if (times <= 10) {
-                        goto BEGIN;
-                    }
-                }
-            }
-            impl->clear();
-            return State::complete;
+            close_impl(impl);
         }
 
         SSLConn::~SSLConn() {
@@ -225,7 +189,7 @@ namespace utils {
             }
             SSLResult result;
             result.impl = new internal::SSLSyncImpl();
-            if (!common_setup(result.impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
+            if (!common_setup_sync(result.impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
                 return SSLResult();
             }
             auto state = connecting(result.impl);
@@ -239,7 +203,7 @@ namespace utils {
             SSLServer server;
             server.impl = new internal::SSLSyncImpl();
             server.impl->is_server = true;
-            if (!common_setup(server.impl, nullptr, cert, nullptr, nullptr, selfcert, selfprivate)) {
+            if (!common_setup_sync(server.impl, nullptr, cert, nullptr, nullptr, selfcert, selfprivate)) {
                 return SSLServer();
             }
             return server;

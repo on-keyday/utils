@@ -22,6 +22,7 @@ namespace utils {
             struct SSLImpl;
             struct SSLSyncImpl;
             struct SSLAsyncImpl;
+            struct SSLSet;
         }  // namespace internal
 
         struct DLL SSLConn {
@@ -40,11 +41,13 @@ namespace utils {
         };
 
         struct DLL SSLAsyncConn {
+            friend internal::SSLSet;
             async::Future<ReadInfo> read(char* ptr, size_t size);
             async::Future<WriteInfo> write(const char* ptr, size_t size);
+            State close(bool force);
 
            private:
-            internal::SSLImpl* impl = nullptr;
+            internal::SSLAsyncImpl* impl = nullptr;
         };
 
         struct SSLServer;
@@ -89,6 +92,9 @@ namespace utils {
 
         DLL SSLResult STDCALL open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                                    const char* selfcert = nullptr, const char* selfprivate = nullptr);
+        DLL async::Future<wrap::shared_ptr<SSLAsyncConn>> STDCALL open_async(AsyncIOClose&& io,
+                                                                             const char* cert, const char* alpn = nullptr, const char* host = nullptr,
+                                                                             const char* selfcert = nullptr, const char* selfprivate = nullptr);
         DLL SSLServer STDCALL setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr);
     }  // namespace net
 }  // namespace utils

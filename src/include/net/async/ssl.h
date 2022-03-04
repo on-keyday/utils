@@ -14,7 +14,7 @@
 
 namespace utils {
     namespace net {
-        DLL async::Future<wrap::shared_ptr<SSLConn>> async_sslopen(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
-                                                                   const char* selfcert = nullptr, const char* selfprivate = nullptr);
+        DLL [[deprecated]] async::Future<wrap::shared_ptr<SSLConn>> async_sslopen(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
+                                                                                  const char* selfcert = nullptr, const char* selfprivate = nullptr);
     }
 }  // namespace utils
