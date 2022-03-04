@@ -157,6 +157,20 @@ namespace utils {
             });
         }
 
+        async::Future<WriteInfo> TCPConn::write(const char* ptr, size_t size) {
+            if (!ptr || !size) {
+                return nullptr;
+            }
+            auto t = write(ptr, size, nullptr);
+            while (t != State::complete) {
+                t = write(ptr, size, nullptr);
+            }
+            if (t == State::failed) {
+                return async::Future{WriteInfo{.byte = ptr, .size = size, .err = (int)::GetLastError()}};
+            }
+            return async::Future{WriteInfo{.byte = ptr, .size = size, .written = size}};
+        }
+
         State TCPConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl || impl->is_closed()) {
                 return State::failed;
