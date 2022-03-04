@@ -265,7 +265,7 @@ Special Value:
     }
     wrap::string got;
     ifacegen::generate(state.data, got, ifacegen::Language::cpp, *flag);
-    if (verbose) {
+    if (*verbose) {
         cout << "generated code:\n";
         cout << got;
     }

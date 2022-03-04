@@ -32,11 +32,18 @@ namespace utils {
             invalid_argument,
         };
 
+        struct ReadInfo {
+            char* byte;
+            size_t size;
+            size_t read;
+            int err;
+        };
+
         struct WriteInfo {
             const char* byte;
             size_t size;
-
             size_t written;
+            int err;
         };
 
         namespace internal {
@@ -47,9 +54,7 @@ namespace utils {
                 return t.write(byte, size);
             }
             SFINAE_BLOCK_T_ELSE(writeable)
-            constexpr static State write(T& t, const char* byte, size_t size) {
-                return State::undefined;
-            }
+
             SFINAE_BLOCK_T_END()
 
             SFINAE_BLOCK_T_BEGIN(readable,
@@ -66,12 +71,12 @@ namespace utils {
 
         template <class T>
         constexpr State write(T& t, const char* byte, size_t size) {
-            return internal::writeable<T>::write(t, byte, size);
+            return t.write(byte, size);
         }
 
         template <class T>
         constexpr State read(T& t, char* byte, size_t size, size_t* red) {
-            return internal::readable<T>::read(t, byte, size, red);
+            return t.read(byte, size, red);
         }
 
         template <size_t inbufsize = 1024, class String, class T>
