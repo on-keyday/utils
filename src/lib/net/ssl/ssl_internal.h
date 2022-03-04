@@ -40,7 +40,7 @@ namespace utils {
                 ::SSL_CTX* ctx = nullptr;
                 ::BIO* bio = nullptr;
                 ::BIO* tmpbio = nullptr;
-                IO io;
+
                 wrap::string buffer;
                 SSLIOPhase iophase = SSLIOPhase::read_from_ssl;
                 State iostate = State::complete;
@@ -48,20 +48,24 @@ namespace utils {
                 size_t io_progress = 0;
                 bool connected = false;
                 bool is_server = false;
-                State do_IO();
 
                 void clear();
 
                 ~SSLImpl();
 #endif
             };
+
+            struct SSLSyncImpl : SSLImpl {
+                IO io;
+                State do_IO();
+            };
         }  // namespace internal
 #ifdef USE_OPENSSL
         bool need_io(::SSL*);
-        bool setup_ssl(internal::SSLImpl* impl);
-        bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
+        bool setup_ssl(internal::SSLSyncImpl* impl);
+        bool common_setup(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate);
-        State connecting(internal::SSLImpl* impl);
+        State connecting(internal::SSLSyncImpl* impl);
 #endif
     }  // namespace net
 }  // namespace utils

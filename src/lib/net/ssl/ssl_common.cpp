@@ -19,7 +19,7 @@ namespace utils {
             void SSLImpl::clear() {}
             SSLImpl::~SSLImpl() {}
 #else
-            State SSLImpl::do_IO() {
+            State SSLSyncImpl::do_IO() {
                 bool has_wbuf = buffer.size() != 0;
                 if (has_wbuf) {
                     iophase = SSLIOPhase::write_to_ssl;
@@ -89,7 +89,7 @@ namespace utils {
                 ssl = nullptr;
                 ::BIO_free(bio);
                 bio = nullptr;
-                io = nullptr;
+                // io = nullptr;
                 buffer.clear();
             }
 
@@ -108,7 +108,7 @@ namespace utils {
             return errcode == SSL_ERROR_WANT_READ || errcode == SSL_ERROR_WANT_WRITE || errcode == SSL_ERROR_SYSCALL;
         }
 
-        bool setup_ssl(internal::SSLImpl* impl) {
+        bool setup_ssl(internal::SSLSyncImpl* impl) {
             if (!::BIO_new_bio_pair(&impl->bio, 0, &impl->tmpbio, 0)) {
                 return false;
             }
@@ -124,7 +124,7 @@ namespace utils {
             return true;
         }
 
-        bool common_setup(internal::SSLImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
+        bool common_setup(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                           const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {
                 impl->ctx = ::SSL_CTX_new(::TLS_method());
@@ -173,7 +173,7 @@ namespace utils {
             return true;
         }
 
-        State connecting(internal::SSLImpl* impl) {
+        State connecting(internal::SSLSyncImpl* impl) {
         BEGIN:
             if (impl->iostate == State::complete) {
                 int res = 0;

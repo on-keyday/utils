@@ -91,6 +91,13 @@ namespace utils {
             return impl->iostate;
         }
 
+        async::Future<ReadInfo> SSLAsyncConn::read(char* ptr, size_t size) {
+            if (!ptr || !size) {
+                return nullptr;
+            }
+        }
+        async::Future<WriteInfo> write(const char* ptr, size_t size);
+
         State SSLConn::read(char* ptr, size_t size, size_t* red) {
             if (!impl) {
                 return State::failed;
@@ -217,7 +224,7 @@ namespace utils {
                 return SSLResult();
             }
             SSLResult result;
-            result.impl = new internal::SSLImpl();
+            result.impl = new internal::SSLSyncImpl();
             if (!common_setup(result.impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
                 return SSLResult();
             }
@@ -230,7 +237,7 @@ namespace utils {
 
         SSLServer setup(const char* selfcert, const char* selfprivate, const char* cert) {
             SSLServer server;
-            server.impl = new internal::SSLImpl();
+            server.impl = new internal::SSLSyncImpl();
             server.impl->is_server = true;
             if (!common_setup(server.impl, nullptr, cert, nullptr, nullptr, selfcert, selfprivate)) {
                 return SSLServer();
@@ -252,7 +259,7 @@ namespace utils {
 
         SSLResult SSLServer::accept(IO&& io) {
             SSLResult result;
-            result.impl = new internal::SSLImpl();
+            result.impl = new internal::SSLSyncImpl();
             if (!setup_ssl(impl)) {
                 return SSLResult();
             }
