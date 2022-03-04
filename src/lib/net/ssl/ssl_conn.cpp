@@ -136,7 +136,7 @@ namespace utils {
         }
 
         State SSLConn::close(bool force) {
-            close_impl(impl);
+            return close_impl(impl);
         }
 
         SSLConn::~SSLConn() {

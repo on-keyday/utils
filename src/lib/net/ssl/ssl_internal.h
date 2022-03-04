@@ -79,7 +79,7 @@ namespace utils {
         bool common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,
                                 const char* selfcert, const char* selfprivate);
         State connecting(internal::SSLSyncImpl* impl);
-        State close_impl(internal::SSLImpl* impl);
+        State close_impl(internal::SSLSyncImpl* impl);
 #endif
     }  // namespace net
 }  // namespace utils
