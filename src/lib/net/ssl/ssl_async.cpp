@@ -42,8 +42,15 @@ namespace utils {
                 static void set(SSLAsyncConn& conn, SSLAsyncImpl* ptr) {
                     conn.impl = ptr;
                 }
+                static SSLAsyncImpl* get(SSLAsyncConn& conn) {
+                    return conn.impl;
+                }
             };
         }  // namespace internal
+
+        SSLAsyncConn::~SSLAsyncConn() {
+            close(true);
+        }
 
         async::Future<ReadInfo> SSLAsyncConn::read(char* ptr, size_t size) {
             if (!ptr || !size) {
@@ -122,7 +129,7 @@ namespace utils {
         }
 
         State SSLAsyncConn::close(bool force) {
-            get_pool().post([this, lock = impl->conn.lock()](async::Context& ctx) {
+            get_pool().post([this, lock = impl->conn.lock()](async::Context& ctx) mutable {
                 if (impl->connected) {
                     size_t times = 0;
                     while (times < 10) {
@@ -138,6 +145,7 @@ namespace utils {
                             break;
                         }
                     }
+                    impl->connected = false;
                 }
                 impl->clear();
                 impl->io.close(true);
@@ -169,6 +177,7 @@ namespace utils {
                 }
                 auto as = wrap::make_shared<SSLAsyncConn>();
                 internal::SSLSet::set(*as, impl);
+                impl->conn = as;
                 ctx.set_value(std::move(as));
             });
         }

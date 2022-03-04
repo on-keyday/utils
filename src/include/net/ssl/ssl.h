@@ -46,6 +46,8 @@ namespace utils {
             async::Future<WriteInfo> write(const char* ptr, size_t size);
             State close(bool force);
 
+            ~SSLAsyncConn();
+
            private:
             internal::SSLAsyncImpl* impl = nullptr;
         };

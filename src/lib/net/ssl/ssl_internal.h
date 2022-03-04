@@ -47,7 +47,6 @@ namespace utils {
                 size_t io_progress = 0;
                 bool connected = false;
                 bool is_server = false;
-                wrap::weak_ptr<SSLConn> conn;
 
                 size_t read_from_ssl(wrap::string& buffer);
                 size_t write_to_ssl(wrap::string& buffer);
@@ -60,11 +59,13 @@ namespace utils {
 
             struct SSLSyncImpl : SSLImpl {
                 IO io;
+                wrap::weak_ptr<SSLConn> conn;
                 State do_IO();
             };
 
             struct SSLAsyncImpl : SSLImpl {
                 AsyncIOClose io;
+                wrap::weak_ptr<SSLAsyncConn> conn;
                 bool do_IO(async::Context&);
             };
         }  // namespace internal

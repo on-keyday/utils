@@ -24,11 +24,11 @@ void test_asynctcp2() {
             auto addr = a.get();
             auto c = net::async_open(std::move(addr));
             c.wait_or_suspend(ctx);
-            auto conn = c.get();
-            assert(conn);
-            auto s = net::open_async(std::move(conn), "./src/test/net/cacert.pem");
+            auto cntcp = c.get();
+            assert(cntcp);
+            auto s = net::open_async(std::move(cntcp), "./src/test/net/cacert.pem");
             s.wait_or_suspend(ctx);
-            auto ssl = s.get();
+            auto conn = s.get();
 
             wrap::string http;
             http += "GET ";
@@ -37,7 +37,8 @@ void test_asynctcp2() {
             http += host;
             http += "\r\n\r\n";
             auto f = conn->write(http.c_str(), http.size());
-            assert(f.is_done());
+            // assert(f.is_done());
+            f.wait_or_suspend(ctx);
             wrap::string buf;
             buf.resize(1024);
             auto v = conn->read(buf.data(), buf.size());

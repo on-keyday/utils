@@ -425,6 +425,9 @@ namespace utils {
         }
 
         void AnyFuture::wait_or_suspend(Context& ctx) {
+            if (!data) {
+                return;
+            }
             check_term(data);
             if (!not_own && !is_done()) {
                 auto c = internal::ContextHandle::get(ctx);
