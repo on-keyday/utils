@@ -324,21 +324,9 @@ namespace utils {
         struct TerminateExcept {
         };
 
-        constexpr auto priority_sigback = 0;
-        constexpr auto priority_signal = 1;
-        constexpr auto priority_taskpost = 2;
+        constexpr auto priority_signal = 0;
+        constexpr auto priority_taskpost = 1;
         constexpr auto priority_endtask = ~0;
-
-        struct SignalBack {
-            std::atomic_flag sig;
-            wrap::shared_ptr<internal::ContextData> data;
-            Atask task;
-
-            constexpr size_t priority() const {
-                return priority_sigback;
-            }
-            constexpr void set_priority(size_t) const {}
-        };
 
         struct Signal {
             size_t sig;
@@ -641,16 +629,6 @@ namespace utils {
                         auto& c = make_fiber(place, std::move(post->task), wd);
                         handle_fiber(place, c.get());
                     }
-                    else if (auto sigback = event.type_assert<SignalBack*>()) {
-                        Event place;
-                        auto p = *sigback;
-                        auto& c = make_fiber(place, std::move(p->task), wd);
-                        c->waiter_flag.test_and_set();
-                        p->data = c;
-                        p->sig.clear();
-                        p->sig.notify_all();
-                        handle_fiber(place, c.get());
-                    }
                     else if (auto signal = event.type_assert<Signal>()) {
                         Event sig;
                         wd->lock_.lock();
@@ -762,13 +740,11 @@ namespace utils {
 
         AnyFuture TaskPool::starting(Task<Context>&& task) {
             init();
-            SignalBack back;
-            back.task = std::move(task);
-            back.sig.test_and_set();
-            data->w << &back;
-            back.sig.wait(true);
+            Event event;
+            auto& c = make_fiber(event, std::move(task), data);
+            data->w << std::move(event);
             AnyFuture f;
-            f.data = back.data;
+            f.data = c;
             return f;
         }
 

@@ -40,7 +40,7 @@ void test_asynctcp2() {
             if (auto loc = response.value("Location")) {
                 cout << "Redirect To: " << loc << "\n";
             }
-            return ctx.set_value(res);
+            cout << res << "done\n";
         });
     };
     std::thread([] {
@@ -55,11 +55,13 @@ void test_asynctcp2() {
     auto m = fetch("docs.microsoft.com");
     auto d = fetch("httpbin.org", "/get");
     auto n = fetch("stackoverflow.com");
-    cout << s.get() << "\ndone\n";
-    cout << g.get() << "\ndone\n";
-    cout << m.get() << "\ndone\n";
-    cout << d.get() << "\ndone\n";
-    cout << n.get() << "\ndone\n";
+    auto e = fetch("example.com");
+    s.wait();
+    g.wait();
+    m.wait();
+    d.wait();
+    n.wait();
+    e.wait();
 }
 
 int main(int argc, char** argv) {
