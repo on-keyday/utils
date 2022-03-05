@@ -742,6 +742,7 @@ namespace utils {
             init();
             Event event;
             auto& c = make_fiber(event, std::move(task), data);
+            c->waiter_flag.test_and_set();
             data->w << std::move(event);
             AnyFuture f;
             f.data = c;
