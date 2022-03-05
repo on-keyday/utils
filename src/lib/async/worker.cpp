@@ -325,7 +325,6 @@ namespace utils {
         };
 
         constexpr auto priority_signal = 0;
-        constexpr auto priority_taskpost = 1;
         constexpr auto priority_endtask = ~0;
 
         struct Signal {
@@ -333,15 +332,6 @@ namespace utils {
             constexpr size_t priority() const {
                 return priority_signal;
             }
-            constexpr void set_priority(size_t) const {}
-        };
-
-        struct TaskPost {
-            Atask task;
-            constexpr size_t priority() const {
-                return priority_taskpost;
-            }
-
             constexpr void set_priority(size_t) const {}
         };
 
@@ -477,12 +467,36 @@ namespace utils {
             data->task.state = TaskState::running;
         }
 
+        auto& make_context(Event& holder, Context*& ctx) {
+            auto ctxptr = wrap::make_shared<Context>();
+            holder = ctxptr;
+            ctx = ctxptr.get();
+            auto& data = internal::ContextHandle::get(*ctx);
+            data = wrap::make_shared<internal::ContextData>();
+            data->self = ctxptr;
+            return data;
+        }
+
+        auto& make_fiber(Event& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
+            Context* ctx;
+            auto& c = make_context(place, ctx);
+            c->task.task = std::move(post);
+            c->task.handle = create_native_context(ctx);
+            c->task.state = TaskState::prelaunch;
+            work->pooling_task++;
+            c->work = std::move(work);
+            return c;
+        }
+
         bool Context::task_wait(Task<Context>&& task) {
             if (!task) {
                 return false;
             }
             append_to_wait(data.get());
-            data->work->w << TaskPost{std::move(task)};
+            Event event;
+            auto& c = make_fiber(event, std::move(task), data->work);
+            c->ptr = data->self;
+            data->work->w << std::move(event);
             context_switch(data);
             data->task.state = TaskState::running;
             return true;
@@ -532,28 +546,7 @@ namespace utils {
             return f;
         }
 
-        auto& make_context(Event& holder, Context*& ctx) {
-            auto ctxptr = wrap::make_shared<Context>();
-            holder = ctxptr;
-            ctx = ctxptr.get();
-            auto& data = internal::ContextHandle::get(*ctx);
-            data = wrap::make_shared<internal::ContextData>();
-            data->self = ctxptr;
-            return data;
-        }
-
-        auto& make_fiber(Event& place, Atask&& post, wrap::shared_ptr<internal::WorkerData> work) {
-            Context* ctx;
-            auto& c = make_context(place, ctx);
-            c->task.task = std::move(post);
-            c->task.handle = create_native_context(ctx);
-            c->task.state = TaskState::prelaunch;
-            work->pooling_task++;
-            c->work = std::move(work);
-            return c;
-        }
-
-        void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
+                void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
             ThreadToFiber self;
             auto r = wd->r;
             auto w = wd->w;
@@ -624,12 +617,7 @@ namespace utils {
                         }
                         continue;
                     }
-                    if (auto post = event.type_assert<TaskPost>()) {
-                        Event place;
-                        auto& c = make_fiber(place, std::move(post->task), wd);
-                        handle_fiber(place, c.get());
-                    }
-                    else if (auto signal = event.type_assert<Signal>()) {
+                    if (auto signal = event.type_assert<Signal>()) {
                         Event sig;
                         wd->lock_.lock();
                         auto found = wd->wait_signal.find(signal->sig);
@@ -735,7 +723,9 @@ namespace utils {
 
         void TaskPool::posting(Task<Context>&& task) {
             init();
-            data->w << TaskPost{std::move(task)};
+            Event event;
+            make_fiber(event, std::move(task), data);
+            data->w << std::move(event);
         }
 
         AnyFuture TaskPool::starting(Task<Context>&& task) {
