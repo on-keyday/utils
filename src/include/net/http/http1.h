@@ -75,6 +75,10 @@ namespace utils {
 
             std::uint16_t status() const;
 
+            const char* value(const char* key, size_t index = 0);
+
+            const char* response(size_t* p = nullptr);
+
             const char* body(size_t* p = nullptr) const;
 
             explicit operator bool() const {

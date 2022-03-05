@@ -12,6 +12,8 @@
 #include <net/async/pool.h>
 #include <net/ssl/ssl.h>
 #include <platform/windows/io_completetion_port.h>
+#include <net/http/http1.h>
+#include <net/http/header.h>
 #include <thread>
 #include <wrap/cout.h>
 
@@ -26,7 +28,12 @@ void test_asynctcp2() {
             auto s = net::open_async(std::move(cntcp), "./src/test/net/cacert.pem");
             s.wait_or_suspend(ctx);
             auto conn = s.get();
-
+            auto h = net::request_async(std::move(conn), host, "GET", path, {});
+            h.wait_or_suspend(ctx);
+            auto resp = std::move(h.get());
+            auto header = resp.response();
+            return ctx.set_value(wrap::string(header.body()));
+            /*
             wrap::string http;
             http += "GET ";
             http += path;
@@ -42,7 +49,7 @@ void test_asynctcp2() {
             v.wait_or_suspend(ctx);
             auto red = v.get();
             buf.resize(red.read);
-            ctx.set_value(buf);
+            ctx.set_value(buf);*/
         });
     };
     std::thread([] {
@@ -56,8 +63,8 @@ void test_asynctcp2() {
     auto g = fetch("www.google.com");
     auto m = fetch("docs.microsoft.com");
     cout << s.get() << "\ndone\n";
-    cout << g.get() << "\n";
-    cout << m.get() << "\n";
+    cout << g.get() << "\ndone\n";
+    cout << m.get() << "\ndone\n";
 }
 
 int main(int argc, char** argv) {

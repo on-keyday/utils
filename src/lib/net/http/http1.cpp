@@ -18,6 +18,7 @@
 #include "../../../include/net/http/body.h"
 
 #include "../../../include/net/async/pool.h"
+#include "../../../include/net/http/reason.h"
 
 #include <algorithm>
 
@@ -37,9 +38,12 @@ namespace utils {
                 h1header::StatusCode code;
                 wrap::vector<std::pair<wrap::string, wrap::string>> order;
                 wrap::string body;
+                wrap::string raw_header;
+                bool changed = false;
 
                 void emplace(auto&& key, auto&& value) {
                     order.emplace_back(std::move(key), std::move(value));
+                    changed = true;
                 }
 
                 auto begin() {
@@ -145,6 +149,29 @@ namespace utils {
                 return 0;
             }
             return impl->code;
+        }
+
+        const char* Header::response(size_t* p) {
+            if (!impl) {
+                return "";
+            }
+            if (!impl->raw_header.size() || impl->changed) {
+                h1header::render_response(impl->raw_header, impl->code, reason::phrase(impl->code, true), *impl);
+            }
+            if (p) {
+                *p = impl->raw_header.size();
+            }
+            return impl->raw_header.c_str();
+        }
+
+        const char* Header::value(const char* key, size_t index) {
+            if (!key) {
+                return nullptr;
+            }
+            if (auto ptr = impl->find(key, index); ptr) {
+                return ptr->c_str();
+            }
+            return "";
         }
 
         const char* Header::body(size_t* size) const {
@@ -389,11 +416,12 @@ namespace utils {
                     while (seq.rptr < impl->buf.size()) {
                         if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
                             seq.seek_if("\r\r")) {
-                            break;
+                            goto HEADER_RECVED;
                         }
                         seq.consume();
                     }
                 }
+            HEADER_RECVED:
                 seq.rptr = 0;
                 auto resp = internal::HttpSet::get(impl->response);
                 if (!h1header::parse_response<wrap::string>(seq, helper::nop, resp->code, helper::nop, *resp,

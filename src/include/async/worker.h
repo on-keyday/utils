@@ -135,7 +135,7 @@ namespace utils {
             Future(T&& t)
                 : place(std::forward<T>(t)) {}
 
-            T get() {
+            T& get() {
                 if (!place) {
                     place = future.get();
                     future.clear();

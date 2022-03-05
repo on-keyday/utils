@@ -208,7 +208,7 @@ namespace utils {
                 codebuf[0] += (status / 100);
                 codebuf[1] += (status % 100 / 10);
                 codebuf[2] += (status % 100 % 10);
-                helper::append(str, status);
+                helper::append(str, codebuf);
                 helper::append(str, " ");
                 helper::append(str, phrase);
                 helper::append(str, "\r\n");
