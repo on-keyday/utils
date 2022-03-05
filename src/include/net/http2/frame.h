@@ -555,6 +555,44 @@ namespace utils {
                 return H2Error::none;
             }
 
+            template <class Output>
+            H2Error encode(const wrap::shared_ptr<Frame>& input, Output& output) {
+                if (input == nullptr) return H2Error::unknown;
+                if ((*input).type == FrameType::data) {
+                    return encode(static_cast<const DataFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::header) {
+                    return encode(static_cast<const HeaderFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::priority) {
+                    return encode(static_cast<const PriorityFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::rst_stream) {
+                    return encode(static_cast<const RstStreamFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::settings) {
+                    return encode(static_cast<const SettingsFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::push_promise) {
+                    return encode(static_cast<const PushPromiseFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::ping) {
+                    return encode(static_cast<const PingFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::goaway) {
+                    return encode(static_cast<const GoAwayFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::window_update) {
+                    return encode(static_cast<const WindowUpdateFrame&>(*input), output);
+                }
+                else if ((*input).type == FrameType::continuous) {
+                    return encode(static_cast<const Continuation&>(*input), output);
+                }
+                else {
+                    return encode(*input, output);
+                }
+            }
+
             template <class Input>
             H2Error decode(Input&& input, wrap::shared_ptr<Frame>& output) {
                 Frame judgement;

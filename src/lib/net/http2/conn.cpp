@@ -14,6 +14,12 @@ namespace utils {
     namespace net {
         namespace http2 {
             namespace internal {
+
+                struct FrameWriter {
+                    void write(auto&&...) {
+                    }
+                    void write(Dummy&) {}
+                };
                 struct FrameReader {
                     wrap::string ref;
                     size_t pos = 0;
@@ -103,6 +109,21 @@ namespace utils {
                         impl->reader.pos = 0;
                     }
                 });
+            }
+
+            bool Conn::write(wrap::shared_ptr<Frame> frame) {
+                if (!frame) {
+                    return nullptr;
+                }
+                auto ptr = frame.get();
+                auto type = ptr->type;
+                auto& ref = *ptr;
+                internal::FrameWriter w;
+                H2Error err = encode(frame, w);
+                if (err != H2Error::none) {
+                    impl->err = err;
+                    return false;
+                }
             }
         }  // namespace http2
     }      // namespace net

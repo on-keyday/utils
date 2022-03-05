@@ -285,6 +285,39 @@ namespace binred {
             if (not_match) {
                 continue;
             }
+            hlp::appends(str, "template<class Output>\n",
+                         bsst.second.errtype, " encode(const ");
+            generate_ptr_obj(str, data, d.first);
+            hlp::appends(str, "& input,Output& output) {\n");
+            write_indent(str, 1);
+            hlp::appends(str, "if(input==nullptr)return ");
+            render_cpp_errorcode(str, bsst.second, nullptr, nullptr, data);
+            hlp::append(str, ";\n");
+            write_indent(str, 1);
+            first = true;
+            for (auto& id : d.second) {
+                auto found = data.structs.find(id);
+                auto& name = get<0>(*found);
+                auto& st = get<1>(*found);
+                auto cond = st.base.type.existcond[0];
+                if (!first) {
+                    hlp::append(str, "else ");
+                }
+                hlp::append(str, "if(");
+                render_tree(str, cond.tree, "(*input)", st);
+                hlp::append(str, "){\n");
+                write_indent(str, 2);
+                hlp::appends(str, "return encode(static_cast<const ", name, "&>(*input),output);\n");
+                write_indent(str, 1);
+                hlp::append(str, "}\n");
+                write_indent(str, 1);
+                first = false;
+            }
+            hlp::appends(str, "else {\n");
+            write_indent(str, 2);
+            hlp::appends(str, "return encode(*input,output);\n");
+            write_indent(str, 1);
+            hlp::appends(str, "}\n}\n\n");
             hlp::appends(str,
                          "template<class Input>\n",
                          bsst.second.errtype, " decode(Input&& input,");
