@@ -32,7 +32,9 @@ void test_asynctcp2() {
             h.wait_or_suspend(ctx);
             auto resp = std::move(h.get());
             auto header = resp.response();
-            return ctx.set_value(wrap::string(header.body()));
+            auto res = wrap::string(header.response());
+            // res += header.body();
+            return ctx.set_value(res);
             /*
             wrap::string http;
             http += "GET ";

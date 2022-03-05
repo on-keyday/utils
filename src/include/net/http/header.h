@@ -203,7 +203,7 @@ namespace utils {
                 if (status < 100 && status > 999) {
                     return false;
                 }
-                helper::append(str, " HTTP/1.1 ");
+                helper::append(str, "HTTP/1.1 ");
                 std::uint8_t codebuf[4] = "000";
                 codebuf[0] += (status / 100);
                 codebuf[1] += (status % 100 / 10);
