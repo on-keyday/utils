@@ -71,7 +71,7 @@ namespace utils {
             Header(Header&&);
             Header& operator=(Header&&);
 
-            void set(const char* key, const char* value);
+            Header& set(const char* key, const char* value);
 
             std::uint16_t status() const;
 

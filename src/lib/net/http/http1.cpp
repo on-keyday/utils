@@ -66,7 +66,7 @@ namespace utils {
                         return false;
                     });
                     if (found != order.end()) {
-                        return std::addressof(std::get<0>(*found));
+                        return std::addressof(std::get<1>(*found));
                     }
                     return nullptr;
                 }
@@ -87,7 +87,7 @@ namespace utils {
             struct HttpAsyncResponseImpl {
                 HeaderImpl* header = nullptr;
                 AsyncIOClose io;
-                wrap::string buf;
+                wrap::string reqests;
                 h1body::BodyType bodytype = h1body::BodyType::no_info;
                 size_t expect = 0;
                 Header response;
@@ -137,11 +137,12 @@ namespace utils {
             return *this;
         }
 
-        void Header::set(const char* key, const char* value) {
+        Header& Header::set(const char* key, const char* value) {
             if (!impl || !key || !value) {
-                return;
+                return *this;
             }
             impl->emplace(key, value);
+            return *this;
         }
 
         std::uint16_t Header::status() const {
@@ -171,7 +172,7 @@ namespace utils {
             if (auto ptr = impl->find(key, index); ptr) {
                 return ptr->c_str();
             }
-            return "";
+            return nullptr;
         }
 
         const char* Header::body(size_t* size) const {
@@ -377,7 +378,7 @@ namespace utils {
             }
             auto impl = new internal::HttpAsyncResponseImpl{};
             impl->io = std::move(io);
-            impl->buf = std::move(buf);
+            impl->reqests = std::move(buf);
             impl->hostname = host;
             return get_pool().start<HttpAsyncResponse>([impl](async::Context& ctx) {
                 struct Defer {
@@ -389,13 +390,13 @@ namespace utils {
                         }
                     }
                 } def{impl};
-                auto w = impl->io.write(impl->buf.c_str(), impl->buf.size());
+                auto w = impl->io.write(impl->reqests.c_str(), impl->reqests.size());
                 w.wait_or_suspend(ctx);
                 if (w.get().err) {
                     return;
                 }
-                impl->buf.clear();
-                auto seq = make_ref_seq(impl->buf);
+                wrap::string buf;
+                auto seq = make_ref_seq(buf);
                 size_t red = 0;
                 auto read_one = [&]() {
                     char tmp[1024];
@@ -405,7 +406,7 @@ namespace utils {
                     if (data.err) {
                         return false;
                     }
-                    impl->buf.append(tmp, data.read);
+                    buf.append(tmp, data.read);
                     red = data.read;
                     return true;
                 };
@@ -413,7 +414,7 @@ namespace utils {
                     if (!read_one()) {
                         return;
                     }
-                    while (seq.rptr < impl->buf.size()) {
+                    while (seq.rptr < buf.size()) {
                         if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
                             seq.seek_if("\r\r")) {
                             goto HEADER_RECVED;

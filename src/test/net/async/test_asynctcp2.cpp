@@ -19,8 +19,9 @@
 
 void test_asynctcp2() {
     using namespace utils;
-    auto fetch = [](const char* host, const char* path = "/") {
-        return net::get_pool().start<wrap::string>([=](async::Context& ctx) {
+    auto& cout = utils::wrap::cout_wrap();
+    auto fetch = [&](const char* host, const char* path = "/") {
+        return net::get_pool().start<wrap::string>([=, &cout](async::Context& ctx) {
             auto c = net::open_async(host, "https");
             c.wait_or_suspend(ctx);
             auto cntcp = c.get();
@@ -28,30 +29,17 @@ void test_asynctcp2() {
             auto s = net::open_async(std::move(cntcp), "./src/test/net/cacert.pem");
             s.wait_or_suspend(ctx);
             auto conn = s.get();
-            auto h = net::request_async(std::move(conn), host, "GET", path, {});
+            net::Header header;
+            header.set("User-Agent", "fetch");
+            auto h = net::request_async(std::move(conn), host, "GET", path, std::move(header));
             h.wait_or_suspend(ctx);
             auto resp = std::move(h.get());
-            auto header = resp.response();
-            auto res = wrap::string(header.response());
-            // res += header.body();
+            auto response = resp.response();
+            auto res = wrap::string(response.response());
+            if (auto loc = response.value("Location")) {
+                cout << "Redirect To: " << loc << "\n";
+            }
             return ctx.set_value(res);
-            /*
-            wrap::string http;
-            http += "GET ";
-            http += path;
-            http += " HTTP/1.1\r\nHost: ";
-            http += host;
-            http += "\r\n\r\n";
-            auto f = conn->write(http.c_str(), http.size());
-            // assert(f.is_done());
-            f.wait_or_suspend(ctx);
-            wrap::string buf;
-            buf.resize(2048);
-            auto v = conn->read(buf.data(), buf.size());
-            v.wait_or_suspend(ctx);
-            auto red = v.get();
-            buf.resize(red.read);
-            ctx.set_value(buf);*/
         });
     };
     std::thread([] {
@@ -60,7 +48,7 @@ void test_asynctcp2() {
             iocp->wait_callbacks(8, ~0);
         }
     }).detach();
-    auto& cout = utils::wrap::cout_wrap();
+
     auto s = fetch("syosetu.com");
     auto g = fetch("www.google.com");
     auto m = fetch("docs.microsoft.com");
