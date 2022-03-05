@@ -16,13 +16,23 @@
 #include <net/http/header.h>
 #include <thread>
 #include <wrap/cout.h>
+#include <testutil/timer.h>
+
+#include <chrono>
+#include <wrap/lite/vector.h>
+#include <thread/lite_lock.h>
 
 void test_asynctcp2() {
     using namespace utils;
     auto& cout = utils::wrap::cout_wrap();
     auto& pool = net::get_pool();
+    pool.set_maxthread(1);
+    std::atomic_size_t totaldelta;
+    thread::LiteLock lock;
+    wrap::vector<std::pair<const char*, std::chrono::milliseconds>> result;
     auto fetch = [&](const char* host, const char* path = "/") {
-        return pool.start<wrap::string>([=, &cout](async::Context& ctx) {
+        return pool.start<wrap::string>([=, &cout, &totaldelta, &lock, &result](async::Context& ctx) {
+            test::Timer timer;
             auto c = net::open_async(host, "https");
             c.wait_or_suspend(ctx);
             auto cntcp = c.get();
@@ -41,6 +51,11 @@ void test_asynctcp2() {
                 cout << "Redirect To: " << loc << "\n";
             }
             cout << res << "done\n";
+            auto delt = timer.delta();
+            totaldelta += delt.count();
+            lock.lock();
+            result.push_back({host, delt});
+            lock.unlock();
         });
     };
     std::thread([] {
@@ -49,7 +64,8 @@ void test_asynctcp2() {
             iocp->wait_callbacks(8, ~0);
         }
     }).detach();
-
+    using namespace std::chrono;
+    test::Timer timer;
     auto s = fetch("syosetu.com");
     auto g = fetch("www.google.com");
     auto m = fetch("docs.microsoft.com");
@@ -62,6 +78,14 @@ void test_asynctcp2() {
     d.wait();
     n.wait();
     e.wait();
+    cout << "real\n";
+    cout << timer.delta();
+    cout << "\ntotal\n"
+         << totaldelta << "ms\n";
+    for (auto& p : result) {
+        cout << "host " << p.first << "\n";
+        cout << "time " << p.second << "\n";
+    }
 }
 
 int main(int argc, char** argv) {
