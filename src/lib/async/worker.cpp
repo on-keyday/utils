@@ -613,8 +613,8 @@ namespace utils {
             };
             wd->accepting++;
             while (r >> event) {
-                if (auto ctx = event.type_assert<Context>()) {
-                    auto c = internal::ContextHandle::get(*ctx).get();
+                if (auto ctx = event.type_assert<wrap::shared_ptr<Context>>()) {
+                    auto c = internal::ContextHandle::get(**ctx).get();
                     handle_fiber(event, c);
                 }
                 else {
@@ -660,9 +660,9 @@ namespace utils {
                             wd->wait_signal.erase(signal->sig);
                         }
                         wd->lock_.unlock();
-                        auto ctx = sig.type_assert<Context>();
+                        auto ctx = sig.type_assert<wrap::shared_ptr<Context>>();
                         if (ctx) {
-                            handle_fiber(sig, internal::ContextHandle::get(*ctx).get());
+                            handle_fiber(sig, internal::ContextHandle::get(**ctx).get());
                         }
                     }
                     else if (auto _ = event.type_assert<EndTask>()) {
