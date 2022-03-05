@@ -13,7 +13,7 @@
 
 namespace utils {
     namespace net {
-        async::Future<wrap::shared_ptr<TCPConn>> STDCALL async_open(wrap::shared_ptr<Address>&& addr) {
+        async::Future<wrap::shared_ptr<TCPConn>> STDCALL open_async(wrap::shared_ptr<Address>&& addr) {
             if (!addr) {
                 return nullptr;
             }
@@ -36,7 +36,7 @@ namespace utils {
             });
         }
 
-        async::Future<wrap::shared_ptr<TCPConn>> STDCALL async_open(const char* host, const char* port, time_t timeout_sec,
+        async::Future<wrap::shared_ptr<TCPConn>> STDCALL open_async(const char* host, const char* port, time_t timeout_sec,
                                                                     int address_family, int socket_type, int protocol, int flags) {
             auto addr = query(host, port, timeout_sec, address_family, socket_type, protocol, flags);
             if (addr.state() == async::TaskState::invalid) {
@@ -48,10 +48,9 @@ namespace utils {
                 if (!addr) {
                     return;
                 }
-                auto p = async_open(std::move(addr));
+                auto p = open_async(std::move(addr));
                 p.wait_or_suspend(ctx);
                 ctx.set_value(std::move(p.get()));
-                get_pool().reduce_thread();
             });
         }
     }  // namespace net

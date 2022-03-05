@@ -20,7 +20,7 @@ void test_asynctcp() {
     auto spawn = [&](const char* host, const char* path = "/") {
         return pool.start([host, path, &logicaltime](async::Context& ctx) mutable {
             auto pack = utils::wrap::pack();
-            auto co = net::async_open(host, "http");
+            auto co = net::open_async(host, "http");
             assert(co.state() != async::TaskState::invalid);
             size_t suspend = 0;
             auto begin = system_clock::now();

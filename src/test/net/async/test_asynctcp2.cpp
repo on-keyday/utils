@@ -19,10 +19,7 @@ void test_asynctcp2() {
     using namespace utils;
     auto fetch = [](const char* host, const char* path = "/") {
         return net::get_pool().start<wrap::string>([=](async::Context& ctx) {
-            auto a = net::query(host, "https");
-            a.wait_or_suspend(ctx);
-            auto addr = a.get();
-            auto c = net::async_open(std::move(addr));
+            auto c = net::open_async(host, "https");
             c.wait_or_suspend(ctx);
             auto cntcp = c.get();
             assert(cntcp);
