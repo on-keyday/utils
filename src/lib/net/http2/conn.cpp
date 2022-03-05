@@ -88,6 +88,7 @@ namespace utils {
                             impl->err = H2Error::transport;
                             return;
                         }
+                        impl->reader.ref.append(tmp, got.read);
                         assert(impl->reader.pos == 0);
                         wrap::shared_ptr<Frame> frame;
                         auto err = decode(impl->reader, frame);
