@@ -42,7 +42,8 @@ namespace utils {
             check_term(data);
         }
 
-        constexpr size_t initial_stack_size = 1024 * 2;
+        constexpr size_t initial_stack_size = 1024 * 64;
+        constexpr size_t reserved_stack_size = initial_stack_size * 2;
 
         void delete_context(native_t& c) {
             DeleteFiber(c);
@@ -50,7 +51,7 @@ namespace utils {
         }
 
         native_t create_native_context(Context* ctx) {
-            return CreateFiber(initial_stack_size, DoTask, ctx);
+            return CreateFiberEx(initial_stack_size, reserved_stack_size, 0, DoTask, ctx);
         }
 
         struct ThreadToFiber {

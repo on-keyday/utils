@@ -17,6 +17,8 @@
 #include "../../../include/number/to_string.h"
 #include "../../../include/net/http/body.h"
 
+#include "../../../include/net/async/pool.h"
+
 #include <algorithm>
 
 namespace utils {
@@ -76,6 +78,26 @@ namespace utils {
                 h1body::BodyType bodytype = h1body::BodyType::no_info;
                 size_t expect = 0;
                 wrap::string hostname;
+            };
+
+            struct HttpAsyncResponseImpl {
+                HeaderImpl* header = nullptr;
+                AsyncIOClose io;
+                wrap::string buf;
+                h1body::BodyType bodytype = h1body::BodyType::no_info;
+                size_t expect = 0;
+                Header response;
+                wrap::string hostname;
+            };
+
+            struct HttpSet {
+                static HeaderImpl* get(Header& p) {
+                    return p.impl;
+                }
+
+                static void set(HttpAsyncResponse& p, HttpAsyncResponseImpl* impl) {
+                    p.impl = impl;
+                }
             };
         }  // namespace internal
 
@@ -316,6 +338,111 @@ namespace utils {
             header.impl = nullptr;
             io.impl->response = Header{};
             return std::move(io);
+        }
+
+        async::Future<HttpAsyncResponse> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
+            if (!io || !host || !method || !path || !header) {
+                return nullptr;
+            }
+            wrap::string buf;
+            if (!render_request(buf, host, method, path, header.impl)) {
+                return nullptr;
+            }
+            auto impl = new internal::HttpAsyncResponseImpl{};
+            impl->io = std::move(io);
+            impl->buf = std::move(buf);
+            impl->hostname = host;
+            return get_pool().start<HttpAsyncResponse>([impl](async::Context& ctx) {
+                struct Defer {
+                    decltype(impl) ptr;
+                    bool no_del = false;
+                    ~Defer() {
+                        if (!no_del) {
+                            delete ptr;
+                        }
+                    }
+                } def{impl};
+                auto w = impl->io.write(impl->buf.c_str(), impl->buf.size());
+                w.wait_or_suspend(ctx);
+                if (w.get().err) {
+                    return;
+                }
+                impl->buf.clear();
+                auto seq = make_ref_seq(impl->buf);
+                size_t red = 0;
+                auto read_one = [&]() {
+                    char tmp[1024];
+                    auto r = impl->io.read(tmp, 1024);
+                    r.wait_or_suspend(ctx);
+                    auto data = r.get();
+                    if (data.err) {
+                        return false;
+                    }
+                    impl->buf.append(tmp, data.read);
+                    red = data.read;
+                    return true;
+                };
+                while (true) {
+                    if (!read_one()) {
+                        return;
+                    }
+                    while (seq.rptr < impl->buf.size()) {
+                        if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
+                            seq.seek_if("\r\r")) {
+                            break;
+                        }
+                        seq.consume();
+                    }
+                }
+                seq.rptr = 0;
+                auto resp = internal::HttpSet::get(impl->response);
+                if (!h1header::parse_response<wrap::string>(seq, helper::nop, resp->code, helper::nop, *resp,
+                                                            h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
+                    return;
+                }
+                auto rem = seq.remain();
+                resp->body.reserve(impl->expect);
+                if (impl->expect) {
+                    resp->body.reserve(impl->expect);
+                }
+                if (impl->bodytype == h1body::BodyType::no_info) {
+                    while (red == 1024) {
+                        if (!read_one()) {
+                            return;
+                        }
+                    }
+                }
+                while (true) {
+                    auto res = h1body::read_body(resp->body, seq, impl->bodytype, impl->expect);
+                    if (res == State::failed) {
+                        return;
+                    }
+                    if (res == State::complete) {
+                        break;
+                    }
+                    if (!read_one()) {
+                        return;
+                    }
+                }
+                HttpAsyncResponse res;
+                internal::HttpSet::set(res, impl);
+                def.no_del = true;
+                return ctx.set_value(std::move(res));
+            });
+        }
+
+        AsyncIOClose HttpAsyncResponse::get_io() {
+            if (!impl) {
+                return nullptr;
+            }
+            return std::move(impl->io);
+        }
+
+        Header HttpAsyncResponse::response() {
+            if (!impl) {
+                return nullptr;
+            }
+            return std::move(impl->response);
         }
 
     }  // namespace net

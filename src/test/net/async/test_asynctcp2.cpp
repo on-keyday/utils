@@ -51,7 +51,13 @@ void test_asynctcp2() {
             iocp->wait_callbacks(8, ~0);
         }
     }).detach();
-    utils::wrap::cout_wrap() << fetch("syosetu.com").get() << "\ndone\n";
+    auto& cout = utils::wrap::cout_wrap();
+    auto s = fetch("syosetu.com");
+    auto g = fetch("www.google.com");
+    auto m = fetch("docs.microsoft.com");
+    cout << s.get() << "\ndone\n";
+    cout << g.get() << "\n";
+    cout << m.get() << "\n";
 }
 
 int main(int argc, char** argv) {

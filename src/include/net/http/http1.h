@@ -17,6 +17,8 @@ namespace utils {
         namespace internal {
             struct HeaderImpl;
             struct HttpResponseImpl;
+            struct HttpAsyncResponseImpl;
+            struct HttpSet;
         }  // namespace internal
 
         struct Header;
@@ -36,8 +38,25 @@ namespace utils {
             internal::HttpResponseImpl* impl = nullptr;
         };
 
+        struct DLL HttpAsyncResponse {
+            friend struct internal::HttpSet;
+            AsyncIOClose get_io();
+
+            Header response();
+
+            constexpr HttpAsyncResponse() {}
+
+            constexpr HttpAsyncResponse(HttpAsyncResponse&& in)
+                : impl(std::exchange(in.impl, nullptr)) {}
+
+           private:
+            internal::HttpAsyncResponseImpl* impl = nullptr;
+        };
+
         struct DLL Header {
             friend struct DLL HttpResponse;
+            friend struct internal::HttpSet;
+            friend struct DLL HttpAsyncResponse;
 
            private:
             constexpr Header(std::nullptr_t) {}
@@ -45,6 +64,7 @@ namespace utils {
            public:
             friend DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             friend DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
+            friend DLL async::Future<HttpAsyncResponse> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             Header();
             ~Header();
 
@@ -67,5 +87,6 @@ namespace utils {
 
         DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
         DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
+        DLL async::Future<HttpAsyncResponse> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
     }  // namespace net
 }  // namespace utils

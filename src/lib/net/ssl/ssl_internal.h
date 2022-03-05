@@ -66,7 +66,7 @@ namespace utils {
             struct SSLAsyncImpl : SSLImpl {
                 AsyncIOClose io;
                 wrap::weak_ptr<SSLAsyncConn> conn;
-                bool do_IO(async::Context&);
+                int do_IO(async::Context&);
             };
         }  // namespace internal
 #ifdef USE_OPENSSL
