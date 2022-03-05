@@ -20,6 +20,7 @@ namespace utils {
             struct WorkerData;
             struct ContextData;
             struct ContextHandle;
+
         }  // namespace internal
 
         enum class TaskState {
@@ -36,33 +37,32 @@ namespace utils {
 
         struct Context;
         struct DLL DefferCancel {
-            Context* ptr;
+            wrap::weak_ptr<Context> ptr;
             ~DefferCancel();
+            static wrap::weak_ptr<Context> get_weak(Context*);
         };
 
         template <class Fn>
         struct Canceler {
             Fn fn;
-            Context* ptr = nullptr;
-            void operator()(Context& ctx) const {
+            wrap::weak_ptr<Context> ptr;
+            void operator()(Context& ctx) {
                 DefferCancel _{ptr};
                 fn(ctx);
             }
 
             template <class F>
             Canceler(F&& f, Context* ptr)
-                : fn(std::move(f)), ptr(ptr) {}
+                : fn(std::move(f)), ptr(DefferCancel::get_weak(ptr)) {}
 
             Canceler(Canceler&& c)
-                : fn(std::move(c.fn)) {
-                ptr = c.ptr;
-                c.ptr = nullptr;
+                : fn(std::move(c.fn)), ptr(std::move(c.ptr)) {
             }
         };
 
         struct ExternalTask {
            private:
-            Context* ptr = nullptr;
+            wrap::weak_ptr<Context> ptr;
             Any param = nullptr;
             friend struct Context;
 
@@ -74,8 +74,7 @@ namespace utils {
             }
 
             void complete() {
-                DefferCancel _{ptr};
-                ptr = nullptr;
+                DefferCancel _{std::move(ptr)};
                 param = nullptr;
             }
         };

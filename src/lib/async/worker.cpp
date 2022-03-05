@@ -303,10 +303,11 @@ namespace utils {
                 TaskData task;
                 wrap::shared_ptr<WorkerData> work;
                 thread::LiteLock ctxlock_;
-                Context* ptr = nullptr;
+                wrap::weak_ptr<Context> ptr;
                 std::atomic_flag waiter_flag;
                 std::atomic<ExternalTask*> outer = nullptr;
                 std::atomic_bool reqcancel;
+                wrap::weak_ptr<Context> self;
             };
 
             struct ContextHandle {
@@ -437,7 +438,7 @@ namespace utils {
                     if (is_done()) {
                         return;
                     }
-                    data->ptr = &ctx;
+                    data->ptr = c->self;
                     append_to_wait(c.get());
                 }
                 context_switch(c);
@@ -470,9 +471,16 @@ namespace utils {
         }
 
         DefferCancel::~DefferCancel() {
-            if (ptr) {
-                ptr->set_signal();
+            if (auto l = ptr.lock(); l) {
+                l->set_signal();
             }
+        }
+
+        wrap::weak_ptr<Context> DefferCancel::get_weak(Context* ptr) {
+            if (!ptr) {
+                return {};
+            }
+            return ptr->data->self;
         }
 
         void Context::suspend() {
@@ -494,7 +502,7 @@ namespace utils {
 
         void Context::externaltask_wait(Any param) {
             ExternalTask task;
-            task.ptr = this;
+            task.ptr = data->self;
             task.param = std::move(param);
             append_to_wait(data.get());
             data->outer = &task;
@@ -537,10 +545,12 @@ namespace utils {
         }
 
         auto& make_context(Event& holder, Context*& ctx) {
-            holder = Context{};
-            ctx = holder.type_assert<Context>();
+            auto ctxptr = wrap::make_shared<Context>();
+            holder = ctxptr;
+            ctx = ctxptr.get();
             auto& data = internal::ContextHandle::get(*ctx);
             data = wrap::make_shared<internal::ContextData>();
+            data->self = ctxptr;
             return data;
         }
 
@@ -577,9 +587,8 @@ namespace utils {
                     c->task.state == TaskState::canceled) {
                     {
                         std::scoped_lock _{c->ctxlock_};
-                        if (c->ptr) {
+                        {
                             DefferCancel _{c->ptr};
-                            c->ptr = nullptr;
                         }
                     }
                     delete_context(c->task.handle);

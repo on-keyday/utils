@@ -17,7 +17,7 @@ interface Any {
 interface Event {
     decltype() type
     __unsafe__() type
-    __sso__() type = 2
+    __sso__() type = 3
     priority() size_t
     set_priority(p size_t) void
 }

@@ -20,8 +20,9 @@
 void test_asynctcp2() {
     using namespace utils;
     auto& cout = utils::wrap::cout_wrap();
+    auto& pool = net::get_pool();
     auto fetch = [&](const char* host, const char* path = "/") {
-        return net::get_pool().start<wrap::string>([=, &cout](async::Context& ctx) {
+        return pool.start<wrap::string>([=, &cout](async::Context& ctx) {
             auto c = net::open_async(host, "https");
             c.wait_or_suspend(ctx);
             auto cntcp = c.get();
@@ -52,9 +53,13 @@ void test_asynctcp2() {
     auto s = fetch("syosetu.com");
     auto g = fetch("www.google.com");
     auto m = fetch("docs.microsoft.com");
+    auto d = fetch("httpbin.org", "/get");
+    auto n = fetch("stackoverflow.com");
     cout << s.get() << "\ndone\n";
     cout << g.get() << "\ndone\n";
     cout << m.get() << "\ndone\n";
+    cout << d.get() << "\ndone\n";
+    cout << n.get() << "\ndone\n";
 }
 
 int main(int argc, char** argv) {
