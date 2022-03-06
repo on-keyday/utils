@@ -90,7 +90,7 @@ namespace utils {
                     return H2Error::protocol;
                 }
                 if (!(input.type == FrameType::data)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -110,7 +110,7 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::data)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!(output.id != 0)) {
@@ -140,7 +140,7 @@ namespace utils {
             template <class Output>
             H2Error encode(const HeaderFrame& input, Output& output) {
                 if (!(input.type == FrameType::header)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -165,7 +165,7 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::header)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (output.flag & Flag::padded) {
@@ -197,7 +197,7 @@ namespace utils {
                     return H2Error::unknown;
                 }
                 if (!(input.type == FrameType::priority)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -215,7 +215,7 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::priority)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!(output.len == 5)) {
@@ -237,7 +237,7 @@ namespace utils {
                     return H2Error::unknown;
                 }
                 if (!(input.type == FrameType::rst_stream)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -253,7 +253,7 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::rst_stream)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!(output.len == 4)) {
@@ -279,7 +279,7 @@ namespace utils {
                     return H2Error::protocol;
                 }
                 if (!(input.type == FrameType::settings)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -301,7 +301,7 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::settings)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!((output.len % 6) == 0)) {
@@ -334,7 +334,7 @@ namespace utils {
             template <class Output>
             H2Error encode(const PushPromiseFrame& input, Output& output) {
                 if (!(input.type == FrameType::push_promise)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -358,7 +358,7 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::push_promise)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (output.flag & Flag::padded) {
@@ -388,16 +388,16 @@ namespace utils {
             template <class Output>
             H2Error encode(const PingFrame& input, Output& output) {
                 if (!(input.len == 8)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
                 }
                 if (!(input.type == FrameType::ping)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
                 if (!(input.id == 0)) {
-                    return H2Error::unknown;
+                    return H2Error::read_data;
                 }
                 output.write(input.opeque);
                 return H2Error::none;
@@ -410,23 +410,23 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::ping)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!(output.len == 8)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
                 }
                 if (!input.read(output.opeque)) {
-                    return H2Error::unknown;
+                    return H2Error::read_data;
                 }
                 if (!(output.id == 0)) {
-                    return H2Error::unknown;
+                    return H2Error::read_data;
                 }
                 return H2Error::none;
             }
 
             struct GoAwayFrame : Frame {
-                std::int32_t id;
+                std::int32_t processed_id;
                 std::uint32_t code;
                 std::string data;
             };
@@ -434,15 +434,15 @@ namespace utils {
             template <class Output>
             H2Error encode(const GoAwayFrame& input, Output& output) {
                 if (!(input.type == FrameType::goaway)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (!(input.id >= 0)) {
-                    return H2Error::unknown;
+                if (!(input.processed_id >= 0)) {
+                    return H2Error::read_processed_id;
                 }
-                output.write(input.id);
+                output.write(input.processed_id);
                 output.write(input.code);
                 output.write(input.data, input.len - 8);
                 return H2Error::none;
@@ -455,20 +455,20 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::goaway)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
-                if (!input.read(output.id)) {
-                    return H2Error::unknown;
+                if (!input.read(output.processed_id)) {
+                    return H2Error::read_processed_id;
                 }
-                if (!(output.id >= 0)) {
-                    return H2Error::unknown;
+                if (!(output.processed_id >= 0)) {
+                    return H2Error::read_processed_id;
                 }
                 if (!input.read(output.code)) {
-                    return H2Error::unknown;
+                    return H2Error::read_code;
                 }
                 if (!input.read(output.data, output.len - 8)) {
-                    return H2Error::unknown;
+                    return H2Error::read_data;
                 }
                 return H2Error::none;
             }
@@ -480,16 +480,16 @@ namespace utils {
             template <class Output>
             H2Error encode(const WindowUpdateFrame& input, Output& output) {
                 if (!(input.len == 4)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
                 }
                 if (!(input.type == FrameType::window_update)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
                 if (!(input.increment > 0)) {
-                    return H2Error::unknown;
+                    return H2Error::read_increment;
                 }
                 output.write(input.increment);
                 return H2Error::none;
@@ -502,17 +502,17 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::window_update)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!(output.len == 4)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
                 }
                 if (!input.read(output.increment)) {
-                    return H2Error::unknown;
+                    return H2Error::read_increment;
                 }
                 if (!(output.increment > 0)) {
-                    return H2Error::unknown;
+                    return H2Error::read_increment;
                 }
                 return H2Error::none;
             }
@@ -524,7 +524,7 @@ namespace utils {
             template <class Output>
             H2Error encode(const Continuation& input, Output& output) {
                 if (!(input.type == FrameType::continuous)) {
-                    return H2Error::unknown;
+                    return H2Error::type_mismatch;
                 }
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
@@ -540,11 +540,11 @@ namespace utils {
                         return e__;
                     }
                     if (!(output.type == FrameType::continuous)) {
-                        return H2Error::unknown;
+                        return H2Error::type_mismatch;
                     }
                 }
                 if (!input.read(output.data, output.len)) {
-                    return H2Error::unknown;
+                    return H2Error::read_data;
                 }
                 return H2Error::none;
             }

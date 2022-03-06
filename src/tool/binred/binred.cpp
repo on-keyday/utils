@@ -114,11 +114,12 @@ int main(int argc, char** argv) {
         STRUCT:="struct" ID BASE? ERRTYPE? "{" MEMBER*? "}" EOS
         BASE:="-" TYPE!
         ERRTYPE:="," ID!
-        MEMBER:=ID TYPE! ["!" AS_RESULT]? ASSIGN?
+        MEMBER:=ID TYPE! MEMBER_AS_RESULT? ASSIGN?
+        MEMBER_AS_RESULT:="!" AS_RESULT
         ASSIGN:="=" [INTEGER|ID]!
         TYPE:=ID SIZE? [PREV|EXIST]*?
         PREV:="?" FLAG_DETAIL! ["@" AS_RESULT]?
-        EXIST:="^" FLAG_DETAIL!
+        EXIST:="^" FLAG_DETAIL! ["@" AS_RESULT]?
         FLAG_DETAIL:=EXPR EOS
         AS_RESULT:=[INTEGER|ID]!
         SIZE:="$" EXPR EOS

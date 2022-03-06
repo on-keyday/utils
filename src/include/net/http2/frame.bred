@@ -25,53 +25,53 @@ struct Priority , H2Error {
     weight std::uint8_t ! H2Error::read_weight = 0
 }
 
-struct DataFrame - Frame ^ type == FrameType::data ? id != 0 @ H2Error::protocol , H2Error {
+struct DataFrame - Frame ^ type == FrameType::data @ H2Error::type_mismatch ? id != 0 @ H2Error::protocol , H2Error {
     padding std::uint8_t ^ flag & Flag::padded ! H2Error::read_padding = 0 
     data std::string $ len - padding ! H2Error::read_data
     pad std::string $ padding  ! H2Error::read_padding
 }
 
-struct HeaderFrame - Frame ^ type == FrameType::header , H2Error {
+struct HeaderFrame - Frame ^ type == FrameType::header @ H2Error::type_mismatch , H2Error {
     padding std::uint8_t ^ flag & Flag::padded ! H2Error::read_padding = 0
     priority Priority ^ flag & Flag::priority
     data std::string $ len - padding ! H2Error::read_data
     pad std::string $ padding ! H2Error::read_padding
 }
 
-struct PriorityFrame - Frame ^ type == FrameType::priority ? len == 5 , H2Error {
+struct PriorityFrame - Frame ^ type == FrameType::priority @ H2Error::type_mismatch ? len == 5 , H2Error {
     priority Priority
 }
 
-struct RstStreamFrame - Frame ^ type == FrameType::rst_stream ? len == 4 , H2Error {
+struct RstStreamFrame - Frame ^ type == FrameType::rst_stream @ H2Error::type_mismatch ? len == 4 , H2Error {
     code std::uint32_t ! H2Error::read_code
 }
 
-struct SettingsFrame - Frame ^ type == FrameType::settings ? len % 6 == 0 @ H2Error::frame_size ? id == 0 @ H2Error::protocol , H2Error {
+struct SettingsFrame - Frame ^ type == FrameType::settings @ H2Error::type_mismatch ? len % 6 == 0 @ H2Error::frame_size ? id == 0 @ H2Error::protocol , H2Error {
     setting std::string $ len ^ (flag & Flag::ack) == 0 ! H2Error::read_data
     dummy Dummy ? (flag&Flag::ack==0)||len==0 @ H2Error::frame_size
 }
 
-struct PushPromiseFrame - Frame ^ type == FrameType::push_promise , H2Error {
+struct PushPromiseFrame - Frame ^ type == FrameType::push_promise @ H2Error::type_mismatch , H2Error {
     padding std::uint8_t ^ flag & Flag::padded = 0
     promise std::int32_t ? promise > 0 ! H2Error::internal
     data std::string $ len - padding
     pad std::string $ padding 
 }
 
-struct PingFrame - Frame ^ type == FrameType::ping ? len == 8 , H2Error {
-    opeque std::uint64_t ? id == 0
+struct PingFrame - Frame ^ type == FrameType::ping @ H2Error::type_mismatch ? len == 8 @ H2Error::frame_size , H2Error {
+    opeque std::uint64_t ? id == 0 ! H2Error::read_data
 }
 
-struct GoAwayFrame - Frame ^ type == FrameType::goaway , H2Error {
-    id std::int32_t ? id >= 0
-    code std::uint32_t
-    data std::string $ len - 8
+struct GoAwayFrame - Frame ^ type == FrameType::goaway @ H2Error::type_mismatch , H2Error {
+    processed_id std::int32_t ? processed_id >= 0 ! H2Error::read_processed_id
+    code std::uint32_t ! H2Error::read_code
+    data std::string $ len - 8 ! H2Error::read_data
 }
 
-struct WindowUpdateFrame - Frame ^ type == FrameType::window_update ? len == 4 , H2Error {
-    increment std::int32_t ? increment > 0 
+struct WindowUpdateFrame - Frame ^ type == FrameType::window_update @ H2Error::type_mismatch ? len == 4 @ H2Error::frame_size , H2Error {
+    increment std::int32_t ? increment > 0 ! H2Error::read_increment
 }
 
-struct Continuation - Frame ^ type == FrameType::continuous , H2Error {
-    data std::string $ len
+struct Continuation - Frame ^ type == FrameType::continuous @ H2Error::type_mismatch , H2Error {
+    data std::string $ len ! H2Error::read_data
 }

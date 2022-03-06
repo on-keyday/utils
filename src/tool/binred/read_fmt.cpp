@@ -20,10 +20,12 @@ namespace binred {
     constexpr auto size_def = "SIZE";
     constexpr auto base_def = "BASE";
     constexpr auto prev_def = "PREV";
+    constexpr auto exist_def = "EXIST";
     constexpr auto expr_def = "EXPR";
     constexpr auto as_result_def = "AS_RESULT";
     constexpr auto errtype_def = "ERRTYPE";
     constexpr auto assign_def = "ASSIGN";
+    constexpr auto member_as_result = "MEMBER_AS_RESULT";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         constexpr auto is_expr = us::filter::stack_order(1, expr_def);
         if (is_expr(result)) {
@@ -87,16 +89,21 @@ namespace binred {
                     cond.back().errvalue = result.token();
                 };
                 auto under_disp = [&](Type& type) {
-                    set_to_flag(type.prevcond);
+                    if (result.under(exist_def)) {
+                        set_to_flag(type.existcond);
+                    }
+                    else {
+                        set_to_flag(type.prevcond);
+                    }
                 };
                 if (result.under(base_def)) {
                     under_disp(cst.base.type);
                 }
-                else if (result.under(prev_def)) {
-                    under_disp(memb().back().type);
+                else if (result.under(member_as_result)) {
+                    memb().back().errvalue = result.token();
                 }
                 else if (result.under(member_def)) {
-                    memb().back().errvalue = result.token();
+                    under_disp(memb().back().type);
                 }
                 return true;
             }

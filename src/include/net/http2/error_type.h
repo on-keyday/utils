@@ -41,7 +41,10 @@ namespace utils {
                 read_depend,
                 read_weight,
                 read_code,
+                read_increment,
+                read_processed_id,
 
+                type_mismatch,
                 transport,
             };
 
@@ -60,7 +63,7 @@ namespace utils {
                 continuous = 0x9,
             };
 
-            enum class Flag {
+            enum Flag {
                 none = 0x0,
                 ack = 0x1,
                 end_stream = 0x1,
@@ -73,7 +76,6 @@ namespace utils {
 
             struct Dummy {};
 
-            constexpr std::uint8_t ack = 0x1;
         }  // namespace http2
     }      // namespace net
 }  // namespace utils
