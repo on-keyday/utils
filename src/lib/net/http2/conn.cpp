@@ -18,9 +18,19 @@ namespace utils {
 
                 struct FrameWriter {
                     wrap::string str;
-                    void write(auto&&...) {
+                    template <class T>
+                    void write(T& val, size_t size = sizeof(T)) {
+                        auto nt = endian::to_network(&val);
+                        char* ptr = reinterpret_cast<char*>(&nt);
+                        for (auto i = sizeof(T) - size; i < sizeof(T); i++) {
+                            str.push_back(ptr[i]);
+                        }
                     }
-                    void write(Dummy&) {}
+
+                    void write(const wrap::string& val, size_t sz) {
+                        str.append(val, 0, sz);
+                    }
+                    void write(const Dummy&) {}
                 };
                 struct FrameReader {
                     wrap::string ref;
@@ -42,7 +52,7 @@ namespace utils {
                         }
                         T cvt;
                         char* ptr = reinterpret_cast<char*>(std::addressof(cvt));
-                        for (size_t i = size - sizeof(T); i < size; i++) {
+                        for (size_t i = sizeof(T) - size; i < sizeof(T); i++) {
                             if (pos >= ref.size()) {
                                 return false;
                             }

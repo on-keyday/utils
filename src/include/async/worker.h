@@ -157,8 +157,9 @@ namespace utils {
                 return future.state();
             }
 
-            void wait_or_suspend(async::Context& ctx) {
+            Future& wait_or_suspend(async::Context& ctx) {
                 future.wait_or_suspend(ctx);
+                return *this;
             }
 
 #ifdef UTILS_COROUTINE_NAMESPACE

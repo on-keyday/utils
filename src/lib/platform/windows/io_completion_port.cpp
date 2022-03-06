@@ -53,7 +53,7 @@ namespace utils {
 
             void IOCPObject::wait_callbacks(size_t maxcount, int wait) {
                 if (maxcount > 64) {
-                    maxcount = 8;
+                    maxcount = 64;
                 }
                 auto fn = [](void* ol, size_t maxcount) {
                     for (auto& cb : callbacks) {
