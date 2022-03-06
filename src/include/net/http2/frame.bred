@@ -72,6 +72,6 @@ struct WindowUpdateFrame - Frame ^ type == FrameType::window_update @ H2Error::t
     increment std::int32_t ? increment > 0 ! H2Error::read_increment
 }
 
-struct Continuation - Frame ^ type == FrameType::continuous @ H2Error::type_mismatch , H2Error {
+struct Continuation - Frame ^ type == FrameType::continuous @ H2Error::type_mismatch ? id != 0 @ H2Error::protocol , H2Error {
     data std::string $ len ! H2Error::read_data
 }

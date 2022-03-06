@@ -12,9 +12,9 @@
 
 #include <utility>
 #include <array>
-#include "../../wrap/lite/enum.h"
-#include "../../endian/reader.h"
-#include "../../endian/writer.h"
+#include "../wrap/lite/enum.h"
+#include "../endian/reader.h"
+#include "../endian/writer.h"
 
 namespace utils {
     namespace net {

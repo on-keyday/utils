@@ -523,6 +523,9 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const Continuation& input, Output& output) {
+                if (!(input.id != 0)) {
+                    return H2Error::protocol;
+                }
                 if (!(input.type == FrameType::continuous)) {
                     return H2Error::type_mismatch;
                 }
@@ -542,6 +545,9 @@ namespace utils {
                     if (!(output.type == FrameType::continuous)) {
                         return H2Error::type_mismatch;
                     }
+                }
+                if (!(output.id != 0)) {
+                    return H2Error::protocol;
                 }
                 if (!input.read(output.data, output.len)) {
                     return H2Error::read_data;
