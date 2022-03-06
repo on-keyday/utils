@@ -46,6 +46,7 @@ namespace utils {
 
                 type_mismatch,
                 transport,
+                ping_failed,
             };
 
             DEFINE_ENUM_FLAGOP(H2Error)

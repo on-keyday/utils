@@ -38,11 +38,12 @@ namespace utils {
                 struct StreamImpl {
                     std::int32_t id;
                     Status status;
-                    std::int64_t window = initial_window_size;
+                    std::int64_t window = 0;
                     net::internal::HeaderImpl h;
                     wrap::string header_raw;
                     wrap::string data;
                     Priority priority{0};
+                    std::uint32_t code = 0;
 
                     std::int32_t get_dependency() {
                         return priority.depend & number::msb_off<std::uint32_t>;
@@ -59,11 +60,13 @@ namespace utils {
                     HpackTable decode_table;
                     std::int64_t window = 0;
                     std::int32_t id_max = 0;
-                    std::int32_t preproced = 0;
-                    std::uint32_t max_table_size = initial_table_size;
+                    std::int32_t preproced_id = 0;
+                    FrameType preproced_type = FrameType::settings;
+                    std::uint32_t max_table_size = 0;
                     wrap::hash_map<std::int32_t, Stream> streams;
                     wrap::hash_map<std::uint16_t, std::uint32_t> setting;
                     bool continuation_mode = false;
+                    std::int32_t prev_ping = 0;
 
                     ConnectionImpl() {
                         setting[k(SettingKey::table_size)] = 4096;
@@ -117,11 +120,12 @@ namespace utils {
                 internal::ConnectionImpl& impl;
                 const Frame& frame;
                 ~LastUpdateConnection() {
-                    impl.preproced = frame.id;
+                    impl.preproced_id = frame.id;
+                    impl.preproced_type = frame.type;
                 }
             };
 
-            H2Error Connection::update(const Frame& frame) {
+            H2Error Connection::update_recv(const Frame& frame) {
                 auto type = frame.type;
                 auto stream = impl->get_stream(frame.id);
                 if (frame.len > impl->setting[k(SettingKey::max_frame_size)]) {
@@ -139,6 +143,9 @@ namespace utils {
                         stream->impl->data.append(data.data);
                         stream->impl->window -= data.data.size();
                         impl->window -= data.data.size();
+                        if (data.flag & Flag::end_stream) {
+                            stream->impl->status = Status::half_closed_remote;
+                        }
                         return H2Error::none;
                     }
                     case FrameType::header: {
@@ -165,7 +172,7 @@ namespace utils {
                         return H2Error::none;
                     }
                     case FrameType::continuous: {
-                        if (frame.id != impl->preproced) {
+                        if (frame.id != impl->preproced_id) {
                             return H2Error::protocol;
                         }
                         assert(stream);
@@ -216,6 +223,37 @@ namespace utils {
                             current = value;
                         }
                         return H2Error::none;
+                    }
+                    case FrameType::rst_stream: {
+                        assert(frame.id != 0);
+                        assert(stream);
+                        if (stream->status() == Status::idle) {
+                            return H2Error::protocol;
+                        }
+                        auto& rst = static_cast<const RstStreamFrame&>(frame);
+                        stream->impl->code = rst.code;
+                        stream->impl->status = Status::closed;
+                        return H2Error::none;
+                    }
+                    case FrameType::priority: {
+                        assert(frame.id != 0);
+                        assert(stream);
+                        auto& prio = static_cast<const PriorityFrame&>(frame);
+                        stream->impl->priority = prio.priority;
+                        return H2Error::none;
+                    }
+                    case FrameType::ping: {
+                        assert(frame.id == 0);
+                        assert(stream);
+                        auto& ping = static_cast<const PingFrame&>(frame);
+                        if (ping.flag & Flag::ack) {
+                            if (ping.opeque != impl->prev_ping) {
+                                return H2Error::ping_failed;
+                            }
+                        }
+                        return H2Error::none;
+                    }
+                    case FrameType::push_promise: {
                     }
                     default: {
                         return H2Error::none;

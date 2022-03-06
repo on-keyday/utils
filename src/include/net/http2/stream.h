@@ -44,7 +44,7 @@ namespace utils {
             struct Connection {
                 Stream* stream(int id);
 
-                H2Error update(const Frame& frame);
+                H2Error update_recv(const Frame& frame);
 
                private:
                 wrap::shared_ptr<internal::ConnectionImpl> impl;

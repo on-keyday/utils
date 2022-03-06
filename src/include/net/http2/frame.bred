@@ -42,7 +42,7 @@ struct PriorityFrame - Frame ^ type == FrameType::priority @ H2Error::type_misma
     priority Priority
 }
 
-struct RstStreamFrame - Frame ^ type == FrameType::rst_stream @ H2Error::type_mismatch ? len == 4 , H2Error {
+struct RstStreamFrame - Frame ^ type == FrameType::rst_stream @ H2Error::type_mismatch ? len == 4 @ H2Error::frame_size ? id != 0 @ H2Error::protocol , H2Error {
     code std::uint32_t ! H2Error::read_code
 }
 
@@ -59,7 +59,7 @@ struct PushPromiseFrame - Frame ^ type == FrameType::push_promise @ H2Error::typ
 }
 
 struct PingFrame - Frame ^ type == FrameType::ping @ H2Error::type_mismatch ? len == 8 @ H2Error::frame_size , H2Error {
-    opeque std::uint64_t ? id == 0 ! H2Error::read_data
+    opeque std::uint64_t ? id == 0 @ H2Error::protocol ! H2Error::read_data
 }
 
 struct GoAwayFrame - Frame ^ type == FrameType::goaway @ H2Error::type_mismatch , H2Error {

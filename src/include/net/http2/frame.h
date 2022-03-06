@@ -234,7 +234,10 @@ namespace utils {
             template <class Output>
             H2Error encode(const RstStreamFrame& input, Output& output) {
                 if (!(input.len == 4)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
+                }
+                if (!(input.id != 0)) {
+                    return H2Error::protocol;
                 }
                 if (!(input.type == FrameType::rst_stream)) {
                     return H2Error::type_mismatch;
@@ -257,7 +260,10 @@ namespace utils {
                     }
                 }
                 if (!(output.len == 4)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
+                }
+                if (!(output.id != 0)) {
+                    return H2Error::protocol;
                 }
                 if (!input.read(output.code)) {
                     return H2Error::read_code;
@@ -397,7 +403,7 @@ namespace utils {
                     return e__;
                 }
                 if (!(input.id == 0)) {
-                    return H2Error::read_data;
+                    return H2Error::protocol;
                 }
                 output.write(input.opeque);
                 return H2Error::none;
@@ -420,7 +426,7 @@ namespace utils {
                     return H2Error::read_data;
                 }
                 if (!(output.id == 0)) {
-                    return H2Error::read_data;
+                    return H2Error::protocol;
                 }
                 return H2Error::none;
             }
