@@ -63,7 +63,7 @@ namespace utils {
                 continuous = 0x9,
             };
 
-            enum Flag {
+            enum Flag : std::uint8_t {
                 none = 0x0,
                 ack = 0x1,
                 end_stream = 0x1,
