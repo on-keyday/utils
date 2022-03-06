@@ -38,9 +38,12 @@ namespace utils {
             }
 
             template <class T, class C>
+            constexpr auto endinan_reqirement = (std::is_integral_v<T> || std::is_enum_v<T>)&&(std::is_integral_v<C> || std::is_enum_v<C>);
+
+            template <class T, class C>
             constexpr T copy_as_is(C* in) {
-                static_assert(std::is_integral_v<T> && std::is_integral_v<C>, "T and C must be integer");
-                T result = 0;
+                static_assert(endinan_reqirement<T, C>, "T and C must be integer");
+                T result = T{};
                 const char* inptr = reinterpret_cast<const char*>(in);
                 char* outptr = reinterpret_cast<char*>(&result);
                 for (auto i = 0; i < sizeof(T); i++) {
@@ -51,8 +54,9 @@ namespace utils {
 
             template <class T, class C>
             constexpr T reverse_endian(C* in) {
-                static_assert(std::is_integral_v<T> && std::is_integral_v<C>, "T and C must be integer");
-                T result = 0;
+                static_assert(endinan_reqirement<T, C>,
+                              "T and C must be integer or enum");
+                T result = T{};
                 const char* inptr = reinterpret_cast<const char*>(in);
                 char* outptr = reinterpret_cast<char*>(&result);
                 for (auto i = 0; i < sizeof(T); i++) {

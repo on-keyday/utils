@@ -6,6 +6,7 @@
 */
 
 
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/http2/conn.h"
 #include "../../../include/net/async/pool.h"
 #include "../../../include/endian/endian.h"
@@ -16,6 +17,7 @@ namespace utils {
             namespace internal {
 
                 struct FrameWriter {
+                    wrap::string str;
                     void write(auto&&...) {
                     }
                     void write(Dummy&) {}
@@ -41,13 +43,13 @@ namespace utils {
                         T cvt;
                         char* ptr = reinterpret_cast<char*>(std::addressof(cvt));
                         for (size_t i = size - sizeof(T); i < size; i++) {
-                            if (pos >= buf.size()) {
+                            if (pos >= ref.size()) {
                                 return false;
                             }
                             ptr[i] = ref[pos];
                             pos++;
                         }
-                        t = endian::from_network_us<T>(&cvt);
+                        t = endian::from_network(&cvt);
                         return true;
                     }
 
@@ -59,6 +61,7 @@ namespace utils {
                         auto second = ref.begin() + pos + size;
                         str.append(first, second);
                         pos += size;
+                        return true;
                     }
                 };
 
@@ -69,6 +72,23 @@ namespace utils {
                     int errcode;
                 };
             }  // namespace internal
+
+            constexpr auto connection_preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+
+            async::Future<wrap::shared_ptr<Conn>> STDCALL open_async(AsyncIOClose&& io) {
+                auto impl = wrap::make_shared<internal::Http2Impl>();
+                impl->io = std::move(io);
+                return get_pool().start<wrap::shared_ptr<Conn>>([impl = std::move(impl)](async::Context& ctx) {
+                    auto ptr = impl->io.write(connection_preface, 24);
+                    auto w = ptr.get();
+                    if (w.err) {
+                        return;
+                    }
+                    auto conn = wrap::make_shared<Conn>();
+                    conn->impl = std::move(impl);
+                    ctx.set_value(std::move(conn));
+                });
+            }
 
             async::Future<wrap::shared_ptr<Frame>> Conn::read() {
                 wrap::shared_ptr<Frame> frame;
@@ -111,19 +131,32 @@ namespace utils {
                 });
             }
 
-            bool Conn::write(const Frame& frame) {
-                if (!frame) {
-                    return nullptr;
-                }
-                auto ptr = frame.get();
-                auto type = ptr->type;
-                auto& ref = *ptr;
+            async::Future<bool> Conn::write(const Frame& frame) {
                 internal::FrameWriter w;
                 H2Error err = encode(&frame, w);
                 if (err != H2Error::none) {
                     impl->err = err;
                     return false;
                 }
+                return get_pool().start<bool>([str = std::move(w.str), impl = this->impl](async::Context& ctx) {
+                    auto w = impl->io.write(str.c_str(), str.size());
+                    w.wait_or_suspend(ctx);
+                    auto got = w.get();
+                    if (got.err) {
+                        impl->errcode = got.err;
+                        impl->err = H2Error::transport;
+                        return;
+                    }
+                    ctx.set_value(true);
+                });
+            }
+
+            State Conn::close(bool force) {
+                return impl->io.close(force);
+            }
+
+            Conn::~Conn() {
+                close(true);
             }
         }  // namespace http2
     }      // namespace net

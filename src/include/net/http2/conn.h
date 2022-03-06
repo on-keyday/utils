@@ -8,6 +8,7 @@
 
 // conn - http protocol version 2 connetion
 #pragma once
+#include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/lite/smart_ptr.h"
 #include "frame.h"
 #include "../../async/worker.h"
@@ -19,13 +20,19 @@ namespace utils {
             namespace internal {
                 struct Http2Impl;
             }
-            struct Conn {
+            struct DLL Conn {
+                friend DLL async::Future<wrap::shared_ptr<Conn>> STDCALL open_async(AsyncIOClose&& io);
                 async::Future<wrap::shared_ptr<Frame>> read();
-                bool write(wrap::shared_ptr<Frame> frame);
+                async::Future<bool> write(const Frame& frame);
+                State close(bool force = false);
+
+                ~Conn();
 
                private:
                 wrap::shared_ptr<internal::Http2Impl> impl;
             };
+
+            DLL async::Future<wrap::shared_ptr<Conn>> STDCALL open_async(AsyncIOClose&& io);
         }  // namespace http2
     }      // namespace net
 }  // namespace utils
