@@ -40,7 +40,8 @@ namespace utils {
                     Status status;
                     std::int64_t window = 0;
                     net::internal::HeaderImpl h;
-                    wrap::string header_raw;
+                    wrap::string remote_raw;
+                    wrap::string local_raw;
                     wrap::string data;
                     Priority priority{0};
                     std::uint32_t code = 0;
@@ -65,8 +66,18 @@ namespace utils {
                     std::uint32_t max_table_size = 0;
                     wrap::hash_map<std::int32_t, Stream> streams;
                     wrap::hash_map<std::uint16_t, std::uint32_t> setting;
-                    bool continuation_mode = false;
+                    std::int32_t continuous_id = 0;
                     std::int32_t prev_ping = 0;
+                    bool server = false;
+
+                    std::int32_t next_stream() const {
+                        if (server) {
+                            return id_max % 2 == 0 ? id_max + 2 : id_max + 1;
+                        }
+                        else {
+                            return id_max % 2 == 1 ? id_max + 1 : id_max + 2;
+                        }
+                    }
 
                     ConnectionImpl() {
                         setting[k(SettingKey::table_size)] = 4096;
@@ -108,8 +119,8 @@ namespace utils {
                 };
             }  // namespace internal
 
-            H2Error decode_hpack(internal::ConnectionImpl& conn, internal::StreamImpl& stream) {
-                auto err = hpack::decode(stream.header_raw, conn.decode_table, stream.h, conn.max_table_size);
+            H2Error decode_hpack(wrap::string& raw, net::internal::HeaderImpl& header, internal::ConnectionImpl& conn) {
+                auto err = hpack::decode(raw, conn.decode_table, header, conn.max_table_size);
                 if (!err) {
                     return H2Error::compression;
                 }
@@ -132,7 +143,7 @@ namespace utils {
                     return H2Error::protocol;
                 }
                 LastUpdateConnection _{*impl, frame};
-                if (impl->continuation_mode && frame.type != FrameType::continuous) {
+                if (impl->continuous_id && frame.type != FrameType::continuous) {
                     return H2Error::protocol;
                 }
                 switch (type) {
@@ -155,7 +166,7 @@ namespace utils {
                         if (stream->status() != Status::idle) {
                             return H2Error::protocol;
                         }
-                        stream->impl->header_raw.append(header.data);
+                        stream->impl->remote_raw.append(header.data);
                         stream->impl->status = Status::open;
                         if (header.flag & Flag::priority) {
                             stream->impl->priority = header.priority;
@@ -164,10 +175,10 @@ namespace utils {
                             stream->impl->status = Status::half_closed_remote;
                         }
                         if (header.flag & Flag::end_headers) {
-                            return decode_hpack(*impl, *stream->impl);
+                            return decode_hpack(stream->impl->remote_raw, stream->impl->h, *impl);
                         }
                         else {
-                            impl->continuation_mode = true;
+                            impl->continuous_id = header.id;
                         }
                         return H2Error::none;
                     }
@@ -177,10 +188,21 @@ namespace utils {
                         }
                         assert(stream);
                         auto& cont = static_cast<const Continuation&>(frame);
-                        stream->impl->header_raw.append(cont.data);
-                        if (cont.flag & Flag::end_headers) {
-                            impl->continuation_mode = false;
-                            return decode_hpack(*impl, *stream->impl);
+                        if (impl->continuous_id == frame.id) {
+                            stream->impl->remote_raw.append(cont.data);
+                            if (cont.flag & Flag::end_headers) {
+                                impl->continuous_id = 0;
+                                return decode_hpack(stream->impl->remote_raw, stream->impl->h, *impl);
+                            }
+                        }
+                        else {
+                            return H2Error::internal;
+                            auto to_add = impl->get_stream(impl->continuous_id);
+                            stream->impl->local_raw.append(cont.data);
+                            if (cont.flag & Flag::end_headers) {
+                                impl->continuous_id = 0;
+                            }
+                            return H2Error::none;
                         }
                         return H2Error::none;
                     }
@@ -254,6 +276,22 @@ namespace utils {
                         return H2Error::none;
                     }
                     case FrameType::push_promise: {
+                        if (!impl->setting[k(SettingKey::enable_push)]) {
+                            return H2Error::protocol;
+                        }
+                        assert(frame.id != 0);
+                        assert(stream);
+                        if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
+                            return H2Error::protocol;
+                        }
+                        auto& promise = static_cast<const PushPromiseFrame&>(frame);
+                        auto new_stream = impl->get_stream(promise.promise);
+                        if (new_stream->status() != Status::idle) {
+                            return H2Error::protocol;
+                        }
+                        new_stream->impl->status = Status::reserved_remote;
+                        impl->continuous_id = promise.promise;
+                        return H2Error::none;
                     }
                     default: {
                         return H2Error::none;

@@ -51,7 +51,7 @@ struct SettingsFrame - Frame ^ type == FrameType::settings @ H2Error::type_misma
     dummy Dummy ? (flag&Flag::ack==0)||len==0 @ H2Error::frame_size
 }
 
-struct PushPromiseFrame - Frame ^ type == FrameType::push_promise @ H2Error::type_mismatch , H2Error {
+struct PushPromiseFrame - Frame ^ type == FrameType::push_promise @ H2Error::type_mismatch ? id != 0 @ H2Error::protocol , H2Error {
     padding std::uint8_t ^ flag & Flag::padded = 0
     promise std::int32_t ? promise > 0 ! H2Error::internal
     data std::string $ len - padding

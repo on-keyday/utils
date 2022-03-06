@@ -339,6 +339,9 @@ namespace utils {
 
             template <class Output>
             H2Error encode(const PushPromiseFrame& input, Output& output) {
+                if (!(input.id != 0)) {
+                    return H2Error::protocol;
+                }
                 if (!(input.type == FrameType::push_promise)) {
                     return H2Error::type_mismatch;
                 }
@@ -366,6 +369,9 @@ namespace utils {
                     if (!(output.type == FrameType::push_promise)) {
                         return H2Error::type_mismatch;
                     }
+                }
+                if (!(output.id != 0)) {
+                    return H2Error::protocol;
                 }
                 if (output.flag & Flag::padded) {
                     if (!input.read(output.padding)) {

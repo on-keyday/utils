@@ -25,6 +25,7 @@ namespace utils {
                 closed,
                 open,
                 half_closed_remote,
+                reserved_remote,
             };
 
             struct Connection;
