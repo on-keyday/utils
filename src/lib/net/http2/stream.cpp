@@ -191,6 +191,9 @@ namespace utils {
                     case FrameType::settings: {
                         assert(frame.id == 0);
                         assert(frame.len % 6 == 0);
+                        if (frame.flag & Flag::ack) {
+                            return H2Error::none;
+                        }
                         auto& settings = static_cast<const SettingsFrame&>(frame);
                         internal::FrameReader<const wrap::string&> r(settings.setting);
                         while (r.pos < r.ref.size()) {
