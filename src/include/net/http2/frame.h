@@ -556,7 +556,7 @@ namespace utils {
             }
 
             template <class Output>
-            H2Error encode(const wrap::shared_ptr<Frame>& input, Output& output) {
+            H2Error encode(const Frame*& input, Output& output) {
                 if (input == nullptr) return H2Error::unknown;
                 if ((*input).type == FrameType::data) {
                     return encode(static_cast<const DataFrame&>(*input), output);

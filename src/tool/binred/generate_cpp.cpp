@@ -287,7 +287,12 @@ namespace binred {
             }
             hlp::appends(str, "template<class Output>\n",
                          bsst.second.errtype, " encode(const ");
-            generate_ptr_obj(str, data, d.first);
+            if (any(flag & GenFlag::dep_enc_is_raw_ptr)) {
+                hlp::appends(str, d.first, "*");
+            }
+            else {
+                generate_ptr_obj(str, data, d.first);
+            }
             hlp::appends(str, "& input,Output& output) {\n");
             write_indent(str, 1);
             hlp::appends(str, "if(input==nullptr)return ");

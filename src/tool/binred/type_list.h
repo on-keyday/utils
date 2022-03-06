@@ -133,6 +133,7 @@ namespace binred {
     enum class GenFlag {
         sep_namespace = 0x1,
         add_license = 0x2,
+        dep_enc_is_raw_ptr = 0x4,
     };
 
     DEFINE_ENUM_FLAGOP(GenFlag)

@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
     auto syntax = opt.Bool("syntax,s", false, "show syntax help", cu);
     auto genflag = opt.FlagSet("license", binred::GenFlag::add_license, "add /*license*/", cu);
     opt.VarFlagSet(genflag, "separate,p", binred::GenFlag::sep_namespace, "separate namespace", cu);
+    opt.VarFlagSet(genflag, "encode_raw_ptr,R", binred::GenFlag::dep_enc_is_raw_ptr, "dependency encode is made with raw ptr", cu);
     auto none_error = opt.VecString<utw::string>("none-error,e", 2, "set default `none` and `error` enum name", "NONE ERROR", cu);
     /*
     uc::DefaultDesc desc;
