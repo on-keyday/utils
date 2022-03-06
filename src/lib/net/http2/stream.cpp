@@ -21,12 +21,19 @@ namespace utils {
     namespace net {
         namespace http2 {
             enum class SettingKey {
+                table_size = 1,
+                enable_push = 2,
+                max_concurrent = 3,
                 initial_windows_size = 4,
+                max_frame_size = 5,
+                header_list_size = 6,
             };
-            namespace internal {
 
-                constexpr auto initial_table_size = 4096;
-                constexpr auto initial_window_size = 65535;
+            auto k(SettingKey v) {
+                return (std::uint16_t)v;
+            }
+
+            namespace internal {
 
                 struct StreamImpl {
                     std::int32_t id;
@@ -50,18 +57,29 @@ namespace utils {
                 struct ConnectionImpl {
                     HpackTable encode_table;
                     HpackTable decode_table;
-                    std::int64_t window = initial_window_size;
+                    std::int64_t window = 0;
                     std::int32_t id_max = 0;
                     std::int32_t preproced = 0;
                     std::uint32_t max_table_size = initial_table_size;
                     wrap::hash_map<std::int32_t, Stream> streams;
                     wrap::hash_map<std::uint16_t, std::uint32_t> setting;
                     bool continuation_mode = false;
+
+                    ConnectionImpl() {
+                        setting[k(SettingKey::table_size)] = 4096;
+                        setting[k(SettingKey::enable_push)] = 1;
+                        setting[k(SettingKey::max_concurrent)] = ~0;
+                        setting[k(SettingKey::initial_windows_size)] = 65535;
+                        setting[k(SettingKey::max_frame_size)] = 16384;
+                        setting[k(SettingKey::header_list_size)] = ~0;
+                    }
+
                     Stream* make_new_stream(int id) {
                         auto ptr = &streams[id];
                         ptr->impl = wrap::make_shared<StreamImpl>();
                         ptr->impl->id = id;
                         ptr->impl->status = Status::idle;
+                        ptr->impl->window = setting[(std::uint16_t)SettingKey::initial_windows_size];
                     }
 
                     Stream* get_stream(int id) {
@@ -106,6 +124,9 @@ namespace utils {
             H2Error Connection::update(const Frame& frame) {
                 auto type = frame.type;
                 auto stream = impl->get_stream(frame.id);
+                if (frame.len > impl->setting[k(SettingKey::max_frame_size)]) {
+                    return H2Error::protocol;
+                }
                 LastUpdateConnection _{*impl, frame};
                 if (impl->continuation_mode && frame.type != FrameType::continuous) {
                     return H2Error::protocol;
