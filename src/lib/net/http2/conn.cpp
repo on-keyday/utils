@@ -10,6 +10,7 @@
 #include "../../../include/net/http2/conn.h"
 #include "../../../include/net/async/pool.h"
 #include "../../../include/endian/endian.h"
+#include "../../../include/helper/strutil.h"
 
 namespace utils {
     namespace net {
@@ -50,7 +51,7 @@ namespace utils {
                         if (size > sizeof(T)) {
                             return false;
                         }
-                        T cvt;
+                        T cvt = T{};
                         char* ptr = reinterpret_cast<char*>(std::addressof(cvt));
                         for (size_t i = sizeof(T) - size; i < sizeof(T); i++) {
                             if (pos >= ref.size()) {
@@ -125,6 +126,15 @@ namespace utils {
                             return;
                         }
                         impl->reader.ref.append(tmp, got.read);
+                        auto starts = [&](auto&& v) {
+                            return helper::starts_with(impl->reader.ref, v);
+                        };
+                        if (starts("HTTP") || starts("GET ") || starts("POST") ||
+                            starts("PUT ") || starts("PATCH") || starts("HEAD") ||
+                            starts("TRACE") || starts("CONNECT")) {
+                            impl->err = H2Error::http_1_1_required;
+                            return;
+                        }
                         assert(impl->reader.pos == 0);
                         wrap::shared_ptr<Frame> frame;
                         auto err = decode(impl->reader, frame);

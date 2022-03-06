@@ -19,7 +19,7 @@ void test_http2base() {
             [](async::Context& ctx) {
                 auto f = net::open_async("google.com", "https");
                 f.wait_or_suspend(ctx);
-                auto s = net::open_async(std::move(f.get()), "./src/test/net/cacert.pem");
+                auto s = net::open_async(std::move(f.get()), "./src/test/net/cacert.pem", "\2h2");
                 s.wait_or_suspend(ctx);
                 auto ssl = s.get();
                 auto h2 = net::http2::open_async(std::move(ssl));
@@ -33,6 +33,11 @@ void test_http2base() {
                 auto setting_frame = conn->read();
                 auto frame = setting_frame.wait_or_suspend(ctx).get();
                 assert(frame->type == net::http2::FrameType::settings);
+                settings = {0};
+                settings.type = net::http2::FrameType::settings;
+                settings.flag = net::http2::ack;
+                conn->write(settings).wait_or_suspend(ctx);
+                auto ackframe = conn->read().wait_or_suspend(ctx).get();
             })
         .wait();
 }

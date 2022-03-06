@@ -19,7 +19,7 @@ namespace utils {
             struct Frame {
                 int len = 0;
                 FrameType type;
-                std::uint8_t flag = 0;
+                Flag flag = Flag::none;
                 std::int32_t id;
             };
 
@@ -95,7 +95,7 @@ namespace utils {
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (input.flag & 0x8) {
+                if (input.flag & Flag::padded) {
                     output.write(input.padding);
                 }
                 output.write(input.data, input.len - input.padding);
@@ -116,7 +116,7 @@ namespace utils {
                 if (!(output.id != 0)) {
                     return H2Error::protocol;
                 }
-                if (output.flag & 0x8) {
+                if (output.flag & Flag::padded) {
                     if (!input.read(output.padding)) {
                         return H2Error::read_padding;
                     }
@@ -145,10 +145,10 @@ namespace utils {
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (input.flag & 0x8) {
+                if (input.flag & Flag::padded) {
                     output.write(input.padding);
                 }
-                if (input.flag & 0x20) {
+                if (input.flag & Flag::priority) {
                     if (auto e__ = encode(input.priority, output); H2Error::none != e__) {
                         return e__;
                     }
@@ -168,12 +168,12 @@ namespace utils {
                         return H2Error::unknown;
                     }
                 }
-                if (output.flag & 0x8) {
+                if (output.flag & Flag::padded) {
                     if (!input.read(output.padding)) {
                         return H2Error::read_padding;
                     }
                 }
-                if (output.flag & 0x20) {
+                if (output.flag & Flag::priority) {
                     if (auto e__ = decode(input, output.priority); H2Error::none != e__) {
                         return e__;
                     }
@@ -284,10 +284,10 @@ namespace utils {
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if ((input.flag & 0x1) == 0) {
+                if ((input.flag & Flag::ack) == 0) {
                     output.write(input.setting, input.len);
                 }
-                if (!(((input.flag & 0x1) == 0) || (input.len == 0))) {
+                if (!(((input.flag & Flag::ack) == 0) || (input.len == 0))) {
                     return H2Error::frame_size;
                 }
                 output.write(input.dummy);
@@ -310,7 +310,7 @@ namespace utils {
                 if (!(output.id == 0)) {
                     return H2Error::protocol;
                 }
-                if ((output.flag & 0x1) == 0) {
+                if ((output.flag & Flag::ack) == 0) {
                     if (!input.read(output.setting, output.len)) {
                         return H2Error::read_data;
                     }
@@ -318,7 +318,7 @@ namespace utils {
                 if (!input.read(output.dummy)) {
                     return H2Error::unknown;
                 }
-                if (!(((output.flag & 0x1) == 0) || (output.len == 0))) {
+                if (!(((output.flag & Flag::ack) == 0) || (output.len == 0))) {
                     return H2Error::frame_size;
                 }
                 return H2Error::none;
@@ -339,7 +339,7 @@ namespace utils {
                 if (auto e__ = encode(static_cast<const Frame&>(input), output); H2Error::none != e__) {
                     return e__;
                 }
-                if (input.flag & 0x8) {
+                if (input.flag & Flag::padded) {
                     output.write(input.padding);
                 }
                 if (!(input.promise > 0)) {
@@ -361,7 +361,7 @@ namespace utils {
                         return H2Error::unknown;
                     }
                 }
-                if (output.flag & 0x8) {
+                if (output.flag & Flag::padded) {
                     if (!input.read(output.padding)) {
                         return H2Error::unknown;
                     }
@@ -482,9 +482,6 @@ namespace utils {
                 if (!(input.len == 4)) {
                     return H2Error::unknown;
                 }
-                if (!(input.id > 0)) {
-                    return H2Error::unknown;
-                }
                 if (!(input.type == FrameType::window_update)) {
                     return H2Error::unknown;
                 }
@@ -509,9 +506,6 @@ namespace utils {
                     }
                 }
                 if (!(output.len == 4)) {
-                    return H2Error::unknown;
-                }
-                if (!(output.id > 0)) {
                     return H2Error::unknown;
                 }
                 if (!input.read(output.increment)) {

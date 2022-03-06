@@ -23,6 +23,7 @@ namespace binred {
     constexpr auto expr_def = "EXPR";
     constexpr auto as_result_def = "AS_RESULT";
     constexpr auto errtype_def = "ERRTYPE";
+    constexpr auto assign_def = "ASSIGN";
     bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         constexpr auto is_expr = us::filter::stack_order(1, expr_def);
         if (is_expr(result)) {
@@ -71,11 +72,12 @@ namespace binred {
             if (result.kind() == us::KeyWord::id) {
                 memb().push_back({.name = result.token()});
             }
-            else if (is_rval()) {
-                auto& t = memb().back();
-                t.defval = result.token();
-                t.kind = result.kind();
-            }
+            return true;
+        }
+        if (result.top() == assign_def) {
+            auto& t = memb().back();
+            t.defval = result.token();
+            t.kind = result.kind();
             return true;
         }
         if (result.top() == as_result_def) {

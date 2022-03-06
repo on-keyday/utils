@@ -73,6 +73,7 @@ namespace utils {
                                     .size = size,
                                     .err = err,
                                 });
+                                return;
                             }
                             continue;
                         }

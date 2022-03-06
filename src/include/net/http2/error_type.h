@@ -60,7 +60,20 @@ namespace utils {
                 continuous = 0x9,
             };
 
+            enum class Flag {
+                none = 0x0,
+                ack = 0x1,
+                end_stream = 0x1,
+                end_headers = 0x4,
+                padded = 0x8,
+                priority = 0x20,
+            };
+
+            DEFINE_ENUM_FLAGOP(Flag)
+
             struct Dummy {};
+
+            constexpr std::uint8_t ack = 0x1;
         }  // namespace http2
     }      // namespace net
 }  // namespace utils
