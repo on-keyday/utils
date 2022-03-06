@@ -15,15 +15,23 @@
 #include "../../../include/wrap/lite/hash_map.h"
 #include "../http/header_impl.h"
 #include "../../../include/number/bitmask.h"
+#include "frame_reader.h"
 
 namespace utils {
     namespace net {
         namespace http2 {
+            enum class SettingKey {
+                initial_windows_size = 4,
+            };
             namespace internal {
+
+                constexpr auto initial_table_size = 4096;
+                constexpr auto initial_window_size = 65535;
+
                 struct StreamImpl {
                     std::int32_t id;
                     Status status;
-                    std::int64_t window;
+                    std::int64_t window = initial_window_size;
                     net::internal::HeaderImpl h;
                     wrap::string header_raw;
                     wrap::string data;
@@ -42,10 +50,10 @@ namespace utils {
                 struct ConnectionImpl {
                     HpackTable encode_table;
                     HpackTable decode_table;
-                    std::int64_t window;
+                    std::int64_t window = initial_window_size;
                     std::int32_t id_max = 0;
                     std::int32_t preproced = 0;
-                    std::uint32_t max_table_size = 0;
+                    std::uint32_t max_table_size = initial_table_size;
                     wrap::hash_map<std::int32_t, Stream> streams;
                     wrap::hash_map<std::uint16_t, std::uint32_t> setting;
                     bool continuation_mode = false;
@@ -108,6 +116,8 @@ namespace utils {
                         assert(stream);
                         auto& data = static_cast<const DataFrame&>(frame);
                         stream->impl->data.append(data.data);
+                        stream->impl->window -= data.data.size();
+                        impl->window -= data.data.size();
                         return H2Error::none;
                     }
                     case FrameType::header: {
@@ -155,6 +165,36 @@ namespace utils {
                             assert(stream);
                             stream->impl->window += window_update.increment;
                         }
+                        return H2Error::none;
+                    }
+                    case FrameType::settings: {
+                        assert(frame.id == 0);
+                        assert(frame.len % 6 == 0);
+                        auto& settings = static_cast<const SettingsFrame&>(frame);
+                        internal::FrameReader<const wrap::string&> r(settings.setting);
+                        while (r.pos < r.ref.size()) {
+                            std::uint16_t key = 0;
+                            std::uint32_t value = 0;
+                            if (!r.read(key)) {
+                                return H2Error::internal;
+                            }
+                            if (!r.read(value)) {
+                                return H2Error::internal;
+                            }
+                            auto& current = impl->setting[key];
+                            if (key == (std::uint16_t)SettingKey::initial_windows_size) {
+                                impl->window = value - current + impl->window;
+                                for (auto& stream : impl->streams) {
+                                    auto& stwindow = stream.second.impl->window;
+                                    stwindow = value - current + stwindow;
+                                }
+                            }
+                            current = value;
+                        }
+                        return H2Error::none;
+                    }
+                    default: {
+                        return H2Error::none;
                     }
                 }
             }
