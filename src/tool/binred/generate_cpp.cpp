@@ -292,8 +292,9 @@ namespace binred {
             }
             else {
                 generate_ptr_obj(str, data, d.first);
+                hlp::append(str, "&");
             }
-            hlp::appends(str, "& input,Output& output) {\n");
+            hlp::appends(str, " input,Output& output) {\n");
             write_indent(str, 1);
             hlp::appends(str, "if(input==nullptr)return ");
             render_cpp_errorcode(str, bsst.second, nullptr, nullptr, data);

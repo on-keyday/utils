@@ -111,7 +111,7 @@ namespace utils {
                 });
             }
 
-            bool Conn::write(wrap::shared_ptr<Frame> frame) {
+            bool Conn::write(const Frame& frame) {
                 if (!frame) {
                     return nullptr;
                 }
@@ -119,7 +119,7 @@ namespace utils {
                 auto type = ptr->type;
                 auto& ref = *ptr;
                 internal::FrameWriter w;
-                H2Error err = encode(frame, w);
+                H2Error err = encode(&frame, w);
                 if (err != H2Error::none) {
                     impl->err = err;
                     return false;
