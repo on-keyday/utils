@@ -391,7 +391,7 @@ namespace utils {
                     }
                 } def{impl};
                 auto w = impl->io.write(impl->reqests.c_str(), impl->reqests.size());
-                w.wait_or_suspend(ctx);
+                w.wait_until(ctx);
                 if (w.get().err) {
                     return;
                 }
@@ -401,7 +401,7 @@ namespace utils {
                 auto read_one = [&]() {
                     char tmp[1024];
                     auto r = impl->io.read(tmp, 1024);
-                    r.wait_or_suspend(ctx);
+                    r.wait_until(ctx);
                     auto data = r.get();
                     if (data.err) {
                         return false;

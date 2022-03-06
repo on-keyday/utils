@@ -25,13 +25,13 @@ namespace utils {
                 }
                 read_from_ssl(buffer);
                 auto w = io.write(buffer.c_str(), buffer.size());
-                w.wait_or_suspend(ctx);
+                w.wait_until(ctx);
                 if (auto got = w.get(); got.err) {
                     return got.err;
                 }
                 buffer.resize(1024);
                 auto recv = io.read(buffer.data(), 1024);
-                recv.wait_or_suspend(ctx);
+                recv.wait_until(ctx);
                 auto data = recv.get();
                 if (data.err) {
                     return data.err;

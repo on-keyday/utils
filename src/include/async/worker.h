@@ -80,7 +80,7 @@ namespace utils {
         };
 
         struct DLL AnyFuture {
-            void wait_or_suspend(Context& ctx);
+            AnyFuture& wait_until(Context& ctx);
             void wait();
             Any get();
 
@@ -157,8 +157,8 @@ namespace utils {
                 return future.state();
             }
 
-            Future& wait_or_suspend(async::Context& ctx) {
-                future.wait_or_suspend(ctx);
+            Future& wait_until(async::Context& ctx) {
+                future.wait_until(ctx);
                 return *this;
             }
 

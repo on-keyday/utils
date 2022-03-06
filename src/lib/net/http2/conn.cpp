@@ -79,8 +79,8 @@ namespace utils {
                 struct Http2Impl {
                     AsyncIOClose io;
                     FrameReader reader;
-                    H2Error err;
-                    int errcode;
+                    H2Error err = H2Error::none;
+                    int errcode = 0;
                 };
             }  // namespace internal
 
@@ -118,7 +118,7 @@ namespace utils {
                     while (true) {
                         char tmp[1024];
                         auto r = impl->io.read(tmp, 1024);
-                        r.wait_or_suspend(ctx);
+                        r.wait_until(ctx);
                         auto got = r.get();
                         if (got.err) {
                             impl->errcode = got.err;
@@ -160,7 +160,7 @@ namespace utils {
                 }
                 return get_pool().start<bool>([str = std::move(w.str), impl = this->impl](async::Context& ctx) {
                     auto w = impl->io.write(str.c_str(), str.size());
-                    w.wait_or_suspend(ctx);
+                    w.wait_until(ctx);
                     auto got = w.get();
                     if (got.err) {
                         impl->errcode = got.err;

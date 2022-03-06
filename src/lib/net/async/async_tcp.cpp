@@ -43,13 +43,13 @@ namespace utils {
                 return nullptr;
             }
             return get_pool().start([a = std::move(addr)](async::Context& ctx) mutable {
-                a.wait_or_suspend(ctx);
+                a.wait_until(ctx);
                 auto addr = std::move(a.get());
                 if (!addr) {
                     return;
                 }
                 auto p = open_async(std::move(addr));
-                p.wait_or_suspend(ctx);
+                p.wait_until(ctx);
                 ctx.set_value(std::move(p.get()));
             });
         }

@@ -10,6 +10,8 @@
 #include <net/async/pool.h>
 #include <net/async/tcp.h>
 #include <net/ssl/ssl.h>
+#include <wrap/cout.h>
+#include <async/async_macro.h>
 
 void test_http2base() {
     using namespace utils;
@@ -18,26 +20,25 @@ void test_http2base() {
         .start(
             [](async::Context& ctx) {
                 auto f = net::open_async("google.com", "https");
-                f.wait_or_suspend(ctx);
-                auto s = net::open_async(std::move(f.get()), "./src/test/net/cacert.pem", "\2h2");
-                s.wait_or_suspend(ctx);
+                f.wait_until(ctx);
+                auto s = net::open_async(std::move(f.get()), "./src/test/net/cacert.pem", "\2h2", "google.com");
+                s.wait_until(ctx);
                 auto ssl = s.get();
                 auto h2 = net::http2::open_async(std::move(ssl));
-                h2.wait_or_suspend(ctx);
-                auto conn = h2.get();
+                auto conn = AWAIT(h2);
                 net::http2::SettingsFrame settings;
                 settings.type = net::http2::FrameType::settings;
                 settings.id = 0;
                 settings.len = 0;
-                conn->write(settings).wait_or_suspend(ctx);
-                auto setting_frame = conn->read();
-                auto frame = setting_frame.wait_or_suspend(ctx).get();
+                AWAIT(conn->write(settings));
+                auto frame = AWAIT(conn->read());
                 assert(frame->type == net::http2::FrameType::settings);
                 settings = {0};
                 settings.type = net::http2::FrameType::settings;
                 settings.flag = net::http2::ack;
-                conn->write(settings).wait_or_suspend(ctx);
-                auto ackframe = conn->read().wait_or_suspend(ctx).get();
+                AWAIT(conn->write(settings));
+                auto ackframe = AWAIT(conn->read());
+                wrap::cout_wrap() << "done!\n";
             })
         .wait();
 }

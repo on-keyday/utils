@@ -404,9 +404,9 @@ namespace utils {
             return true;
         }
 
-        void AnyFuture::wait_or_suspend(Context& ctx) {
+        AnyFuture& AnyFuture::wait_until(Context& ctx) {
             if (!data) {
-                return;
+                return *this;
             }
             check_term(data);
             if (!not_own && !is_done()) {
@@ -414,7 +414,7 @@ namespace utils {
                 {
                     std::scoped_lock _{data->ctxlock_};
                     if (is_done()) {
-                        return;
+                        return *this;
                     }
                     data->ptr = c->self;
                     append_to_wait(c.get());
@@ -422,6 +422,7 @@ namespace utils {
                 context_switch(c);
                 c->task.state = TaskState::running;
             }
+            return *this;
         }
 
         ExternalTask* AnyFuture::get_taskrequest() {
@@ -546,7 +547,7 @@ namespace utils {
             return f;
         }
 
-                void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
+        void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
             ThreadToFiber self;
             auto r = wd->r;
             auto w = wd->w;

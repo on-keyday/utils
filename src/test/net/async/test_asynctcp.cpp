@@ -24,7 +24,7 @@ void test_asynctcp() {
             assert(co.state() != async::TaskState::invalid);
             size_t suspend = 0;
             auto begin = system_clock::now();
-            co.wait_or_suspend(ctx);
+            co.wait_until(ctx);
             auto end = system_clock::now();
             auto time = [&] {
                 return duration_cast<milliseconds>(end - begin);
