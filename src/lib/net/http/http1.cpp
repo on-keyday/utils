@@ -56,15 +56,6 @@ namespace utils {
                 wrap::string hostname;
             };
 
-            struct HttpSet {
-                static HeaderImpl* get(Header& p) {
-                    return p.impl;
-                }
-
-                static void set(HttpAsyncResponse& p, HttpAsyncResponseImpl* impl) {
-                    p.impl = impl;
-                }
-            };
         }  // namespace internal
 
         HttpResponse::HttpResponse(HttpResponse&& in) {

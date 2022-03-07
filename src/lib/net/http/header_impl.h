@@ -16,6 +16,16 @@
 namespace utils {
     namespace net {
         namespace internal {
+            struct HttpSet {
+                static HeaderImpl* get(Header& p) {
+                    return p.impl;
+                }
+
+                static void set(HttpAsyncResponse& p, HttpAsyncResponseImpl* impl) {
+                    p.impl = impl;
+                }
+            };
+
             struct HeaderImpl {
                 h1header::StatusCode code;
                 wrap::vector<std::pair<wrap::string, wrap::string>> order;

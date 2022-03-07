@@ -38,7 +38,8 @@ namespace utils {
                 struct StreamImpl {
                     std::int32_t id;
                     Status status;
-                    std::int64_t window = 0;
+                    std::int64_t recv_window = 0;
+                    std::int64_t send_window = 0;
                     net::internal::HeaderImpl h;
                     wrap::string remote_raw;
                     wrap::string local_raw;
@@ -55,18 +56,41 @@ namespace utils {
                     }
                 };
                 using HpackTable = wrap::queue<std::pair<wrap::string, wrap::string>>;
+                using Settings = wrap::hash_map<std::uint16_t, std::uint32_t>;
 
-                struct ConnectionImpl {
-                    HpackTable encode_table;
+                struct RecvState {
                     HpackTable decode_table;
                     std::int64_t window = 0;
-                    std::int32_t id_max = 0;
                     std::int32_t preproced_id = 0;
                     FrameType preproced_type = FrameType::settings;
+                    std::int32_t continuous_id = 0;
+                    Settings setting;
+                };
+
+                struct SendState {
+                    std::uint32_t window = 0;
+                    Settings setting;
+                };
+
+                void initial_setting(Settings& setting) {
+                    setting[k(SettingKey::table_size)] = 4096;
+                    setting[k(SettingKey::enable_push)] = 1;
+                    setting[k(SettingKey::max_concurrent)] = ~0;
+                    setting[k(SettingKey::initial_windows_size)] = 65535;
+                    setting[k(SettingKey::max_frame_size)] = 16384;
+                    setting[k(SettingKey::header_list_size)] = ~0;
+                }
+
+                struct ConnectionImpl {
+                    SendState send;
+                    RecvState recv;
+                    HpackTable encode_table;
+
+                    std::int32_t id_max = 0;
+
                     std::uint32_t max_table_size = 0;
                     wrap::hash_map<std::int32_t, Stream> streams;
-                    wrap::hash_map<std::uint16_t, std::uint32_t> setting;
-                    std::int32_t continuous_id = 0;
+
                     std::int32_t prev_ping = 0;
                     bool server = false;
 
@@ -80,12 +104,8 @@ namespace utils {
                     }
 
                     ConnectionImpl() {
-                        setting[k(SettingKey::table_size)] = 4096;
-                        setting[k(SettingKey::enable_push)] = 1;
-                        setting[k(SettingKey::max_concurrent)] = ~0;
-                        setting[k(SettingKey::initial_windows_size)] = 65535;
-                        setting[k(SettingKey::max_frame_size)] = 16384;
-                        setting[k(SettingKey::header_list_size)] = ~0;
+                        initial_setting(recv.setting);
+                        initial_setting(send.setting);
                     }
 
                     Stream* make_new_stream(int id) {
@@ -93,7 +113,8 @@ namespace utils {
                         ptr->impl = wrap::make_shared<StreamImpl>();
                         ptr->impl->id = id;
                         ptr->impl->status = Status::idle;
-                        ptr->impl->window = setting[(std::uint16_t)SettingKey::initial_windows_size];
+                        ptr->impl->send_window = send.setting[(std::uint16_t)SettingKey::initial_windows_size];
+                        ptr->impl->recv_window = recv.setting[(std::uint16_t)SettingKey::initial_windows_size];
                     }
 
                     Stream* get_stream(int id) {
@@ -120,7 +141,7 @@ namespace utils {
             }  // namespace internal
 
             H2Error decode_hpack(wrap::string& raw, net::internal::HeaderImpl& header, internal::ConnectionImpl& conn) {
-                auto err = hpack::decode(raw, conn.decode_table, header, conn.max_table_size);
+                auto err = hpack::decode(raw, conn.recv.decode_table, header, conn.max_table_size);
                 if (!err) {
                     return H2Error::compression;
                 }
@@ -131,29 +152,57 @@ namespace utils {
                 internal::ConnectionImpl& impl;
                 const Frame& frame;
                 ~LastUpdateConnection() {
-                    impl.preproced_id = frame.id;
-                    impl.preproced_type = frame.type;
+                    impl.recv.preproced_id = frame.id;
+                    impl.recv.preproced_type = frame.type;
                 }
             };
 
+            int Stream::id() const {
+                return impl->id;
+            }
+            std::uint8_t Stream::priority() const {
+                return impl->priority.weight;
+            }
+
+            std::int64_t Stream::window_size() const {
+                return impl->recv_window;
+            }
+
+            Status Stream::status() const {
+                return impl->status;
+            }
+
             H2Error Connection::update_recv(const Frame& frame) {
-                auto type = frame.type;
                 auto stream = impl->get_stream(frame.id);
-                if (frame.len > impl->setting[k(SettingKey::max_frame_size)]) {
+                if (frame.len > impl->recv.setting[k(SettingKey::max_frame_size)]) {
                     return H2Error::protocol;
                 }
                 LastUpdateConnection _{*impl, frame};
-                if (impl->continuous_id && frame.type != FrameType::continuous) {
+                if (impl->recv.continuous_id && frame.type != FrameType::continuous) {
                     return H2Error::protocol;
                 }
-                switch (type) {
+                switch (frame.type) {
+                    case FrameType::ping: {
+                        assert(frame.id == 0);
+                        assert(stream);
+                        auto& ping = static_cast<const PingFrame&>(frame);
+                        if (ping.flag & Flag::ack) {
+                            if (ping.opeque != impl->prev_ping) {
+                                return H2Error::ping_failed;
+                            }
+                        }
+                        return H2Error::none;
+                    }
                     case FrameType::data: {
                         assert(frame.id != 0);
                         assert(stream);
+                        if (stream->status() != Status::open && stream->status() != Status::half_closed_local) {
+                            return H2Error::protocol;
+                        }
                         auto& data = static_cast<const DataFrame&>(frame);
                         stream->impl->data.append(data.data);
-                        stream->impl->window -= data.data.size();
-                        impl->window -= data.data.size();
+                        stream->impl->recv_window -= data.data.size();
+                        impl->recv.window -= data.data.size();
                         if (data.flag & Flag::end_stream) {
                             stream->impl->status = Status::half_closed_remote;
                         }
@@ -178,29 +227,29 @@ namespace utils {
                             return decode_hpack(stream->impl->remote_raw, stream->impl->h, *impl);
                         }
                         else {
-                            impl->continuous_id = header.id;
+                            impl->recv.continuous_id = header.id;
                         }
                         return H2Error::none;
                     }
                     case FrameType::continuous: {
-                        if (frame.id != impl->preproced_id) {
+                        if (frame.id != impl->recv.preproced_id) {
                             return H2Error::protocol;
                         }
                         assert(stream);
                         auto& cont = static_cast<const Continuation&>(frame);
-                        if (impl->continuous_id == frame.id) {
+                        if (impl->recv.continuous_id == frame.id) {
                             stream->impl->remote_raw.append(cont.data);
                             if (cont.flag & Flag::end_headers) {
-                                impl->continuous_id = 0;
+                                impl->recv.continuous_id = 0;
                                 return decode_hpack(stream->impl->remote_raw, stream->impl->h, *impl);
                             }
                         }
                         else {
                             return H2Error::internal;
-                            auto to_add = impl->get_stream(impl->continuous_id);
+                            auto to_add = impl->get_stream(impl->recv.continuous_id);
                             stream->impl->local_raw.append(cont.data);
                             if (cont.flag & Flag::end_headers) {
-                                impl->continuous_id = 0;
+                                impl->recv.continuous_id = 0;
                             }
                             return H2Error::none;
                         }
@@ -209,11 +258,11 @@ namespace utils {
                     case FrameType::window_update: {
                         auto& window_update = static_cast<const WindowUpdateFrame&>(frame);
                         if (window_update.id == 0) {
-                            impl->window += window_update.increment;
+                            impl->send.window += window_update.increment;
                         }
                         else {
                             assert(stream);
-                            stream->impl->window += window_update.increment;
+                            stream->impl->send_window += window_update.increment;
                         }
                         return H2Error::none;
                     }
@@ -234,11 +283,11 @@ namespace utils {
                             if (!r.read(value)) {
                                 return H2Error::internal;
                             }
-                            auto& current = impl->setting[key];
+                            auto& current = impl->recv.setting[key];
                             if (key == (std::uint16_t)SettingKey::initial_windows_size) {
-                                impl->window = value - current + impl->window;
+                                impl->recv.window = value - current + impl->recv.window;
                                 for (auto& stream : impl->streams) {
-                                    auto& stwindow = stream.second.impl->window;
+                                    auto& stwindow = stream.second.impl->recv_window;
                                     stwindow = value - current + stwindow;
                                 }
                             }
@@ -264,19 +313,9 @@ namespace utils {
                         stream->impl->priority = prio.priority;
                         return H2Error::none;
                     }
-                    case FrameType::ping: {
-                        assert(frame.id == 0);
-                        assert(stream);
-                        auto& ping = static_cast<const PingFrame&>(frame);
-                        if (ping.flag & Flag::ack) {
-                            if (ping.opeque != impl->prev_ping) {
-                                return H2Error::ping_failed;
-                            }
-                        }
-                        return H2Error::none;
-                    }
+
                     case FrameType::push_promise: {
-                        if (!impl->setting[k(SettingKey::enable_push)]) {
+                        if (!impl->recv.setting[k(SettingKey::enable_push)]) {
                             return H2Error::protocol;
                         }
                         assert(frame.id != 0);
@@ -290,10 +329,78 @@ namespace utils {
                             return H2Error::protocol;
                         }
                         new_stream->impl->status = Status::reserved_remote;
-                        impl->continuous_id = promise.promise;
+                        impl->recv.continuous_id = promise.promise;
                         return H2Error::none;
                     }
                     default: {
+                        return H2Error::none;
+                    }
+                }
+            }
+
+            H2Error Connection::update_send(const Frame& frame) {
+                auto stream = impl->get_stream(frame.id);
+                switch (frame.type) {
+                    case FrameType::data: {
+                        assert(stream);
+                        if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
+                            return H2Error::protocol;
+                        }
+                        stream->impl->send_window -= frame.len;
+                        return H2Error::none;
+                    }
+                    case FrameType::header: {
+                        assert(stream);
+                        if (stream->status() != Status::idle) {
+                            return H2Error::protocol;
+                        }
+                    }
+                    case FrameType::window_update: {
+                        auto& update = static_cast<const WindowUpdateFrame&>(frame);
+                        if (frame.id == 0) {
+                            impl->recv.window += update.increment;
+                        }
+                        else {
+                            stream->impl->recv_window += update.increment;
+                        }
+                        return H2Error::none;
+                    }
+                    case FrameType::rst_stream: {
+                        auto& rst = static_cast<const RstStreamFrame&>(frame);
+                        stream->impl->code = rst.code;
+                        stream->impl->status = Status::closed;
+                        return H2Error::none;
+                    }
+                    default: {
+                        return H2Error::internal;
+                    }
+                    case FrameType::settings: {
+                        assert(frame.id == 0);
+                        assert(frame.len % 6 == 0);
+                        if (frame.flag & Flag::ack) {
+                            return H2Error::none;
+                        }
+                        auto& settings = static_cast<const SettingsFrame&>(frame);
+                        internal::FrameReader<const wrap::string&> r(settings.setting);
+                        while (r.pos < r.ref.size()) {
+                            std::uint16_t key = 0;
+                            std::uint32_t value = 0;
+                            if (!r.read(key)) {
+                                return H2Error::internal;
+                            }
+                            if (!r.read(value)) {
+                                return H2Error::internal;
+                            }
+                            auto& current = impl->send.setting[key];
+                            if (key == (std::uint16_t)SettingKey::initial_windows_size) {
+                                impl->recv.window = value - current + impl->recv.window;
+                                for (auto& stream : impl->streams) {
+                                    auto& stwindow = stream.second.impl->recv_window;
+                                    stwindow = value - current + stwindow;
+                                }
+                            }
+                            current = value;
+                        }
                         return H2Error::none;
                     }
                 }

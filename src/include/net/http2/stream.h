@@ -25,7 +25,14 @@ namespace utils {
                 closed,
                 open,
                 half_closed_remote,
+                half_closed_local,
                 reserved_remote,
+            };
+
+            enum class StreamError {
+                none,
+                invalid_status,
+                setting_was_ignored,
             };
 
             struct Connection;
@@ -46,6 +53,9 @@ namespace utils {
                 Stream* stream(int id);
 
                 H2Error update_recv(const Frame& frame);
+                H2Error update_send(const Frame& frame);
+
+                bool make_header(Header&& h, HeaderFrame& frame);
 
                private:
                 wrap::shared_ptr<internal::ConnectionImpl> impl;
