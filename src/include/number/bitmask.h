@@ -28,7 +28,7 @@ namespace utils {
         template <class T, size_t bit>
         constexpr T bit_off = T(~bit_on<Us<T>, bit>);
 
-        static_assert((std::numeric_limits<std::uint32_t>::max)() == msb_off<std::uint32_t> | msb_on<std::uint32_t>,
+        static_assert((std::numeric_limits<std::uint32_t>::max)() == (msb_off<std::uint32_t> | msb_on<std::uint32_t>),
                       "implementation failed");
 
     }  // namespace number

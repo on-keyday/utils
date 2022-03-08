@@ -129,6 +129,7 @@ PRIVATE
 "src/lib/net/async/async_tcp.cpp"
 "src/lib/net/ssl/ssl_async.cpp"
 "src/lib/net/http2/conn.cpp"
+"src/lib/net/http2/stream_update.cpp"
 )
 #if(WIN32)
 target_sources(utils

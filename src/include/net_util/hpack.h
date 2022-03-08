@@ -649,8 +649,8 @@ namespace utils {
                 struct IntegerCoder {
                     using string_t = String;
 
-                    template <std::uint32_t n>
-                    static HpkErr decode(endian::Reader<string_t>& se, size_t& sz, std::uint8_t& firstmask) {
+                    template <std::uint32_t n, class T>
+                    static HpkErr decode(endian::Reader<T>& se, size_t& sz, std::uint8_t& firstmask) {
                         static_assert(n > 0 && n <= 8, "invalid range");
                         constexpr unsigned char msk = static_cast<std::uint8_t>(~0) >> (8 - n);
                         std::uint8_t tmp = 0;
@@ -700,10 +700,10 @@ namespace utils {
                     }
                 };
 
-                template <class String, class In>
+                template <class String>
                 struct HpackStringCoder {
                     using string_t = String;
-
+                    template <class In>
                     static void encode(endian::Writer<In>& se, const string_t& value) {
                         if (value.size() > huffman_coder::gethuffmanlen(value)) {
                             string_t enc = HuffmanCoder<String>::encode(value);
@@ -716,11 +716,12 @@ namespace utils {
                         }
                     }
 
+                    template <class In>
                     static HpkErr decode(string_t& str, endian::Reader<In>& se) {
                         size_t sz = 0;
                         unsigned char mask = 0;
                         TRY(IntegerCoder<In>::template decode<7>(se, sz, mask));
-                        TRY(se.read_byte(str, sz));
+                        TRY(se.template read_seq<std::uint8_t>(str, sz));
                         if (mask & 0x80) {
                             string_t decoded;
                             TRY(HuffmanCoder<String>::decode(decoded, str));
@@ -733,7 +734,7 @@ namespace utils {
                 template <class String, class Table, class Header>
                 struct Hpack {
                     using string_coder = HpackStringCoder<String>;
-                    using integer_coder = HapckIntegerCoder<String>;
+                    using integer_coder = IntegerCoder<String>;
                     using string_t = String;
                     using table_t = Table;
                     using header_t = Header;
@@ -830,8 +831,8 @@ namespace utils {
                             return true;
                         };
                         endian::Reader<string_t&> se(src);
-                        while (!se.base_reader().ceof()) {
-                            unsigned char tmp = se.base_reader().achar();
+                        while (!se.seq.eos()) {
+                            unsigned char tmp = se.seq.current();
                             string_t key, value;
                             auto read_two_literal = [&]() -> HpkErr {
                                 TRY(string_coder::decode(key, se));

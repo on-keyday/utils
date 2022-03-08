@@ -11,7 +11,9 @@
 #include "../../../include/net/http/header.h"
 #include "../../../include/wrap/lite/vector.h"
 #include "../../../include/wrap/lite/string.h"
+#include "../../../include/net/http/http1.h"
 #include <algorithm>
+#include "../../../include/helper/equal.h"
 
 namespace utils {
     namespace net {
