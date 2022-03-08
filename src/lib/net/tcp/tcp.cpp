@@ -58,6 +58,10 @@ namespace utils {
                     ptr->already_set = true;
                 }
             }
+#else
+            struct TCPEpoll {
+                async::AnyFuture f;
+            };
 #endif
 
             struct TCPImpl {
@@ -68,6 +72,8 @@ namespace utils {
                 wrap::weak_ptr<TCPConn> conn;
 #ifdef _WIN32
                 TCPIOCP iocp;
+#else
+                TCPEpoll pol;
 #endif
 
                 void close() {
@@ -152,6 +158,13 @@ namespace utils {
                 impl->iocp.info = nullptr;
                 impl->iocp.f.clear();
                 ctx.set_value(info);
+#else
+                while (true) {
+                    auto err = ::recv(impl->sock, ptr, size, 0);
+                    if (err == -1 && errno == EAGAIN) {
+                        impl->pol.f = ctx.clone();
+                    }
+                }
 #endif
             });
         }
