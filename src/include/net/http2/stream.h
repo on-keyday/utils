@@ -10,6 +10,7 @@
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
 #include "conn.h"
+#include "../http/http1.h"
 
 namespace utils {
     namespace net {

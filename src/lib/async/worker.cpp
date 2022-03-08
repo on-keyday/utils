@@ -33,12 +33,12 @@ namespace utils {
 #ifdef _WIN32
         using native_t = void*;
         // platform dependency
-        void context_switch(native_t handle, native_t) {
+        void context_switch(native_t handle, native_t, Context*) {
             SwitchToFiber(handle);
         }
 
-        void context_switch(auto& data) {
-            context_switch(data->roothandle, nullptr);
+        void context_switch(auto& data, Context*) {
+            context_switch(data->roothandle, nullptr, nullptr);
             check_term(data);
         }
 
@@ -66,9 +66,19 @@ namespace utils {
             }
         };
 
-        void set_roothandle(native_t& handle, ThreadToFiber& self) {
-            handle = self.roothandle;
+        template <class F>
+        bool wait_on_context(F& future) {
+            if (::IsThreadAFiber()) {
+                auto data = ::GetFiberData();
+                if (data) {
+                    auto ctx = static_cast<Context*>(data);
+                    future.wait_until(*ctx);
+                    return true;
+                }
+            }
+            return false;
         }
+
 #else
 
         const std::size_t page_size_ = ::getpagesize();
@@ -189,11 +199,15 @@ namespace utils {
 
         using native_t = native_context*;
 
-        void context_switch(native_t to, native_t from) {
-            // glock_.lock();
+        static Context*& current_context() {
+            thread_local Context* ptr = nullptr;
+            return ptr;
+        }
+
+        void context_switch(native_t to, native_t from, Context* ptr) {
             auto res = ::swapcontext(&from->ctx, &to->ctx);
             assert(res == 0);
-            // glock_.unlock();
+            current_context() = ptr;
         }
 
         void context_switch(auto& data) {
@@ -242,9 +256,10 @@ namespace utils {
             }
         };
 
-        void set_roothandle(native_t& handle, ThreadToFiber& self) {
-            //::getcontext(&self.roothandle->ctx);
-            handle = self.roothandle;
+        template <class F>
+        bool wait_on_context(F& future) {
+            current_context();
+            return false;
         }
 #endif
         constexpr auto default_priority = 0x7f;
@@ -352,9 +367,12 @@ namespace utils {
 
         void DoTask(void* pdata) {
             Context* ctx = static_cast<Context*>(pdata);
+#ifndef _WIN32
+            current_context() = ctx;
+#endif
             auto data = internal::ContextHandle::get(*ctx).get();
             if (data->task.state == TaskState::term) {
-                context_switch(data);
+                context_switch(data, nullptr);
                 std::terminate();  // unreachable
             }
             data->task.state = TaskState::running;
@@ -368,7 +386,7 @@ namespace utils {
                 data->task.except = std::current_exception();
                 data->task.state = TaskState::except;
             }
-            context_switch(data);
+            context_switch(data, nullptr);
             std::terminate();  // unreachable
         }
 
@@ -419,7 +437,7 @@ namespace utils {
                     data->ptr = c->self;
                     append_to_wait(c.get());
                 }
-                context_switch(c);
+                context_switch(c, &ctx);
                 c->task.state = TaskState::running;
             }
             return *this;
@@ -435,6 +453,9 @@ namespace utils {
 
         void AnyFuture::wait() {
             if (!data || not_own) return;
+            if (wait_on_context(*this)) {
+                return;
+            }
             data->waiter_flag.wait(true);
         }
 
@@ -464,7 +485,7 @@ namespace utils {
 
         void Context::suspend() {
             data->task.state = TaskState::suspend;
-            context_switch(data);
+            context_switch(data, this);
             data->task.state = TaskState::running;
         }
 
@@ -498,7 +519,7 @@ namespace utils {
             auto& c = make_fiber(event, std::move(task), data->work);
             c->ptr = data->self;
             data->work->w << std::move(event);
-            context_switch(data);
+            context_switch(data, this);
             data->task.state = TaskState::running;
             return true;
         }
@@ -510,7 +531,7 @@ namespace utils {
             append_to_wait(data.get());
             data->outer = &task;
             data->outer.notify_all();
-            context_switch(data);
+            context_switch(data, this);
             data->outer = nullptr;
             data->task.state = TaskState::running;
         }
@@ -554,13 +575,13 @@ namespace utils {
             r.set_blocking(true);
             Event event;
             auto handle_fiber = [&](Event& place, internal::ContextData* c) {
-                set_roothandle(c->roothandle, self);
+                c->roothandle = self.roothandle;
                 c->task.placedata = &place;
                 if (wd->diepool) {
                     c->task.state = TaskState::term;
                 }
                 wd->accepting--;
-                context_switch(c->task.handle, c->roothandle);
+                context_switch(c->task.handle, c->roothandle, nullptr);
                 wd->accepting++;
                 c->task.placedata = nullptr;
                 c->roothandle = nullptr;
@@ -609,9 +630,9 @@ namespace utils {
                         wd->lock_.unlock();
                         if (tmp.size()) {
                             for (auto&& w : std::move(tmp)) {
-                                auto ctx = w.second.type_assert<Context>();
+                                auto ctx = w.second.type_assert<wrap::shared_ptr<Context>>();
                                 if (ctx) {
-                                    handle_fiber(w.second, internal::ContextHandle::get(*ctx).get());
+                                    handle_fiber(w.second, internal::ContextHandle::get(**ctx).get());
                                 }
                             }
                             tmp.clear();
