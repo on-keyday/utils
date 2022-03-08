@@ -72,6 +72,7 @@ namespace utils {
                     std::uint32_t window = 0;
                     std::int32_t preproced_id = 0;
                     FrameType preproced_type = FrameType::settings;
+                    std::int32_t continuous_id = 0;
                     Settings setting;
                 };
 
@@ -92,6 +93,7 @@ namespace utils {
 
                     std::uint32_t max_table_size = 0;
                     wrap::hash_map<std::int32_t, Stream> streams;
+                    wrap::string debug_data;
 
                     std::int32_t prev_ping = 0;
                     bool server = false;
@@ -328,6 +330,7 @@ namespace utils {
                         assert(frame.id == 0);
                         auto& goaway = static_cast<const GoAwayFrame&>(frame);
                         impl->code = goaway.code;
+                        impl->debug_data = goaway.data;
                         return H2Error::none;
                     }
                     case FrameType::priority: {
@@ -352,7 +355,9 @@ namespace utils {
                             return H2Error::protocol;
                         }
                         new_stream->impl->status = Status::reserved_remote;
-                        impl->recv.continuous_id = promise.promise;
+                        if (!(frame.flag & Flag::end_headers)) {
+                            impl->recv.continuous_id = promise.promise;
+                        }
                         return H2Error::none;
                     }
                     default: {
@@ -362,7 +367,14 @@ namespace utils {
             }
 
             H2Error Connection::update_send(const Frame& frame) {
+                if (frame.len > impl->recv.setting[k(SettingKey::max_frame_size)]) {
+                    return H2Error::protocol;
+                }
+                LastUpdateConnection _{impl->send, frame};
                 auto stream = impl->get_stream(frame.id);
+                if (impl->send.continuous_id && frame.type != FrameType::continuous) {
+                    return H2Error::protocol;
+                }
                 switch (frame.type) {
                     case FrameType::data: {
                         assert(stream);
@@ -403,6 +415,18 @@ namespace utils {
                                 stream->impl->status = Status::half_closed_local;
                             }
                         }
+                        if (!(frame.flag & Flag::end_headers)) {
+                            impl->send.continuous_id = frame.id;
+                        }
+                        return H2Error::none;
+                    }
+                    case FrameType::continuous: {
+                        if (frame.id != impl->send.continuous_id) {
+                            return H2Error::protocol;
+                        }
+                        if (frame.flag & Flag::end_headers) {
+                            impl->send.continuous_id = 0;
+                        }
                         return H2Error::none;
                     }
                     case FrameType::window_update: {
@@ -421,7 +445,11 @@ namespace utils {
                         stream->impl->status = Status::closed;
                         return H2Error::none;
                     }
-
+                    case FrameType::goaway: {
+                        auto& goaway = static_cast<const GoAwayFrame&>(frame);
+                        impl->code = goaway.code;
+                        impl->debug_data = goaway.data;
+                    }
                     case FrameType::settings: {
                         assert(frame.id == 0);
                         assert(frame.len % 6 == 0);
@@ -440,7 +468,7 @@ namespace utils {
                                 return H2Error::internal;
                             }
                             auto& current = impl->send.setting[key];
-                            if (key == (std::uint16_t)SettingKey::initial_windows_size) {
+                            if (key == k(SettingKey::initial_windows_size)) {
                                 impl->send.window = value - current + impl->send.window;
                                 for (auto& stream : impl->streams) {
                                     auto& stwindow = stream.second.impl->send_window;
@@ -456,6 +484,25 @@ namespace utils {
                         assert(stream);
                         auto& prio = static_cast<const PriorityFrame&>(frame);
                         stream->impl->priority = prio.priority;
+                        return H2Error::none;
+                    }
+                    case FrameType::push_promise: {
+                        if (!impl->send.setting[k(SettingKey::enable_push)]) {
+                            return H2Error::protocol;
+                        }
+                        assert(stream);
+                        if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
+                            return H2Error::protocol;
+                        }
+                        auto& promise = static_cast<const PushPromiseFrame&>(frame);
+                        auto new_stream = impl->get_stream(promise.promise);
+                        if (new_stream->status() != Status::idle) {
+                            return H2Error::protocol;
+                        }
+                        new_stream->impl->status = Status::reserved_local;
+                        if (!(frame.flag & Flag::end_headers)) {
+                            impl->recv.continuous_id = promise.promise;
+                        }
                         return H2Error::none;
                     }
                     default: {
