@@ -210,8 +210,8 @@ namespace utils {
             current_context() = ptr;
         }
 
-        void context_switch(auto& data) {
-            context_switch(data->roothandle, data->task.handle);
+        void context_switch(auto& data, Context* ptr) {
+            context_switch(data->roothandle, data->task.handle, ptr);
             check_term(data);
         }
 
@@ -258,7 +258,10 @@ namespace utils {
 
         template <class F>
         bool wait_on_context(F& future) {
-            current_context();
+            auto ctx = current_context();
+            if (ctx) {
+                future.wait_until(*ctx);
+            }
             return false;
         }
 #endif

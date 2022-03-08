@@ -47,9 +47,11 @@ namespace utils {
                     auto fn = CompletionCallback<Fn, bool>{cb};
                     register_callback_impl(fn);
                 }
-
+#ifdef _WIN32
                 void wait_callbacks(size_t maxcount, int wait);
-
+#else
+                void wait_callbacks(size_t, int) {}
+#endif
                private:
                 IOCPObject();
                 ~IOCPObject();
@@ -57,8 +59,13 @@ namespace utils {
                 void register_callback_impl(CCBRegistered cb);
                 IOCPContext* ctx;
             };
+#ifdef _WIN32
             DLL IOCPObject* STDCALL get_iocp();
-
+#else
+            inline IOCPObject* get_iocp() {
+                return nullptr;
+            }
+#endif
         }  // namespace windows
 
     }  // namespace platform

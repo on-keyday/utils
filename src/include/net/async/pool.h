@@ -17,6 +17,8 @@ namespace utils {
         DLL async::TaskPool& STDCALL get_pool();
 #ifdef _WIN32
         DLL void STDCALL set_iocompletion_thread(bool run);
+#else
+        inline void set_iocompletion_thread(bool) {}
 #endif
     }  // namespace net
 }  // namespace utils

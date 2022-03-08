@@ -79,12 +79,12 @@ void test_asynctcp2() {
     n.wait();
     e.wait();
     cout << "real\n";
-    cout << timer.delta();
+    cout << timer.delta().count() << "ms";
     cout << "\ntotal\n"
          << totaldelta << "ms\n";
     for (auto& p : result) {
         cout << "host " << p.first << "\n";
-        cout << "time " << p.second << "\n";
+        cout << "time " << p.second.count() << "ms\n";
     }
 }
 

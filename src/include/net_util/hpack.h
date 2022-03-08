@@ -694,7 +694,7 @@ namespace utils {
                                 se.write(std::uint8_t((sz % 0x80) | 0x80));
                                 sz /= 0x80;
                             }
-                            sewrite(std::uint8_t(sz));
+                            se.write(std::uint8_t(sz));
                         }
                         return true;
                     }
@@ -705,7 +705,7 @@ namespace utils {
                     using string_t = String;
                     template <class In>
                     static void encode(endian::Writer<In>& se, const string_t& value) {
-                        if (value.size() > huffman_coder::gethuffmanlen(value)) {
+                        if (value.size() > HuffmanCoder<String>::gethuffmanlen(value)) {
                             string_t enc = HuffmanCoder<String>::encode(value);
                             IntegerCoder<In>::template encode<7>(se, enc.size(), 0x80);
                             se.write_seq(enc);

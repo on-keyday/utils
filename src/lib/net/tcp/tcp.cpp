@@ -30,7 +30,7 @@ namespace utils {
                 platform::windows::CompletionType type = platform::windows::CompletionType::tcp_read;
                 ReadInfo* info = nullptr;
                 async::AnyFuture f;
-                wrap::weak_ptr<TCPConn> conn;
+
                 bool already_set = false;
             };
 
@@ -65,6 +65,7 @@ namespace utils {
                 addrinfo* selected = nullptr;
                 ::SOCKET sock = invalid_socket;
                 bool connected = false;
+                wrap::weak_ptr<TCPConn> conn;
 #ifdef _WIN32
                 TCPIOCP iocp;
 #endif
@@ -126,7 +127,7 @@ namespace utils {
             if (!ptr || !size) {
                 return nullptr;
             }
-            return get_pool().start<ReadInfo>([=, this, lock = impl->iocp.conn.lock()](async::Context& ctx) {
+            return get_pool().start<ReadInfo>([=, this, lock = impl->conn.lock()](async::Context& ctx) {
 #ifdef _WIN32
                 ::WSABUF buf;
                 buf.buf = ptr;
@@ -164,7 +165,13 @@ namespace utils {
                 t = write(ptr, size, nullptr);
             }
             if (t == State::failed) {
-                return async::Future{WriteInfo{.byte = ptr, .size = size, .err = (int)::GetLastError()}};
+                return async::Future{WriteInfo{.byte = ptr, .size = size, .err =
+#ifdef _WIN32
+                                                                              (int)::GetLastError()
+#else
+                                                                              errno
+#endif
+                }};
             }
             return async::Future{WriteInfo{.byte = ptr, .size = size, .written = size}};
         }

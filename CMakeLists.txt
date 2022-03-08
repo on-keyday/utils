@@ -189,6 +189,7 @@ target_link_libraries(http1 libssl.so libcrypto.so Threads::Threads)
 if(UTILS_BUILD_SHARED_LIBS)
 target_link_libraries(utils libssl.so libcrypto.so)
 endif()
+target_link_libraries(asynctcp2 Threads::Threads)
 endif()
 
 if(WIN32)
