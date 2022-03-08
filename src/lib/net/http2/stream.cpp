@@ -68,7 +68,11 @@ namespace utils {
                 };
 
                 struct SendState {
+                    HpackTable encode_table;
                     std::uint32_t window = 0;
+
+                    std::int32_t preproced_id = 0;
+                    FrameType preproced_type = FrameType::settings;
                     Settings setting;
                 };
 
@@ -84,7 +88,6 @@ namespace utils {
                 struct ConnectionImpl {
                     SendState send;
                     RecvState recv;
-                    HpackTable encode_table;
 
                     std::int32_t id_max = 0;
 
@@ -148,12 +151,13 @@ namespace utils {
                 return H2Error::none;
             }
 
+            template <class Impl>
             struct LastUpdateConnection {
-                internal::ConnectionImpl& impl;
+                Impl& impl;
                 const Frame& frame;
                 ~LastUpdateConnection() {
-                    impl.recv.preproced_id = frame.id;
-                    impl.recv.preproced_type = frame.type;
+                    impl.preproced_id = frame.id;
+                    impl.preproced_type = frame.type;
                 }
             };
 
@@ -177,7 +181,7 @@ namespace utils {
                 if (frame.len > impl->recv.setting[k(SettingKey::max_frame_size)]) {
                     return H2Error::protocol;
                 }
-                LastUpdateConnection _{*impl, frame};
+                LastUpdateConnection _{impl->recv, frame};
                 if (impl->recv.continuous_id && frame.type != FrameType::continuous) {
                     return H2Error::protocol;
                 }
@@ -204,7 +208,12 @@ namespace utils {
                         stream->impl->recv_window -= data.data.size();
                         impl->recv.window -= data.data.size();
                         if (data.flag & Flag::end_stream) {
-                            stream->impl->status = Status::half_closed_remote;
+                            if (stream->status() == Status::half_closed_local) {
+                                stream->impl->status = Status::closed;
+                            }
+                            else {
+                                stream->impl->status = Status::half_closed_remote;
+                            }
                         }
                         return H2Error::none;
                     }
@@ -221,7 +230,12 @@ namespace utils {
                             stream->impl->priority = header.priority;
                         }
                         if (header.flag & Flag::end_stream) {
-                            stream->impl->status = Status::half_closed_remote;
+                            if (stream->status() == Status::half_closed_local) {
+                                stream->impl->status = Status::closed;
+                            }
+                            else {
+                                stream->impl->status = Status::half_closed_remote;
+                            }
                         }
                         if (header.flag & Flag::end_headers) {
                             return decode_hpack(stream->impl->remote_raw, stream->impl->h, *impl);
@@ -347,6 +361,14 @@ namespace utils {
                             return H2Error::protocol;
                         }
                         stream->impl->send_window -= frame.len;
+                        if (frame.flag & Flag::end_stream) {
+                            if (stream->status() == Status::half_closed_remote) {
+                                stream->impl->status = Status::closed;
+                            }
+                            else {
+                                stream->impl->status = Status::half_closed_local;
+                            }
+                        }
                         return H2Error::none;
                     }
                     case FrameType::header: {
@@ -371,9 +393,7 @@ namespace utils {
                         stream->impl->status = Status::closed;
                         return H2Error::none;
                     }
-                    default: {
-                        return H2Error::internal;
-                    }
+
                     case FrameType::settings: {
                         assert(frame.id == 0);
                         assert(frame.len % 6 == 0);
@@ -393,15 +413,18 @@ namespace utils {
                             }
                             auto& current = impl->send.setting[key];
                             if (key == (std::uint16_t)SettingKey::initial_windows_size) {
-                                impl->recv.window = value - current + impl->recv.window;
+                                impl->send.window = value - current + impl->send.window;
                                 for (auto& stream : impl->streams) {
-                                    auto& stwindow = stream.second.impl->recv_window;
+                                    auto& stwindow = stream.second.impl->send_window;
                                     stwindow = value - current + stwindow;
                                 }
                             }
                             current = value;
                         }
                         return H2Error::none;
+                    }
+                    default: {
+                        return H2Error::internal;
                     }
                 }
             }
