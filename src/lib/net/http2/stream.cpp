@@ -70,7 +70,6 @@ namespace utils {
                 struct SendState {
                     HpackTable encode_table;
                     std::uint32_t window = 0;
-
                     std::int32_t preproced_id = 0;
                     FrameType preproced_type = FrameType::settings;
                     Settings setting;
@@ -88,7 +87,7 @@ namespace utils {
                 struct ConnectionImpl {
                     SendState send;
                     RecvState recv;
-
+                    std::uint32_t code = 0;
                     std::int32_t id_max = 0;
 
                     std::uint32_t max_table_size = 0;
@@ -221,11 +220,16 @@ namespace utils {
                         assert(frame.id != 0);
                         assert(stream);
                         auto& header = static_cast<const HeaderFrame&>(frame);
-                        if (stream->status() != Status::idle) {
+                        if (stream->status() != Status::idle && stream->status() != Status::reserved_remote) {
                             return H2Error::protocol;
                         }
                         stream->impl->remote_raw.append(header.data);
-                        stream->impl->status = Status::open;
+                        if (stream->status() == Status::idle) {
+                            stream->impl->status = Status::open;
+                        }
+                        else {
+                            stream->impl->status = Status::half_closed_local;
+                        }
                         if (header.flag & Flag::priority) {
                             stream->impl->priority = header.priority;
                         }
@@ -259,9 +263,9 @@ namespace utils {
                             }
                         }
                         else {
-                            return H2Error::internal;
+                            return H2Error::internal;  // unsafe implementation
                             auto to_add = impl->get_stream(impl->recv.continuous_id);
-                            stream->impl->local_raw.append(cont.data);
+                            to_add->impl->local_raw.append(cont.data);
                             if (cont.flag & Flag::end_headers) {
                                 impl->recv.continuous_id = 0;
                             }
@@ -320,6 +324,12 @@ namespace utils {
                         stream->impl->status = Status::closed;
                         return H2Error::none;
                     }
+                    case FrameType::goaway: {
+                        assert(frame.id == 0);
+                        auto& goaway = static_cast<const GoAwayFrame&>(frame);
+                        impl->code = goaway.code;
+                        return H2Error::none;
+                    }
                     case FrameType::priority: {
                         assert(frame.id != 0);
                         assert(stream);
@@ -327,7 +337,6 @@ namespace utils {
                         stream->impl->priority = prio.priority;
                         return H2Error::none;
                     }
-
                     case FrameType::push_promise: {
                         if (!impl->recv.setting[k(SettingKey::enable_push)]) {
                             return H2Error::protocol;
@@ -373,9 +382,28 @@ namespace utils {
                     }
                     case FrameType::header: {
                         assert(stream);
-                        if (stream->status() != Status::idle) {
+                        if (stream->status() != Status::idle && stream->status() != Status::reserved_local) {
                             return H2Error::protocol;
                         }
+                        auto& h = static_cast<const HeaderFrame&>(frame);
+                        if (stream->status() == Status::idle) {
+                            stream->impl->status = Status::open;
+                        }
+                        else {
+                            stream->impl->status = Status::half_closed_remote;
+                        }
+                        if (frame.flag & Flag::priority) {
+                            stream->impl->priority = h.priority;
+                        }
+                        if (frame.flag & Flag::end_stream) {
+                            if (stream->status() == Status::half_closed_remote) {
+                                stream->impl->status = Status::closed;
+                            }
+                            else {
+                                stream->impl->status = Status::half_closed_local;
+                            }
+                        }
+                        return H2Error::none;
                     }
                     case FrameType::window_update: {
                         auto& update = static_cast<const WindowUpdateFrame&>(frame);
@@ -421,6 +449,13 @@ namespace utils {
                             }
                             current = value;
                         }
+                        return H2Error::none;
+                    }
+                    case FrameType::priority: {
+                        assert(frame.id != 0);
+                        assert(stream);
+                        auto& prio = static_cast<const PriorityFrame&>(frame);
+                        stream->impl->priority = prio.priority;
                         return H2Error::none;
                     }
                     default: {

@@ -27,6 +27,7 @@ namespace utils {
                 half_closed_remote,
                 half_closed_local,
                 reserved_remote,
+                reserved_local,
             };
 
             enum class StreamError {
