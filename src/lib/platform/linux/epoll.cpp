@@ -6,17 +6,19 @@
 */
 
 
+#ifdef __linux__
 #include "../../../include/platform/linux/epoll.h"
 
 #include <sys/epoll.h>
 #include <unistd.h>
 #include <cassert>
-#include <cstdint>
 #include <cerrno>
+
+#include "../../../include/wrap/lite/vector.h"
 
 namespace utils {
     namespace platform {
-        namespace linux {
+        namespace linuxd {
             static int epoll_fd = ~0;
 
             void init_epoll() {
@@ -28,7 +30,7 @@ namespace utils {
                 ::close(epoll_fd);
             }
 
-            int regiseter_handle(int fd, std::uint32_t eventflag, void* userdata) {
+            int Epoller::register_handle(int fd, std::uint32_t eventflag, void* userdata) {
                 epoll_event event;
                 event.events = eventflag;
                 event.data.fd = fd;
@@ -36,7 +38,7 @@ namespace utils {
                 return ::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event);
             }
 
-            void remove_handle(int fd) {
+            void Epoller::remove_handle(int fd) {
                 ::epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
             }
 
@@ -48,6 +50,41 @@ namespace utils {
                     fn(events[i].data.ptr, events[i].events);
                 }
             }
-        }  // namespace linux
+
+            wrap::vector<EpollCallback> callbacks;
+
+            void wait_callback(std::uint32_t maxcount, int wait) {
+                if (maxcount > 64) {
+                    maxcount = 64;
+                }
+                wait_event(
+                    [](void* ptr, std::uint32_t events) {
+                        for (auto& callback : callbacks) {
+                            if (callback.call(ptr, events)) {
+                                return;
+                            }
+                        }
+                    },
+                    maxcount, wait);
+            }
+
+            void Epoller::register_callback_impl(EpollCallback cb) {
+                callbacks.push_back(std::move(cb));
+            }
+
+            Epoller::Epoller() {
+                init_epoll();
+            }
+
+            Epoller::~Epoller() {
+                delete_epoll();
+            }
+
+            Epoller* get_poller() {
+                static Epoller poller;
+                return &poller;
+            }
+        }  // namespace linuxd
     }      // namespace platform
 }  // namespace utils
+#endif

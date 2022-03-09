@@ -12,10 +12,14 @@
 #include "../../../include/net/core/platform.h"
 #include "../../../include/net/core/init_net.h"
 #ifdef _WIN32
-//#define USE_IOCP
+#include "../../../include/platform/windows/io_completetion_port.h"
+#endif
+#ifdef __linux__
+#include "../../../include/platform/linux/epoll.h"
+#include <sys/epoll.h>
 #endif
 //#ifdef USE_IOCP
-#include "../../../include/platform/windows/io_completetion_port.h"
+
 //#endif
 
 #include "../../../include/net/async/pool.h"
@@ -60,8 +64,34 @@ namespace utils {
             }
 #else
             struct TCPEpoll {
+                std::uint32_t polltype = 1;
                 async::AnyFuture f;
+                bool already_set = false;
             };
+
+            auto tcp_callback() {
+                auto epoll = platform::linuxd::get_poller();
+                epoll->register_callback([](void* ptr, std::uint32_t event) {
+                    auto po = static_cast<TCPEpoll*>(ptr);
+                    if (!po || po->polltype != 1) {
+                        return false;
+                    }
+                    auto task = po->f.get_taskrequest();
+                    if (task) {
+                        task->complete();
+                    }
+                    return true;
+                });
+                return epoll;
+            }
+
+            void tcp_epoll_init(SOCKET sock, TCPEpoll* ptr) {
+                static auto epoll = tcp_callback();
+                if (ptr && !ptr->already_set) {
+                    epoll->register_handle(sock, EPOLLIN | EPOLLET, ptr);
+                    ptr->already_set = true;
+                }
+            }
 #endif
 
             struct TCPImpl {
@@ -134,15 +164,16 @@ namespace utils {
                 return nullptr;
             }
             return get_pool().start<ReadInfo>([=, this, lock = impl->conn.lock()](async::Context& ctx) {
+                ReadInfo info;
+                info.byte = ptr;
+                info.size = size;
 #ifdef _WIN32
                 ::WSABUF buf;
                 buf.buf = ptr;
                 buf.len = size;
                 ::DWORD red, flag;
                 internal::tcp_iocp_init(impl->sock, &impl->iocp);
-                ReadInfo info;
-                info.byte = ptr;
-                info.size = size;
+
                 impl->iocp.info = &info;
                 impl->iocp.f = ctx.clone();
                 auto res = ::WSARecv(impl->sock, &buf, 1, &red, &flag, &impl->iocp.ol, nullptr);
@@ -159,11 +190,18 @@ namespace utils {
                 impl->iocp.f.clear();
                 ctx.set_value(info);
 #else
+                impl->pol.f = ctx.clone();
                 while (true) {
                     auto err = ::recv(impl->sock, ptr, size, 0);
-                    if (err == -1 && errno == EAGAIN) {
-                        impl->pol.f = ctx.clone();
+                    if (err == -1) {
+                        if (errno == EWOULDBLOCK) {
+                            ctx.externaltask_wait();
+                            continue;
+                        }
+                        info.err = errno;
+                        return ctx.set_value(info);
                     }
+                    return ctx.set_value(info);
                 }
 #endif
             });
@@ -283,9 +321,7 @@ namespace utils {
                 auto conn = wrap::make_shared<TCPConn>();
                 conn->impl = impl;
                 conn->impl->connected = true;
-#ifdef _WIN32
-                conn->impl->iocp.conn = conn;
-#endif
+                conn->impl->conn = conn;
                 impl = nullptr;
                 return conn;
             };
