@@ -677,8 +677,8 @@ namespace utils {
                         return true;
                     }
 
-                    template <std::uint32_t n>
-                    static HpkErr encode(endian::Writer<string_t> se, size_t sz, std::uint8_t firstmask) {
+                    template <std::uint32_t n, class T>
+                    static HpkErr encode(endian::Writer<T>& se, size_t sz, std::uint8_t firstmask) {
                         static_assert(n > 0 && n <= 8, "invalid range");
                         constexpr std::uint8_t msk = static_cast<std::uint8_t>(~0) >> (8 - n);
                         if (firstmask & msk) {
@@ -796,7 +796,7 @@ namespace utils {
                                     }
                                 }
                                 else {
-                                    se.template write_as<std::uint8_t>(0);
+                                    se.write(std::uint8_t(0));
                                     string_coder::encode(se, h.first);
                                 }
                                 string_coder::encode(se, h.second);

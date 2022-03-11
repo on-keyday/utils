@@ -10,11 +10,12 @@
 #pragma once
 #include "conn.h"
 #include "stream.h"
+#include "../http/http1.h"
 
 namespace utils {
     namespace net {
         namespace http2 {
-            async::Future<bool> request(AsyncIOClose&& io, Connection& conn, Header&& h);
+            async::Future<http::HttpAsyncResponse> request(AsyncIOClose&& io, Connection* conn, http::Header&& h);
         }
     }  // namespace net
 }  // namespace utils

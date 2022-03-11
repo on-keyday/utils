@@ -43,6 +43,27 @@ namespace utils {
                 });
             }
 
+            H2Error Conn::get_error() {
+                if (!impl) {
+                    return H2Error::unknown;
+                }
+                return impl->err;
+            }
+
+            int Conn::get_errorcode() {
+                if (!impl) {
+                    return -1;
+                }
+                return impl->errcode;
+            }
+
+            AsyncIOClose Conn::get_io() {
+                if (!impl) {
+                    return nullptr;
+                }
+                return std::move(impl->io);
+            }
+
             async::Future<wrap::shared_ptr<Frame>> Conn::read() {
                 wrap::shared_ptr<Frame> frame;
                 assert(impl->reader.pos == 0);

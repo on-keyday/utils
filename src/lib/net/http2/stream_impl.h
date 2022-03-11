@@ -37,7 +37,7 @@ namespace utils {
                     Status status;
                     std::int64_t recv_window = 0;
                     std::int64_t send_window = 0;
-                    net::internal::HeaderImpl h;
+                    http::internal::HeaderImpl h;
                     wrap::string remote_raw;
                     wrap::string local_raw;
                     wrap::string data;
@@ -73,7 +73,7 @@ namespace utils {
                     Settings setting;
                 };
 
-                void initial_setting(Settings& setting) {
+                inline void initial_setting(Settings& setting) {
                     setting[k(SettingKey::table_size)] = 4096;
                     setting[k(SettingKey::enable_push)] = 1;
                     setting[k(SettingKey::max_concurrent)] = ~0;

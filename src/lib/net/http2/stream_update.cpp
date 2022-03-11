@@ -17,8 +17,8 @@ namespace utils {
     namespace net {
         namespace http2 {
 
-            H2Error decode_hpack(wrap::string& raw, net::internal::HeaderImpl& header, internal::ConnectionImpl& conn) {
-                auto err = hpack::decode(raw, conn.recv.decode_table, header, conn.max_table_size);
+            H2Error decode_hpack(wrap::string& raw, http::internal::HeaderImpl& header, internal::ConnectionImpl& conn) {
+                auto err = hpack::decode(raw, conn.recv.decode_table, header, conn.recv.setting[k(SettingKey::table_size)]);
                 if (!err) {
                     return H2Error::compression;
                 }

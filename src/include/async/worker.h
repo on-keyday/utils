@@ -239,11 +239,11 @@ namespace utils {
             }
 
             template <class T, class Fn>
-            Future<T> start(Fn&& fn) {
-                auto f = [fn = std::forward<Fn>(fn)](auto& ctx) mutable {
+            Future<T> start(Fn&& fn, T defval = T{}) {
+                auto f = [fn = std::forward<Fn>(fn), defval = std::move(defval)](auto& ctx) mutable {
                     fn(ctx);
                     if (!ctx.value().template type_assert<T>()) {
-                        ctx.set_value(T{});
+                        ctx.set_value(std::move(defval));
                     }
                 };
                 auto fu = starting(std::move(f));
@@ -253,5 +253,38 @@ namespace utils {
             ~TaskPool();
         };
 
+        namespace internal {
+
+            template <class Fn, class... Args, size_t... v>
+            decltype(auto) call_with_ctx(Context& ctx, Fn&& fn, std::tuple<Args...>&& tup, std::index_sequence<v...>) {
+                return fn(ctx, std::get<v>(tup)...);
+            }
+
+            template <class Ret>
+            struct AsyncInvoker {
+                template <class Fn, class... Args>
+                static async::Future<Ret> invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
+                    return p.start<Ret>([fn = std::move(fn), tup = std::forward_as_tuple(arg...)](async::Context& ctx) mutable {
+                        ctx.set_value(call_with_ctx(ctx, std::forward<Fn>(fn), tup, std::make_index_sequence<sizeof...(Args)>));
+                    });
+                }
+            };
+
+            template <>
+            struct AsyncInvoker<void> {
+                template <class Fn, class... Args>
+                static async::AnyFuture invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
+                    return p.start([fn = std::move(fn), tup = std::forward_as_tuple(arg...)](async::Context& ctx) mutable {
+                        call_with_ctx(ctx, std::forward<Fn>(fn), tup, std::make_index_sequence<sizeof...(Args)>);
+                    });
+                }
+            };
+
+        }  // namespace internal
+
+        template <class Fn, class... Args>
+        decltype(auto) start(TaskPool& p, Fn&& fn, Args&&... args) {
+            return internal::AsyncInvoker<std::invoke_result_t<Fn, Context&, Args...>>::invoke(p, fn, std::forward<Args>(args)...);
+        }
     }  // namespace async
 }  // namespace utils

@@ -55,7 +55,7 @@ utils::net::IOClose make_ioclose(const char* host, const char* port, bool secure
 void test_http1() {
     auto ioclose = make_ioclose("www.google.com", "https", true);
     assert(ioclose);
-    auto req = utils::net::request(std::move(ioclose), "www.google.com", "GET", "/", {});
+    auto req = utils::net::http::request(std::move(ioclose), "www.google.com", "GET", "/", {});
     auto resp = req.get_response();
     while (!resp) {
         if (req.failed()) {
@@ -65,7 +65,7 @@ void test_http1() {
         resp = req.get_response();
     }
     utils::wrap::cout_wrap() << resp.body();
-    req = utils::net::request(std::move(req), "GET", "/teapot", {});
+    req = utils::net::http::request(std::move(req), "GET", "/teapot", {});
     resp = req.get_response();
     while (!resp) {
         if (req.failed()) {

@@ -26,6 +26,12 @@ namespace utils {
                 async::Future<bool> write(const Frame& frame);
                 State close(bool force = false);
 
+                AsyncIOClose get_io();
+
+                H2Error get_error();
+
+                int get_errorcode();
+
                 ~Conn();
 
                private:

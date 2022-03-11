@@ -53,11 +53,14 @@ namespace utils {
 
             struct Connection {
                 Stream* stream(int id);
+                Stream* new_stream();
 
                 H2Error update_recv(const Frame& frame);
                 H2Error update_send(const Frame& frame);
 
-                bool make_header(Header&& h, HeaderFrame& frame);
+                bool make_data(std::int32_t id, wrap::string& data, DataFrame& frame,bool& block);
+                bool make_header(http::Header&& h, HeaderFrame& frame, wrap::string& remain);
+                bool make_continuous(std::int32_t id, wrap::string& remain, Continuation& frame);
 
                private:
                 wrap::shared_ptr<internal::ConnectionImpl> impl;
