@@ -8,6 +8,7 @@
 
 // request - http2 request
 #pragma once
+#include "../../platform/windows/dllexport_header.h"
 #include "conn.h"
 #include "stream.h"
 #include "../http/http1.h"
@@ -15,7 +16,8 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            async::Future<http::HttpAsyncResponse> request(AsyncIOClose&& io, Connection* conn, http::Header&& h);
+
+            DLL async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data = wrap::string{});
         }
     }  // namespace net
 }  // namespace utils

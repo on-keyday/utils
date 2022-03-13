@@ -239,6 +239,11 @@ namespace utils {
             }
 
             template <class T, class Fn>
+            Future<T> start_unwrap(Fn&& fn) {
+                return Future<T>{starting(std::move(fn))};
+            }
+
+            template <class T, class Fn>
             Future<T> start(Fn&& fn, T defval = T{}) {
                 auto f = [fn = std::forward<Fn>(fn), defval = std::move(defval)](auto& ctx) mutable {
                     fn(ctx);
@@ -246,8 +251,7 @@ namespace utils {
                         ctx.set_value(std::move(defval));
                     }
                 };
-                auto fu = starting(std::move(f));
-                return Future<T>{std::move(fu)};
+                return start_unwrap<T>(std::move(f));
             }
 
             ~TaskPool();
@@ -257,15 +261,15 @@ namespace utils {
 
             template <class Fn, class... Args, size_t... v>
             decltype(auto) call_with_ctx(Context& ctx, Fn&& fn, std::tuple<Args...>&& tup, std::index_sequence<v...>) {
-                return fn(ctx, std::get<v>(tup)...);
+                return fn(ctx, std::move(std::get<v>(tup))...);
             }
 
             template <class Ret>
             struct AsyncInvoker {
                 template <class Fn, class... Args>
                 static async::Future<Ret> invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
-                    return p.start<Ret>([fn = std::move(fn), tup = std::forward_as_tuple(arg...)](async::Context& ctx) mutable {
-                        ctx.set_value(call_with_ctx(ctx, std::forward<Fn>(fn), tup, std::make_index_sequence<sizeof...(Args)>));
+                    return p.template start_unwrap<Ret>([fn = std::move(fn), tup = std::forward_as_tuple(arg...)](async::Context& ctx) mutable {
+                        ctx.set_value(call_with_ctx(ctx, std::forward<Fn>(fn), std::forward<decltype(tup)>(tup), std::make_index_sequence<sizeof...(Args)>{}));
                     });
                 }
             };
@@ -275,7 +279,7 @@ namespace utils {
                 template <class Fn, class... Args>
                 static async::AnyFuture invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
                     return p.start([fn = std::move(fn), tup = std::forward_as_tuple(arg...)](async::Context& ctx) mutable {
-                        call_with_ctx(ctx, std::forward<Fn>(fn), tup, std::make_index_sequence<sizeof...(Args)>);
+                        call_with_ctx(ctx, std::forward<Fn>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>);
                     });
                 }
             };

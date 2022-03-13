@@ -16,8 +16,9 @@ namespace utils {
     namespace net {
         namespace http2 {
             namespace internal {
+                template <class Str = wrap::string>
                 struct FrameWriter {
-                    wrap::string str;
+                    Str str;
                     template <class T>
                     void write(T& val, size_t size = sizeof(T)) {
                         auto nt = endian::to_network(&val);

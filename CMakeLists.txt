@@ -132,6 +132,8 @@ PRIVATE
 "src/lib/net/http2/conn.cpp"
 "src/lib/net/http2/stream_update.cpp"
 "src/lib/net/http2/stream_make.cpp"
+"src/lib/net/http2/stream_context.cpp"
+"src/lib/net/http2/request.cpp"
 )
 #if(WIN32)
 target_sources(utils

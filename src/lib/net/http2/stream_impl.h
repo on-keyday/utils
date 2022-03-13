@@ -17,18 +17,6 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            enum class SettingKey {
-                table_size = 1,
-                enable_push = 2,
-                max_concurrent = 3,
-                initial_windows_size = 4,
-                max_frame_size = 5,
-                header_list_size = 6,
-            };
-
-            constexpr auto k(SettingKey v) {
-                return (std::uint16_t)v;
-            }
 
             namespace internal {
 

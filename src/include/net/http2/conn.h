@@ -30,6 +30,8 @@ namespace utils {
 
                 H2Error get_error();
 
+                void set_error(H2Error err);
+
                 int get_errorcode();
 
                 ~Conn();

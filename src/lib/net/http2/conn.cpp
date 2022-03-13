@@ -43,6 +43,12 @@ namespace utils {
                 });
             }
 
+            void Conn::set_error(H2Error err) {
+                if (impl) {
+                    impl->err = err;
+                }
+            }
+
             H2Error Conn::get_error() {
                 if (!impl) {
                     return H2Error::unknown;
