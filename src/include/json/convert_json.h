@@ -83,6 +83,27 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_END()
 
+                SFINAE_BLOCK_T_BEGIN(is_pointer, *std::declval<T>())
+                static bool invoke(T& t, JSON& json) {
+                    if (!t) {
+                        json = nullptr;
+                    }
+                    else {
+                        if constexpr (std::is_same_v<T, void*>) {
+                            json = std::uintptr_t(t);
+                        }
+                        else {
+                            return is_primitive<decltype(*t)>::invoke(*t, json);
+                        }
+                    }
+                    return true;
+                }
+                SFINAE_BLOCK_T_ELSE(is_pointer)
+                static bool invoke(T& t, JSON& json) {
+                    return has_to_json_member<T>::invoke(t, json);
+                }
+                SFINAE_BLOCK_T_END()
+
                 SFINAE_BLOCK_T_BEGIN(is_primitive, std::declval<JSON&>() = std::declval<T>())
                 static bool invoke(T& t, JSON& json) {
                     json = t;
@@ -90,7 +111,7 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_ELSE(is_primitive)
                 static bool invoke(T& t, JSON& json) {
-                    return has_to_json_member<T>::invoke(t, json);
+                    return is_pointer<T>::invoke(t, json);
                 }
                 SFINAE_BLOCK_T_END()
 

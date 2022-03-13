@@ -9,6 +9,8 @@
 #pragma once
 #include "../../include/cmdline/subcmd/cmdcontext.h"
 #include "../../include/wrap/cout.h"
+#include "../../include/json/json_export.h"
+#include "../../include/json/convert_json.h"
 
 extern utils::wrap::UtfOut& cout;
 constexpr auto mode = utils::cmdline::option::ParseFlag::assignable_mode;
