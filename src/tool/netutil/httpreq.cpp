@@ -32,6 +32,7 @@ namespace netutil {
     wrap::string* cacert;
     bool* h2proto;
     bool* uricheck;
+    bool* tidy;
 
     void show_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
         auto js = json::convert_to_json<json::OrderedJSON>(uri);
@@ -44,7 +45,7 @@ namespace netutil {
         cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
     }
 
-    bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool use_on_http) {
+    bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool use_on_http, bool tidy) {
         for (auto& v : ctx.arg()) {
             net::URI uri;
             net::rough_uri_parse(v, uri);
@@ -58,7 +59,7 @@ namespace netutil {
     }
 
     int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
-        if (!parse_uri(ctx, uris, true)) {
+        if (!parse_uri(ctx, uris, true, true)) {
             return -1;
         }
         if (*verbose) {
@@ -100,7 +101,7 @@ namespace netutil {
             return 1;
         }
         wrap::vector<net::URI> uris;
-        parse_uri(ctx, uris, false);
+        parse_uri(ctx, uris, false, *tidy);
         show_uri(uris, ctx.arg());
         return 0;
     }
@@ -113,6 +114,7 @@ namespace netutil {
         h2proto = opt.Bool("2,http2", false, "use http2 protocol");
         auto urps = ctx.SubCommand("uriparse", uriparse, "parse uri and output as json", "<uri>...");
         common_option(*urps);
+        tidy = urps->option().Bool("t,tidy", false, "make parsed uri tidy");
     }
 
     int httpreq(subcmd::RunCommand& ctx) {
