@@ -19,7 +19,7 @@ void test_urlparse() {
     assert(url.user == "on-keyday");
     assert(url.password == "pass");
     assert(url.host == "gmail.com");
-    assert(url.port == "443");
+    assert(url.port == ":443");
     assert(url.path == "/");
     assert(url.query == "?a=b");
     assert(url.tag == "#tag");
@@ -35,6 +35,9 @@ void test_urlparse() {
     assert(url.scheme == "javascript");
     assert(url.has_dobule_slash == false);
     assert(url.other == R"(alert("hogehoge"))");
+    url = {};
+    utils::net::rough_uri_parse("parsed/direct/bool.h", url);
+    assert(url.path == "parsed/direct/bool.h");
 }
 
 int main() {

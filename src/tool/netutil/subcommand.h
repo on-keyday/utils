@@ -17,6 +17,7 @@ namespace netutil {
     using namespace utils::cmdline;
 
     extern bool* help;
+    extern bool* verbose;
     void common_option(subcmd::RunCommand& ctx);
 
     // set option

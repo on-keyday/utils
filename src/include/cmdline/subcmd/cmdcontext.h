@@ -123,7 +123,7 @@ namespace utils {
                 }
 
                 wrap::string cuc() const {
-                    return parent_ ? parent_->cuc() + ": " + mainname;
+                    return parent_ ? parent_->cuc() + ": " + mainname : mainname;
                 }
 
                 virtual wrap::vector<wrap::string>& arg() {

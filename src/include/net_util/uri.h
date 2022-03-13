@@ -71,30 +71,41 @@ namespace utils {
             void parse_host(bool& unknown_data, Sequencer<T>& seq, URI& parsed) {
                 bool at_first = false;
                 bool on_port = false;
+                bool has_dot = false;
                 if (seq.seek_if("[")) {
                     helper::read_until(parsed.host, seq, "]");
+                    has_dot = true;
                 }
                 while (!seq.eos()) {
                     if (seq.current() == '/') {
-                        if (at_first) {
-                            unknown_data = true;
-                        }
                         break;
                     }
                     else if (seq.current() == ':') {
                         on_port = true;
                         at_first = true;
+                        parsed.port.push_back(':');
                     }
                     else {
                         if (on_port) {
                             parsed.port.push_back(seq.current());
                         }
                         else {
+                            if (seq.current() == '.') {
+                                has_dot = true;
+                            }
                             parsed.host.push_back(seq.current());
                         }
                     }
                     seq.consume();
                     at_first = false;
+                }
+                if (!has_dot) {
+                    unknown_data = true;
+                    parsed.other = std::move(parsed.host);
+                    if (on_port) {
+                        parsed.other.append(parsed.port);
+                        parsed.port.clear();
+                    }
                 }
                 if (at_first) {
                     unknown_data = true;
@@ -134,23 +145,28 @@ namespace utils {
             bool unknown_data = false;
             bool no_host = false;
             if (helper::starts_with(str, "/") && !helper::starts_with(str, "//")) {
+                // abstract path
                 no_host = true;
             }
             if (!no_host && helper::contains(str, "@")) {
+                // user name
                 has_user = true;
             }
             while (!seq.eos()) {
                 if (seq.match("//")) {
+                    // without scheme
                     break;
                 }
                 if (seq.match("/")) {
-                    unknown_data = true;
+                    // relative path
                     break;
                 }
                 if (seq.match(".")) {
+                    // host name
                     break;
                 }
                 if (seq.match(":")) {
+                    // with scheme
                     has_scheme = true;
                     break;
                 }
@@ -173,6 +189,12 @@ namespace utils {
             }
             if (!no_host && !unknown_data) {
                 internal::parse_host(unknown_data, seq, parsed);
+                if (unknown_data) {
+                    if (seq.current() == '/' || seq.eos()) {
+                        parsed.path = std::move(parsed.other);
+                        unknown_data = false;
+                    }
+                }
             }
             if (!unknown_data) {
                 internal::parse_path(unknown_data, seq, parsed);
