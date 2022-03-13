@@ -678,7 +678,6 @@ namespace utils {
         void TaskPool::init_data() {
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
-
                 auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>();
                 data->w = w;
                 data->r = r;
