@@ -60,6 +60,7 @@ namespace utils {
 
                 windows_mode = pf_short | use_slash | use_colon | sf_assign | parse_all,
 
+                // good for use
                 assignable_mode = pf_short | pf_long | parse_all | sf_assign | assign_anyway_val,
             };
 

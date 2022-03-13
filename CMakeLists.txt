@@ -7,6 +7,9 @@ link_directories("D:/OpenSSL/build-x64-debug/lib")
 if(MSVC)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /source-charset:utf-8")
 endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+add_compile_options("-fcoroutines-ts")
+endif()
 else()
 # find_package(OPENSSL REQUIRED)
 set(CMAKE_THREAD_LIBS_INIT "-lpthread")
@@ -16,7 +19,7 @@ set(CMAKE_USE_PTHREADS_INIT 1)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 link_directories("/lib/llvm-12/lib")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fcoroutines-ts")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fcoroutines-ts -fsanitize=address -fsanitize=undefined")
 set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 set(CMAKE_CXX_FLAGS "-nostdinc++ -nodefaultlibs -isystem /lib/llvm-12/include/c++/v1 -fuse-ld=lld")
@@ -89,6 +92,8 @@ add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
 add_executable(binred "src/tool/binred/binred.cpp"
                       "src/tool/binred/read_fmt.cpp"
                       "src/tool/binred/generate_cpp.cpp")
+add_executable(netutil "src/tool/netutil/netmain.cpp")
+
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -181,6 +186,7 @@ target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
+target_link_libraries(netutil utils)
 
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)

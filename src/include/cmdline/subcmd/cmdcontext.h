@@ -99,6 +99,25 @@ namespace utils {
                 }
 
                public:
+                template <class Str>
+                void Usage(Str& str, option::ParseFlag flag) {
+                    helper::appends(str, mainname, " - ", desc, "\n");
+                    ctx.Usage(str, flag, mainname.c_str(), usage.c_str(), "    ");
+                    if (subcommand.size()) {
+                        helper::append(str, "Command:\n");
+                    }
+                    for (auto& cmd : subcommand) {
+                        helper::appends(str, "    ", cmd.first, " - ", cmd.second->desc, "\n");
+                    }
+                }
+
+                template <class Str = wrap::string>
+                Str Usage(option::ParseFlag flag) {
+                    Str v;
+                    Usage(v, flag);
+                    return v;
+                }
+
                 const wrap::string& name() {
                     return mainname;
                 }
