@@ -53,8 +53,11 @@ namespace utils {
                 template <class Str>
                 void Usage(Str& str, ParseFlag flag, const char* cmdname, const char* usage = "[option]", const char* indent = "    ") {
                     helper::appends(str, "Usage:\n",
-                                    indent, cmdname, " ", usage, "\nOption:\n");
-                    help(str, flag, indent);
+                                    indent, cmdname, " ", usage, "\n");
+                    if (desc.list.size()) {
+                        helper::append(str, "Option:\n");
+                        help(str, flag, indent);
+                    }
                 }
 
                 template <class Str>
