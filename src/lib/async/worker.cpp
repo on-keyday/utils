@@ -470,6 +470,9 @@ namespace utils {
         Any AnyFuture::get() {
             if (!data || not_own) return nullptr;
             data->waiter_flag.wait(true);
+            if (data->task.except) {
+                std::rethrow_exception(data->task.except);
+            }
             return std::move(data->task.result);
         }
 
