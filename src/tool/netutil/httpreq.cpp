@@ -23,7 +23,7 @@ namespace utils::net {
         TO_JSON_PARAM(path, "path")
         TO_JSON_PARAM(query, "query")
         TO_JSON_PARAM(tag, "tag")
-        TO_JSON_PARAM(other, "opeque")
+        TO_JSON_PARAM(other, "opaque")
         JSON_PARAM_END()
     }
 }  // namespace utils::net
