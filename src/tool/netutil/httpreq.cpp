@@ -32,42 +32,39 @@ namespace netutil {
     wrap::string* cacert;
     bool* h2proto;
     bool* uricheck;
-    void httpreq_option(subcmd::RunContext& ctx) {
-        auto subcmd = ctx.SubCommand("httpreq", httpreq, "http request", "[option] <url>...");
-        auto& opt = subcmd->option();
-        common_option(*subcmd);
-        cacert = opt.String<wrap::string>("c,cacert", "./cacert", "cacert file", "FILE");
-        h2proto = opt.Bool("2,http2", false, "use http2 protocol");
-        uricheck = opt.Bool("u,uri-check", false, "check url whether it's parsable");
-    }
 
-    void verbose_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
-        if (*verbose) {
-            if (!*quiet) {
-                cout << "verbose uri...\n";
-            }
-            auto js = json::convert_to_json<json::OrderedJSON>(uri);
-            size_t idx = 0;
-            for (auto& v : json::as_array(js)) {
-                js.abegin();
-                v["raw"] = raw[idx];
-                idx++;
-            }
-            cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
+    void show_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
+        auto js = json::convert_to_json<json::OrderedJSON>(uri);
+        size_t idx = 0;
+        for (auto& v : json::as_array(js)) {
+            js.abegin();
+            v["raw"] = raw[idx];
+            idx++;
         }
+        cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
     }
 
-    int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+    bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool use_on_http) {
         for (auto& v : ctx.arg()) {
             net::URI uri;
             net::rough_uri_parse(v, uri);
-            if (uri.other.size()) {
+            if (use_on_http && uri.other.size()) {
                 cout << ctx.cuc() << ": error: " << v << " is not parsable as url\n";
-                return -1;
+                return false;
             }
             uris.push_back(std::move(uri));
         }
-        verbose_uri(uris, ctx.arg());
+        return true;
+    }
+
+    int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+        if (!parse_uri(ctx, uris, true)) {
+            return -1;
+        }
+        if (*verbose) {
+            cout << "verbose url...\n";
+            show_uri(uris, ctx.arg());
+        }
         net::URI prev;
         prev.scheme = "http";
         for (size_t i = 0; i < uris.size(); i++) {
@@ -95,6 +92,27 @@ namespace netutil {
             }
         }
         return 0;
+    }
+
+    int uriparse(subcmd::RunCommand& ctx) {
+        if (*help) {
+            cout << ctx.Usage(mode);
+            return 1;
+        }
+        wrap::vector<net::URI> uris;
+        parse_uri(ctx, uris, false);
+        show_uri(uris, ctx.arg());
+        return 0;
+    }
+
+    void httpreq_option(subcmd::RunContext& ctx) {
+        auto subcmd = ctx.SubCommand("httpreq", httpreq, "http request", "[option] <url>...");
+        auto& opt = subcmd->option();
+        common_option(*subcmd);
+        cacert = opt.String<wrap::string>("c,cacert", "./cacert", "cacert file", "FILE");
+        h2proto = opt.Bool("2,http2", false, "use http2 protocol");
+        auto urps = ctx.SubCommand("uriparse", uriparse, "parse uri and output as json", "<uri>...");
+        common_option(*urps);
     }
 
     int httpreq(subcmd::RunCommand& ctx) {

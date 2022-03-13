@@ -73,7 +73,10 @@ namespace utils {
                 bool on_port = false;
                 bool has_dot = false;
                 if (seq.seek_if("[")) {
-                    helper::read_until(parsed.host, seq, "]");
+                    parsed.host.push_back('[');
+                    if (helper::read_until(parsed.host, seq, "]")) {
+                        parsed.host.push_back(']');
+                    }
                     has_dot = true;
                 }
                 while (!seq.eos()) {
@@ -175,6 +178,7 @@ namespace utils {
             seq.seek(0);
             if (has_scheme) {
                 helper::read_until(parsed.scheme, seq, ":");
+                parsed.scheme.push_back(':');
             }
             if (!no_host) {
                 parsed.has_double_slash = seq.seek_if("//");
@@ -204,6 +208,21 @@ namespace utils {
                     parsed.other.push_back(seq.current());
                     seq.consume();
                 }
+            }
+        }
+
+        inline void uri_tidy(net::URI& uri) {
+            if (uri.scheme.size() && uri.scheme.back() == ':') {
+                uri.scheme.pop_back();
+            }
+            if (uri.host.size()) {
+                if (uri.host.front() == '[' && uri.host.back() == ']') {
+                    uri.host.pop_back();
+                    uri.host.erase(0, 1);
+                }
+            }
+            if (uri.port.size() && uri.port.front() == ':') {
+                uri.port.erase(0, 1);
             }
         }
     }  // namespace net
