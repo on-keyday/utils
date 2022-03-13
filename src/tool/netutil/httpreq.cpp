@@ -53,6 +53,9 @@ namespace netutil {
                 cout << ctx.cuc() << ": error: " << v << " is not parsable as url\n";
                 return false;
             }
+            if (tidy) {
+                net::uri_tidy(uri);
+            }
             uris.push_back(std::move(uri));
         }
         return true;

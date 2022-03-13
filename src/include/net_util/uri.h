@@ -156,6 +156,10 @@ namespace utils {
                 has_user = true;
             }
             while (!seq.eos()) {
+                if (seq.match("[")) {
+                    // ipv6 address
+                    break;
+                }
                 if (seq.match("//")) {
                     // without scheme
                     break;
