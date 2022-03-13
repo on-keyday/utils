@@ -19,22 +19,30 @@ auto& cout = wrap::cout_wrap();
 
 void test_http2protocol() {
     net::set_iocompletion_thread(true);
-    net::start([](async::Context& ctx) {
-        auto tcp = AWAIT(net::open_async("google.com", "https"));
-        auto ssl = AWAIT(net::open_async(std::move(tcp), "./src/test/net/cacert.pem", "\2h2", "google.com"));
-        auto h2 = AWAIT(net::http2::open_async(std::move(ssl)));
-        auto setting = {std::pair{net::http2::SettingKey::enable_push, 0}};
-        auto h2ctx = AWAIT(net::http2::negotiate(std::move(h2), setting));
-        net::http::Header h;
-        h.set(":method", "GET");
-        h.set(":authority", "google.com");
-        h.set(":path", "/");
-        h.set(":scheme", "https");
-        auto resp = std::move(AWAIT(net::http2::request(h2ctx, std::move(h))));
-        auto rh = resp.response();
-        cout << rh.response() << "body\n"
-             << rh.body();
-    }).wait();
+    auto spawn = [](const char* host, const char* path = "/") {
+        return net::start(
+            [](async::Context& ctx, const char* host, const char* path) {
+                auto tcp = AWAIT(net::open_async(host, "https"));
+                auto ssl = AWAIT(net::open_async(std::move(tcp), "./src/test/net/cacert.pem", "\2h2", host));
+                auto h2 = AWAIT(net::http2::open_async(std::move(ssl)));
+                auto setting = {std::pair{net::http2::SettingKey::enable_push, 0}};
+                auto h2ctx = AWAIT(net::http2::negotiate(std::move(h2), setting));
+                net::http::Header h;
+                h.set(":method", "GET");
+                h.set(":authority", host);
+                h.set(":path", path);
+                h.set(":scheme", "https");
+                auto resp = std::move(AWAIT(net::http2::request(h2ctx, std::move(h))));
+                auto rh = resp.response();
+                cout << rh.response() << "body\n"
+                     << rh.body();
+            },
+            host, path);
+    };
+    auto g = spawn("google.com");
+    auto m = spawn("gmail.com");
+    g.wait();
+    m.wait();
 }
 
 int main(int, char**) {

@@ -120,6 +120,7 @@ namespace utils {
                     return ChanStateValue::closed;
                 }
                 if (que.size() == 0) {
+                    write_blocking.unlock();
                     return ChanStateValue::empty;
                 }
                 handler.pop(que, t);
@@ -132,6 +133,7 @@ namespace utils {
                     return ChanStateValue::closed;
                 }
                 if (!check_limit()) {
+                    read_blocking.unlock();
                     return ChanStateValue::full;
                 }
                 handler.push(que, std::move(t));

@@ -14,6 +14,7 @@ namespace utils {
     namespace thread {
         struct LiteLock {
             std::atomic_flag flag;
+
             void lock() {
                 while (!try_lock()) {
                     flag.wait(true);
@@ -21,11 +22,11 @@ namespace utils {
             }
 
             bool try_lock() {
-                return flag.test_and_set() == false;
+                return flag.test_and_set(std::memory_order_acquire) == false;
             }
 
             void unlock() {
-                flag.clear();
+                flag.clear(std::memory_order_release);
                 flag.notify_all();
             }
         };
