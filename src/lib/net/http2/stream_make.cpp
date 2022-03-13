@@ -35,6 +35,7 @@ namespace utils {
                 }
                 ptr->order = impl->h.order;
                 ptr->body = impl->data;
+                ptr->version = 2;
                 http::HttpAsyncResponse resp;
                 auto to_set = new http::internal::HttpAsyncResponseImpl{};
                 to_set->response = std::move(h);
@@ -93,7 +94,14 @@ namespace utils {
                 auto cpy = raw_h->order;
                 constexpr auto validator_ = h1header::default_validator();
                 for (auto& kv : cpy) {
-                    if (!validator_(kv)) {
+                    if (helper::equal(kv.first, ":path") ||
+                        helper::equal(kv.first, ":authority") ||
+                        helper::equal(kv.first, ":status") ||
+                        helper::equal(kv.first, ":scheme") ||
+                        helper::equal(kv.first, ":method")) {
+                        // nothing to do
+                    }
+                    else if (!validator_(kv)) {
                         return false;
                     }
                     if (helper::equal(kv.first, "host") ||

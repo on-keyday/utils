@@ -11,8 +11,11 @@
 #include <net/async/pool.h>
 #include <async/async_macro.h>
 #include <net/ssl/ssl.h>
+#include <wrap/cout.h>
 
 using namespace utils;
+
+auto& cout = wrap::cout_wrap();
 
 void test_http2protocol() {
     net::set_iocompletion_thread(true);
@@ -29,6 +32,8 @@ void test_http2protocol() {
         h.set(":scheme", "https");
         auto resp = std::move(AWAIT(net::http2::request(h2ctx, std::move(h))));
         auto rh = resp.response();
+        cout << rh.response() << "body\n"
+             << rh.body();
     }).wait();
 }
 

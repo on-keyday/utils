@@ -204,11 +204,19 @@ namespace utils {
 
             template <class String, class Status, class Phrase, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
             bool render_response(String& str, Status&& status, Phrase&& phrase, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
-                                 Prerender&& prerender = helper::no_check()) {
+                                 Prerender&& prerender = helper::no_check(), int verstr = 1) {
                 if (status < 100 && status > 999) {
                     return false;
                 }
-                helper::append(str, "HTTP/1.1 ");
+                if (verstr == 2) {
+                    helper::append(str, "HTTP/2.0 ");
+                }
+                else if (verstr == 0) {
+                    helper::append(str, "HTTP/1.0 ");
+                }
+                else {
+                    helper::append(str, "HTTP/1.1 ");
+                }
                 std::uint8_t codebuf[4] = "000";
                 codebuf[0] += (status / 100);
                 codebuf[1] += (status % 100 / 10);

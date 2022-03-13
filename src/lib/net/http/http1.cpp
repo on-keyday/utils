@@ -102,7 +102,9 @@ namespace utils {
                     return "";
                 }
                 if (!impl->raw_header.size() || impl->changed) {
-                    h1header::render_response(impl->raw_header, impl->code, reason::phrase(impl->code, true), *impl);
+                    h1header::render_response(
+                        impl->raw_header, impl->code, reason::phrase(impl->code, true), *impl,
+                        helper::no_check(), true, helper::no_check(), impl->version);
                 }
                 if (p) {
                     *p = impl->raw_header.size();

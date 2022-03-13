@@ -97,7 +97,9 @@ namespace utils {
                         assert(frame.id != 0);
                         assert(stream);
                         auto& header = static_cast<const HeaderFrame&>(frame);
-                        if (stream->status() != Status::idle && stream->status() != Status::reserved_remote) {
+                        if (stream->status() != Status::idle &&
+                            stream->status() != Status::half_closed_local &&
+                            stream->status() != Status::reserved_remote) {
                             return H2Error::protocol;
                         }
                         stream->impl->remote_raw.append(header.data);
@@ -269,7 +271,9 @@ namespace utils {
                     }
                     case FrameType::header: {
                         assert(stream);
-                        if (stream->status() != Status::idle && stream->status() != Status::reserved_local) {
+                        if (stream->status() != Status::idle &&
+                            stream->status() != Status::half_closed_remote &&
+                            stream->status() != Status::reserved_local) {
                             return H2Error::protocol;
                         }
                         auto& h = static_cast<const HeaderFrame&>(frame);
@@ -324,6 +328,7 @@ namespace utils {
                         auto& goaway = static_cast<const GoAwayFrame&>(frame);
                         impl->code = goaway.code;
                         impl->debug_data = goaway.data;
+                        return H2Error::none;
                     }
                     case FrameType::settings: {
                         assert(frame.id == 0);

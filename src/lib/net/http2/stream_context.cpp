@@ -23,6 +23,8 @@ namespace utils {
                         if (err != H2Error::none) {
                             return h2ctx;
                         }
+                        bool recvack = false;
+                        bool sendack = false;
                         while (true) {
                             auto ptr = AWAIT(h2ctx->read());
                             if (!ptr) {
@@ -39,8 +41,18 @@ namespace utils {
                             }
                             else if (ptr->type == FrameType::settings) {
                                 if (ptr->flag & Flag::ack) {
-                                    break;
+                                    recvack = true;
                                 }
+                                else {
+                                    SettingsFrame sf{0};
+                                    sf.type = FrameType::settings;
+                                    sf.flag = Flag::ack;
+                                    AWAIT(h2ctx->write(sf));
+                                    sendack = true;
+                                }
+                            }
+                            if (recvack && sendack) {
+                                break;
                             }
                         }
                         return h2ctx;

@@ -34,6 +34,7 @@ namespace utils {
                     wrap::vector<std::pair<wrap::string, wrap::string>> order;
                     wrap::string body;
                     wrap::string raw_header;
+                    int version = 1;
                     bool changed = false;
 
                     void emplace(auto&& key, auto&& value) {
