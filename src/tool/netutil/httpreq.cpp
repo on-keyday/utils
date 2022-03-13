@@ -43,6 +43,9 @@ namespace netutil {
 
     void verbose_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
         if (*verbose) {
+            if (!*quiet) {
+                cout << "verbose uri...\n";
+            }
             auto js = json::convert_to_json<json::OrderedJSON>(uri);
             size_t idx = 0;
             for (auto& v : json::as_array(js)) {
@@ -55,9 +58,6 @@ namespace netutil {
     }
 
     int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
-        if (*verbose && !*quiet) {
-            cout << "verbose uri...\n";
-        }
         for (auto& v : ctx.arg()) {
             net::URI uri;
             net::rough_uri_parse(v, uri);
@@ -67,6 +67,7 @@ namespace netutil {
             }
             uris.push_back(std::move(uri));
         }
+        verbose_uri(uris, ctx.arg());
         net::URI prev;
         prev.scheme = "http";
         for (size_t i = 0; i < uris.size(); i++) {
