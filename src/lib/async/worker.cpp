@@ -681,7 +681,8 @@ namespace utils {
                 auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>();
                 data->w = w;
                 data->r = r;
-                data->maxthread = std::thread::hardware_concurrency() / 2;
+                auto conc = std::thread::hardware_concurrency() / 2;
+                data->maxthread = conc ? conc : 4;
             }
         }
 
