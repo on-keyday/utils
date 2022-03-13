@@ -92,7 +92,8 @@ add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
 add_executable(binred "src/tool/binred/binred.cpp"
                       "src/tool/binred/read_fmt.cpp"
                       "src/tool/binred/generate_cpp.cpp")
-add_executable(netutil "src/tool/netutil/netmain.cpp")
+add_executable(netutil "src/tool/netutil/netmain.cpp"
+                       "src/tool/netutil/httpreq.cpp")
 
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")

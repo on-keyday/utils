@@ -122,6 +122,10 @@ namespace utils {
                     return mainname;
                 }
 
+                wrap::string cuc() const {
+                    return parent_ ? parent_->cuc() + ": " + mainname;
+                }
+
                 virtual wrap::vector<wrap::string>& arg() {
                     assert(parent_);
                     return parent_->arg();
