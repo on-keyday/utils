@@ -509,12 +509,28 @@ namespace utils {
                 return t;
             }
 
+            auto obegin() {
+                auto o = const_cast<object_t*>(obj.as_obj());
+                if (!o) {
+                    bad_type("not object type");
+                }
+                return o->begin();
+            }
+
             auto obegin() const {
                 auto o = obj.as_obj();
                 if (!o) {
                     bad_type("not object type");
                 }
                 return o->begin();
+            }
+
+            auto oend() {
+                auto o = const_cast<object_t*>(obj.as_obj());
+                if (!o) {
+                    bad_type("not object type");
+                }
+                return o->end();
             }
 
             auto oend() const {
@@ -525,12 +541,28 @@ namespace utils {
                 return o->end();
             }
 
+            auto abegin() {
+                auto a = const_cast<array_t*>(obj.as_arr());
+                if (!a) {
+                    bad_type("not array type");
+                }
+                return a->begin();
+            }
+
             auto abegin() const {
                 auto a = obj.as_arr();
                 if (!a) {
                     bad_type("not array type");
                 }
                 return a->begin();
+            }
+
+            auto aend() {
+                auto a = const_cast<array_t*>(obj.as_arr());
+                if (!a) {
+                    bad_type("not array type");
+                }
+                return a->end();
             }
 
             auto aend() const {

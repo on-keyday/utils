@@ -11,6 +11,23 @@
 
 using namespace utils;
 
+namespace utils::net {
+    bool to_json(const URI& uri, auto& json) {
+        JSON_PARAM_BEGIN(uri, json)
+        TO_JSON_PARAM(scheme, "scheme")
+        TO_JSON_PARAM(has_double_slash, "has_double_slash")
+        TO_JSON_PARAM(user, "user")
+        TO_JSON_PARAM(password, "password")
+        TO_JSON_PARAM(host, "host")
+        TO_JSON_PARAM(port, "port")
+        TO_JSON_PARAM(path, "path")
+        TO_JSON_PARAM(query, "query")
+        TO_JSON_PARAM(tag, "tag")
+        TO_JSON_PARAM(other, "opeque")
+        JSON_PARAM_END()
+    }
+}  // namespace utils::net
+
 namespace netutil {
     wrap::string* cacert;
     bool* h2proto;
@@ -24,7 +41,23 @@ namespace netutil {
         uricheck = opt.Bool("u,uri-check", false, "check url whether it's parsable");
     }
 
+    void verbose_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
+        if (*verbose) {
+            auto js = json::convert_to_json<json::OrderedJSON>(uri);
+            size_t idx = 0;
+            for (auto& v : json::as_array(js)) {
+                js.abegin();
+                v["raw"] = raw[idx];
+                idx++;
+            }
+            cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
+        }
+    }
+
     int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+        if (*verbose && !*quiet) {
+            cout << "verbose uri...\n";
+        }
         for (auto& v : ctx.arg()) {
             net::URI uri;
             net::rough_uri_parse(v, uri);
@@ -39,6 +72,7 @@ namespace netutil {
         for (size_t i = 0; i < uris.size(); i++) {
             auto& uri = uris[i];
             auto& raw = ctx.arg()[i];
+
             if (!uri.scheme.size()) {
                 uri.scheme = prev.scheme;
             }
@@ -77,7 +111,9 @@ namespace netutil {
             return err;
         }
         if (*uricheck) {
-            cout << ctx.cuc() << ": uri are all parsable\n";
+            if (!*quiet) {
+                cout << ctx.cuc() << ": uri are all parsable\n";
+            }
             return 1;
         }
         return -1;

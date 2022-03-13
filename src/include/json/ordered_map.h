@@ -41,6 +41,14 @@ namespace utils {
                 });
             }
 
+            auto begin() {
+                return obj.begin();
+            }
+
+            auto end() {
+                return obj.end();
+            }
+
             auto begin() const {
                 return obj.begin();
             }

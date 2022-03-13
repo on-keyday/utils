@@ -11,6 +11,7 @@
 #include "../../include/wrap/cout.h"
 #include "../../include/json/json_export.h"
 #include "../../include/json/convert_json.h"
+#include "../../include/json/iterator.h"
 
 extern utils::wrap::UtfOut& cout;
 constexpr auto mode = utils::cmdline::option::ParseFlag::assignable_mode;
@@ -20,6 +21,7 @@ namespace netutil {
 
     extern bool* help;
     extern bool* verbose;
+    extern bool* quiet;
     void common_option(subcmd::RunCommand& ctx);
 
     // set option

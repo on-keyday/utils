@@ -354,5 +354,6 @@ namespace utils {
 #define JSON_PARAM_END() \
     return true;         \
     }
+
     }  // namespace json
 }  // namespace utils

@@ -26,7 +26,7 @@ namespace utils {
             wrap::string query;
             wrap::string tag;
             wrap::string other;
-            bool has_dobule_slash = false;
+            bool has_double_slash = false;
         };
 
         namespace internal {
@@ -177,8 +177,8 @@ namespace utils {
                 helper::read_until(parsed.scheme, seq, ":");
             }
             if (!no_host) {
-                parsed.has_dobule_slash = seq.seek_if("//");
-                if (!parsed.has_dobule_slash && has_scheme) {
+                parsed.has_double_slash = seq.seek_if("//");
+                if (!parsed.has_double_slash && has_scheme) {
                     no_host = true;
                     has_user = false;
                     unknown_data = true;

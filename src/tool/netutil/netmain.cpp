@@ -16,15 +16,18 @@ wrap::UtfOut& cout = wrap::cout_wrap();
 namespace netutil {
     bool* help;
     bool* verbose;
+    bool* quiet;
 
     void common_option(subcmd::RunCommand& ctx) {
         if (help) {
             ctx.option().VarBool(help, "h,help", "show help");
             ctx.option().VarBool(verbose, "v,verbose", "verbose log");
+            ctx.option().VarBool(quiet, "quiet", "quiet log");
         }
         else {
             help = ctx.option().Bool("h,help", false, "show help");
             verbose = ctx.option().Bool("v,verbose", false, "verbose log");
+            quiet = ctx.option().Bool("quiet", false, "quiet log");
         }
     }
 }  // namespace netutil
