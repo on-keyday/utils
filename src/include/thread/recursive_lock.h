@@ -19,17 +19,20 @@ namespace utils {
             std::thread::id thread_id;
             void lock() {
                 while (!try_lock()) {
-                    if (thread_id == std::this_thread::get_id()) {
-                        count++;
-                        break;
-                    }
                     flag.wait(true);
                 }
-                thread_id = std::this_thread::get_id();
             }
 
             bool try_lock() {
-                return flag.test_and_set() == false;
+                if (flag.test_and_set() == false) {
+                    thread_id = std::this_thread::get_id();
+                    return true;
+                }
+                if (thread_id == std::this_thread::get_id()) {
+                    count++;
+                    return true;
+                }
+                return false;
             }
 
             void unlock() {
