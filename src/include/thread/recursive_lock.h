@@ -15,7 +15,7 @@ namespace utils {
     namespace thread {
         struct RecursiveLock {
             std::atomic_flag flag;
-            size_t count;
+            size_t count = 0;
             std::thread::id thread_id;
             void lock() {
                 while (!try_lock()) {
@@ -41,8 +41,8 @@ namespace utils {
                         count--;
                     }
                     else {
-                        flag.clear();
                         thread_id = {};
+                        flag.clear();
                     }
                 }
                 flag.notify_all();

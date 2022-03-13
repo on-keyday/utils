@@ -10,6 +10,7 @@
 #pragma once
 
 #include "lite_lock.h"
+#include "recursive_lock.h"
 #include "../wrap/lite/queue.h"
 #include "../wrap/lite/enum.h"
 #include "../wrap/lite/smart_ptr.h"
@@ -83,7 +84,7 @@ namespace utils {
            private:
             Que<T> que;
             size_t limit = ~0;
-            LiteLock lock_;
+            RecursiveLock lock_;
             std::atomic_flag closed;
             LiteLock read_blocking;
             LiteLock write_blocking;
