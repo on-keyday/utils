@@ -18,6 +18,7 @@
 #include "../../include/async/worker.h"
 #include "../../include/wrap/lite/lite.h"
 #include "../../include/thread/channel.h"
+#include "../../include/thread/recursive_lock.h"
 #include "../../include/helper/iface_cast.h"
 #include "../../include/thread/priority_ext.h"
 #include <exception>
@@ -303,8 +304,12 @@ namespace utils {
             };
 
             struct WorkerData {
-                thread::SendChan<Event, queue_type, thread::DualModeHandler<PriorityReset>> w;
-                thread::RecvChan<Event, queue_type, thread::DualModeHandler<PriorityReset>> r;
+                thread::SendChan<Event, queue_type,
+                                 thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>
+                    w;
+                thread::RecvChan<Event, queue_type,
+                                 thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>
+                    r;
                 wrap::hash_map<size_t, Event> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
@@ -674,7 +679,7 @@ namespace utils {
             if (!data) {
                 data = wrap::make_shared<internal::WorkerData>();
 
-                auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler<PriorityReset>>();
+                auto [w, r] = thread::make_chan<Event, queue_type, thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>();
                 data->w = w;
                 data->r = r;
                 data->maxthread = std::thread::hardware_concurrency() / 2;
