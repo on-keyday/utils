@@ -63,6 +63,7 @@ namespace utils {
                 bool make_data(std::int32_t id, wrap::string& data, DataFrame& frame, bool& block);
                 bool make_header(http::Header&& h, HeaderFrame& frame, wrap::string& remain);
                 bool make_continuous(std::int32_t id, wrap::string& remain, Continuation& frame);
+                Connection();
 
                private:
                 wrap::shared_ptr<internal::ConnectionImpl> impl;

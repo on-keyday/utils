@@ -17,10 +17,10 @@ namespace utils {
                 if (buffer.size()) {
                     auto f = write_to_ssl(buffer);
                     if (f == szfailed) {
-                        return false;
+                        return -1;
                     }
                     if (buffer.size()) {
-                        return true;
+                        return 0;
                     }
                 }
                 read_from_ssl(buffer);
@@ -126,6 +126,7 @@ namespace utils {
                             .size = size,
                             .err = ::SSL_get_error(impl->ssl, -1),
                         });
+                        SSL_ERROR_SSL;
                         return;
                     }
                     ctx.set_value(WriteInfo{.byte = ptr, .size = size, .written = w});

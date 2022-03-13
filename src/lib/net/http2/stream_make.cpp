@@ -17,6 +17,10 @@
 namespace utils {
     namespace net {
         namespace http2 {
+            Connection::Connection() {
+                impl = wrap::make_shared<internal::ConnectionImpl>();
+            }
+
             Stream* Connection::stream(int id) {
                 return impl->get_stream(id);
             }

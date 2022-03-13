@@ -12,6 +12,7 @@
 #include "../../../include/endian/endian.h"
 #include "../../../include/helper/strutil.h"
 #include "frame_reader.h"
+#include "../../../include/async/async_macro.h"
 
 namespace utils {
     namespace net {
@@ -33,7 +34,7 @@ namespace utils {
                 impl->io = std::move(io);
                 return get_pool().start<wrap::shared_ptr<Conn>>([impl = std::move(impl)](async::Context& ctx) {
                     auto ptr = impl->io.write(connection_preface, 24);
-                    auto w = ptr.get();
+                    auto w = AWAIT(ptr);
                     if (w.err) {
                         return;
                     }
