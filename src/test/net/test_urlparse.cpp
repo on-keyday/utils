@@ -14,7 +14,7 @@ void test_urlparse() {
     assert(url.host == "google.com" && "expect google.com but not");
     url = {};
     utils::net::rough_uri_parse("https://on-keyday:pass@gmail.com:443/?a=b#tag", url);
-    assert(url.scheme == "https");
+    assert(url.scheme == "https:");
     assert(url.has_double_slash == true);
     assert(url.user == "on-keyday");
     assert(url.password == "pass");
@@ -26,13 +26,13 @@ void test_urlparse() {
     assert(url.other == "");
     url = {};
     utils::net::rough_uri_parse("file:///D:/Minitools/Utils/test.txt", url);
-    assert(url.scheme == "file");
+    assert(url.scheme == "file:");
     assert(url.has_double_slash == true);
     assert(url.host == "");
     assert(url.path == "/D:/Minitools/Utils/test.txt");
     url = {};
     utils::net::rough_uri_parse(R"(javascript:alert("hogehoge"))", url);
-    assert(url.scheme == "javascript");
+    assert(url.scheme == "javascript:");
     assert(url.has_double_slash == false);
     assert(url.other == R"(alert("hogehoge"))");
     url = {};
