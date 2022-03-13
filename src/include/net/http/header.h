@@ -20,6 +20,11 @@ namespace utils {
         namespace h1header {
             struct StatusCode {
                 std::uint16_t code = 0;
+                void append(auto& v) {
+                    for (auto& c : v) {
+                        push_back(c);
+                    }
+                }
                 void push_back(auto v) {
                     number::internal::PushBackParserInt<std::uint16_t> tmp;
                     tmp.result = code;

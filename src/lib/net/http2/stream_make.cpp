@@ -12,12 +12,30 @@
 #include "frame_reader.h"
 #include "stream_impl.h"
 #include "../http/header_impl.h"
+#include "../http/async_resp_impl.h"
 
 namespace utils {
     namespace net {
         namespace http2 {
             Stream* Connection::stream(int id) {
                 return impl->get_stream(id);
+            }
+
+            http::HttpAsyncResponse Stream::response() {
+                http::Header h;
+                auto ptr = http::internal::HttpSet::get(h);
+                ptr->changed = true;
+                auto found = impl->h.find(":status");
+                if (found) {
+                    ptr->code.append(*found);
+                }
+                ptr->order = impl->h.order;
+                ptr->body = impl->data;
+                http::HttpAsyncResponse resp;
+                auto to_set = new http::internal::HttpAsyncResponseImpl{};
+                to_set->response = std::move(h);
+                http::internal::HttpSet::set(resp, to_set);
+                return resp;
             }
 
             Stream* Connection::new_stream() {

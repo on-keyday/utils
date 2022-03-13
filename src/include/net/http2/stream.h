@@ -45,6 +45,7 @@ namespace utils {
                 std::uint8_t priority() const;
                 std::int64_t window_size() const;
                 Status status() const;
+                http::HttpAsyncResponse response();
 
                private:
                 friend struct internal::ConnectionImpl;
@@ -84,8 +85,8 @@ namespace utils {
                     auto value = get<1>(s);
                     static_assert(sizeof(key) == 2, "require 2 octect value for http2 settings key");
                     static_assert(sizeof(value) == 4, "require 4 octect value for http2 settings value");
-                    key = endian::to_network(key);
-                    value = endian::to_network(value);
+                    key = endian::to_network(&key);
+                    value = endian::to_network(&value);
                     const char* kptr = reinterpret_cast<const char*>(&key);
                     const char* vptr = reinterpret_cast<const char*>(&value);
                     frame.setting.append(kptr, 2);

@@ -20,6 +20,7 @@
 #include "../../../include/net/async/pool.h"
 #include "../../../include/net/http/reason.h"
 #include "header_impl.h"
+#include "async_resp_impl.h"
 
 namespace utils {
     namespace net {
@@ -44,16 +45,6 @@ namespace utils {
                     Header response;
                     h1body::BodyType bodytype = h1body::BodyType::no_info;
                     size_t expect = 0;
-                    wrap::string hostname;
-                };
-
-                struct HttpAsyncResponseImpl {
-                    HeaderImpl* header = nullptr;
-                    AsyncIOClose io;
-                    wrap::string reqests;
-                    h1body::BodyType bodytype = h1body::BodyType::no_info;
-                    size_t expect = 0;
-                    Header response;
                     wrap::string hostname;
                 };
 

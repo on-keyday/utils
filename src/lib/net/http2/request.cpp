@@ -103,6 +103,7 @@ namespace utils {
                             return {};
                         }
                     }
+                    return stream->response();
                 };
                 return start(fn, std::move(ctx), std::move(remain), std::move(frame), std::move(data));
             }

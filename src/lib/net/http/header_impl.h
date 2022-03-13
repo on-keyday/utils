@@ -74,6 +74,7 @@ namespace utils {
                         return nullptr;
                     }
                 };
+
             }  // namespace internal
         }      // namespace http
     }          // namespace net

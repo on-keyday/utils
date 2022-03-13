@@ -279,7 +279,7 @@ namespace utils {
                 template <class Fn, class... Args>
                 static async::AnyFuture invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
                     return p.start([fn = std::move(fn), tup = std::forward_as_tuple(arg...)](async::Context& ctx) mutable {
-                        call_with_ctx(ctx, std::forward<Fn>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>);
+                        call_with_ctx(ctx, std::forward<Fn>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>{});
                     });
                 }
             };
