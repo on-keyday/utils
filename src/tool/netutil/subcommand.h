@@ -12,6 +12,7 @@
 #include "../../include/json/json_export.h"
 #include "../../include/json/convert_json.h"
 #include "../../include/json/iterator.h"
+#include "../../include/net_util/uri.h"
 
 extern utils::wrap::UtfOut& cout;
 constexpr auto mode = utils::cmdline::option::ParseFlag::assignable_mode;

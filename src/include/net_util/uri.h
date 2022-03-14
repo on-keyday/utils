@@ -28,6 +28,23 @@ namespace utils {
             wrap::string other;
             bool has_double_slash = false;
 
+            wrap::string path_query() {
+                wrap::string ret;
+                ret += path;
+                ret += query;
+                return ret;
+            }
+
+            wrap::string host_port() {
+                wrap::string ret;
+                ret += host;
+                if (port.size() && port.front() != ':') {
+                    port += ':';
+                }
+                ret += port;
+                return ret;
+            }
+
             wrap::string to_string() {
                 wrap::string ret;
                 ret += scheme;
@@ -45,12 +62,8 @@ namespace utils {
                     }
                     ret += '@';
                 }
-                ret += host;
-                if (port.size() && port.front() != ':') {
-                    port += ':';
-                }
-                ret += path;
-                ret += query;
+                ret += host_port();
+                ret += path_query();
                 ret += tag;
                 ret += other;
                 return ret;

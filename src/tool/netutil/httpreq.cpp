@@ -8,7 +8,6 @@
 
 #include "subcommand.h"
 #include "../../include/net_util/uri_normalize.h"
-#include "../../include/net_util/uri.h"
 
 using namespace utils;
 
