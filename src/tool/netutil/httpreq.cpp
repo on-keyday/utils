@@ -52,25 +52,30 @@ namespace netutil {
         cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
     }
 
-    bool encode_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
-        for (auto& uri : uris) {
-            auto err = net::normalize_uri(uri, normflag);
-            if (auto msg = error_msg(err)) {
-                cout << ctx.cuc() << ": error: " << msg << "\n";
-                return false;
-            }
+    bool normalize_a_uri(size_t idx, subcmd::RunCommand& ctx, net::URI& uri) {
+        auto err = net::normalize_uri(uri, normflag);
+        if (auto msg = error_msg(err)) {
+            cout << ctx.cuc() << ": " << ctx.arg()[idx] << ": error: " << msg << "\n";
+            return false;
         }
         return true;
     }
 
-    bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool use_on_http, bool tidy) {
+    bool encode_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+        size_t idx = 0;
+        for (auto& uri : uris) {
+            if (!normalize_a_uri(idx, ctx, uri)) {
+                return false;
+            }
+            idx++;
+        }
+        return true;
+    }
+
+    bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool tidy) {
         for (auto& v : ctx.arg()) {
             net::URI uri;
             net::rough_uri_parse(v, uri);
-            if (use_on_http && uri.other.size()) {
-                cout << ctx.cuc() << ": error: " << v << " is not parsable as url\n";
-                return false;
-            }
             if (tidy) {
                 net::uri_tidy(uri);
             }
@@ -79,53 +84,13 @@ namespace netutil {
         return true;
     }
 
-    int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
-        if (!parse_uri(ctx, uris, true, true)) {
-            return -1;
-        }
-        if (*verbose) {
-            cout << "verbose url...\n";
-            show_uri(uris, ctx.arg());
-        }
-        net::URI prev;
-        prev.scheme = "http";
-        for (size_t i = 0; i < uris.size(); i++) {
-            auto& uri = uris[i];
-            auto& raw = ctx.arg()[i];
-
-            if (!uri.scheme.size()) {
-                uri.scheme = prev.scheme;
-            }
-            else if (uri.scheme != "http" && uri.scheme != "https") {
-                cout << ctx.cuc() << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
-                return -1;
-            }
-            else if (uri.scheme.size() && !uri.has_double_slash) {
-                cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
-            }
-            if (!uri.host.size()) {
-                if (!prev.host.size()) {
-                    cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
-                    return -1;
-                }
-            }
-            else {
-                prev.host = uri.host;
-            }
-            if (!uri.path.size()) {
-                uri.path = "/";
-            }
-        }
-        return 0;
-    }
-
     int uriparse(subcmd::RunCommand& ctx) {
         if (*help) {
             cout << ctx.Usage(mode);
             return 1;
         }
         wrap::vector<net::URI> uris;
-        parse_uri(ctx, uris, false, *tidy);
+        parse_uri(ctx, uris, *tidy);
         if (!encode_uri(ctx, uris)) {
             return -1;
         }
@@ -148,6 +113,62 @@ namespace netutil {
         show_encoded = urps->option().Bool("e,show-encoded", false, "show encoded/decoded url");
     }
 
+    int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+        if (!parse_uri(ctx, uris, true)) {
+            return -1;
+        }
+        if (*verbose) {
+            cout << "verbose url...\n";
+            show_uri(uris, ctx.arg());
+        }
+        normflag = net::NormalizeFlag::host | net::NormalizeFlag::path;
+        net::URI prev;
+        prev.scheme = "http";
+        for (size_t i = 0; i < uris.size(); i++) {
+            auto& uri = uris[i];
+            auto& raw = ctx.arg()[i];
+            if (!normalize_a_uri(i, ctx, uri)) {
+                return -1;
+            }
+            if (uri.other.size()) {
+                cout << ctx.cuc() << ": error: " << raw << " is not parsable as http url\n";
+                return -1;
+            }
+            if (uri.user.size() || uri.password.size()) {
+                cout << ctx.cuc() << ": " << raw << ": error: user and password are not settable for http url\n";
+                return -1;
+            }
+
+            if (!uri.scheme.size()) {
+                uri.scheme = prev.scheme;
+            }
+            else if (uri.scheme != "http" && uri.scheme != "https") {
+                cout << ctx.cuc() << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
+                return -1;
+            }
+            else if (uri.scheme.size() && !uri.has_double_slash) {
+                cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
+                return -1;
+            }
+            if (!uri.host.size()) {
+                if (!prev.host.size()) {
+                    cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
+                    return -1;
+                }
+            }
+            else {
+                prev.host = uri.host;
+            }
+            if (!uri.path.size()) {
+                uri.path = "/";
+            }
+            if (uri.tag.size()) {
+                uri.tag = {};
+            }
+        }
+        return 0;
+    }
+
     int httpreq(subcmd::RunCommand& ctx) {
         if (*help) {
             cout << ctx.Usage(mode);
@@ -168,7 +189,6 @@ namespace netutil {
             }
             return 1;
         }
-
         return -1;
     }
 }  // namespace netutil
