@@ -23,7 +23,8 @@ namespace utils {
                 using minbuf_t = Minibuffer<char32_t>;
                 constexpr size_t offset = 4 / sizeof(typename BufferType<T>::char_type);
                 static_assert(offset != 0, "too large char type");
-                if (seq.current(-1) < 0x80 || offset == 1) {
+                std::make_unsigned_t<decltype(seq.current())> c = seq.current(-1);
+                if (c < 0x80 || offset == 1) {
                     return seq.backto();
                 }
                 size_t base = seq.rptr;

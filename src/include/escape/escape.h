@@ -94,7 +94,7 @@ namespace utils {
         constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none,
                                             Escape&& esc = default_set(), Range&& range = default_range()) {
             while (!seq.eos()) {
-                auto c = seq.current();
+                std::make_unsigned_t<decltype(seq.current())> c = seq.current();
                 bool done = false;
                 for (auto& s : esc) {
                     if (get<0>(s) == c) {
@@ -145,7 +145,7 @@ namespace utils {
                             }
                             done = true;
                         }
-                        if (!done && any(EscapeFlag::oct)) {
+                        if (!done && any(flag & EscapeFlag::oct)) {
                             helper::append(out, "\\");
                             if (auto e = number::to_string(out, c, 8); !e) {
                                 return e;

@@ -8,6 +8,8 @@
 
 #include "subcommand.h"
 #include "../../include/net_util/uri.h"
+#include "../../include/net_util/punycode.h"
+#include "../../include/net_util/urlencode.h"
 
 using namespace utils;
 
@@ -34,6 +36,14 @@ namespace netutil {
     bool* uricheck;
     bool* tidy;
 
+    enum class EncodeFlag {
+        host = 0x1,
+        path = 0x2,
+    };
+
+    DEFINE_ENUM_FLAGOP(EncodeFlag);
+    EncodeFlag* encflag;
+
     void show_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
         auto js = json::convert_to_json<json::OrderedJSON>(uri);
         size_t idx = 0;
@@ -43,6 +53,32 @@ namespace netutil {
             idx++;
         }
         cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
+    }
+
+    bool encode_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+        for (auto& uri : uris) {
+            if (any(*encflag & EncodeFlag::host)) {
+                wrap::string encoded;
+                if (!net::punycode::encode_host(uri.host, encoded)) {
+                    cout << ctx.cuc() << ": error: failed to encode host\n";
+                }
+                uri.host = std::move(encoded);
+            }
+            if (any(*encflag & EncodeFlag::path)) {
+                wrap::string encoded;
+                if (!net::urlenc::encode(uri.path, encoded, net::urlenc::encodeURIComponent())) {
+                    cout << ctx.cuc() << ": error: failed to encode path\n";
+                    return false;
+                }
+                uri.path = std::move(encoded);
+                if (!net::urlenc::encode(uri.query, encoded, net::urlenc::encodeURI())) {
+                    cout << ctx.cuc() << ": error: failed to encode path\n";
+                    return false;
+                }
+                uri.query = std::move(uri.query);
+            }
+        }
+        return true;
     }
 
     bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool use_on_http, bool tidy) {
@@ -105,6 +141,9 @@ namespace netutil {
         }
         wrap::vector<net::URI> uris;
         parse_uri(ctx, uris, false, *tidy);
+        if (!encode_uri(ctx, uris)) {
+            return -1;
+        }
         show_uri(uris, ctx.arg());
         return 0;
     }
@@ -118,6 +157,8 @@ namespace netutil {
         auto urps = ctx.SubCommand("uriparse", uriparse, "parse uri and output as json", "<uri>...");
         common_option(*urps);
         tidy = urps->option().Bool("t,tidy", false, "make parsed uri tidy");
+        encflag = urps->option().FlagSet("H,encode-host", EncodeFlag::host, "encode host with punycode");
+        urps->option().VarFlagSet(encflag, "P,encode-path", EncodeFlag::path, "encode path with urlencode");
     }
 
     int httpreq(subcmd::RunCommand& ctx) {
