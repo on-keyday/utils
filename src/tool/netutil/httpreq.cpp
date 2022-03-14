@@ -35,6 +35,8 @@ namespace netutil {
     bool* h2proto;
     bool* uricheck;
     bool* tidy;
+    bool* show_encoded;
+    bool* human_friendly;
 
     enum class EncodeFlag {
         host = 0x1,
@@ -50,6 +52,10 @@ namespace netutil {
         for (auto& v : json::as_array(js)) {
             js.abegin();
             v["raw"] = raw[idx];
+            if (any(*encflag) && *show_encoded) {
+                auto& u = uri[idx];
+                v[*human_friendly ? "decoded" : "encoded"] = u.to_string();
+            }
             idx++;
         }
         cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
@@ -59,23 +65,56 @@ namespace netutil {
         for (auto& uri : uris) {
             if (any(*encflag & EncodeFlag::host)) {
                 wrap::string encoded;
-                if (!net::punycode::encode_host(uri.host, encoded)) {
-                    cout << ctx.cuc() << ": error: failed to encode host\n";
+                if (helper::is_valid(uri.host, number::is_in_ascii_range<std::uint8_t>) &&
+                    helper::contains(uri.host, "xn--")) {
+                    if (*human_friendly) {
+                        if (!net::punycode::decode_host(uri.host, encoded)) {
+                            cout << ctx.cuc() << ": error: failed to decode host\n";
+                            return false;
+                        }
+                        uri.host = std::move(encoded);
+                    }
                 }
-                uri.host = std::move(encoded);
+                else {
+                    if (!*human_friendly) {
+                        if (!net::punycode::encode_host(uri.host, encoded)) {
+                            cout << ctx.cuc() << ": error: failed to encode host\n";
+                            return false;
+                        }
+                        uri.host = std::move(encoded);
+                    }
+                }
             }
-            if (any(*encflag & EncodeFlag::path)) {
+            auto encode_each = [](auto& input) {
                 wrap::string encoded;
-                if (!net::urlenc::encode(uri.path, encoded, net::urlenc::encodeURIComponent())) {
-                    cout << ctx.cuc() << ": error: failed to encode path\n";
+                if (helper::is_valid(input, number::is_in_ascii_range<std::uint8_t>) &&
+                    helper::contains(input, "%")) {
+                    if (*human_friendly) {
+                        if (net::urlenc::decode(input, encoded)) {
+                            input = std::move(encoded);
+                            return true;
+                        }
+                    }
+                    encoded = {};
+                }
+                if (*human_friendly) {
+                    return true;
+                }
+                if (!net::urlenc::encode(input, encoded, net::urlenc::encodeURI())) {
                     return false;
                 }
-                uri.path = std::move(encoded);
-                if (!net::urlenc::encode(uri.query, encoded, net::urlenc::encodeURI())) {
-                    cout << ctx.cuc() << ": error: failed to encode path\n";
+                input = std::move(encoded);
+                return true;
+            };
+            if (any(*encflag & EncodeFlag::path)) {
+                if (!encode_each(uri.path)) {
+                    cout << ctx.cuc() << ": error: failed to encode/decode path\n";
                     return false;
                 }
-                uri.query = std::move(uri.query);
+                if (!encode_each(uri.query)) {
+                    cout << ctx.cuc() << ": error: failed to encode/decode query\n";
+                    return false;
+                }
             }
         }
         return true;
@@ -118,6 +157,9 @@ namespace netutil {
                 cout << ctx.cuc() << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
                 return -1;
             }
+            else if (uri.scheme.size() && !uri.has_double_slash) {
+                cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
+            }
             if (!uri.host.size()) {
                 if (!prev.host.size()) {
                     cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
@@ -157,8 +199,10 @@ namespace netutil {
         auto urps = ctx.SubCommand("uriparse", uriparse, "parse uri and output as json", "<uri>...");
         common_option(*urps);
         tidy = urps->option().Bool("t,tidy", false, "make parsed uri tidy");
-        encflag = urps->option().FlagSet("H,encode-host", EncodeFlag::host, "encode host with punycode");
-        urps->option().VarFlagSet(encflag, "P,encode-path", EncodeFlag::path, "encode path with urlencode");
+        encflag = urps->option().FlagSet("H,encode-host", EncodeFlag::host, "encode/decode host with punycode");
+        urps->option().VarFlagSet(encflag, "P,encode-path", EncodeFlag::path, "encode/decode path with urlencode");
+        show_encoded = urps->option().Bool("e,show-encoded", false, "show encoded/decoded url");
+        human_friendly = urps->option().Bool("f,human-friendly", false, "encode/decode human-friendly");
     }
 
     int httpreq(subcmd::RunCommand& ctx) {

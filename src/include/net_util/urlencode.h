@@ -53,14 +53,15 @@ namespace utils {
             template <class T, class Out, class F = void (*)(std::uint8_t)>
             constexpr bool encode(Sequencer<T>& seq, Out& out, F&& no_escape = default_noescape(), bool upper = false) {
                 while (!seq.eos()) {
-                    if (seq.current() < 0 || seq.current() > 0xff) {
+                    std::make_unsigned_t<decltype(seq.current())> c = seq.current();
+                    if (c > 0xff) {
                         return false;
                     }
-                    if (no_escape(seq.current())) {
-                        out.push_back(seq.current());
+                    if (no_escape(c)) {
+                        out.push_back(c);
                     }
                     else {
-                        auto n = std::uint8_t(seq.current());
+                        auto n = std::uint8_t(c);
                         out.push_back('%');
                         out.push_back(number::to_num_char((n & 0xf0) >> 4, upper));
                         out.push_back(number::to_num_char((n & 0x0f), upper));

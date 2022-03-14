@@ -27,6 +27,34 @@ namespace utils {
             wrap::string tag;
             wrap::string other;
             bool has_double_slash = false;
+
+            wrap::string to_string() {
+                wrap::string ret;
+                ret += scheme;
+                if (scheme.size() && scheme.back() != ':') {
+                    ret += ':';
+                }
+                if (has_double_slash) {
+                    ret += "//";
+                }
+                if (user.size()) {
+                    ret += user;
+                    if (password.size()) {
+                        ret += ':';
+                        ret += password;
+                    }
+                    ret += '@';
+                }
+                ret += host;
+                if (port.size() && port.front() != ':') {
+                    port += ':';
+                }
+                ret += path;
+                ret += query;
+                ret += tag;
+                ret += other;
+                return ret;
+            }
         };
 
         namespace internal {
