@@ -38,6 +38,11 @@ void test_urlparse() {
     url = {};
     utils::net::rough_uri_parse("parsed/direct/bool.h", url);
     assert(url.path == "parsed/direct/bool.h");
+    url = {};
+    utils::net::rough_uri_parse("mailto:friend@example.com", url);
+    assert(url.scheme == "mailto:");
+    assert(url.user == "friend");
+    assert(url.host == "example.com");
 }
 
 int main() {

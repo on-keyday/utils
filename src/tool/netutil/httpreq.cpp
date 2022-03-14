@@ -7,9 +7,8 @@
 
 
 #include "subcommand.h"
+#include "../../include/net_util/uri_normalize.h"
 #include "../../include/net_util/uri.h"
-#include "../../include/net_util/punycode.h"
-#include "../../include/net_util/urlencode.h"
 
 using namespace utils;
 
@@ -36,24 +35,17 @@ namespace netutil {
     bool* uricheck;
     bool* tidy;
     bool* show_encoded;
-    bool* human_friendly;
 
-    enum class EncodeFlag {
-        host = 0x1,
-        path = 0x2,
-    };
-
-    DEFINE_ENUM_FLAGOP(EncodeFlag);
-    EncodeFlag* encflag;
+    net::NormalizeFlag normflag;
 
     void show_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
         auto js = json::convert_to_json<json::OrderedJSON>(uri);
         size_t idx = 0;
         for (auto& v : json::as_array(js)) {
             v["raw"] = raw[idx];
-            if (any(*encflag) && *show_encoded) {
+            if (any(normflag & ~net::NormalizeFlag::human_friendly) && *show_encoded) {
                 auto& u = uri[idx];
-                v[*human_friendly ? "decoded" : "encoded"] = u.to_string();
+                v[any(normflag & net::NormalizeFlag::human_friendly) ? "decoded" : "encoded"] = u.to_string();
             }
             idx++;
         }
@@ -62,61 +54,10 @@ namespace netutil {
 
     bool encode_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
         for (auto& uri : uris) {
-            if (any(*encflag & EncodeFlag::host)) {
-                wrap::string encoded;
-                if (helper::is_valid(uri.host, number::is_in_ascii_range<std::uint8_t>) &&
-                    helper::contains(uri.host, "xn--")) {
-                    if (*human_friendly) {
-                        if (!net::punycode::decode_host(uri.host, encoded)) {
-                            cout << ctx.cuc() << ": error: failed to decode host\n";
-                            return false;
-                        }
-                        uri.host = std::move(encoded);
-                    }
-                }
-                else {
-                    if (!*human_friendly) {
-                        if (!net::punycode::encode_host(uri.host, encoded)) {
-                            cout << ctx.cuc() << ": error: failed to encode host\n";
-                            return false;
-                        }
-                        uri.host = std::move(encoded);
-                    }
-                }
-            }
-            auto encode_each = [](auto& input) {
-                wrap::string encoded;
-                if (helper::is_valid(input, number::is_in_ascii_range<std::uint8_t>) &&
-                    helper::contains(input, "%")) {
-                    if (*human_friendly) {
-                        if (net::urlenc::decode(input, encoded)) {
-                            input = std::move(encoded);
-                            return true;
-                        }
-                    }
-                    else {
-                        return true;
-                    }
-                    encoded = {};
-                }
-                if (*human_friendly) {
-                    return true;
-                }
-                if (!net::urlenc::encode(input, encoded, net::urlenc::encodeURI())) {
-                    return false;
-                }
-                input = std::move(encoded);
-                return true;
-            };
-            if (any(*encflag & EncodeFlag::path)) {
-                if (!encode_each(uri.path)) {
-                    cout << ctx.cuc() << ": error: failed to encode/decode path\n";
-                    return false;
-                }
-                if (!encode_each(uri.query)) {
-                    cout << ctx.cuc() << ": error: failed to encode/decode query\n";
-                    return false;
-                }
+            auto err = net::normalize_uri(uri, normflag);
+            if (auto msg = error_msg(err)) {
+                cout << ctx.cuc() << ": error: " << msg << "\n";
+                return false;
             }
         }
         return true;
@@ -201,10 +142,10 @@ namespace netutil {
         auto urps = ctx.SubCommand("uriparse", uriparse, "parse uri and output as json", "<uri>...");
         common_option(*urps);
         tidy = urps->option().Bool("t,tidy", false, "make parsed uri tidy");
-        encflag = urps->option().FlagSet("H,encode-host", EncodeFlag::host, "encode/decode host with punycode");
-        urps->option().VarFlagSet(encflag, "P,encode-path", EncodeFlag::path, "encode/decode path with urlencode");
+        urps->option().VarFlagSet(&normflag, "H,encode-host", net::NormalizeFlag::host, "encode/decode host with punycode");
+        urps->option().VarFlagSet(&normflag, "P,encode-path", net::NormalizeFlag::path, "encode/decode path with urlencode");
+        urps->option().VarFlagSet(&normflag, "f,human-friendly", net::NormalizeFlag::human_friendly, "encode/decode human-friendly");
         show_encoded = urps->option().Bool("e,show-encoded", false, "show encoded/decoded url");
-        human_friendly = urps->option().Bool("f,human-friendly", false, "encode/decode human-friendly");
     }
 
     int httpreq(subcmd::RunCommand& ctx) {
