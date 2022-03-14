@@ -36,8 +36,8 @@ void test_asynctcp2() {
             auto c = net::open_async(host, "https");
             c.wait_until(ctx);
             auto cntcp = c.get();
-            assert(cntcp);
-            auto s = net::open_async(std::move(cntcp), "./src/test/net/cacert.pem");
+            assert(cntcp.err == net::ConnError::none);
+            auto s = net::open_async(std::move(cntcp.conn), "./src/test/net/cacert.pem");
             s.wait_until(ctx);
             auto conn = s.get();
             net::http::Header header;

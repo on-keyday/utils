@@ -35,8 +35,9 @@ void test_asynctcp() {
                  << t.count() << "ms\n";
             logicaltime += t.count();
             begin = system_clock::now();
-            auto conn = co.get();
-            assert(conn);
+            auto connres = co.get();
+            assert(connres.err == net::ConnError::none);
+            auto conn = connres.conn;
             wrap::string text = "GET ";
             text += path;
             text += " HTTP/1.1\r\nHost: ";

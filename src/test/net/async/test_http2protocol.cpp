@@ -23,7 +23,8 @@ void test_http2protocol() {
         return net::start(
             [](async::Context& ctx, const char* host, const char* path) {
                 auto tcp = AWAIT(net::open_async(host, "https"));
-                auto ssl = AWAIT(net::open_async(std::move(tcp), "./src/test/net/cacert.pem", "\2h2", host));
+                assert(tcp.conn);
+                auto ssl = AWAIT(net::open_async(std::move(tcp.conn), "./src/test/net/cacert.pem", "\2h2", host));
                 auto h2 = AWAIT(net::http2::open_async(std::move(ssl)));
                 auto setting = {std::pair{net::http2::SettingKey::enable_push, 0}};
                 auto h2ctx = AWAIT(net::http2::negotiate(std::move(h2), setting));

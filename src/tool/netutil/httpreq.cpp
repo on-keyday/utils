@@ -149,6 +149,13 @@ namespace netutil {
                 cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
                 return -1;
             }
+            if (uri.port.size()) {
+                std::uint16_t port = 0;
+                if (!number::parse_integer(uri.port, port)) {
+                    cout << ctx.cuc() << ": error: " << raw << ": port number is not acceptable.\n";
+                    return false;
+                }
+            }
             if (!uri.host.size()) {
                 if (!prev.host.size()) {
                     cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
@@ -157,6 +164,7 @@ namespace netutil {
             }
             else {
                 prev.host = uri.host;
+                prev.port = uri.port;
             }
             if (!uri.path.size()) {
                 uri.path = "/";
