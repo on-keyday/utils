@@ -94,6 +94,9 @@ namespace netutil {
                             return true;
                         }
                     }
+                    else {
+                        return true;
+                    }
                     encoded = {};
                 }
                 if (*human_friendly) {

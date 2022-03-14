@@ -108,7 +108,7 @@ namespace utils {
                     has_dot = true;
                 }
                 while (!seq.eos()) {
-                    if (seq.current() == '/') {
+                    if (seq.current() == '/' || seq.current() == '?' || seq.current() == '#') {
                         break;
                     }
                     else if (seq.current() == ':') {
@@ -214,9 +214,8 @@ namespace utils {
             }
             if (!no_host) {
                 parsed.has_double_slash = seq.seek_if("//");
-                if (!parsed.has_double_slash && has_scheme) {
+                if (!parsed.has_double_slash && has_scheme && !has_user) {
                     no_host = true;
-                    has_user = false;
                     unknown_data = true;
                 }
             }
