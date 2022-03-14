@@ -285,6 +285,37 @@ namespace utils {
                     return true;
                 }
             };
+
+            template <class Key, class Val, template <class...> class Map>
+            struct MappingParser {
+                Map<Key, Val> mapping;
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    if (!reserved) {
+                        val.set_value(Val{});
+                    }
+                    auto ptr = val.get_ptr<Val>();
+                    if (!ptr) {
+                        state.state = FlagType::type_not_match;
+                        return false;
+                    }
+                    const char* key = state.val;
+                    if (!key) {
+                        key = state.argv[state.arg_track_index];
+                        if (!state.val) {
+                            state.state = FlagType::require_more_argument;
+                            return false;
+                        }
+                        state.arg_track_index++;
+                    }
+                    auto found = mapping.find(utf::convert<Key>(key));
+                    if (found != mapping.end()) {
+                        state.state = FlagType::not_accepted;
+                        return false;
+                    }
+                    *ptr = get<1>(*found);
+                    return true;
+                }
+            };
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils

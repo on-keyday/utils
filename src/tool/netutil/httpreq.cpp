@@ -50,7 +50,6 @@ namespace netutil {
         auto js = json::convert_to_json<json::OrderedJSON>(uri);
         size_t idx = 0;
         for (auto& v : json::as_array(js)) {
-            js.abegin();
             v["raw"] = raw[idx];
             if (any(*encflag) && *show_encoded) {
                 auto& u = uri[idx];
@@ -225,6 +224,7 @@ namespace netutil {
             }
             return 1;
         }
+
         return -1;
     }
 }  // namespace netutil
