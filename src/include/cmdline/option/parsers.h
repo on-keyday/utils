@@ -301,7 +301,7 @@ namespace utils {
                     const char* key = state.val;
                     if (!key) {
                         key = state.argv[state.arg_track_index];
-                        if (!state.val) {
+                        if (!key) {
                             state.state = FlagType::require_more_argument;
                             return false;
                         }
