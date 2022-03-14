@@ -35,7 +35,7 @@ namespace netutil {
         }
         auto tcpconn = AWAIT(net::open_async(uri.host.c_str(), port));
         if (tcpconn.err != net::ConnError::none) {
-            chan << msg(id, "error: open connection to `", uri.host_port(), "` failed\n");
+            chan << msg(id, "error: open connection to `", uri.host_port(), "` failed\n", error_msg(tcpconn.err), "\n");
             return false;
         }
     }
