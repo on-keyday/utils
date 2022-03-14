@@ -11,6 +11,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "dns.h"
 #include "../tcp/tcp.h"
+#include "../../wrap/lite/enum.h"
 
 namespace utils {
     namespace net {
@@ -19,6 +20,11 @@ namespace utils {
             dns_query,
             tcp_connect,
         };
+
+        BEGIN_ENUM_STRING_MSG(ConnError, error_msg)
+        ENUM_STRING_MSG(ConnError::dns_query, "dns query failed")
+        ENUM_STRING_MSG(ConnError::tcp_connect, "tcp connect failed")
+        END_ENUM_STRING_MSG(nullptr)
 
         struct ConnResult {
             ConnError err = {};
