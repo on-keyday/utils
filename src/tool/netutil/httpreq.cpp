@@ -58,18 +58,18 @@ namespace netutil {
         }
     }
 
-    bool preprocese_a_uri(subcmd::RunCommand& ctx, wrap::string& raw, net::URI& uri, net::URI& prev) {
+    bool preprocese_a_uri(wrap::internal::Pack&& cout, wrap::string cuc, wrap::string& raw, net::URI& uri, net::URI& prev) {
         parse_uri(raw, uri, true);
         if (auto msg = error_msg(net::normalize_uri(uri, normflag))) {
-            cout << ctx.cuc() << ": " << raw << ": error: " << msg << "\n";
+            cout << cuc << ": " << raw << ": error: " << msg << "\n";
             return false;
         }
         if (uri.other.size()) {
-            cout << ctx.cuc() << ": error: " << raw << " is not parsable as http url\n";
+            cout << cuc << ": error: " << raw << " is not parsable as http url\n";
             return false;
         }
         if (uri.user.size() || uri.password.size()) {
-            cout << ctx.cuc() << ": " << raw << ": error: user and password are not settable for http url\n";
+            cout << cuc << ": " << raw << ": error: user and password are not settable for http url\n";
             return false;
         }
 
@@ -77,23 +77,23 @@ namespace netutil {
             uri.scheme = prev.scheme;
         }
         else if (uri.scheme != "http" && uri.scheme != "https") {
-            cout << ctx.cuc() << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
+            cout << cuc << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
             return false;
         }
         else if (uri.scheme.size() && !uri.has_double_slash) {
-            cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
+            cout << cuc << ": error: " << raw << ": invald url format; need // after scheme.\n";
             return false;
         }
         if (uri.port.size()) {
             std::uint16_t port = 0;
             if (!number::parse_integer(uri.port, port)) {
-                cout << ctx.cuc() << ": error: " << raw << ": port number is not acceptable.\n";
+                cout << cuc << ": error: " << raw << ": port number is not acceptable.\n";
                 return false;
             }
         }
         if (!uri.host.size()) {
             if (!prev.host.size()) {
-                cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
+                cout << cuc << ": error: " << raw << ": no host name is provided. need least one host name.\n";
                 return false;
             }
         }
@@ -150,7 +150,9 @@ namespace netutil {
         prev.scheme = "http";
         for (size_t i = 0; i < ctx.arg().size(); i++) {
             net::URI uri;
-            if (!preprocese_a_uri(ctx, ctx.arg()[i], uri, prev)) {
+            wrap::internal::Pack pack;
+            if (!preprocese_a_uri(pack.pack(), ctx.cuc(), ctx.arg()[i], uri, prev)) {
+                cout << pack.pack();
                 return -1;
             }
             uris.push_back(std::move(uri));

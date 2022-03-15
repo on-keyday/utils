@@ -24,7 +24,18 @@ namespace netutil {
     };
 
     struct Redirect {
-        net::URI uri;
+        wrap::vector<net::URI> uris;
+    };
+
+    struct Reconnect {
+        wrap::vector<net::URI> uris;
+        wrap::vector<net::http::Header> h;
+        int index = 0;
+    };
+
+    struct FinalResult {
+        wrap::vector<net::URI> uris;
+        wrap::vector<net::http::Header> h;
     };
 
     auto msg(int id, auto&&... args) {
@@ -43,18 +54,46 @@ namespace netutil {
     }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
-        for (auto& uri : uris) {
-            auto host = uri.host_port();
-            auto path = uri.path_query();
+        auto host = uris[0].host_port();
+        wrap::vector<net::http::Header> resps;
+        for (int i = 0; i < uris.size(); i++) {
+            auto path = uris[i].path_query();
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
             if (res.err != net::http::HttpError::none) {
+                chan << msgend(id, "error: http request to ", host, " failed\n",
+                               error_msg(res.err), "\nerrno: ", res.base_err);
                 return;
             }
+            io = res.resp.get_io();
+            auto h = res.resp.response();
+            if (auto conn = h.value("connection");
+                helper::contains(conn, "close", helper::ignore_case())) {
+                if (i + 1 != uris.size()) {
+                    Reconnect rec;
+                    rec.h = std::move(resps);
+                    rec.h.push_back(std::move(h));
+                    rec.uris = std::move(uris);
+                    rec.index = i + 1;
+                    chan << std::move(rec);
+                    return;
+                }
+            }
+            else if (h.status() >= 300 && h.status() < 400) {
+                if (auto loc = h.value("location")) {
+                    wrap::string locuri = loc;
+                    net::URI newuri;
+                    preprocese_a_uri(loc, "", locuri, newuri, uris[i]);
+                }
+            }
+            resps.push_back(std::move(h));
         }
+        chan << FinalResult{
+            .uris = std::move(uris),
+            .h = std::move(resps),
+        };
     }
 
     void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
-        net::set_iocompletion_thread(true);
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {
@@ -98,6 +137,7 @@ namespace netutil {
     }
 
     int http_do(subcmd::RunContext& ctx, wrap::vector<net::URI>& uris) {
+        net::set_iocompletion_thread(true);
         wrap::map<wrap::string, wrap::vector<net::URI>> hosts;
         for (auto& uri : uris) {
             hosts[uri.host].push_back(std::move(uri));

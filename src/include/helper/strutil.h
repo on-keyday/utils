@@ -63,7 +63,7 @@ namespace utils {
 
         template <class In, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool contains(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
-            return find(in, cmp) != ~0;
+            return find(in, cmp, compare) != ~0;
         }
 
         template <bool no_zero = false, class String, class Validate>
