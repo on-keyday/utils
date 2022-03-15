@@ -579,7 +579,7 @@ namespace utils {
             return f;
         }
 
-        void task_handler(wrap::shared_ptr<internal::WorkerData> wd) {
+        void task_handler(wrap::shared_ptr<internal::WorkerData> wd, bool on_single) {
             ThreadToFiber self;
             auto r = wd->r;
             auto w = wd->w;
@@ -673,6 +673,9 @@ namespace utils {
                 if (wd->do_yield) {
                     std::this_thread::yield();
                 }
+                if (on_single && r.peek_queue() == 0) {
+                    break;
+                }
             }
             wd->accepting--;
             wd->detached--;
@@ -690,7 +693,7 @@ namespace utils {
         }
 
         void detach_thread(wrap::shared_ptr<internal::WorkerData>& data) {
-            std::thread(task_handler, data).detach();
+            std::thread(task_handler, data, false).detach();
             data->detached++;
         }
 
@@ -779,10 +782,9 @@ namespace utils {
                 initlock.unlock();
                 return false;
             }
-            data->w << EndTask{};
             data->accepting = 1;
             data->detached = 1;
-            task_handler(data);
+            task_handler(data, true);
             initlock.unlock();
             return true;
         }

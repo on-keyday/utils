@@ -84,6 +84,7 @@ add_executable(coroutine "src/test/async/test_coroutine.cpp")
 add_executable(asynctcp2 "src/test/net/async/test_asynctcp2.cpp")
 add_executable(http2base "src/test/net/async/test_http2base.cpp")
 add_executable(http2protocol "src/test/net/async/test_http2protocol.cpp")
+add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -182,6 +183,7 @@ target_link_libraries(coroutine utils)
 target_link_libraries(asynctcp2 utils)
 target_link_libraries(http2base utils)
 target_link_libraries(http2protocol utils)
+target_link_libraries(run_on_single_thread utils)
 
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
