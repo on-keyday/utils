@@ -47,7 +47,13 @@ namespace netutil {
             chan << msgend(id, "error: open connection to `", uri.host_port(), "` failed\n", error_msg(tcpconn.err), "\n");
             return;
         }
+        net::AsyncIOClose io;
         if (uri.scheme == "https") {
+            const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
+            auto sslconn = AWAIT(net::open_async(std::move(tcpconn.conn), cacert->c_str(), alpn));
+        }
+        else {
+            io = std::move(tcpconn.conn);
         }
     }
 

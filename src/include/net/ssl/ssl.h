@@ -97,11 +97,23 @@ namespace utils {
             internal::SSLSyncImpl* impl = nullptr;
         };
 
+        enum class SSLAsyncError {
+            none,
+            set_up_error,
+            connect_error,
+        };
+
+        struct SSLAsyncResult {
+            SSLAsyncError err = {};
+            int errcode = 0;
+            wrap::shared_ptr<SSLAsyncConn> conn;
+        };
+
         DLL SSLResult STDCALL open(IO&& io, const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                                    const char* selfcert = nullptr, const char* selfprivate = nullptr);
-        DLL async::Future<wrap::shared_ptr<SSLAsyncConn>> STDCALL open_async(AsyncIOClose&& io,
-                                                                             const char* cert, const char* alpn = nullptr, const char* host = nullptr,
-                                                                             const char* selfcert = nullptr, const char* selfprivate = nullptr);
+        DLL async::Future<SSLAsyncResult> STDCALL open_async(AsyncIOClose&& io,
+                                                             const char* cert, const char* alpn = nullptr, const char* host = nullptr,
+                                                             const char* selfcert = nullptr, const char* selfprivate = nullptr);
         DLL SSLServer STDCALL setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr);
     }  // namespace net
 }  // namespace utils

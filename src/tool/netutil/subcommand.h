@@ -26,6 +26,8 @@ namespace netutil {
     void common_option(subcmd::RunCommand& ctx);
 
     // set option
+    extern utils::wrap::string* cacert;
+    extern bool* h2proto;
     void httpreq_option(subcmd::RunContext& ctx);
 
     // command

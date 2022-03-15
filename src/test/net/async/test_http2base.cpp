@@ -26,7 +26,8 @@ void test_http2base() {
                 auto s = net::open_async(std::move(tcp), "./src/test/net/cacert.pem", "\2h2", "google.com");
                 s.wait_until(ctx);
                 auto ssl = s.get();
-                auto h2 = net::http2::open_async(std::move(ssl));
+                assert(ssl.conn);
+                auto h2 = net::http2::open_async(std::move(ssl.conn));
                 auto conn = AWAIT(h2);
                 net::http2::SettingsFrame settings;
                 settings.type = net::http2::FrameType::settings;

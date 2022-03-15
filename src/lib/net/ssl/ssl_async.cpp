@@ -189,7 +189,7 @@ namespace utils {
             return (const char*)selected;
         }
 
-        async::Future<wrap::shared_ptr<SSLAsyncConn>> STDCALL open_async(
+        async::Future<SSLAsyncResult> STDCALL open_async(
             AsyncIOClose&& io,
             const char* cert, const char* alpn, const char* host,
             const char* selfcert, const char* selfprivate) {
@@ -198,23 +198,31 @@ namespace utils {
             }
             auto impl = new internal::SSLAsyncImpl{};
             if (!common_setup_async(impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
-                return nullptr;
+                return SSLAsyncResult{.err = SSLAsyncError::set_up_error};
             }
-            return get_pool().start<wrap::shared_ptr<SSLAsyncConn>>([impl](async::Context& ctx) {
-                while (!::SSL_connect(impl->ssl)) {
-                    if (need_io(impl->ssl)) {
-                        if (!impl->do_IO(ctx)) {
-                            return;
+            return start(
+                [](async::Context& ctx, internal::SSLAsyncImpl* impl) -> SSLAsyncResult {
+                    while (!::SSL_connect(impl->ssl)) {
+                        if (need_io(impl->ssl)) {
+                            if (!impl->do_IO(ctx)) {
+                                return SSLAsyncResult{
+                                    .err = SSLAsyncError::connect_error,
+                                    .errcode = ::SSL_get_error(impl->ssl, -1),
+                                };
+                            }
+                            continue;
                         }
-                        continue;
+                        return SSLAsyncResult{
+                            .err = SSLAsyncError::connect_error,
+                            .errcode = ::SSL_get_error(impl->ssl, -1),
+                        };
                     }
-                    return;
-                }
-                auto as = wrap::make_shared<SSLAsyncConn>();
-                internal::SSLSet::set(*as, impl);
-                impl->conn = as;
-                ctx.set_value(std::move(as));
-            });
+                    auto as = wrap::make_shared<SSLAsyncConn>();
+                    internal::SSLSet::set(*as, impl);
+                    impl->conn = as;
+                    return SSLAsyncResult{.conn = as};
+                },
+                impl);
         }
     }  // namespace net
 }  // namespace utils
