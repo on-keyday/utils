@@ -49,6 +49,8 @@ namespace utils {
             void* get_raw_ssl();
             void* get_raw_sslctx();
 
+            const char* alpn_selected(int* len);
+
             ~SSLAsyncConn();
 
            private:

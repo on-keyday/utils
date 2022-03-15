@@ -176,6 +176,19 @@ namespace utils {
             return State::complete;
         }
 
+        const char* SSLAsyncConn::alpn_selected(int* len) {
+            if (!impl || !impl->ssl) {
+                return nullptr;
+            }
+            const unsigned char* selected = nullptr;
+            unsigned int lens = 0;
+            ::SSL_get0_alpn_selected(impl->ssl, &selected, &lens);
+            if (len) {
+                *len = (int)lens;
+            }
+            return (const char*)selected;
+        }
+
         async::Future<wrap::shared_ptr<SSLAsyncConn>> STDCALL open_async(
             AsyncIOClose&& io,
             const char* cert, const char* alpn, const char* host,
