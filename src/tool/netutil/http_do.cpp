@@ -11,6 +11,7 @@
 #include "../../include/net/async/pool.h"
 #include "../../include/async/async_macro.h"
 #include "../../include/thread/channel.h"
+#include <execution>
 using namespace utils;
 namespace netutil {
     struct Message {
@@ -24,7 +25,7 @@ namespace netutil {
 
     using msg_chan = thread::SendChan<Message>;
 
-    int do_request_host(async::Context& ctx, msg_chan chan, int id, wrap::vector<net::URI>& uris) {
+    void do_request_host(async::Context& ctx, msg_chan chan, int id, wrap::vector<net::URI>& uris) {
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {
@@ -36,7 +37,10 @@ namespace netutil {
         auto tcpconn = AWAIT(net::open_async(uri.host.c_str(), port));
         if (tcpconn.err != net::ConnError::none) {
             chan << msg(id, "error: open connection to `", uri.host_port(), "` failed\n", error_msg(tcpconn.err), "\n");
-            return false;
+            return;
         }
+    }
+
+    int http_do(subcmd::RunContext& ctx) {
     }
 }  // namespace netutil

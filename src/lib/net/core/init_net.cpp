@@ -9,6 +9,7 @@
 #include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/core/init_net.h"
 #include "../../../include/net/core/platform.h"
+#include "../../../include/net/core/errcode.h"
 
 namespace utils {
     namespace net {
@@ -46,6 +47,14 @@ namespace utils {
 
         bool initialized() {
             return internal::init().succeed;
+        }
+
+        int STDCALL errcode() {
+#ifdef _WIN32
+            return ::WSAGetLastError();
+#else
+            return errno;
+#endif
         }
     }  // namespace net
 }  // namespace utils

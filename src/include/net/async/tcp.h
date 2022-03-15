@@ -28,6 +28,8 @@ namespace utils {
 
         struct ConnResult {
             ConnError err = {};
+            AddrError addrerr = {};
+            int errcode = 0;
             wrap::shared_ptr<TCPConn> conn;
         };
 
