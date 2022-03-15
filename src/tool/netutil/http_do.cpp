@@ -33,7 +33,13 @@ namespace netutil {
 
     using msg_chan = thread::SendChan<Message>;
 
-    void do_request_host(async::Context& ctx, msg_chan chan, int id, wrap::vector<net::URI>& uris) {
+    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, int id, wrap::vector<net::URI> uris) {
+    }
+
+    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, int id, wrap::vector<net::URI> uris) {
+    }
+
+    void do_request_host(async::Context& ctx, msg_chan chan, int id, wrap::vector<net::URI> uris) {
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {
@@ -51,7 +57,6 @@ namespace netutil {
                 "addrerr: ", error_msg(tcp.addrerr), "\n");
             return;
         }
-        net::AsyncIOClose io;
         if (uri.scheme == "https") {
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
             auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
@@ -63,9 +68,16 @@ namespace netutil {
                     "errno:", ssl.transporterr, "\n");
                 return;
             }
+            auto conn = ssl.conn;
+            auto selected = conn->alpn_selected(nullptr);
+            if (!selected || ::strncmp(selected, "http/1.1", 8)) {
+            }
+            else if (::strncmp(selected, "h2", 2)) {
+                return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris));
+            }
         }
         else {
-            io = std::move(tcp.conn);
+            return do_http1(ctx, std::move(tcp.conn), std::move(chan), id, std::move(uris));
         }
     }
 

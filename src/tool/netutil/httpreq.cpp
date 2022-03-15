@@ -51,34 +51,61 @@ namespace netutil {
         cout << json::to_string<wrap::string>(js, json::FmtFlag::last_line | json::FmtFlag::unescape_slash);
     }
 
-    bool normalize_a_uri(size_t idx, subcmd::RunCommand& ctx, net::URI& uri) {
-        auto err = net::normalize_uri(uri, normflag);
-        if (auto msg = error_msg(err)) {
-            cout << ctx.cuc() << ": " << ctx.arg()[idx] << ": error: " << msg << "\n";
+    void parse_uri(wrap::string& v, net::URI& uri, bool tidy) {
+        net::rough_uri_parse(v, uri);
+        if (tidy) {
+            net::uri_tidy(uri);
+        }
+    }
+
+    bool preprocese_a_uri(subcmd::RunCommand& ctx, wrap::string& raw, net::URI& uri, net::URI& prev) {
+        parse_uri(raw, uri, true);
+        if (auto msg = error_msg(net::normalize_uri(uri, normflag))) {
+            cout << ctx.cuc() << ": " << raw << ": error: " << msg << "\n";
             return false;
         }
-        return true;
-    }
+        if (uri.other.size()) {
+            cout << ctx.cuc() << ": error: " << raw << " is not parsable as http url\n";
+            return false;
+        }
+        if (uri.user.size() || uri.password.size()) {
+            cout << ctx.cuc() << ": " << raw << ": error: user and password are not settable for http url\n";
+            return false;
+        }
 
-    bool encode_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
-        size_t idx = 0;
-        for (auto& uri : uris) {
-            if (!normalize_a_uri(idx, ctx, uri)) {
+        if (!uri.scheme.size()) {
+            uri.scheme = prev.scheme;
+        }
+        else if (uri.scheme != "http" && uri.scheme != "https") {
+            cout << ctx.cuc() << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
+            return false;
+        }
+        else if (uri.scheme.size() && !uri.has_double_slash) {
+            cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
+            return false;
+        }
+        if (uri.port.size()) {
+            std::uint16_t port = 0;
+            if (!number::parse_integer(uri.port, port)) {
+                cout << ctx.cuc() << ": error: " << raw << ": port number is not acceptable.\n";
                 return false;
             }
-            idx++;
         }
-        return true;
-    }
-
-    bool parse_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris, bool tidy) {
-        for (auto& v : ctx.arg()) {
-            net::URI uri;
-            net::rough_uri_parse(v, uri);
-            if (tidy) {
-                net::uri_tidy(uri);
+        if (!uri.host.size()) {
+            if (!prev.host.size()) {
+                cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
+                return false;
             }
-            uris.push_back(std::move(uri));
+        }
+        else {
+            prev.host = uri.host;
+            prev.port = uri.port;
+        }
+        if (!uri.path.size()) {
+            uri.path = "/";
+        }
+        if (uri.tag.size()) {
+            uri.tag = {};
         }
         return true;
     }
@@ -89,9 +116,14 @@ namespace netutil {
             return 1;
         }
         wrap::vector<net::URI> uris;
-        parse_uri(ctx, uris, *tidy);
-        if (!encode_uri(ctx, uris)) {
-            return -1;
+        for (auto& v : ctx.arg()) {
+            net::URI uri;
+            parse_uri(v, uri, *tidy);
+            auto err = error_msg(net::normalize_uri(uri, normflag));
+            if (err) {
+                cout << ctx.cuc() << ": error: " << err << "\n";
+            }
+            uris.push_back(std::move(uri));
         }
         show_uri(uris, ctx.arg());
         return 0;
@@ -113,65 +145,20 @@ namespace netutil {
     }
 
     int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
-        if (!parse_uri(ctx, uris, true)) {
-            return -1;
-        }
-        if (*verbose) {
-            cout << "verbose url...\n";
-            show_uri(uris, ctx.arg());
-        }
         normflag = net::NormalizeFlag::host | net::NormalizeFlag::path;
         net::URI prev;
         prev.scheme = "http";
-        for (size_t i = 0; i < uris.size(); i++) {
-            auto& uri = uris[i];
-            auto& raw = ctx.arg()[i];
-            if (!normalize_a_uri(i, ctx, uri)) {
+        for (size_t i = 0; i < ctx.arg().size(); i++) {
+            net::URI uri;
+            if (!preprocese_a_uri(ctx, ctx.arg()[i], uri, prev)) {
                 return -1;
             }
-            if (uri.other.size()) {
-                cout << ctx.cuc() << ": error: " << raw << " is not parsable as http url\n";
-                return -1;
-            }
-            if (uri.user.size() || uri.password.size()) {
-                cout << ctx.cuc() << ": " << raw << ": error: user and password are not settable for http url\n";
-                return -1;
-            }
-
-            if (!uri.scheme.size()) {
-                uri.scheme = prev.scheme;
-            }
-            else if (uri.scheme != "http" && uri.scheme != "https") {
-                cout << ctx.cuc() << ": error: " << raw << ": uri scheme " << uri.scheme << " is not surpported\n";
-                return -1;
-            }
-            else if (uri.scheme.size() && !uri.has_double_slash) {
-                cout << ctx.cuc() << ": error: " << raw << ": invald url format; need // after scheme.\n";
-                return -1;
-            }
-            if (uri.port.size()) {
-                std::uint16_t port = 0;
-                if (!number::parse_integer(uri.port, port)) {
-                    cout << ctx.cuc() << ": error: " << raw << ": port number is not acceptable.\n";
-                    return false;
-                }
-            }
-            if (!uri.host.size()) {
-                if (!prev.host.size()) {
-                    cout << ctx.cuc() << ": error: " << raw << ": no host name is provided. need least one host name.\n";
-                    return -1;
-                }
-            }
-            else {
-                prev.host = uri.host;
-                prev.port = uri.port;
-            }
-            if (!uri.path.size()) {
-                uri.path = "/";
-            }
-            if (uri.tag.size()) {
-                uri.tag = {};
-            }
+            uris.push_back(std::move(uri));
+        }
+        if (*verbose) {
+            cout << "--- verbose log begin ---\nuri parsed:\n";
+            show_uri(uris, ctx.arg());
+            cout << "--- verbose log end ---\n";
         }
         return 0;
     }
