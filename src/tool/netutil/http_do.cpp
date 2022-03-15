@@ -14,6 +14,7 @@
 #include "../../include/thread/channel.h"
 #include <execution>
 #include "../../include/wrap/lite/map.h"
+#include "../../include/net/http/http1.h"
 using namespace utils;
 namespace netutil {
     struct Message {
@@ -42,9 +43,16 @@ namespace netutil {
     }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
+        for (auto& uri : uris) {
+            auto host = uri.host_port();
+            auto path = uri.path_query();
+            auto req = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
+            req;
+        }
     }
 
     void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
+        net::set_iocompletion_thread(true);
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {

@@ -315,9 +315,10 @@ namespace utils {
                 return std::move(io);
             }
 
-            async::Future<HttpAsyncResponse> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
+            async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
                 if (!io || !host || !method || !path || !header) {
-                    return nullptr;
+                    return HttpAsyncResult{
+                        .err = HttpError::invalid_arg};
                 }
                 wrap::string buf;
                 if (!render_request(buf, host, method, path, header.impl)) {
@@ -327,7 +328,7 @@ namespace utils {
                 impl->io = std::move(io);
                 impl->reqests = std::move(buf);
                 impl->hostname = host;
-                return get_pool().start<HttpAsyncResponse>([impl](async::Context& ctx) {
+                return start([impl](async::Context& ctx) -> HttpAsyncResult {
                     struct Defer {
                         decltype(impl) ptr;
                         bool no_del = false;
@@ -339,8 +340,9 @@ namespace utils {
                     } def{impl};
                     auto w = impl->io.write(impl->reqests.c_str(), impl->reqests.size());
                     w.wait_until(ctx);
-                    if (w.get().err) {
-                        return;
+                    auto got = w.get();
+                    if (got.err) {
+                        return {.err = HttpError::write_request, .base_err = got.err};
                     }
                     wrap::string buf;
                     auto seq = make_ref_seq(buf);
@@ -351,15 +353,15 @@ namespace utils {
                         r.wait_until(ctx);
                         auto data = r.get();
                         if (data.err) {
-                            return false;
+                            return data.err;
                         }
                         buf.append(tmp, data.read);
                         red = data.read;
-                        return true;
+                        return 0;
                     };
                     while (true) {
-                        if (!read_one()) {
-                            return;
+                        if (auto err = read_one(); err != 0) {
+                            return {.err = HttpError::read_header, .base_err = err};
                         }
                         while (seq.rptr < buf.size()) {
                             if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
@@ -374,36 +376,35 @@ namespace utils {
                     auto resp = internal::HttpSet::get(impl->response);
                     if (!h1header::parse_response<wrap::string>(seq, helper::nop, resp->code, helper::nop, *resp,
                                                                 h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
-                        return;
+                        return {.err = HttpError::invalid_header};
                     }
                     auto rem = seq.remain();
-                    resp->body.reserve(impl->expect);
                     if (impl->expect) {
                         resp->body.reserve(impl->expect);
                     }
                     if (impl->bodytype == h1body::BodyType::no_info) {
                         while (red == 1024) {
-                            if (!read_one()) {
-                                return;
+                            if (auto err = read_one(); err != 0) {
+                                return {.err = HttpError::read_body, .base_err = err};
                             }
                         }
                     }
                     while (true) {
                         auto res = h1body::read_body(resp->body, seq, impl->bodytype, impl->expect);
                         if (res == State::failed) {
-                            return;
+                            return {.err = HttpError::invalid_body};
                         }
                         if (res == State::complete) {
                             break;
                         }
-                        if (!read_one()) {
-                            return;
+                        if (auto err = read_one(); err != 0) {
+                            return {.err = HttpError::read_body, .base_err = err};
                         }
                     }
                     HttpAsyncResponse res;
                     internal::HttpSet::set(res, impl);
                     def.no_del = true;
-                    return ctx.set_value(std::move(res));
+                    return {.resp = std::move(res)};
                 });
             }
 
@@ -419,6 +420,11 @@ namespace utils {
                     return nullptr;
                 }
                 return std::move(impl->response);
+            }
+
+            HttpAsyncResponse& HttpAsyncResponse::operator=(HttpAsyncResponse&& in) {
+                delete impl;
+                impl = std::exchange(in.impl, nullptr);
             }
         }  // namespace http
     }      // namespace net

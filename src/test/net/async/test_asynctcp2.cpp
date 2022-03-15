@@ -46,7 +46,7 @@ void test_asynctcp2() {
             auto h = net::http::request_async(std::move(conn.conn), host, "GET", path, std::move(header));
             h.wait_until(ctx);
             auto resp = std::move(h.get());
-            auto response = resp.response();
+            auto response = resp.resp.response();
             auto res = wrap::string(response.response());
             if (auto loc = response.value("Location")) {
                 cout << "Redirect To: " << loc << "\n";

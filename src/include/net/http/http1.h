@@ -23,6 +23,7 @@ namespace utils {
             }  // namespace internal
 
             struct Header;
+            struct HttpAsyncResult;
 
             struct DLL HttpResponse {
                 friend DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
@@ -49,9 +50,27 @@ namespace utils {
 
                 constexpr HttpAsyncResponse(HttpAsyncResponse&& in)
                     : impl(std::exchange(in.impl, nullptr)) {}
+                HttpAsyncResponse& operator=(HttpAsyncResponse&& in);
 
                private:
                 internal::HttpAsyncResponseImpl* impl = nullptr;
+            };
+
+            enum class HttpError {
+                none,
+                transport,
+                invalid_arg,
+                invalid_header,
+                invalid_body,
+                read_body,
+                read_header,
+                write_request,
+            };
+
+            struct HttpAsyncResult {
+                HttpAsyncResponse resp;
+                HttpError err;
+                int base_err;
             };
 
             struct DLL Header {
@@ -65,7 +84,7 @@ namespace utils {
                public:
                 friend DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
                 friend DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
-                friend DLL async::Future<HttpAsyncResponse> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+                friend DLL async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
                 Header();
                 ~Header();
 
@@ -92,7 +111,7 @@ namespace utils {
 
             DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
-            DLL async::Future<HttpAsyncResponse> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+            DLL async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
         }  // namespace http
     }      // namespace net
 }  // namespace utils
