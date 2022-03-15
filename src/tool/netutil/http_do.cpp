@@ -42,18 +42,30 @@ namespace netutil {
         else {
             port = uri.scheme.c_str();
         }
-        auto tcpconn = AWAIT(net::open_async(uri.host.c_str(), port));
-        if (!tcpconn.conn) {
-            chan << msgend(id, "error: open connection to `", uri.host_port(), "` failed\n", error_msg(tcpconn.err), "\n");
+        auto tcp = AWAIT(net::open_async(uri.host.c_str(), port));
+        if (!tcp.conn) {
+            chan << msgend(
+                id,
+                "error: open connection to `", uri.host_port(), "` failed\n", error_msg(tcp.err), "\n",
+                "errno: ", tcp.errcode, "\n",
+                "addrerr: ", error_msg(tcp.addrerr), "\n");
             return;
         }
         net::AsyncIOClose io;
         if (uri.scheme == "https") {
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
-            auto sslconn = AWAIT(net::open_async(std::move(tcpconn.conn), cacert->c_str(), alpn));
+            auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
+            if (!ssl.conn) {
+                chan << msgend(
+                    id,
+                    "error: open ssl connection to `", uri.host_port(), "` failed\n", error_msg(ssl.err), "\n",
+                    "sslerror: ", ssl.errcode, "\n",
+                    "errno:", ssl.transporterr, "\n");
+                return;
+            }
         }
         else {
-            io = std::move(tcpconn.conn);
+            io = std::move(tcp.conn);
         }
     }
 

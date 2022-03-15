@@ -204,10 +204,11 @@ namespace utils {
                 [](async::Context& ctx, internal::SSLAsyncImpl* impl) -> SSLAsyncResult {
                     while (!::SSL_connect(impl->ssl)) {
                         if (need_io(impl->ssl)) {
-                            if (!impl->do_IO(ctx)) {
+                            if (auto code = impl->do_IO(ctx); code != 0) {
                                 return SSLAsyncResult{
                                     .err = SSLAsyncError::connect_error,
                                     .errcode = ::SSL_get_error(impl->ssl, -1),
+                                    .transporterr = code,
                                 };
                             }
                             continue;

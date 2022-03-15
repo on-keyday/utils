@@ -12,6 +12,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "../../async/worker.h"
 #include "../dns/dns.h"
+#include "../../wrap/lite/enum.h"
 
 namespace utils {
     namespace net {
@@ -20,6 +21,11 @@ namespace utils {
             invalid_address,
             syscall_err,
         };
+
+        BEGIN_ENUM_STRING_MSG(AddrError, error_msg)
+        ENUM_STRING_MSG(AddrError::invalid_address, "invalid address")
+        ENUM_STRING_MSG(AddrError::syscall_err, "syscall error")
+        END_ENUM_STRING_MSG("none")
 
         struct AddrResult {
             AddrError err;

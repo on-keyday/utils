@@ -13,6 +13,7 @@
 #include "../core/iodef.h"
 
 #include "../../wrap/lite/smart_ptr.h"
+#include "../../wrap/lite/enum.h"
 
 #include "../generate/iocloser.h"
 
@@ -103,9 +104,15 @@ namespace utils {
             connect_error,
         };
 
+        BEGIN_ENUM_STRING_MSG(SSLAsyncError, error_msg)
+        ENUM_STRING_MSG(SSLAsyncError::set_up_error, "create ssl context suite failed")
+        ENUM_STRING_MSG(SSLAsyncError::connect_error, "negotiate ssl connection failed")
+        END_ENUM_STRING_MSG(nullptr)
+
         struct SSLAsyncResult {
             SSLAsyncError err = {};
             int errcode = 0;
+            int transporterr = 0;
             wrap::shared_ptr<SSLAsyncConn> conn;
         };
 
