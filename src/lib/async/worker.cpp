@@ -772,6 +772,21 @@ namespace utils {
             return f;
         }
 
+        bool TaskPool::run_on_this_thread() {
+            initlock.lock();
+            init_data();
+            if (data->detached != 0) {
+                initlock.unlock();
+                return false;
+            }
+            data->w << EndTask{};
+            data->accepting = 1;
+            data->detached = 1;
+            task_handler(data);
+            initlock.unlock();
+            return true;
+        }
+
         TaskPool::~TaskPool() {
             initlock.lock();
             if (data) {

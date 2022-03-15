@@ -13,6 +13,7 @@
 #include "../../include/async/async_macro.h"
 #include "../../include/thread/channel.h"
 #include <execution>
+#include "../../include/wrap/lite/map.h"
 using namespace utils;
 namespace netutil {
     struct Message {
@@ -21,25 +22,29 @@ namespace netutil {
         bool endofmsg = false;
     };
 
+    struct Redirect {
+        net::URI uri;
+    };
+
     auto msg(int id, auto&&... args) {
         return Message{.id = id, .msg = wrap::pack(args...)};
     }
 
     auto msgend(int id, auto&&... args) {
-        auto p = msg(id, args);
+        auto p = msg(id, args...);
         p.endofmsg = true;
         return p;
     }
 
-    using msg_chan = thread::SendChan<Message>;
+    using msg_chan = thread::SendChan<async::Any>;
 
-    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, int id, wrap::vector<net::URI> uris) {
+    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
     }
 
-    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, int id, wrap::vector<net::URI> uris) {
+    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
     }
 
-    void do_request_host(async::Context& ctx, msg_chan chan, int id, wrap::vector<net::URI> uris) {
+    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {
@@ -71,6 +76,7 @@ namespace netutil {
             auto conn = ssl.conn;
             auto selected = conn->alpn_selected(nullptr);
             if (!selected || ::strncmp(selected, "http/1.1", 8)) {
+                return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris));
             }
             else if (::strncmp(selected, "h2", 2)) {
                 return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris));
@@ -82,5 +88,29 @@ namespace netutil {
     }
 
     int http_do(subcmd::RunContext& ctx, wrap::vector<net::URI>& uris) {
+        wrap::map<wrap::string, wrap::vector<net::URI>> hosts;
+        for (auto& uri : uris) {
+            hosts[uri.host].push_back(std::move(uri));
+        }
+        auto [w, r] = thread::make_chan<async::Any>();
+        size_t id = 0;
+        for (auto& host : hosts) {
+            net::start(do_request_host, w, id, std::move(host.second));
+            id++;
+        }
+        size_t exists = id;
+        async::Any event;
+        while (r >> event) {
+            if (auto msg = event.type_assert<Message>()) {
+                cout << "#" << msg->id << "\n";
+                cout << std::move(msg->msg);
+                if (msg->endofmsg) {
+                    exists--;
+                }
+            }
+            else if (auto redirect = event.type_assert<Redirect>()) {
+            }
+        }
+        return 0;
     }
 }  // namespace netutil

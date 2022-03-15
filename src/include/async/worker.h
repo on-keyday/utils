@@ -228,6 +228,8 @@ namespace utils {
 
             void force_run_max_thread();
 
+            bool run_on_this_thread();
+
             template <class Fn>
             void post(Fn&& fn) {
                 posting(std::forward<Fn>(fn));
@@ -269,7 +271,7 @@ namespace utils {
                 template <class Fn, class... Args>
                 static async::Future<Ret> invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
                     return p.template start_unwrap<Ret>([fn = std::move(fn), tup = std::make_tuple(std::forward<Args>(arg)...)](async::Context& ctx) mutable {
-                        ctx.set_value(call_with_ctx(ctx, std::forward<Fn>(fn), std::forward<decltype(tup)>(tup), std::make_index_sequence<sizeof...(Args)>{}));
+                        ctx.set_value(call_with_ctx(ctx, std::forward<Fn>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>{}));
                     });
                 }
             };
@@ -279,7 +281,7 @@ namespace utils {
                 template <class Fn, class... Args>
                 static async::AnyFuture invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
                     return p.start([fn = std::move(fn), tup = std::make_tuple(std::forward<Args>(arg)...)](async::Context& ctx) mutable {
-                        call_with_ctx(ctx, std::forward<Fn>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>{});
+                        call_with_ctx(ctx, std::forward<decltype(fn)>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>{});
                     });
                 }
             };
