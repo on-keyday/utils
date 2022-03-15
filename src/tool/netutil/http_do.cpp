@@ -46,8 +46,10 @@ namespace netutil {
         for (auto& uri : uris) {
             auto host = uri.host_port();
             auto path = uri.path_query();
-            auto req = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
-            req;
+            auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
+            if (res.err != net::http::HttpError::none) {
+                return;
+            }
         }
     }
 

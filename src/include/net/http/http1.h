@@ -11,6 +11,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/lite/smart_ptr.h"
 #include "../generate/iocloser.h"
+#include "../../wrap/lite/enum.h"
 
 namespace utils {
     namespace net {
@@ -66,6 +67,16 @@ namespace utils {
                 read_header,
                 write_request,
             };
+
+            BEGIN_ENUM_STRING_MSG(HttpError, error_msg)
+            ENUM_STRING_MSG(HttpError::transport, "connection level error")
+            ENUM_STRING_MSG(HttpError::invalid_arg, "invalid argument")
+            ENUM_STRING_MSG(HttpError::invalid_header, "failed to parse header")
+            ENUM_STRING_MSG(HttpError::invalid_body, "failed to parse body")
+            ENUM_STRING_MSG(HttpError::read_body, "failed to read body")
+            ENUM_STRING_MSG(HttpError::read_header, "failed to read header")
+            ENUM_STRING_MSG(HttpError::write_request, "failed to write request")
+            END_ENUM_STRING_MSG(nullptr)
 
             struct HttpAsyncResult {
                 HttpAsyncResponse resp;

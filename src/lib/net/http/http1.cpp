@@ -425,6 +425,7 @@ namespace utils {
             HttpAsyncResponse& HttpAsyncResponse::operator=(HttpAsyncResponse&& in) {
                 delete impl;
                 impl = std::exchange(in.impl, nullptr);
+                return *this;
             }
         }  // namespace http
     }      // namespace net
