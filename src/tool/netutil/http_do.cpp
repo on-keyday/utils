@@ -54,6 +54,7 @@ namespace netutil {
     using msg_chan = thread::SendChan<async::Any>;
 
     void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
+        auto host = uris[0].host_port();
     }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {

@@ -30,12 +30,24 @@ namespace utils {
                 half_closed_local,
                 reserved_remote,
                 reserved_local,
+                unknown,
             };
 
             enum class StreamError {
                 none,
+                over_max_frame_size,
                 invalid_status,
                 setting_was_ignored,
+                continuation_not_followed,
+                not_acceptable_on_current_status,
+                internal_data_read,
+                push_promise_disabled,
+                unsupported_frame,
+                hpack_failed,
+                unimplemented,
+                ping_maybe_failed,
+                writing_frame,
+                reading_frame,
             };
 
             struct Connection;
@@ -53,12 +65,21 @@ namespace utils {
                 wrap::shared_ptr<internal::StreamImpl> impl;
             };
 
+            struct UpdateResult {
+                H2Error err = H2Error::none;
+                StreamError detail = StreamError::none;
+                std::int32_t id = 0;
+                FrameType frame = {};
+                Status status = Status::unknown;
+                bool stream_level = false;
+            };
+
             struct DLL Connection {
                 Stream* stream(int id);
                 Stream* new_stream();
 
-                H2Error update_recv(const Frame& frame);
-                H2Error update_send(const Frame& frame);
+                UpdateResult update_recv(const Frame& frame);
+                UpdateResult update_send(const Frame& frame);
 
                 bool make_data(std::int32_t id, wrap::string& data, DataFrame& frame, bool& block);
                 bool make_header(http::Header&& h, HeaderFrame& frame, wrap::string& remain);
@@ -69,14 +90,24 @@ namespace utils {
                 wrap::shared_ptr<internal::ConnectionImpl> impl;
             };
 
+            struct ReadResult {
+                UpdateResult err;
+                wrap::shared_ptr<Frame> frame;
+            };
+
             struct DLL Context {
                 Connection state;
                 wrap::shared_ptr<Conn> io;
-                async::Future<H2Error> write(const Frame& frame);
-                async::Future<wrap::shared_ptr<Frame>> read();
+                async::Future<UpdateResult> write(const Frame& frame);
+                async::Future<ReadResult> read();
             };
 
-            DLL async::Future<wrap::shared_ptr<Context>> STDCALL negotiate(wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame);
+            struct NegotiateResult {
+                UpdateResult err;
+                wrap::shared_ptr<Context> ctx;
+            };
+
+            DLL async::Future<NegotiateResult> STDCALL negotiate(wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame);
             template <class Settings>
             async::Future<wrap::shared_ptr<Context>> negotiate(wrap::shared_ptr<Conn>&& conn, Settings& setting) {
                 SettingsFrame frame{0};

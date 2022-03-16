@@ -16,8 +16,12 @@
 namespace utils {
     namespace net {
         namespace http2 {
+            struct H2Result {
+                H2Error err = H2Error::none;
+                wrap::shared_ptr<Frame> frame;
+            };
 
             DLL async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data = wrap::string{});
-        }
-    }  // namespace net
+        }  // namespace http2
+    }      // namespace net
 }  // namespace utils

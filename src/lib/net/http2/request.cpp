@@ -14,6 +14,9 @@
 namespace utils {
     namespace net {
         namespace http2 {
+            H2Result default_handle_recv(async::Context& ctx) {
+            }
+
             async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data) {
                 if (!ctx || !h) {
                     return nullptr;
@@ -37,14 +40,14 @@ namespace utils {
                     if (!data.size()) {
                         frame.flag |= Flag::end_stream;
                     }
-                    if (auto err = AWAIT(h2ctx->write(frame)); err != H2Error::none) {
-                        write_goaway(err);
+                    if (auto err = AWAIT(h2ctx->write(frame)); err.err != H2Error::none) {
+                        write_goaway(err.err);
                         return {};
                     }
                     auto recv_frame = [&] {
-                        auto rframe = AWAIT(h2ctx->read());
-                        if (!rframe) {
-                            write_goaway(h2ctx->io->get_error());
+                        auto res = AWAIT(h2ctx->read());
+                        if (rframe.err.err != H2Error::none) {
+                            write_goaway(rframe.err.err);
                             return false;
                         }
                         if (rframe->type == FrameType::ping) {
