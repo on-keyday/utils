@@ -56,10 +56,10 @@ namespace netutil {
     void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
     }
 
-    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index) {
+    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();
         auto scheme = uris[0].scheme;
-        wrap::vector<net::http::Header> resps;
+        wrap::vector<net::http::Header> resps = std::move(prevhandled);
         for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].path_query();
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
@@ -93,6 +93,7 @@ namespace netutil {
                         goto END;
                     }
                     if (newuri.host == host && newuri.scheme == scheme) {
+                        chan << msg(id, "redirect to ", newuri.to_string(), "\n");
                         uris.push_back(std::move(newuri));
                     }
                     else {
@@ -110,7 +111,7 @@ namespace netutil {
         };
     }
 
-    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t procindex) {
+    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t procindex, wrap::vector<net::http::Header> prevproced = {}) {
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {
@@ -142,14 +143,14 @@ namespace netutil {
             auto conn = ssl.conn;
             auto selected = conn->alpn_selected(nullptr);
             if (!selected || ::strncmp(selected, "http/1.1", 8)) {
-                return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex);
+                return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex, std::move(prevproced));
             }
             else if (::strncmp(selected, "h2", 2)) {
                 return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris));
             }
         }
         else {
-            return do_http1(ctx, std::move(tcp.conn), std::move(chan), id, std::move(uris), procindex);
+            return do_http1(ctx, std::move(tcp.conn), std::move(chan), id, std::move(uris), procindex, std::move(prevproced));
         }
     }
 
@@ -163,12 +164,15 @@ namespace netutil {
         size_t id = 0;
         for (auto& host : hosts) {
             for (auto& scheme : host.second) {
-                net::start(do_request_host, w, id, std::move(host.second), 0);
+                net::start(do_request_host, w, id, std::move(scheme.second), 0, wrap::vector<net::http::Header>{});
                 id++;
             }
         }
+        hosts.clear();
         size_t exists = id;
         async::Any event;
+        wrap::vector<net::URI> processed_uri;
+        wrap::vector<net::http::Header> processed_header;
         while (r >> event) {
             if (auto msg = event.type_assert<Message>()) {
                 cout << "#" << msg->id << "\n";
@@ -178,6 +182,26 @@ namespace netutil {
                 }
             }
             else if (auto redirect = event.type_assert<Redirect>()) {
+                cout << "#" << redirect->id << "\n";
+                cout << "request redirect to " << redirect->location.to_string() << "\n";
+                cout << "ownership of this url has moved\n";
+                hosts[redirect->location.host][redirect->location.scheme].push_back(std::move(redirect->location));
+            }
+            else if (auto reconnect = event.type_assert<Reconnect>()) {
+                cout << "#" << reconnect->id << "\n";
+                cout << "`Connection: close` has been detected\n";
+                cout << "retrying to connect...\n";
+                net::start(do_request_host, w, reconnect->id, std::move(reconnect->uris), reconnect->index, std::move(reconnect->h));
+            }
+            else if (auto final = event.type_assert<FinalResult>()) {
+                cout << "#" << final->id << "\n";
+                cout << "request task done\n";
+                exists--;
+                if (exists) {
+                    cout << "waiting for others...\n";
+                }
+                std::move(final->uris.begin(), final->uris.end(), std::back_inserter(processed_uri));
+                std::move(final->h.begin(), final->h.end(), std::back_inserter(processed_header));
             }
         }
         return 0;
