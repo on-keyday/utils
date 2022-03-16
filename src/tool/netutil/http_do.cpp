@@ -15,6 +15,7 @@
 #include <execution>
 #include "../../include/wrap/lite/map.h"
 #include "../../include/net/http/http1.h"
+
 using namespace utils;
 namespace netutil {
     struct Message {
@@ -157,6 +158,7 @@ namespace netutil {
 
     int http_do(subcmd::RunContext& ctx, wrap::vector<net::URI>& uris) {
         net::set_iocompletion_thread(true);
+
         wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<net::URI>>> hosts;
         for (auto& uri : uris) {
             hosts[uri.host][uri.scheme].push_back(std::move(uri));
@@ -174,6 +176,7 @@ namespace netutil {
         async::Any event;
         wrap::vector<net::URI> processed_uri;
         wrap::vector<net::http::Header> processed_header;
+        r.set_blocking(true);
         while (r >> event) {
             if (auto msg = event.type_assert<Message>()) {
                 cout << "#" << msg->id << "\n";
@@ -203,6 +206,9 @@ namespace netutil {
                 }
                 std::move(final->uris.begin(), final->uris.end(), std::back_inserter(processed_uri));
                 std::move(final->h.begin(), final->h.end(), std::back_inserter(processed_header));
+                if (!exists) {
+                    break;
+                }
             }
         }
         return 0;
