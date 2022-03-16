@@ -15,6 +15,7 @@ namespace utils {
     namespace net {
         namespace http2 {
             H2Result default_handle_recv(async::Context& ctx) {
+                return {};
             }
 
             async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data) {
@@ -46,10 +47,11 @@ namespace utils {
                     }
                     auto recv_frame = [&] {
                         auto res = AWAIT(h2ctx->read());
-                        if (rframe.err.err != H2Error::none) {
-                            write_goaway(rframe.err.err);
+                        if (res.err.err != H2Error::none) {
+                            write_goaway(res.err.err);
                             return false;
                         }
+                        auto rframe = res.frame;
                         if (rframe->type == FrameType::ping) {
                             if (!(rframe->flag & Flag::ack)) {
                                 rframe->flag |= Flag::ack;
@@ -72,8 +74,8 @@ namespace utils {
                                 write_goaway(H2Error::internal);
                                 return {};
                             }
-                            if (auto err = AWAIT(h2ctx->write(cont)); err != H2Error::none) {
-                                write_goaway(err);
+                            if (auto err = AWAIT(h2ctx->write(cont)); err.err != H2Error::none) {
+                                write_goaway(err.err);
                                 return {};
                             }
                         }
@@ -91,8 +93,8 @@ namespace utils {
                                 }
                                 continue;
                             }
-                            if (auto err = AWAIT(h2ctx->write(dframe)); err != H2Error::none) {
-                                write_goaway(err);
+                            if (auto err = AWAIT(h2ctx->write(dframe)); err.err != H2Error::none) {
+                                write_goaway(err.err);
                                 return {};
                             }
                         }

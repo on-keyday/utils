@@ -18,11 +18,14 @@ namespace utils {
                 ctx->io = std::move(conn);
                 auto f = ctx->write(frame);
                 return start(
-                    [](async::Context& ctx, wrap::shared_ptr<Context> h2ctx, async::Future<H2Error> f)
+                    [](async::Context& ctx, wrap::shared_ptr<Context> h2ctx, async::Future<UpdateResult> f)
                         -> NegotiateResult {
                         auto err = AWAIT(f);
-                        if (err != H2Error::none) {
-                            return {.ctx = std::move(h2ctx)};
+                        if (err.err != H2Error::none) {
+                            return {
+                                .err = std::move(err),
+                                .ctx = std::move(h2ctx),
+                            };
                         }
                         bool recvack = false;
                         bool sendack = false;

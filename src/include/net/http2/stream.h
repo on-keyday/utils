@@ -109,7 +109,7 @@ namespace utils {
 
             DLL async::Future<NegotiateResult> STDCALL negotiate(wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame);
             template <class Settings>
-            async::Future<wrap::shared_ptr<Context>> negotiate(wrap::shared_ptr<Conn>&& conn, Settings& setting) {
+            async::Future<NegotiateResult> negotiate(wrap::shared_ptr<Conn>&& conn, Settings& setting) {
                 SettingsFrame frame{0};
                 frame.type = FrameType::settings;
                 for (auto& s : setting) {
