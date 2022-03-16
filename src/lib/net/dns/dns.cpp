@@ -13,6 +13,7 @@
 
 #include "../../../include/wrap/lite/string.h"
 #include "../../../include/utf/convert.h"
+#include "../../../include/helper/strutil.h"
 
 #include <cassert>
 
@@ -129,6 +130,35 @@ namespace utils {
 
         Address::~Address() {
             delete impl;
+        }
+
+        bool Address::stringify(IBuffer buf, size_t index) {
+            if (!impl) {
+                return false;
+            }
+            auto sel = impl->result;
+            size_t count = 0;
+            while (sel && count < index) {
+                sel = sel->ai_next;
+            }
+            if (!sel) {
+                return false;
+            }
+            char tmp[75] = {0};
+            if (sel->ai_family == AF_INET) {
+                sockaddr_in* addr4 = (sockaddr_in*)sel->ai_addr;
+                inet_ntop(sel->ai_family, &addr4->sin_addr, tmp, 75);
+            }
+            else if (sel->ai_family == AF_INET6) {
+                sockaddr_in6* addr6 = (sockaddr_in6*)sel->ai_addr;
+                inet_ntop(sel->ai_family, &addr6->sin6_addr, tmp, 75);
+            }
+            size_t start_idx = 0;
+            if (helper::contains(tmp, ".") && helper::starts_with(tmp, "::ffff:")) {
+                start_idx = 7;
+            }
+            helper::append(buf, tmp + start_idx);
+            return true;
         }
 
         void* Address::get_rawaddr() {

@@ -575,7 +575,7 @@ namespace ifacegen {
 )");
         bool raw_gened = false, type_gened = false;
         bool has_sso = any(flag & GenFlag::use_small_size_opt);
-        for (auto& func : iface.second.iface) {
+        for (Interface& func : iface.second.iface) {
             if (func.funcname == decltype_func) {
                 if (!raw_gened) {
                     render_cpp_raw__func("        ", flag, str, 1, append_typeid, append_typefn);
@@ -650,7 +650,10 @@ namespace ifacegen {
                 hlp::appends(str,
                              ";\n",
                              "            }\n",
-                             "            return ");
+                             "            ");
+                if (func.type.prim != "void") {
+                    hlp::appends(str, "return ");
+                }
                 render_cpp_t_ptr_call(str, alias, func);
                 hlp::appends(str,
                              ";\n",

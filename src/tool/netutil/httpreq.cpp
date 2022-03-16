@@ -104,6 +104,14 @@ namespace netutil {
         if (!uri.path.size()) {
             uri.path = "/";
         }
+        else if (uri.path[0] != '/') {
+            auto tmp = std::move(uri.path);
+            uri.path = prev.path;
+            if (!helper::ends_with(uri.path, "/")) {
+                uri.path.push_back('/');
+            }
+            uri.path += tmp;
+        }
         if (uri.tag.size()) {
             uri.tag = {};
         }
@@ -148,6 +156,7 @@ namespace netutil {
         normflag = net::NormalizeFlag::host | net::NormalizeFlag::path;
         net::URI prev;
         prev.scheme = "http";
+        prev.path = "/";
         for (size_t i = 0; i < ctx.arg().size(); i++) {
             net::URI uri;
             wrap::internal::Pack pack;

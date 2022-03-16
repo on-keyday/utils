@@ -5,7 +5,7 @@
 
 # iocloser - iocloser interface
 
-# generate command
+# generate code
 # release
 # tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V -S
 # debug
@@ -33,5 +33,10 @@ interface AsyncIOClose {
     read(ptr *char,size size_t) async::Future<ReadInfo>
     write(ptr *const char,size size_t) async::Future<WriteInfo>
     close(force bool) State
-    decltype() tpe
+    decltype() type
+}
+
+interface IBuffer {
+    push_back(c std::uint8_t) void
+    __sso__() type = 3
 }

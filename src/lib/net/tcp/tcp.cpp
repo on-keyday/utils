@@ -152,6 +152,13 @@ namespace utils {
             return *this;
         }
 
+        wrap::shared_ptr<Address> TCPConn::address() {
+            if (!impl) {
+                return nullptr;
+            }
+            return impl->addr;
+        }
+
         size_t TCPConn::get_raw() const {
             if (!impl) {
                 return internal::invalid_socket;

@@ -18,31 +18,34 @@
 using namespace utils;
 namespace netutil {
     struct Message {
-        int id;
+        size_t id;
         wrap::internal::Pack msg;
         bool endofmsg = false;
     };
 
     struct Redirect {
-        wrap::vector<net::URI> uris;
+        size_t id;
+        net::URI location;
     };
 
     struct Reconnect {
         wrap::vector<net::URI> uris;
         wrap::vector<net::http::Header> h;
-        int index = 0;
+        size_t index = 0;
+        size_t id;
     };
 
     struct FinalResult {
         wrap::vector<net::URI> uris;
         wrap::vector<net::http::Header> h;
+        size_t id;
     };
 
-    auto msg(int id, auto&&... args) {
+    auto msg(size_t id, auto&&... args) {
         return Message{.id = id, .msg = wrap::pack(args...)};
     }
 
-    auto msgend(int id, auto&&... args) {
+    auto msgend(size_t id, auto&&... args) {
         auto p = msg(id, args...);
         p.endofmsg = true;
         return p;
@@ -53,10 +56,10 @@ namespace netutil {
     void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
     }
 
-    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
+    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index) {
         auto host = uris[0].host_port();
         wrap::vector<net::http::Header> resps;
-        for (int i = 0; i < uris.size(); i++) {
+        for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].path_query();
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
             if (res.err != net::http::HttpError::none) {
@@ -74,6 +77,7 @@ namespace netutil {
                     rec.h.push_back(std::move(h));
                     rec.uris = std::move(uris);
                     rec.index = i + 1;
+                    rec.id = id;
                     chan << std::move(rec);
                     return;
                 }
@@ -82,18 +86,30 @@ namespace netutil {
                 if (auto loc = h.value("location")) {
                     wrap::string locuri = loc;
                     net::URI newuri;
-                    preprocese_a_uri(loc, "", locuri, newuri, uris[i]);
+                    if (!preprocese_a_uri(loc, "", locuri, newuri, uris[i])) {
+                        chan << msg(id, "warning: failed to parse location header\n",
+                                    "location: ", loc, "\n");
+                        goto END;
+                    }
+                    if (newuri.host == host) {
+                        uris.push_back(std::move(newuri));
+                    }
+                    else {
+                        chan << Redirect{.id = id, .location = std::move(newuri)};
+                    }
                 }
             }
+        END:
             resps.push_back(std::move(h));
         }
         chan << FinalResult{
             .uris = std::move(uris),
             .h = std::move(resps),
+            .id = id,
         };
     }
 
-    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
+    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t procindex) {
         auto& uri = uris[0];
         const char* port;
         if (uri.port.size()) {
@@ -125,14 +141,14 @@ namespace netutil {
             auto conn = ssl.conn;
             auto selected = conn->alpn_selected(nullptr);
             if (!selected || ::strncmp(selected, "http/1.1", 8)) {
-                return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris));
+                return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex);
             }
             else if (::strncmp(selected, "h2", 2)) {
                 return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris));
             }
         }
         else {
-            return do_http1(ctx, std::move(tcp.conn), std::move(chan), id, std::move(uris));
+            return do_http1(ctx, std::move(tcp.conn), std::move(chan), id, std::move(uris), procindex);
         }
     }
 
@@ -145,7 +161,7 @@ namespace netutil {
         auto [w, r] = thread::make_chan<async::Any>();
         size_t id = 0;
         for (auto& host : hosts) {
-            net::start(do_request_host, w, id, std::move(host.second));
+            net::start(do_request_host, w, id, std::move(host.second), 0);
             id++;
         }
         size_t exists = id;

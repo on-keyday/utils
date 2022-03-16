@@ -34,6 +34,8 @@ namespace utils {
 
             size_t get_raw() const;
 
+            wrap::shared_ptr<Address> address();
+
            private:
             internal::TCPImpl* impl = nullptr;
         };

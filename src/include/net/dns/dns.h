@@ -10,12 +10,13 @@
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/lite/smart_ptr.h"
+#include "../generate/iocloser.h"
 
 namespace utils {
     namespace net {
         struct Address;
         namespace internal {
-            //NOTE: using pimpl pattern to remove platform dependency from header
+            // NOTE: using pimpl pattern to remove platform dependency from header
             struct DnsResultImpl;
             struct AddressImpl;
             wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len);
@@ -29,6 +30,8 @@ namespace utils {
             ~Address();
 
             void* get_rawaddr();
+
+            bool stringify(IBuffer buf, size_t index = 0);
 
            private:
             internal::AddressImpl* impl = nullptr;

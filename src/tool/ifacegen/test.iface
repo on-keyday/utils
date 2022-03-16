@@ -108,3 +108,7 @@ interface Value {
     __copy__() type
     __vtable__() type
 }
+
+interface ReturnVoid {
+    func() void
+}
