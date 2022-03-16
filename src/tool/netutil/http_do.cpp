@@ -58,6 +58,7 @@ namespace netutil {
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index) {
         auto host = uris[0].host_port();
+        auto scheme = uris[0].scheme;
         wrap::vector<net::http::Header> resps;
         for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].path_query();
@@ -91,7 +92,7 @@ namespace netutil {
                                     "location: ", loc, "\n");
                         goto END;
                     }
-                    if (newuri.host == host) {
+                    if (newuri.host == host && newuri.scheme == scheme) {
                         uris.push_back(std::move(newuri));
                     }
                     else {
@@ -154,15 +155,17 @@ namespace netutil {
 
     int http_do(subcmd::RunContext& ctx, wrap::vector<net::URI>& uris) {
         net::set_iocompletion_thread(true);
-        wrap::map<wrap::string, wrap::vector<net::URI>> hosts;
+        wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<net::URI>>> hosts;
         for (auto& uri : uris) {
-            hosts[uri.host].push_back(std::move(uri));
+            hosts[uri.host][uri.scheme].push_back(std::move(uri));
         }
         auto [w, r] = thread::make_chan<async::Any>();
         size_t id = 0;
         for (auto& host : hosts) {
-            net::start(do_request_host, w, id, std::move(host.second), 0);
-            id++;
+            for (auto& scheme : host.second) {
+                net::start(do_request_host, w, id, std::move(host.second), 0);
+                id++;
+            }
         }
         size_t exists = id;
         async::Any event;
