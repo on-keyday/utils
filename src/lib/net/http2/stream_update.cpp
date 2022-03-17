@@ -84,7 +84,7 @@ namespace utils {
                 switch (frame.type) {
                     case FrameType::ping: {
                         assert(frame.id == 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         auto& ping = static_cast<const PingFrame&>(frame);
                         if (ping.flag & Flag::ack) {
                             if (ping.opeque != impl->prev_ping) {
@@ -98,7 +98,7 @@ namespace utils {
                     }
                     case FrameType::data: {
                         assert(frame.id != 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         if (stream->status() != Status::open && stream->status() != Status::half_closed_local) {
                             return UpdateResult{
                                 .err = H2Error::protocol,
@@ -124,7 +124,7 @@ namespace utils {
                     }
                     case FrameType::header: {
                         assert(frame.id != 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         auto& header = static_cast<const HeaderFrame&>(frame);
                         if (stream->status() != Status::idle &&
                             stream->status() != Status::half_closed_local &&
@@ -173,7 +173,7 @@ namespace utils {
                                 .status = stream->status(),
                             };
                         }
-                        assert(stream);
+                        ASSERT_STREAM();
                         auto& cont = static_cast<const Continuation&>(frame);
                         if (impl->recv.continuous_id == frame.id) {
                             stream->impl->remote_raw.append(cont.data);
@@ -204,7 +204,7 @@ namespace utils {
                             impl->send.window += window_update.increment;
                         }
                         else {
-                            assert(stream);
+                            ASSERT_STREAM();
                             stream->impl->send_window += window_update.increment;
                         }
                         return {};
@@ -250,7 +250,7 @@ namespace utils {
                     }
                     case FrameType::rst_stream: {
                         assert(frame.id != 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         if (stream->status() == Status::idle) {
                             return UpdateResult{
                                 .err = H2Error::protocol,
@@ -274,7 +274,7 @@ namespace utils {
                     }
                     case FrameType::priority: {
                         assert(frame.id != 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         auto& prio = static_cast<const PriorityFrame&>(frame);
                         stream->impl->priority = prio.priority;
                         return {};
@@ -289,7 +289,7 @@ namespace utils {
                             };
                         }
                         assert(frame.id != 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
                             return UpdateResult{
                                 .err = H2Error::protocol,
@@ -350,7 +350,7 @@ namespace utils {
                 }
                 switch (frame.type) {
                     case FrameType::data: {
-                        assert(stream);
+                        ASSERT_STREAM();
                         if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
                             return UpdateResult{
                                 .err = H2Error::protocol,
@@ -373,7 +373,7 @@ namespace utils {
                         return {};
                     }
                     case FrameType::header: {
-                        assert(stream);
+                        ASSERT_STREAM();
                         if (stream->status() != Status::idle &&
                             stream->status() != Status::half_closed_remote &&
                             stream->status() != Status::reserved_local) {
@@ -495,7 +495,7 @@ namespace utils {
                     }
                     case FrameType::priority: {
                         assert(frame.id != 0);
-                        assert(stream);
+                        ASSERT_STREAM();
                         auto& prio = static_cast<const PriorityFrame&>(frame);
                         stream->impl->priority = prio.priority;
                         return {};
@@ -509,7 +509,7 @@ namespace utils {
                                 .frame = FrameType::push_promise,
                             };
                         }
-                        assert(stream);
+                        ASSERT_STREAM();
                         if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
                             return UpdateResult{
                                 .err = H2Error::protocol,

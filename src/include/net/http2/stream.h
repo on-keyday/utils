@@ -56,6 +56,8 @@ namespace utils {
                 ping_maybe_failed,
                 writing_frame,
                 reading_frame,
+                require_id_0,
+                require_id_not_0,
             };
 
             BEGIN_ENUM_STRING_MSG(StreamError, error_msg)

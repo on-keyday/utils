@@ -14,48 +14,49 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            UpdateResult send_header(wrap::shared_ptr<Context>& h2ctx, async::Context& ctx, http::Header&& h) {
-                HeaderFrame frame{0};
-                wrap::string remain;
-                if (!h2ctx->state.make_header(std::move(h), frame, remain)) {
-                    return UpdateResult{
-                        .err = H2Error::internal,
-                        .detail = StreamError::hpack_failed,
-                        .id = frame.id,
-                    };
-                }
-                auto r = AWAIT(h2ctx->write(frame));
-                if (r.err != H2Error::none) {
-                    return std::move(r);
-                }
-                while (remain.size()) {
-                    Continuation cont;
-                    if (!h2ctx->state.make_continuous(frame.id, remain, cont)) {
+            async::Future<UpdateResult> send_header(wrap::shared_ptr<Context>& h2ctx, http::Header&& h, bool end_stream) {
+                auto fn = [](async::Context& ctx, wrap::shared_ptr<Context> h2ctx, http::Header h, bool end_stream) -> UpdateResult {
+                    HeaderFrame frame{0};
+                    wrap::string remain;
+                    if (!h2ctx->state.make_header(std::move(h), frame, remain)) {
                         return UpdateResult{
                             .err = H2Error::internal,
-                            .detail = StreamError::continuation_not_followed,
+                            .detail = StreamError::hpack_failed,
                             .id = frame.id,
                         };
                     }
-                    r = AWAIT(h2ctx->write(cont));
+                    if (end_stream) {
+                        frame.flag |= Flag::end_stream;
+                    }
+                    auto r = AWAIT(h2ctx->write(frame));
                     if (r.err != H2Error::none) {
                         return std::move(r);
                     }
-                }
-                return {.id = frame.id};
+                    while (remain.size()) {
+                        Continuation cont;
+                        if (!h2ctx->state.make_continuous(frame.id, remain, cont)) {
+                            return UpdateResult{
+                                .err = H2Error::internal,
+                                .detail = StreamError::continuation_not_followed,
+                                .id = frame.id,
+                            };
+                        }
+                        r = AWAIT(h2ctx->write(cont));
+                        if (r.err != H2Error::none) {
+                            return std::move(r);
+                        }
+                    }
+                    return {.id = frame.id};
+                };
+                return start(fn, h2ctx, std::move(h), end_stream);
             }
 
-            async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data) {
+            async::Future<H2Response> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data) {
                 if (!ctx || !h) {
                     return nullptr;
                 }
-                HeaderFrame frame;
-                wrap::string remain;
-                if (!ctx->state.make_header(std::move(h), frame, remain)) {
-                    return nullptr;
-                }
-                auto fn = [](async::Context& ctx, wrap::shared_ptr<Context> h2ctx, wrap::string remain, HeaderFrame frame, wrap::string data)
-                    -> http::HttpAsyncResponse {
+                auto fn = [](async::Context& ctx, wrap::shared_ptr<Context> h2ctx, wrap::string data, http::Header h)
+                    -> H2Response {
                     auto write_goaway = [&](H2Error err) {
                         if (err != H2Error::transport) {
                             GoAwayFrame goaway;
@@ -65,13 +66,11 @@ namespace utils {
                             AWAIT(h2ctx->write(goaway));
                         }
                     };
-                    if (!data.size()) {
-                        frame.flag |= Flag::end_stream;
+                    auto err = AWAIT(send_header(h2ctx, std::move(h), !data.size()));
+                    if (err.err != H2Error::none) {
+                        return {.err = std::move(err)};
                     }
-                    if (auto err = AWAIT(h2ctx->write(frame)); err.err != H2Error::none) {
-                        write_goaway(err.err);
-                        return {};
-                    }
+                    auto id = err.id;
                     auto recv_frame = [&] {
                         auto res = AWAIT(h2ctx->read());
                         if (res.err.err != H2Error::none) {
@@ -96,50 +95,34 @@ namespace utils {
                         return true;
                     };
                     bool block = false;
-                    while (true) {
-                        if (remain.size()) {
-                            Continuation cont;
-                            if (!h2ctx->state.make_continuous(frame.id, remain, cont)) {
+                    while (data.size()) {
+                        if (block) {
+                            if (!recv_frame()) {
+                                return {};
+                            }
+                        }
+                        DataFrame dframe;
+                        if (!h2ctx->state.make_data(id, data, dframe, block)) {
+                            if (!block) {
                                 write_goaway(H2Error::internal);
                                 return {};
                             }
-                            if (auto err = AWAIT(h2ctx->write(cont)); err.err != H2Error::none) {
-                                write_goaway(err.err);
-                                return {};
-                            }
+                            continue;
                         }
-                        else if (data.size()) {
-                            if (block) {
-                                if (!recv_frame()) {
-                                    return {};
-                                }
-                            }
-                            DataFrame dframe;
-                            if (!h2ctx->state.make_data(frame.id, data, dframe, block)) {
-                                if (!block) {
-                                    write_goaway(H2Error::internal);
-                                    return {};
-                                }
-                                continue;
-                            }
-                            if (auto err = AWAIT(h2ctx->write(dframe)); err.err != H2Error::none) {
-                                write_goaway(err.err);
-                                return {};
-                            }
-                        }
-                        else {
-                            break;
+                        if (auto err = AWAIT(h2ctx->write(dframe)); err.err != H2Error::none) {
+                            write_goaway(err.err);
+                            return {};
                         }
                     }
-                    auto stream = h2ctx->state.stream(frame.id);
+                    auto stream = h2ctx->state.stream(id);
                     while (stream->status() != Status::closed) {
                         if (!recv_frame()) {
                             return {};
                         }
                     }
-                    return stream->response();
+                    return {.err = UpdateResult{.id = id}, .resp = stream->response()};
                 };
-                return start(fn, std::move(ctx), std::move(remain), std::move(frame), std::move(data));
+                return start(fn, std::move(ctx), std::move(data), std::move(h));
             }
         }  // namespace http2
     }      // namespace net

@@ -35,7 +35,7 @@ void test_http2protocol() {
                 h.set(":path", path);
                 h.set(":scheme", "https");
                 auto resp = std::move(AWAIT(net::http2::request(h2ctx.ctx, std::move(h))));
-                auto rh = resp.response();
+                auto rh = resp.resp.response();
                 cout << rh.response() << "body\n"
                      << rh.body();
             },

@@ -16,12 +16,12 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            struct H2Result {
+            struct H2Response {
                 UpdateResult err;
-                wrap::shared_ptr<Frame> frame;
+                http::HttpAsyncResponse resp;
             };
 
-            DLL async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data = wrap::string{});
+            DLL async::Future<H2Response> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data = wrap::string{});
         }  // namespace http2
     }      // namespace net
 }  // namespace utils

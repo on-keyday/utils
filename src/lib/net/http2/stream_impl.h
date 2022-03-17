@@ -129,6 +129,24 @@ namespace utils {
                     }
                 };
             }  // namespace internal
-        }      // namespace http2
-    }          // namespace net
+
+#define ASSERT_STREAM()                                  \
+    if (!stream) {                                       \
+        if (frame.id == 0) {                             \
+            return UpdateResult{                         \
+                .err = H2Error::protocol,                \
+                .detail = StreamError::require_id_not_0, \
+                .id = frame.id,                          \
+                .frame = frame.type,                     \
+            };                                           \
+        }                                                \
+        return UpdateResult{                             \
+            .err = H2Error::protocol,                    \
+            .detail = StreamError::require_id_0,         \
+            .id = frame.id,                              \
+            .frame = frame.type,                         \
+        };                                               \
+    }
+        }  // namespace http2
+    }      // namespace net
 }  // namespace utils

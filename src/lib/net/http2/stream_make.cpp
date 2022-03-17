@@ -51,10 +51,13 @@ namespace utils {
                 return impl->code;
             }
 
-            bool Connection::make_data(std::int32_t id, wrap::string& data, DataFrame& f, bool& block) {
+            bool Connection::make_data(std::int32_t id, wrap::string& data, DataFrame& frame, bool& block) {
                 block = false;
                 auto stream = impl->get_stream(id);
-                assert(stream);
+                if (!stream) {
+                    return false;
+                }
+                auto& f = frame;
                 if (stream->status() != Status::open && stream->status() != Status::half_closed_remote) {
                     return false;
                 }
@@ -134,7 +137,9 @@ namespace utils {
                 }
                 f.len = (int)f.data.size();
                 auto stream = new_stream();
-                assert(stream);
+                if (!stream) {
+                    return false;
+                }
                 f.id = stream->id();
                 return true;
             }
