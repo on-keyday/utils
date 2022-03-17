@@ -51,15 +51,19 @@ namespace utils {
             }
 
             UpdateResult STDCALL update_window_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::int32_t id, std::uint32_t incr) {
-                if (id <= 0 || incr == 0) {
+                if (id < 0 || incr == 0) {
                     return {
                         .err = H2Error::protocol,
                         .detail = StreamError::require_id_not_0,
+                        .id = id,
+                        .frame = FrameType::window_update,
                     };
                 }
                 WindowUpdateFrame wframe{0};
+                wframe.id = id;
                 wframe.type = FrameType::window_update;
                 wframe.increment = incr;
+                wframe.len = 4;
                 return AWAIT(h2ctx->write(wframe));
             }
 
@@ -82,6 +86,8 @@ namespace utils {
                                 .err = {
                                     .err = H2Error::internal,
                                     .detail = StreamError::internal_data_read,
+                                    .id = id,
+                                    .frame = FrameType::data,
                                 },
                                 .frame = std::move(res.frame),
                             };

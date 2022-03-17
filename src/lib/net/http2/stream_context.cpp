@@ -72,7 +72,7 @@ namespace utils {
                 auto fn = [&io = this->io](async::Context& ctx, async::Future<bool> f) {
                     if (!AWAIT(f)) {
                         return UpdateResult{
-                            .err = H2Error::transport,
+                            .err = io->get_error(),
                             .detail = StreamError::writing_frame,
                             .id = io->get_errorcode(),
                         };
