@@ -41,7 +41,7 @@ namespace utils {
                     }
                     auto id = err.id;
                     auto recv_frame = [&] {
-                        auto res = default_handle_ping_and_data(ctx, h2ctx);
+                        auto res = default_handling_ping_and_data(ctx, h2ctx);
                         if (res.err.err != H2Error::none) {
                             write_goaway(res.err.err);
                         }

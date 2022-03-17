@@ -13,7 +13,7 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            ReadResult STDCALL default_handle_ping_and_data(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx) {
+            ReadResult STDCALL default_handling_ping_and_data(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx) {
                 auto res = AWAIT(h2ctx->read());
                 if (res.err.err != H2Error::none || !res.frame) {
                     return std::move(res);
