@@ -64,16 +64,19 @@ namespace netutil {
         }
         auto settings = {std::pair{net::http2::SettingKey::enable_push, 0}};
         auto nego = AWAIT(net::http2::negotiate(std::move(res.conn), settings));
+        auto error_with_info = [&](net::http2::UpdateResult& res, auto&&... args) {
+            chan << msgend(id, args...,
+                           "h2error:", error_msg(res.err), "\n",
+                           "detail: ", error_msg(res.detail), "\n",
+                           "id: ", res.id, "\n",
+                           "frame: ", frame_name(res.frame), "\n",
+                           "status: ", status_name(res.status), "\n");
+        };
         if (!nego.ctx) {
-            chan << msgend(id, "error: negotiate http2 protocol settings with ", host, " failed\n",
-                           "h2error:", error_msg(nego.err.err), "\n",
-                           "detail: ", error_msg(nego.err.detail), "\n",
-                           "id: ", nego.err.id, "\n",
-                           "frame: ", frame_name(nego.err.frame), "\n",
-                           "status: ", status_name(nego.err.status), "\n");
+            error_with_info(nego.err, "error: negotiate http2 protocol settings with ", host, " failed\n");
             return;
         }
-    }
+        }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();

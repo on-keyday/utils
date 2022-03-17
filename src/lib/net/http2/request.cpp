@@ -63,6 +63,8 @@ namespace utils {
                             update.type = FrameType::window_update;
                             update.increment = rframe->len;
                             AWAIT(h2ctx->write(update));
+                            update.id = rframe->id;
+                            AWAIT(h2ctx->write(update));
                         }
                         return true;
                     };

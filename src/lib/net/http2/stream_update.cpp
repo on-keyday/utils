@@ -361,6 +361,7 @@ namespace utils {
                             };
                         }
                         stream->impl->send_window -= frame.len;
+                        impl->send.window -= frame.len;
                         if (frame.flag & Flag::end_stream) {
                             if (stream->status() == Status::half_closed_remote) {
                                 stream->impl->status = Status::closed;
