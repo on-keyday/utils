@@ -33,6 +33,16 @@ namespace utils {
                 unknown,
             };
 
+            BEGIN_ENUM_STRING_MSG(Status, status_name)
+            ENUM_STRING_MSG(Status::idle, "idle")
+            ENUM_STRING_MSG(Status::closed, "closed")
+            ENUM_STRING_MSG(Status::open, "open")
+            ENUM_STRING_MSG(Status::half_closed_local, "half_closed_local")
+            ENUM_STRING_MSG(Status::half_closed_remote, "half_closed_remote")
+            ENUM_STRING_MSG(Status::reserved_local, "reserved_local")
+            ENUM_STRING_MSG(Status::reserved_remote, "reserved_remote")
+            END_ENUM_STRING_MSG("unknown")
+
             enum class StreamError {
                 none,
                 over_max_frame_size,

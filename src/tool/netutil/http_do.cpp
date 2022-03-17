@@ -68,7 +68,8 @@ namespace netutil {
             chan << msgend(id, "error: negotiate http2 protocol settings with ", host, " failed\n",
                            "h2error:", error_msg(nego.err.err), "\n",
                            "detail: ", error_msg(nego.err.detail), "\n",
-                           "id: ", nego.err.id, "\n");
+                           "id: ", nego.err.id, "\n",
+                           "frame: ", frame_name(nego.err.frame), "\n");
             return;
         }
     }
