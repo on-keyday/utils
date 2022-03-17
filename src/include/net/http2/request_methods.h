@@ -14,7 +14,7 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            DLL UpdateResult STDCALL default_handle_ping_and_data(async::Context& ctx, wrap::shared_ptr<Context> h2ctx);
+            DLL ReadResult STDCALL default_handle_ping_and_data(async::Context& ctx, wrap::shared_ptr<Context> h2ctx);
             DLL UpdateResult STDCALL handle_ping(async::Context& ctx, wrap::shared_ptr<Context> h2ctx, Frame& frame);
             DLL ReadResult STDCALL wait_data_async(async::Context& ctx, wrap::shared_ptr<Context> h2ctx, std::int32_t id, wrap::string* ptr, bool end_stream);
             DLL UpdateResult STDCALL update_window_async(async::Context& ctx, wrap::shared_ptr<Context> h2ctx, std::int32_t id, std::uint32_t incr);

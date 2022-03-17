@@ -13,6 +13,30 @@
 namespace utils {
     namespace net {
         namespace http2 {
+            ReadResult STDCALL default_handle_ping_and_data(async::Context& ctx, wrap::shared_ptr<Context> h2ctx) {
+                auto res = AWAIT(h2ctx->read());
+                if (res.err.err != H2Error::none || !res.frame) {
+                    return std::move(res);
+                }
+                auto err = handle_ping(ctx, h2ctx, *res.frame);
+                if (err.err != H2Error::none) {
+                    return {.err = std::move(err), .frame = std::move(res.frame)};
+                }
+                if (res.frame->type == FrameType::data) {
+                    auto id = res.frame->id;
+                    auto len = res.frame->len;
+                    err = update_window_async(ctx, h2ctx, id, len);
+                    if (err.err != H2Error::none) {
+                        return {.err = std::move(err), .frame = std::move(res.frame)};
+                    }
+                    err = update_window_async(ctx, h2ctx, 0, len);
+                    if (err.err != H2Error::none) {
+                        return {.err = std::move(err), .frame = std::move(res.frame)};
+                    }
+                }
+                return std::move(res);
+            }
+
             UpdateResult STDCALL handle_ping(async::Context& ctx, wrap::shared_ptr<Context> h2ctx, Frame& frame) {
                 if (frame.type != FrameType::ping) {
                     return {};
