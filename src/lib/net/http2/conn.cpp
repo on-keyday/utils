@@ -29,18 +29,21 @@ namespace utils {
 
             constexpr auto connection_preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
-            async::Future<wrap::shared_ptr<Conn>> STDCALL open_async(AsyncIOClose&& io) {
+            async::Future<OpenResult> STDCALL open_async(AsyncIOClose&& io) {
                 auto impl = wrap::make_shared<internal::Http2Impl>();
                 impl->io = std::move(io);
-                return get_pool().start<wrap::shared_ptr<Conn>>([impl = std::move(impl)](async::Context& ctx) {
+                net::start([](async::Context& ctx, wrap::shared_ptr<internal::Http2Impl> impl) {
                     auto ptr = impl->io.write(connection_preface, 24);
                     auto w = AWAIT(ptr);
                     if (w.err) {
-                        return;
+                        return OpenResult{.errcode = w.err};
                     }
                     auto conn = wrap::make_shared<Conn>();
                     conn->impl = std::move(impl);
-                    ctx.set_value(std::move(conn));
+                    return OpenResult{.conn = std::move(conn)};
+                });
+                return get_pool().start<OpenResult>([impl = std::move(impl)](async::Context& ctx) {
+
                 });
             }
 

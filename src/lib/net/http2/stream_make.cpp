@@ -47,6 +47,10 @@ namespace utils {
                 return impl->get_stream(impl->next_stream());
             }
 
+            int Connection::errcode() {
+                return impl->code;
+            }
+
             bool Connection::make_data(std::int32_t id, wrap::string& data, DataFrame& f, bool& block) {
                 block = false;
                 auto stream = impl->get_stream(id);

@@ -36,8 +36,6 @@ namespace utils {
             enum class StreamError {
                 none,
                 over_max_frame_size,
-                invalid_status,
-                setting_was_ignored,
                 continuation_not_followed,
                 not_acceptable_on_current_status,
                 internal_data_read,
@@ -49,6 +47,20 @@ namespace utils {
                 writing_frame,
                 reading_frame,
             };
+
+            BEGIN_ENUM_STRING_MSG(StreamError, error_msg)
+            ENUM_STRING_MSG(StreamError::over_max_frame_size, "frame size is over max_frame_size")
+            ENUM_STRING_MSG(StreamError::continuation_not_followed, "expect continuation frame but not")
+            ENUM_STRING_MSG(StreamError::not_acceptable_on_current_status, "such type frame is not acceptable on current status")
+            ENUM_STRING_MSG(StreamError::internal_data_read, "error while internal data read")
+            ENUM_STRING_MSG(StreamError::push_promise_disabled, "push promise frame is disabled but it was recvieved/sent")
+            ENUM_STRING_MSG(StreamError::unsupported_frame, "unspported type frame handled")
+            ENUM_STRING_MSG(StreamError::hpack_failed, "hpack encode/decode failed")
+            ENUM_STRING_MSG(StreamError::unimplemented, "that feature is unimplemented")
+            ENUM_STRING_MSG(StreamError::ping_maybe_failed, "ping maybe failed")
+            ENUM_STRING_MSG(StreamError::writing_frame, "error while writing frame")
+            ENUM_STRING_MSG(StreamError::reading_frame, "error while reading frame")
+            END_ENUM_STRING_MSG("none")
 
             struct Connection;
 
@@ -80,6 +92,7 @@ namespace utils {
 
                 UpdateResult update_recv(const Frame& frame);
                 UpdateResult update_send(const Frame& frame);
+                int errcode();
 
                 bool make_data(std::int32_t id, wrap::string& data, DataFrame& frame, bool& block);
                 bool make_header(http::Header&& h, HeaderFrame& frame, wrap::string& remain);

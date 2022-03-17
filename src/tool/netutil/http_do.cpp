@@ -15,6 +15,7 @@
 #include <execution>
 #include "../../include/wrap/lite/map.h"
 #include "../../include/net/http/http1.h"
+#include "../../include/net/http2/request.h"
 
 using namespace utils;
 namespace netutil {
@@ -54,8 +55,20 @@ namespace netutil {
 
     using msg_chan = thread::SendChan<async::Any>;
 
-    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris) {
+    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();
+        auto res = AWAIT(net::http2::open_async(std::move(io)));
+        if (!res.conn) {
+            chan << msgend(id, "error: negotiate http2 protocol with ", host, " failed\n", "errno: ", res.errcode, "\n");
+            return;
+        }
+        auto settings = {std::pair{net::http2::SettingKey::enable_push, 0}};
+        auto nego = AWAIT(net::http2::negotiate(std::move(res.conn), settings));
+        if (!nego.ctx) {
+            chan << msgend(id, "error: negotiate http2 protocol settings with ", host, " failed\n",
+                           "h2error:", error_msg(nego.err.err), "\n");
+            return;
+        }
     }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
@@ -148,7 +161,7 @@ namespace netutil {
                 return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex, std::move(prevproced));
             }
             else if (::strncmp(selected, "h2", 2)) {
-                return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris));
+                return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex, std::move(prevproced));
             }
         }
         else {

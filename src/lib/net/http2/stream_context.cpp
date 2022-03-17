@@ -24,7 +24,6 @@ namespace utils {
                         if (err.err != H2Error::none) {
                             return {
                                 .err = std::move(err),
-                                .ctx = std::move(h2ctx),
                             };
                         }
                         bool recvack = false;
@@ -36,7 +35,7 @@ namespace utils {
                             }
                             auto ptr = res.frame;
                             if (ptr->type == FrameType::goaway) {
-                                return {.ctx = std::move(h2ctx)};
+                                return {.err = UpdateResult{.err = (H2Error)h2ctx->state.errcode()}};
                             }
                             else if (ptr->type == FrameType::ping) {
                                 if (!(ptr->flag & Flag::ack)) {
@@ -75,6 +74,7 @@ namespace utils {
                         return UpdateResult{
                             .err = H2Error::transport,
                             .detail = StreamError::writing_frame,
+                            .id = io->get_errorcode(),
                         };
                     }
                     return UpdateResult{};
@@ -90,6 +90,7 @@ namespace utils {
                         return {.err = UpdateResult{
                                     .err = H2Error::transport,
                                     .detail = StreamError::reading_frame,
+                                    .id = io->get_errorcode(),
                                 }};
                     }
                     if (auto err = state.update_recv(*r); err.err != H2Error::none) {
