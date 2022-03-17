@@ -22,7 +22,7 @@ namespace utils {
                 if (err.err != H2Error::none) {
                     return {.err = std::move(err), .frame = std::move(res.frame)};
                 }
-                if (res.frame->type == FrameType::data) {
+                if (res.frame->type == FrameType::data && res.frame->len != 0) {
                     auto id = res.frame->id;
                     auto len = res.frame->len;
                     err = update_window_async(ctx, h2ctx, id, len);
