@@ -32,7 +32,7 @@ namespace utils {
             async::Future<OpenResult> STDCALL open_async(AsyncIOClose&& io) {
                 auto impl = wrap::make_shared<internal::Http2Impl>();
                 impl->io = std::move(io);
-                net::start([](async::Context& ctx, wrap::shared_ptr<internal::Http2Impl> impl) {
+                return net::start([](async::Context& ctx, wrap::shared_ptr<internal::Http2Impl> impl) {
                     auto ptr = impl->io.write(connection_preface, 24);
                     auto w = AWAIT(ptr);
                     if (w.err) {
@@ -41,10 +41,8 @@ namespace utils {
                     auto conn = wrap::make_shared<Conn>();
                     conn->impl = std::move(impl);
                     return OpenResult{.conn = std::move(conn)};
-                });
-                return get_pool().start<OpenResult>([impl = std::move(impl)](async::Context& ctx) {
-
-                });
+                },
+                                  std::move(impl));
             }
 
             void Conn::set_error(H2Error err) {

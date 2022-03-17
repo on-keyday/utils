@@ -81,6 +81,19 @@ namespace utils {
                 continuous = 0x9,
             };
 
+            BEGIN_ENUM_STRING_MSG(FrameType, frame_name)
+            ENUM_STRING_MSG(FrameType::data, "data")
+            ENUM_STRING_MSG(FrameType::header, "header")
+            ENUM_STRING_MSG(FrameType::priority, "priority")
+            ENUM_STRING_MSG(FrameType::rst_stream, "rst_stream")
+            ENUM_STRING_MSG(FrameType::settings, "settings")
+            ENUM_STRING_MSG(FrameType::push_promise, "push_promise")
+            ENUM_STRING_MSG(FrameType::ping, "ping")
+            ENUM_STRING_MSG(FrameType::goaway, "goaway")
+            ENUM_STRING_MSG(FrameType::window_update, "window_update")
+            ENUM_STRING_MSG(FrameType::continuous, "continuous")
+            END_ENUM_STRING_MSG("unknown")
+
             enum Flag : std::uint8_t {
                 none = 0x0,
                 ack = 0x1,

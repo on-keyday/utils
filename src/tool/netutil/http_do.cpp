@@ -66,7 +66,9 @@ namespace netutil {
         auto nego = AWAIT(net::http2::negotiate(std::move(res.conn), settings));
         if (!nego.ctx) {
             chan << msgend(id, "error: negotiate http2 protocol settings with ", host, " failed\n",
-                           "h2error:", error_msg(nego.err.err), "\n");
+                           "h2error:", error_msg(nego.err.err), "\n",
+                           "detail: ", error_msg(nego.err.detail), "\n",
+                           "id: ", nego.err.id, "\n");
             return;
         }
     }

@@ -28,7 +28,7 @@ void test_http2base() {
                 auto ssl = s.get();
                 assert(ssl.conn);
                 auto h2 = net::http2::open_async(std::move(ssl.conn));
-                auto conn = AWAIT(h2);
+                auto conn = AWAIT(h2).conn;
                 net::http2::SettingsFrame settings;
                 settings.type = net::http2::FrameType::settings;
                 settings.id = 0;
