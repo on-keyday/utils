@@ -13,7 +13,7 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            ReadResult STDCALL default_handle_ping_and_data(async::Context& ctx, wrap::shared_ptr<Context>& h2ctx) {
+            ReadResult STDCALL default_handle_ping_and_data(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx) {
                 auto res = AWAIT(h2ctx->read());
                 if (res.err.err != H2Error::none || !res.frame) {
                     return std::move(res);
@@ -37,7 +37,7 @@ namespace utils {
                 return std::move(res);
             }
 
-            UpdateResult STDCALL handle_ping(async::Context& ctx, wrap::shared_ptr<Context>& h2ctx, Frame& frame) {
+            UpdateResult STDCALL handle_ping(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, Frame& frame) {
                 if (frame.type != FrameType::ping) {
                     return {};
                 }
@@ -50,7 +50,7 @@ namespace utils {
                 return res;
             }
 
-            UpdateResult STDCALL update_window_async(async::Context& ctx, wrap::shared_ptr<Context>& h2ctx, std::int32_t id, std::uint32_t incr) {
+            UpdateResult STDCALL update_window_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::int32_t id, std::uint32_t incr) {
                 if (id <= 0 || incr == 0) {
                     return {
                         .err = H2Error::protocol,
@@ -63,7 +63,7 @@ namespace utils {
                 return AWAIT(h2ctx->write(wframe));
             }
 
-            ReadResult STDCALL wait_data_async(async::Context& ctx, wrap::shared_ptr<Context>& h2ctx, std::int32_t id, wrap::string* ptr, bool end_stream) {
+            ReadResult STDCALL wait_data_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::int32_t id, wrap::string* ptr, bool end_stream) {
                 if (!ptr || !ptr->size() || id <= 0) {
                     return ReadResult{};
                 }
@@ -111,7 +111,7 @@ namespace utils {
                 return {};
             }
 
-            UpdateResult STDCALL send_header_async(async::Context& ctx, wrap::shared_ptr<Context> h2ctx, http::Header h, bool end_stream) {
+            UpdateResult STDCALL send_header_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, http::Header h, bool end_stream) {
                 HeaderFrame frame{0};
                 wrap::string remain;
                 if (!h2ctx->state.make_header(std::move(h), frame, remain)) {

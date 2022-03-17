@@ -41,52 +41,23 @@ namespace utils {
                     }
                     auto id = err.id;
                     auto recv_frame = [&] {
-                        auto res = AWAIT(h2ctx->read());
+                        auto res = default_handle_ping_and_data(ctx, h2ctx);
                         if (res.err.err != H2Error::none) {
                             write_goaway(res.err.err);
-                            return false;
                         }
-                        auto rframe = res.frame;
-                        if (rframe->type == FrameType::ping) {
-                            if (!(rframe->flag & Flag::ack)) {
-                                rframe->flag |= Flag::ack;
-                                AWAIT(h2ctx->write(*rframe));
-                            }
-                        }
-                        else if (rframe->type == FrameType::data) {
-                            WindowUpdateFrame update{0};
-                            update.type = FrameType::window_update;
-                            update.increment = rframe->len;
-                            AWAIT(h2ctx->write(update));
-                            update.id = rframe->id;
-                            AWAIT(h2ctx->write(update));
-                        }
-                        return true;
+                        return std::move(res);
                     };
                     bool block = false;
                     while (data.size()) {
-                        if (block) {
-                            if (!recv_frame()) {
-                                return {};
-                            }
-                        }
-                        DataFrame dframe;
-                        if (!h2ctx->state.make_data(id, data, dframe, block)) {
-                            if (!block) {
-                                write_goaway(H2Error::internal);
-                                return {};
-                            }
-                            continue;
-                        }
-                        if (auto err = AWAIT(h2ctx->write(dframe)); err.err != H2Error::none) {
-                            write_goaway(err.err);
-                            return {};
+                        auto res = wait_data_async(ctx, h2ctx, id, &data, true);
+                        if (res.err.err != H2Error::none) {
+                            return {.err = std::move(res.err)};
                         }
                     }
                     auto stream = h2ctx->state.stream(id);
                     while (stream->status() != Status::closed) {
-                        if (!recv_frame()) {
-                            return {};
+                        if (auto res = recv_frame(); res.err.err != H2Error::none) {
+                            return {.err = std::move(res.err)};
                         }
                     }
                     return {.err = UpdateResult{.id = id}, .resp = stream->response()};
