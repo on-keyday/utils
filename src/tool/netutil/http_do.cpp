@@ -87,6 +87,9 @@ namespace netutil {
             auto res = net::http2::send_header_async(ctx, h2ctx, std::move(h), true);
             if (res.err != net::http2::H2Error::none) {
                 error_with_info(nego.err, "error: sending header of ", uri.to_string(), " failed\n");
+                if (res.err != net::http2::H2Error::transport) {
+                    net::http2::send_goaway(ctx, h2ctx, (std::uint32_t)res.err);
+                }
                 return;
             }
         }
