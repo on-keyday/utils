@@ -66,6 +66,7 @@ namespace utils {
             ENUM_STRING_MSG(H2Error::enhance_your_clam, "enchance your clam")
             ENUM_STRING_MSG(H2Error::inadequate_security, "inadequate security")
             ENUM_STRING_MSG(H2Error::http_1_1_required, "http/1.1 required")
+            ENUM_STRING_MSG(H2Error::transport,"transport layer error")
             END_ENUM_STRING_MSG("unknown or internal error")
 
             enum class FrameType : std::uint8_t {

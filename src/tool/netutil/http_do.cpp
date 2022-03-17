@@ -69,7 +69,8 @@ namespace netutil {
                            "h2error:", error_msg(nego.err.err), "\n",
                            "detail: ", error_msg(nego.err.detail), "\n",
                            "id: ", nego.err.id, "\n",
-                           "frame: ", frame_name(nego.err.frame), "\n");
+                           "frame: ", frame_name(nego.err.frame), "\n",
+                           "status: ", status_name(nego.err.status), "\n");
             return;
         }
     }
