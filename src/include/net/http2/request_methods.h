@@ -21,6 +21,7 @@ namespace utils {
             DLL ReadResult STDCALL wait_data_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::int32_t id, wrap::string* ptr, bool end_stream);
             DLL UpdateResult STDCALL update_window_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::int32_t id, std::uint32_t incr);
             DLL UpdateResult STDCALL send_header_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, http::Header h, bool end_stream);
+            DLL UpdateResult STDCALL send_goaway(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::uint32_t errcode);
         }  // namespace http2
     }      // namespace net
 }  // namespace utils

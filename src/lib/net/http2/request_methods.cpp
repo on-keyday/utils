@@ -117,6 +117,15 @@ namespace utils {
                 return {};
             }
 
+            UpdateResult STDCALL send_goaway(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::uint32_t errcode) {
+                GoAwayFrame goaway{0};
+                goaway.type = FrameType::goaway;
+                goaway.code = errcode;
+                goaway.processed_id = h2ctx->state.max_proced();
+                goaway.len = 4;
+                return AWAIT(h2ctx->write(goaway));
+            }
+
             UpdateResult STDCALL send_header_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, http::Header h, bool end_stream) {
                 HeaderFrame frame{0};
                 wrap::string remain;

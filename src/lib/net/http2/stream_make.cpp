@@ -51,6 +51,10 @@ namespace utils {
                 return impl->code;
             }
 
+            std::int32_t Connection::max_proced() const {
+                return impl->id_max;
+            }
+
             bool Connection::make_data(std::int32_t id, wrap::string& data, DataFrame& frame, bool& block) {
                 block = false;
                 auto stream = impl->get_stream(id);

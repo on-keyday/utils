@@ -28,11 +28,7 @@ namespace utils {
                     -> H2Response {
                     auto write_goaway = [&](H2Error err) {
                         if (err != H2Error::transport) {
-                            GoAwayFrame goaway;
-                            goaway.type = FrameType::goaway;
-                            goaway.processed_id = 0;
-                            goaway.code = (std::uint32_t)err;
-                            AWAIT(h2ctx->write(goaway));
+                            send_goaway(ctx, h2ctx, (std::uint32_t)err);
                         }
                     };
                     auto err = send_header_async(ctx, h2ctx, std::move(h), !data.size());

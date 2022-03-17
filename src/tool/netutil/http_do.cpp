@@ -15,7 +15,7 @@
 #include <execution>
 #include "../../include/wrap/lite/map.h"
 #include "../../include/net/http/http1.h"
-#include "../../include/net/http2/request.h"
+#include "../../include/net/http2/request_methods.h"
 
 using namespace utils;
 namespace netutil {
@@ -77,6 +77,19 @@ namespace netutil {
             return;
         }
         auto h2ctx = nego.ctx;
+        for (auto& uri : uris) {
+            net::http::Header h;
+            h.set(":method", "GET");
+            h.set(":authority", host.c_str());
+            h.set(":scheme", "https");
+            auto path = uri.path_query();
+            h.set(":path", path.c_str());
+            auto res = net::http2::send_header_async(ctx, h2ctx, std::move(h), true);
+            if (res.err != net::http2::H2Error::none) {
+                error_with_info(nego.err, "error: sending header of ", uri.to_string(), " failed\n");
+                return;
+            }
+        }
     }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
