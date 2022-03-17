@@ -271,7 +271,7 @@ namespace utils {
                 template <class Fn, class... Args>
                 static async::Future<Ret> invoke(TaskPool& p, Fn&& fn, Args&&... arg) {
                     return p.template start_unwrap<Ret>([fn = std::move(fn), tup = std::make_tuple(std::forward<Args>(arg)...)](async::Context& ctx) mutable {
-                        ctx.set_value(call_with_ctx(ctx, std::forward<Fn>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>{}));
+                        ctx.set_value(call_with_ctx(ctx, std::forward<decltype(fn)>(fn), std::move(tup), std::make_index_sequence<sizeof...(Args)>{}));
                     });
                 }
             };

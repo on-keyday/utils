@@ -58,6 +58,7 @@ namespace utils {
                 reading_frame,
                 require_id_0,
                 require_id_not_0,
+                stream_blocked,
             };
 
             BEGIN_ENUM_STRING_MSG(StreamError, error_msg)
@@ -72,6 +73,9 @@ namespace utils {
             ENUM_STRING_MSG(StreamError::ping_maybe_failed, "ping maybe failed")
             ENUM_STRING_MSG(StreamError::writing_frame, "error while writing frame")
             ENUM_STRING_MSG(StreamError::reading_frame, "error while reading frame")
+            ENUM_STRING_MSG(StreamError::require_id_0, "require id 0 frame")
+            ENUM_STRING_MSG(StreamError::require_id_not_0, "require non-zero id frame")
+            ENUM_STRING_MSG(StreamError::stream_blocked, "stream now blocking")
             END_ENUM_STRING_MSG("none")
 
             struct Connection;
@@ -82,6 +86,8 @@ namespace utils {
                 std::int64_t window_size() const;
                 Status status() const;
                 http::HttpAsyncResponse response();
+
+                http::Header peek_header() const;
 
                private:
                 friend struct internal::ConnectionImpl;

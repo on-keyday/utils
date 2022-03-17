@@ -143,6 +143,7 @@ PRIVATE
 "src/lib/net/http2/stream_make.cpp"
 "src/lib/net/http2/stream_context.cpp"
 "src/lib/net/http2/request.cpp"
+"src/lib/net/http2/request_methods.cpp"
 )
 #if(WIN32)
 target_sources(utils

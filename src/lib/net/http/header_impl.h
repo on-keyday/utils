@@ -20,7 +20,7 @@ namespace utils {
         namespace http {
             namespace internal {
                 struct HttpSet {
-                    static HeaderImpl* get(Header& p) {
+                    static wrap::shared_ptr<HeaderImpl>& get(Header& p) {
                         return p.impl;
                     }
 

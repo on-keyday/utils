@@ -37,7 +37,7 @@ namespace utils {
             namespace internal {
 
                 struct HttpResponseImpl {
-                    HeaderImpl* header = nullptr;
+                    wrap::shared_ptr<HeaderImpl> header;
                     HttpState state;
                     IOClose io;
                     wrap::string buf;
@@ -63,23 +63,7 @@ namespace utils {
             }
 
             Header::Header() {
-                impl = new internal::HeaderImpl();
-            }
-
-            Header::~Header() {
-                delete impl;
-            }
-
-            Header::Header(Header&& in) {
-                impl = in.impl;
-                in.impl = nullptr;
-            }
-
-            Header& Header::operator=(Header&& in) {
-                delete impl;
-                impl = in.impl;
-                in.impl = nullptr;
-                return *this;
+                impl = wrap::make_shared<internal::HeaderImpl>();
             }
 
             Header& Header::set(const char* key, const char* value) {
@@ -232,13 +216,13 @@ namespace utils {
                 return nullptr;
             }
 
-            bool render_request(wrap::string& buf, const char* host, const char* method, const char* path, internal::HeaderImpl* header) {
+            bool render_request(wrap::string& buf, const char* host, const char* method, const char* path, internal::HeaderImpl& header) {
                 constexpr auto validator = h1header::default_validator();
                 if (!validator(std::pair{"Host", host})) {
                     return false;
                 }
                 auto res = h1header::render_request(
-                    buf, method, path, *header,
+                    buf, method, path, header,
                     [&](auto&& keyval) {
                         if (helper::equal(std::get<0>(keyval), "Host", helper::ignore_case())) {
                             return false;
@@ -255,7 +239,7 @@ namespace utils {
                         helper::append(str, "\r\n");
                         helper::append(str, "Content-Length:");
                         helper::FixedPushBacker<char[64], 63> pb;
-                        number::to_string(pb, header->body.size());
+                        number::to_string(pb, header.body.size());
                         helper::append(str, pb.buf);
                         helper::append(str, "\r\n");
                     });
@@ -270,7 +254,7 @@ namespace utils {
                     return HttpResponse{};
                 }
                 wrap::string buf;
-                if (!render_request(buf, host, method, path, header.impl)) {
+                if (!render_request(buf, host, method, path, *header.impl)) {
                     return HttpResponse{};
                 }
                 HttpResponse response;
@@ -296,7 +280,7 @@ namespace utils {
                     return HttpResponse{};
                 }
                 wrap::string buf;
-                if (!render_request(buf, io.impl->hostname.c_str(), method, path, header.impl)) {
+                if (!render_request(buf, io.impl->hostname.c_str(), method, path, *header.impl)) {
                     return HttpResponse{};
                 }
                 auto done = io.impl->io.write(buf.c_str(), buf.size(), nullptr);
@@ -308,7 +292,6 @@ namespace utils {
                 io.impl->buf = std::move(buf);
                 io.impl->redpos = 0;
                 io.impl->expect = 0;
-                delete io.impl->header;
                 io.impl->header = header.impl;
                 header.impl = nullptr;
                 io.impl->response = Header{};
@@ -321,7 +304,7 @@ namespace utils {
                         .err = HttpError::invalid_arg};
                 }
                 wrap::string buf;
-                if (!render_request(buf, host, method, path, header.impl)) {
+                if (!render_request(buf, host, method, path, *header.impl)) {
                     return nullptr;
                 }
                 auto impl = new internal::HttpAsyncResponseImpl{};

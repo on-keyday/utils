@@ -97,10 +97,6 @@ namespace utils {
                 friend DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
                 friend DLL async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
                 Header();
-                ~Header();
-
-                Header(Header&&);
-                Header& operator=(Header&&);
 
                 Header& set(const char* key, const char* value);
 
@@ -117,7 +113,7 @@ namespace utils {
                 }
 
                private:
-                internal::HeaderImpl* impl = nullptr;
+                wrap::shared_ptr<internal::HeaderImpl> impl = nullptr;
             };
 
             DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
