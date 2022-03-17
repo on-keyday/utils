@@ -7,6 +7,8 @@
 
 
 // request_methods - request method suite
+// these are customization point of http2
+// and you have to use these on async::TaskPool
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
 #include "stream.h"
