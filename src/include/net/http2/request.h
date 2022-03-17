@@ -17,7 +17,7 @@ namespace utils {
     namespace net {
         namespace http2 {
             struct H2Result {
-                H2Error err = H2Error::none;
+                UpdateResult err;
                 wrap::shared_ptr<Frame> frame;
             };
 

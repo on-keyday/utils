@@ -76,7 +76,8 @@ namespace netutil {
             error_with_info(nego.err, "error: negotiate http2 protocol settings with ", host, " failed\n");
             return;
         }
-        }
+        auto h2ctx = nego.ctx;
+    }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();

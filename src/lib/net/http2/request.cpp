@@ -14,8 +14,35 @@
 namespace utils {
     namespace net {
         namespace http2 {
-            H2Result default_handle_recv(async::Context& ctx) {
-                return {};
+            UpdateResult send_header(wrap::shared_ptr<Context>& h2ctx, async::Context& ctx, http::Header&& h) {
+                HeaderFrame frame{0};
+                wrap::string remain;
+                if (!h2ctx->state.make_header(std::move(h), frame, remain)) {
+                    return UpdateResult{
+                        .err = H2Error::internal,
+                        .detail = StreamError::hpack_failed,
+                        .id = frame.id,
+                    };
+                }
+                auto r = AWAIT(h2ctx->write(frame));
+                if (r.err != H2Error::none) {
+                    return std::move(r);
+                }
+                while (remain.size()) {
+                    Continuation cont;
+                    if (!h2ctx->state.make_continuous(frame.id, remain, cont)) {
+                        return UpdateResult{
+                            .err = H2Error::internal,
+                            .detail = StreamError::continuation_not_followed,
+                            .id = frame.id,
+                        };
+                    }
+                    r = AWAIT(h2ctx->write(cont));
+                    if (r.err != H2Error::none) {
+                        return std::move(r);
+                    }
+                }
+                return {.id = frame.id};
             }
 
             async::Future<http::HttpAsyncResponse> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data) {
