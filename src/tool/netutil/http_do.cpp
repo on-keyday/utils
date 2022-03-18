@@ -183,7 +183,7 @@ namespace netutil {
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
             if (res.err != net::http::HttpError::none) {
                 chan << msgend(id, "error: http request to ", host, " failed\n",
-                               error_msg(res.err), "\nerrno: ", res.base_err);
+                               error_msg(res.err), "\nerrno: ", res.base_err, "\n");
                 return;
             }
             io = res.resp.get_io();
@@ -253,11 +253,14 @@ namespace netutil {
             }
             auto conn = ssl.conn;
             auto selected = conn->alpn_selected(nullptr);
-            if (!selected || ::strncmp(selected, "http/1.1", 8)) {
+            if (!selected || ::strncmp(selected, "http/1.1", 8) == 0) {
                 return do_http1(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex, std::move(prevproced));
             }
-            else if (::strncmp(selected, "h2", 2)) {
+            else if (::strncmp(selected, "h2", 2) == 0) {
                 return do_http2(ctx, std::move(conn), std::move(chan), id, std::move(uris), procindex, std::move(prevproced));
+            }
+            else {
+                chan << msgend(id, "error: server returned invalid alpn string\n");
             }
         }
         else {
