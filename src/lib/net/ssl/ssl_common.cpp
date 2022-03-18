@@ -173,17 +173,17 @@ namespace utils {
             return true;
         }
 
-        bool common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate) {
+        SSLAsyncError common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate) {
             if (!impl->ctx) {
                 impl->ctx = ::SSL_CTX_new(::TLS_method());
                 if (!impl->ctx) {
-                    return false;
+                    return SSLAsyncError::set_up_error;
                 }
             }
             ::SSL_CTX_set_options(impl->ctx, SSL_OP_NO_SSLv2);
             if (cert) {
                 if (!::SSL_CTX_load_verify_locations(impl->ctx, cert, nullptr)) {
-                    return false;
+                    return SSLAsyncError::cert_register_error;
                 }
             }
             if (selfcert) {
@@ -191,16 +191,16 @@ namespace utils {
                     selfprivate = selfcert;
                 }
                 if (::SSL_CTX_use_certificate_file(impl->ctx, selfcert, SSL_FILETYPE_PEM) != 1) {
-                    return false;
+                    return SSLAsyncError::cert_register_error;
                 }
                 if (::SSL_CTX_use_PrivateKey_file(impl->ctx, selfprivate, SSL_FILETYPE_PEM) != 1) {
-                    return false;
+                    return SSLAsyncError::cert_register_error;
                 }
                 if (!::SSL_CTX_check_private_key(impl->ctx)) {
-                    return false;
+                    return SSLAsyncError::cert_register_error;
                 }
             }
-            return true;
+            return SSLAsyncError::none;
         }
 
         bool common_setup_ssl(internal::SSLImpl* impl, const char* alpn, const char* host) {
@@ -221,7 +221,8 @@ namespace utils {
 
         bool common_setup_sync(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                                const char* selfcert, const char* selfprivate) {
-            if (!common_setup_sslctx(impl, cert, selfcert, selfprivate)) {
+            if (auto err = common_setup_sslctx(impl, cert, selfcert, selfprivate);
+                err != SSLAsyncError::none) {
                 return false;
             }
             if (io) {

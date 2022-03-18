@@ -101,11 +101,15 @@ namespace utils {
         enum class SSLAsyncError {
             none,
             set_up_error,
+            cert_register_error,
+            host_register_error,
             connect_error,
         };
 
         BEGIN_ENUM_STRING_MSG(SSLAsyncError, error_msg)
         ENUM_STRING_MSG(SSLAsyncError::set_up_error, "create ssl context suite failed")
+        ENUM_STRING_MSG(SSLAsyncError::cert_register_error, "failed to register cert files")
+        ENUM_STRING_MSG(SSLAsyncError::host_register_error, "failed to register host or alpn name")
         ENUM_STRING_MSG(SSLAsyncError::connect_error, "negotiate ssl connection failed")
         END_ENUM_STRING_MSG(nullptr)
 

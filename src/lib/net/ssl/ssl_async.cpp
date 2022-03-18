@@ -133,21 +133,22 @@ namespace utils {
                 });
         }
 
-        bool common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,
-                                const char* selfcert, const char* selfprivate) {
-            if (!common_setup_sslctx(impl, cert, selfcert, selfprivate)) {
-                return false;
+        SSLAsyncError common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,
+                                         const char* selfcert, const char* selfprivate) {
+            if (auto err = common_setup_sslctx(impl, cert, selfcert, selfprivate);
+                err != SSLAsyncError::none) {
+                return err;
             }
             if (io) {
                 if (!setup_ssl(impl)) {
-                    return false;
+                    return SSLAsyncError::set_up_error;
                 }
                 impl->io = std::move(io);
             }
             if (!common_setup_ssl(impl, alpn, host)) {
-                return false;
+                return SSLAsyncError::host_register_error;
             }
-            return true;
+            return SSLAsyncError::none;
         }
 
         State SSLAsyncConn::close(bool force) {
@@ -197,8 +198,9 @@ namespace utils {
                 return nullptr;
             }
             auto impl = new internal::SSLAsyncImpl{};
-            if (!common_setup_async(impl, std::move(io), cert, alpn, host, selfcert, selfprivate)) {
-                return SSLAsyncResult{.err = SSLAsyncError::set_up_error};
+            if (auto err = common_setup_async(impl, std::move(io), cert, alpn, host, selfcert, selfprivate);
+                err != SSLAsyncError::none) {
+                return SSLAsyncResult{.err = err};
             }
             return start(
                 [](async::Context& ctx, internal::SSLAsyncImpl* impl) -> SSLAsyncResult {
