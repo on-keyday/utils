@@ -55,6 +55,27 @@ namespace netutil {
     }
 
     using msg_chan = thread::SendChan<async::Any>;
+    template <class Callback>
+    bool handle_redirection(net::http::Header& h, net::URI& uri, msg_chan chan, size_t id,
+                            const wrap::string& host, const wrap::string& scheme, Callback&& cb) {
+        if (auto loc = h.value("location")) {
+            wrap::string locuri = loc;
+            net::URI newuri;
+            if (!preprocese_a_uri(loc, "", locuri, newuri, uri)) {
+                chan << msg(id, "warning: failed to parse location header\n",
+                            "location: ", loc, "\n");
+                return true;
+            }
+            if (newuri.host == host && newuri.scheme == scheme) {
+                chan << msg(id, "redirect to ", newuri.to_string(), "\n");
+                return cb(std::move(newuri));
+            }
+            else {
+                chan << Redirect{.id = id, .location = std::move(newuri)};
+            }
+        }
+        return true;
+    }
 
     void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();
@@ -84,7 +105,7 @@ namespace netutil {
             }
         };
         wrap::map<std::int32_t, net::URI> sid;
-        for (auto& uri : uris) {
+        auto send_header = [&](net::URI& uri) {
             net::http::Header h;
             h.set(":method", "GET");
             h.set(":authority", host.c_str());
@@ -95,9 +116,13 @@ namespace netutil {
             if (res.err != net::http2::H2Error::none) {
                 error_with_info(nego.err, "error: sending header of ", uri.to_string(), " failed\n");
                 goaway(res);
-                return;
+                return false;
             }
             sid.emplace(res.id, std::move(uri));
+            return true;
+        };
+        for (auto& uri : uris) {
+            send_header(uri);
         }
         while (sid.size()) {
             auto data = net::http2::default_handling_ping_and_data(ctx, h2ctx);
@@ -114,7 +139,8 @@ namespace netutil {
             }
             auto f = data.frame;
             if (f->type == net::http2::FrameType::goaway) {
-                error_with_info(data.err, "error: goaway ");
+                error_with_info(data.err, "error: goaway was recieved in progress of receiving response");
+                return;
             }
             if (f->id != 0) {
                 auto st = h2ctx->state.stream(f->id);
@@ -122,13 +148,28 @@ namespace netutil {
                     auto found = sid.find(f->id);
                     if (found != sid.end()) {
                         auto resp = st->response();
-                        prevhandled.push_back(resp.response());
+                        auto h = resp.response();
+                        if (net::http::is_redirect_range(h.status())) {
+                            if (!handle_redirection(
+                                    h, found->second, chan, id, host, "https",
+                                    [&](net::URI uri) {
+                                        return send_header(uri);
+                                    })) {
+                                return;
+                            }
+                        }
+                        prevhandled.push_back(std::move(h));
                         uris.push_back(std::move(found->second));
                         sid.erase(f->id);
                     }
                 }
             }
         }
+        chan << FinalResult{
+            .uris = std::move(uris),
+            .h = std::move(prevhandled),
+            .id = id,
+        };
     }
 
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
@@ -158,23 +199,10 @@ namespace netutil {
                     return;
                 }
             }
-            else if (h.status() >= 300 && h.status() < 400) {
-                if (auto loc = h.value("location")) {
-                    wrap::string locuri = loc;
-                    net::URI newuri;
-                    if (!preprocese_a_uri(loc, "", locuri, newuri, uris[i])) {
-                        chan << msg(id, "warning: failed to parse location header\n",
-                                    "location: ", loc, "\n");
-                        goto END;
-                    }
-                    if (newuri.host == host && newuri.scheme == scheme) {
-                        chan << msg(id, "redirect to ", newuri.to_string(), "\n");
-                        uris.push_back(std::move(newuri));
-                    }
-                    else {
-                        chan << Redirect{.id = id, .location = std::move(newuri)};
-                    }
-                }
+            else if (net::http::is_redirect_range(h.status())) {
+                handle_redirection(h, uris[i], chan, id, host, scheme, [&](net::URI uri) {
+                    uris.push_back(std::move(uri));
+                });
             }
         END:
             resps.push_back(std::move(h));
