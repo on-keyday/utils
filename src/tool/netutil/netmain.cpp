@@ -58,6 +58,7 @@ int main_proc(int argc, char** argv) {
 
 _CRT_ALLOC_HOOK base_alloc_hook;
 std::int64_t total_alloced;
+size_t count = 0;
 void* dumpfile;
 
 struct DumpFileCloser {
@@ -89,7 +90,11 @@ int alloc_hook(int nAllocType, void* pvData,
         number::insert_space(arr, 8, total_alloced);
         number::to_string(arr, total_alloced);
         helper::append(arr, "/time: ");
-        number::to_string(arr, t.delta().count());
+        auto delta = t.delta().count();
+        number::insert_space(arr, 8, delta);
+        number::to_string(arr, delta);
+        helper::append(arr, "/count: ");
+        number::to_string(arr, count);
         helper::append(arr, "\n");
         OutputDebugStringA(arr.buf);
         DWORD w;
@@ -109,6 +114,7 @@ int alloc_hook(int nAllocType, void* pvData,
             save_log("dealoc");
         }
     }
+    count++;
     return res;
 }
 
