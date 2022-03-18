@@ -224,6 +224,7 @@ namespace netutil {
         else {
             port = uri.scheme.c_str();
         }
+        chan << msg(id, "starting connect to ", uri.host_port(), "\n");
         auto tcp = AWAIT(net::open_async(uri.host.c_str(), port));
         if (!tcp.conn) {
             chan << msgend(
@@ -233,6 +234,9 @@ namespace netutil {
                 "addrerr: ", error_msg(tcp.addrerr), "\n");
             return;
         }
+        wrap::string ipaddr;
+        tcp.conn->address()->stringify(&ipaddr);
+        chan << msg(id, "remote address is ", ipaddr, "\n");
         if (uri.scheme == "https") {
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
             auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
@@ -262,54 +266,60 @@ namespace netutil {
         net::set_iocompletion_thread(true);
 
         wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<net::URI>>> hosts;
+        auto [w, r] = thread::make_chan<async::Any>();
+        size_t id = 0;
+        r.set_blocking(true);
         for (auto& uri : uris) {
             hosts[uri.host][uri.scheme].push_back(std::move(uri));
         }
-        auto [w, r] = thread::make_chan<async::Any>();
-        size_t id = 0;
-        for (auto& host : hosts) {
-            for (auto& scheme : host.second) {
-                net::start(do_request_host, w, id, std::move(scheme.second), 0, wrap::vector<net::http::Header>{});
-                id++;
-            }
-        }
-        hosts.clear();
-        size_t exists = id;
-        async::Any event;
         wrap::vector<net::URI> processed_uri;
         wrap::vector<net::http::Header> processed_header;
-        r.set_blocking(true);
-        while (r >> event) {
-            if (auto msg = event.type_assert<Message>()) {
-                cout << "#" << msg->id << "\n";
-                cout << std::move(msg->msg);
-                if (msg->endofmsg) {
+        while (hosts.size()) {
+            size_t exists = 0;
+            for (auto& host : hosts) {
+                for (auto& scheme : host.second) {
+                    net::start(do_request_host, w, id, std::move(scheme.second), 0, wrap::vector<net::http::Header>{});
+                    id++;
+                    exists++;
+                }
+            }
+            hosts.clear();
+            async::Any event;
+            while (r >> event) {
+                if (auto msg = event.type_assert<Message>()) {
+                    cout << "#" << msg->id << "\n";
+                    cout << std::move(msg->msg);
+                    if (msg->endofmsg) {
+                        exists--;
+                        if (!exists) {
+                            break;
+                        }
+                    }
+                }
+                else if (auto redirect = event.type_assert<Redirect>()) {
+                    cout << "#" << redirect->id << "\n";
+                    cout << "request redirect to " << redirect->location.to_string() << "\n";
+                    cout << "ownership of this url has moved\n";
+                    hosts[redirect->location.host][redirect->location.scheme].push_back(std::move(redirect->location));
+                }
+                else if (auto reconnect = event.type_assert<Reconnect>()) {
+                    cout << "#" << reconnect->id << "\n";
+                    cout << "`Connection: close` has been detected\n";
+                    cout << "retrying to connect...\n";
+                    net::start(do_request_host, w, reconnect->id, std::move(reconnect->uris), reconnect->index, std::move(reconnect->h));
+                }
+                else if (auto final = event.type_assert<FinalResult>()) {
+                    cout << "#" << final->id << "\n";
+                    cout << "request task done\n";
                     exists--;
-                }
-            }
-            else if (auto redirect = event.type_assert<Redirect>()) {
-                cout << "#" << redirect->id << "\n";
-                cout << "request redirect to " << redirect->location.to_string() << "\n";
-                cout << "ownership of this url has moved\n";
-                hosts[redirect->location.host][redirect->location.scheme].push_back(std::move(redirect->location));
-            }
-            else if (auto reconnect = event.type_assert<Reconnect>()) {
-                cout << "#" << reconnect->id << "\n";
-                cout << "`Connection: close` has been detected\n";
-                cout << "retrying to connect...\n";
-                net::start(do_request_host, w, reconnect->id, std::move(reconnect->uris), reconnect->index, std::move(reconnect->h));
-            }
-            else if (auto final = event.type_assert<FinalResult>()) {
-                cout << "#" << final->id << "\n";
-                cout << "request task done\n";
-                exists--;
-                if (exists) {
-                    cout << "waiting for others...\n";
-                }
-                std::move(final->uris.begin(), final->uris.end(), std::back_inserter(processed_uri));
-                std::move(final->h.begin(), final->h.end(), std::back_inserter(processed_header));
-                if (!exists) {
-                    break;
+                    if (exists) {
+                        cout << "waiting for others...\n";
+                    }
+                    std::move(final->uris.begin(), final->uris.end(), std::back_inserter(processed_uri));
+                    std::move(final->h.begin(), final->h.end(), std::back_inserter(processed_header));
+                    if (!exists) {
+                        break;
+                    }
                 }
             }
         }

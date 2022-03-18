@@ -188,12 +188,6 @@ namespace netutil {
         if (err != 0) {
             return err;
         }
-        if (*uricheck) {
-            if (!*quiet) {
-                cout << ctx.cuc() << ": uri are all parsable\n";
-            }
-            return 1;
-        }
         return http_do(ctx, uris);
     }
 }  // namespace netutil
