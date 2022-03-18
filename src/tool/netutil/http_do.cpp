@@ -329,7 +329,7 @@ namespace netutil {
                 }
             }
         }
-        cou << "all tasks done\n";
+        cout << "all tasks done\n";
         return 0;
     }
 }  // namespace netutil
