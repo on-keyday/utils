@@ -29,6 +29,28 @@ namespace utils {
     namespace async {
         using Atask = Task<Context>;
 
+        struct compare_type {
+            bool operator()(auto& a, auto& b) {
+                return a.priority() > b.priority();
+            }
+        };
+
+        template <class T>
+        using queue_type = thread::WithRawContainer<T, wrap::queue<T>, compare_type>;
+
+        struct PriorityReset {
+            void operator()(queue_type<Event>& que) {
+                /*for (auto& v : que.container()) {
+                    v.set_priority(default_priority);
+                }*/
+            }
+        };
+
+        using send_t = thread::SendChan<Event, queue_type,
+                                        thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>;
+        using recv_t = thread::RecvChan<Event, queue_type,
+                                        thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>;
+
         void DoTask(void*);
         void check_term(auto& data);
 #ifdef _WIN32
@@ -268,23 +290,6 @@ namespace utils {
 #endif
         constexpr auto default_priority = 0x7f;
 
-        struct compare_type {
-            bool operator()(auto& a, auto& b) {
-                return a.priority() > b.priority();
-            }
-        };
-
-        template <class T>
-        using queue_type = thread::WithRawContainer<T, wrap::queue<T>, compare_type>;
-
-        struct PriorityReset {
-            void operator()(queue_type<Event>& que) {
-                /*for (auto& v : que.container()) {
-                    v.set_priority(default_priority);
-                }*/
-            }
-        };
-
         namespace internal {
             struct TaskData {
                 Atask task;
@@ -304,12 +309,8 @@ namespace utils {
             };
 
             struct WorkerData {
-                thread::SendChan<Event, queue_type,
-                                 thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>
-                    w;
-                thread::RecvChan<Event, queue_type,
-                                 thread::DualModeHandler<PriorityReset>, thread::RecursiveLock>
-                    r;
+                send_t w;
+                recv_t r;
                 wrap::hash_map<size_t, Event> wait_signal;
                 thread::LiteLock lock_;
                 std::atomic_size_t sigidcount = 0;
@@ -420,6 +421,7 @@ namespace utils {
                 if (c->work->diepool) {
                     check_term(c);
                 }
+                assert(c->task.placedata);
                 c->work->wait_signal.emplace(c->task.sigid, std::move(*c->task.placedata));
             }
         }

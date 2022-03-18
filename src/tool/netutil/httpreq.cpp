@@ -114,9 +114,6 @@ namespace netutil {
             }
             uri.path += tmp;
         }
-        if (uri.tag.size()) {
-            uri.tag = {};
-        }
         uri.has_double_slash = true;
         return true;
     }
@@ -187,6 +184,7 @@ namespace netutil {
             return 2;
         };
         wrap::vector<net::URI> uris;
+
         auto err = preprocess_uri(ctx, uris);
         if (err != 0) {
             return err;

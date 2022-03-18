@@ -173,6 +173,8 @@ namespace utils {
                 impl->clear();
                 impl->io.close(true);
                 impl->io = nullptr;
+                ::SSL_CTX_free(impl->ctx);
+                impl->ctx = nullptr;
             });
             return State::complete;
         }

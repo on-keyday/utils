@@ -395,6 +395,10 @@ namespace utils {
                 });
             }
 
+            HttpAsyncResponse::~HttpAsyncResponse() {
+                delete impl;
+            }
+
             AsyncIOClose HttpAsyncResponse::get_io() {
                 if (!impl) {
                     return nullptr;

@@ -53,6 +53,8 @@ namespace utils {
                     : impl(std::exchange(in.impl, nullptr)) {}
                 HttpAsyncResponse& operator=(HttpAsyncResponse&& in);
 
+                ~HttpAsyncResponse();
+
                private:
                 internal::HttpAsyncResponseImpl* impl = nullptr;
             };

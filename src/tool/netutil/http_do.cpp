@@ -66,6 +66,7 @@ namespace netutil {
                             "location: ", loc, "\n");
                 return true;
             }
+            newuri.tag = std::move(uri.tag);
             if (newuri.host == host && newuri.scheme == scheme) {
                 chan << msg(id, "redirect to ", newuri.to_string(), "\n");
                 return cb(std::move(newuri));
