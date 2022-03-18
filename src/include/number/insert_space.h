@@ -19,23 +19,25 @@ namespace utils {
                 return NumError::invalid;
             }
             std::make_unsigned_t<T> calc;
+            int sign = 0;
             if (input < 0) {
                 calc = -input;
+                sign = 1;
             }
             else {
                 calc = input;
             }
             auto& v = digit_bound<T>[radix];
             size_t digit = 0;
-            while (calc > v[digit]) {
+            while (calc >= v[digit]) {
                 digit++;
             }
             digit++;
-            if (count <= digit) {
+            if (count <= digit + sign) {
                 count = 0;
             }
             else {
-                count = count - digit;
+                count = count - digit - sign;
             }
             for (size_t i = 0; i < count; i++) {
                 result.push_back(c);

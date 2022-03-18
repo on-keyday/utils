@@ -29,6 +29,7 @@ namespace netutil {
     extern utils::wrap::string* cacert;
     extern bool* h2proto;
     void httpreq_option(subcmd::RunContext& ctx);
+    void debug_log_option(subcmd::RunContext& ctx);
 
     // command
     int httpreq(subcmd::RunCommand& cmd);
@@ -36,4 +37,6 @@ namespace netutil {
     bool preprocese_a_uri(utils::wrap::internal::Pack&& cout, utils::wrap::string cuc, utils::wrap::string& raw, utils::net::URI& uri, utils::net::URI& prev);
 
     int http_do(subcmd::RunCommand& ctx, utils::wrap::vector<utils::net::URI>& uris);
+
+    int debug_log_parse(subcmd::RunCommand& ctx);
 }  // namespace netutil

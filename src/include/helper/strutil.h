@@ -129,5 +129,12 @@ namespace utils {
             return splt;
         }
 
+        template <class T, class Sep>
+        constexpr auto make_cpy_splitview(T&& t, Sep&& sep) {
+            SplitView<buffer_t<std::remove_reference_t<T>>, buffer_t<Sep>> splt{std::forward<T>(t)};
+            splt.sep = sep;
+            return splt;
+        }
+
     }  // namespace helper
 }  // namespace utils

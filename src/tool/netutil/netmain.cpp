@@ -46,6 +46,7 @@ int main_proc(int argc, char** argv) {
     ctx.Set(argv[0], main_help, "cli network utility", "[command]");
     netutil::common_option(ctx);
     netutil::httpreq_option(ctx);
+    netutil::debug_log_option(ctx);
     auto err = subcmd::parse(argc, argv, ctx, mode);
     if (auto msg = error_msg(err)) {
         cout << argv[0] << ": error: " << ctx.erropt() << ": " << msg << "\n";
@@ -55,38 +56,62 @@ int main_proc(int argc, char** argv) {
 }
 
 _CRT_ALLOC_HOOK base_alloc_hook;
+std::int64_t total_alloced;
+void* dumpfile;
+
+struct DumpFileCloser {
+    ~DumpFileCloser() {
+        if (dumpfile)
+            ::CloseHandle(dumpfile);
+    }
+} closer;
 
 int alloc_hook(int nAllocType, void* pvData,
                size_t nSize, int nBlockUse, long lRequest,
                const unsigned char* szFileName, int nLine) {
+    if (!dumpfile) {
+        dumpfile = ::CreateFileA("./memdump_by_netutil.txt", GENERIC_WRITE, 0, nullptr,
+                                 CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    }
     auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
     auto save_log = [&](auto name) {
         number::Array<64, char> arr{0};
-        helper::appends(arr, name, ": ");
-        if (nSize < 10) {
-            OutputDebugStringA("check!\n");
-        }
-        number::insert_space(arr, 8, nSize);
+        helper::appends(arr, name, ":/size:");
+        number::insert_space(arr, 7, nSize);
         number::to_string(arr, nSize);
-        helper::appends(arr, " req: ");
+        helper::appends(arr, "/req:");
+        number::insert_space(arr, 6, lRequest);
         number::to_string(arr, lRequest);
+        helper::append(arr, "/total:");
+        number::insert_space(arr, 8, total_alloced);
+        number::to_string(arr, total_alloced);
         helper::append(arr, "\n");
         OutputDebugStringA(arr.buf);
+        DWORD w;
+        ::WriteFile(dumpfile, arr.buf, arr.size(), &w, nullptr);
     };
     if (nAllocType == _HOOK_ALLOC) {
-        save_log("alloc");
+        total_alloced += nSize;
+        save_log("malloc");
     }
     else if (nAllocType == _HOOK_FREE) {
-        if (nSize != 0) {
-            save_log("free");
+        if (pvData) {
+            nSize = _msize_dbg(pvData, _NORMAL_BLOCK);
+            _CrtIsMemoryBlock(pvData, nSize,
+                              &lRequest, nullptr, nullptr);
+
+            total_alloced -= nSize;
+            save_log("dealoc");
         }
     }
     return res;
 }
 
 int main(int argc, char** argv) {
-    _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-    base_alloc_hook = _CrtGetAllocHook();
-    _CrtSetAllocHook(alloc_hook);
+    if (argc >= 2 && !helper::equal(argv[1], "mdump")) {
+        _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+        base_alloc_hook = _CrtGetAllocHook();
+        _CrtSetAllocHook(alloc_hook);
+    }
     return main_proc(argc, argv);
 }
