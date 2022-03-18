@@ -50,6 +50,8 @@ namespace utils {
             void* get_raw_ssl();
             void* get_raw_sslctx();
 
+            bool verify();
+
             const char* alpn_selected(int* len);
 
             ~SSLAsyncConn();
@@ -103,6 +105,7 @@ namespace utils {
             set_up_error,
             cert_register_error,
             host_register_error,
+            alpn_register_error,
             connect_error,
         };
 

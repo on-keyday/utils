@@ -135,7 +135,7 @@ namespace utils {
 
         SSLAsyncError common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,
                                          const char* selfcert, const char* selfprivate) {
-            if (auto err = common_setup_sslctx(impl, cert, selfcert, selfprivate);
+            if (auto err = common_setup_sslctx(impl, cert, selfcert, selfprivate, alpn);
                 err != SSLAsyncError::none) {
                 return err;
             }
@@ -145,7 +145,7 @@ namespace utils {
                 }
                 impl->io = std::move(io);
             }
-            if (!common_setup_ssl(impl, alpn, host)) {
+            if (!common_setup_ssl(impl, host)) {
                 return SSLAsyncError::host_register_error;
             }
             return SSLAsyncError::none;
@@ -190,6 +190,18 @@ namespace utils {
             return (const char*)selected;
         }
 
+        bool SSLAsyncConn::verify() {
+            auto verify = ::SSL_get_peer_certificate(impl->ssl);
+            if (!verify) {
+                return false;
+            }
+            if (::SSL_get_verify_result(impl->ssl) != X509_V_OK) {
+                return false;
+            }
+            ::X509_free(verify);
+            return true;
+        }
+
         async::Future<SSLAsyncResult> STDCALL open_async(
             AsyncIOClose&& io,
             const char* cert, const char* alpn, const char* host,
@@ -223,6 +235,7 @@ namespace utils {
                     auto as = wrap::make_shared<SSLAsyncConn>();
                     internal::SSLSet::set(*as, impl);
                     impl->conn = as;
+                    auto sel = as->alpn_selected(nullptr);
                     return SSLAsyncResult{.conn = as};
                 },
                 impl);

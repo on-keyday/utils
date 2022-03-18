@@ -173,7 +173,7 @@ namespace utils {
             return true;
         }
 
-        SSLAsyncError common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate) {
+        SSLAsyncError common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate, const char* alpn) {
             if (!impl->ctx) {
                 impl->ctx = ::SSL_CTX_new(::TLS_method());
                 if (!impl->ctx) {
@@ -200,15 +200,15 @@ namespace utils {
                     return SSLAsyncError::cert_register_error;
                 }
             }
+            if (alpn) {
+                if (::SSL_CTX_set_alpn_protos(impl->ctx, (const unsigned char*)alpn, ::strlen(alpn)) != 0) {
+                    return SSLAsyncError::alpn_register_error;
+                }
+            }
             return SSLAsyncError::none;
         }
 
-        bool common_setup_ssl(internal::SSLImpl* impl, const char* alpn, const char* host) {
-            if (alpn) {
-                if (::SSL_set_alpn_protos(impl->ssl, (const unsigned char*)alpn, ::strlen(alpn)) != 0) {
-                    return false;
-                }
-            }
+        bool common_setup_ssl(internal::SSLImpl* impl, const char* host) {
             if (host) {
                 ::SSL_set_tlsext_host_name(impl->ssl, host);
                 auto param = SSL_get0_param(impl->ssl);
@@ -221,7 +221,7 @@ namespace utils {
 
         bool common_setup_sync(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                                const char* selfcert, const char* selfprivate) {
-            if (auto err = common_setup_sslctx(impl, cert, selfcert, selfprivate);
+            if (auto err = common_setup_sslctx(impl, cert, selfcert, selfprivate, alpn);
                 err != SSLAsyncError::none) {
                 return false;
             }
@@ -231,7 +231,7 @@ namespace utils {
                 }
                 impl->io = std::move(io);
             }
-            if (!common_setup_ssl(impl, alpn, host)) {
+            if (!common_setup_ssl(impl, host)) {
                 return false;
             }
             return true;

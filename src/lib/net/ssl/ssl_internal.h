@@ -73,8 +73,8 @@ namespace utils {
         constexpr size_t szfailed = ~0;
         bool need_io(::SSL*);
         bool setup_ssl(internal::SSLImpl* impl);
-        SSLAsyncError common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate);
-        bool common_setup_ssl(internal::SSLImpl* impl, const char* alpn, const char* host);
+        SSLAsyncError common_setup_sslctx(internal::SSLImpl* impl, const char* cert, const char* selfcert, const char* selfprivate, const char* alpn);
+        bool common_setup_ssl(internal::SSLImpl* impl, const char* host);
         bool common_setup_sync(internal::SSLSyncImpl* impl, IO&& io, const char* cert, const char* alpn, const char* host,
                                const char* selfcert, const char* selfprivate);
         SSLAsyncError common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,
