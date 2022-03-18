@@ -193,7 +193,7 @@ namespace utils {
                         }
                     }
                 BEGIN:
-                    e = h1body::read_body(impl->response.impl->body, seq, impl->bodytype, impl->expect);
+                    e = h1body::read_body(impl->response.impl->body, seq, impl->expect, impl->bodytype);
                     if (is_failed(e)) {
                         failed_clean();
                         return nullptr;
@@ -330,15 +330,16 @@ namespace utils {
                     wrap::string buf;
                     auto seq = make_ref_seq(buf);
                     size_t red = 0;
-                    auto read_one = [&]() {
-                        char tmp[1024];
-                        auto r = impl->io.read(tmp, 1024);
+                    wrap::string recvbuf;
+                    auto read_one = [&](size_t reqsize = 1024) {
+                        recvbuf.resize(reqsize == 0 ? 1024 : reqsize);
+                        auto r = impl->io.read(recvbuf.data(), recvbuf.size());
                         r.wait_until(ctx);
                         auto data = r.get();
                         if (data.err) {
                             return data.err;
                         }
-                        buf.append(tmp, data.read);
+                        buf.append(recvbuf, 0, data.read);
                         red = data.read;
                         return 0;
                     };
@@ -376,14 +377,14 @@ namespace utils {
                         }
                     }
                     while (true) {
-                        auto res = h1body::read_body(resp->body, seq, impl->bodytype, impl->expect);
+                        auto res = h1body::read_body(resp->body, seq, impl->expect, impl->bodytype);
                         if (res == State::failed) {
                             return {.err = HttpError::invalid_body};
                         }
                         if (res == State::complete) {
                             break;
                         }
-                        if (auto err = read_one(); err != 0) {
+                        if (auto err = read_one(impl->expect); err != 0) {
                             return {.err = HttpError::read_body, .base_err = err};
                         }
                     }

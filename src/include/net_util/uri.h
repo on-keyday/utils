@@ -31,6 +31,9 @@ namespace utils {
             wrap::string path_query() {
                 wrap::string ret;
                 ret += path;
+                if (query.size() && query.front() != '?') {
+                    ret += '?';
+                }
                 ret += query;
                 return ret;
             }
@@ -42,6 +45,15 @@ namespace utils {
                     port += ':';
                 }
                 ret += port;
+                return ret;
+            }
+
+            wrap::string tags() {
+                wrap::string ret;
+                if (tag.size() && tag.front() != '#') {
+                    ret += '#';
+                }
+                ret += tag;
                 return ret;
             }
 
@@ -64,7 +76,7 @@ namespace utils {
                 }
                 ret += host_port();
                 ret += path_query();
-                ret += tag;
+                ret += tags();
                 ret += other;
                 return ret;
             }
@@ -267,6 +279,12 @@ namespace utils {
             }
             if (uri.port.size() && uri.port.front() == ':') {
                 uri.port.erase(0, 1);
+            }
+            if (uri.query.size() && uri.query.front() == '?') {
+                uri.query.erase(0, 1);
+            }
+            if (uri.tag.size() && uri.tag.front() == '#') {
+                uri.tag.erase(0, 1);
             }
         }
     }  // namespace net

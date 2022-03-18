@@ -24,7 +24,7 @@ namespace utils {
             };
 
             template <class String, class T>
-            State read_body(String& result, Sequencer<T>& seq, BodyType type = BodyType::no_info, size_t expect = 0) {
+            State read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
                 auto inipos = seq.rptr;
                 if (type == BodyType::chuncked) {
                     while (true) {
@@ -43,6 +43,7 @@ namespace utils {
                         if (num != 0) {
                             if (seq.remain() < num) {
                                 seq.rptr = inipos;
+                                expect = num;
                                 return State::running;
                             }
                             if (!helper::read_n(result, seq, num)) {

@@ -140,6 +140,12 @@ namespace netutil {
                 return;
             }
             auto f = data.frame;
+            chan << msg(id, "frame recieved\n",
+                        "type: ", frame_name(f->type), "\n",
+                        "id: ", f->id, "\n",
+                        "flag: ",
+                        flag_state<wrap::string>(f->flag, f->type == net::http2::FrameType::settings || f->type == net::http2::FrameType::ping), "\n",
+                        "len: ", f->len, "\n");
             if (f->type == net::http2::FrameType::goaway) {
                 error_with_info(data.err, "error: goaway was recieved in progress of receiving response\n");
                 return;

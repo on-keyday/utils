@@ -50,6 +50,19 @@ namespace utils {
                 };
             }
 
+            constexpr auto queryUnescape() {
+                return [](std::uint8_t c) {
+                    return number::is_alnum(c) ||
+                           c == '&' || c == '=' || c == '?';
+                };
+            }
+
+            constexpr auto pathUnescape() {
+                return [](std::uint8_t c) {
+                    return number::is_alnum(c) || c == '/';
+                };
+            }
+
             template <class T, class Out, class F = void (*)(std::uint8_t)>
             constexpr bool encode(Sequencer<T>& seq, Out& out, F&& no_escape = default_noescape(), bool upper = false) {
                 while (!seq.eos()) {

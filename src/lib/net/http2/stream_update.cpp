@@ -84,7 +84,6 @@ namespace utils {
                 switch (frame.type) {
                     case FrameType::ping: {
                         assert(frame.id == 0);
-                        ASSERT_STREAM();
                         auto& ping = static_cast<const PingFrame&>(frame);
                         if (ping.flag & Flag::ack) {
                             if (ping.opeque != impl->prev_ping) {
@@ -316,6 +315,7 @@ namespace utils {
                         return UpdateResult{
                             .err = H2Error::none,
                             .detail = StreamError::unsupported_frame,
+                            .id = frame.id,
                             .frame = frame.type,
                         };
                     }
@@ -537,11 +537,15 @@ namespace utils {
                         }
                         return {};
                     }
+                    case FrameType::ping: {
+                        return {};
+                    }
                     default: {
                         return UpdateResult{
                             .err = H2Error::protocol,
                             .detail = StreamError::unsupported_frame,
                             .id = frame.id,
+                            .frame = frame.type,
                         };
                     }
                 }

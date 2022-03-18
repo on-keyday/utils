@@ -135,6 +135,9 @@ namespace utils {
                 if (flag & Flag::priority) {
                     write("priority");
                 }
+                if (first) {
+                    write("none");
+                }
                 return buf;
             }
 

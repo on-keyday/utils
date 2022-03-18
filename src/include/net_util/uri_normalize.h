@@ -39,8 +39,8 @@ namespace utils {
         ENUM_STRING_MSG(NormalizeError::encode_decode_query, "failed to encode/decode error")
         END_ENUM_STRING_MSG(nullptr)
 
-        template <class URI, class String = decltype(std::declval<URI>().host)>
-        NormalizeError normalize_uri(URI& uri, NormalizeFlag flag = NormalizeFlag::none) {
+        template <class URI, class String = decltype(std::declval<URI>().host), class UrlEnc = decltype(urlenc::pathUnescape())>
+        NormalizeError normalize_uri(URI& uri, NormalizeFlag flag = NormalizeFlag::none, UrlEnc&& enc = urlenc::pathUnescape()) {
             if (any(flag & NormalizeFlag::host)) {
                 String encoded;
                 if (helper::is_valid(uri.host, number::is_in_ascii_range<std::uint8_t>) &&
@@ -61,7 +61,7 @@ namespace utils {
                     }
                 }
             }
-            auto encode_each = [&](auto& input) {
+            auto encode_each = [&](auto& input, bool query) {
                 String encoded;
                 if (helper::is_valid(input, number::is_in_ascii_range<std::uint8_t>) &&
                     helper::contains(input, "%")) {
@@ -79,17 +79,31 @@ namespace utils {
                 if (any(flag & NormalizeFlag::human_friendly)) {
                     return true;
                 }
-                if (!net::urlenc::encode(input, encoded, net::urlenc::encodeURI())) {
-                    return false;
+                if constexpr (std::is_same_v<UrlEnc, decltype(urlenc::pathUnescape())>) {
+                    if (query) {
+                        if (!net::urlenc::encode(input, encoded, urlenc::queryUnescape())) {
+                            return false;
+                        }
+                    }
+                    else {
+                        if (!net::urlenc::encode(input, encoded, enc)) {
+                            return false;
+                        }
+                    }
+                }
+                else {
+                    if (!net::urlenc::encode(input, encoded, enc)) {
+                        return false;
+                    }
                 }
                 input = std::move(encoded);
                 return true;
             };
             if (any(flag & NormalizeFlag::path)) {
-                if (!encode_each(uri.path)) {
+                if (!encode_each(uri.path, false)) {
                     return NormalizeError::encode_decode_path;
                 }
-                if (!encode_each(uri.query)) {
+                if (!encode_each(uri.query, true)) {
                     return NormalizeError::encode_decode_query;
                 }
             }
