@@ -34,4 +34,6 @@ namespace netutil {
     int httpreq(subcmd::RunCommand& cmd);
 
     bool preprocese_a_uri(utils::wrap::internal::Pack&& cout, utils::wrap::string cuc, utils::wrap::string& raw, utils::net::URI& uri, utils::net::URI& prev);
+
+    int http_do(subcmd::RunCommand& ctx, utils::wrap::vector<utils::net::URI>& uris);
 }  // namespace netutil

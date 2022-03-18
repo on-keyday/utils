@@ -194,6 +194,6 @@ namespace netutil {
             }
             return 1;
         }
-        return -1;
+        return http_do(ctx, uris);
     }
 }  // namespace netutil

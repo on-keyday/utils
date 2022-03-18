@@ -202,6 +202,7 @@ namespace netutil {
             else if (net::http::is_redirect_range(h.status())) {
                 handle_redirection(h, uris[i], chan, id, host, scheme, [&](net::URI uri) {
                     uris.push_back(std::move(uri));
+                    return true;
                 });
             }
         END:
@@ -257,7 +258,7 @@ namespace netutil {
         }
     }
 
-    int http_do(subcmd::RunContext& ctx, wrap::vector<net::URI>& uris) {
+    int http_do(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
         net::set_iocompletion_thread(true);
 
         wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<net::URI>>> hosts;
