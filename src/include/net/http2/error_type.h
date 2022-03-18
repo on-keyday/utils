@@ -9,6 +9,7 @@
 // error_type - http2 error definiton
 #pragma once
 #include "../../wrap/lite/enum.h"
+#include "../../helper/appender.h"
 
 namespace utils {
     namespace net {
@@ -66,7 +67,7 @@ namespace utils {
             ENUM_STRING_MSG(H2Error::enhance_your_clam, "enchance your clam")
             ENUM_STRING_MSG(H2Error::inadequate_security, "inadequate security")
             ENUM_STRING_MSG(H2Error::http_1_1_required, "http/1.1 required")
-            ENUM_STRING_MSG(H2Error::transport,"transport layer error")
+            ENUM_STRING_MSG(H2Error::transport, "transport layer error")
             END_ENUM_STRING_MSG("unknown or internal error")
 
             enum class FrameType : std::uint8_t {
@@ -105,6 +106,37 @@ namespace utils {
             };
 
             DEFINE_ENUM_FLAGOP(Flag)
+
+            template <class Buf>
+            Buf flag_state(Flag flag, bool ack) {
+                Buf buf;
+                bool first = true;
+                auto write = [&](auto&& v) {
+                    if (!first) {
+                        helper::append(buf, " | ");
+                    }
+                    first = false;
+                    helper::append(buf, v);
+                };
+                if (flag & Flag::ack) {
+                    if (ack) {
+                        write("ack");
+                    }
+                    else {
+                        write("end_stream");
+                    }
+                }
+                if (flag & Flag::end_headers) {
+                    write("end_headers");
+                }
+                if (flag & Flag::padded) {
+                    write("padded");
+                }
+                if (flag & Flag::priority) {
+                    write("priority");
+                }
+                return buf;
+            }
 
             struct Dummy {};
 
