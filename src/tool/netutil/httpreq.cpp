@@ -96,6 +96,8 @@ namespace netutil {
                 cout << cuc << ": error: " << raw << ": no host name is provided. need least one host name.\n";
                 return false;
             }
+            uri.host = prev.host;
+            uri.port = prev.port;
         }
         else {
             prev.host = uri.host;

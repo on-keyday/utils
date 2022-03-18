@@ -79,6 +79,7 @@ namespace netutil {
 
     void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();
+        chan << msg(id, "starting http2 request on host ", host, " with scheme https\n");
         auto res = AWAIT(net::http2::open_async(std::move(io)));
         if (!res.conn) {
             chan << msgend(id, "error: negotiate http2 protocol with ", host, " failed\n", "errno: ", res.errcode, "\n");
@@ -139,7 +140,7 @@ namespace netutil {
             }
             auto f = data.frame;
             if (f->type == net::http2::FrameType::goaway) {
-                error_with_info(data.err, "error: goaway was recieved in progress of receiving response");
+                error_with_info(data.err, "error: goaway was recieved in progress of receiving response\n");
                 return;
             }
             if (f->id != 0) {
@@ -175,6 +176,7 @@ namespace netutil {
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].host_port();
         auto scheme = uris[0].scheme;
+        chan << msg(id, "starting http1 request on host ", host, " with scheme ", scheme, "\n");
         wrap::vector<net::http::Header> resps = std::move(prevhandled);
         for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].path_query();
@@ -238,6 +240,7 @@ namespace netutil {
         tcp.conn->address()->stringify(&ipaddr);
         chan << msg(id, "remote address is ", ipaddr, "\n");
         if (uri.scheme == "https") {
+            chan << msg(id, "starting ssl negitiation\n");
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
             auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
             if (!ssl.conn) {

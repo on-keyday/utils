@@ -346,6 +346,9 @@ namespace utils {
                         if (auto err = read_one(); err != 0) {
                             return {.err = HttpError::read_header, .base_err = err};
                         }
+                        if (!helper::starts_with(buf, "HTTP/1.1")) {
+                            return {.err = HttpError::not_http_response, .base_err = -1};
+                        }
                         while (seq.rptr < buf.size()) {
                             if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
                                 seq.seek_if("\r\r")) {

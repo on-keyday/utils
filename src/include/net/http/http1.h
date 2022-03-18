@@ -66,6 +66,7 @@ namespace utils {
                 read_body,
                 read_header,
                 write_request,
+                not_http_response,
             };
 
             BEGIN_ENUM_STRING_MSG(HttpError, error_msg)
@@ -76,6 +77,7 @@ namespace utils {
             ENUM_STRING_MSG(HttpError::read_body, "failed to read body")
             ENUM_STRING_MSG(HttpError::read_header, "failed to read header")
             ENUM_STRING_MSG(HttpError::write_request, "failed to write request")
+            ENUM_STRING_MSG(HttpError::not_http_response, "received invalid or non http/1.1 response")
             END_ENUM_STRING_MSG(nullptr)
 
             struct HttpAsyncResult {
