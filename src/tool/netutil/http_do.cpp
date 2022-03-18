@@ -113,6 +113,7 @@ namespace netutil {
             h.set(":scheme", "https");
             auto path = uri.path_query();
             h.set(":path", path.c_str());
+            chan << msg(id, "start request to ", uri.to_string(), "\n");
             auto res = net::http2::send_header_async(ctx, h2ctx, std::move(h), true);
             if (res.err != net::http2::H2Error::none) {
                 error_with_info(nego.err, "error: sending header of ", uri.to_string(), " failed\n");
@@ -180,6 +181,7 @@ namespace netutil {
         wrap::vector<net::http::Header> resps = std::move(prevhandled);
         for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].path_query();
+            chan << msg(id, "start request to ", uris[i].to_string(), "\n");
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
             if (res.err != net::http::HttpError::none) {
                 chan << msgend(id, "error: http request to ", host, " failed\n",

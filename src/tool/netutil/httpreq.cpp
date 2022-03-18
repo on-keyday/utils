@@ -117,6 +117,7 @@ namespace netutil {
         if (uri.tag.size()) {
             uri.tag = {};
         }
+        uri.has_double_slash = true;
         return true;
     }
 
