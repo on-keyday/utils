@@ -62,15 +62,15 @@ namespace netutil {
                 }
                 ids.erase(num);
             }
-            ::cout << cout.pack();
-            if (out->size()) {
-                std::ofstream fs(*out);
-                if (!fs) {
-                    ::cout << "error: failed to open output file " << *out;
-                    return -1;
-                }
-                fs << utf::convert<wrap::string>(cout.raw());
+        }
+        ::cout << cout.pack();
+        if (out->size()) {
+            std::ofstream fs(*out);
+            if (!fs) {
+                ::cout << "error: failed to open output file " << *out;
+                return -1;
             }
+            fs << utf::convert<wrap::string>(cout.raw());
         }
         return 0;
     }
