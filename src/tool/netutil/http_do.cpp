@@ -16,6 +16,7 @@
 #include "../../include/wrap/lite/map.h"
 #include "../../include/net/http/http1.h"
 #include "../../include/net/http2/request_methods.h"
+#include "../../include/wrap/lite/set.h"
 
 using namespace utils;
 namespace netutil {
@@ -77,6 +78,12 @@ namespace netutil {
             return;
         }
         auto h2ctx = nego.ctx;
+        auto goaway = [&](net::http2::UpdateResult& res) {
+            if (res.err != net::http2::H2Error::transport) {
+                net::http2::send_goaway(ctx, h2ctx, (std::uint32_t)res.err);
+            }
+        };
+        wrap::map<std::int32_t, net::URI> sid;
         for (auto& uri : uris) {
             net::http::Header h;
             h.set(":method", "GET");
@@ -87,10 +94,39 @@ namespace netutil {
             auto res = net::http2::send_header_async(ctx, h2ctx, std::move(h), true);
             if (res.err != net::http2::H2Error::none) {
                 error_with_info(nego.err, "error: sending header of ", uri.to_string(), " failed\n");
-                if (res.err != net::http2::H2Error::transport) {
-                    net::http2::send_goaway(ctx, h2ctx, (std::uint32_t)res.err);
-                }
+                goaway(res);
                 return;
+            }
+            sid.emplace(res.id, std::move(uri));
+        }
+        while (sid.size()) {
+            auto data = net::http2::default_handling_ping_and_data(ctx, h2ctx);
+            if (data.err.err != net::http2::H2Error::none || !data.frame) {
+                if (auto found = sid.find(data.err.id);
+                    data.err.err != net::http2::H2Error::transport && found != sid.end()) {
+                    error_with_info(data.err, "error: error while recving data of ", found->second.to_string(), "\n");
+                }
+                else {
+                    error_with_info(data.err, "error: error while recieving data\n");
+                }
+                goaway(data.err);
+                return;
+            }
+            auto f = data.frame;
+            if (f->type == net::http2::FrameType::goaway) {
+                error_with_info(data.err, "error: goaway ");
+            }
+            if (f->id != 0) {
+                auto st = h2ctx->state.stream(f->id);
+                if (st->status() == net::http2::Status::closed) {
+                    auto found = sid.find(f->id);
+                    if (found != sid.end()) {
+                        auto resp = st->response();
+                        prevhandled.push_back(resp.response());
+                        uris.push_back(std::move(found->second));
+                        sid.erase(f->id);
+                    }
+                }
             }
         }
     }
