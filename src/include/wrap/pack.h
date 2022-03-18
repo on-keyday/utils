@@ -111,6 +111,10 @@ namespace utils {
                     return impl.result.empty();
                 }
 
+                wrap::path_string raw() const {
+                    return impl.result;
+                }
+
                 template <class... Args>
                 Pack(Args&&... args) {
                     pack(std::forward<Args>(args)...);
