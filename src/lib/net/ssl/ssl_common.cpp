@@ -201,7 +201,9 @@ namespace utils {
                 }
             }
             if (alpn) {
-                if (::SSL_CTX_set_alpn_protos(impl->ctx, (const unsigned char*)alpn, ::strlen(alpn)) != 0) {
+                auto alpn_pass = (const unsigned char*)alpn;
+                auto alpn_len = ::strlen(alpn);
+                if (::SSL_CTX_set_alpn_protos(impl->ctx, alpn_pass, alpn_len) != 0) {
                     return SSLAsyncError::alpn_register_error;
                 }
             }

@@ -216,7 +216,7 @@ namespace utils {
             }
             return start(
                 [](async::Context& ctx, internal::SSLAsyncImpl* impl) -> SSLAsyncResult {
-                    while (!::SSL_connect(impl->ssl)) {
+                    while (::SSL_connect(impl->ssl) < 0) {
                         if (need_io(impl->ssl)) {
                             if (auto code = impl->do_IO(ctx); code != 0) {
                                 return SSLAsyncResult{
