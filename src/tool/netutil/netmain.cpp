@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <number/to_string.h>
 #include <number/insert_space.h>
+#include <testutil/timer.h>
 using namespace utils;
 using namespace cmdline;
 
@@ -66,6 +67,8 @@ struct DumpFileCloser {
     }
 } closer;
 
+test::Timer t;
+
 int alloc_hook(int nAllocType, void* pvData,
                size_t nSize, int nBlockUse, long lRequest,
                const unsigned char* szFileName, int nLine) {
@@ -75,7 +78,7 @@ int alloc_hook(int nAllocType, void* pvData,
     }
     auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
     auto save_log = [&](auto name) {
-        number::Array<64, char> arr{0};
+        number::Array<80, char> arr{0};
         helper::appends(arr, name, ":/size:");
         number::insert_space(arr, 7, nSize);
         number::to_string(arr, nSize);
@@ -85,6 +88,8 @@ int alloc_hook(int nAllocType, void* pvData,
         helper::append(arr, "/total:");
         number::insert_space(arr, 8, total_alloced);
         number::to_string(arr, total_alloced);
+        helper::append(arr, "/time: ");
+        number::to_string(arr, t.delta().count());
         helper::append(arr, "\n");
         OutputDebugStringA(arr.buf);
         DWORD w;

@@ -48,14 +48,15 @@ namespace netutil {
                 auto found = ids.find(num);
                 if (found != ids.end()) {
                     auto del_c = parse_num(splt[1]);
-                    auto v = helper::make_ref_splitview(found->second, "/")[1];
-                    auto alo_c = parse_num(v);
+                    auto v = helper::make_ref_splitview(found->second, "/");
+                    auto alo_c = parse_num(v[1]);
                     cout << "pair  req: " << num << "\n";
                     if (del_c != alo_c) {
                         cout << "warning: delete size and allocate size not match\n";
                     }
                     cout << found->second << "\n";
                     cout << line << "\n";
+                    cout << "time delta: " << parse_num(splt[4]) - parse_num(v[4]) << "\n";
                 }
                 else {
                     cout << "warning: delete but not allocated req: " << num << "\n";
