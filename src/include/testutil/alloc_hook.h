@@ -8,17 +8,18 @@
 
 // alloc_hook - allocator hook
 #pragma once
+#include "../platform/windows/dllexport_header.h"
 
 namespace utils {
     namespace test {
 #if defined(_DEBUG) && defined(_WIN32)
-        bool set_log_file(const char* file);
-        void set_alloc_hook(bool on);
+        DLL bool STDCALL set_log_file(const char* file);
+        DLL void STDCALL set_alloc_hook(bool on);
 #else
-        bool set_log_file(const char* file) {
+        inline bool set_log_file(const char* file) {
             return false;
         }
-        void set_alloc_hook(bool on) {}
+        inline void set_alloc_hook(bool on) {}
 #endif
     }  // namespace test
 }  // namespace utils

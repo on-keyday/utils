@@ -55,6 +55,8 @@ int main_proc(int argc, char** argv) {
 
 int main(int argc, char** argv) {
     if (argc >= 2 && !helper::equal(argv[1], "mdump")) {
+        test::set_log_file("./memdump_by_netutil.txt");
+        test::set_alloc_hook(true);
     }
     return main_proc(argc, argv);
 }

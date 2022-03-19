@@ -5,6 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/utf/convert.h"
 #include "../../include/wrap/lite/char.h"
 #include "../../include/testutil/alloc_hook.h"
@@ -36,7 +37,7 @@ namespace utils {
             }
         } closer;
 
-        bool set_log_file(const char* file) {
+        bool STDCALL set_log_file(const char* file) {
             number::Array<1024, wrap::path_char, true> file_;
             utf::convert(file, file_);
             if (dumpfile) {
@@ -96,7 +97,7 @@ namespace utils {
             return res;
         }
 
-        void set_alloc_hook(bool on) {
+        void STDCALL set_alloc_hook(bool on) {
             if (on) {
                 old_flag = _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
                 base_alloc_hook = _CrtGetAllocHook();
