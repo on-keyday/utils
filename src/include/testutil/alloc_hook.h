@@ -13,6 +13,20 @@
 namespace utils {
     namespace test {
 #if defined(_DEBUG) && defined(_WIN32)
+        enum class HookType {
+            alloc,
+            realloc,
+            dealloc,
+        };
+
+        struct HookInfo {
+            int reqid;
+            size_t size;
+            size_t time;
+            HookType type;
+        };
+        using Hooker = void (*)(HookInfo info);
+        DLL extern Hooker log_hooker;
         DLL bool STDCALL set_log_file(const char* file);
         DLL void STDCALL set_alloc_hook(bool on);
 #else

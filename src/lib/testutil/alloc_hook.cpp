@@ -30,6 +30,10 @@ namespace utils {
         Timer t;
         int old_flag;
 
+        Hooker log_hooker;
+
+        int reqfirst = 0;
+
         struct DumpFileCloser {
             ~DumpFileCloser() {
                 if (dumpfile)
@@ -51,12 +55,11 @@ namespace utils {
             return dumpfile != nullptr;
         }
 
-        int reqfirst = 0;
-
         int alloc_hook(int nAllocType, void* pvData,
                        size_t nSize, int nBlockUse, long lRequest,
                        const unsigned char* szFileName, int nLine) {
             auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
+            long long delta = 0;
             auto save_log = [&](auto name) {
                 number::Array<80, char> arr{0};
                 helper::appends(arr, name, ":/size:");
@@ -69,7 +72,7 @@ namespace utils {
                 number::insert_space(arr, 8, total_alloced);
                 number::to_string(arr, total_alloced);
                 helper::append(arr, "/time: ");
-                auto delta = t.delta<std::chrono::microseconds>().count();
+                delta = t.delta<std::chrono::microseconds>().count();
                 number::insert_space(arr, 8, delta);
                 number::to_string(arr, delta);
                 helper::append(arr, "/count: ");
@@ -84,9 +87,20 @@ namespace utils {
             if (reqfirst == 0) {
                 reqfirst = lRequest;
             }
+            auto callback = [&](HookType type) {
+                if (log_hooker) {
+                    HookInfo info;
+                    info.reqid = lRequest;
+                    info.size = nSize;
+                    info.time = delta;
+                    info.type = type;
+                    log_hooker(info);
+                }
+            };
             if (nAllocType == _HOOK_ALLOC) {
                 total_alloced += nSize;
                 save_log("malloc");
+                callback(HookType::alloc);
             }
             else if (nAllocType == _HOOK_FREE) {
                 if (pvData) {
@@ -96,6 +110,7 @@ namespace utils {
 
                     total_alloced -= nSize;
                     save_log("dealoc");
+                    callback(HookType::dealloc);
                 }
             }
             count++;
