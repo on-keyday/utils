@@ -51,6 +51,8 @@ namespace utils {
             return dumpfile != nullptr;
         }
 
+        int reqfirst = 0;
+
         int alloc_hook(int nAllocType, void* pvData,
                        size_t nSize, int nBlockUse, long lRequest,
                        const unsigned char* szFileName, int nLine) {
@@ -67,7 +69,7 @@ namespace utils {
                 number::insert_space(arr, 8, total_alloced);
                 number::to_string(arr, total_alloced);
                 helper::append(arr, "/time: ");
-                auto delta = t.delta().count();
+                auto delta = t.delta<std::chrono::microseconds>().count();
                 number::insert_space(arr, 8, delta);
                 number::to_string(arr, delta);
                 helper::append(arr, "/count: ");
@@ -79,6 +81,9 @@ namespace utils {
                     ::WriteFile(dumpfile, arr.buf, arr.size(), &w, nullptr);
                 }
             };
+            if (reqfirst == 0) {
+                reqfirst = lRequest;
+            }
             if (nAllocType == _HOOK_ALLOC) {
                 total_alloced += nSize;
                 save_log("malloc");

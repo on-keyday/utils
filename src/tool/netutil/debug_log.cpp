@@ -36,7 +36,7 @@ namespace netutil {
             auto parse_num = [&](auto&& tgt) {
                 auto seq = make_cpy_seq(helper::make_ref_splitview(tgt, ":")[1]);
                 helper::space::consume_space(seq);
-                std::uint32_t id = 0;
+                std::size_t id = 0;
                 number::parse_integer(seq, id);
                 return id;
             };
@@ -59,7 +59,8 @@ namespace netutil {
                     cout << "time delta: " << parse_num(splt[4]) - parse_num(v[4]) << "\n";
                 }
                 else {
-                    cout << "warning: delete but not allocated req: " << num << "\n";
+                    cout << "warning: delete but not allocated req: " << num << "\n"
+                         << line << "\n";
                 }
                 ids.erase(num);
             }
