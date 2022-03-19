@@ -11,7 +11,7 @@
 
 namespace utils {
     namespace test {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_WIN32)
         bool set_log_file(const char* file);
         void set_alloc_hook(bool on);
 #else
