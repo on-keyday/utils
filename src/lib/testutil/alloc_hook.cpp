@@ -38,7 +38,7 @@ namespace utils {
         } closer;
 
         bool STDCALL set_log_file(const char* file) {
-            number::Array<1024, wrap::path_char, true> file_;
+            number::Array<1024, wrap::path_char, true> file_{0};
             utf::convert(file, file_);
             if (dumpfile) {
                 ::CloseHandle(dumpfile);
