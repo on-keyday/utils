@@ -6,7 +6,7 @@
 */
 
 #include "../../include/utf/convert.h"
-#include "../../include/wrap/lite/string.h"
+#include "../../include/wrap/lite/char.h"
 #include "../../include/testutil/alloc_hook.h"
 #include "../../include/testutil/timer.h"
 #include "../../include/helper/appender.h"
@@ -37,7 +37,8 @@ namespace utils {
         } closer;
 
         bool set_log_file(const char* file) {
-            auto file_ = utf::convert<wrap::path_string>(file);
+            number::Array<1024, wrap::path_char, true> file_;
+            utf::convert(file, file_);
             if (dumpfile) {
                 ::CloseHandle(dumpfile);
             }

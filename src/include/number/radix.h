@@ -67,7 +67,7 @@ namespace utils {
             radix_base_max<T>(35),
             radix_base_max<T>(36),
         };
-        template <size_t sz, class T>
+        template <size_t sz, class T, bool strmode = false>
         struct Array {
             T buf[sz];
             size_t i = 0;
@@ -80,8 +80,15 @@ namespace utils {
             }
 
             constexpr void push_back(T t) {
+                if (strmode ? i >= sz - 1 : i >= sz) {
+                    return;
+                }
                 buf[i] = t;
                 i++;
+            }
+
+            constexpr const T* c_str() const {
+                return buf;
             }
         };
 
