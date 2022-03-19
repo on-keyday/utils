@@ -52,8 +52,6 @@ namespace utils {
         int alloc_hook(int nAllocType, void* pvData,
                        size_t nSize, int nBlockUse, long lRequest,
                        const unsigned char* szFileName, int nLine) {
-            if (!dumpfile) {
-            }
             auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
             auto save_log = [&](auto name) {
                 number::Array<80, char> arr{0};
@@ -74,8 +72,10 @@ namespace utils {
                 number::to_string(arr, count);
                 helper::append(arr, "\n");
                 OutputDebugStringA(arr.buf);
-                DWORD w;
-                ::WriteFile(dumpfile, arr.buf, arr.size(), &w, nullptr);
+                if (dumpfile) {
+                    DWORD w;
+                    ::WriteFile(dumpfile, arr.buf, arr.size(), &w, nullptr);
+                }
             };
             if (nAllocType == _HOOK_ALLOC) {
                 total_alloced += nSize;
