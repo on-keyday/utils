@@ -161,7 +161,24 @@ namespace netutil {
             if (f->id != 0) {
                 auto st = h2ctx->state.stream(f->id);
                 if (f->flag & net::http2::Flag::end_headers) {
-                    st->peek_header("content-length");
+                    if (auto len = st->peek_header("content-length")) {
+                        std::size_t sz = 0;
+                        number::parse_integer(len, sz);
+                        if (sz) {
+                            std::uint32_t v = (std::numeric_limits<std::uint32_t>::max)();
+                            if (sz < v) {
+                                v = sz;
+                            }
+                            auto err = net::http2::update_window_async(ctx, h2ctx, f->id, v);
+                            if (err.err != net::http2::H2Error::none) {
+                                error_with_info(err, "error: error while sending window update by content-length");
+                            }
+                            err = net::http2::update_window_async(ctx, h2ctx, 0, v);
+                            if (err.err != net::http2::H2Error::none) {
+                                error_with_info(err, "error: error while sending window update by content-length");
+                            }
+                        }
+                    }
                 }
                 if (st->status() == net::http2::Status::closed) {
                     auto found = sid.find(f->id);

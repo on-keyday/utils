@@ -43,7 +43,7 @@ namespace utils {
                 return resp;
             }
 
-            const char* Stream::peek_header(const char* key, size_t index = 0) const {
+            const char* Stream::peek_header(const char* key, size_t index) const {
                 auto ptr = impl->h.find(key, index);
                 if (ptr) {
                     return ptr->c_str();
