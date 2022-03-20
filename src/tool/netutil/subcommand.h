@@ -13,6 +13,8 @@
 #include "../../include/json/convert_json.h"
 #include "../../include/json/iterator.h"
 #include "../../include/net_util/uri.h"
+#include "../../include/thread/channel.h"
+#include "../../include/async/worker.h"
 
 extern utils::wrap::UtfOut& cout;
 constexpr auto mode = utils::cmdline::option::ParseFlag::assignable_mode;
@@ -39,4 +41,25 @@ namespace netutil {
     int http_do(subcmd::RunCommand& ctx, utils::wrap::vector<utils::net::URI>& uris);
 
     int debug_log_parse(subcmd::RunCommand& ctx);
+
+    enum class TagFlag {
+        none,
+        redirect = 0x1,
+        save_if_succeed = 0x2,
+        show_request = 0x4,
+        show_response = 0x5,
+        show_body = 0x6,
+    };
+
+    DEFINE_ENUM_FLAGOP(TagFlag)
+
+    struct TagCommand {
+        utils::wrap::string file;
+        TagFlag flag = TagFlag::none;
+        utils::wrap::string method;
+        utils::wrap::string data_loc;
+        int ipver = 0;
+    };
+
+    using msg_chan = utils::thread::SendChan<utils::async::Any>;
 }  // namespace netutil

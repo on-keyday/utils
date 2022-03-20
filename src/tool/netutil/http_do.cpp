@@ -54,8 +54,7 @@ namespace netutil {
         return p;
     }
 
-    using msg_chan = thread::SendChan<async::Any>;
-    template <class Callback>
+        template <class Callback>
     bool handle_redirection(net::http::Header& h, net::URI& uri, msg_chan chan, size_t id,
                             const wrap::string& host, const wrap::string& scheme, Callback&& cb) {
         if (auto loc = h.value("location")) {
@@ -339,16 +338,15 @@ namespace netutil {
             }
         }
         for (size_t i = 0; i < processed_uri.size(); i++) {
+            auto tagcmd = std::move(processed_uri[i].tag);
             auto v = processed_uri[i].to_string();
             if (v == "" || v == "//") {
                 processed_uri.erase(processed_uri.begin() + i);
                 i--;
                 continue;
             }
-            if (v == "https://accounts.google.com/mail/u/0/") {
-                cout << v << "\n"
-                     << processed_header[i].response();
-            }
+            cout << v << "\n"
+                 << processed_header[i].response();
         }
         cout << "all tasks done\n";
         return 0;

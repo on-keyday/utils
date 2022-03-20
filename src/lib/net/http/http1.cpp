@@ -18,7 +18,7 @@
 #include "../../../include/net/http/body.h"
 
 #include "../../../include/net/async/pool.h"
-#include "../../../include/net/http/reason.h"
+#include "../../../include/net/http/value.h"
 #include "header_impl.h"
 #include "async_resp_impl.h"
 
@@ -87,7 +87,7 @@ namespace utils {
                 }
                 if (!impl->raw_header.size() || impl->changed) {
                     h1header::render_response(
-                        impl->raw_header, impl->code, reason::phrase(impl->code, true), *impl,
+                        impl->raw_header, impl->code, h1value::reason_phrase(impl->code, true), *impl,
                         helper::no_check(), true, helper::no_check(), impl->version);
                 }
                 if (p) {
@@ -307,11 +307,12 @@ namespace utils {
                 if (!render_request(buf, host, method, path, *header.impl)) {
                     return nullptr;
                 }
+                bool req_is_head = helper::equal(method, "HEAD");
                 auto impl = new internal::HttpAsyncResponseImpl{};
                 impl->io = std::move(io);
                 impl->reqests = std::move(buf);
                 impl->hostname = host;
-                return start([impl](async::Context& ctx) -> HttpAsyncResult {
+                return start([impl, req_is_head](async::Context& ctx) -> HttpAsyncResult {
                     struct Defer {
                         decltype(impl) ptr;
                         bool no_del = false;
@@ -370,9 +371,11 @@ namespace utils {
                         resp->body.reserve(impl->expect);
                     }
                     if (impl->bodytype == h1body::BodyType::no_info) {
-                        while (red == 1024) {
-                            if (auto err = read_one(); err != 0) {
-                                return {.err = HttpError::read_body, .base_err = err};
+                        if (!req_is_head || !seq.eos()) {
+                            while (red == 1024) {
+                                if (auto err = read_one(); err != 0) {
+                                    return {.err = HttpError::read_body, .base_err = err};
+                                }
                             }
                         }
                     }
@@ -382,6 +385,9 @@ namespace utils {
                             return {.err = HttpError::invalid_body};
                         }
                         if (res == State::complete) {
+                            break;
+                        }
+                        if (seq.eos() && req_is_head) {
                             break;
                         }
                         if (auto err = read_one(impl->expect); err != 0) {

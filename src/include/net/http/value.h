@@ -6,13 +6,13 @@
 */
 
 
-// reason - reason phrase mapping
+// value - value meanings mapper
 #pragma once
 
 namespace utils {
     namespace net {
-        namespace reason {
-            constexpr const char* phrase(unsigned short status, bool dav = false) {
+        namespace h1value {
+            constexpr const char* reason_phrase(unsigned short status, bool dav = false) {
                 switch (status) {
                     case 100:
                         return "Continue";
@@ -145,6 +145,18 @@ namespace utils {
                 }
                 return "Unknown";
             }
-        }  // namespace reason
+
+            constexpr const char* methods[] = {
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "TRACE",
+                "OPTIONS",
+                "CONNECT",
+            };
+        }  // namespace h1value
     }      // namespace net
 }  // namespace utils
