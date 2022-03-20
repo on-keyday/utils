@@ -14,7 +14,7 @@ namespace utils {
     namespace helper {
         namespace internal {
             template <class T, class V>
-            struct FirstTimeWriter {
+            struct FirstLateWriter {
                 T& buf;
                 V later_write;
                 bool first = true;
@@ -29,8 +29,8 @@ namespace utils {
         }  // namespace internal
 
         template <class T, class V>
-        auto make_writer(T& t, V late) {
-            return internal::FirstTimeWriter<T, std::decay_t<V>>{t, late};
+        auto first_late_writer(T& t, V late) {
+            return internal::FirstLateWriter<T, std::decay_t<V>>{t, late};
         }
     }  // namespace helper
 }  // namespace utils
