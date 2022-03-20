@@ -56,6 +56,7 @@ namespace netutil {
     // set option
     extern utils::wrap::string* cacert;
     extern bool* h2proto;
+    extern TagFlag tagflag;
     void httpreq_option(subcmd::RunContext& ctx);
     void debug_log_option(subcmd::RunContext& ctx);
 

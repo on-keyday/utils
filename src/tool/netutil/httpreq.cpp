@@ -40,6 +40,7 @@ namespace netutil {
     bool* show_encoded;
 
     net::NormalizeFlag normflag;
+    TagFlag tagflag;
 
     void show_uri(auto& uri, wrap::vector<wrap::string>& raw, auto&& cb) {
         auto js = json::convert_to_json<json::OrderedJSON>(uri);
@@ -165,6 +166,7 @@ namespace netutil {
         urps->option().VarFlagSet(&normflag, "P,encode-path", net::NormalizeFlag::path, "encode/decode path with urlencode");
         urps->option().VarFlagSet(&normflag, "f,human-friendly", net::NormalizeFlag::human_friendly, "encode/decode human-friendly");
         show_encoded = urps->option().Bool("e,show-encoded", false, "show encoded/decoded url");
+        urps->option().VarFlagSet(&tagflag, "r,redirect", TagFlag::redirect, "auto redirect");
     }
 
     int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<UriWithTag>& uris) {

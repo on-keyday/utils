@@ -57,6 +57,9 @@ namespace netutil {
     template <class Callback>
     bool handle_redirection(net::http::Header& h, UriWithTag& uri, msg_chan chan, size_t id,
                             const wrap::string& host, const wrap::string& scheme, Callback&& cb) {
+        if (any(uri.tagcmd.flag & TagFlag::redirect)) {
+            return true;
+        }
         if (auto loc = h.value("location")) {
             wrap::string locuri = loc;
             UriWithTag newuri;

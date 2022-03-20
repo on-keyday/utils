@@ -45,6 +45,7 @@ namespace netutil {
     }
 
     bool parse_tagcommand(const wrap::string& str, TagCommand& cmd, wrap::string& err) {
+        cmd.flag = tagflag;
         if (!helper::sandwiched(str, "(", ")")) {
             err = "not a tag command";
             return false;
