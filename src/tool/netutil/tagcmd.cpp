@@ -8,18 +8,27 @@
 
 #include "subcommand.h"
 #include "../../include/net/http/value.h"
+#include "../../include/helper/cond_writer.h"
 
 using namespace utils;
 namespace netutil {
     bool to_json(TagFlag flag, auto& json) {
         number::Array<50, char, true> arr;
-        bool first = true;
-        auto write = [&](auto&&... v) {
-            if (!first) {
-            }
-            first = true;
-        };
+        auto write = helper::first_late_writer(arr, " | ");
         if (any(flag & TagFlag::redirect)) {
+            write("redirect");
+        }
+        if (any(flag & TagFlag::save_if_succeed)) {
+            write("save_if");
+        }
+        if (any(flag & TagFlag::show_request)) {
+            write("show_request");
+        }
+        if (any(flag & TagFlag::show_response)) {
+            write("show_response");
+        }
+        if (flag == TagFlag::none) {
+            write("none");
         }
         json = arr.c_str();
         return true;
@@ -29,6 +38,9 @@ namespace netutil {
         JSON_PARAM_BEGIN(cmd, json)
         TO_JSON_PARAM(file, "file")
         TO_JSON_PARAM(flag, "flag")
+        TO_JSON_PARAM(ipver, "ipver")
+        TO_JSON_PARAM(data_loc, "data_loc")
+        TO_JSON_PARAM(method, "method")
         JSON_PARAM_END()
     }
 
@@ -57,6 +69,12 @@ namespace netutil {
             if (seq.seek_if("file=")) {
                 if (!read(cmd.file)) {
                     err = "failed to read file name";
+                    return false;
+                }
+            }
+            else if (seq.seek_if("data=")) {
+                if (!read(cmd.data_loc)) {
+                    err = "failed to read payload file name";
                     return false;
                 }
             }
@@ -93,6 +111,17 @@ namespace netutil {
             else if (seq.seek_if("show_body")) {
                 set_flag(TagFlag::show_body);
             }
+            else if (seq.seek_if("ipver=")) {
+                if (seq.seek_if("4")) {
+                    cmd.ipver = 4;
+                }
+                else if (seq.seek_if("6")) {
+                    cmd.ipver = 6;
+                }
+                else if (seq.seek_if("0")) {
+                    cmd.ipver = 0;
+                }
+            }
         END:
             if (seq.consume_if(',')) {
                 continue;
@@ -103,5 +132,6 @@ namespace netutil {
             }
             break;
         }
+        return true;
     }
 }  // namespace netutil
