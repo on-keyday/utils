@@ -24,6 +24,7 @@ namespace netutil {
     struct Message {
         size_t id;
         wrap::internal::Pack msg;
+        bool timer = false;
         bool endofmsg = false;
     };
 
@@ -52,6 +53,12 @@ namespace netutil {
     auto msgend(size_t id, auto&&... args) {
         auto p = msg(id, args...);
         p.endofmsg = true;
+        return p;
+    }
+
+    auto timermsg(size_t id, auto&&... args) {
+        auto p = msg(id, args...);
+        p.timer = true;
         return p;
     }
 
@@ -216,12 +223,15 @@ namespace netutil {
         for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].uri.path_query();
             chan << msg(id, "start request to ", uris[i].uri.to_string(), "\n");
+            test::Timer t;
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
+            auto d = t.delta();
             if (res.err != net::http::HttpError::none) {
                 chan << msgend(id, "error: http request to ", host, " failed\n",
                                error_msg(res.err), "\nerrno: ", res.base_err, "\n");
                 return;
             }
+            chan << timermsg(id, uris[i].uri.to_string(), " http1 request delta ", d.count(), "ms\n");
             io = res.resp.get_io();
             auto h = res.resp.response();
             if (auto conn = h.value("connection");
@@ -262,9 +272,12 @@ namespace netutil {
         else {
             port = uri.scheme.c_str();
         }
+
         chan << msg(id, "starting connect to ", uri.host_port(), "\n");
         auto ipver = net::afinet(uris[0].tagcmd.ipver);
+        test::Timer delta;
         auto tcp = AWAIT(net::open_async(uri.host.c_str(), port, 60, ipver));
+        chan << timermsg(id, uri.host_port(), " tcp connection delta ", delta.delta().count(), "ms\n");
         if (!tcp.conn) {
             chan << msgend(
                 id,
@@ -277,7 +290,7 @@ namespace netutil {
         tcp.conn->address()->stringify(&ipaddr);
         chan << msg(id, "remote address is ", ipaddr, "\n");
         if (uri.scheme == "https") {
-            chan << msg(id, "starting ssl negitiation\n");
+            chan << msg(id, "starting ssl negoitiation\n");
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
             auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
             if (!ssl.conn) {
@@ -333,7 +346,7 @@ namespace netutil {
             async::Any event;
             while (r >> event) {
                 if (auto msg = event.type_assert<Message>()) {
-                    if (*verbose) {
+                    if (*verbose && !msg->timer) {
                         cout << "#" << msg->id << "\n";
                         cout << std::move(msg->msg);
                     }
@@ -341,6 +354,9 @@ namespace netutil {
                         exists--;
                     }
                     if (*show_timer) {
+                        if (msg->timer) {
+                            cout << std::move(msg->msg);
+                        }
                         cout << "message id " << msg->id;
                     }
                 }
