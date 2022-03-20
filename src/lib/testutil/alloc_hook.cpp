@@ -61,6 +61,9 @@ namespace utils {
             auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
             long long delta = 0;
             auto save_log = [&](auto name) {
+                if (lRequest < reqfirst) {
+                    return;
+                }
                 number::Array<80, char> arr{0};
                 helper::appends(arr, name, ":/size:");
                 number::insert_space(arr, 7, nSize);
