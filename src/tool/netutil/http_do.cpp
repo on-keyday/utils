@@ -237,8 +237,8 @@ namespace netutil {
             port = uri.scheme.c_str();
         }
         chan << msg(id, "starting connect to ", uri.host_port(), "\n");
-
-        auto tcp = AWAIT(net::open_async(uri.host.c_str(), port, 60));
+        auto ipver = net::afinet(uris[0].tagcmd.ipver);
+        auto tcp = AWAIT(net::open_async(uri.host.c_str(), port, 60, ipver));
         if (!tcp.conn) {
             chan << msgend(
                 id,
