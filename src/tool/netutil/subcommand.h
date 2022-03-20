@@ -25,23 +25,6 @@ namespace netutil {
     extern bool* help;
     extern bool* verbose;
     extern bool* quiet;
-    void common_option(subcmd::RunCommand& ctx);
-
-    // set option
-    extern utils::wrap::string* cacert;
-    extern bool* h2proto;
-    void httpreq_option(subcmd::RunContext& ctx);
-    void debug_log_option(subcmd::RunContext& ctx);
-
-    // command
-    int httpreq(subcmd::RunCommand& cmd);
-
-    bool preprocese_a_uri(utils::wrap::internal::Pack&& cout, utils::wrap::string cuc, utils::wrap::string& raw, utils::net::URI& uri, utils::net::URI& prev);
-
-    int http_do(subcmd::RunCommand& ctx, utils::wrap::vector<utils::net::URI>& uris);
-
-    int debug_log_parse(subcmd::RunCommand& ctx);
-
     enum class TagFlag {
         none,
         redirect = 0x1,
@@ -62,4 +45,28 @@ namespace netutil {
     };
 
     using msg_chan = utils::thread::SendChan<utils::async::Any>;
+
+    struct UriWithTag {
+        utils::net::URI uri;
+        TagCommand tagcmd;
+    };
+
+    void common_option(subcmd::RunCommand& ctx);
+
+    // set option
+    extern utils::wrap::string* cacert;
+    extern bool* h2proto;
+    void httpreq_option(subcmd::RunContext& ctx);
+    void debug_log_option(subcmd::RunContext& ctx);
+
+    // command
+    int httpreq(subcmd::RunCommand& cmd);
+
+    bool preprocese_a_uri(utils::wrap::internal::Pack&& cout, utils::wrap::string cuc, utils::wrap::string& raw, UriWithTag& uri, UriWithTag& prev);
+
+    int http_do(subcmd::RunCommand& ctx, utils::wrap::vector<UriWithTag>& uris);
+
+    int debug_log_parse(subcmd::RunCommand& ctx);
+
+    bool parse_tagcommand(const utils::wrap::string& str, TagCommand& cmd, utils::wrap::string& err);
 }  // namespace netutil

@@ -26,9 +26,13 @@ namespace utils::net {
         TO_JSON_PARAM(other, "opaque")
         JSON_PARAM_END()
     }
+
 }  // namespace utils::net
 
 namespace netutil {
+    bool to_json(const UriWithTag& wtag, auto& json) {
+        return to_json(wtag.uri, json);
+    }
     wrap::string* cacert;
     bool* h2proto;
     bool* uricheck;
@@ -37,13 +41,13 @@ namespace netutil {
 
     net::NormalizeFlag normflag;
 
-    void show_uri(wrap::vector<net::URI>& uri, wrap::vector<wrap::string>& raw) {
+    void show_uri(auto& uri, wrap::vector<wrap::string>& raw, auto&& cb) {
         auto js = json::convert_to_json<json::OrderedJSON>(uri);
         size_t idx = 0;
         for (auto& v : json::as_array(js)) {
             v["raw"] = raw[idx];
             if (any(normflag & ~net::NormalizeFlag::human_friendly) && *show_encoded) {
-                auto& u = uri[idx];
+                auto& u = cb(uri[idx]);
                 v[any(normflag & net::NormalizeFlag::human_friendly) ? "decoded" : "encoded"] = u.to_string();
             }
             idx++;
@@ -58,7 +62,9 @@ namespace netutil {
         }
     }
 
-    bool preprocese_a_uri(wrap::internal::Pack&& cout, wrap::string cuc, wrap::string& raw, net::URI& uri, net::URI& prev) {
+    bool preprocese_a_uri(wrap::internal::Pack&& cout, wrap::string cuc, wrap::string& raw, UriWithTag& utag, UriWithTag& pretag) {
+        auto& uri = utag.uri;
+        auto& prev = pretag.uri;
         parse_uri(raw, uri, true);
         if (auto msg = error_msg(net::normalize_uri(uri, normflag))) {
             cout << cuc << ": " << raw << ": error: " << msg << "\n";
@@ -114,6 +120,13 @@ namespace netutil {
             }
             uri.path += tmp;
         }
+        if (uri.tag.size() && helper::sandwiched(uri.tag, "(", ")")) {
+            wrap::string err;
+            if (!parse_tagcommand(uri.tag, utag.tagcmd, err)) {
+                cout << cuc << ": error: " << err;
+                return false;
+            }
+        }
         uri.has_double_slash = true;
         return true;
     }
@@ -133,7 +146,9 @@ namespace netutil {
             }
             uris.push_back(std::move(uri));
         }
-        show_uri(uris, ctx.arg());
+        show_uri(uris, ctx.arg(), [](auto& v) -> net::URI& {
+            return v;
+        });
         return 0;
     }
 
@@ -152,13 +167,13 @@ namespace netutil {
         show_encoded = urps->option().Bool("e,show-encoded", false, "show encoded/decoded url");
     }
 
-    int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+    int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<UriWithTag>& uris) {
         normflag = net::NormalizeFlag::host | net::NormalizeFlag::path;
-        net::URI prev;
-        prev.scheme = "http";
-        prev.path = "/";
+        UriWithTag prev;
+        prev.uri.scheme = "http";
+        prev.uri.path = "/";
         for (size_t i = 0; i < ctx.arg().size(); i++) {
-            net::URI uri;
+            UriWithTag uri;
             wrap::internal::Pack pack;
             if (!preprocese_a_uri(pack.pack(), ctx.cuc(), ctx.arg()[i], uri, prev)) {
                 cout << pack.pack();
@@ -168,7 +183,9 @@ namespace netutil {
         }
         if (*verbose) {
             cout << "--- verbose log begin ---\nuri parsed:\n";
-            show_uri(uris, ctx.arg());
+            show_uri(uris, ctx.arg(), [](UriWithTag& tag) -> net::URI& {
+                return tag.uri;
+            });
             cout << "--- verbose log end ---\n";
         }
         return 0;
@@ -179,12 +196,12 @@ namespace netutil {
             cout << ctx.cuc() << ": require url\n";
             return 2;
         };
-        wrap::vector<net::URI> uris;
-
+        wrap::vector<UriWithTag> uris;
         auto err = preprocess_uri(ctx, uris);
         if (err != 0) {
             return err;
         }
+
         return http_do(ctx, uris);
     }
 }  // namespace netutil

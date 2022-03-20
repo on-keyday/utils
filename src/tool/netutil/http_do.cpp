@@ -28,18 +28,18 @@ namespace netutil {
 
     struct Redirect {
         size_t id;
-        net::URI location;
+        UriWithTag uri;
     };
 
     struct Reconnect {
-        wrap::vector<net::URI> uris;
+        wrap::vector<UriWithTag> uris;
         wrap::vector<net::http::Header> h;
         size_t index = 0;
         size_t id;
     };
 
     struct FinalResult {
-        wrap::vector<net::URI> uris;
+        wrap::vector<UriWithTag> uris;
         wrap::vector<net::http::Header> h;
         size_t id;
     };
@@ -54,31 +54,32 @@ namespace netutil {
         return p;
     }
 
-        template <class Callback>
-    bool handle_redirection(net::http::Header& h, net::URI& uri, msg_chan chan, size_t id,
+    template <class Callback>
+    bool handle_redirection(net::http::Header& h, UriWithTag& uri, msg_chan chan, size_t id,
                             const wrap::string& host, const wrap::string& scheme, Callback&& cb) {
         if (auto loc = h.value("location")) {
             wrap::string locuri = loc;
-            net::URI newuri;
+            UriWithTag newuri;
             if (!preprocese_a_uri(loc, "", locuri, newuri, uri)) {
                 chan << msg(id, "warning: failed to parse location header\n",
                             "location: ", loc, "\n");
                 return true;
             }
-            newuri.tag = std::move(uri.tag);
-            if (newuri.host == host && newuri.scheme == scheme) {
-                chan << msg(id, "redirect to ", newuri.to_string(), "\n");
+            newuri.uri.tag = std::move(uri.uri.tag);
+            newuri.tagcmd = std::move(uri.tagcmd);
+            if (newuri.uri.host == host && newuri.uri.scheme == scheme) {
+                chan << msg(id, "redirect to ", newuri.uri.to_string(), "\n");
                 return cb(std::move(newuri));
             }
             else {
-                chan << Redirect{.id = id, .location = std::move(newuri)};
+                chan << Redirect{.id = id, .uri = std::move(newuri)};
             }
         }
         return true;
     }
 
-    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
-        auto host = uris[0].host_port();
+    void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<UriWithTag> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
+        auto host = uris[0].uri.host_port();
         chan << msg(id, "starting http2 request on host ", host, " with scheme https\n");
         auto res = AWAIT(net::http2::open_async(std::move(io)));
         if (!res.conn) {
@@ -105,8 +106,9 @@ namespace netutil {
                 net::http2::send_goaway(ctx, h2ctx, (std::uint32_t)res.err);
             }
         };
-        wrap::map<std::int32_t, net::URI> sid;
-        auto send_header = [&](net::URI& uri) {
+        wrap::map<std::int32_t, UriWithTag> sid;
+        auto send_header = [&](UriWithTag& utag) {
+            auto& uri = utag.uri;
             net::http::Header h;
             h.set(":method", "GET");
             h.set(":authority", host.c_str());
@@ -120,7 +122,7 @@ namespace netutil {
                 goaway(res);
                 return false;
             }
-            sid.emplace(res.id, std::move(uri));
+            sid.emplace(res.id, std::move(utag));
             return true;
         };
         for (auto& uri : uris) {
@@ -131,7 +133,7 @@ namespace netutil {
             if (data.err.err != net::http2::H2Error::none || !data.frame) {
                 if (auto found = sid.find(data.err.id);
                     data.err.err != net::http2::H2Error::transport && found != sid.end()) {
-                    error_with_info(data.err, "error: error while recving data of ", found->second.to_string(), "\n");
+                    error_with_info(data.err, "error: error while recving data of ", found->second.uri.to_string(), "\n");
                 }
                 else {
                     error_with_info(data.err, "error: error while recieving data\n");
@@ -160,7 +162,7 @@ namespace netutil {
                         if (net::http::is_redirect_range(h.status())) {
                             if (!handle_redirection(
                                     h, found->second, chan, id, host, "https",
-                                    [&](net::URI uri) {
+                                    [&](UriWithTag uri) {
                                         return send_header(uri);
                                     })) {
                                 return;
@@ -180,14 +182,14 @@ namespace netutil {
         };
     }
 
-    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
-        auto host = uris[0].host_port();
-        auto scheme = uris[0].scheme;
+    void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<UriWithTag> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
+        auto host = uris[0].uri.host_port();
+        auto scheme = uris[0].uri.scheme;
         chan << msg(id, "starting http1 request on host ", host, " with scheme ", scheme, "\n");
         wrap::vector<net::http::Header> resps = std::move(prevhandled);
         for (size_t i = start_index; i < uris.size(); i++) {
-            auto path = uris[i].path_query();
-            chan << msg(id, "start request to ", uris[i].to_string(), "\n");
+            auto path = uris[i].uri.path_query();
+            chan << msg(id, "start request to ", uris[i].uri.to_string(), "\n");
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
             if (res.err != net::http::HttpError::none) {
                 chan << msgend(id, "error: http request to ", host, " failed\n",
@@ -210,7 +212,7 @@ namespace netutil {
                 }
             }
             else if (net::http::is_redirect_range(h.status())) {
-                handle_redirection(h, uris[i], chan, id, host, scheme, [&](net::URI uri) {
+                handle_redirection(h, uris[i], chan, id, host, scheme, [&](UriWithTag uri) {
                     uris.push_back(std::move(uri));
                     return true;
                 });
@@ -225,8 +227,8 @@ namespace netutil {
         };
     }
 
-    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<net::URI> uris, size_t procindex, wrap::vector<net::http::Header> prevproced = {}) {
-        auto& uri = uris[0];
+    void do_request_host(async::Context& ctx, msg_chan chan, size_t id, wrap::vector<UriWithTag> uris, size_t procindex, wrap::vector<net::http::Header> prevproced = {}) {
+        auto& uri = uris[0].uri;
         const char* port;
         if (uri.port.size()) {
             port = uri.port.c_str();
@@ -276,17 +278,17 @@ namespace netutil {
         }
     }
 
-    int http_do(subcmd::RunCommand& ctx, wrap::vector<net::URI>& uris) {
+    int http_do(subcmd::RunCommand& ctx, wrap::vector<UriWithTag>& uris) {
         net::set_iocompletion_thread(true);
 
-        wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<net::URI>>> hosts;
+        wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<UriWithTag>>> hosts;
         auto [w, r] = thread::make_chan<async::Any>();
         size_t id = 0;
         r.set_blocking(true);
         for (auto& uri : uris) {
-            hosts[uri.host][uri.scheme].push_back(std::move(uri));
+            hosts[uri.uri.host][uri.uri.scheme].push_back(std::move(uri));
         }
-        wrap::vector<net::URI> processed_uri;
+        wrap::vector<UriWithTag> processed_uri;
         wrap::vector<net::http::Header> processed_header;
         while (hosts.size()) {
             size_t exists = 0;
@@ -312,9 +314,9 @@ namespace netutil {
                 }
                 else if (auto redirect = event.type_assert<Redirect>()) {
                     cout << "#" << redirect->id << "\n";
-                    cout << "request redirect to " << redirect->location.to_string() << "\n";
+                    cout << "request redirect to " << redirect->uri.uri.to_string() << "\n";
                     cout << "ownership of this url has moved\n";
-                    hosts[redirect->location.host][redirect->location.scheme].push_back(std::move(redirect->location));
+                    hosts[redirect->uri.uri.host][redirect->uri.uri.scheme].push_back(std::move(redirect->uri));
                 }
                 else if (auto reconnect = event.type_assert<Reconnect>()) {
                     cout << "#" << reconnect->id << "\n";
@@ -338,8 +340,7 @@ namespace netutil {
             }
         }
         for (size_t i = 0; i < processed_uri.size(); i++) {
-            auto tagcmd = std::move(processed_uri[i].tag);
-            auto v = processed_uri[i].to_string();
+            auto v = processed_uri[i].uri.to_string();
             if (v == "" || v == "//") {
                 processed_uri.erase(processed_uri.begin() + i);
                 i--;

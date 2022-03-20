@@ -96,7 +96,8 @@ add_executable(binred "src/tool/binred/binred.cpp"
 add_executable(netutil "src/tool/netutil/netmain.cpp"
                        "src/tool/netutil/httpreq.cpp"
                        "src/tool/netutil/http_do.cpp"
-                       "src/tool/netutil/debug_log.cpp")
+                       "src/tool/netutil/debug_log.cpp"
+                       "src/tool/netutil/tagcmd.cpp")
 
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
