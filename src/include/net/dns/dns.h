@@ -33,8 +33,16 @@ namespace utils {
 
             bool stringify(IBuffer buf, size_t index = 0);
 
+            void set_limit(size_t sock);
+
            private:
             internal::AddressImpl* impl = nullptr;
+        };
+
+        enum class IpAddrLimit {
+            none,
+            v4,
+            v6,
         };
 
         struct DLL DnsResult {

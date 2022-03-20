@@ -33,6 +33,7 @@ namespace utils {
             struct AddressImpl {
                 addrinfo* result = nullptr;
                 bool from_sockaddr = false;
+                IpAddrLimit limit = IpAddrLimit::none;
 
                 ~AddressImpl() {
                     if (from_sockaddr) {
@@ -130,6 +131,20 @@ namespace utils {
 
         Address::~Address() {
             delete impl;
+        }
+
+        void Address::set_limit(size_t sock) {
+            if (!impl) return;
+            switch (impl->limit) {
+                case IpAddrLimit::v4: {
+                }
+                case IpAddrLimit::v6: {
+                    u_long flag = 1;
+                    ::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&flag, sizeof(flag));
+                }
+                default:
+                    return;
+            }
         }
 
         bool Address::stringify(IBuffer buf, size_t index) {

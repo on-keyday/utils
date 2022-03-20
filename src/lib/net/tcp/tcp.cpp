@@ -350,6 +350,16 @@ namespace utils {
             delete impl;
         }
 
+        int STDCALL afinet(int ipver) {
+            if (ipver == 6) {
+                return AF_INET6;
+            }
+            else if (ipver == 4) {
+                return AF_INET;
+            }
+            return AF_UNSPEC;
+        }
+
         TCPResult open(wrap::shared_ptr<Address>&& addr) {
             network();
             if (!addr) {

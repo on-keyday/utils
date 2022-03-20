@@ -81,5 +81,7 @@ namespace utils {
         DLL TCPResult STDCALL open(wrap::shared_ptr<Address>&& addr);
 
         DLL TCPServer STDCALL setup(wrap::shared_ptr<Address>&& addr, int ipver = 0);
+
+        DLL int STDCALL afinet(int ipver);
     }  // namespace net
 }  // namespace utils
