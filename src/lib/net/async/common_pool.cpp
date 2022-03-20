@@ -22,17 +22,17 @@ namespace utils {
 #ifdef _WIN32
         std::atomic_bool flag;
 
-        void completion_thread() {
+        void completion_thread(bool inf) {
             auto iocp = platform::windows::get_iocp();
             while (flag) {
-                iocp->wait_callbacks(64, 500);
+                iocp->wait_callbacks(64, inf ? ~0 : 500);
             }
         }
 
-        void STDCALL set_iocompletion_thread(bool run) {
+        void STDCALL set_iocompletion_thread(bool run, bool inf) {
             auto v = flag.exchange(run);
             if (!v) {
-                std::thread(completion_thread).detach();
+                std::thread(completion_thread, inf).detach();
             }
         }
 #endif

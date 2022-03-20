@@ -40,7 +40,7 @@ namespace utils {
                         return;
                     }
                     ctx.suspend();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(7));
                     p = res.get_address();
                 }
                 ctx.set_value(AddrResult{.addr = std::move(p)});

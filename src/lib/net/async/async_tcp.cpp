@@ -33,7 +33,7 @@ namespace utils {
                         return;
                     }
                     ctx.suspend();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(7));
                     p = res.connect();
                 }
                 ctx.set_value(ConnResult{.conn = std::move(p)});

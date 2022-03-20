@@ -22,9 +22,9 @@ namespace utils {
         }
 
 #ifdef _WIN32
-        DLL void STDCALL set_iocompletion_thread(bool run);
+        DLL void STDCALL set_iocompletion_thread(bool run,bool inf=false);
 #else
-        inline void set_iocompletion_thread(bool) {}
+        inline void set_iocompletion_thread(bool,bool) {}
 #endif
     }  // namespace net
 }  // namespace utils

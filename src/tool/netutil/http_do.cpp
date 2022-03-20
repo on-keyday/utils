@@ -154,12 +154,14 @@ namespace netutil {
                 return;
             }
             auto f = data.frame;
-            chan << msg(id, "frame recieved\n",
-                        "type: ", frame_name(f->type), "\n",
-                        "id: ", f->id, "\n",
-                        "flag: ",
-                        flag_state<wrap::string>(f->flag, f->type == net::http2::FrameType::settings || f->type == net::http2::FrameType::ping), "\n",
-                        "len: ", f->len, "\n");
+            if (*verbose) {
+                chan << msg(id, "frame recieved\n",
+                            "type: ", frame_name(f->type), "\n",
+                            "id: ", f->id, "\n",
+                            "flag: ",
+                            flag_state<wrap::string>(f->flag, f->type == net::http2::FrameType::settings || f->type == net::http2::FrameType::ping), "\n",
+                            "len: ", f->len, "\n");
+            }
             if (f->type == net::http2::FrameType::goaway) {
                 error_with_info(data.err, "error: goaway was recieved in progress of receiving response\n");
                 return;
@@ -218,11 +220,15 @@ namespace netutil {
     void do_http1(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<UriWithTag> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].uri.host_port();
         auto scheme = uris[0].uri.scheme;
-        chan << msg(id, "starting http1 request on host ", host, " with scheme ", scheme, "\n");
+        if (*verbose) {
+            chan << msg(id, "starting http1 request on host ", host, " with scheme ", scheme, "\n");
+        }
         wrap::vector<net::http::Header> resps = std::move(prevhandled);
         for (size_t i = start_index; i < uris.size(); i++) {
             auto path = uris[i].uri.path_query();
-            chan << msg(id, "start request to ", uris[i].uri.to_string(), "\n");
+            if (*verbose) {
+                chan << msg(id, "start request to ", uris[i].uri.to_string(), "\n");
+            }
             test::Timer t;
             auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
             auto d = t.delta();
@@ -231,9 +237,17 @@ namespace netutil {
                                error_msg(res.err), "\nerrno: ", res.base_err, "\n");
                 return;
             }
-            chan << timermsg(id, uris[i].uri.to_string(), " http1 request delta ", d.count(), "ms\n");
+            if (*show_timer) {
+                chan << timermsg(id, uris[i].uri.to_string(), " http1 request delta ", d.count(), "ms\n");
+            }
             io = res.resp.get_io();
             auto h = res.resp.response();
+            if (net::http::is_redirect_range(h.status())) {
+                handle_redirection(h, uris[i], chan, id, host, scheme, [&](UriWithTag uri) {
+                    uris.push_back(std::move(uri));
+                    return true;
+                });
+            }
             if (auto conn = h.value("connection");
                 helper::contains(conn, "close", helper::ignore_case())) {
                 if (i + 1 != uris.size()) {
@@ -246,12 +260,6 @@ namespace netutil {
                     chan << std::move(rec);
                     return;
                 }
-            }
-            else if (net::http::is_redirect_range(h.status())) {
-                handle_redirection(h, uris[i], chan, id, host, scheme, [&](UriWithTag uri) {
-                    uris.push_back(std::move(uri));
-                    return true;
-                });
             }
         END:
             resps.push_back(std::move(h));
@@ -272,12 +280,15 @@ namespace netutil {
         else {
             port = uri.scheme.c_str();
         }
-
-        chan << msg(id, "starting connect to ", uri.host_port(), "\n");
+        if (*verbose) {
+            chan << msg(id, "starting connect to ", uri.host_port(), "\n");
+        }
         auto ipver = net::afinet(uris[0].tagcmd.ipver);
         test::Timer delta;
         auto tcp = AWAIT(net::open_async(uri.host.c_str(), port, 60, ipver));
-        chan << timermsg(id, uri.host_port(), " tcp connection delta ", delta.delta().count(), "ms\n");
+        if (*show_timer) {
+            chan << timermsg(id, uri.host_port(), " tcp connection delta ", delta.delta().count(), "ms\n");
+        }
         if (!tcp.conn) {
             chan << msgend(
                 id,
@@ -286,11 +297,15 @@ namespace netutil {
                 "addrerr: ", error_msg(tcp.addrerr), "\n");
             return;
         }
-        wrap::string ipaddr;
-        tcp.conn->address()->stringify(&ipaddr);
-        chan << msg(id, "remote address is ", ipaddr, "\n");
+        if (*verbose) {
+            wrap::string ipaddr;
+            tcp.conn->address()->stringify(&ipaddr);
+            chan << msg(id, "remote address is ", ipaddr, "\n");
+        }
         if (uri.scheme == "https") {
-            chan << msg(id, "starting ssl negoitiation\n");
+            if (*verbose) {
+                chan << msg(id, "starting ssl negoitiation\n");
+            }
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
             auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
             if (!ssl.conn) {
@@ -321,8 +336,10 @@ namespace netutil {
     test::Timer timer;
 
     int http_do(subcmd::RunCommand& ctx, wrap::vector<UriWithTag>& uris) {
-        net::set_iocompletion_thread(true);
+        net::set_iocompletion_thread(true, true);
         net::get_pool().set_maxthread(std::thread::hardware_concurrency());
+        net::get_pool().force_run_max_thread();
+        net::get_pool().set_yield(true);
         timer.reset();
         wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<UriWithTag>>> hosts;
         auto [w, r] = thread::make_chan<async::Any>();
