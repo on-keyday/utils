@@ -123,7 +123,7 @@ namespace netutil {
         if (uri.tag.size() && helper::sandwiched(uri.tag, "(", ")")) {
             wrap::string err;
             if (!parse_tagcommand(uri.tag, utag.tagcmd, err)) {
-                cout << cuc << ": error: " << err;
+                cout << cuc << ": tagparse: error: " << err;
                 return false;
             }
         }
