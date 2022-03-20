@@ -87,7 +87,7 @@ namespace utils {
                 Status status() const;
                 http::HttpAsyncResponse response();
 
-                http::Header peek_header() const;
+                const char* peek_header(const char* key, size_t index = 0) const;
 
                private:
                 friend struct internal::ConnectionImpl;

@@ -43,6 +43,14 @@ namespace utils {
                 return resp;
             }
 
+            const char* Stream::peek_header(const char* key, size_t index = 0) const {
+                auto ptr = impl->h.find(key, index);
+                if (ptr) {
+                    return ptr->c_str();
+                }
+                return nullptr;
+            }
+
             Stream* Connection::new_stream() {
                 return impl->get_stream(impl->next_stream());
             }

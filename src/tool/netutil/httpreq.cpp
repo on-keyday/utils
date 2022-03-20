@@ -38,6 +38,7 @@ namespace netutil {
     bool* uricheck;
     bool* tidy;
     bool* show_encoded;
+    bool* show_timer;
 
     net::NormalizeFlag normflag;
     TagFlag tagflag;
@@ -160,6 +161,8 @@ namespace netutil {
         common_option(*subcmd);
         cacert = opt.String<wrap::string>("c,cacert", "./cacert", "cacert file", "FILE");
         h2proto = opt.Bool("2,http2", false, "use http2 protocol");
+        opt.VarFlagSet(&tagflag, "r,redirect", TagFlag::redirect, "auto redirect");
+        show_timer = opt.Bool("t,timer", false, "show timer");
         auto urps = ctx.SubCommand("uriparse", uriparse, "parse uri and output as json", "<uri>...");
         common_option(*urps);
         tidy = urps->option().Bool("t,tidy", false, "make parsed uri tidy");
@@ -167,7 +170,6 @@ namespace netutil {
         urps->option().VarFlagSet(&normflag, "P,encode-path", net::NormalizeFlag::path, "encode/decode path with urlencode");
         urps->option().VarFlagSet(&normflag, "f,human-friendly", net::NormalizeFlag::human_friendly, "encode/decode human-friendly");
         show_encoded = urps->option().Bool("e,show-encoded", false, "show encoded/decoded url");
-        urps->option().VarFlagSet(&tagflag, "r,redirect", TagFlag::redirect, "auto redirect");
     }
 
     int preprocess_uri(subcmd::RunCommand& ctx, wrap::vector<UriWithTag>& uris) {

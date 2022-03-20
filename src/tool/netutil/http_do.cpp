@@ -17,6 +17,7 @@
 #include "../../include/net/http/http1.h"
 #include "../../include/net/http2/request_methods.h"
 #include "../../include/wrap/lite/set.h"
+#include "../../include/testutil/timer.h"
 
 using namespace utils;
 namespace netutil {
@@ -57,7 +58,7 @@ namespace netutil {
     template <class Callback>
     bool handle_redirection(net::http::Header& h, UriWithTag& uri, msg_chan chan, size_t id,
                             const wrap::string& host, const wrap::string& scheme, Callback&& cb) {
-        if (any(uri.tagcmd.flag & TagFlag::redirect)) {
+        if (!any(uri.tagcmd.flag & TagFlag::redirect)) {
             return true;
         }
         if (auto loc = h.value("location")) {
@@ -131,6 +132,7 @@ namespace netutil {
         for (auto& uri : uris) {
             send_header(uri);
         }
+
         while (sid.size()) {
             auto data = net::http2::default_handling_ping_and_data(ctx, h2ctx);
             if (data.err.err != net::http2::H2Error::none || !data.frame) {
@@ -155,8 +157,12 @@ namespace netutil {
                 error_with_info(data.err, "error: goaway was recieved in progress of receiving response\n");
                 return;
             }
+
             if (f->id != 0) {
                 auto st = h2ctx->state.stream(f->id);
+                if (f->flag & net::http2::Flag::end_headers) {
+                    st->peek_header("content-length");
+                }
                 if (st->status() == net::http2::Status::closed) {
                     auto found = sid.find(f->id);
                     if (found != sid.end()) {
@@ -282,9 +288,12 @@ namespace netutil {
         }
     }
 
+    test::Timer timer;
+
     int http_do(subcmd::RunCommand& ctx, wrap::vector<UriWithTag>& uris) {
         net::set_iocompletion_thread(true);
-
+        net::get_pool().set_maxthread(std::thread::hardware_concurrency());
+        timer.reset();
         wrap::map<wrap::string, wrap::map<wrap::string, wrap::vector<UriWithTag>>> hosts;
         auto [w, r] = thread::make_chan<async::Any>();
         size_t id = 0;
@@ -307,39 +316,59 @@ namespace netutil {
             async::Any event;
             while (r >> event) {
                 if (auto msg = event.type_assert<Message>()) {
-                    cout << "#" << msg->id << "\n";
-                    cout << std::move(msg->msg);
+                    if (*verbose) {
+                        cout << "#" << msg->id << "\n";
+                        cout << std::move(msg->msg);
+                    }
                     if (msg->endofmsg) {
                         exists--;
-                        if (!exists) {
-                            break;
-                        }
+                    }
+                    if (*show_timer) {
+                        cout << "message id " << msg->id;
                     }
                 }
                 else if (auto redirect = event.type_assert<Redirect>()) {
-                    cout << "#" << redirect->id << "\n";
-                    cout << "request redirect to " << redirect->uri.uri.to_string() << "\n";
-                    cout << "ownership of this url has moved\n";
+                    if (*verbose) {
+                        cout << "#" << redirect->id << "\n";
+                        cout << "request redirect to " << redirect->uri.uri.to_string() << "\n";
+                        cout << "ownership of this url has moved\n";
+                    }
                     hosts[redirect->uri.uri.host][redirect->uri.uri.scheme].push_back(std::move(redirect->uri));
+                    if (*show_timer) {
+                        cout << "redirect id " << redirect->id;
+                    }
                 }
                 else if (auto reconnect = event.type_assert<Reconnect>()) {
-                    cout << "#" << reconnect->id << "\n";
-                    cout << "`Connection: close` has been detected\n";
-                    cout << "retrying to connect...\n";
+                    if (*verbose) {
+                        cout << "#" << reconnect->id << "\n";
+                        cout << "`Connection: close` has been detected\n";
+                        cout << "trying to reconnect...\n";
+                    }
                     net::start(do_request_host, w, reconnect->id, std::move(reconnect->uris), reconnect->index, std::move(reconnect->h));
+                    if (*show_timer) {
+                        cout << "reconnect id " << reconnect->id;
+                    }
                 }
                 else if (auto final = event.type_assert<FinalResult>()) {
-                    cout << "#" << final->id << "\n";
-                    cout << "request task done\n";
                     exists--;
-                    if (exists) {
-                        cout << "waiting for others...\n";
+                    if (*verbose) {
+                        cout << "#" << final->id << "\n";
+                        cout << "request task done\n";
+                        if (exists) {
+                            cout << "waiting for others...\n";
+                        }
                     }
                     std::move(final->uris.begin(), final->uris.end(), std::back_inserter(processed_uri));
                     std::move(final->h.begin(), final->h.end(), std::back_inserter(processed_header));
-                    if (!exists) {
-                        break;
+                    if (*show_timer) {
+                        cout << "result id " << final->id;
                     }
+                }
+                if (*show_timer) {
+                    cout << " msg delta: " << timer.delta().count() << "ms\n";
+                }
+                if (!exists) {
+                    break;
                 }
             }
         }
@@ -350,10 +379,17 @@ namespace netutil {
                 i--;
                 continue;
             }
+            /*
             cout << v << "\n"
                  << processed_header[i].response();
+            */
         }
-        cout << "all tasks done\n";
+        if (*verbose) {
+            cout << "all tasks done\n";
+        }
+        if (*show_timer) {
+            cout << "delta time: " << timer.delta().count() << "ms\n";
+        }
         return 0;
     }
 }  // namespace netutil
