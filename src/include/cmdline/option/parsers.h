@@ -308,7 +308,7 @@ namespace utils {
                         state.arg_track_index++;
                     }
                     auto found = mapping.find(utf::convert<Key>(key));
-                    if (found != mapping.end()) {
+                    if (found == mapping.end()) {
                         state.state = FlagType::not_accepted;
                         return false;
                     }

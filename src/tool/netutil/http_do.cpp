@@ -338,6 +338,18 @@ namespace netutil {
                 }
             }
         }
+        for (size_t i = 0; i < processed_uri.size(); i++) {
+            auto v = processed_uri[i].to_string();
+            if (v == "" || v == "//") {
+                processed_uri.erase(processed_uri.begin() + i);
+                i--;
+                continue;
+            }
+            if (v == "https://accounts.google.com/mail/u/0/") {
+                cout << v << "\n"
+                     << processed_header[i].response();
+            }
+        }
         cout << "all tasks done\n";
         return 0;
     }

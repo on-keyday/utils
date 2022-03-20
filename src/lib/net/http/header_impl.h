@@ -38,7 +38,7 @@ namespace utils {
                     bool changed = false;
 
                     void emplace(auto&& key, auto&& value) {
-                        order.emplace_back(std::move(key), std::move(value));
+                        order.emplace_back(key, value);
                         changed = true;
                     }
 

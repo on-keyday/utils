@@ -187,8 +187,28 @@ namespace utils {
 
                protected:
                 runner_t Run;
+                bool* help_flag_ptr;
+
+                virtual int help_run(RunCommand& ctx) {
+                    assert(parent_);
+                    return parent_->help_run(ctx);
+                }
+
+                static int run_interal(RunCommand& ctx) {
+                    if (ctx.help_flag_ptr && *ctx.help_flag_ptr) {
+                        return ctx.help_run(ctx);
+                    }
+                    if (!ctx.Run) {
+                        return -1;
+                    }
+                    return ctx.Run(ctx);
+                }
 
                public:
+                void set_help_ptr(bool* ptr) {
+                    help_flag_ptr = ptr;
+                }
+
                 template <class Usage = const char*>
                 wrap::shared_ptr<RunCommand> SubCommand(auto&& name, runner_t runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     auto ptr = this->make_subcommand(name, desc, usage, need_subcommand);
@@ -200,30 +220,34 @@ namespace utils {
                 }
 
                 int run() {
-                    if (!this->final_reached) {
-                        if (!this->Run) {
-                            return -1;
-                        }
-                        return this->Run(*this);
-                    }
-                    if (!this->final_reached->Run) {
-                        return -1;
-                    }
-                    return this->final_reached->Run(*this->final_reached);
+                    return run_interal(this->final_reached ? *this->final_reached : *this);
                 }
             };
 
             struct RunContext : public RunCommand {
                private:
+                using runner_t = CommandRunner<RunCommand>;
                 wrap::vector<wrap::string> arg_;
+                runner_t help_runner;
+
+                int help_run(RunCommand& ctx) override {
+                    if (!help_runner) {
+                        return -1;
+                    }
+                    return help_runner(ctx);
+                }
 
                public:
                 wrap::vector<wrap::string>& arg() override {
                     return arg_;
                 }
 
+                void SetHelpRun(runner_t runner) {
+                    help_runner = std::move(runner);
+                }
+
                 template <class Usage = const char*>
-                void Set(auto&& name, CommandRunner<RunCommand> runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
+                void Set(auto&& name, runner_t runner, auto&& desc, Usage&& usage = "[option]", bool need_subcommand = false) {
                     set_self(name, desc, usage, need_subcommand);
                     this->Run = std::move(runner);
                 }

@@ -30,6 +30,7 @@ namespace netutil {
             verbose = ctx.option().Bool("v,verbose", false, "verbose log");
             quiet = ctx.option().Bool("quiet", false, "quiet log");
         }
+        ctx.set_help_ptr(help);
     }
 }  // namespace netutil
 
@@ -42,6 +43,7 @@ int main_proc(int argc, char** argv) {
     wrap::U8Arg _(argc, argv);
     subcmd::RunContext ctx;
     ctx.Set(argv[0], main_help, "cli network utility", "[command]");
+    ctx.SetHelpRun(main_help);
     netutil::common_option(ctx);
     netutil::httpreq_option(ctx);
     netutil::debug_log_option(ctx);

@@ -61,9 +61,6 @@ namespace utils {
             auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
             long long delta = 0;
             auto save_log = [&](auto name) {
-                if (lRequest < reqfirst) {
-                    return;
-                }
                 number::Array<80, char> arr{0};
                 helper::appends(arr, name, ":/size:");
                 number::insert_space(arr, 7, nSize);
@@ -86,10 +83,8 @@ namespace utils {
                     DWORD w;
                     ::WriteFile(dumpfile, arr.buf, arr.size(), &w, nullptr);
                 }
+                count++;
             };
-            if (reqfirst == 0) {
-                reqfirst = lRequest;
-            }
             auto callback = [&](HookType type) {
                 if (log_hooker) {
                     HookInfo info;
@@ -100,6 +95,9 @@ namespace utils {
                     log_hooker(info);
                 }
             };
+            if (reqfirst == 0) {
+                reqfirst = lRequest;
+            }
             if (nAllocType == _HOOK_ALLOC) {
                 total_alloced += nSize;
                 save_log("malloc");
@@ -110,13 +108,14 @@ namespace utils {
                     nSize = _msize_dbg(pvData, _NORMAL_BLOCK);
                     _CrtIsMemoryBlock(pvData, nSize,
                                       &lRequest, nullptr, nullptr);
-
+                    if (lRequest < reqfirst) {
+                        return res;
+                    }
                     total_alloced -= nSize;
                     save_log("dealoc");
                     callback(HookType::dealloc);
                 }
             }
-            count++;
             return res;
         }
 

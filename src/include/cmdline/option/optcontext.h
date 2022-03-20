@@ -97,7 +97,7 @@ namespace utils {
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
+                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag=CustomFlag::none) {
                     return custom_option_reserved(
                         std::move(defaultv), option,
                         bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));

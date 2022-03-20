@@ -175,10 +175,6 @@ namespace netutil {
     }
 
     int httpreq(subcmd::RunCommand& ctx) {
-        if (*help) {
-            cout << ctx.Usage(mode);
-            return 1;
-        }
         if (ctx.arg().size() == 0) {
             cout << ctx.cuc() << ": require url\n";
             return 2;
