@@ -36,6 +36,9 @@ namespace utils {
         DLL async::Future<ConnResult> STDCALL open_async(wrap::shared_ptr<Address>&& addr);
         DLL async::Future<ConnResult> STDCALL open_async(const char* host, const char* port, time_t timeout_sec = 60,
                                                          int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
+        DLL ConnResult STDCALL open_async(async::Context& ctx, wrap::shared_ptr<Address>&& addr);
+        DLL ConnResult STDCALL open_async(async::Context& ctx, const char* host, const char* port, time_t timeout_sec = 60,
+                                          int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
 
     }  // namespace net
 }  // namespace utils

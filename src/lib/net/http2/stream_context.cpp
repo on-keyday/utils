@@ -83,6 +83,35 @@ namespace utils {
                 return true;
             }
 
+            UpdateResult Context::write(async::Context& ctx, const Frame& frame) {
+                if (auto e = state.update_send(frame); e.err != H2Error::none) {
+                    return e;
+                }
+                if (!io->write(ctx, frame)) {
+                    return {
+                        .err = io->get_error(),
+                        .detail = StreamError::writing_frame,
+                        .id = io->get_errorcode(),
+                    };
+                }
+                return {};
+            }
+
+            ReadResult Context::read(async::Context& ctx) {
+                auto r = io->read(ctx);
+                if (!r) {
+                    return {.err = {
+                                .err = H2Error::transport,
+                                .detail = StreamError::reading_frame,
+                                .id = io->get_errorcode(),
+                            }};
+                }
+                if (auto err = state.update_recv(*r); err.err != H2Error::none) {
+                    return {.err = err, .frame = r};
+                }
+                return {};
+            }
+
             async::Future<UpdateResult> Context::write(const Frame& frame) {
                 if (auto e = state.update_send(frame); e.err != H2Error::none) {
                     return e;
@@ -102,22 +131,9 @@ namespace utils {
             }
 
             async::Future<ReadResult> Context::read() {
-                auto fn = [&io = this->io, &state = this->state](async::Context& ctx)
-                    -> ReadResult {
-                    auto r = AWAIT(io->read());
-                    if (!r) {
-                        return {.err = UpdateResult{
-                                    .err = H2Error::transport,
-                                    .detail = StreamError::reading_frame,
-                                    .id = io->get_errorcode(),
-                                }};
-                    }
-                    if (auto err = state.update_recv(*r); err.err != H2Error::none) {
-                        return {.err = err, .frame = r};
-                    }
-                    return {.frame = r};
-                };
-                return start(fn);
+                return start([this](async::Context& ctx) {
+                    return this->read(ctx);
+                });
             }
         }  // namespace http2
     }      // namespace net

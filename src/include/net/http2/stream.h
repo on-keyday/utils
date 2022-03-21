@@ -134,6 +134,9 @@ namespace utils {
                 async::Future<UpdateResult> write(const Frame& frame);
                 async::Future<ReadResult> read();
 
+                UpdateResult write(async::Context& ctx, const Frame& frame);
+                ReadResult read(async::Context& ctx);
+
                 UpdateResult serialize_frame(IBuffer buf, const Frame& frame);
                 bool write_serial(async::Context& ctx, const wrap::string& buf);
             };

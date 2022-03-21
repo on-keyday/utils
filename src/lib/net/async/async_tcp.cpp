@@ -14,30 +14,34 @@
 
 namespace utils {
     namespace net {
-        async::Future<ConnResult> STDCALL open_async(wrap::shared_ptr<Address>&& addr) {
+        ConnResult STDCALL open_async(async::Context& ctx, wrap::shared_ptr<Address>&& addr) {
             if (!addr) {
                 return ConnResult{.err = ConnError::dns_query,
                                   .addrerr = AddrError::invalid_address};
             }
-            return get_pool().start<ConnResult>([a = std::move(addr)](async::Context& ctx) mutable {
-                auto res = open(std::move(a));
-                auto p = res.connect();
-                if (p) {
-                    ctx.set_value(ConnResult{.conn = std::move(p)});
-                    return;
+            auto res = open(std::move(addr));
+            auto p = res.connect();
+            if (p) {
+                return {.conn = std::move(p)};
+            }
+            while (!p) {
+                if (res.failed()) {
+                    return {.err = ConnError::tcp_connect,
+                            .errcode = errcode()};
                 }
-                while (!p) {
-                    if (res.failed()) {
-                        ctx.set_value(ConnResult{.err = ConnError::tcp_connect,
-                                                 .errcode = errcode()});
-                        return;
-                    }
-                    ctx.suspend();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(7));
-                    p = res.connect();
-                }
-                ctx.set_value(ConnResult{.conn = std::move(p)});
-            });
+                ctx.suspend();
+                std::this_thread::sleep_for(std::chrono::milliseconds(7));
+                p = res.connect();
+            }
+            return {.conn = std::move(p)};
+        }
+
+        async::Future<ConnResult> STDCALL open_async(wrap::shared_ptr<Address>&& addr) {
+            return net::start(
+                [](async::Context& ctx, auto v) {
+                    return open_async(ctx, std::move(v));
+                },
+                std::move(addr));
         }
 
         async::Future<ConnResult> STDCALL open_async(const char* host, const char* port, time_t timeout_sec,
@@ -66,6 +70,19 @@ namespace utils {
                 p.wait_until(ctx);
                 ctx.set_value(std::move(p.get()));
             });
+        }
+
+        ConnResult STDCALL open_async(async::Context& ctx, const char* host, const char* port, time_t timeout_sec,
+                                      int address_family, int socket_type, int protocol, int flags) {
+            auto p = query(ctx, host, port, timeout_sec, address_family, socket_type, protocol, flags);
+            if (p.err != AddrError::none) {
+                return ConnResult{
+                    .err = ConnError::dns_query,
+                    .addrerr = p.err,
+                    .errcode = p.errcode,
+                };
+            }
+            return open_async(ctx, std::move(p.addr));
         }
     }  // namespace net
 }  // namespace utils

@@ -131,6 +131,9 @@ namespace utils {
         DLL async::Future<SSLAsyncResult> STDCALL open_async(AsyncIOClose&& io,
                                                              const char* cert, const char* alpn = nullptr, const char* host = nullptr,
                                                              const char* selfcert = nullptr, const char* selfprivate = nullptr);
+        DLL SSLAsyncResult STDCALL open_async(async::Context& ctx, AsyncIOClose&& io,
+                                              const char* cert, const char* alpn = nullptr, const char* host = nullptr,
+                                              const char* selfcert = nullptr, const char* selfprivate = nullptr);
         DLL SSLServer STDCALL setup(const char* selfcert, const char* selfprivate, const char* cert = nullptr);
     }  // namespace net
 }  // namespace utils

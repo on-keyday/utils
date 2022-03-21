@@ -95,7 +95,7 @@ namespace utils {
                         if (!first) {
                             return std::move(res);
                         }
-                        res = AWAIT(h2ctx->read());
+                        res = h2ctx->read(ctx);
                         if (res.err.err != H2Error::none) {
                             return std::move(res);
                         }

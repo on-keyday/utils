@@ -18,6 +18,7 @@ namespace utils {
     namespace net {
         enum class AddrError {
             none,
+            invalid_arg,
             invalid_address,
             syscall_err,
         };
@@ -35,5 +36,8 @@ namespace utils {
 
         DLL async::Future<AddrResult> STDCALL query(const char* host, const char* port, time_t timeout_sec = 60,
                                                     int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
+
+        DLL AddrResult STDCALL query(async::Context& ctx, const char* host, const char* port, time_t timeout_sec = 60,
+                                     int address_family = 0, int socket_type = 0, int protocol = 0, int flags = 0);
     }  // namespace net
 }  // namespace utils

@@ -17,34 +17,37 @@ namespace utils {
     namespace net {
         async::Future<AddrResult> query(const char* host, const char* port, time_t timeout_sec,
                                         int address_family, int socket_type, int protocol, int flags) {
+            return net::start([=](async::Context& ctx) {
+                return query(ctx, host, port, timeout_sec, address_family, socket_type, protocol, flags);
+            });
+        }
+
+        DLL AddrResult STDCALL query(async::Context& ctx, const char* host, const char* port, time_t timeout_sec,
+                                     int address_family, int socket_type, int protocol, int flags) {
             if (!host || !port) {
-                return nullptr;
+                return {.err = AddrError::invalid_arg};
             }
-            auto result = query_dns(host, port, timeout_sec, address_family, socket_type, protocol, flags);
-            if (result.failed()) {
+            auto res = query_dns(host, port, timeout_sec, address_family, socket_type, protocol, flags);
+            if (res.failed()) {
                 return AddrResult{.err = AddrError::syscall_err,
                                   .errcode = errcode()};
             }
-            return get_pool().start<AddrResult>([res = std::move(result)](async::Context& ctx) mutable {
-                auto p = res.get_address();
-                if (p) {
-                    ctx.set_value(AddrResult{.addr = std::move(p)});
-                    return;
+            auto p = res.get_address();
+            if (p) {
+                return {.addr = std::move(p)};
+            }
+            while (!p) {
+                if (res.failed()) {
+                    return {
+                        .err = AddrError::syscall_err,
+                        .errcode = errcode(),
+                    };
                 }
-                while (!p) {
-                    if (res.failed()) {
-                        ctx.set_value(AddrResult{
-                            .err = AddrError::syscall_err,
-                            .errcode = errcode(),
-                        });
-                        return;
-                    }
-                    ctx.suspend();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(7));
-                    p = res.get_address();
-                }
-                ctx.set_value(AddrResult{.addr = std::move(p)});
-            });
+                ctx.suspend();
+                std::this_thread::sleep_for(std::chrono::milliseconds(7));
+                p = res.get_address();
+            }
+            return {.addr = std::move(p)};
         }
     }  // namespace net
 }  // namespace utils
