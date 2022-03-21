@@ -13,55 +13,55 @@
 namespace utils {
     namespace net {
         namespace http2 {
+            NegotiateResult STDCALL negotiate(async::Context& ctx, wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame) {
+                auto h2ctx = wrap::make_shared<Context>();
+                h2ctx->io = std::move(conn);
+                auto err = h2ctx->write(ctx, frame);
+                if (err.err != H2Error::none) {
+                    return {
+                        .err = std::move(err),
+                    };
+                }
+                bool recvack = false;
+                bool sendack = false;
+                while (true) {
+                    auto res = h2ctx->read(ctx);
+                    if (res.err.err != H2Error::none) {
+                        return {.err = res.err};
+                    }
+                    auto ptr = res.frame;
+                    if (ptr->type == FrameType::goaway) {
+                        return {.err = UpdateResult{.err = (H2Error)h2ctx->state.errcode()}};
+                    }
+                    else if (ptr->type == FrameType::ping) {
+                        if (!(ptr->flag & Flag::ack)) {
+                            ptr->flag |= Flag::ack;
+                            h2ctx->write(ctx, *ptr);
+                        }
+                    }
+                    else if (ptr->type == FrameType::settings) {
+                        if (ptr->flag & Flag::ack) {
+                            recvack = true;
+                        }
+                        else {
+                            SettingsFrame sf{0};
+                            sf.type = FrameType::settings;
+                            sf.flag = Flag::ack;
+                            h2ctx->write(ctx, sf);
+                            sendack = true;
+                        }
+                    }
+                    if (recvack && sendack) {
+                        break;
+                    }
+                }
+                return {.ctx = std::move(h2ctx)};
+            }
+
             async::Future<NegotiateResult> STDCALL negotiate(wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame) {
-                auto ctx = wrap::make_shared<Context>();
-                ctx->io = std::move(conn);
-                auto f = ctx->write(frame);
-                return start(
-                    [](async::Context& ctx, wrap::shared_ptr<Context> h2ctx, async::Future<UpdateResult> f)
-                        -> NegotiateResult {
-                        auto err = AWAIT(f);
-                        if (err.err != H2Error::none) {
-                            return {
-                                .err = std::move(err),
-                            };
-                        }
-                        bool recvack = false;
-                        bool sendack = false;
-                        while (true) {
-                            auto res = AWAIT(h2ctx->read());
-                            if (res.err.err != H2Error::none) {
-                                return {.err = res.err};
-                            }
-                            auto ptr = res.frame;
-                            if (ptr->type == FrameType::goaway) {
-                                return {.err = UpdateResult{.err = (H2Error)h2ctx->state.errcode()}};
-                            }
-                            else if (ptr->type == FrameType::ping) {
-                                if (!(ptr->flag & Flag::ack)) {
-                                    ptr->flag |= Flag::ack;
-                                    AWAIT(h2ctx->write(*ptr));
-                                }
-                            }
-                            else if (ptr->type == FrameType::settings) {
-                                if (ptr->flag & Flag::ack) {
-                                    recvack = true;
-                                }
-                                else {
-                                    SettingsFrame sf{0};
-                                    sf.type = FrameType::settings;
-                                    sf.flag = Flag::ack;
-                                    AWAIT(h2ctx->write(sf));
-                                    sendack = true;
-                                }
-                            }
-                            if (recvack && sendack) {
-                                break;
-                            }
-                        }
-                        return {.ctx = std::move(h2ctx)};
-                    },
-                    ctx, std::move(f));
+                return start([&](async::Context& ctx) {
+                    return negotiate(ctx, std::move(conn), frame);
+                });
             }
 
             UpdateResult Context::serialize_frame(IBuffer buf, const Frame& frame) {
@@ -78,9 +78,15 @@ namespace utils {
                 return {};
             }
 
-            bool Context::write_serial(async::Context& ctx, const wrap::string& buf) {
-                io->write_serial(ctx, buf);
-                return true;
+            UpdateResult Context::write_serial(async::Context& ctx, const wrap::string& buf) {
+                if (auto err = io->write_serial(ctx, buf); err.err) {
+                    return {
+                        .err = io->get_error(),
+                        .detail = StreamError::writing_frame,
+                        .id = io->get_errorcode(),
+                    };
+                }
+                return {};
             }
 
             UpdateResult Context::write(async::Context& ctx, const Frame& frame) {

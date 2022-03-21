@@ -24,11 +24,14 @@ namespace utils {
                     }
                 }
                 read_from_ssl(buffer);
-                auto got = io.write(ctx, buffer.c_str(), buffer.size());
-                if (got.err) {
-                    return got.err;
+                if (buffer.size()) {
+                    auto got = io.write(ctx, buffer.c_str(), buffer.size());
+                    if (got.err) {
+                        return got.err;
+                    }
                 }
-                buffer.resize(2048);
+                buffer.clear();
+                buffer.resize(1024);
                 auto data = io.read(ctx, buffer.data(), buffer.size());
                 if (data.err) {
                     return data.err;
@@ -226,12 +229,8 @@ namespace utils {
                             .transporterr = code,
                         };
                     }
-                    continue;
                 }
-                return {
-                    .err = SSLAsyncError::connect_error,
-                    .errcode = ::SSL_get_error(impl->ssl, -1),
-                };
+                continue;
             }
             auto as = wrap::make_shared<SSLAsyncConn>();
             internal::SSLSet::set(*as, impl);

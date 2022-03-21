@@ -45,7 +45,7 @@ namespace utils {
                     return {};
                 }
                 frame.flag |= Flag::ack;
-                auto res = AWAIT(h2ctx->write(frame));
+                auto res = h2ctx->write(ctx, frame);
                 frame.flag &= ~Flag::ack;
                 return res;
             }
@@ -64,7 +64,7 @@ namespace utils {
                 wframe.type = FrameType::window_update;
                 wframe.increment = incr;
                 wframe.len = 4;
-                return AWAIT(h2ctx->write(wframe));
+                return h2ctx->write(ctx, wframe);
             }
 
             ReadResult STDCALL wait_data_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, std::int32_t id, wrap::string* ptr, bool end_stream) {
@@ -109,7 +109,7 @@ namespace utils {
                     if (dframe.flag & Flag::end_stream && !end_stream) {
                         dframe.flag &= ~Flag::end_stream;
                     }
-                    auto err = AWAIT(h2ctx->write(dframe));
+                    auto err = h2ctx->write(ctx, dframe);
                     if (err.err != H2Error::none) {
                         return {.err = std::move(err)};
                     }
@@ -123,7 +123,7 @@ namespace utils {
                 goaway.code = errcode;
                 goaway.processed_id = h2ctx->state.max_proced();
                 goaway.len = 4;
-                return AWAIT(h2ctx->write(goaway));
+                return h2ctx->write(ctx, goaway);
             }
 
             UpdateResult STDCALL send_header_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, http::Header h, bool end_stream) {
@@ -139,7 +139,6 @@ namespace utils {
                 if (end_stream) {
                     frame.flag |= Flag::end_stream;
                 }
-
                 auto r = h2ctx->serialize_frame(&buffer, frame);
                 if (r.err != H2Error::none) {
                     return std::move(r);
@@ -153,13 +152,14 @@ namespace utils {
                             .id = frame.id,
                         };
                     }
-
                     r = h2ctx->serialize_frame(&buffer, frame);
                     if (r.err != H2Error::none) {
                         return std::move(r);
                     }
                 }
-
+                if (auto err = h2ctx->write_serial(ctx, buffer); err.err != H2Error::none) {
+                    return err;
+                }
                 return {.id = frame.id};
             }
 

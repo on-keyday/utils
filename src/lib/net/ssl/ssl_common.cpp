@@ -26,7 +26,7 @@ namespace utils {
                     size_t red;
                     auto result = ::BIO_read_ex(bio, tmpbuf, 1024, &red);
                     buffer.append(tmpbuf, red);
-                    if (!result || red < 1024) {
+                    if (!result || result < 1024) {
                         break;
                     }
                 }

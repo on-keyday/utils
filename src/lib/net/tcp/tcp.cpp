@@ -173,11 +173,13 @@ namespace utils {
             ReadInfo info;
             info.byte = ptr;
             info.size = size;
+            info.read = 0;
+            info.err = 0;
 #ifdef _WIN32
             ::WSABUF buf;
             buf.buf = ptr;
             buf.len = size;
-            ::DWORD red, flag;
+            ::DWORD red = 0, flag = 0;
             internal::tcp_iocp_init(impl->sock, &impl->iocp);
             impl->iocp.info = &info;
             impl->iocp.f = ctx.clone();
@@ -244,12 +246,11 @@ namespace utils {
             auto t = write(ptr, size, nullptr);
             while (t != State::complete) {
                 if (t == State::failed) {
-                    return async::Future{WriteInfo{.byte = ptr, .size = size, .err = errcode()}};
+                    return {WriteInfo{.byte = ptr, .size = size, .err = errcode()}};
                 }
                 t = write(ptr, size, nullptr);
             }
-
-            return async::Future{WriteInfo{.byte = ptr, .size = size, .written = size}};
+            return {WriteInfo{.byte = ptr, .size = size, .written = size}};
         }
 
         State TCPConn::read(char* ptr, size_t size, size_t* red) {

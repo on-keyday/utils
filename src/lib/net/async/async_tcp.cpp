@@ -46,30 +46,11 @@ namespace utils {
 
         async::Future<ConnResult> STDCALL open_async(const char* host, const char* port, time_t timeout_sec,
                                                      int address_family, int socket_type, int protocol, int flags) {
-            auto addr = query(host, port, timeout_sec, address_family, socket_type, protocol, flags);
-            if (addr.state() == async::TaskState::invalid) {
-                auto p = addr.get();
-                return ConnResult{
-                    .err = ConnError::dns_query,
-                    .addrerr = p.err,
-                    .errcode = p.errcode,
-                };
-            }
-            return get_pool().start([a = std::move(addr)](async::Context& ctx) mutable {
-                a.wait_until(ctx);
-                auto addr = std::move(a.get());
-                if (!addr.addr) {
-                    ctx.set_value(ConnResult{
-                        .err = ConnError::dns_query,
-                        .addrerr = addr.err,
-                        .errcode = addr.errcode,
-                    });
-                    return;
-                }
-                auto p = open_async(std::move(addr.addr));
-                p.wait_until(ctx);
-                ctx.set_value(std::move(p.get()));
-            });
+            return net::start(
+                [](async::Context& ctx, auto... args) {
+                    return open_async(ctx, args...);
+                },
+                host, port, timeout_sec, address_family, socket_type, protocol, flags);
         }
 
         ConnResult STDCALL open_async(async::Context& ctx, const char* host, const char* port, time_t timeout_sec,

@@ -138,7 +138,7 @@ namespace utils {
                 ReadResult read(async::Context& ctx);
 
                 UpdateResult serialize_frame(IBuffer buf, const Frame& frame);
-                bool write_serial(async::Context& ctx, const wrap::string& buf);
+                UpdateResult write_serial(async::Context& ctx, const wrap::string& buf);
             };
 
             struct NegotiateResult {
@@ -146,9 +146,11 @@ namespace utils {
                 wrap::shared_ptr<Context> ctx;
             };
 
+            DLL NegotiateResult STDCALL negotiate(async::Context& ctx, wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame);
             DLL async::Future<NegotiateResult> STDCALL negotiate(wrap::shared_ptr<Conn>&& conn, SettingsFrame& frame);
+
             template <class Settings>
-            async::Future<NegotiateResult> negotiate(wrap::shared_ptr<Conn>&& conn, Settings& setting) {
+            NegotiateResult negotiate(async::Context& ctx, wrap::shared_ptr<Conn>&& conn, Settings& setting) {
                 SettingsFrame frame{0};
                 frame.type = FrameType::settings;
                 for (auto& s : setting) {
@@ -164,7 +166,14 @@ namespace utils {
                     frame.setting.append(vptr, 4);
                     frame.len += 6;
                 }
-                return negotiate(std::move(conn), frame);
+                return negotiate(ctx, std::move(conn), frame);
+            }
+
+            template <class Settings>
+            async::Future<NegotiateResult> negotiate(wrap::shared_ptr<Conn>&& conn, Settings& setting) {
+                return net::start([&](async::Context& ctx) {
+                    return negotiate(ctx, std::move(conn), setting);
+                });
             }
 
             enum class SettingKey : std::uint16_t {

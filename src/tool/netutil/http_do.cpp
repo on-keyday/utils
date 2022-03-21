@@ -231,7 +231,7 @@ namespace netutil {
                 chan << msg(id, "start request to ", uris[i].uri.to_string(), "\n");
             }
             test::Timer t;
-            auto res = std::move(AWAIT(net::http::request_async(std::move(io), host.c_str(), "GET", path.c_str(), {})));
+            auto res = std::move(net::http::request_async(ctx, std::move(io), host.c_str(), "GET", path.c_str(), {}));
             auto d = t.delta();
             if (res.err != net::http::HttpError::none) {
                 chan << msgend(id, "error: http request to ", host, " failed\n",
@@ -286,7 +286,7 @@ namespace netutil {
         }
         auto ipver = net::afinet(uris[0].tagcmd.ipver);
         test::Timer delta;
-        auto tcp = AWAIT(net::open_async(uri.host.c_str(), port, 60, ipver));
+        auto tcp = net::open_async(ctx, uri.host.c_str(), port, 60, ipver);
         if (*show_timer) {
             chan << timermsg(id, uri.host_port(), " tcp connection delta ", delta.delta().count(), "ms\n");
         }
@@ -309,7 +309,7 @@ namespace netutil {
             }
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
             delta.reset();
-            auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
+            auto ssl = net::open_async(ctx, std::move(tcp.conn), cacert->c_str(), alpn, uri.host.c_str());
             if (!ssl.conn) {
                 chan << msgend(
                     id,
