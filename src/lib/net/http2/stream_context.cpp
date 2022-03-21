@@ -115,7 +115,7 @@ namespace utils {
                 if (auto err = state.update_recv(*r); err.err != H2Error::none) {
                     return {.err = err, .frame = r};
                 }
-                return {};
+                return {.frame = r};
             }
 
             async::Future<UpdateResult> Context::write(const Frame& frame) {

@@ -11,12 +11,12 @@
 
 #include "optvalue.h"
 #include "../utf/convert.h"
-#include "../wrap/lite/smart_ptr.h"
+#include "../wrap/light/smart_ptr.h"
 #include "../helper/equal.h"
 #include "../helper/splits.h"
 #include "../helper/view.h"
 #include "../helper/pushbacker.h"
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 #include "../helper/appender.h"
 
 namespace utils {

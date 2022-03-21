@@ -12,7 +12,7 @@
 
 #include <utility>
 #include <array>
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 #include "../endian/reader.h"
 #include "../endian/writer.h"
 

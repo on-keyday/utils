@@ -10,9 +10,9 @@
 #pragma once
 
 #include "lite_lock.h"
-#include "../wrap/lite/queue.h"
-#include "../wrap/lite/enum.h"
-#include "../wrap/lite/smart_ptr.h"
+#include "../wrap/light/queue.h"
+#include "../wrap/light/enum.h"
+#include "../wrap/light/smart_ptr.h"
 
 namespace utils {
     namespace thread {

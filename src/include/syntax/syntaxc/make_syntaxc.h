@@ -12,10 +12,10 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "syntaxc.h"
 
-#include "../../wrap/lite/string.h"
-#include "../../wrap/lite/vector.h"
-#include "../../wrap/lite/map.h"
-#include "../../wrap/lite/smart_ptr.h"
+#include "../../wrap/light/string.h"
+#include "../../wrap/light/vector.h"
+#include "../../wrap/light/map.h"
+#include "../../wrap/light/smart_ptr.h"
 
 namespace utils {
     namespace syntax {

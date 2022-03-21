@@ -11,8 +11,8 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include "../utf/convert.h"
-#include "lite/string.h"
-#include "lite/vector.h"
+#include "light/string.h"
+#include "light/vector.h"
 
 namespace utils {
     namespace wrap {

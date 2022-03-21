@@ -16,7 +16,7 @@
 
 #include <sys/stat.h>
 
-#include "../wrap/lite/char.h"
+#include "../wrap/light/char.h"
 
 namespace utils {
     namespace file {

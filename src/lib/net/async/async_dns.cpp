@@ -9,7 +9,7 @@
 #include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/async/dns.h"
 #include "../../../include/net/async/pool.h"
-#include "../../../include/wrap/lite/string.h"
+#include "../../../include/wrap/light/string.h"
 #include "../../../include/net/core/errcode.h"
 #include <thread>
 

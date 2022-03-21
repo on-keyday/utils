@@ -51,6 +51,8 @@ namespace netutil {
         TagCommand tagcmd;
     };
 
+    using req_chan = utils::thread::RecvChan<utils::wrap::vector<UriWithTag>>;
+
     void common_option(subcmd::RunCommand& ctx);
 
     // set option

@@ -13,8 +13,8 @@
 #include "../../helper/equal.h"
 #include "../../helper/strutil.h"
 
-#include "../../wrap/lite/string.h"
-#include "../../wrap/lite/vector.h"
+#include "../../wrap/light/string.h"
+#include "../../wrap/light/vector.h"
 
 namespace utils {
     namespace syntax {

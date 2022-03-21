@@ -13,7 +13,7 @@
 namespace utils {
     namespace net {
         namespace internal {
-            int SSLAsyncImpl::do_IO(async::Context& ctx) {
+            int SSLAsyncImpl::do_IO(async::Context& ctx, size_t reqbuf) {
                 if (buffer.size()) {
                     auto f = write_to_ssl(buffer);
                     if (f == szfailed) {
@@ -31,7 +31,7 @@ namespace utils {
                     }
                 }
                 buffer.clear();
-                buffer.resize(1024);
+                buffer.resize(10240);
                 auto data = io.read(ctx, buffer.data(), buffer.size());
                 if (data.err) {
                     return data.err;
@@ -85,7 +85,7 @@ namespace utils {
             size_t red = 0;
             while (!::SSL_read_ex(impl->ssl, ptr, size, &red)) {
                 if (need_io(impl->ssl)) {
-                    if (auto err = impl->do_IO(ctx); err != 0) {
+                    if (auto err = impl->do_IO(ctx, size + 1024); err != 0) {
                         return {
                             .byte = ptr,
                             .size = size,
@@ -111,7 +111,7 @@ namespace utils {
             size_t w = 0;
             while (!::SSL_write_ex(impl->ssl, ptr, size, &w)) {
                 if (need_io(impl->ssl)) {
-                    if (auto err = impl->do_IO(ctx); err != 0) {
+                    if (auto err = impl->do_IO(ctx, size + 1024); err != 0) {
                         return {
                             .byte = ptr,
                             .size = size,
@@ -164,7 +164,7 @@ namespace utils {
                         auto done = ::SSL_shutdown(impl->ssl);
                         if (done < 0) {
                             if (need_io(impl->ssl)) {
-                                if (auto err = impl->do_IO(ctx); err != 0) {
+                                if (auto err = impl->do_IO(ctx, 1024); err != 0) {
                                     break;
                                 }
                             }
@@ -222,7 +222,7 @@ namespace utils {
             }
             while (::SSL_connect(impl->ssl) < 0) {
                 if (need_io(impl->ssl)) {
-                    if (auto code = impl->do_IO(ctx); code != 0) {
+                    if (auto code = impl->do_IO(ctx, 4096); code != 0) {
                         return {
                             .err = SSLAsyncError::connect_error,
                             .errcode = ::SSL_get_error(impl->ssl, -1),

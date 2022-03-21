@@ -11,7 +11,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "dns.h"
 #include "../tcp/tcp.h"
-#include "../../wrap/lite/enum.h"
+#include "../../wrap/light/enum.h"
 
 namespace utils {
     namespace net {

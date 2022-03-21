@@ -12,7 +12,7 @@
 #include "../helper/equal.h"
 #include "../helper/strutil.h"
 #include "../utf/convert.h"
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 #include "../number/parse.h"
 #include "../number/prefix.h"
 #include <cassert>

@@ -10,11 +10,11 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include <iosfwd>
-#include "lite/char.h"
-#include "lite/string.h"
+#include "light/char.h"
+#include "light/string.h"
 #include "../thread/lite_lock.h"
 #include "pack.h"
-#include "lite/stream.h"
+#include "light/stream.h"
 
 namespace utils {
     namespace wrap {

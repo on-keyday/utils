@@ -19,7 +19,7 @@
 #include <testutil/timer.h>
 
 #include <chrono>
-#include <wrap/lite/vector.h>
+#include <wrap/light/vector.h>
 #include <thread/lite_lock.h>
 
 void test_asynctcp2() {

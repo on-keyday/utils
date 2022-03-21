@@ -10,7 +10,7 @@
 #pragma once
 
 #include "lite_lock.h"
-#include "../wrap/lite/map.h"
+#include "../wrap/light/map.h"
 #include "channel.h"
 #include <algorithm>
 

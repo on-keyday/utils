@@ -30,19 +30,22 @@ namespace utils {
             constexpr auto connection_preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
             async::Future<OpenResult> STDCALL open_async(AsyncIOClose&& io) {
+                return net::start([io = std::move(io)](async::Context& ctx) mutable {
+                    return open_async(ctx, std::move(io));
+                });
+            }
+
+            OpenResult STDCALL open_async(async::Context& ctx, AsyncIOClose&& io) {
                 auto impl = wrap::make_shared<internal::Http2Impl>();
                 impl->io = std::move(io);
-                return net::start([](async::Context& ctx, wrap::shared_ptr<internal::Http2Impl> impl) {
-                    auto ptr = impl->io.write(connection_preface, 24);
-                    auto w = AWAIT(ptr);
-                    if (w.err) {
-                        return OpenResult{.errcode = w.err};
-                    }
-                    auto conn = wrap::make_shared<Conn>();
-                    conn->impl = std::move(impl);
-                    return OpenResult{.conn = std::move(conn)};
-                },
-                                  std::move(impl));
+                auto ptr = impl->io.write(connection_preface, 24);
+                auto w = AWAIT(ptr);
+                if (w.err) {
+                    return OpenResult{.errcode = w.err};
+                }
+                auto conn = wrap::make_shared<Conn>();
+                conn->impl = std::move(impl);
+                return OpenResult{.conn = std::move(conn)};
             }
 
             void Conn::set_error(H2Error err) {

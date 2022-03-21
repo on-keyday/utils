@@ -9,7 +9,7 @@
 // dns - dns query
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
-#include "../../wrap/lite/smart_ptr.h"
+#include "../../wrap/light/smart_ptr.h"
 #include "../generate/iocloser.h"
 
 namespace utils {

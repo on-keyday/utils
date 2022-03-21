@@ -9,7 +9,7 @@
 // attribute - define attribute
 #pragma once
 
-#include "../../wrap/lite/enum.h"
+#include "../../wrap/light/enum.h"
 
 namespace utils {
     namespace syntax {

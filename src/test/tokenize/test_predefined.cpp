@@ -8,8 +8,8 @@
 
 #include "../../include/tokenize/predefined.h"
 
-#include "../../include/wrap/lite/vector.h"
-#include "../../include/wrap/lite/string.h"
+#include "../../include/wrap/light/vector.h"
+#include "../../include/wrap/light/string.h"
 
 using namespace utils;
 

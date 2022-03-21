@@ -7,8 +7,8 @@
 
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/wrap/iocommon.h"
-#include"../../include/thread/lite_lock.h"
-#include"../../include/wrap/lite/stream.h"
+#include "../../include/thread/lite_lock.h"
+#include "../../include/wrap/light/stream.h"
 #include <cstdio>
 #include <iostream>
 #include <cassert>
@@ -77,8 +77,8 @@ namespace utils {
                 return false;
             }
             ::DWORD require = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-            if(need_cr_for_return){
-                require|=DISABLE_NEWLINE_AUTO_RETURN;
+            if (need_cr_for_return) {
+                require |= DISABLE_NEWLINE_AUTO_RETURN;
             }
             if (!SetConsoleMode(handle, original | require)) {
                 require = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
@@ -131,11 +131,11 @@ namespace utils {
             change_console_mode(true);
             if (!no_change_mode) {
                 if (_setmode(_fileno(stdout), stdoutmode) == -1) {
-                    //err = "error:text output mode change failed\n";
+                    // err = "error:text output mode change failed\n";
                     return false;
                 }
                 if (_setmode(_fileno(stderr), stderrmode) == -1) {
-                    //err = "error:text error mode change failed\n";
+                    // err = "error:text error mode change failed\n";
                     return false;
                 }
             }
@@ -148,7 +148,7 @@ namespace utils {
             change_console_mode(false);
             if (!no_change_mode) {
                 if (_setmode(_fileno(stdin), stdinmode) == -1) {
-                    //err = "error:text input mode change failed";
+                    // err = "error:text input mode change failed";
                     return false;
                 }
             }

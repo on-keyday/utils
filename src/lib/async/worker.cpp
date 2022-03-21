@@ -16,7 +16,7 @@
 #include "../../include/platform/windows/dllexport_source.h"
 
 #include "../../include/async/worker.h"
-#include "../../include/wrap/lite/lite.h"
+#include "../../include/wrap/light/lite.h"
 #include "../../include/thread/channel.h"
 #include "../../include/thread/recursive_lock.h"
 #include "../../include/helper/iface_cast.h"

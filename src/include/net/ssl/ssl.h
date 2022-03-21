@@ -12,8 +12,8 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "../core/iodef.h"
 
-#include "../../wrap/lite/smart_ptr.h"
-#include "../../wrap/lite/enum.h"
+#include "../../wrap/light/smart_ptr.h"
+#include "../../wrap/light/enum.h"
 
 #include "../generate/iocloser.h"
 

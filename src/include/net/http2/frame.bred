@@ -11,7 +11,7 @@ package utils::net::http2
 import <cstdint>
 import <string>
 import "error_type.h"
-import "../../wrap/lite/smart_ptr.h"
+import "../../wrap/light/smart_ptr.h"
 
 struct Frame , H2Error {
     len int $ 3 ! H2Error::read_len = 0

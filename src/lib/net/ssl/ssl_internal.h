@@ -13,7 +13,7 @@
 
 #include "../../../include/net/core/platform.h"
 
-#include "../../../include/wrap/lite/string.h"
+#include "../../../include/wrap/light/string.h"
 
 #include "../../../include/net/generate/iocloser.h"
 
@@ -66,7 +66,7 @@ namespace utils {
             struct SSLAsyncImpl : SSLImpl {
                 AsyncIOClose io;
                 wrap::weak_ptr<SSLAsyncConn> conn;
-                int do_IO(async::Context&);
+                int do_IO(async::Context&, size_t);
             };
         }  // namespace internal
 #ifdef USE_OPENSSL

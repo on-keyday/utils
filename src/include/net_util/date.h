@@ -12,9 +12,9 @@
 
 #include "../core/sequencer.h"
 #include "../helper/splits.h"
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 #include "../helper/appender.h"
-#include "../wrap/lite/vector.h"
+#include "../wrap/light/vector.h"
 #include <ctime>
 
 namespace utils {

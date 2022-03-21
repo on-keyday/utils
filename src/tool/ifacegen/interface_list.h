@@ -7,7 +7,7 @@
 
 
 #pragma once
-#include "../../include/wrap/lite/lite.h"
+#include "../../include/wrap/light/lite.h"
 #include "../../include/syntax/make_parser/keyword.h"
 #include "../../include/syntax/matching/matching.h"
 

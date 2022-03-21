@@ -8,7 +8,7 @@
 
 #include "../../include/net/tcp/tcp.h"
 #include "../../include/net/ssl/ssl.h"
-#include "../../include/wrap/lite/string.h"
+#include "../../include/wrap/light/string.h"
 #include "../../include/wrap/cout.h"
 #include "../../include/net/http/http1.h"
 #include "../../include/wrap/cout.h"

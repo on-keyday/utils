@@ -10,7 +10,7 @@
 #include "../../include/cmdline/parse.h"
 #include "../../include/cmdline/make_opt.h"
 
-#include "../../include/wrap/lite/lite.h"
+#include "../../include/wrap/light/lite.h"
 
 #include "../../include/wrap/cout.h"
 

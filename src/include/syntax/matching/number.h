@@ -10,7 +10,7 @@
 // almost copied from commonlib
 #pragma once
 
-#include "../../wrap/lite/smart_ptr.h"
+#include "../../wrap/light/smart_ptr.h"
 
 #include "context.h"
 

@@ -10,7 +10,7 @@
 #pragma once
 
 #include "dispatcher.h"
-#include "../../wrap/lite/enum.h"
+#include "../../wrap/light/enum.h"
 #include "../matching/context.h"
 #include "../../helper/compare_type.h"
 

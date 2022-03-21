@@ -10,7 +10,7 @@
 #pragma once
 #include <regex>
 #include "parser_base.h"
-#include "../wrap/lite/string.h"
+#include "../wrap/light/string.h"
 #include "token_parser.h"
 #include "../utf/convert.h"
 

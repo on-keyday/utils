@@ -11,9 +11,9 @@
 
 #include "optdef.h"
 
-#include "../wrap/lite/string.h"
-#include "../wrap/lite/vector.h"
-#include "../wrap/lite/map.h"
+#include "../wrap/light/string.h"
+#include "../wrap/light/vector.h"
+#include "../wrap/light/map.h"
 
 namespace utils {
     namespace cmdline {

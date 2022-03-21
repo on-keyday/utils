@@ -13,7 +13,7 @@
 
 #include "../../../include/helper/iface_cast.h"
 
-#include "../../../include/wrap/lite/vector.h"
+#include "../../../include/wrap/light/vector.h"
 
 #include <windows.h>
 #include <cassert>

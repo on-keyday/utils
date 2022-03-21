@@ -10,7 +10,7 @@
 // need to link libutils
 #pragma once
 #include "platform.h"
-#include "../wrap/lite/string.h"
+#include "../wrap/light/string.h"
 #include "../utf/convert.h"
 
 namespace utils {

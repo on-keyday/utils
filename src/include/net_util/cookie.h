@@ -10,7 +10,7 @@
 // almost copied from socklib
 #pragma once
 
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 #include "date.h"
 #include "../helper/strutil.h"
 #include "../number/parse.h"

@@ -10,7 +10,7 @@
 #pragma once
 #include "punycode.h"
 #include "urlencode.h"
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 #include "../helper/strutil.h"
 
 namespace utils {

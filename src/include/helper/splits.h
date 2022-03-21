@@ -11,8 +11,8 @@
 
 #include "../core/sequencer.h"
 
-#include "../wrap/lite/string.h"
-#include "../wrap/lite/vector.h"
+#include "../wrap/light/string.h"
+#include "../wrap/light/vector.h"
 
 namespace utils {
     namespace helper {

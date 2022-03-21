@@ -10,7 +10,7 @@
 #pragma once
 #include "../../../include/net/http2/error_type.h"
 #include "../../../include/endian/endian.h"
-#include "../../../include/wrap/lite/string.h"
+#include "../../../include/wrap/light/string.h"
 
 namespace utils {
     namespace net {

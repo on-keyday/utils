@@ -9,7 +9,7 @@
 // token - generic token
 #pragma once
 
-#include "../wrap/lite/smart_ptr.h"
+#include "../wrap/light/smart_ptr.h"
 
 namespace utils {
     namespace parser {

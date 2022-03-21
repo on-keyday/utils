@@ -9,9 +9,9 @@
 #include "../../../include/platform/windows/dllexport_source.h"
 #include "../../../include/net/http/http1.h"
 #include "../../../include/net/http/header.h"
-#include "../../../include/wrap/lite/string.h"
-#include "../../../include/wrap/lite/map.h"
-#include "../../../include/wrap/lite/vector.h"
+#include "../../../include/wrap/light/string.h"
+#include "../../../include/wrap/light/map.h"
+#include "../../../include/wrap/light/vector.h"
 
 #include "../../../include/helper/equal.h"
 #include "../../../include/number/to_string.h"

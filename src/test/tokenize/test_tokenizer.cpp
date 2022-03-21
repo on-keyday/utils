@@ -10,8 +10,8 @@
 #include "../../include/tokenize/cast.h"
 #include "../../include/tokenize/merge.h"
 
-#include "../../include/wrap/lite/string.h"
-#include "../../include/wrap/lite/vector.h"
+#include "../../include/wrap/light/string.h"
+#include "../../include/wrap/light/vector.h"
 #include "../../include/wrap/cout.h"
 using namespace utils;
 

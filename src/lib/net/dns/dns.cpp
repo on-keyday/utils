@@ -11,7 +11,7 @@
 #include "../../../include/net/core/init_net.h"
 #include "../../../include/net/dns/dns.h"
 
-#include "../../../include/wrap/lite/string.h"
+#include "../../../include/wrap/light/string.h"
 #include "../../../include/utf/convert.h"
 #include "../../../include/helper/strutil.h"
 

@@ -9,7 +9,7 @@
 // priority_ext - extension of std::priority_quque
 #pragma once
 #include <queue>
-#include "../wrap/lite/queue.h"
+#include "../wrap/light/queue.h"
 #include "channel.h"
 #include "../helper/compare_type.h"
 

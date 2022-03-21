@@ -9,9 +9,9 @@
 // http1 - http1.1 protocol
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
-#include "../../wrap/lite/smart_ptr.h"
+#include "../../wrap/light/smart_ptr.h"
 #include "../generate/iocloser.h"
-#include "../../wrap/lite/enum.h"
+#include "../../wrap/light/enum.h"
 
 namespace utils {
     namespace net {

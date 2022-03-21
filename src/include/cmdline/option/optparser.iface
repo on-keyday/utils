@@ -9,7 +9,7 @@ package utils::cmdline::option
 # tool\ifacegen -i src/include/cmdline/option/optparser.iface -o src/include/cmdline/option/optparser.h -VeSn --license --helper-deref "\"../../helper/deref.h\""
 
 import "flag.h"
-import "../../wrap/lite/string.h"
+import "../../wrap/light/string.h"
 
 interface Value {
     decltype() type

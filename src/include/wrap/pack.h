@@ -12,9 +12,9 @@
 #include <sstream>
 #include "../helper/sfinae.h"
 #include "../thread/lite_lock.h"
-#include "lite/string.h"
+#include "light/string.h"
 #include "../utf/convert.h"
-#include "lite/stream.h"
+#include "light/stream.h"
 
 namespace utils {
     namespace wrap {

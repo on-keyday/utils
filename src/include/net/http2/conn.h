@@ -9,7 +9,7 @@
 // conn - http protocol version 2 connetion
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
-#include "../../wrap/lite/smart_ptr.h"
+#include "../../wrap/light/smart_ptr.h"
 #include "frame.h"
 #include "../../async/worker.h"
 #include "../generate/iocloser.h"
@@ -24,7 +24,7 @@ namespace utils {
             struct OpenResult;
 
             struct DLL Conn {
-                friend DLL async::Future<OpenResult> STDCALL open_async(AsyncIOClose&& io);
+                friend DLL OpenResult STDCALL open_async(async::Context&, AsyncIOClose&& io);
                 async::Future<wrap::shared_ptr<Frame>> read();
                 async::Future<bool> write(const Frame& frame);
                 wrap::shared_ptr<Frame> read(async::Context& ctx);
@@ -53,6 +53,7 @@ namespace utils {
             };
 
             DLL async::Future<OpenResult> STDCALL open_async(AsyncIOClose&& io);
+            DLL OpenResult STDCALL open_async(async::Context& ctx, AsyncIOClose&& io);
         }  // namespace http2
     }      // namespace net
 }  // namespace utils

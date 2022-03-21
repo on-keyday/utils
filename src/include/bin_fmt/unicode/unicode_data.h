@@ -10,12 +10,12 @@
 // almost copied from commonlib
 #pragma once
 
-#include "../../wrap/lite/string.h"
+#include "../../wrap/light/string.h"
 #include "../../number/to_string.h"
 #include "../../number/parse.h"
-#include "../../wrap/lite/enum.h"
-#include "../../wrap/lite/vector.h"
-#include "../../wrap/lite/map.h"
+#include "../../wrap/light/enum.h"
+#include "../../wrap/light/vector.h"
+#include "../../wrap/light/map.h"
 
 namespace utils {
     namespace unicode {
@@ -48,7 +48,7 @@ namespace utils {
         struct Numeric {
             int v1 = (int)-1;
             int v2 = (int)-1;
-            //std::string v3;
+            // std::string v3;
             NumFlag flag = NumFlag::none;
             union {
                 struct {
@@ -57,7 +57,7 @@ namespace utils {
                 } v3_S;
                 long long v3_L = -1;
             };
-            //std::string v3_str;
+            // std::string v3_str;
 
             template <class String>
             bool stringify(String& str) {
@@ -109,7 +109,7 @@ namespace utils {
             wrap::string name;
             wrap::string block;
             wrap::string category;
-            unsigned int ccc = 0;  //Canonical_Combining_Class
+            unsigned int ccc = 0;  // Canonical_Combining_Class
             wrap::string bidiclass;
             wrap::string east_asian_width;
             wrap::string breakcategory;

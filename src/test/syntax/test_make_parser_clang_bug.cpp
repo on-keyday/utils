@@ -10,8 +10,8 @@
 #include "../../include/syntax/make_parser/tokenizer.h"
 #include "../../include/tokenize/fmt/show_current.h"
 
-#include "../../include/wrap/lite/string.h"
-#include "../../include/wrap/lite/map.h"
+#include "../../include/wrap/light/string.h"
+#include "../../include/wrap/light/map.h"
 #include "../../include/wrap/cout.h"
 #include "../../include/wrap/iocommon.h"
 using namespace utils;

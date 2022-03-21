@@ -14,7 +14,7 @@
 #include <cassert>
 #include <cerrno>
 
-#include "../../../include/wrap/lite/vector.h"
+#include "../../../include/wrap/light/vector.h"
 
 namespace utils {
     namespace platform {

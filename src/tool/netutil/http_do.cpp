@@ -13,10 +13,10 @@
 #include "../../include/async/async_macro.h"
 #include "../../include/thread/channel.h"
 #include <execution>
-#include "../../include/wrap/lite/map.h"
+#include "../../include/wrap/light/map.h"
 #include "../../include/net/http/http1.h"
 #include "../../include/net/http2/request_methods.h"
-#include "../../include/wrap/lite/set.h"
+#include "../../include/wrap/light/set.h"
 #include "../../include/testutil/timer.h"
 
 using namespace utils;
@@ -92,14 +92,14 @@ namespace netutil {
     void do_http2(async::Context& ctx, net::AsyncIOClose io, msg_chan chan, size_t id, wrap::vector<UriWithTag> uris, size_t start_index, wrap::vector<net::http::Header> prevhandled) {
         auto host = uris[0].uri.host_port();
         chan << msg(id, "starting http2 request on host ", host, " with scheme https\n");
-        auto res = AWAIT(net::http2::open_async(std::move(io)));
+        auto res = net::http2::open_async(ctx, std::move(io));
         if (!res.conn) {
             chan << msgend(id, "error: negotiate http2 protocol with ", host, " failed\n", "errno: ", res.errcode, "\n");
             return;
         }
         auto settings = {std::pair{net::http2::SettingKey::enable_push, 0},
                          std::pair{net::http2::SettingKey::max_frame_size, 0xffffff}};
-        auto nego = AWAIT(net::http2::negotiate(std::move(res.conn), settings));
+        auto nego = net::http2::negotiate(ctx, std::move(res.conn), settings);
         auto error_with_info = [&](net::http2::UpdateResult& res, auto&&... args) {
             chan << msgend(id, args...,
                            "h2error:", error_msg(res.err), "\n",
@@ -231,7 +231,7 @@ namespace netutil {
                 chan << msg(id, "start request to ", uris[i].uri.to_string(), "\n");
             }
             test::Timer t;
-            auto res = std::move(net::http::request_async(ctx, std::move(io), host.c_str(), "GET", path.c_str(), {}));
+            auto res = net::http::request_async(ctx, std::move(io), host.c_str(), "GET", path.c_str(), {});
             auto d = t.delta();
             if (res.err != net::http::HttpError::none) {
                 chan << msgend(id, "error: http request to ", host, " failed\n",

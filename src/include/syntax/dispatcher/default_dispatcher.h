@@ -9,8 +9,8 @@
 // default_dispatcher - default dispatcher
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
-#include "../../wrap/lite/string.h"
-#include "../../wrap/lite/vector.h"
+#include "../../wrap/light/string.h"
+#include "../../wrap/light/vector.h"
 #include "dispatch_context.h"
 
 namespace utils {

@@ -7,7 +7,7 @@
 
 
 #include <utf/cast.h>
-#include <wrap/lite/string.h>
+#include <wrap/light/string.h>
 
 void test_utfcast() {
     using namespace utils;

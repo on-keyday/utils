@@ -9,8 +9,8 @@
 // token - define token kind
 #pragma once
 
-#include "../wrap/lite/smart_ptr.h"
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/smart_ptr.h"
+#include "../wrap/light/enum.h"
 #include <cstdint>
 
 namespace utils {

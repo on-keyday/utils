@@ -8,7 +8,7 @@
 
 #include "../../include/net_util/cookie.h"
 #include "../../include/net_util/uri.h"
-#include "../../include/wrap/lite/lite.h"
+#include "../../include/wrap/light/lite.h"
 
 void test_cookie() {
     utils::wrap::vector<utils::net::cookie::Cookie<utils::wrap::string>> cookies;

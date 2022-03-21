@@ -22,6 +22,7 @@ namespace utils {
             };
 
             DLL async::Future<H2Response> STDCALL request(wrap::shared_ptr<Context> ctx, http::Header&& h, const wrap::string& data = wrap::string{});
+            DLL H2Response STDCALL request(async::Context& ctx, wrap::shared_ptr<Context> h2ctx, http::Header&& h, const wrap::string& data = wrap::string{});
         }  // namespace http2
     }      // namespace net
 }  // namespace utils

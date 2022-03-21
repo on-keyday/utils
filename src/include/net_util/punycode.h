@@ -13,7 +13,7 @@
 #include "../helper/appender.h"
 #include "../helper/strutil.h"
 #include "../number/char_range.h"
-#include "../wrap/lite/string.h"
+#include "../wrap/light/string.h"
 #include "../utf/view.h"
 #include <limits>
 #include <cstring>

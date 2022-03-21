@@ -9,10 +9,10 @@
 // stream_impl - stream impl
 #pragma once
 #include "../../../include/net/http2/stream.h"
-#include "../../../include/wrap/lite/hash_map.h"
+#include "../../../include/wrap/light/hash_map.h"
 #include "../http/header_impl.h"
 #include "../../../include/number/bitmask.h"
-#include "../../../include/wrap/lite/queue.h"
+#include "../../../include/wrap/light/queue.h"
 
 namespace utils {
     namespace net {

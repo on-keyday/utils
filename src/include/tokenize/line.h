@@ -12,7 +12,7 @@
 #include <cstdint>
 
 #include "../core/sequencer.h"
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 
 namespace utils {
     namespace tokenize {

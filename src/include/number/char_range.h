@@ -10,7 +10,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
-#include "../wrap/lite/enum.h"
+#include "../wrap/light/enum.h"
 
 namespace utils {
     namespace number {

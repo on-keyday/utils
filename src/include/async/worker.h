@@ -9,7 +9,7 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include "../thread/lite_lock.h"
-#include "../wrap/lite/smart_ptr.h"
+#include "../wrap/light/smart_ptr.h"
 #include "task.h"
 #include "coroutine/detect.h"
 

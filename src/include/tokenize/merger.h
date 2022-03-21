@@ -9,7 +9,7 @@
 // merger - define merge contexts
 #pragma once
 #include "merge.h"
-#include "../wrap/lite/string.h"
+#include "../wrap/light/string.h"
 
 namespace utils {
     namespace tokenize {
