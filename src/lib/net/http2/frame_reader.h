@@ -29,7 +29,9 @@ namespace utils {
                     }
 
                     void write(const wrap::string& val, size_t sz) {
-                        str.append(val, 0, sz);
+                        for (size_t i = 0; i < sz; i++) {
+                            str.push_back(val[i]);
+                        }
                     }
                     void write(const Dummy&) {}
                 };

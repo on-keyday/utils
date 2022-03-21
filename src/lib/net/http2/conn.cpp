@@ -72,54 +72,83 @@ namespace utils {
                 return std::move(impl->io);
             }
 
-            async::Future<wrap::shared_ptr<Frame>> Conn::read() {
+            WriteInfo Conn::write_serial(async::Context& ctx, const wrap::string& buf) {
+                return impl->io.write(ctx, buf.c_str(), buf.size());
+            }
+
+            bool Conn::serialize_frame(IBuffer& buf, const Frame& frame) {
+                internal::FrameWriter<IBuffer&> w{buf};
+                H2Error err = encode(&frame, w);
+                if (err != H2Error::none) {
+                    impl->err = err;
+                    return false;
+                }
+                return true;
+            }
+
+            wrap::shared_ptr<Frame> Conn::read(async::Context& ctx) {
                 wrap::shared_ptr<Frame> frame;
                 assert(impl->reader.pos == 0);
                 auto err = decode(impl->reader, frame);
                 if (err == H2Error::none) {
                     impl->reader.tidy();
-                    return {std::move(frame)};
+                    return std::move(frame);
                 }
-                if (!any(err & H2Error::user_defined_bit)) {
-                    impl->err = err;
-                    return nullptr;
-                }
-                impl->reader.pos = 0;
-                return get_pool().start<wrap::shared_ptr<Frame>>([impl = this->impl](async::Context& ctx) {
-                    while (true) {
-                        char tmp[1024];
-                        auto r = impl->io.read(tmp, 1024);
-                        r.wait_until(ctx);
-                        auto got = r.get();
-                        if (got.err) {
-                            impl->errcode = got.err;
-                            impl->err = H2Error::transport;
-                            return;
-                        }
-                        impl->reader.ref.append(tmp, got.read);
-                        auto starts = [&](auto&& v) {
-                            return helper::starts_with(impl->reader.ref, v);
-                        };
-                        if (starts("HTTP") || starts("GET ") || starts("POST") ||
-                            starts("PUT ") || starts("PATCH") || starts("HEAD") ||
-                            starts("TRACE") || starts("CONNECT")) {
-                            impl->err = H2Error::http_1_1_required;
-                            return;
-                        }
-                        assert(impl->reader.pos == 0);
-                        wrap::shared_ptr<Frame> frame;
-                        auto err = decode(impl->reader, frame);
-                        if (err == H2Error::none) {
-                            impl->reader.tidy();
-                            return ctx.set_value(std::move(frame));
-                        }
-                        if (!any(err & H2Error::user_defined_bit)) {
-                            impl->err = err;
-                            return;
-                        }
-                        impl->reader.pos = 0;
+                while (true) {
+                    char tmp[1024];
+                    auto r = impl->io.read(tmp, 1024);
+                    r.wait_until(ctx);
+                    auto got = r.get();
+                    if (got.err) {
+                        impl->errcode = got.err;
+                        impl->err = H2Error::transport;
+                        return nullptr;
                     }
+                    impl->reader.ref.append(tmp, got.read);
+                    auto starts = [&](auto&& v) {
+                        return helper::starts_with(impl->reader.ref, v);
+                    };
+                    if (starts("HTTP") || starts("GET ") || starts("POST") ||
+                        starts("PUT ") || starts("PATCH") || starts("HEAD") ||
+                        starts("TRACE") || starts("CONNECT")) {
+                        impl->err = H2Error::http_1_1_required;
+                        return nullptr;
+                    }
+                    assert(impl->reader.pos == 0);
+                    wrap::shared_ptr<Frame> frame;
+                    auto err = decode(impl->reader, frame);
+                    if (err == H2Error::none) {
+                        impl->reader.tidy();
+                        return std::move(frame);
+                    }
+                    if (!any(err & H2Error::user_defined_bit)) {
+                        impl->err = err;
+                        return nullptr;
+                    }
+                    impl->reader.pos = 0;
+                }
+            }
+
+            async::Future<wrap::shared_ptr<Frame>> Conn::read() {
+                return get_pool().start<wrap::shared_ptr<Frame>>([this](async::Context& ctx) {
+                    return this->read(ctx);
                 });
+            }
+
+            bool Conn::write(async::Context& ctx, const Frame& frame) {
+                internal::FrameWriter w;
+                H2Error err = encode(&frame, w);
+                if (err != H2Error::none) {
+                    impl->err = err;
+                    return false;
+                }
+                auto got = impl->io.write(ctx, w.str.c_str(), w.str.size());
+                if (got.err) {
+                    impl->errcode = got.err;
+                    impl->err = H2Error::transport;
+                    return false;
+                }
+                return true;
             }
 
             async::Future<bool> Conn::write(const Frame& frame) {

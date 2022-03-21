@@ -128,7 +128,7 @@ namespace utils {
 
             UpdateResult STDCALL send_header_async(async::Context& ctx, const wrap::shared_ptr<Context>& h2ctx, http::Header h, bool end_stream) {
                 HeaderFrame frame{0};
-                wrap::string remain;
+                wrap::string remain, buffer;
                 if (!h2ctx->state.make_header(std::move(h), frame, remain)) {
                     return UpdateResult{
                         .err = H2Error::internal,
@@ -139,7 +139,8 @@ namespace utils {
                 if (end_stream) {
                     frame.flag |= Flag::end_stream;
                 }
-                auto r = AWAIT(h2ctx->write(frame));
+
+                auto r = h2ctx->serialize_frame(&buffer, frame);
                 if (r.err != H2Error::none) {
                     return std::move(r);
                 }
@@ -152,11 +153,13 @@ namespace utils {
                             .id = frame.id,
                         };
                     }
-                    r = AWAIT(h2ctx->write(cont));
+
+                    r = h2ctx->serialize_frame(&buffer, frame);
                     if (r.err != H2Error::none) {
                         return std::move(r);
                     }
                 }
+
                 return {.id = frame.id};
             }
 

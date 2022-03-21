@@ -45,6 +45,9 @@ namespace utils {
             friend internal::SSLSet;
             async::Future<ReadInfo> read(char* ptr, size_t size);
             async::Future<WriteInfo> write(const char* ptr, size_t size);
+
+            ReadInfo read(async::Context& ctx, char* ptr, size_t size);
+            WriteInfo write(async::Context& ctx, const char* ptr, size_t size);
             State close(bool force);
 
             void* get_raw_ssl();

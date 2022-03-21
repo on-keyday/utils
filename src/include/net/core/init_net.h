@@ -24,5 +24,6 @@ namespace utils {
 
         DLL Init& STDCALL network();
 
+        DLL int STDCALL errcode();
     }  // namespace net
 }  // namespace utils

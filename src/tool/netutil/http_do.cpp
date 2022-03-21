@@ -97,7 +97,8 @@ namespace netutil {
             chan << msgend(id, "error: negotiate http2 protocol with ", host, " failed\n", "errno: ", res.errcode, "\n");
             return;
         }
-        auto settings = {std::pair{net::http2::SettingKey::enable_push, 0}};
+        auto settings = {std::pair{net::http2::SettingKey::enable_push, 0},
+                         std::pair{net::http2::SettingKey::max_frame_size, 0xffffff}};
         auto nego = AWAIT(net::http2::negotiate(std::move(res.conn), settings));
         auto error_with_info = [&](net::http2::UpdateResult& res, auto&&... args) {
             chan << msgend(id, args...,
@@ -307,6 +308,7 @@ namespace netutil {
                 chan << msg(id, "starting ssl negoitiation\n");
             }
             const char* alpn = *h2proto ? "\x02h2\x08http/1.1" : "\x08http/1.1";
+            delta.reset();
             auto ssl = AWAIT(net::open_async(std::move(tcp.conn), cacert->c_str(), alpn));
             if (!ssl.conn) {
                 chan << msgend(
@@ -315,6 +317,9 @@ namespace netutil {
                     "sslerror: ", ssl.errcode, "\n",
                     "errno:", ssl.transporterr, "\n");
                 return;
+            }
+            if (*show_timer) {
+                chan << timermsg(id, uri.host_port(), " ssl connection delta ", delta.delta().count(), "ms\n");
             }
             auto conn = ssl.conn;
             auto selected = conn->alpn_selected(nullptr);

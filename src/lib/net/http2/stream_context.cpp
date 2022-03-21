@@ -64,6 +64,25 @@ namespace utils {
                     ctx, std::move(f));
             }
 
+            UpdateResult Context::serialize_frame(IBuffer buf, const Frame& frame) {
+                if (auto e = state.update_send(frame); e.err != H2Error::none) {
+                    return e;
+                }
+                if (!io->serialize_frame(buf, frame)) {
+                    return UpdateResult{
+                        .err = io->get_error(),
+                        .detail = StreamError::writing_frame,
+                        .id = io->get_errorcode(),
+                    };
+                }
+                return {};
+            }
+
+            bool Context::write_serial(async::Context& ctx, const wrap::string& buf) {
+                io->write_serial(ctx, buf);
+                return true;
+            }
+
             async::Future<UpdateResult> Context::write(const Frame& frame) {
                 if (auto e = state.update_send(frame); e.err != H2Error::none) {
                     return e;

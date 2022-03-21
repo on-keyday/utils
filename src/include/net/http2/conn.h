@@ -27,6 +27,10 @@ namespace utils {
                 friend DLL async::Future<OpenResult> STDCALL open_async(AsyncIOClose&& io);
                 async::Future<wrap::shared_ptr<Frame>> read();
                 async::Future<bool> write(const Frame& frame);
+                wrap::shared_ptr<Frame> read(async::Context& ctx);
+                bool write(async::Context& ctx, const Frame& frame);
+                bool serialize_frame(IBuffer& buf, const Frame& frame);
+                WriteInfo write_serial(async::Context& ctx, const wrap::string& buf);
                 State close(bool force = false);
 
                 AsyncIOClose get_io();

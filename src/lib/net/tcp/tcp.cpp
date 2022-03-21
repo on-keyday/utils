@@ -166,71 +166,89 @@ namespace utils {
             return impl->sock;
         }
 
+        ReadInfo TCPConn::read(async::Context& ctx, char* ptr, size_t size) {
+            if (!ptr || !size) {
+                return {.err = -1};
+            }
+            ReadInfo info;
+            info.byte = ptr;
+            info.size = size;
+#ifdef _WIN32
+            ::WSABUF buf;
+            buf.buf = ptr;
+            buf.len = size;
+            ::DWORD red, flag;
+            internal::tcp_iocp_init(impl->sock, &impl->iocp);
+            impl->iocp.info = &info;
+            impl->iocp.f = ctx.clone();
+            auto res = ::WSARecv(impl->sock, &buf, 1, &red, &flag, &impl->iocp.ol, nullptr);
+            if (res == SOCKET_ERROR) {
+                auto err = ::WSAGetLastError();
+                if (err != WSA_IO_PENDING) {
+                    info.err = err;
+                    return info;
+                }
+            }
+            ctx.externaltask_wait();  // wait io completion
+            impl->iocp.info = nullptr;
+            impl->iocp.f.clear();
+            return info;
+#else
+            impl->pol.f = ctx.clone();
+            while (true) {
+                auto err = ::recv(impl->sock, ptr, size, 0);
+                if (err == -1) {
+                    if (errno == EWOULDBLOCK) {
+                        ctx.externaltask_wait();
+                        continue;
+                    }
+                    info.err = errno;
+                    return info;
+                }
+                return info;
+            }
+#endif
+        }
+
+        WriteInfo TCPConn::write(async::Context& ctx, const char* ptr, size_t size) {
+            if (!ptr || !size) {
+                return {.err = -1};
+            }
+            auto t = write(ptr, size, nullptr);
+            while (t != State::complete) {
+                if (t == State::failed) {
+                    return {
+                        .byte = ptr,
+                        .size = size,
+                        .err = errcode(),
+                    };
+                }
+                t = write(ptr, size, nullptr);
+            }
+            return WriteInfo{.byte = ptr, .size = size, .written = size};
+        }
+
         async::Future<ReadInfo> TCPConn::read(char* ptr, size_t size) {
             if (!ptr || !size) {
-                return nullptr;
+                return ReadInfo{.err = -1};
             }
-            return get_pool().start<ReadInfo>([=, this, lock = impl->conn.lock()](async::Context& ctx) {
-                ReadInfo info;
-                info.byte = ptr;
-                info.size = size;
-#ifdef _WIN32
-                ::WSABUF buf;
-                buf.buf = ptr;
-                buf.len = size;
-                ::DWORD red, flag;
-                internal::tcp_iocp_init(impl->sock, &impl->iocp);
-
-                impl->iocp.info = &info;
-                impl->iocp.f = ctx.clone();
-                auto res = ::WSARecv(impl->sock, &buf, 1, &red, &flag, &impl->iocp.ol, nullptr);
-                if (res == SOCKET_ERROR) {
-                    auto err = ::WSAGetLastError();
-                    if (err != WSA_IO_PENDING) {
-                        info.err = err;
-                        ctx.set_value(info);
-                        return;
-                    }
-                }
-                ctx.externaltask_wait();
-                impl->iocp.info = nullptr;
-                impl->iocp.f.clear();
-                ctx.set_value(info);
-#else
-                impl->pol.f = ctx.clone();
-                while (true) {
-                    auto err = ::recv(impl->sock, ptr, size, 0);
-                    if (err == -1) {
-                        if (errno == EWOULDBLOCK) {
-                            ctx.externaltask_wait();
-                            continue;
-                        }
-                        info.err = errno;
-                        return ctx.set_value(info);
-                    }
-                    return ctx.set_value(info);
-                }
-#endif
+            return net::start([=, this, lock = impl->conn.lock()](async::Context& ctx) {
+                return this->read(ctx, ptr, size);
             });
         }
 
         async::Future<WriteInfo> TCPConn::write(const char* ptr, size_t size) {
             if (!ptr || !size) {
-                return nullptr;
+                return WriteInfo{.err = -1};
             }
             auto t = write(ptr, size, nullptr);
             while (t != State::complete) {
+                if (t == State::failed) {
+                    return async::Future{WriteInfo{.byte = ptr, .size = size, .err = errcode()}};
+                }
                 t = write(ptr, size, nullptr);
             }
-            if (t == State::failed) {
-                return async::Future{WriteInfo{.byte = ptr, .size = size, .err =
-#ifdef _WIN32
-                                                                              (int)::GetLastError()
-#else
-                                                                              errno
-#endif
-                }};
-            }
+
             return async::Future{WriteInfo{.byte = ptr, .size = size, .written = size}};
         }
 

@@ -99,7 +99,7 @@ namespace utils {
                public:
                 friend DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
                 friend DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
-                friend DLL async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+                friend DLL HttpAsyncResult STDCALL request_async(async::Context&, AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
                 Header();
 
                 Header& set(const char* key, const char* value);
@@ -123,6 +123,7 @@ namespace utils {
             DLL HttpResponse STDCALL request(IOClose&& io, const char* host, const char* method, const char* path, Header&& header);
             DLL HttpResponse STDCALL request(HttpResponse&& io, const char* method, const char* path, Header&& header);
             DLL async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
+            DLL HttpAsyncResult STDCALL request_async(async::Context& ctx, AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header);
 
             inline bool is_redirect_range(std::uint16_t status) {
                 return status >= 300 && status < 400;

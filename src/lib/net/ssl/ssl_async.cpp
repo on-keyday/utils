@@ -24,15 +24,12 @@ namespace utils {
                     }
                 }
                 read_from_ssl(buffer);
-                auto w = io.write(buffer.c_str(), buffer.size());
-                w.wait_until(ctx);
-                if (auto got = w.get(); got.err) {
+                auto got = io.write(ctx, buffer.c_str(), buffer.size());
+                if (got.err) {
                     return got.err;
                 }
-                buffer.resize(1024);
-                auto recv = io.read(buffer.data(), 1024);
-                recv.wait_until(ctx);
-                auto data = recv.get();
+                buffer.resize(2048);
+                auto data = io.read(ctx, buffer.data(), buffer.size());
                 if (data.err) {
                     return data.err;
                 }
@@ -62,30 +59,9 @@ namespace utils {
             if (!ptr || !size) {
                 return nullptr;
             }
-            return get_pool().start<ReadInfo>(
-                [=, this, lock = impl->conn.lock()](async::Context& ctx) {
-                    size_t red = 0;
-                    while (!::SSL_read_ex(impl->ssl, ptr, size, &red)) {
-                        if (need_io(impl->ssl)) {
-                            if (auto err = impl->do_IO(ctx); err != 0) {
-                                ctx.set_value(ReadInfo{
-                                    .byte = ptr,
-                                    .size = size,
-                                    .err = err,
-                                });
-                                return;
-                            }
-                            continue;
-                        }
-                        ctx.set_value(ReadInfo{
-                            .byte = ptr,
-                            .size = size,
-                            .err = ::SSL_get_error(impl->ssl, -1),
-                        });
-                        return;
-                    }
-                    ctx.set_value(ReadInfo{.byte = ptr, .size = size, .read = red});
-                });
+            return net::start([=, this, lock = impl->conn.lock()](async::Context& ctx) {
+                return this->read(ctx, ptr, size);
+            });
         }
 
         void* SSLAsyncConn::get_raw_ssl() {
@@ -102,35 +78,61 @@ namespace utils {
             return impl->ctx;
         }
 
+        ReadInfo SSLAsyncConn::read(async::Context& ctx, char* ptr, size_t size) {
+            size_t red = 0;
+            while (!::SSL_read_ex(impl->ssl, ptr, size, &red)) {
+                if (need_io(impl->ssl)) {
+                    if (auto err = impl->do_IO(ctx); err != 0) {
+                        return {
+                            .byte = ptr,
+                            .size = size,
+                            .err = err,
+                        };
+                    }
+                    continue;
+                }
+                return {
+                    .byte = ptr,
+                    .size = size,
+                    .err = ::SSL_get_error(impl->ssl, -1),
+                };
+            }
+            return {
+                .byte = ptr,
+                .size = size,
+                .read = red,
+            };
+        }
+
+        WriteInfo SSLAsyncConn::write(async::Context& ctx, const char* ptr, size_t size) {
+            size_t w = 0;
+            while (!::SSL_write_ex(impl->ssl, ptr, size, &w)) {
+                if (need_io(impl->ssl)) {
+                    if (auto err = impl->do_IO(ctx); err != 0) {
+                        return {
+                            .byte = ptr,
+                            .size = size,
+                            .err = err,
+                        };
+                    }
+                    continue;
+                }
+                return {
+                    .byte = ptr,
+                    .size = size,
+                    .err = ::SSL_get_error(impl->ssl, -1),
+                };
+            }
+            return {.byte = ptr, .size = size, .written = w};
+        }
+
         async::Future<WriteInfo> SSLAsyncConn::write(const char* ptr, size_t size) {
             if (!ptr || !size) {
                 return nullptr;
             }
-            return get_pool().start<WriteInfo>(
-                [=, this, lock = impl->conn.lock()](async::Context& ctx) {
-                    size_t w = 0;
-                    while (!::SSL_write_ex(impl->ssl, ptr, size, &w)) {
-                        if (need_io(impl->ssl)) {
-                            if (auto err = impl->do_IO(ctx); err != 0) {
-                                ctx.set_value(WriteInfo{
-                                    .byte = ptr,
-                                    .size = size,
-                                    .err = err,
-                                });
-                                return;
-                            }
-                            continue;
-                        }
-                        ctx.set_value(WriteInfo{
-                            .byte = ptr,
-                            .size = size,
-                            .err = ::SSL_get_error(impl->ssl, -1),
-                        });
-                        SSL_ERROR_SSL;
-                        return;
-                    }
-                    ctx.set_value(WriteInfo{.byte = ptr, .size = size, .written = w});
-                });
+            return net::start([=, this, lock = impl->conn.lock()](async::Context& ctx) {
+                return this->write(ctx, ptr, size);
+            });
         }
 
         SSLAsyncError common_setup_async(internal::SSLAsyncImpl* impl, AsyncIOClose&& io, const char* cert, const char* alpn, const char* host,

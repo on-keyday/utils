@@ -133,6 +133,9 @@ namespace utils {
                 wrap::shared_ptr<Conn> io;
                 async::Future<UpdateResult> write(const Frame& frame);
                 async::Future<ReadResult> read();
+
+                UpdateResult serialize_frame(IBuffer buf, const Frame& frame);
+                bool write_serial(async::Context& ctx, const wrap::string& buf);
             };
 
             struct NegotiateResult {

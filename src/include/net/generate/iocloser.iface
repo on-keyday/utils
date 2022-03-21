@@ -32,6 +32,8 @@ interface IO {
 interface AsyncIOClose {
     read(ptr *char,size size_t) async::Future<ReadInfo>
     write(ptr *const char,size size_t) async::Future<WriteInfo>
+    read(ctx &async::Context,ptr *char,size size_t) ReadInfo
+    write(ctx &async::Context,ptr *const char,size size_t) WriteInfo
     close(force bool) State
     decltype() type
 }

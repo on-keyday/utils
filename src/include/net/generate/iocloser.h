@@ -284,6 +284,8 @@ struct AsyncIOClose {
     struct NOVTABLE__ interface__ {
         virtual async::Future<ReadInfo> read(char* ptr, size_t size) = 0;
         virtual async::Future<WriteInfo> write(const char* ptr, size_t size) = 0;
+        virtual ReadInfo read(async::Context& ctx, char* ptr, size_t size) = 0;
+        virtual WriteInfo write(async::Context& ctx, const char* ptr, size_t size) = 0;
         virtual State close(bool force) = 0;
         virtual const void* raw__(const std::type_info&) const noexcept = 0;
 
@@ -312,6 +314,22 @@ struct AsyncIOClose {
                 return async::Future<WriteInfo>{};
             }
             return t_ptr_->write(ptr, size);
+        }
+
+        ReadInfo read(async::Context& ctx, char* ptr, size_t size) override {
+            auto t_ptr_ = utils::helper::deref(this->t_holder_);
+            if (!t_ptr_) {
+                return ReadInfo{};
+            }
+            return t_ptr_->read(ctx, ptr, size);
+        }
+
+        WriteInfo write(async::Context& ctx, const char* ptr, size_t size) override {
+            auto t_ptr_ = utils::helper::deref(this->t_holder_);
+            if (!t_ptr_) {
+                return WriteInfo{};
+            }
+            return t_ptr_->write(ctx, ptr, size);
         }
 
         State close(bool force) override {
@@ -378,6 +396,14 @@ struct AsyncIOClose {
 
     async::Future<WriteInfo> write(const char* ptr, size_t size) {
         return iface?iface->write(ptr, size):async::Future<WriteInfo>{};
+    }
+
+    ReadInfo read(async::Context& ctx, char* ptr, size_t size) {
+        return iface?iface->read(ctx, ptr, size):ReadInfo{};
+    }
+
+    WriteInfo write(async::Context& ctx, const char* ptr, size_t size) {
+        return iface?iface->write(ctx, ptr, size):WriteInfo{};
     }
 
     State close(bool force) {

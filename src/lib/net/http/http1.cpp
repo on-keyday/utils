@@ -298,107 +298,108 @@ namespace utils {
                 return std::move(io);
             }
 
-            async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
+            HttpAsyncResult STDCALL request_async(async::Context& ctx, AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
                 if (!io || !host || !method || !path || !header) {
                     return HttpAsyncResult{
                         .err = HttpError::invalid_arg};
                 }
                 wrap::string buf;
                 if (!render_request(buf, host, method, path, *header.impl)) {
-                    return nullptr;
+                    return {.err = HttpError::invalid_arg};
                 }
                 bool req_is_head = helper::equal(method, "HEAD");
                 auto impl = new internal::HttpAsyncResponseImpl{};
                 impl->io = std::move(io);
                 impl->reqests = std::move(buf);
                 impl->hostname = host;
-                return start([impl, req_is_head](async::Context& ctx) -> HttpAsyncResult {
-                    struct Defer {
-                        decltype(impl) ptr;
-                        bool no_del = false;
-                        ~Defer() {
-                            if (!no_del) {
-                                delete ptr;
-                            }
-                        }
-                    } def{impl};
-                    auto w = impl->io.write(impl->reqests.c_str(), impl->reqests.size());
-                    w.wait_until(ctx);
-                    auto got = w.get();
-                    if (got.err) {
-                        return {.err = HttpError::write_request, .base_err = got.err};
-                    }
-                    wrap::string buf;
-                    auto seq = make_ref_seq(buf);
-                    size_t red = 0;
-                    wrap::string recvbuf;
-                    auto read_one = [&](size_t reqsize = 1024) {
-                        recvbuf.resize(reqsize == 0 ? 1024 : reqsize);
-                        auto r = impl->io.read(recvbuf.data(), recvbuf.size());
-                        r.wait_until(ctx);
-                        auto data = r.get();
-                        if (data.err) {
-                            return data.err;
-                        }
-                        buf.append(recvbuf, 0, data.read);
-                        red = data.read;
-                        return 0;
-                    };
-                    while (true) {
-                        if (auto err = read_one(); err != 0) {
-                            return {.err = HttpError::read_header, .base_err = err};
-                        }
-                        if (!helper::starts_with(buf, "HTTP/1.1")) {
-                            return {.err = HttpError::not_http_response, .base_err = -1};
-                        }
-                        while (seq.rptr < buf.size()) {
-                            if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
-                                seq.seek_if("\r\r")) {
-                                goto HEADER_RECVED;
-                            }
-                            seq.consume();
+                struct Defer {
+                    decltype(impl) ptr;
+                    bool no_del = false;
+                    ~Defer() {
+                        if (!no_del) {
+                            delete ptr;
                         }
                     }
-                HEADER_RECVED:
-                    seq.rptr = 0;
-                    auto resp = internal::HttpSet::get(impl->response);
-                    if (!h1header::parse_response<wrap::string>(seq, helper::nop, resp->code, helper::nop, *resp,
-                                                                h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
-                        return {.err = HttpError::invalid_header};
+                } def{impl};
+                auto got = impl->io.write(ctx, impl->reqests.c_str(), impl->reqests.size());
+                if (got.err) {
+                    return {.err = HttpError::write_request, .base_err = got.err};
+                }
+                auto seq = make_ref_seq(buf);
+                size_t red = 0;
+                wrap::string recvbuf;
+                auto read_one = [&](size_t reqsize = 1024) {
+                    recvbuf.resize(reqsize == 0 ? 1024 : reqsize);
+                    auto data = impl->io.read(ctx, recvbuf.data(), recvbuf.size());
+                    if (data.err) {
+                        return data.err;
                     }
-                    auto rem = seq.remain();
-                    if (impl->expect) {
-                        resp->body.reserve(impl->expect);
+                    buf.append(recvbuf, 0, data.read);
+                    red = data.read;
+                    return 0;
+                };
+                while (true) {
+                    if (auto err = read_one(); err != 0) {
+                        return {.err = HttpError::read_header, .base_err = err};
                     }
-                    if (impl->bodytype == h1body::BodyType::no_info) {
-                        if (!req_is_head || !seq.eos()) {
-                            while (red == 1024) {
-                                if (auto err = read_one(); err != 0) {
-                                    return {.err = HttpError::read_body, .base_err = err};
-                                }
+                    if (!helper::starts_with(buf, "HTTP/1.1")) {
+                        return {.err = HttpError::not_http_response, .base_err = -1};
+                    }
+                    while (seq.rptr < buf.size()) {
+                        if (seq.seek_if("\r\n\r\n") || seq.seek_if("\n\n") ||
+                            seq.seek_if("\r\r")) {
+                            goto HEADER_RECVED;
+                        }
+                        seq.consume();
+                    }
+                }
+            HEADER_RECVED:
+                seq.rptr = 0;
+                auto resp = internal::HttpSet::get(impl->response);
+                if (!h1header::parse_response<wrap::string>(seq, helper::nop, resp->code, helper::nop, *resp,
+                                                            h1body::bodyinfo_preview(impl->bodytype, impl->expect))) {
+                    return {.err = HttpError::invalid_header};
+                }
+                auto rem = seq.remain();
+                if (impl->expect) {
+                    resp->body.reserve(impl->expect);
+                }
+                if (impl->bodytype == h1body::BodyType::no_info) {
+                    if (!req_is_head || !seq.eos()) {
+                        while (red == 1024) {
+                            if (auto err = read_one(); err != 0) {
+                                return {.err = HttpError::read_body, .base_err = err};
                             }
                         }
                     }
-                    while (true) {
-                        auto res = h1body::read_body(resp->body, seq, impl->expect, impl->bodytype);
-                        if (res == State::failed) {
-                            return {.err = HttpError::invalid_body};
-                        }
-                        if (res == State::complete) {
-                            break;
-                        }
-                        if (seq.eos() && req_is_head) {
-                            break;
-                        }
-                        if (auto err = read_one(impl->expect); err != 0) {
-                            return {.err = HttpError::read_body, .base_err = err};
-                        }
+                }
+                while (true) {
+                    auto res = h1body::read_body(resp->body, seq, impl->expect, impl->bodytype);
+                    if (res == State::failed) {
+                        return {.err = HttpError::invalid_body};
                     }
-                    HttpAsyncResponse res;
-                    internal::HttpSet::set(res, impl);
-                    def.no_del = true;
-                    return {.resp = std::move(res)};
-                });
+                    if (res == State::complete) {
+                        break;
+                    }
+                    if (seq.eos() && req_is_head) {
+                        break;
+                    }
+                    if (auto err = read_one(impl->expect); err != 0) {
+                        return {.err = HttpError::read_body, .base_err = err};
+                    }
+                }
+                HttpAsyncResponse res;
+                internal::HttpSet::set(res, impl);
+                def.no_del = true;
+                return {.resp = std::move(res)};
+            }
+
+            async::Future<HttpAsyncResult> STDCALL request_async(AsyncIOClose&& io, const char* host, const char* method, const char* path, Header&& header) {
+                return net::start(
+                    [](async::Context& ctx, auto... args) {
+                        return request_async(ctx, std::forward<decltype(args)>(args)...);
+                    },
+                    std::move(io), host, method, path, std::move(header));
             }
 
             HttpAsyncResponse::~HttpAsyncResponse() {
