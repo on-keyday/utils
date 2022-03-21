@@ -85,6 +85,7 @@ add_executable(asynctcp2 "src/test/net/async/test_asynctcp2.cpp")
 add_executable(http2base "src/test/net/async/test_http2base.cpp")
 add_executable(http2protocol "src/test/net/async/test_http2protocol.cpp")
 add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cpp")
+#add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
