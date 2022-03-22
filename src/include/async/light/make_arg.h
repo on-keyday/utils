@@ -77,6 +77,7 @@ namespace utils {
             struct Args<One, Other...> {
                 AnArg<One> one;
                 Args<Other...> other;
+                constexpr Args() {}
                 template <class T, class... V>
                 constexpr Args(T&& one, Args<V...>&& v)
                     : one(std::forward<T>(one)), other(std::forward<Args<V...>>(v)) {}
@@ -141,6 +142,45 @@ namespace utils {
             template <class One, class... Arg>
             auto make_arg(One&& one, Arg&&... arg) {
                 return Args<arg_t<One>, arg_t<Arg>...>{std::forward<One>(one), make_arg(std::forward<Arg>(arg)...)};
+            }
+
+            template <class Ret, class Fn, class... Arg>
+            struct FuncRecord {
+                Fn fn;
+                Args<Arg...> args;
+                Args<Ret> retobj;
+
+                constexpr FuncRecord(FuncRecord&& rec)
+                    : fn(std::forward<Fn>(rec.fn)),
+                      args(std::forward<Args<Arg...>>(rec.args)),
+                      retobj(std::forward<Args<Ret>>(rec.retobj)) {}
+
+                constexpr FuncRecord(Fn&& in, Arg&&... arg)
+                    : fn(std::forward<Fn>(in)),
+                      args(make_arg(std::forward<Arg>(arg)...)) {
+                }
+
+                void execute() {
+                    if constexpr (std::is_same_v<Ret, void>) {
+                        args.invoke(fn);
+                    }
+                    else {
+                        retobj = args.invoke(fn);
+                    }
+                }
+
+                void operator()() {
+                    execute();
+                }
+            };
+
+            template <class Fn, class... Arg>
+            constexpr auto make_funcrecord(Fn&& fn, Arg&&... arg) {
+                using invoke_res = decltype(std::declval<Args<arg_t<Arg>...>>().invoke(std::declval<Fn>()));
+                return FuncRecord<invoke_res, std::decay_t<Fn>, arg_t<Arg>...>{
+                    std::forward<Fn>(fn),
+                    std::forward<Arg>(arg)...,
+                };
             }
 
         }  // namespace light

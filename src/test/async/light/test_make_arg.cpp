@@ -27,8 +27,11 @@ void test_make_arg(V& arg) {
     a.invoke([](int&& m, int& n, const double& f) {
         auto arg = make_arg(std::move(m), n, f);
     });
-    auto record = make_funcrecord([](int) {}, object);
-    record.execute();
+    auto record = make_funcrecord([](int) {
+        return false;
+    },
+                                  object);
+
     auto ptr = std::make_shared<decltype(record)>(std::move(record));
 }
 
