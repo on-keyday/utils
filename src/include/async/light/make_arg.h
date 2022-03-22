@@ -69,7 +69,7 @@ namespace utils {
             struct Args<void> {
                 template <size_t index, size_t current>
                 constexpr void get() const {
-                    static_assert(index != current, "void but require after value");
+                    static_assert(index != current, "void but require more value");
                 }
             };
 
