@@ -6,9 +6,19 @@
 */
 
 
-#include <async/light/context.h>
+#include <async/light/make_arg.h>
 using namespace utils::async::light;
 
-int test_make_arg() {
-    make_arg(9, "");
+struct V {
+    int val;
+    int v;
+};
+
+const auto& as_const(auto& v) {
+    return v;
+}
+
+void test_make_arg(V& arg) {
+    int object = 0;
+    auto m = make_arg(9, "", object, arg, "");
 }
