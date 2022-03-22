@@ -9,6 +9,7 @@
 // make_arg - make argument object
 #pragma once
 #include <type_traits>
+#include <memory>
 
 namespace utils {
     namespace async {
@@ -16,10 +17,18 @@ namespace utils {
             template <class... InArg>
             struct Args;
 
+            enum class ArgTrait {
+                normal,
+                lref,
+                ptr,
+                void_,
+            };
+
             template <class T>
             struct AnArg {
                 using remref_t = std::remove_cvref_t<T>;
                 remref_t value;
+                static constexpr ArgTrait traits = ArgTrait::normal;
 
                 constexpr AnArg() {}
                 constexpr AnArg(T t)
@@ -33,6 +42,8 @@ namespace utils {
             template <class T>
             struct AnArg<T*> {
                 T* value;
+
+                static constexpr ArgTrait traits = ArgTrait::ptr;
                 constexpr AnArg() {}
                 constexpr AnArg(T* t)
                     : value(t) {}
@@ -44,6 +55,8 @@ namespace utils {
             template <class T>
             struct AnArg<T&> {
                 T* value;
+
+                static constexpr ArgTrait traits = ArgTrait::lref;
                 constexpr AnArg() {}
                 constexpr AnArg(T& t)
                     : value(std::addressof(t)) {}

@@ -12,6 +12,7 @@
 #include "conn.h"
 #include "../http/http1.h"
 #include "../../endian/endian.h"
+#include "../async/pool.h"
 
 namespace utils {
     namespace net {

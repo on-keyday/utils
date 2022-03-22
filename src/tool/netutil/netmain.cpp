@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "crtdbg.h"
+
 #include "subcommand.h"
 #include "../../include/wrap/argv.h"
 #include "../../include/testutil/alloc_hook.h"

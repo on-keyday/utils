@@ -18,6 +18,7 @@
 #include "../../include/net/http2/request_methods.h"
 #include "../../include/wrap/light/set.h"
 #include "../../include/testutil/timer.h"
+#include <thread>
 
 using namespace utils;
 namespace netutil {
