@@ -7,6 +7,7 @@
 
 
 #include <async/light/make_arg.h>
+#include <async/light/context.h>
 using namespace utils::async::light;
 
 struct V {
@@ -22,8 +23,14 @@ void test_make_arg(V& arg) {
     int object = 0;
     auto m = make_arg(9, "hello", std::move(object), arg, "boke");
     auto a = make_arg(as_const(object), object, 0.3);
-    a.invoke([](int m, int n, double f) {
+    a.invoke([](int&& m, int& n, const double& f) {
+        auto arg = make_arg(std::move(m), n, f);
     });
+    auto record = make_funcrecord([]() {});
+    record.execute();
 }
 
-int main() {}
+int main() {
+    V v;
+    test_make_arg(v);
+}

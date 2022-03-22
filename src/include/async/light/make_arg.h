@@ -42,20 +42,6 @@ namespace utils {
             };
 
             template <class T>
-            struct AnArg<const T> {
-                using remref_t =
-                    std::remove_cvref_t<T>;
-                remref_t value;
-                constexpr AnArg() {}
-                constexpr AnArg(const T& t)
-                    : value(t) {}
-
-                constexpr const remref_t& get() {
-                    return value;
-                }
-            };
-
-            template <class T>
             struct AnArg<T&> {
                 T* value;
                 constexpr AnArg() {}
@@ -71,6 +57,11 @@ namespace utils {
                 constexpr Args() {}
                 constexpr size_t size() const {
                     return 0;
+                }
+
+                template <class Fn>
+                constexpr decltype(auto) invoke(Fn&& fn) {
+                    return fn();
                 }
             };
 
@@ -116,7 +107,7 @@ namespace utils {
 
                public:
                 template <class Fn>
-                constexpr auto invoke(Fn&& fn) {
+                constexpr decltype(auto) invoke(Fn&& fn) {
                     return invoke_fn_impl(fn, invoke_sequence());
                 }
             };
@@ -125,7 +116,7 @@ namespace utils {
             Args(One, Args<Arg...>) -> Args<One, Arg...>;
 
             template <class T>
-            struct array_to_pointer {
+            struct arg_cast {
                 static constexpr bool is_array = std::is_array_v<std::remove_reference_t<T>>;
                 static constexpr bool is_not_pointer = !std::is_pointer_v<std::remove_reference_t<T>>;
                 using Target = std::remove_extent_t<std::remove_reference_t<T>>*;
@@ -141,7 +132,7 @@ namespace utils {
             };
 
             template <class T>
-            using array_to_pointer_t = typename array_to_pointer<T>::type;
+            using arg_t = typename arg_cast<T>::type;
 
             auto make_arg() {
                 return Args<>{};
@@ -149,7 +140,7 @@ namespace utils {
 
             template <class One, class... Arg>
             auto make_arg(One&& one, Arg&&... arg) {
-                return Args<array_to_pointer_t<One>, array_to_pointer_t<Arg>...>{std::forward<One>(one), make_arg(std::forward<Arg>(arg)...)};
+                return Args<arg_t<One>, arg_t<Arg>...>{std::forward<One>(one), make_arg(std::forward<Arg>(arg)...)};
             }
 
         }  // namespace light
