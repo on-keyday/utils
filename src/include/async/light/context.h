@@ -8,6 +8,7 @@
 
 // context - light context
 #pragma once
+#include "make_arg.h"
 
 namespace utils {
     namespace async {
@@ -21,6 +22,17 @@ namespace utils {
             struct ASYNC_NO_VTABLE_ Executor {
                 virtual void execute(Context) = 0;
                 virtual ~Executor() {}
+            };
+
+            template <class Fn, class Ret, class... Arg>
+            struct FuncRecord {
+                Fn fn;
+                Args<Arg...> args;
+                Args<Ret> retobj;
+
+                virtual void invoke() {
+                    retobj = args.invoke(fn);
+                }
             };
 
             struct Context {

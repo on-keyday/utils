@@ -20,6 +20,33 @@ namespace utils {
             struct AnArg {
                 using remref_t = std::remove_cvref_t<T>;
                 remref_t value;
+
+                constexpr AnArg() {}
+                constexpr AnArg(T t)
+                    : value(std::move(t)) {}
+
+                constexpr remref_t&& get() {
+                    return std::move(value);
+                }
+            };
+
+            template <class T>
+            struct AnArg<T*> {
+                T* value;
+                constexpr AnArg() {}
+                constexpr AnArg(T* t)
+                    : value(t) {}
+                constexpr T* get() {
+                    return value;
+                }
+            };
+
+            template <class T>
+            struct AnArg<const T> {
+                using remref_t =
+                    std::remove_cvref_t<T>;
+                remref_t value;
+                constexpr AnArg() {}
                 constexpr AnArg(const T& t)
                     : value(t) {}
 
@@ -29,32 +56,9 @@ namespace utils {
             };
 
             template <class T>
-            struct AnArg<T*> {
-                T* value;
-                constexpr AnArg(T* t)
-                    : value(t) {}
-                constexpr T* get() {
-                    return value;
-                }
-            };
-
-            template <class T>
-            struct AnArg<T&&> {
-                using remref_t =
-                    std::remove_cvref_t<T>;
-                remref_t value;
-                constexpr AnArg(T&& t)
-                    : value(std::move(t)) {}
-
-                constexpr remref_t&& get() {
-                    return std::move(value);
-                }
-            };
-
-            template <class T>
             struct AnArg<T&> {
                 T* value;
-
+                constexpr AnArg() {}
                 constexpr AnArg(T& t)
                     : value(std::addressof(t)) {}
                 constexpr T& get() {
@@ -65,6 +69,17 @@ namespace utils {
             template <>
             struct Args<> {
                 constexpr Args() {}
+                constexpr size_t size() const {
+                    return 0;
+                }
+            };
+
+            template <>
+            struct Args<void> {
+                template <size_t index, size_t current>
+                constexpr void get() const {
+                    static_assert(index != current, "void but require after value");
+                }
             };
 
             template <class One, class... Other>
@@ -75,13 +90,34 @@ namespace utils {
                 constexpr Args(T&& one, Args<V...>&& v)
                     : one(std::forward<T>(one)), other(std::forward<Args<V...>>(v)) {}
                 template <size_t index, size_t current = 0>
-                decltype(auto) get() {
+                constexpr decltype(auto) get() {
                     if constexpr (index == current) {
                         return one.get();
                     }
                     else {
                         return other.template get<index, current + 1>();
                     }
+                }
+                static constexpr auto size_ = sizeof...(Other) + 1;
+
+                constexpr size_t size() const {
+                    return size_;
+                }
+
+                constexpr auto invoke_sequence() {
+                    return std::make_index_sequence<size_>{};
+                }
+
+               private:
+                template <class Fn, size_t... idx>
+                constexpr auto invoke_fn_impl(Fn&& fn, std::index_sequence<idx...>) {
+                    return fn(get<idx>()...);
+                }
+
+               public:
+                template <class Fn>
+                constexpr auto invoke(Fn&& fn) {
+                    return invoke_fn_impl(fn, invoke_sequence());
                 }
             };
 
@@ -97,9 +133,11 @@ namespace utils {
                                                 Target,
                                                 T>;
                 static constexpr bool is_const = std::is_const_v<std::remove_reference_t<Type>>;
-                using type = std::conditional_t<is_not_pointer && is_const,
-                                                std::remove_cvref_t<Type>,
-                                                Type>
+
+                using Const = std::conditional_t<is_not_pointer && is_const,
+                                                 std::remove_cvref_t<Type>,
+                                                 Type>;
+                using type = Const;
             };
 
             template <class T>
