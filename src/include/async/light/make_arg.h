@@ -102,7 +102,7 @@ namespace utils {
 
                private:
                 template <class Fn, size_t... idx>
-                constexpr auto invoke_fn_impl(Fn&& fn, std::index_sequence<idx...>) {
+                constexpr decltype(auto) invoke_fn_impl(Fn&& fn, std::index_sequence<idx...>) {
                     return fn(get<idx>()...);
                 }
 
