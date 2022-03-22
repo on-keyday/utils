@@ -30,7 +30,12 @@ namespace utils {
                 Args<Arg...> args;
                 Args<Ret> retobj;
 
-                FuncRecord(Fn&& in, Arg&&... arg)
+                constexpr FuncRecord(FuncRecord&& rec)
+                    : fn(std::forward<Fn>(rec.fn)),
+                      args(std::forward<Args<Arg...>>(rec.args)),
+                      retobj(std::forward<Args<Ret>>(rec.retobj)) {}
+
+                constexpr FuncRecord(Fn&& in, Arg&&... arg)
                     : fn(std::forward<Fn>(in)),
                       args(make_arg(std::forward<Arg>(arg)...)) {
                 }
@@ -46,7 +51,7 @@ namespace utils {
             };
 
             template <class Fn, class... Arg>
-            auto make_funcrecord(Fn&& fn, Arg&&... arg) {
+            constexpr auto make_funcrecord(Fn&& fn, Arg&&... arg) {
                 using invoke_res = decltype(std::declval<Args<arg_t<Arg>...>>().invoke(std::declval<Fn>()));
                 return FuncRecord<invoke_res, std::decay_t<Fn>, arg_t<Arg>...>{
                     std::forward<Fn>(fn),
