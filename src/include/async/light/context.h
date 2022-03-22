@@ -13,18 +13,59 @@
 namespace utils {
     namespace async {
         namespace light {
-            struct Context;
+            struct ContextBase;
+
 #ifdef _WIN32
 #define ASYNC_NO_VTABLE_ __declspec(novtable)
 #else
 #define ASYNC_NO_VTABLE_
 #endif
             struct ASYNC_NO_VTABLE_ Executor {
-                virtual void execute(Context) = 0;
+                virtual void execute() = 0;
                 virtual ~Executor() {}
             };
 
-            struct Context {
+            void* create_native_context();
+            void invoke_executor(void* ctx, Executor* exec);
+            void delete_native_context(void* ctx);
+            bool switch_context(void* from, void* to);
+
+            struct ContextBase {
+               private:
+                friend void invoke_executor(void*, Executor*);
+                void* current = nullptr;
+                ContextBase();
+
+               public:
+                void suspend();
+            };
+
+            template <class T>
+            struct Future {
+               private:
+                Context<T> ctx;
+
+               public:
+            };
+
+            template <class... Arg>
+            struct ArgExecutor : Executor {
+                FuncRecord<Arg...> args;
+                void execute() override {
+                    args.execute();
+                }
+            };
+
+            template <class T>
+            struct Context : ContextBase {
+               private:
+               public:
+                void yield(T t) {
+                    switch_context();
+                }
+                template <class U>
+                U await(Future<U> u) {
+                }
             };
         }  // namespace light
     }      // namespace async
