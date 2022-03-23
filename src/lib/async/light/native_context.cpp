@@ -6,15 +6,22 @@
 */
 
 
-#include "native_context.h"
+#include "native_context_impl.h"
 
 namespace utils {
     namespace async {
         namespace light {
 
             void start_proc(native_context* ctx) {
-                ctx->exec->execute();
-                ::swapcontext(get_ucontext(ctx->native_handle), ucontext_from(ctx->native_handle));
+                while (true) {
+                    try {
+                        ctx->exec->execute();
+                    } catch (...) {
+                        ctx->exception = std::current_exception();
+                    }
+                    ctx->end_of_function = true;
+                    return_to_caller(ctx);
+                }
             }
 
             struct PrepareContext {
@@ -34,16 +41,80 @@ namespace utils {
 #endif
             };
 
+            struct GetOwnership {
+                std::atomic_flag& flag;
+                bool result;
+                GetOwnership(std::atomic_flag& f)
+                    : flag(f) {
+                    result = flag.test_and_set();
+                }
+
+                operator bool() {
+                    return result == false;
+                }
+
+                ~GetOwnership() {
+                    if (result == false) {
+                        flag.clear();
+                    }
+                }
+            };
+
+            bool is_still_running(const native_context* ctx) {
+                if (!ctx) {
+                    return false;
+                }
+                return ctx->run.test();
+            }
+
+            bool is_on_end_of_function(const native_context* ctx) {
+                if (!ctx) {
+                    return false;
+                }
+                return ctx->end_of_function;
+            }
+
             native_context* create_native_context(Executor* exec, void (*deleter)(Executor*)) {
-                if (!exec || !deleter) {
+                if (exec && !deleter || !exec && deleter) {
                     return nullptr;
                 }
                 auto ctx = new native_context{};
                 ctx->exec = exec;
                 ctx->deleter = deleter;
                 ctx->native_handle = nullptr;
+                ctx->end_of_function = true;
                 return ctx;
             }
+
+            bool reset_executor(native_context* ctx, Executor* exec, void (*deleter)(Executor*)) {
+                if (!ctx || exec && !deleter || !exec && deleter) {
+                    return false;
+                }
+                GetOwnership own(ctx->run);
+                if (!own) {
+                    return false;
+                }
+                if (!ctx->end_of_function) {
+                    return false;
+                }
+                if (ctx->exec) {
+                    ctx->deleter(ctx->exec);
+                }
+                ctx->exec = exec;
+                ctx->deleter = deleter;
+                return true;
+            }
+#ifdef __linux__
+            static bool reset_ucontext(native_context* ctx) {
+                assert(ctx->native_handle);
+                auto uctx = get_ucontext(ctx->native_handle);
+                if (::getcontext(uctx) != 0) {
+                    return false;
+                }
+                ::makecontext(uctx, (void (*)())start_proc, 1, ctx);
+                return true;
+            }
+#endif
 
             static bool initialize_context(native_context* ctx) {
                 if (ctx->native_handle) {
@@ -56,38 +127,55 @@ namespace utils {
                     return false;
                 }
                 ctx->native_handle = move_to_stack(stack);
-                assert(ctx->native_handle);
-                auto uctx = get_ucontext(ctx->native_handle);
-                if (::getcontext(uctx) != 0) {
+                if (!reset_ucontext(ctx)) {
                     move_from_stack(ctx->native_handle, stack);
                     ctx->native_handle = nullptr;
                     stack.clean();
-                    return false;
                 }
-                ::makecontext(uctx, (void (*)())start_proc, 1, ctx);
 #endif
                 return true;
             }
 
-            void swap_ctx(native_handle_t* to, ucontext_t* from) {
+            static void swap_ctx(native_handle_t* to, ucontext_t* from) {
                 ucontext_from(to) = from;
                 ::swapcontext(from, get_ucontext(to));
                 ucontext_from(to) = nullptr;
+            }
+
+            bool return_to_caller(native_context* ctx) {
+                if (!ctx) {
+                    return false;
+                }
+                auto caller = ucontext_from(ctx->native_handle);
+                auto callee = get_ucontext(ctx->native_handle);
+                if (!caller) {
+                    return false;
+                }
+                assert(callee);
+                ::swapcontext(callee, caller);
+                return true;
             }
 
             bool invoke_executor(native_context* ctx) {
                 if (!ctx) {
                     return false;
                 }
+                GetOwnership own(ctx->run);
+                if (!own) {
+                    return false;
+                }
+                if (!ctx->exec) {
+                    return false;
+                }
                 if (!initialize_context(ctx)) {
                     return false;
                 }
-
 #ifdef _WIN32
 #else
                 if (ucontext_from(ctx->native_handle)) {
                     return false;
                 }
+                ctx->end_of_function = false;
                 PrepareContext this_;
                 swap_ctx(ctx->native_handle, this_.ctx);
                 return true;
@@ -99,6 +187,10 @@ namespace utils {
                     return false;
                 }
                 if (!from->native_handle) {
+                    return false;
+                }
+                GetOwnership own(to->run);
+                if (!own) {
                     return false;
                 }
                 if (!to->native_handle) {

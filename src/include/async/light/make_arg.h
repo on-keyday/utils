@@ -148,12 +148,12 @@ namespace utils {
             template <class T>
             using arg_t = typename arg_cast<T>::type;
 
-            auto make_arg() {
+            constexpr auto make_arg() {
                 return Args<>{};
             }
 
             template <class One, class... Arg>
-            auto make_arg(One&& one, Arg&&... arg) {
+            constexpr auto make_arg(One&& one, Arg&&... arg) {
                 return Args<arg_t<One>, arg_t<Arg>...>{std::forward<One>(one), make_arg(std::forward<Arg>(arg)...)};
             }
 
@@ -173,7 +173,7 @@ namespace utils {
                       args(make_arg(std::forward<Arg>(arg)...)) {
                 }
 
-                void execute() {
+                constexpr void execute() {
                     if constexpr (std::is_same_v<Ret, void>) {
                         args.invoke(fn);
                     }
@@ -182,15 +182,17 @@ namespace utils {
                     }
                 }
 
-                void operator()() {
+                constexpr void operator()() {
                     execute();
                 }
             };
 
             template <class Fn, class... Arg>
+            using invoke_res = decltype(std::declval<Args<arg_t<Arg>...>>().invoke(std::declval<Fn>()));
+
+            template <class Fn, class... Arg>
             constexpr auto make_funcrecord(Fn&& fn, Arg&&... arg) {
-                using invoke_res = decltype(std::declval<Args<arg_t<Arg>...>>().invoke(std::declval<Fn>()));
-                return FuncRecord<invoke_res, std::decay_t<Fn>, arg_t<Arg>...>{
+                return FuncRecord<invoke_res<Fn, Arg...>, std::decay_t<Fn>, arg_t<Arg>...>{
                     std::forward<Fn>(fn),
                     std::forward<Arg>(arg)...,
                 };

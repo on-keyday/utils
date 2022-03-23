@@ -6,10 +6,11 @@
 */
 
 
-// native_context - native context impl
+// native_context_impl - native context impl
 #pragma once
-#include "../../../include/async/light/context.h"
+#include "../../../include/async/light/native_context.h"
 #include <cstdint>
+#include <atomic>
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -28,6 +29,9 @@ namespace utils {
 #endif
                 Executor* exec;
                 void (*deleter)(Executor*);
+                std::exception_ptr exception;
+                bool end_of_function = false;
+                std::atomic_flag run;
             };
         }  // namespace light
     }      // namespace async
