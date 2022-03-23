@@ -86,6 +86,7 @@ add_executable(http2base "src/test/net/async/test_http2base.cpp")
 add_executable(http2protocol "src/test/net/async/test_http2protocol.cpp")
 add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cpp")
 add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
+add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -148,6 +149,8 @@ PRIVATE
 "src/lib/net/http2/request.cpp"
 "src/lib/net/http2/request_methods.cpp"
 "src/lib/testutil/alloc_hook.cpp"
+"src/lib/async/light/native_context.cpp"
+"src/lib/async/light/native_stack.cpp"
 )
 #if(WIN32)
 target_sources(utils
@@ -189,6 +192,7 @@ target_link_libraries(asynctcp2 utils)
 target_link_libraries(http2base utils)
 target_link_libraries(http2protocol utils)
 target_link_libraries(run_on_single_thread utils)
+target_link_libraries(shared_context utils)
 
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")

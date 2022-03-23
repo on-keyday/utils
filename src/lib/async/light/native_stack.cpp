@@ -104,6 +104,15 @@ namespace utils {
                 ctx->~native_handle_t();
                 return true;
             }
+
+            void set_stack_pointer(native_handle_t* h) {
+                if (!h) {
+                    return;
+                }
+                h->ctx.uc_stack.ss_sp = h->stack.root_ptr();
+                h->ctx.uc_stack.ss_size = h->stack.func_stack_size();
+                h->ctx.uc_link = nullptr;
+            }
         }  // namespace light
     }      // namespace async
 }  // namespace utils

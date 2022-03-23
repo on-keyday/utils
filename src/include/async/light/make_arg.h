@@ -178,7 +178,7 @@ namespace utils {
                         args.invoke(fn);
                     }
                     else {
-                        retobj = args.invoke(fn);
+                        retobj = make_arg(args.invoke(fn));
                     }
                 }
 

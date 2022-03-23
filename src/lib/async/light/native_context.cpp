@@ -186,11 +186,11 @@ namespace utils {
                 if (!from || !to) {
                     return false;
                 }
-                if (!from->native_handle) {
-                    return false;
-                }
                 GetOwnership own(to->run);
                 if (!own) {
+                    return false;
+                }
+                if (!from->native_handle || !from->run.test()) {
                     return false;
                 }
                 if (!to->native_handle) {
@@ -204,9 +204,37 @@ namespace utils {
                     return false;
                 }
                 auto curctx = get_ucontext(from->native_handle);
+                to->end_of_function = false;
                 swap_ctx(to->native_handle, curctx);
                 return true;
 #endif
+            }
+
+            bool delete_native_context(native_context* ctx) {
+                if (!ctx) {
+                    return true;
+                }
+                GetOwnership own(ctx->run);
+                if (!own) {
+                    return false;
+                }
+                if (!ctx->end_of_function) {
+                    return false;
+                }
+                if (ctx->exec) {
+                    ctx->deleter(ctx->exec);
+                }
+                if (ctx->native_handle) {
+#ifdef _WIN32
+#else
+                    native_stack stack;
+                    move_from_stack(ctx->native_handle, stack);
+                    stack.clean();
+#endif
+                }
+                delete ctx;
+                own.result = true;
+                return true;
             }
 
         }  // namespace light

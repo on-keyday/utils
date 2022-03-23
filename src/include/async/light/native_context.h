@@ -46,7 +46,8 @@ namespace utils {
             bool return_to_caller(native_context* ctx);
 
             // delete native_context
-            void delete_native_context(native_context* ctx);
+            bool delete_native_context(native_context* ctx);
+
             bool switch_context(native_context* from, native_context* to);
 
         }  // namespace light

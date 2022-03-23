@@ -16,6 +16,7 @@
 #include "../../include/platform/windows/dllexport_source.h"
 
 #include "../../include/async/worker.h"
+#include "light/native_stack.h"
 #include "../../include/wrap/light/lite.h"
 #include "../../include/thread/channel.h"
 #include "../../include/thread/recursive_lock.h"
@@ -104,123 +105,7 @@ namespace utils {
 
 #else
 
-        const std::size_t page_size_ = ::getpagesize();
-
-        struct native_context;
-
-        struct native_stack {
-           private:
-            void* map_root = nullptr;
-            size_t size_ = 0;
-            bool on_stack = false;
-            friend native_context* move_to_stack(native_stack& stack);
-            friend bool move_from_stack(native_context* ctx, native_stack& stack);
-
-           public:
-            constexpr void* root_ptr() const {
-                return map_root;
-            }
-
-            void* stack_ptr() const {
-                return reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(map_root) + size_);
-            }
-
-            void* storage_ptr() const {
-                struct nst {
-                    void* a;
-                    size_t b;
-                    bool c;
-                };
-                struct nct {
-                    nst n;
-                    ucontext_t c;
-                };
-                auto p = reinterpret_cast<std::uintptr_t>(stack_ptr()) - reinterpret_cast<std::uintptr_t>(sizeof(nct));
-                p &= ~static_cast<std::uintptr_t>(0xff);
-                return reinterpret_cast<void*>(p);
-            }
-
-            void* func_stack_root() const {
-                auto p = reinterpret_cast<std::uintptr_t>(storage_ptr()) - 64;
-                return reinterpret_cast<void*>(p);
-            }
-
-            bool init(size_t times = 2) {
-                if (map_root) {
-                    return false;
-                }
-                size_ = page_size_ * (times + 1);
-                auto p = ::mmap(nullptr, size_,
-                                PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK | MAP_GROWSDOWN, -1, 0);
-                if (!p || p == MAP_FAILED) {
-                    return false;
-                }
-                ::mprotect(p, page_size_, PROT_NONE);
-                map_root = p;
-                return true;
-            }
-
-            bool clean() {
-                if (on_stack) {
-                    return false;
-                }
-                if (map_root) {
-                    ::munmap(map_root, size_);
-                    map_root = nullptr;
-                    size_ = 0;
-                }
-                return true;
-            }
-
-            bool is_movable() const {
-                return !on_stack && map_root;
-            }
-
-            size_t size() const {
-                return size_;
-            }
-
-            size_t func_stack_size() const {
-                auto res = reinterpret_cast<std::uintptr_t>(func_stack_root()) - reinterpret_cast<std::uintptr_t>(root_ptr());
-                return res;
-            }
-        };
-
-        struct native_context {
-            native_stack stack;
-            ucontext_t ctx;
-        };
-
-        native_context* move_to_stack(native_stack& stack) {
-            if (!stack.is_movable()) {
-                return nullptr;
-            }
-            auto storage = stack.storage_ptr();
-            auto ret = new (storage) native_context();
-            ret->stack.on_stack = true;
-            ret->stack.map_root = stack.map_root;
-            stack.map_root = nullptr;
-            ret->stack.size_ = stack.size_;
-            stack.size_ = 0;
-            return ret;
-        }
-
-        bool move_from_stack(native_context* ctx, native_stack& stack) {
-            if (!ctx ||
-                !ctx->stack.map_root || !stack.on_stack ||
-                stack.map_root || stack.on_stack) {
-                return false;
-            }
-            stack.size_ = ctx->stack.size_;
-            ctx->stack.size_ = 0;
-            stack.map_root = ctx->stack.map_root;
-            ctx->stack.map_root = nullptr;
-            stack.on_stack = false;
-            ctx->~native_context();
-            return true;
-        }
-
-        using native_t = native_context*;
+        using native_t = light::native_handle_t*;
 
         static Context*& current_context() {
             thread_local Context* ptr = nullptr;
@@ -228,7 +113,7 @@ namespace utils {
         }
 
         void context_switch(native_t to, native_t from, Context* ptr) {
-            auto res = ::swapcontext(&from->ctx, &to->ctx);
+            auto res = ::swapcontext(light::get_ucontext(from), light::get_ucontext(to));
             assert(res == 0);
             current_context() = ptr;
         }
@@ -241,41 +126,46 @@ namespace utils {
         constexpr size_t initial_stack_size = 1024 * 2;
 
         void delete_context(native_t& c) {
-            native_stack st;
+            light::native_stack st;
             move_from_stack(c, st);
             st.clean();
             c = nullptr;
         }
 
         native_t create_native_context(Context* ctx) {
-            native_stack stack;
+            light::native_stack stack;
             if (!stack.init()) {
                 return nullptr;
             }
             auto res = move_to_stack(stack);
             assert(res);
-            if (::getcontext(&res->ctx) != 0) {
+            if (::getcontext(get_ucontext(res)) != 0) {
                 move_from_stack(res, stack);
                 stack.clean();
                 return nullptr;
             }
-            res->ctx.uc_stack.ss_sp = res->stack.root_ptr();
-            res->ctx.uc_stack.ss_size = res->stack.func_stack_size();
-            res->ctx.uc_link = nullptr;
-            ::makecontext(&res->ctx, (void (*)())DoTask, 1, ctx);
+            set_stack_pointer(res);
+            ::makecontext(get_ucontext(res), (void (*)())DoTask, 1, ctx);
             return res;
         }
 
+        struct native_t_internal {
+            light::native_stack stack;
+            ucontext_t ctx;
+            ucontext_t* dummy;
+        };
+
         struct ThreadToFiber {
-            native_context* roothandle;
+            native_t roothandle;
             ThreadToFiber() {
-                roothandle = new native_context{};
-                auto res = ::getcontext(&roothandle->ctx);
+                roothandle = (native_t) new native_t_internal{};
+                auto res = ::getcontext(get_ucontext(roothandle));
                 assert(res == 0);
             }
 
             ~ThreadToFiber() {
-                delete roothandle;
+                auto ptr = (native_t_internal*)roothandle;
+                delete ptr;
             }
         };
 

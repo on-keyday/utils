@@ -20,7 +20,7 @@ namespace utils {
             template <class Ret, class... Other>
             struct ArgExecutor : Executor {
                 FuncRecord<Ret, Other...> record;
-                constexpr ArgExecutor(FuncRecord<Ret, Other>&& rec)
+                constexpr ArgExecutor(FuncRecord<Ret, Other...>&& rec)
                     : record(std::move(rec)) {}
 
                 void execute() override {
@@ -30,8 +30,18 @@ namespace utils {
 
             template <class T>
             struct SharedContext {
-                Args<T>* ret_obj = nullptr;
+               private:
                 native_context* native_ctx = nullptr;
+
+               public:
+                Args<T>* ret_obj = nullptr;
+
+                bool invoke() {
+                    if (!native_ctx) {
+                        return false;
+                    }
+                    return invoke_executor(native_ctx);
+                }
 
                 template <class Fn, class... Args>
                 bool replace_function(Fn&& fn, Args&&... args) {
@@ -44,6 +54,7 @@ namespace utils {
                     else {
                         native_ctx = create_native_context(exec, [](Executor* e) { delete e; });
                     }
+                    return true;
                 }
             };
 
@@ -54,9 +65,15 @@ namespace utils {
                 return ctx;
             }
 
+            template <class Ret>
+            auto make_shared_context() {
+                return wrap::make_shared<SharedContext<Ret>>();
+            }
+
             struct ContextBase {
-               private:
+               protected:
                 constexpr ContextBase() {}
+
                 bool suspend(native_context* current);
             };
 
