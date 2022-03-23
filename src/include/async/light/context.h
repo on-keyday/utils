@@ -32,9 +32,22 @@ namespace utils {
             struct SharedContext {
                private:
                 native_context* native_ctx = nullptr;
+                Args<T>* ret_obj = nullptr;
 
                public:
-                Args<T>* ret_obj = nullptr;
+                using return_value_t = decltype(ret_obj->template get<0>());
+
+                template <class Fn>
+                bool get_cb(Fn&& fn) {
+                    if (!aquire_context_lock(native_ctx)) {
+                        return false;
+                    }
+                    if constexpr (!std::is_same_v<return_value_t, void>) {
+                        fn(ret_obj->get());
+                    }
+                    release_context_lock(native_ctx);
+                    return true;
+                }
 
                 bool invoke() {
                     if (!native_ctx) {
@@ -49,7 +62,10 @@ namespace utils {
                     auto exec = new ArgExecutor(make_funcrecord(std::forward<Fn>(fn), std::forward<Args>(args)...));
                     ret_obj = &exec->record.retobj;
                     if (native_ctx) {
-                        reset_executor(native_ctx, exec, [](Executor* e) { delete e; });
+                        if (!reset_executor(native_ctx, exec, [](Executor* e) { delete e; })) {
+                            delete exec;
+                            return false;
+                        }
                     }
                     else {
                         native_ctx = create_native_context(exec, [](Executor* e) { delete e; });

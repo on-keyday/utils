@@ -60,9 +60,28 @@ namespace utils {
                 }
             };
 
-            bool is_still_running(const native_context* ctx) {
+            bool aquire_context_lock(native_context* ctx) {
                 if (!ctx) {
                     return false;
+                }
+                GetOwnership own(ctx->run);
+                if (own) {
+                    own.result = true;
+                    return true;
+                }
+                return false;
+            }
+
+            void release_context_lock(native_context* ctx) {
+                if (!ctx || !ctx->run.test()) {
+                    return;
+                }
+                ctx->run.clear();
+            }
+
+            bool is_still_running(const native_context* ctx) {
+                if (!ctx) {
+                    return true;
                 }
                 return ctx->run.test();
             }
@@ -111,6 +130,7 @@ namespace utils {
                 if (::getcontext(uctx) != 0) {
                     return false;
                 }
+                set_stack_pointer(ctx->native_handle);
                 ::makecontext(uctx, (void (*)())start_proc, 1, ctx);
                 return true;
             }

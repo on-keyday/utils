@@ -13,10 +13,10 @@ void test_shared_context() {
     auto ptr = make_shared_context<int>();
     int refobj = 0;
     ptr->replace_function(
-        [](int& obj) {
+        [](const int& obj) -> int {
             return obj;
         },
-        refobj);
+        std::move(refobj));
     ptr->invoke();
 }
 
