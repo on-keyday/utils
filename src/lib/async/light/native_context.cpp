@@ -53,23 +53,34 @@ namespace utils {
                     return result == false;
                 }
 
+                void set_dangling_lock() {
+                    result = true;
+                }
+
                 ~GetOwnership() {
                     if (result == false) {
                         flag.clear();
+                        flag.notify_all();
                     }
                 }
             };
 
-            bool aquire_context_lock(native_context* ctx) {
+            bool acquire_context_lock(native_context* ctx) {
                 if (!ctx) {
                     return false;
                 }
                 GetOwnership own(ctx->run);
                 if (own) {
-                    own.result = true;
+                    own.set_dangling_lock();
                     return true;
                 }
                 return false;
+            }
+
+            void acquire_or_wait_lock(native_context* ctx) {
+                while (!acquire_context_lock(ctx)) {
+                    ctx->run.wait(true);
+                }
             }
 
             void release_context_lock(native_context* ctx) {
@@ -93,6 +104,13 @@ namespace utils {
                 return ctx->end_of_function;
             }
 
+            bool is_not_called_yet(const native_context* ctx) {
+                if (!ctx) {
+                    return true;
+                }
+                return ctx->first_time;
+            }
+
             native_context* create_native_context(Executor* exec, void (*deleter)(Executor*)) {
                 if (exec && !deleter || !exec && deleter) {
                     return nullptr;
@@ -102,6 +120,7 @@ namespace utils {
                 ctx->deleter = deleter;
                 ctx->native_handle = nullptr;
                 ctx->end_of_function = true;
+                ctx->first_time = true;
                 return ctx;
             }
 
@@ -121,6 +140,7 @@ namespace utils {
                 }
                 ctx->exec = exec;
                 ctx->deleter = deleter;
+                ctx->first_time = true;
                 return true;
             }
 #ifdef __linux__
@@ -176,7 +196,7 @@ namespace utils {
                 return true;
             }
 
-            bool invoke_executor(native_context* ctx) {
+            bool invoke_executor(native_context* ctx, bool no_run_if_end) {
                 if (!ctx) {
                     return false;
                 }
@@ -190,11 +210,15 @@ namespace utils {
                 if (!initialize_context(ctx)) {
                     return false;
                 }
+                if (no_run_if_end && !ctx->first_time && ctx->end_of_function) {
+                    return false;
+                }
 #ifdef _WIN32
 #else
                 if (ucontext_from(ctx->native_handle)) {
                     return false;
                 }
+                ctx->first_time = false;
                 ctx->end_of_function = false;
                 PrepareContext this_;
                 swap_ctx(ctx->native_handle, this_.ctx);
@@ -202,7 +226,7 @@ namespace utils {
 #endif
             }
 
-            bool switch_context(native_context* from, native_context* to) {
+            bool switch_context(native_context* from, native_context* to, bool not_run_on_end) {
                 if (!from || !to) {
                     return false;
                 }
@@ -218,6 +242,9 @@ namespace utils {
                         return false;
                     }
                 }
+                if (not_run_on_end && !to->first_time && to->end_of_function) {
+                    return false;
+                }
 #ifdef _WIN32
 #else
                 if (ucontext_from(to->native_handle)) {
@@ -225,6 +252,7 @@ namespace utils {
                 }
                 auto curctx = get_ucontext(from->native_handle);
                 to->end_of_function = false;
+                to->first_time = false;
                 swap_ctx(to->native_handle, curctx);
                 return true;
 #endif
@@ -253,7 +281,7 @@ namespace utils {
 #endif
                 }
                 delete ctx;
-                own.result = true;
+                own.set_dangling_lock();
                 return true;
             }
 

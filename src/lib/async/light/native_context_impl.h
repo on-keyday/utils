@@ -30,7 +30,8 @@ namespace utils {
                 Executor* exec;
                 void (*deleter)(Executor*);
                 std::exception_ptr exception;
-                bool end_of_function = false;
+                std::atomic_bool end_of_function = false;
+                std::atomic_bool first_time = false;
                 std::atomic_flag run;
             };
         }  // namespace light

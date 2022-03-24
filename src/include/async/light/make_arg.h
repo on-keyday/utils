@@ -80,7 +80,7 @@ namespace utils {
 
             template <>
             struct Args<void> {
-                template <size_t index, size_t current>
+                template <size_t index, size_t current = 0>
                 constexpr void get() const {
                     static_assert(index != current, "void but require more value");
                 }

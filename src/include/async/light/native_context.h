@@ -37,19 +37,26 @@ namespace utils {
             // tell whether ctx is stil running
             bool is_still_running(const native_context* ctx);
 
-            // tell for ctx to be on end_of_function state
+            // tell whether ctx is on end_of_function state
             bool is_on_end_of_function(const native_context* ctx);
+
+            // tell whether ctx is not called yet
+            bool is_not_called_yet(const native_context* ctx);
 
             // aquire context internal lock
             // insecure function
-            bool aquire_context_lock(native_context* ctx);
+            bool acquire_context_lock(native_context* ctx);
 
             // release context internal lock
             // insecure function
             void release_context_lock(native_context* ctx);
 
+            // wait until lock is acquired
+            // insecure function
+            void acquire_or_wait_lock(native_context* ctx);
+
             // invoke executor
-            bool invoke_executor(native_context* ctx);
+            bool invoke_executor(native_context* ctx, bool no_run_if_end);
 
             // back to caller
             bool return_to_caller(native_context* ctx);
@@ -58,7 +65,7 @@ namespace utils {
             bool delete_native_context(native_context* ctx);
 
             // switch context
-            bool switch_context(native_context* from, native_context* to);
+            bool switch_context(native_context* from, native_context* to, bool not_run_on_end);
 
         }  // namespace light
     }      // namespace async

@@ -7,7 +7,9 @@
 
 
 #include <async/light/context.h>
+#include <wrap/cout.h>
 using namespace utils::async::light;
+auto& cout = utils::wrap::cout_wrap();
 
 void test_shared_context() {
     auto ptr = make_shared_context<int>();
@@ -18,6 +20,29 @@ void test_shared_context() {
         },
         std::move(refobj));
     ptr->invoke();
+    ptr->replace_function([]() -> int {
+        cout << "called\n";
+        return 0;
+    });
+    ptr->invoke();
+    auto f = invoke<int>([](Context<int> ctx) {
+        int obj = 4;
+        ctx.yield(obj);
+        auto v = ctx.await(start<const char*>(true, [](Context<const char*> ctx) {
+            return "hello world";
+        }));
+        cout << v << "\n";
+        return 0;
+    });
+    auto v = f.get();
+    assert(v == 4);
+    f.resume();
+    v = f.get();
+    assert(v == 0);
+    auto b = f.resume();
+    assert(b == false);
+    v = f.get();
+    assert(v == 0);
 }
 
 int main() {

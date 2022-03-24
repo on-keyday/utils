@@ -92,7 +92,7 @@ namespace utils {
 
             bool move_from_stack(native_handle_t* ctx, native_stack& stack) {
                 if (!ctx ||
-                    !ctx->stack.map_root || !stack.on_stack ||
+                    !ctx->stack.map_root || !ctx->stack.on_stack ||
                     stack.map_root || stack.on_stack) {
                     return false;
                 }
