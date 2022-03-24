@@ -234,7 +234,12 @@ namespace utils {
             template <class Ret, class Fn, class... Args>
             Future<Ret> start(bool suspend, Fn&& fn, Args&&... args) {
                 auto ctx = make_shared_context<Ret>();
-                ctx->replace_function(std::forward<Fn>(fn), Context<Ret>{ctx}, std::forward<Args>(args)...);
+                if constexpr (std::is_invocable_r_v<Ret, Fn, Context<Ret>, Args...>) {
+                    ctx->replace_function(std::forward<Fn>(fn), Context<Ret>{ctx}, std::forward<Args>(args)...);
+                }
+                else {
+                    ctx->replace_function(std::forward<Fn>(fn), std::forward<Args>(args)...);
+                }
                 if (!suspend) {
                     ctx->invoke();
                 }

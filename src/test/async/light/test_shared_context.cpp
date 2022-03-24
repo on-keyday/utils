@@ -29,6 +29,10 @@ void test_shared_context() {
         int obj = 4;
         ctx.yield(obj);
         auto v = ctx.await(start<const char*>(true, [](Context<const char*> ctx) {
+            cout << "inner await\n";
+            ctx.await(start<bool>(true, []() {
+                return true;
+            }));
             return "hello world";
         }));
         cout << v << "\n";
