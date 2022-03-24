@@ -8,6 +8,7 @@
 
 #include <async/light/context.h>
 #include <wrap/cout.h>
+#include <thread>
 using namespace utils::async::light;
 auto& cout = utils::wrap::cout_wrap();
 
@@ -25,28 +26,38 @@ void test_shared_context() {
         return 0;
     });
     ptr->invoke();
-    auto f = invoke<int>([](Context<int> ctx) {
-        int obj = 4;
-        ctx.yield(obj);
-        auto v = ctx.await(start<const char*>(true, [](Context<const char*> ctx) {
-            cout << "inner await\n";
-            ctx.await(start<bool>(true, []() {
-                return true;
+    auto make_routine = []() {
+        return start<int>(true, [](Context<int> ctx) {
+            int obj = 4;
+            ctx.yield(obj);
+            auto v = ctx.await(start<const char*>(true, [](Context<const char*> ctx) {
+                cout << "inner await\n";
+                auto t = ctx.await(start<bool>(true, []() {
+                    cout << "deep inner await\n";
+                    return true;
+                }));
+                return "hello world";
             }));
-            return "hello world";
-        }));
-        cout << v << "\n";
-        return 0;
+            cout << v << "\n";
+            return 0;
+        });
+    };
+    auto j = std::thread([f = make_routine()]() mutable {
+        auto v = f.get();
+        assert(v == 4);
+        f.resume();
+        v = f.get();
+        assert(v == 0);
+        auto b = f.resume();
+        assert(b == false);
+        v = f.get();
+        assert(v == 0);
     });
-    auto v = f.get();
-    assert(v == 4);
-    f.resume();
-    v = f.get();
-    assert(v == 0);
-    auto b = f.resume();
-    assert(b == false);
-    v = f.get();
-    assert(v == 0);
+    auto v = make_routine();
+    auto s = v.get();
+    v.resume();
+    s = v.get();
+    j.join();
 }
 
 int main() {

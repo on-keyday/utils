@@ -93,7 +93,6 @@ namespace utils {
                 bool replace_function(Fn&& fn, Args&&... args) {
                     static_assert(std::is_same_v<invoke_res<Fn, Args...>, T>, "invoke result must be same");
                     auto exec = new ArgExecutor(make_funcrecord(std::forward<Fn>(fn), std::forward<Args>(args)...));
-                    ret_obj = &exec->record.retobj;
                     if (native_ctx) {
                         if (!reset_executor(native_ctx, exec, [](Executor* e) { delete e; })) {
                             delete exec;
@@ -103,6 +102,7 @@ namespace utils {
                     else {
                         native_ctx = create_native_context(exec, [](Executor* e) { delete e; });
                     }
+                    ret_obj = &exec->record.retobj;
                     return true;
                 }
 
@@ -137,6 +137,14 @@ namespace utils {
                 friend U await_impl(wrap::shared_ptr<SharedContext<T_>>& ctx, Future<U> f, bool not_run_if_end);
 
                public:
+                template <class Fn, class... Args>
+                bool rebind_function(Fn&& fn, Args&&... args) {
+                    if (!done()) {
+                        return false;
+                    }
+                    return ctx->repleace_function(std::forward<Fn>(fn), std::forward<Args>(args)...);
+                }
+
                 bool resume() {
                     return ctx->invoke(true);
                 }
@@ -154,6 +162,7 @@ namespace utils {
                                 },
                                 true)) {
                             resume();
+                            continue;
                         }
                         break;
                     }
