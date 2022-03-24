@@ -89,7 +89,7 @@ namespace utils {
             template <class One, class... Other>
             struct Args<One, Other...> {
                 AnArg<One> one;
-                Args<Other...> other;
+                [[no_unique_address]] Args<Other...> other;
                 constexpr Args() {}
                 template <class T, class... V>
                 constexpr Args(T&& one, Args<V...>&& v)

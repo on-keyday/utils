@@ -58,6 +58,10 @@ void test_shared_context() {
     v.resume();
     s = v.get();
     j.join();
+    v.rebind_function([](int a) { return a; }, 53);
+    s = v.get();
+    assert(s == 53);
+    v.rebind_function([](Context<int> ctx) { return 0; });
 }
 
 int main() {

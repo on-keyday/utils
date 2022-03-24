@@ -124,6 +124,12 @@ namespace utils {
             }
 
             template <class T>
+            struct Context;
+
+            template <class Ret, class Fn, class... Arg>
+            bool bind_func(wrap::shared_ptr<SharedContext<Ret>>& ctx, Fn&& fn, Arg&&... arg);
+
+            template <class T>
             struct Future {
                private:
                 wrap::shared_ptr<SharedContext<T>> ctx;
@@ -142,7 +148,7 @@ namespace utils {
                     if (!done()) {
                         return false;
                     }
-                    return ctx->repleace_function(std::forward<Fn>(fn), std::forward<Args>(args)...);
+                    return bind_func(ctx, std::forward<Fn>(fn), std::forward<Args>(args)...);
                 }
 
                 bool resume() {
@@ -191,8 +197,8 @@ namespace utils {
             template <class T>
             struct Context {
                private:
-                template <class Ret, class Fn, class... Args>
-                friend Future<Ret> start(bool suspend, Fn&& fn, Args&&... args);
+                template <class Ret, class Fn, class... Arg>
+                friend bool bind_func(wrap::shared_ptr<SharedContext<Ret>>& ctx, Fn&& fn, Arg&&... arg);
 
                 wrap::shared_ptr<SharedContext<T>> ctx;
 
@@ -243,12 +249,7 @@ namespace utils {
             template <class Ret, class Fn, class... Args>
             Future<Ret> start(bool suspend, Fn&& fn, Args&&... args) {
                 auto ctx = make_shared_context<Ret>();
-                if constexpr (std::is_invocable_r_v<Ret, Fn, Context<Ret>, Args...>) {
-                    ctx->replace_function(std::forward<Fn>(fn), Context<Ret>{ctx}, std::forward<Args>(args)...);
-                }
-                else {
-                    ctx->replace_function(std::forward<Fn>(fn), std::forward<Args>(args)...);
-                }
+                bind_func(ctx, std::forward<Fn>(fn), std::forward<Args>(args)...);
                 if (!suspend) {
                     ctx->invoke();
                 }
@@ -258,6 +259,16 @@ namespace utils {
             template <class Ret, class Fn, class... Args>
             Future<Ret> invoke(Fn&& fn, Args&&... args) {
                 return start<Ret>(false, std::forward<Fn>(fn), std::forward<Args>(args)...);
+            }
+
+            template <class Ret, class Fn, class... Arg>
+            bool bind_func(wrap::shared_ptr<SharedContext<Ret>>& ctx, Fn&& fn, Arg&&... arg) {
+                if constexpr (std::is_invocable_r_v<Ret, Fn, Context<Ret>, Arg...>) {
+                    return ctx->replace_function(std::forward<Fn>(fn), Context<Ret>{ctx}, std::forward<Arg>(arg)...);
+                }
+                else {
+                    return ctx->replace_function(std::forward<Fn>(fn), std::forward<Arg>(arg)...);
+                }
             }
         }  // namespace light
     }      // namespace async
