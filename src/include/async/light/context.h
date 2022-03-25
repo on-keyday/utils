@@ -70,19 +70,23 @@ namespace utils {
                     return ret_obj;
                 }
 
-                bool invoke(bool not_run_if_end = false) {
-                    return invoke_executor(native_ctx, not_run_if_end);
+                bool invoke() {
+                    return invoke_executor(native_ctx);
                 }
 
                 template <class U>
-                bool await_with(wrap::shared_ptr<SharedContext<U>>& ptr, bool not_run_on_end) {
+                bool await_with(wrap::shared_ptr<SharedContext<U>>& ptr) {
                     auto to = ptr->native_ctx;
                     auto from = native_ctx;
-                    return switch_context(from, to, not_run_on_end);
+                    return switch_context(from, to);
                 }
 
                 bool running() const {
                     return is_still_running(native_ctx);
+                }
+
+                bool suspended() const {
+                    return !running() && !is_on_end_of_function(native_ctx);
                 }
 
                 bool done() const {
@@ -94,13 +98,15 @@ namespace utils {
                     static_assert(std::is_same_v<invoke_res<Fn, Args...>, T>, "invoke result must be same");
                     auto exec = new ArgExecutor(make_funcrecord(std::forward<Fn>(fn), std::forward<Args>(args)...));
                     if (native_ctx) {
-                        if (!reset_executor(native_ctx, exec, [](Executor* e) { delete e; })) {
+                        if (!reset_executor(
+                                native_ctx, exec, [](Executor* e) { delete e; }, control_flag::once)) {
                             delete exec;
                             return false;
                         }
                     }
                     else {
-                        native_ctx = create_native_context(exec, [](Executor* e) { delete e; });
+                        native_ctx = create_native_context(
+                            exec, [](Executor* e) { delete e; }, control_flag::once);
                     }
                     ret_obj = &exec->record.retobj;
                     return true;
@@ -140,7 +146,7 @@ namespace utils {
                     : ctx(std::move(v)) {}
 
                 template <class T_, class U>
-                friend U await_impl(wrap::shared_ptr<SharedContext<T_>>& ctx, Future<U> f, bool not_run_if_end);
+                friend U await_impl(wrap::shared_ptr<SharedContext<T_>>& ctx, Future<U> f);
 
                public:
                 template <class Fn, class... Args>
@@ -152,7 +158,11 @@ namespace utils {
                 }
 
                 bool resume() {
-                    return ctx->invoke(true);
+                    return ctx->invoke();
+                }
+
+                bool suspended() const {
+                    return ctx->suspended();
                 }
 
                 bool done() const {
@@ -177,13 +187,13 @@ namespace utils {
             };
 
             template <class T, class U>
-            U await_impl(wrap::shared_ptr<SharedContext<T>>& ctx, Future<U> u, bool not_run_on_end = false) {
+            U await_impl(wrap::shared_ptr<SharedContext<T>>& ctx, Future<U> u) {
                 Args<U>* ptr;
                 while (true) {
                     if (!u.ctx->get_cb([&](Args<U>* p) {
                             ptr = p;
                         })) {
-                        if (!ctx->await_with(u.ctx, not_run_on_end)) {
+                        if (!ctx->await_with(u.ctx)) {
                             ctx->return_();
                         }
                     }
@@ -220,7 +230,7 @@ namespace utils {
 
                 template <class U>
                 U await(Future<U> u) {
-                    return await_impl(ctx, u, true);
+                    return await_impl(ctx, u);
                 }
             };
 
@@ -242,7 +252,7 @@ namespace utils {
 
                 template <class U>
                 U await(Future<U> u) {
-                    return await_impl(ctx, u, true);
+                    return await_impl(ctx, u);
                 }
             };
 

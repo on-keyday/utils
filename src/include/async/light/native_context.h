@@ -9,6 +9,7 @@
 // native_context - low level execution context
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
+#include "../../wrap/light/enum.h"
 namespace utils {
     namespace async {
         namespace light {
@@ -28,11 +29,19 @@ namespace utils {
             // low level contextt wrapper
             struct native_context;
 
+            // native context behaviour control flag
+            enum class control_flag {
+                none = 0,
+                once = 1,  // once reaching end of function, don't run again
+            };
+
+            DEFINE_ENUM_FLAGOP(control_flag);
+
             // create native_context
-            DLL native_context* STDCALL create_native_context(Executor* exec, void (*deleter)(Executor*));
+            DLL native_context* STDCALL create_native_context(Executor* exec, void (*deleter)(Executor*), control_flag flag);
 
             // reset executor
-            DLL bool STDCALL reset_executor(native_context* ctx, Executor* exec, void (*deleter)(Executor*));
+            DLL bool STDCALL reset_executor(native_context* ctx, Executor* exec, void (*deleter)(Executor*), control_flag flag);
 
             // tell whether ctx is stil running
             DLL bool STDCALL is_still_running(const native_context* ctx);
@@ -56,7 +65,7 @@ namespace utils {
             DLL void STDCALL acquire_or_wait_lock(native_context* ctx);
 
             // invoke executor
-            DLL bool STDCALL invoke_executor(native_context* ctx, bool no_run_if_end);
+            DLL bool STDCALL invoke_executor(native_context* ctx);
 
             // back to caller
             DLL bool STDCALL return_to_caller(native_context* ctx);
@@ -65,7 +74,7 @@ namespace utils {
             DLL bool STDCALL delete_native_context(native_context* ctx);
 
             // switch context
-            DLL bool STDCALL switch_context(native_context* from, native_context* to, bool not_run_on_end);
+            DLL bool STDCALL switch_context(native_context* from, native_context* to);
 
         }  // namespace light
     }      // namespace async

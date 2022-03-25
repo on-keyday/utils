@@ -36,6 +36,7 @@ namespace utils {
                 std::atomic_bool end_of_function = false;
                 std::atomic_bool first_time = false;
                 std::atomic_flag run;
+                control_flag flag;
             };
         }  // namespace light
     }      // namespace async
