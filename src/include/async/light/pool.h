@@ -23,6 +23,8 @@ namespace utils {
 
             template <class T>
             struct FTask : Task {
+                FTask(Future<T>&& t)
+                    : task(std::move(t)) {}
                 Future<T> task;
                 bool run() override {
                     task.resume();
@@ -33,11 +35,38 @@ namespace utils {
             struct TaskPool {
                private:
                 LFList<Task*> list;
+                std::atomic_size_t size_;
+                std::atomic_size_t element_count;
 
                public:
                 template <class T>
                 void append(Future<T>&& f) {
                     auto ftask = new FTask<T>{std::move(f)};
+                    size_++;
+                    if (insert_element(&list, static_cast<Task*>(ftask))) {
+                        element_count++;
+                    }
+                }
+
+                bool run_task() {
+                    auto task = get_a_task(&list);
+                    if (!task) {
+                        return false;
+                    }
+                    if (task->run()) {
+                        delete task;
+                        size_--;
+                    }
+                    else {
+                        if (insert_element(&list, task)) {
+                            element_count++;
+                        }
+                    }
+                    return true;
+                }
+
+                size_t size() const {
+                    return size_;
                 }
             };
 

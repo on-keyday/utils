@@ -27,7 +27,7 @@ namespace utils {
                     if (p) {
                         return next.load();
                     }
-                    return root ? root->begin : nullptr;
+                    return root ? root->begin.load() : nullptr;
                 }
 
                 bool try_set_task(T p) {
@@ -48,8 +48,8 @@ namespace utils {
 
             template <class T>
             struct LFList {
-                ListElement<T>* begin;
-                std::atomic<ListElement<T>*> end;
+                std::atomic<ListElement<T>*> begin = nullptr;
+                std::atomic<ListElement<T>*> end = nullptr;
                 void insert_list(ListElement<T>* list) {
                     if (!list) {
                         return;
@@ -60,24 +60,24 @@ namespace utils {
                         old->next.store(list);
                     }
                     else {
-                        begin = list;
+                        begin.store(list);
                     }
                 }
             };
 
             template <class T>
-            void insert_element(LFList<T>* root, T task) {
+            bool insert_element(LFList<T>* root, T task) {
                 if (!root) {
-                    return;
+                    return false;
                 }
-                auto b = root->begin;
+                auto b = root->begin.load();
                 if (b) {
                     if (b->try_set_task(task)) {
-                        return;
+                        return false;
                     }
                     for (auto p = b->get_next(); p != b; p = p->get_next()) {
                         if (p->try_set_task(task)) {
-                            return;
+                            return false;
                         }
                     }
                 }
@@ -85,11 +85,12 @@ namespace utils {
                 auto set = list->try_set_task(task);
                 assert(set == true);
                 root->insert_list(list);
+                return true;
             }
 
             template <class T>
-            inline T get_a_task(LFList<T>* root) {
-                auto b = root->begin;
+            T get_a_task(LFList<T>* root) {
+                auto b = root->begin.load();
                 if (b) {
                     auto t = b->acquire_task();
                     if (t) {

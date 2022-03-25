@@ -237,8 +237,8 @@ namespace utils {
             template <>
             struct Context<void> {
                private:
-                template <class Ret, class Fn, class... Args>
-                friend Future<Ret> start(bool suspend, Fn&& fn, Args&&... args);
+                template <class Ret, class Fn, class... Arg>
+                friend bool bind_func(wrap::shared_ptr<SharedContext<Ret>>& ctx, Fn&& fn, Arg&&... arg);
 
                 wrap::shared_ptr<SharedContext<void>> ctx;
 
