@@ -37,6 +37,7 @@ namespace utils {
                         fiber = ::ConvertThreadToFiber(nullptr);
                         cvt = true;
                     }
+                    assert(fiber);
                 }
 
                 ~PrepareContext() {

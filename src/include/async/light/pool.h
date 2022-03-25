@@ -15,6 +15,7 @@ namespace utils {
         namespace light {
             struct ASYNC_NO_VTABLE_ Task {
                 virtual bool run() = 0;
+                virtual ~Task() {}
             };
 
             template <class T>
