@@ -68,6 +68,15 @@ namespace utils {
                 size_t size() const {
                     return size_;
                 }
+
+                bool clear() {
+                    if (size_) {
+                        return false;
+                    }
+                    list.clear();
+                    element_count = 0;
+                    return true;
+                }
             };
 
         }  // namespace light

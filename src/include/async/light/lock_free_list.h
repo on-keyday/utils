@@ -44,6 +44,14 @@ namespace utils {
                 T acquire_task() {
                     return ptr.exchange(nullptr);
                 }
+
+                ~ListElement() {
+                    if (ptr) {
+                        std::terminate();  // invalid deletion
+                    }
+                    auto n = next.exchange(nullptr);
+                    delete n;
+                }
             };
 
             template <class T>
@@ -62,6 +70,12 @@ namespace utils {
                     else {
                         begin.store(list);
                     }
+                }
+
+                void clear() {
+                    auto d = begin.exchange(nullptr);
+                    end.exchange(nullptr);
+                    delete d;
                 }
             };
 
