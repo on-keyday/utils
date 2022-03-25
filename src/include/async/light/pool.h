@@ -9,13 +9,16 @@
 // pool -  task pool object
 #pragma once
 #include "context.h"
+#include <atomic>
+#include <cassert>
+#include "lock_free_list.h"
 
 namespace utils {
     namespace async {
         namespace light {
             struct ASYNC_NO_VTABLE_ Task {
                 virtual bool run() = 0;
-                virtual ~Task() {}
+                constexpr virtual ~Task() {}
             };
 
             template <class T>
@@ -26,6 +29,18 @@ namespace utils {
                     return task.done();
                 }
             };
+
+            struct TaskPool {
+               private:
+                LFList<Task*> list;
+
+               public:
+                template <class T>
+                void append(Future<T>&& f) {
+                    auto ftask = new FTask<T>{std::move(f)};
+                }
+            };
+
         }  // namespace light
     }      // namespace async
 }  // namespace utils

@@ -32,7 +32,8 @@ namespace utils {
             // native context behaviour control flag
             enum class control_flag {
                 none = 0,
-                once = 1,  // once reaching end of function, don't run again
+                once = 1,     // once reaching end of function, don't run again
+                rethrow = 2,  // if on end of function and exception exists, rethrow
             };
 
             DEFINE_ENUM_FLAGOP(control_flag);

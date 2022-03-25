@@ -274,6 +274,9 @@ namespace utils {
                 swap_ctx(ctx->native_handle, this_.ctx);
 
 #endif
+                if (any(ctx->flag & control_flag::rethrow) && ctx->end_of_function && ctx->exception) {
+                    std::rethrow_exception(ctx->exception);
+                }
                 return true;
             }
 
@@ -313,6 +316,9 @@ namespace utils {
                 to->first_time = false;
                 swap_ctx(to->native_handle, curctx);
 #endif
+                if (any(to->flag & control_flag::rethrow) && to->end_of_function && to->exception) {
+                    std::rethrow_exception(to->exception);
+                }
                 return true;
             }
 
