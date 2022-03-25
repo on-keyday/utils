@@ -13,6 +13,8 @@
 #include <atomic>
 #ifdef _WIN32
 #include <Windows.h>
+#include <exception>
+#include <cassert>
 #else
 #include "native_stack.h"
 #endif
@@ -24,6 +26,7 @@ namespace utils {
             struct native_context {
 #ifdef _WIN32
                 void* native_handle;
+                void* fiber_from;
 #else
                 native_handle_t* native_handle;
 #endif

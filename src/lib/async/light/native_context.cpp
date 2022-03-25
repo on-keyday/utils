@@ -6,13 +6,14 @@
 */
 
 
+#include "../../../include/platform/windows/dllexport_source.h"
 #include "native_context_impl.h"
 
 namespace utils {
     namespace async {
         namespace light {
 
-            void start_proc(native_context* ctx) {
+            void STDCALL start_proc(native_context* ctx) {
                 while (true) {
                     try {
                         ctx->exec->execute();
@@ -26,6 +27,23 @@ namespace utils {
 
             struct PrepareContext {
 #ifdef _WIN32
+                void* fiber;
+                bool cvt = false;
+                PrepareContext() {
+                    if (::IsThreadAFiber()) {
+                        fiber = ::GetCurrentFiber();
+                    }
+                    else {
+                        fiber = ConvertThreadToFiber(nullptr);
+                        cvt = true;
+                    }
+                }
+
+                ~PrepareContext() {
+                    if (cvt) {
+                        ConvertFiberToThread();
+                    }
+                }
 #else
                 ucontext_t* ctx;
 
@@ -119,6 +137,9 @@ namespace utils {
                 ctx->exec = exec;
                 ctx->deleter = deleter;
                 ctx->native_handle = nullptr;
+#ifdef _WIN32
+                ctx->fiber_from = nullptr;
+#endif
                 ctx->end_of_function = true;
                 ctx->first_time = true;
                 return ctx;
@@ -161,6 +182,10 @@ namespace utils {
                     return true;
                 }
 #ifdef _WIN32
+                ctx->native_handle = ::CreateFiberEx(1024 * 64, 2048 * 64, 0, (LPFIBER_START_ROUTINE)start_proc, ctx);
+                if (!ctx->native_handle) {
+                    return false;
+                }
 #else
                 native_stack stack;
                 if (!stack.init()) {
@@ -176,16 +201,30 @@ namespace utils {
                 return true;
             }
 
+#ifdef _WIN32
+            static void swap_ctx(native_context* ctx, void* from) {
+                ctx->fiber_from = from;
+                ::SwitchToFiber(ctx->native_handle);
+                ctx->fiber_from = nullptr;
+            }
+#else
             static void swap_ctx(native_handle_t* to, ucontext_t* from) {
                 ucontext_from(to) = from;
                 ::swapcontext(from, get_ucontext(to));
                 ucontext_from(to) = nullptr;
             }
-
+#endif
             bool return_to_caller(native_context* ctx) {
                 if (!ctx) {
                     return false;
                 }
+#ifdef _WIN32
+                if (!ctx->fiber_from) {
+                    return false;
+                }
+                assert(ctx->native_handle);
+                ::SwitchToFiber(ctx->fiber_from);
+#else
                 auto caller = ucontext_from(ctx->native_handle);
                 auto callee = get_ucontext(ctx->native_handle);
                 if (!caller) {
@@ -193,6 +232,7 @@ namespace utils {
                 }
                 assert(callee);
                 ::swapcontext(callee, caller);
+#endif
                 return true;
             }
 
@@ -214,6 +254,13 @@ namespace utils {
                     return false;
                 }
 #ifdef _WIN32
+                if (ctx->fiber_from) {
+                    return false;
+                }
+                ctx->first_time = false;
+                ctx->end_of_function = false;
+                PrepareContext this_;
+                swap_ctx(ctx, this_.fiber);
 #else
                 if (ucontext_from(ctx->native_handle)) {
                     return false;
@@ -222,8 +269,9 @@ namespace utils {
                 ctx->end_of_function = false;
                 PrepareContext this_;
                 swap_ctx(ctx->native_handle, this_.ctx);
-                return true;
+
 #endif
+                return true;
             }
 
             bool switch_context(native_context* from, native_context* to, bool not_run_on_end) {
@@ -246,6 +294,13 @@ namespace utils {
                     return false;
                 }
 #ifdef _WIN32
+                if (to->fiber_from) {
+                    return false;
+                }
+                auto curfiber = from->native_handle;
+                to->end_of_function = false;
+                to->first_time = false;
+                swap_ctx(to, curfiber);
 #else
                 if (ucontext_from(to->native_handle)) {
                     return false;
@@ -254,8 +309,8 @@ namespace utils {
                 to->end_of_function = false;
                 to->first_time = false;
                 swap_ctx(to->native_handle, curctx);
-                return true;
 #endif
+                return true;
             }
 
             bool delete_native_context(native_context* ctx) {
@@ -274,6 +329,8 @@ namespace utils {
                 }
                 if (ctx->native_handle) {
 #ifdef _WIN32
+                    PrepareContext this_;
+                    ::DeleteFiber(ctx->native_handle);
 #else
                     native_stack stack;
                     move_from_stack(ctx->native_handle, stack);

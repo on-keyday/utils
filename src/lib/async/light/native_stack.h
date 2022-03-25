@@ -64,7 +64,8 @@ namespace utils {
             bool move_from_stack(native_handle_t* ctx, native_stack& stack);
 
             void set_stack_pointer(native_handle_t* h);
-#endif
+
         }  // namespace light
     }      // namespace async
 }  // namespace utils
+#endif
