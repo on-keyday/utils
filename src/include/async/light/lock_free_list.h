@@ -103,16 +103,40 @@ namespace utils {
             }
 
             template <class T>
-            T get_a_task(LFList<T>* root) {
-                auto b = root->begin.load();
+            struct SearchContext {
+                LFList<T>* root = nullptr;
+                ListElement<T>* suspended = nullptr;
+            };
+
+            template <class T>
+            T get_a_task(LFList<T>* root, SearchContext<T>* sctx = nullptr) {
+                ListElement<T>* b = nullptr;
+                if (sctx) {
+                    if (sctx->root == root && sctx->suspended) {
+                        b = sctx->suspended;
+                    }
+                    else {
+                        sctx->root = root;
+                        sctx->suspended = nullptr;
+                    }
+                }
+                if (!b) {
+                    b = root->begin.load();
+                }
                 if (b) {
                     auto t = b->acquire_task();
                     if (t) {
+                        if (sctx) {
+                            sctx->suspended = b;
+                        }
                         return t;
                     }
                     for (auto p = b->get_next(); p != b; p = p->get_next()) {
                         t = p->acquire_task();
                         if (t) {
+                            if (sctx) {
+                                sctx->suspended = p;
+                            }
                             return t;
                         }
                     }

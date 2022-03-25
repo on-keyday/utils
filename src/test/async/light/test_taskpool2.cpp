@@ -15,11 +15,12 @@ auto& cout = cout_wrap();
 
 void test_taskpool2() {
     auto pool = make_shared<TaskPool>();
-    for (auto i = 0; i < std::thread::hardware_concurrency() / 2; i++) {
+    for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
         std::thread(
             [](shared_ptr<TaskPool> pool) {
+                SearchContext<Task*> sctx;
                 while (true) {
-                    if (!pool->run_task()) {
+                    if (!pool->run_task(&sctx)) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     }
                 }

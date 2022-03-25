@@ -48,8 +48,8 @@ namespace utils {
                     }
                 }
 
-                bool run_task() {
-                    auto task = get_a_task(&list);
+                bool run_task(SearchContext<Task*>* sctx = nullptr) {
+                    auto task = get_a_task(&list, sctx);
                     if (!task) {
                         return false;
                     }
