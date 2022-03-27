@@ -33,7 +33,7 @@ namespace utils {
 
             template <class Dur = std::chrono::milliseconds>
             auto next_step() {
-                auto d = delta();
+                auto d = delta<Dur>();
                 reset();
                 return d;
             }

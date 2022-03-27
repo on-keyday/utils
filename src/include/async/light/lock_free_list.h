@@ -80,17 +80,37 @@ namespace utils {
             };
 
             template <class T>
-            bool insert_element(LFList<T>* root, T task) {
+            struct SearchContext {
+                LFList<T>* root = nullptr;
+                ListElement<T>* suspended = nullptr;
+            };
+
+            template <class T>
+            bool insert_element(LFList<T>* root, T task, SearchContext<T>* sctx = nullptr) {
                 if (!root) {
                     return false;
                 }
-                auto b = root->begin.load();
+                ListElement<T>* b = nullptr;
+                bool has_sctx = false;
+                if (sctx && sctx->root == root && sctx->suspended) {
+                    b = sctx->suspended;
+                    has_sctx = true;
+                }
+                else {
+                    b = root->begin.load();
+                }
                 if (b) {
                     if (b->try_set_task(task)) {
+                        if (has_sctx) {
+                            sctx->suspended = b->get_next();
+                        }
                         return false;
                     }
                     for (auto p = b->get_next(); p != b; p = p->get_next()) {
                         if (p->try_set_task(task)) {
+                            if (has_sctx) {
+                                sctx->suspended = p->get_next();
+                            }
                             return false;
                         }
                     }
@@ -99,17 +119,14 @@ namespace utils {
                 auto set = list->try_set_task(task);
                 assert(set == true);
                 root->insert_list(list);
+                if (has_sctx) {
+                    sctx->suspended = list->get_next();
+                }
                 return true;
             }
 
             template <class T>
-            struct SearchContext {
-                LFList<T>* root = nullptr;
-                ListElement<T>* suspended = nullptr;
-            };
-
-            template <class T>
-            T get_a_task(LFList<T>* root, SearchContext<T>* sctx = nullptr) {
+            T get_a_task(LFList<T>* root, SearchContext<T>* sctx = nullptr, int search = 1) {
                 ListElement<T>* b = nullptr;
                 if (sctx) {
                     if (sctx->root == root && sctx->suspended) {
@@ -120,24 +137,29 @@ namespace utils {
                         sctx->suspended = nullptr;
                     }
                 }
+                if (search <= 0) {
+                    search = 1;
+                }
                 if (!b) {
                     b = root->begin.load();
                 }
                 if (b) {
-                    auto t = b->acquire_task();
-                    if (t) {
-                        if (sctx) {
-                            sctx->suspended = b;
-                        }
-                        return t;
-                    }
-                    for (auto p = b->get_next(); p != b; p = p->get_next()) {
-                        t = p->acquire_task();
+                    for (auto i = 0; i < search; i++) {
+                        auto t = b->acquire_task();
                         if (t) {
                             if (sctx) {
-                                sctx->suspended = p;
+                                sctx->suspended = b->get_next();
                             }
                             return t;
+                        }
+                        for (auto p = b->get_next(); p != b; p = p->get_next()) {
+                            t = p->acquire_task();
+                            if (t) {
+                                if (sctx) {
+                                    sctx->suspended = p->get_next();
+                                }
+                                return t;
+                            }
                         }
                     }
                 }

@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cassert>
 #include "lock_free_list.h"
+#include "../../testutil/timer.h"
 
 namespace utils {
     namespace async {
@@ -32,24 +33,37 @@ namespace utils {
                 }
             };
 
+            template <class Dur = std::chrono::milliseconds>
+            struct TimeContext {
+                test::Timer timer;
+                size_t hit = 0;
+                size_t not_hit = 0;
+                size_t prev = 0;
+                Dur update_delta;
+                Dur wait;
+                Dur limit;
+            };
+
             struct TaskPool {
                private:
                 LFList<Task*> list;
                 std::atomic_size_t size_;
                 std::atomic_size_t element_count;
+                std::atomic_size_t total_insertion;
 
                public:
                 template <class T>
                 void append(Future<T>&& f) {
                     auto ftask = new FTask<T>{std::move(f)};
                     size_++;
+                    total_insertion++;
                     if (insert_element(&list, static_cast<Task*>(ftask))) {
                         element_count++;
                     }
                 }
 
-                bool run_task(SearchContext<Task*>* sctx = nullptr) {
-                    auto task = get_a_task(&list, sctx);
+                bool run_task(SearchContext<Task*>* sctx = nullptr, int search_cost = 1) {
+                    auto task = get_a_task(&list, sctx, search_cost);
                     if (!task) {
                         return false;
                     }
@@ -58,7 +72,8 @@ namespace utils {
                         size_--;
                     }
                     else {
-                        if (insert_element(&list, task)) {
+                        total_insertion++;
+                        if (insert_element(&list, task, sctx)) {
                             element_count++;
                         }
                     }
@@ -76,6 +91,23 @@ namespace utils {
                     list.clear();
                     element_count = 0;
                     return true;
+                }
+
+                template <class Dur, class Callback>
+                bool run_task_with_wait(TimeContext<Dur>& tctx, Callback&& cb, SearchContext<Task*>* sctx = nullptr, int search_cost = 1) {
+                    auto b = run_task(sctx, search_cost);
+                    if (!b) {
+                        tctx.not_hit++;
+                        std::this_thread::sleep_for(tctx.wait);
+                        if (tctx.update_delta <= tctx.timer.delta<Dur>()) {
+                            cb(tctx);
+                            tctx.timer.reset();
+                        }
+                    }
+                    else {
+                        tctx.hit++;
+                    }
+                    return b;
                 }
             };
 

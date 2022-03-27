@@ -9,19 +9,29 @@
 #include <async/light/pool.h>
 #include <thread>
 #include <wrap/cout.h>
+#include <testutil/timer.h>
 using namespace utils::async::light;
 using namespace utils::wrap;
 auto& cout = cout_wrap();
 
 void test_taskpool2() {
     auto pool = make_shared<TaskPool>();
+    std::atomic_size_t hit, not_hit;
     for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
         std::thread(
-            [](shared_ptr<TaskPool> pool) {
+            [&](shared_ptr<TaskPool> pool) {
                 SearchContext<Task*> sctx;
-                while (true) {
+                bool first = false;
+                utils::test::Timer t;
+                auto w = std::chrono::milliseconds(12800);
+                while (!first || pool->size()) {
                     if (!pool->run_task(&sctx)) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        not_hit++;
+                        std::this_thread::sleep_for(w);
+                    }
+                    else {
+                        first = true;
+                        hit++;
                     }
                 }
             },
@@ -31,10 +41,10 @@ void test_taskpool2() {
     for (auto i = 0; i < 10; i++) {
         pool->append(start<void>(
             true, [&pool](Context<void> ctx, int idx) {
-                for (auto i = 0; i < 1000; i++) {
+                for (auto i = 0; i < 10000; i++) {
                     cout << packln(std::this_thread::get_id(), ": called ", idx, ":", i);
                     ctx.suspend();
-                    pool->append(start<void>(true, []() {
+                    ctx.await(start<void>(true, []() {
                         cout << "do!\n";
                     }));
                 }
@@ -45,6 +55,9 @@ void test_taskpool2() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     pool->clear();
+
+    cout << "hit count:" << hit << "\n";
+    cout << "not hit count:" << not_hit << "\n";
 }
 
 int main() {
