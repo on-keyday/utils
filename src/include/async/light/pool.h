@@ -112,18 +112,21 @@ namespace utils {
                 template <class Dur, class Callback>
                 bool run_task_with_wait(TimeContext<Dur>& tctx, Callback&& cb, SearchContext<Task*>* sctx = nullptr, int search_cost = 1) {
                     auto b = run_task(sctx, search_cost);
-                    if (!b) {
-                        tctx.not_hit++;
-                        std::this_thread::sleep_for(tctx.wait);
+                    auto call_update = [&]() {
                         if (tctx.update_delta <= tctx.timer.template delta<Dur>()) {
                             cb(tctx);
                             tctx.reset_prev();
                             tctx.timer.reset();
                         }
+                    };
+                    if (!b) {
+                        tctx.not_hit++;
+                        std::this_thread::sleep_for(tctx.wait);
                     }
                     else {
                         tctx.hit++;
                     }
+                    call_update();
                     return b;
                 }
             };

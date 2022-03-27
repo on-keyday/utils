@@ -19,6 +19,11 @@ void test_taskpool2() {
     auto pool = make_shared<TaskPool>();
     std::atomic_size_t hit, not_hit, reached;
     auto hc = std::thread::hardware_concurrency();
+    for (auto i = 0; i < hc * 10000; i++) {
+        cout << "called " << i << "\n"
+             << "done\n";
+    }
+    auto single = timer.next_step<std::chrono::seconds>();
     for (auto i = 0; i < hc; i++) {
         std::thread(
             [&](shared_ptr<TaskPool> pool) {
@@ -61,15 +66,16 @@ void test_taskpool2() {
             pool)
             .detach();
     }
+
     for (auto i = 0; i < hc; i++) {
         pool->append(start<void>(
             true, [&pool](Context<void> ctx, int idx) {
                 for (auto i = 0; i < 10000; i++) {
                     cout << packln(std::this_thread::get_id(), ": called ", idx, ":", i);
                     ctx.suspend();
-                    ctx.await(start<void>(true, []() {
+                    ctx.await<void>([]() {
                         cout << "do!\n";
-                    }));
+                    });
                 }
             },
             std::move(i)));
@@ -80,6 +86,7 @@ void test_taskpool2() {
     cout << "time:" << timer.delta<std::chrono::seconds>() << "\n";
     pool->clear();
 
+    cout << "single time:" << single << "\n";
     cout << "hit count:" << hit << "\n";
     cout << "not hit count:" << not_hit << "\n";
 }

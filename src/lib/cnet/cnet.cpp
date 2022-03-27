@@ -1,0 +1,167 @@
+/*
+    utils - utility library
+    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#include "../../include/platform/windows/dllexport_source.h"
+#include "../../include/cnet/cnet.h"
+
+namespace utils {
+    namespace cnet {
+        enum class InternalFlag {
+            none,
+            initialized = 0x1,
+            init_succeed = 0x2,
+            uninitialized = 0x4,
+        };
+
+        DEFINE_ENUM_FLAGOP(InternalFlag)
+
+        struct CNet {
+            void* user;
+            CNet* next;
+            Protocol proto;
+            CNetFlag flag;
+            InternalFlag inflag;
+
+            ~CNet() {
+                if (!any(inflag & InternalFlag::uninitialized) && proto.uninitialize) {
+                    proto.uninitialize(this, user);
+                }
+                proto.deleter(user);
+                delete next;
+            }
+        };
+
+        bool STDCALL reset_protocol_context(CNet* ctx, CNetFlag flag, void* user, const Protocol* proto) {
+            if (!ctx || !user || !proto || !proto->deleter) {
+                return false;
+            }
+            ctx->flag = flag;
+            ctx->user = user;
+            ctx->proto = *proto;
+            delete ctx->next;
+            ctx->next = nullptr;
+            if (!any(flag & CNetFlag::init_before_io) && ctx->proto.initialize) {
+                if (!ctx->proto.initialize(ctx, user)) {
+                    ctx->proto.deleter(user);
+                    ctx->user = nullptr;
+                    ctx->proto = {};
+                    ctx->proto.deleter = [](void*) {};
+                    return false;
+                }
+                ctx->inflag = InternalFlag::initialized | InternalFlag::init_succeed;
+            }
+            return true;
+        }
+
+        CNet* STDCALL create_cnet(CNetFlag flag, void* user, const Protocol* proto) {
+            if (!user || !proto || !proto->deleter) {
+                return nullptr;
+            }
+            auto ctx = new CNet{};
+            if (!reset_protocol_context(ctx, flag, user, proto)) {
+                delete ctx;
+                return nullptr;
+            }
+            return ctx;
+        }
+
+        bool STDCALL set_lowlevel_protocol(CNet* ctx, CNet* protocol) {
+            if (!ctx || ctx == protocol) {
+                return false;
+            }
+            if (any(ctx->flag & CNetFlag::final_link)) {
+                return false;
+            }
+            delete ctx->next;
+            ctx->next = protocol;
+            return true;
+        }
+
+        CNet* STDCALL get_lowlevel_protocol(CNet* ctx) {
+            if (!ctx) {
+                return nullptr;
+            }
+            return ctx->next;
+        }
+
+        bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written) {
+            if (!ctx || !written) {
+                return 0;
+            }
+            auto write_buf = [&](Buffer<const char>* buf) {
+                WRITE_START:
+                    auto result = ctx->proto.write(ctx, ctx->user, buf);
+                    if (result && any(ctx->flag & CNetFlag::repeat_writing) && buf->size != buf->proced) {
+                        goto WRITE_START;
+                    }
+                    return result;
+            };
+            auto write_impl = [&](Buffer<const char>* buf) {
+                auto with_make_buf = [&](auto&& cb, bool cond) {
+                    if (cond) {
+                        MadeBuffer mbuf{0};
+                        if (!ctx->proto.make_data(ctx, ctx->user, &mbuf, buf)) {
+                            return false;
+                        }
+                        Buffer<const char> pbuf;
+                        pbuf.ptr = mbuf.buf.ptr;
+                        pbuf.size = mbuf.buf.size;
+                        pbuf.proced = 0;
+                        if (cb(&pbuf)) {
+                            buf->proced = mbuf.buf.proced;
+                            return true;
+                        }
+                        return false;
+                    }
+                    else {
+                        return cb(buf);
+                    }
+                };
+                if (ctx->proto.write) {
+                    return with_make_buf(write_buf, any(ctx->flag & CNetFlag::must_make_data) && ctx->proto.make_data);
+                }
+                else if (ctx->next) {
+                    return with_make_buf(
+                        [&](Buffer<const char>* buf) {
+                            return write(ctx->next, buf->ptr, buf->size, &buf->proced);
+                        },
+                        ctx->proto.make_data);
+                }
+                return false;
+            };
+            Buffer<const char> buf;
+            buf.ptr = data;
+            buf.size = size;
+            buf.proced = 0;
+            if (write_impl(&buf)) {
+                *written = buf.proced;
+                return true;
+            }
+            return false;
+        }
+
+        bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red) {
+            if (!ctx || !buffer || !size || !red) {
+                return false;
+            }
+            Buffer<char> buf;
+            if (ctx->proto.read) {
+                buf.ptr = buffer;
+                buf.size = size;
+                buf.proced = 0;
+                if (ctx->proto.read(ctx, ctx->user, &buf)) {
+                    *red = buf.proced;
+                    return true;
+                }
+            }
+            else if (ctx->next) {
+                return read(ctx->next, buffer, size, red);
+            }
+            return false;
+        }
+    }  // namespace cnet
+}  // namespace utils

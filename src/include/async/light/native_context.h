@@ -68,7 +68,7 @@ namespace utils {
             // invoke executor
             DLL bool STDCALL invoke_executor(native_context* ctx);
 
-            // back to caller
+            // return current context to caller
             DLL bool STDCALL return_to_caller(native_context* ctx);
 
             // delete native_context
