@@ -44,7 +44,7 @@ namespace utils {
             ctx->proto = *proto;
             delete ctx->next;
             ctx->next = nullptr;
-            if (!any(flag & CNetFlag::init_before_io) && ctx->proto.initialize) {
+            if (ctx->proto.initialize && !any(flag & CNetFlag::init_before_io)) {
                 if (!ctx->proto.initialize(ctx, user)) {
                     ctx->proto.deleter(user);
                     ctx->user = nullptr;
@@ -53,6 +53,9 @@ namespace utils {
                     return false;
                 }
                 ctx->inflag = InternalFlag::initialized | InternalFlag::init_succeed;
+            }
+            else {
+                ctx->inflag = InternalFlag::init_succeed;
             }
             return true;
         }
@@ -91,6 +94,15 @@ namespace utils {
         bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written) {
             if (!ctx || !written) {
                 return 0;
+            }
+            if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
+                if (ctx->proto.initialize(ctx, ctx->user)) {
+                    ctx->inflag |= InternalFlag::init_succeed;
+                }
+                ctx->inflag |= InternalFlag::initialized;
+            }
+            if (!any(ctx->inflag & InternalFlag::init_succeed)) {
+                return false;
             }
             auto write_buf = [&](Buffer<const char>* buf) {
                 WRITE_START:
@@ -146,6 +158,15 @@ namespace utils {
 
         bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red) {
             if (!ctx || !red) {
+                return false;
+            }
+            if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
+                if (ctx->proto.initialize(ctx, ctx->user)) {
+                    ctx->inflag |= InternalFlag::init_succeed;
+                }
+                ctx->inflag |= InternalFlag::initialized;
+            }
+            if (!any(ctx->inflag & InternalFlag::init_succeed)) {
                 return false;
             }
             Buffer<char> buf;
