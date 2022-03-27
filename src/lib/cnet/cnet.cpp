@@ -91,9 +91,9 @@ namespace utils {
             return ctx->next;
         }
 
-        bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written) {
-            if (!ctx || !written) {
-                return 0;
+        bool STDCALL initialize(CNet* ctx) {
+            if (!ctx) {
+                return false;
             }
             if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
                 if (ctx->proto.initialize(ctx, ctx->user)) {
@@ -101,7 +101,14 @@ namespace utils {
                 }
                 ctx->inflag |= InternalFlag::initialized;
             }
-            if (!any(ctx->inflag & InternalFlag::init_succeed)) {
+            return any(ctx->inflag & InternalFlag::init_succeed);
+        }
+
+        bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written) {
+            if (!ctx || !written) {
+                return false;
+            }
+            if (!initialize(ctx)) {
                 return false;
             }
             auto write_buf = [&](Buffer<const char>* buf) {
@@ -160,13 +167,7 @@ namespace utils {
             if (!ctx || !red) {
                 return false;
             }
-            if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
-                if (ctx->proto.initialize(ctx, ctx->user)) {
-                    ctx->inflag |= InternalFlag::init_succeed;
-                }
-                ctx->inflag |= InternalFlag::initialized;
-            }
-            if (!any(ctx->inflag & InternalFlag::init_succeed)) {
+            if (!initialize(ctx)) {
                 return false;
             }
             Buffer<char> buf;

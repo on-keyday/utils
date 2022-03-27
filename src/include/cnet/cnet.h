@@ -66,9 +66,9 @@ namespace utils {
 
         template <class T, class SettingValue = void>
         struct ProtocolSuite {
-            void (*initialize)(CNet* ctx, T* user);
-            bool (*write)(CNet* ctx, T* user, Buffer<const char> buf);
-            bool (*read)(CNet* ctx, T* user, Buffer<char> buf);
+            bool (*initialize)(CNet* ctx, T* user);
+            bool (*write)(CNet* ctx, T* user, Buffer<const char>* buf);
+            bool (*read)(CNet* ctx, T* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(CNet* ctx, T* user);
 
@@ -103,6 +103,13 @@ namespace utils {
 
         // get lowlevel protocol
         DLL CNet* STDCALL get_lowlevel_protocol(CNet* ctx);
+
+        // initialize protocol context
+        DLL bool STDCALL initialize(CNet* ctx);
+
+        inline bool open(CNet* ctx) {
+            return initialize(ctx);
+        }
 
         // write to context
         DLL bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written);
