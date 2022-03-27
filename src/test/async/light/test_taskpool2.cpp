@@ -15,30 +15,53 @@ using namespace utils::wrap;
 auto& cout = cout_wrap();
 
 void test_taskpool2() {
+    utils::test::Timer timer;
     auto pool = make_shared<TaskPool>();
-    std::atomic_size_t hit, not_hit;
-    for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
+    std::atomic_size_t hit, not_hit, reached;
+    auto hc = std::thread::hardware_concurrency();
+    for (auto i = 0; i < hc; i++) {
         std::thread(
             [&](shared_ptr<TaskPool> pool) {
                 SearchContext<Task*> sctx;
                 bool first = false;
-                utils::test::Timer t;
-                auto w = std::chrono::milliseconds(12800);
+                TimeContext ctx;
+                ctx.wait = std::chrono::milliseconds(100);
+                ctx.update_delta = std::chrono::milliseconds(500);
                 while (!first || pool->size()) {
-                    if (!pool->run_task(&sctx)) {
+                    if (!pool->run_task_with_wait(
+                            ctx, [](TimeContext<>& ctx) {
+                                size_t hit = ctx.hit_delta();
+                                size_t nhit = ctx.not_hit_delta();
+                                size_t hit_per_not = nhit - hit;
+                                if (nhit > hit && hit_per_not) {
+                                    if (hit_per_not > 40) {
+                                        ctx.wait *= 2;
+                                    }
+                                    if (hit_per_not > 10) {
+                                        ctx.wait *= 2;
+                                    }
+                                    ctx.wait *= 4;
+                                }
+                            },
+                            &sctx)) {
                         not_hit++;
-                        std::this_thread::sleep_for(w);
                     }
                     else {
                         first = true;
                         hit++;
                     }
                 }
+                cout << pack(
+                    "final ", std::this_thread::get_id(), "\n",
+                    "wait time:", ctx.wait, "\n",
+                    "hit count:", ctx.hit, "\n",
+                    "not hit count:", ctx.not_hit, "\n\n");
+                reached++;
             },
             pool)
             .detach();
     }
-    for (auto i = 0; i < 10; i++) {
+    for (auto i = 0; i < hc; i++) {
         pool->append(start<void>(
             true, [&pool](Context<void> ctx, int idx) {
                 for (auto i = 0; i < 10000; i++) {
@@ -51,9 +74,10 @@ void test_taskpool2() {
             },
             std::move(i)));
     }
-    while (pool->size()) {
+    while (hc > reached) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    cout << "time:" << timer.delta<std::chrono::seconds>() << "\n";
     pool->clear();
 
     cout << "hit count:" << hit << "\n";

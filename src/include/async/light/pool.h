@@ -38,10 +38,26 @@ namespace utils {
                 test::Timer timer;
                 size_t hit = 0;
                 size_t not_hit = 0;
-                size_t prev = 0;
-                Dur update_delta;
-                Dur wait;
-                Dur limit;
+                Dur update_delta{};
+
+                size_t prev_hit = 0;
+                size_t prev_not_hit = 0;
+
+                Dur wait{};
+                Dur limit{};
+
+                void reset_prev() noexcept {
+                    prev_hit = hit;
+                    prev_not_hit = not_hit;
+                }
+
+                size_t hit_delta() const noexcept {
+                    return hit - prev_hit;
+                }
+
+                size_t not_hit_delta() const noexcept {
+                    return not_hit - prev_not_hit;
+                }
             };
 
             struct TaskPool {
@@ -99,8 +115,9 @@ namespace utils {
                     if (!b) {
                         tctx.not_hit++;
                         std::this_thread::sleep_for(tctx.wait);
-                        if (tctx.update_delta <= tctx.timer.delta<Dur>()) {
+                        if (tctx.update_delta <= tctx.timer.template delta<Dur>()) {
                             cb(tctx);
+                            tctx.reset_prev();
                             tctx.timer.reset();
                         }
                     }

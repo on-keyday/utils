@@ -204,6 +204,21 @@ namespace utils {
                 return ptr->template get<0>();
             }
 
+            template <class Ret, class Fn, class... Args>
+            Future<Ret> start(bool suspend, Fn&& fn, Args&&... args) {
+                auto ctx = make_shared_context<Ret>();
+                bind_func(ctx, std::forward<Fn>(fn), std::forward<Args>(args)...);
+                if (!suspend) {
+                    ctx->invoke();
+                }
+                return Future<Ret>{ctx};
+            }
+
+            template <class Ret, class Fn, class... Args>
+            Future<Ret> invoke(Fn&& fn, Args&&... args) {
+                return start<Ret>(false, std::forward<Fn>(fn), std::forward<Args>(args)...);
+            }
+
             template <class T>
             struct Context {
                private:
@@ -232,6 +247,11 @@ namespace utils {
                 U await(Future<U> u) {
                     return await_impl(ctx, u);
                 }
+
+                template <class Ret, class Fn, class... Args>
+                decltype(auto) await(Fn&& fn, Args&&... args) {
+                    return await(start<Ret>(true, std::forward<Fn>(fn), std::forward<Args>(args)...));
+                }
             };
 
             template <>
@@ -254,22 +274,12 @@ namespace utils {
                 U await(Future<U> u) {
                     return await_impl(ctx, u);
                 }
-            };
 
-            template <class Ret, class Fn, class... Args>
-            Future<Ret> start(bool suspend, Fn&& fn, Args&&... args) {
-                auto ctx = make_shared_context<Ret>();
-                bind_func(ctx, std::forward<Fn>(fn), std::forward<Args>(args)...);
-                if (!suspend) {
-                    ctx->invoke();
+                template <class Ret, class Fn, class... Args>
+                decltype(auto) await(Fn&& fn, Args&&... args) {
+                    return await(start<Ret>(true, std::forward<Fn>(fn), std::forward<Args>(args)...));
                 }
-                return Future<Ret>{ctx};
-            }
-
-            template <class Ret, class Fn, class... Args>
-            Future<Ret> invoke(Fn&& fn, Args&&... args) {
-                return start<Ret>(false, std::forward<Fn>(fn), std::forward<Args>(args)...);
-            }
+            };
 
             template <class Ret, class Fn, class... Arg>
             bool bind_func(wrap::shared_ptr<SharedContext<Ret>>& ctx, Fn&& fn, Arg&&... arg) {
