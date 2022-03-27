@@ -107,8 +107,18 @@ namespace utils {
         // write to context
         DLL bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written);
 
+        // do protocol request
+        inline bool request(CNet* ctx, size_t* written) {
+            return write(ctx, nullptr, 0, written);
+        }
+
         // read from context
         DLL bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red);
+
+        // receive protocol response
+        inline bool response(CNet* ctx, size_t* red) {
+            return read(ctx, nullptr, 0, red);
+        }
 
         // set number setting
         DLL bool STDCALL set_number(CNet* ctx, std::int64_t key, std::int64_t value);

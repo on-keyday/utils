@@ -145,7 +145,7 @@ namespace utils {
         }
 
         bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red) {
-            if (!ctx || !buffer || !size || !red) {
+            if (!ctx || !red) {
                 return false;
             }
             Buffer<char> buf;
@@ -162,6 +162,50 @@ namespace utils {
                 return read(ctx->next, buffer, size, red);
             }
             return false;
+        }
+
+        bool STDCALL set_number(CNet* ctx, std::int64_t key, std::int64_t value) {
+            if (!ctx || !ctx->proto.settings_number) {
+                return false;
+            }
+            return ctx->proto.settings_number(ctx, ctx->user, key, value);
+        }
+
+        bool STDCALL set_ptr(CNet* ctx, std::int64_t key, void* value) {
+            if (!ctx || !ctx->proto.settings_ptr) {
+                return false;
+            }
+            return ctx->proto.settings_ptr(ctx, ctx->user, key, value);
+        }
+
+        std::int64_t STDCALL query_number(CNet* ctx, std::int64_t key) {
+            if (!ctx || !ctx->proto.query_number) {
+                return 0;
+            }
+            return ctx->proto.query_number(ctx, ctx->user, key);
+        }
+
+        void* STDCALL query_ptr(CNet* ctx, std::int64_t key) {
+            if (!ctx || !ctx->proto.query_ptr) {
+                return nullptr;
+            }
+            return ctx->proto.query_ptr(ctx, ctx->user, key);
+        }
+
+        bool STDCALL is_supported(CNet* ctx, std::int64_t key, bool ptr) {
+            if (!ctx) {
+                return false;
+            }
+            if (!ctx->proto.is_support) {
+                return false;
+            }
+            if (ptr && !ctx->proto.query_ptr) {
+                return false;
+            }
+            if (!ptr && !ctx->proto.query_number) {
+                return false;
+            }
+            return ctx->proto.is_support(key, ptr);
         }
     }  // namespace cnet
 }  // namespace utils
