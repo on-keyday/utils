@@ -108,6 +108,12 @@ namespace utils {
         // get lowlevel protocol
         DLL CNet* STDCALL get_lowlevel_protocol(CNet* ctx);
 
+        // set user defined callback
+        DLL bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data);
+
+        // invoke user defined callback
+        DLL bool STDCALL invoke_callback(CNet* ctx);
+
         // initialize protocol context
         DLL bool STDCALL initialize(CNet* ctx);
 

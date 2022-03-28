@@ -22,9 +22,13 @@ namespace utils {
         struct CNet {
             void* user;
             CNet* next;
+            CNet* parent;
             Protocol proto;
             CNetFlag flag;
             InternalFlag inflag;
+
+            void* cbctx;
+            bool (*callback)(CNet*, void*);
 
             ~CNet() {
                 uninitialize(this);
@@ -32,6 +36,29 @@ namespace utils {
                 delete next;
             }
         };
+
+        bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data) {
+            if (!ctx) {
+                return false;
+            }
+            ctx->callback = cb;
+            ctx->cbctx = data;
+            return true;
+        }
+
+        bool STDCALL invoke_callback(CNet* ctx) {
+            if (!ctx) {
+                return false;
+            }
+            for (auto p = ctx; p; p = p->parent) {
+                if (p->callback) {
+                    if (!p->callback(ctx, p->cbctx)) {
+                        break;
+                    }
+                }
+            }
+            return true;
+        }
 
         bool STDCALL reset_protocol_context(CNet* ctx, CNetFlag flag, void* user, const Protocol* proto) {
             if (!ctx || !user || !proto || !proto->deleter) {
@@ -67,6 +94,7 @@ namespace utils {
                 delete ctx;
                 return nullptr;
             }
+            ctx->parent = nullptr;
             return ctx;
         }
 
@@ -82,6 +110,9 @@ namespace utils {
             }
             delete ctx->next;
             ctx->next = protocol;
+            if (protocol) {
+                protocol->parent = ctx;
+            }
             return true;
         }
 

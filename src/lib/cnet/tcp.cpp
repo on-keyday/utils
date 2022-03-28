@@ -9,32 +9,54 @@
 #include "../../include/net/core/init_net.h"
 #include <cstdint>
 #include "../../include/number/array.h"
+#ifdef _WIN32
+#ifdef __MINGW32__
+#define _WIN32_WINNT 0x0501
+#endif
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#define closesocket close
+#define ioctlsocket ioctl
+#define SD_SEND SHUT_WR
+#define SD_RECEIVE SHUT_RD
+#define SD_BOTH SHUT_RDWR
+#define WSAWOULDBLOCK EWOULDBLOCK
+typedef int SOCKET;
+#endif
+
 namespace utils {
     namespace cnet {
         namespace tcp {
             struct OsTCPSocket {
-#ifdef _WIN32
-                std::uintptr_t sock;
-#else
-                int sock;
-#endif
-            };
-
-            struct OsDns {
+                ::OVERLAPPED ol;
+                ::SOCKET sock;
                 number::Array<254, char, true> host{0};
                 number::Array<10, char, true> port{0};
+                ::addrinfo* info = nullptr;
             };
 
             bool open_socket(CNet* ctx, OsTCPSocket* sock) {
                 if (!net::network().initialized()) {
                     return false;
                 }
-                auto dns = cnet::get_lowlevel_protocol(ctx);
-                size_t w = 0;
-                request(dns, &w);
+                ADDRINFOEXA info{0}, *result;
+                ::timeval timeout{0};
+                sock->ol.hEvent = ::CreateEventA(nullptr, true, false, nullptr);
+
+                ::GetAddrInfoExA(
+                    sock->host.c_str(), sock->port.c_str(),
+                    NS_DNS, nullptr, &info, &result, &timeout, &sock->ol, nullptr, nullptr);
             }
 
-            void close_socket(CNet* ctx, OsTCPSocket* sock);
+            void close_socket(CNet* ctx, OsTCPSocket* sock) {}
 
             bool write_socket(CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf);
             bool read_socket(CNet* ctx, OsTCPSocket* user, Buffer<char>* buf);
@@ -47,12 +69,7 @@ namespace utils {
                     .uninitialize = close_socket,
                     .deleter = [](OsTCPSocket* sock) { delete sock; },
                 };
-                ProtocolSuite<OsDns> dns_proto{
-                    .deleter = [](OsDns* p) { delete p; },
-                };
-                auto ctx = create_cnet(CNetFlag::once_set_no_delete_link | CNetFlag::init_before_io, new OsTCPSocket{}, tcp_proto);
-                auto dns = create_cnet(CNetFlag::final_link, new OsDns{}, dns_proto);
-                set_lowlevel_protocol(ctx, dns);
+                auto ctx = create_cnet(CNetFlag::final_link | CNetFlag::init_before_io, new OsTCPSocket{}, tcp_proto);
                 return ctx;
             }
 
