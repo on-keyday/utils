@@ -158,6 +158,7 @@ namespace utils {
         enum CNetCommonSetting {
             protocol_name = 0,  // protocol name (constant value)
             protocol_type = 1,  // protocol type (constant value)
+            error_code = 2,     // most recent error code
             user_defined_start = 100,
         };
 

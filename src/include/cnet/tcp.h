@@ -19,9 +19,31 @@ namespace utils {
             DLL CNet* STDCALL create_client();
 
             enum TCPConfig {
-                ipver = user_defined_start + 1,  // set ip version
-                dns_resolver,
+                // ip version
+                ipver = user_defined_start + 1,
+                // retry after ::connect() failed
+                retry_after_connect_call,
+                // use multiple io system like below
+                // windows: io completion port
+                // linux: epoll
+                use_multiple_io_system,
+                // polling recv data
+                recv_polling,
+                // host name
+                host_name,
+                // port number
+                port_number,
+                // raw socket (only get)
+                raw_socket,
             };
+
+            inline int ip_version(CNet* ctx) {
+                return query_number(ctx, ipver);
+            }
+
+            bool set_hostport(CNet* ctx, const char* host, const char* port) {
+                return set_ptr(ctx, host_name, (void*)host) && set_ptr(ctx, port_number, (void*)port);
+            }
 
         }  // namespace tcp
     }      // namespace cnet
