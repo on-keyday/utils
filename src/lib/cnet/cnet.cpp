@@ -27,9 +27,6 @@ namespace utils {
             InternalFlag inflag;
 
             ~CNet() {
-                if (!any(inflag & InternalFlag::uninitialized) && proto.uninitialize) {
-                    proto.uninitialize(this, user);
-                }
                 proto.deleter(user);
                 delete next;
             }
@@ -95,13 +92,30 @@ namespace utils {
             if (!ctx) {
                 return false;
             }
+            if (!any(ctx->flag & CNetFlag::reinitializable) && any(ctx->inflag & InternalFlag::uninitialized)) {
+                return false;
+            }
+            else {
+                ctx->inflag = InternalFlag::none;
+            }
             if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
                 if (ctx->proto.initialize(ctx, ctx->user)) {
                     ctx->inflag |= InternalFlag::init_succeed;
                 }
                 ctx->inflag |= InternalFlag::initialized;
             }
+            else if (!ctx->proto.initialize) {
+                ctx->inflag |= InternalFlag::init_succeed;
+            }
             return any(ctx->inflag & InternalFlag::init_succeed);
+        }
+
+        bool STDCALL uninitialize(CNet* ctx) {
+            if (!any(ctx->inflag & InternalFlag::uninitialized) && ctx->proto.uninitialize) {
+                ctx->proto.uninitialize(ctx, ctx->user);
+                ctx->inflag |= InternalFlag::uninitialized;
+            }
+            return true;
         }
 
         bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written) {

@@ -28,6 +28,8 @@ namespace utils {
             must_make_data = 0x4,
             // repeat writing while proced != size
             repeat_writing = 0x8,
+            // make it able to re-initialize after uninitialized
+            reinitializable = 0x10,
         };
 
         DEFINE_ENUM_FLAGOP(CNetFlag)
@@ -111,6 +113,9 @@ namespace utils {
             return initialize(ctx);
         }
 
+        // uninititalize protocol context
+        DLL bool STDCALL uninitialize(CNet* ctx);
+
         // write to context
         DLL bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written);
 
@@ -141,6 +146,12 @@ namespace utils {
 
         // is this key surpported ?
         DLL bool STDCALL is_supported(CNet* ctx, std::int64_t key, bool ptr);
+
+        enum CNetCommonSetting {
+            protocol_name = 0,  // protocol name (constant value)
+
+            user_defined_start = 100,
+        };
 
     }  // namespace cnet
 }  // namespace utils
