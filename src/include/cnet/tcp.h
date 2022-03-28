@@ -20,6 +20,7 @@ namespace utils {
 
             enum TCPConfig {
                 ipver = user_defined_start + 1,  // set ip version
+                dns_resolver,
             };
 
         }  // namespace tcp

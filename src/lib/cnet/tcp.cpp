@@ -8,6 +8,7 @@
 #include "../../include/cnet/tcp.h"
 #include "../../include/net/core/init_net.h"
 #include <cstdint>
+#include "../../include/number/array.h"
 namespace utils {
     namespace cnet {
         namespace tcp {
@@ -19,11 +20,20 @@ namespace utils {
 #endif
             };
 
+            struct OsDns {
+                number::Array<254, char, true> host{0};
+                number::Array<10, char, true> port{0};
+            };
+
             bool open_socket(CNet* ctx, OsTCPSocket* sock) {
                 if (!net::network().initialized()) {
                     return false;
                 }
+                auto dns = cnet::get_lowlevel_protocol(ctx);
+                size_t w = 0;
+                request(dns, &w);
             }
+
             void close_socket(CNet* ctx, OsTCPSocket* sock);
 
             bool write_socket(CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf);
@@ -37,7 +47,13 @@ namespace utils {
                     .uninitialize = close_socket,
                     .deleter = [](OsTCPSocket* sock) { delete sock; },
                 };
-                return create_cnet(CNetFlag::final_link | CNetFlag::init_before_io, new OsTCPSocket{}, tcp_proto);
+                ProtocolSuite<OsDns> dns_proto{
+                    .deleter = [](OsDns* p) { delete p; },
+                };
+                auto ctx = create_cnet(CNetFlag::once_set_no_delete_link | CNetFlag::init_before_io, new OsTCPSocket{}, tcp_proto);
+                auto dns = create_cnet(CNetFlag::final_link, new OsDns{}, dns_proto);
+                set_lowlevel_protocol(ctx, dns);
+                return ctx;
             }
 
         }  // namespace tcp

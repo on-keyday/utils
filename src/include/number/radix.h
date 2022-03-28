@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <limits>
 #include "char_range.h"
+#include "array.h"
 
 namespace utils {
     namespace number {
@@ -66,30 +67,6 @@ namespace utils {
             radix_base_max<T>(34),
             radix_base_max<T>(35),
             radix_base_max<T>(36),
-        };
-        template <size_t sz, class T, bool strmode = false>
-        struct Array {
-            T buf[sz];
-            size_t i = 0;
-            constexpr T operator[](size_t f) const {
-                return buf[f];
-            }
-
-            constexpr size_t size() const {
-                return i;
-            }
-
-            constexpr void push_back(T t) {
-                if (strmode ? i >= sz - 1 : i >= sz) {
-                    return;
-                }
-                buf[i] = t;
-                i++;
-            }
-
-            constexpr const T* c_str() const {
-                return buf;
-            }
         };
 
         template <class T>

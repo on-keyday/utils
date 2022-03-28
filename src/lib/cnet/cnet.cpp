@@ -27,6 +27,7 @@ namespace utils {
             InternalFlag inflag;
 
             ~CNet() {
+                uninitialize(this);
                 proto.deleter(user);
                 delete next;
             }
@@ -74,6 +75,9 @@ namespace utils {
                 return false;
             }
             if (any(ctx->flag & CNetFlag::final_link)) {
+                return false;
+            }
+            if (ctx->next && any(ctx->flag & CNetFlag::once_set_no_delete_link)) {
                 return false;
             }
             delete ctx->next;

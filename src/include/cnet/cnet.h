@@ -30,6 +30,8 @@ namespace utils {
             repeat_writing = 0x8,
             // make it able to re-initialize after uninitialized
             reinitializable = 0x10,
+            // once set no delete link
+            once_set_no_delete_link = 0x20,
         };
 
         DEFINE_ENUM_FLAGOP(CNetFlag)
@@ -149,8 +151,15 @@ namespace utils {
 
         enum CNetCommonSetting {
             protocol_name = 0,  // protocol name (constant value)
-
+            protocol_type = 1,  // protocol type (constant value)
             user_defined_start = 100,
+        };
+
+        enum ProtocolType {
+            unknown = 0,
+            byte_stream = 1,
+            block_stream = 2,
+            request_response = 3,
         };
 
     }  // namespace cnet
