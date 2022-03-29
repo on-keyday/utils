@@ -36,15 +36,101 @@ namespace utils {
                 number::Array<50, unsigned char, true> alpn{0};
                 Host<char> host;
                 bool setup = false;
+                wrap::string buffer;
+                size_t buf_index = 0;
+                size_t write_index = 0;
+                TLSStatus status;
+
+                void append_to_buffer(const char* data, size_t size_) {
+                    auto now_cap = buffer.size() - buf_index;
+                    if (now_cap < size_) {
+                        auto cur_size = buffer.size();
+                        auto add_ = size_ - cur_size;
+                        buffer.resize(cur_size + add_);
+                    }
+                    ::memmove_s(buffer.data() + buf_index, buffer.size(), data, size_);
+                    buf_index += size_;
+                }
             };
 
-            void do_IO(OpenSSLContext* tls) {
+            int write_to_bio(CNet* ctx, OpenSSLContext* tls) {
+                size_t w = 0;
+                auto err = ::BIO_write_ex(tls->bio, tls->buffer.c_str(), tls->buf_index - tls->write_index, &w);
+                if (!err) {
+                    if (::BIO_should_retry(tls->bio)) {
+                        return 0;
+                    }
+                    return -1;
+                }
+                tls->write_index += w;
+                if (tls->write_index == tls->buf_index) {
+                    tls->buf_index = 0;
+                    tls->write_index = 0;
+                    return 1;
+                }
+                return 0;
+            }
+
+            bool do_IO(CNet* ctx, OpenSSLContext* tls) {
+                if (tls->buf_index) {
+                    auto err = write_to_bio(ctx, tls);
+                    if (err <= 0) {
+                        return err == 0;
+                    }
+                }
                 number::Array<1024, char> v;
-                ::BIO_read_ex(tls->bio, v.buf, v.capacity(), &v.i);
+                while (true) {
+                    auto err = ::BIO_read_ex(tls->bio, v.buf, v.capacity(), &v.i);
+                    tls->append_to_buffer(v.c_str(), v.size());
+                    if (!err || v.i < v.capacity()) {
+                        break;
+                    }
+                }
+                auto lowconn = cnet::get_lowlevel_protocol(ctx);
+                assert(lowconn);
+                tls->status = TLSStatus::start_write_to_low;
+                invoke_callback(ctx);
+                size_t w = 0;
+                while (true) {
+                    if (!cnet::write(lowconn, tls->buffer.data(), tls->buf_index, &w)) {
+                        return false;
+                    }
+                    if (w == tls->buffer.size()) {
+                        break;
+                    }
+                    tls->status = TLSStatus::writing_to_low;
+                    invoke_callback(ctx);
+                }
+                tls->status = TLSStatus::write_to_low_done;
+                invoke_callback(ctx);
+                tls->status = TLSStatus::start_read_from_low;
+                invoke_callback(ctx);
+                tls->buf_index = 0;
+                if (tls->buffer.size() < 1024) {
+                    tls->buffer.resize(1024);
+                }
+                while (true) {
+                    if (!cnet::read(lowconn, tls->buffer.data(), tls->buffer.size(), &tls->buf_index)) {
+                        return false;
+                    }
+                    if (tls->buf_index != 0) {
+                        break;
+                    }
+                    tls->status = TLSStatus::reading_from_low;
+                    invoke_callback(ctx);
+                }
+                tls->status = TLSStatus::read_from_low_done;
+                invoke_callback(ctx);
+                return write_to_bio(ctx, tls) >= 0;
             }
 
             bool open_tls(CNet* ctx, OpenSSLContext* tls) {
+                auto lproto = cnet::get_lowlevel_protocol(ctx);
+                if (!lproto) {
+                    return false;
+                }
                 tls->sslctx = ::SSL_CTX_new(TLS_method());
+                ::SSL_CTX_set_options(tls->sslctx, SSL_OP_NO_SSLv2);
                 if (!tls->sslctx) {
                     return false;
                 }
@@ -77,7 +163,6 @@ namespace utils {
                 ::SSL_CTX_free(tls->sslctx);
                 tls->sslctx = nullptr;
                 cnet::close(cnet::get_lowlevel_protocol(ctx));
-                return;
             }
 
             CNet* STDCALL create_client() {

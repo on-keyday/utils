@@ -196,6 +196,8 @@ namespace utils {
             }
 
             bool write_socket(CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf) {
+                sock->status = TCPStatus::start_sending;
+                invoke_callback(ctx);
                 auto err = ::send(sock->sock, buf->ptr, buf->size, 0);
                 if (err < 0) {
                     if (net::errcode() == WSAEWOULDBLOCK) {
@@ -204,6 +206,8 @@ namespace utils {
                     return false;
                 }
                 buf->proced = err;
+                sock->status = TCPStatus::sent;
+                invoke_callback(ctx);
                 return true;
             }
 
@@ -254,6 +258,8 @@ namespace utils {
                         break;
                     }
                 }
+                sock->status = TCPStatus::recieved;
+                invoke_callback(ctx);
                 return true;
             }
 

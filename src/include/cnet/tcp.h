@@ -42,15 +42,22 @@ namespace utils {
             enum class TCPStatus {
                 unknown,
                 idle,
+
                 start_resolving_name,
                 wait_resolving_name,
                 resolve_name_done,
+
                 start_connectig,
                 wait_connect,
                 connected,
+
                 start_recving,
                 wait_recv,
-                recived,
+                recieved,
+
+                start_sending,
+                wait_send,
+                sent,
             };
 
             inline int ip_version(CNet* ctx) {

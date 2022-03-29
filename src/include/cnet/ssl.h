@@ -20,6 +20,17 @@ namespace utils {
                 host,
                 cert_file,
             };
+
+            enum class TLSStatus {
+                idle,
+                start_write_to_low,
+                writing_to_low,
+                write_to_low_done,
+
+                start_read_from_low,
+                reading_from_low,
+                read_from_low_done,
+            };
         }  // namespace ssl
     }      // namespace cnet
 }  // namespace utils
