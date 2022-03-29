@@ -9,6 +9,7 @@
 #include "../../include/cnet/ssl.h"
 #include "../../include/wrap/light/string.h"
 #include "../../include/number/array.h"
+#include "../../include/helper/appender.h"
 #ifndef USE_OPENSSL
 #define USE_OPENSSL 1
 #endif
@@ -200,10 +201,112 @@ namespace utils {
                 cnet::close(cnet::get_lowlevel_protocol(ctx));
             }
 
+            template <class Callback>
+            bool io_common_loop(CNet* ctx, OpenSSLContext* tls, Callback&& callback) {
+                while (true) {
+                    auto err = callback();
+                    if (!err) {
+                        if (need_IO(tls)) {
+                            if (!do_IO(ctx, tls)) {
+                                return false;
+                            }
+                            continue;
+                        }
+                        return false;
+                    }
+                    break;
+                }
+            }
+
+            bool read_tls(CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
+                tls->status = TLSStatus::start_read;
+                invoke_callback(ctx);
+                if (!io_common_loop(
+                        ctx, tls,
+                        [&]() {
+                            return ::SSL_read_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
+                        })) {
+                    return false;
+                }
+                tls->status = TLSStatus::read_done;
+                invoke_callback(ctx);
+                return true;
+            }
+
+            bool write_tls(CNet* ctx, OpenSSLContext* tls, Buffer<const char>* buf) {
+                tls->status = TLSStatus::start_write;
+                invoke_callback(ctx);
+                if (!io_common_loop(
+                        ctx, tls,
+                        [&]() {
+                            return ::SSL_write_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
+                        })) {
+                    return false;
+                }
+                tls->status = TLSStatus::write_done;
+                invoke_callback(ctx);
+                return true;
+            }
+
+            bool tls_settings_ptr(CNet* ctx, OpenSSLContext* tls, std::int64_t key, void* value) {
+                if (!value) {
+                    return false;
+                }
+                if (key == host_verify) {
+                    auto host = (const char*)value;
+                    tls->host = {};
+                    helper::append(tls->host, host);
+                }
+                else if (key == cert_file) {
+                    auto file = (const char*)value;
+                    tls->cert_file = file;
+                }
+                else if (key == alpn) {
+                    auto alpn_str = (const char*)value;
+                    tls->alpn = {};
+                    helper::append(tls->alpn, alpn_str);
+                }
+                else {
+                    return false;
+                }
+                return true;
+            }
+
+            std::int64_t tls_query_number(CNet* ctx, OpenSSLContext* tls, std::int64_t key) {
+                if (key == protocol_type) {
+                    return byte_stream;
+                }
+                else if (key == error_code) {
+                    return ::SSL_get_error(tls->ssl, -1);
+                }
+                return 0;
+            }
+
+            void* tls_query_ptr(CNet* ctx, OpenSSLContext* tls, std::int64_t key) {
+                if (key == protocol_name) {
+                    return (void*)"tls";
+                }
+                else if (key == host_verify) {
+                    return (void*)tls->host.c_str();
+                }
+                else if (key == cert_file) {
+                    return (void*)tls->cert_file.c_str();
+                }
+                else if (key == raw_ssl) {
+                    return tls->ssl;
+                }
+                return nullptr;
+            }
+
             CNet* STDCALL create_client() {
                 ProtocolSuite<OpenSSLContext> ssl_proto{
                     .initialize = open_tls,
+                    .write = write_tls,
+                    .read = read_tls,
                     .uninitialize = close_tls,
+                    .settings_ptr = tls_settings_ptr,
+                    .query_number = tls_query_number,
+                    .query_ptr = tls_query_ptr,
                     .deleter = [](OpenSSLContext* v) { delete v; },
                 };
                 return create_cnet(CNetFlag::once_set_no_delete_link | CNetFlag::init_before_io, new OpenSSLContext{}, ssl_proto);

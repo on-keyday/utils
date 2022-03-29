@@ -16,9 +16,15 @@ namespace utils {
             DLL CNet* STDCALL create_client();
 
             enum TLSConfig {
+                // alpn string
                 alpn,
-                host,
+                // host name for verification
+                host_verify,
+                // certificate file path
                 cert_file,
+
+                // raw ssl context (get only)
+                raw_ssl,
             };
 
             enum class TLSStatus {
@@ -33,6 +39,12 @@ namespace utils {
 
                 start_connect,
                 connected,
+
+                start_read,
+                read_done,
+
+                start_write,
+                write_done,
             };
         }  // namespace ssl
     }      // namespace cnet
