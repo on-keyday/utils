@@ -6,6 +6,7 @@
 */
 
 
+#include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/cnet/ssl.h"
 #include "../../include/wrap/light/string.h"
 #include "../../include/number/array.h"
@@ -216,6 +217,7 @@ namespace utils {
                     }
                     break;
                 }
+                return true;
             }
 
             bool read_tls(CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
@@ -299,10 +301,10 @@ namespace utils {
                     return tls->ssl;
                 }
                 else if (key == alpn_selected) {
-                    unsigned char* ptr = nullptr;
+                    const unsigned char* ptr = nullptr;
                     unsigned int len = 0;
                     ::SSL_get0_alpn_selected(tls->ssl, &ptr, &len);
-                    return ptr;
+                    return (void*)ptr;
                 }
                 return nullptr;
             }

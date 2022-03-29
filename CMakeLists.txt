@@ -155,6 +155,7 @@ PRIVATE
 "src/lib/async/light/native_stack.cpp"
 "src/lib/cnet/cnet.cpp"
 "src/lib/cnet/tcp.cpp"
+"src/lib/cnet/ssl.cpp"
 )
 #if(WIN32)
 target_sources(utils
