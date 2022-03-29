@@ -61,6 +61,15 @@ namespace utils {
                 ::SSL_set_tlsext_host_name(tls->ssl, tls->host.c_str());
             }
 
+            void close_ssl(CNet* ctx, OpenSSLContext* tls) {
+                ::SSL_free(tls->ssl);
+                tls->ssl = nullptr;
+                tls->bio = nullptr;
+                ::SSL_CTX_free(tls->sslctx);
+                tls->sslctx = nullptr;
+                return;
+            }
+
             CNet* STDCALL create_client() {
                 ProtocolSuite<OpenSSLContext> ssl_proto{
                     .initialize = open_tls,
