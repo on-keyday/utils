@@ -279,6 +279,9 @@ namespace utils {
                 else if (key == error_code) {
                     return ::SSL_get_error(tls->ssl, -1);
                 }
+                else if (key == current_state) {
+                    return (std::int64_t)tls->status;
+                }
                 return 0;
             }
 
@@ -294,6 +297,12 @@ namespace utils {
                 }
                 else if (key == raw_ssl) {
                     return tls->ssl;
+                }
+                else if (key == alpn_selected) {
+                    unsigned char* ptr = nullptr;
+                    unsigned int len = 0;
+                    ::SSL_get0_alpn_selected(tls->ssl, &ptr, &len);
+                    return ptr;
                 }
                 return nullptr;
             }

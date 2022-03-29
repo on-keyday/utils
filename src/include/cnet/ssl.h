@@ -25,10 +25,18 @@ namespace utils {
 
                 // raw ssl context (get only)
                 raw_ssl,
+
+                // cuurent state (get only)
+                current_state,
+
+                // alpn selected (get only)
+                alpn_selected,
             };
 
             enum class TLSStatus {
+                unknown,
                 idle,
+
                 start_write_to_low,
                 writing_to_low,
                 write_to_low_done,
@@ -46,6 +54,33 @@ namespace utils {
                 start_write,
                 write_done,
             };
+
+            inline TLSStatus get_current_state(CNet* ctx) {
+                return (TLSStatus)query_number(ctx, current_state);
+            }
+
+            inline bool set_certificate_file(CNet* ctx, const char* file) {
+                return set_ptr(ctx, cert_file, (void*)file);
+            }
+
+            inline bool set_alpn(CNet* ctx, const char* alpnstr) {
+                return set_ptr(ctx, alpn, (void*)alpnstr);
+            }
+
+            inline bool set_host(CNet* ctx, const char* host) {
+                return set_ptr(ctx, host_verify, (void*)host);
+            }
+
+            inline const char* get_alpn_selected(CNet* ctx) {
+                return (const char*)query_ptr(ctx, alpn_selected);
+            }
+
+            inline bool is_waiting(CNet* ctx) {
+                auto s = get_current_state(ctx);
+                return s == TLSStatus::writing_to_low ||
+                       s == TLSStatus::reading_from_low;
+            }
+
         }  // namespace ssl
     }      // namespace cnet
 }  // namespace utils

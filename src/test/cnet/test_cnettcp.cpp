@@ -7,6 +7,7 @@
 
 
 #include <cnet/tcp.h>
+#include <cnet/ssl.h>
 #include <cassert>
 #include <cstring>
 #include <thread>
@@ -44,8 +45,9 @@ void test_tcp_cnet() {
         return true;
     };
     cnet::set_lambda(conn, cb);
-    cnet::tcp::set_hostport(conn, "www.google.com", "http");
+    cnet::tcp::set_hostport(conn, "www.google.com", "https");
     auto suc = cnet::open(conn);
+    auto ssl = cnet::ssl::create_client();
     assert(suc);
     auto text = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
     size_t w = 0;
