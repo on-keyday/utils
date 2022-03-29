@@ -30,6 +30,9 @@ namespace utils {
                 start_read_from_low,
                 reading_from_low,
                 read_from_low_done,
+
+                start_connect,
+                connected,
             };
         }  // namespace ssl
     }      // namespace cnet

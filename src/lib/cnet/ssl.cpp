@@ -71,6 +71,13 @@ namespace utils {
                 return 0;
             }
 
+            bool need_IO(OpenSSLContext* tls) {
+                auto err = ::SSL_get_error(tls->ssl, -1);
+                return err == SSL_ERROR_WANT_READ ||
+                       err == SSL_ERROR_WANT_WRITE ||
+                       err == SSL_ERROR_SYSCALL;
+            }
+
             bool do_IO(CNet* ctx, OpenSSLContext* tls) {
                 if (tls->buf_index) {
                     auto err = write_to_bio(ctx, tls);
@@ -151,6 +158,33 @@ namespace utils {
                     return false;
                 }
                 ::SSL_set_tlsext_host_name(tls->ssl, tls->host.c_str());
+                auto param = SSL_get0_param(tls->ssl);
+                if (!X509_VERIFY_PARAM_add1_host(param, tls->host.c_str(), tls->host.size())) {
+                    return false;
+                }
+                tls->status = TLSStatus::start_connect;
+                invoke_callback(ctx);
+                while (true) {
+                    auto err = ::SSL_connect(tls->ssl);
+                    if (err == 1) {
+                        break;
+                    }
+                    else if (!err) {
+                        return false;
+                    }
+                    else {
+                        if (need_IO(tls)) {
+                            if (!do_IO(ctx, tls)) {
+                                return false;
+                            }
+                            continue;
+                        }
+                        return false;
+                    }
+                }
+                tls->status = TLSStatus::connected;
+                invoke_callback(ctx);
+                return true;
             }
 
             void close_ssl(CNet* ctx, OpenSSLContext* tls) {
