@@ -38,6 +38,11 @@ namespace utils {
                 bool setup = false;
             };
 
+            void do_IO(OpenSSLContext* tls) {
+                number::Array<1024, char> v;
+                ::BIO_read_ex(tls->bio, v.buf, v.capacity(), &v.i);
+            }
+
             bool open_tls(CNet* ctx, OpenSSLContext* tls) {
                 tls->sslctx = ::SSL_CTX_new(TLS_method());
                 if (!tls->sslctx) {
