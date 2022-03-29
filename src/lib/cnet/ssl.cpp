@@ -187,7 +187,7 @@ namespace utils {
                 return true;
             }
 
-            void close_ssl(CNet* ctx, OpenSSLContext* tls) {
+            void close_tls(CNet* ctx, OpenSSLContext* tls) {
                 if (tls->setup) {
                     auto err = ::SSL_shutdown(tls->ssl);
                 }
@@ -202,6 +202,7 @@ namespace utils {
             CNet* STDCALL create_client() {
                 ProtocolSuite<OpenSSLContext> ssl_proto{
                     .initialize = open_tls,
+                    .uninitialize = close_tls,
                     .deleter = [](OpenSSLContext* v) { delete v; },
                 };
                 return create_cnet(CNetFlag::once_set_no_delete_link | CNetFlag::init_before_io, new OpenSSLContext{}, ssl_proto);
