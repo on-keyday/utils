@@ -88,6 +88,7 @@ add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cp
 add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
 add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
 add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
+add_executable(cnettcp "src/test/cnet/test_cnettcp.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -152,6 +153,8 @@ PRIVATE
 "src/lib/testutil/alloc_hook.cpp"
 "src/lib/async/light/native_context.cpp"
 "src/lib/async/light/native_stack.cpp"
+"src/lib/cnet/cnet.cpp"
+"src/lib/cnet/tcp.cpp"
 )
 #if(WIN32)
 target_sources(utils
@@ -195,6 +198,7 @@ target_link_libraries(http2protocol utils)
 target_link_libraries(run_on_single_thread utils)
 target_link_libraries(shared_context utils)
 target_link_libraries(taskpool2 utils)
+target_link_libraries(cnettcp utils)
 
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")

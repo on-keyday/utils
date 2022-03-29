@@ -41,8 +41,24 @@ namespace utils {
                 return query_number(ctx, ipver);
             }
 
-            bool set_hostport(CNet* ctx, const char* host, const char* port) {
+            inline bool set_hostport(CNet* ctx, const char* host, const char* port) {
                 return set_ptr(ctx, host_name, (void*)host) && set_ptr(ctx, port_number, (void*)port);
+            }
+
+            inline bool retry_after_connect(CNet* ctx, bool flag) {
+                return set_number(ctx, retry_after_connect_call, flag);
+            }
+
+            inline bool use_multiple_io(CNet* ctx, bool flag) {
+                return set_number(ctx, use_multiple_io_system, flag);
+            }
+
+            inline bool polling_recv(CNet* ctx, bool flag) {
+                return set_number(ctx, recv_polling, flag);
+            }
+
+            inline std::uintptr_t get_raw_socket(CNet* ctx) {
+                return query_number(ctx, raw_socket);
             }
 
         }  // namespace tcp

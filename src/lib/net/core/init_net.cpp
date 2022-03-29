@@ -34,6 +34,7 @@ namespace utils {
                 static InitImpl net;
                 return net;
             }
+
         }  // namespace internal
 
         Init& network() {
@@ -45,7 +46,7 @@ namespace utils {
             internal::init();
         }
 
-        bool initialized() {
+        bool Init::initialized() {
             return internal::init().succeed;
         }
 

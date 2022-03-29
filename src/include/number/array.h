@@ -34,6 +34,10 @@ namespace utils {
             constexpr const T* c_str() const {
                 return buf;
             }
+
+            constexpr size_t capacity() const {
+                return strmode ? sz - 1 : sz;
+            }
         };
     }  // namespace number
 }  // namespace utils

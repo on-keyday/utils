@@ -5,6 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/cnet/tcp.h"
 #include "../../include/net/core/init_net.h"
 #include <cstdint>
@@ -78,27 +79,29 @@ namespace utils {
                 else if (sock->ipver == 6) {
                     info.ai_family = AF_INET6;
                 }
-                ::timeval timeout{0};
                 ::OVERLAPPED ol{0};
                 ol.hEvent = ::CreateEventA(nullptr, true, false, nullptr);
                 if (ol.hEvent == nullptr) {
                     return nullptr;
                 }
-                auto err = ::GetAddrInfoExW(
+                ::timeval timeout{0};
+                ::HANDLE cancel = nullptr;
+                timeout.tv_sec = 60;
+                ::GetAddrInfoExW(
                     sock->host.c_str(), sock->port.c_str(),
-                    NS_DNS, nullptr, &info, &result, &timeout, &ol, nullptr, nullptr);
+                    NS_DNS, nullptr, &info, &result, &timeout, &ol, nullptr, &cancel);
+                auto err = net::errcode();
                 if (err != NO_ERROR && err != WSA_IO_PENDING) {
                     return nullptr;
                 }
                 while (err != NO_ERROR) {
                     err = ::GetAddrInfoExOverlappedResult(&ol);
                     if (err != WSAEINPROGRESS) {
+                        ::CloseHandle(ol.hEvent);
                         if (err == NO_ERROR) {
-                            ::CloseHandle(ol.hEvent);
                             break;
                         }
-                        ::CloseHandle(ol.hEvent);
-                        return false;
+                        return nullptr;
                     }
                     invoke_callback(ctx);
                 }
@@ -166,9 +169,9 @@ namespace utils {
                     if (any(sock->flag & Flag::retry_after_connect)) {
                         continue;
                     }
-                    break;
+                    return false;
                 }
-                return false;
+                return true;
             }
 
             void close_socket(CNet* ctx, OsTCPSocket* sock) {

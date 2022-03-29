@@ -155,6 +155,9 @@ namespace utils {
         // is this key surpported ?
         DLL bool STDCALL is_supported(CNet* ctx, std::int64_t key, bool ptr);
 
+        // delete cnet context
+        DLL void STDCALL delete_cnet(CNet* ctx);
+
         enum CNetCommonSetting {
             protocol_name = 0,  // protocol name (constant value)
             protocol_type = 1,  // protocol type (constant value)

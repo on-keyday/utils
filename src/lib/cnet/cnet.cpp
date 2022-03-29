@@ -127,11 +127,10 @@ namespace utils {
             if (!ctx) {
                 return false;
             }
-            if (!any(ctx->flag & CNetFlag::reinitializable) && any(ctx->inflag & InternalFlag::uninitialized)) {
-                return false;
-            }
-            else {
-                ctx->inflag = InternalFlag::none;
+            if (any(ctx->flag & CNetFlag::reinitializable)) {
+                if (any(ctx->inflag & InternalFlag::uninitialized)) {
+                    ctx->inflag = InternalFlag::none;
+                }
             }
             if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
                 if (ctx->proto.initialize(ctx, ctx->user)) {
@@ -277,6 +276,10 @@ namespace utils {
                 return false;
             }
             return ctx->proto.is_support(key, ptr);
+        }
+
+        void STDCALL delete_cnet(CNet* ctx) {
+            delete ctx;
         }
     }  // namespace cnet
 }  // namespace utils
