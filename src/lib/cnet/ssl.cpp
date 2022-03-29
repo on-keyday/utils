@@ -184,6 +184,7 @@ namespace utils {
                 }
                 tls->status = TLSStatus::connected;
                 invoke_callback(ctx);
+                tls->setup = true;
                 return true;
             }
 
