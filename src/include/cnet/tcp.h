@@ -35,6 +35,22 @@ namespace utils {
                 port_number,
                 // raw socket (only get)
                 raw_socket,
+                // current status
+                current_status,
+            };
+
+            enum class TCPStatus {
+                unknown,
+                idle,
+                start_resolving_name,
+                wait_resolving_name,
+                resolve_name_done,
+                start_connectig,
+                wait_connect,
+                connected,
+                start_recving,
+                wait_recv,
+                recived,
             };
 
             inline int ip_version(CNet* ctx) {
@@ -59,6 +75,17 @@ namespace utils {
 
             inline std::uintptr_t get_raw_socket(CNet* ctx) {
                 return query_number(ctx, raw_socket);
+            }
+
+            inline TCPStatus get_current_state(CNet* ctx) {
+                return (TCPStatus)query_number(ctx, current_status);
+            }
+
+            inline bool is_waiting(CNet* ctx) {
+                auto s = get_current_state(ctx);
+                return s == TCPStatus::wait_resolving_name ||
+                       s == TCPStatus::wait_connect ||
+                       s == TCPStatus::wait_recv;
             }
 
         }  // namespace tcp

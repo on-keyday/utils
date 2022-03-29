@@ -10,6 +10,7 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include "../wrap/light/enum.h"
+#include "../helper/equal.h"
 
 namespace utils {
     namespace cnet {
@@ -111,6 +112,17 @@ namespace utils {
         // set user defined callback
         DLL bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data);
 
+        template <class Fn>
+        bool set_lambda(CNet* ctx, Fn& fn) {
+            using pointer = decltype(std::addressof(fn));
+            return set_callback(
+                ctx, [](CNet* ctx, void* cpt) {
+                    auto res = (*pointer(cpt))(ctx);
+                    return bool(res);
+                },
+                std::addressof(fn));
+        }
+
         // invoke user defined callback
         DLL bool STDCALL invoke_callback(CNet* ctx);
 
@@ -171,6 +183,22 @@ namespace utils {
             block_stream = 2,
             request_response = 3,
         };
+
+        inline const char* get_protocol_name(CNet* ctx) {
+            return (const char*)query_ptr(ctx, protocol_name);
+        }
+
+        inline ProtocolType get_protocol_type(CNet* ctx) {
+            return (ProtocolType)query_number(ctx, protocol_type);
+        }
+
+        inline std::int64_t get_error(CNet* ctx) {
+            return query_number(ctx, error_code);
+        }
+
+        inline bool protocol_is(CNet* ctx, const char* required) {
+            return helper::equal(get_protocol_name(ctx), required);
+        }
 
     }  // namespace cnet
 }  // namespace utils

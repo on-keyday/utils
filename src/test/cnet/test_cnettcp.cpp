@@ -20,14 +20,30 @@ using namespace utils;
 auto& cout = wrap::cout_wrap();
 
 void test_tcp_cnet() {
-    test::Timer timer;
+    test::Timer timer, local_timer;
     auto conn = cnet::tcp::create_client();
-    cnet::set_callback(
-        conn, [](cnet::CNet*, void*) {
+    auto cb = [&](cnet::CNet* ctx) {
+        if (!cnet::protocol_is(ctx, "tcp")) {
+            return true;
+        }
+        if (cnet::tcp::is_waiting(ctx)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             return false;
-        },
-        nullptr);
+        }
+        auto p = cnet::tcp::get_current_state(ctx);
+        if (p == cnet::tcp::TCPStatus::start_resolving_name) {
+            cout << "start timer\n";
+            local_timer.reset();
+        }
+        else if (p == cnet::tcp::TCPStatus::resolve_name_done) {
+            cout << "dns resolving:" << local_timer.delta() << "\n";
+        }
+        else if (p == cnet::tcp::TCPStatus::connected) {
+            cout << "tcp connecting:" << local_timer.delta() << "\n";
+        }
+        return true;
+    };
+    cnet::set_lambda(conn, cb);
     cnet::tcp::set_hostport(conn, "www.google.com", "http");
     auto suc = cnet::open(conn);
     assert(suc);
@@ -47,7 +63,11 @@ void test_tcp_cnet() {
         return true;
     });
     assert(suc);
-    cout << body;
+
+    auto d = timer.delta();
+    // cout << body << "\n";
+    cout << "http responding:" << d << "\n";
+    cnet::delete_cnet(conn);
 }
 
 int main() {

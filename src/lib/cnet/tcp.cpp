@@ -69,9 +69,12 @@ namespace utils {
                 ::ADDRINFOEXW* info = nullptr;
                 ::ADDRINFOEXW* selected = nullptr;
                 Flag flag = Flag::none;
+                TCPStatus status = TCPStatus::idle;
             };
 
             ADDRINFOEXW* dns_query(CNet* ctx, OsTCPSocket* sock) {
+                sock->status = TCPStatus::start_resolving_name;
+                invoke_callback(ctx);
                 ADDRINFOEXW info{0}, *result = nullptr;
                 if (sock->ipver == 4) {
                     info.ai_family = AF_INET;
@@ -103,8 +106,11 @@ namespace utils {
                         }
                         return nullptr;
                     }
+                    sock->status = TCPStatus::wait_resolving_name;
                     invoke_callback(ctx);
                 }
+                sock->status = TCPStatus::resolve_name_done;
+                invoke_callback(ctx);
                 return result;
             }
 
@@ -118,9 +124,11 @@ namespace utils {
                     ::timeval tv{0};
                     if (send) {
                         ::select(proto + 1, nullptr, &suc, &fail, &tv);
+                        sock->status = TCPStatus::wait_connect;
                     }
                     else {
                         ::select(proto + 1, &suc, nullptr, &fail, &tv);
+                        sock->status = TCPStatus::wait_recv;
                     }
                     if (FD_ISSET(proto, &suc)) {
                         return true;
@@ -140,6 +148,8 @@ namespace utils {
                 if (!sock->info) {
                     return false;
                 }
+                sock->status = TCPStatus::start_connectig;
+                invoke_callback(ctx);
                 for (auto p = sock->info; p; p = p->ai_next) {
 #ifdef _WIN32
                     auto proto = ::WSASocketW(p->ai_family, p->ai_socktype, p->ai_protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
@@ -166,11 +176,14 @@ namespace utils {
                     }
                     sock->sock = -1;
                     ::closesocket(proto);
+
                     if (any(sock->flag & Flag::retry_after_connect)) {
                         continue;
                     }
                     return false;
                 }
+                sock->status = TCPStatus::connected;
+                invoke_callback(ctx);
                 return true;
             }
 
@@ -195,6 +208,8 @@ namespace utils {
             }
 
             bool read_socket(CNet* ctx, OsTCPSocket* sock, Buffer<char>* buf) {
+                sock->status = TCPStatus::start_recving;
+                invoke_callback(ctx);
                 if (any(sock->flag & Flag::multiple_io)) {
 #ifdef _WIN32
                     MultiIOState state;
@@ -212,6 +227,7 @@ namespace utils {
                         }
                     }
                     while (!state.done) {
+                        sock->status = TCPStatus::wait_recv;
                         invoke_callback(ctx);
                     }
                     buf->proced = state.recvsize;
@@ -226,6 +242,8 @@ namespace utils {
                                     if (!selecting_loop(ctx, sock, false)) {
                                         return false;
                                     }
+                                    sock->status = TCPStatus::wait_recv;
+                                    invoke_callback(ctx);
                                     continue;
                                 }
                                 return true;
@@ -298,6 +316,9 @@ namespace utils {
                 }
                 else if (key == raw_socket) {
                     return sock->sock;
+                }
+                else if (key == current_status) {
+                    return (std::int64_t)sock->status;
                 }
                 else if (key == retry_after_connect_call) {
                     return any(sock->flag & Flag::retry_after_connect);
