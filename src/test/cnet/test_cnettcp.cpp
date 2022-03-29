@@ -48,7 +48,23 @@ void test_tcp_cnet() {
     cnet::tcp::set_hostport(conn, "www.google.com", "https");
     auto suc = cnet::open(conn);
     auto ssl = cnet::ssl::create_client();
+    auto cb2 = [&](cnet::CNet* ctx) {
+        if (!cnet::protocol_is(ctx, "tls")) {
+            return true;
+        }
+        auto cs = cnet::ssl::get_current_state(ctx);
+        if (cs == cnet::ssl::TLSStatus::connected) {
+            cout << "ssl connecting:" << local_timer.delta() << "\n";
+        }
+        return true;
+    };
+    cnet::set_lambda(ssl, cb2);
+    suc = cnet::set_lowlevel_protocol(ssl, conn);
     assert(suc);
+    cnet::ssl::set_certificate_file(ssl, "src/test/net/cacert.pem");
+    suc = cnet::open(ssl);
+    assert(suc);
+    conn = ssl;
     auto text = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
     size_t w = 0;
     cnet::write(conn, text, ::strlen(text), &w);

@@ -104,6 +104,7 @@ namespace utils {
         }
 
         // set lowlevel protocol
+        // ownership of protocol is transferred if succeed
         DLL bool STDCALL set_lowlevel_protocol(CNet* ctx, CNet* protocol);
 
         // get lowlevel protocol
