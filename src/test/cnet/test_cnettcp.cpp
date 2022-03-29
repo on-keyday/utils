@@ -20,7 +20,7 @@ using namespace utils;
 auto& cout = wrap::cout_wrap();
 
 void test_tcp_cnet() {
-    test::Timer timer, local_timer;
+    test::Timer local_timer;
     auto conn = cnet::tcp::create_client();
     auto cb = [&](cnet::CNet* ctx) {
         if (!cnet::protocol_is(ctx, "tcp")) {
@@ -67,7 +67,7 @@ void test_tcp_cnet() {
         return;
     }
 
-    auto d = timer.delta();
+    auto d = local_timer.delta();
     // cout << body << "\n";
     cout << "http responding:" << d << "\n";
     cnet::delete_cnet(conn);
