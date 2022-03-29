@@ -104,7 +104,7 @@ namespace utils {
                     if (!cnet::write(lowconn, tls->buffer.data(), tls->buf_index, &w)) {
                         return false;
                     }
-                    if (w == tls->buffer.size()) {
+                    if (w == tls->buf_index) {
                         break;
                     }
                     tls->status = TLSStatus::writing_to_low;
