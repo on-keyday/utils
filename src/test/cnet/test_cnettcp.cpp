@@ -62,7 +62,10 @@ void test_tcp_cnet() {
         seq.buf.buffer.append(tmpbuf.buf, r);
         return true;
     });
-    assert(suc);
+    if (!suc) {
+        cout << "error:" << cnet::get_error(conn) << "\n";
+        return;
+    }
 
     auto d = timer.delta();
     // cout << body << "\n";
