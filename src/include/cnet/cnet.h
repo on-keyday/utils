@@ -129,12 +129,18 @@ namespace utils {
         // initialize protocol context
         DLL bool STDCALL initialize(CNet* ctx);
 
+        // open connection
         inline bool open(CNet* ctx) {
             return initialize(ctx);
         }
 
         // uninititalize protocol context
         DLL bool STDCALL uninitialize(CNet* ctx);
+
+        // close connection
+        inline bool close(CNet* ctx) {
+            return uninitialize(ctx);
+        }
 
         // write to context
         DLL bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written);

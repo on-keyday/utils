@@ -35,6 +35,7 @@ namespace utils {
                 wrap::string cert_file;
                 number::Array<50, unsigned char, true> alpn{0};
                 Host<char> host;
+                bool setup = false;
             };
 
             bool open_tls(CNet* ctx, OpenSSLContext* tls) {
@@ -62,11 +63,15 @@ namespace utils {
             }
 
             void close_ssl(CNet* ctx, OpenSSLContext* tls) {
+                if (tls->setup) {
+                    auto err = ::SSL_shutdown(tls->ssl);
+                }
                 ::SSL_free(tls->ssl);
                 tls->ssl = nullptr;
                 tls->bio = nullptr;
                 ::SSL_CTX_free(tls->sslctx);
                 tls->sslctx = nullptr;
+                cnet::close(cnet::get_lowlevel_protocol(ctx));
                 return;
             }
 
