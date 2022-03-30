@@ -40,6 +40,9 @@ namespace utils {
                 raw_socket,
                 // current status
                 current_status,
+
+                // wait for accepting (server)
+                wait_for_accept,
             };
 
             enum class TCPStatus {

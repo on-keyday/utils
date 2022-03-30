@@ -7,34 +7,13 @@
 
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/cnet/tcp.h"
-#include "../../include/net/core/init_net.h"
+
 #include <cstdint>
 #include <atomic>
 #include "../../include/number/array.h"
 #include "../../include/wrap/light/char.h"
 #include "../../include/helper/appender.h"
-#ifdef _WIN32
-#ifdef __MINGW32__
-#define _WIN32_WINNT 0x0501
-#endif
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#else
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#define closesocket close
-#define ioctlsocket ioctl
-#define SD_SEND SHUT_WR
-#define SD_RECEIVE SHUT_RD
-#define SD_BOTH SHUT_RDWR
-#define WSAWOULDBLOCK EWOULDBLOCK
-typedef int SOCKET;
-#endif
+#include "sock_inc.h"
 
 namespace utils {
     namespace cnet {
@@ -49,6 +28,8 @@ namespace utils {
                 retry_after_connect = 0x1,
                 multiple_io = 0x2,
                 poll_recv = 0x4,
+
+                made_from_sockaddr_storage = 0x8,
             };
 
             DEFINE_ENUM_FLAGOP(Flag)
@@ -117,9 +98,8 @@ namespace utils {
                 return result;
             }
 
-            bool selecting_loop(CNet* ctx, OsTCPSocket* sock, bool send) {
+            bool selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status) {
                 ::fd_set base{0};
-                auto proto = sock->sock;
                 FD_ZERO(&base);
                 FD_SET(proto, &base);
                 while (true) {
@@ -127,11 +107,11 @@ namespace utils {
                     ::timeval tv{0};
                     if (send) {
                         ::select(proto + 1, nullptr, &suc, &fail, &tv);
-                        sock->status = TCPStatus::wait_connect;
+                        status = TCPStatus::wait_connect;
                     }
                     else {
                         ::select(proto + 1, &suc, nullptr, &fail, &tv);
-                        sock->status = TCPStatus::wait_recv;
+                        status = TCPStatus::wait_recv;
                     }
                     if (FD_ISSET(proto, &suc)) {
                         return true;
@@ -172,7 +152,7 @@ namespace utils {
                     }
                     if (net::errcode() == WSAEWOULDBLOCK) {
                         sock->sock = proto;
-                        if (selecting_loop(ctx, sock, true)) {
+                        if (selecting_loop(ctx, sock->sock, true, sock->status)) {
                             sock->selected = p;
                             break;
                         }
@@ -191,7 +171,13 @@ namespace utils {
             }
 
             void close_socket(CNet* ctx, OsTCPSocket* sock) {
-                ::FreeAddrInfoExW(sock->info);
+                if (any(sock->flag & Flag::made_from_sockaddr_storage)) {
+                    delete (::sockaddr_storage*)sock->info->ai_addr;
+                    delete sock->info;
+                }
+                else {
+                    ::FreeAddrInfoExW(sock->info);
+                }
                 sock->info = nullptr;
                 sock->selected = nullptr;
                 ::closesocket(sock->sock);
@@ -260,7 +246,7 @@ namespace utils {
                         if (err < 0) {
                             if (net::errcode() == WSAEWOULDBLOCK) {
                                 if (any(sock->flag & Flag::poll_recv)) {
-                                    if (!selecting_loop(ctx, sock, false)) {
+                                    if (!selecting_loop(ctx, sock->sock, false, sock->status)) {
                                         return false;
                                     }
                                     sock->status = TCPStatus::wait_recv;
@@ -381,6 +367,30 @@ namespace utils {
                     .deleter = [](OsTCPSocket* sock) { delete sock; },
                 };
                 auto ctx = create_cnet(CNetFlag::final_link | CNetFlag::init_before_io, new OsTCPSocket{}, tcp_proto);
+                return ctx;
+            }
+
+            CNet* create_server_conn(::SOCKET sock, ::sockaddr_storage* info, size_t len) {
+                ProtocolSuite<OsTCPSocket> tcp_proto{
+                    .write = write_socket,
+                    .read = read_socket,
+                    .uninitialize = close_socket,
+                    .settings_number = tcp_settings_number,
+                    .settings_ptr = tcp_settings_ptr,
+                    .query_number = tcp_query_number,
+                    .query_ptr = tcp_query_ptr,
+                    .deleter = [](OsTCPSocket* sock) { delete sock; },
+                };
+                auto ptr = new OsTCPSocket{};
+                ptr->sock = sock;
+                auto addr = new ::ADDRINFOEXW{};
+                addr->ai_addr = (::sockaddr*)new ::sockaddr_storage{*info};
+                addr->ai_addrlen = len;
+                addr->ai_family = info->ss_family;
+                ptr->info = addr;
+                ptr->selected = addr;
+                ptr->flag |= Flag::made_from_sockaddr_storage;
+                auto ctx = create_cnet(CNetFlag::final_link | CNetFlag::init_before_io, ptr, tcp_proto);
                 return ctx;
             }
 

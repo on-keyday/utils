@@ -189,6 +189,7 @@ namespace utils {
             byte_stream = 1,
             block_stream = 2,
             request_response = 3,
+            conn_acceptor = 4,
         };
 
         inline const char* get_protocol_name(CNet* ctx) {
