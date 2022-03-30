@@ -111,7 +111,9 @@ namespace utils {
                     }
                     else {
                         ::select(proto + 1, &suc, nullptr, &fail, &tv);
-                        status = TCPStatus::wait_recv;
+                        if (status != TCPStatus::wait_accept) {
+                            status = TCPStatus::wait_recv;
+                        }
                     }
                     if (FD_ISSET(proto, &suc)) {
                         return true;

@@ -18,6 +18,9 @@ namespace utils {
             // create tcp client
             DLL CNet* STDCALL create_client();
 
+            // create tcp server
+            DLL CNet* STDCALL create_server();
+
             // report io completion
             DLL bool STDCALL io_completion(void* ol, size_t recvsize);
 
@@ -43,6 +46,9 @@ namespace utils {
 
                 // wait for accepting (server)
                 wait_for_accept,
+
+                // resuse address flag
+                reuse_address,
             };
 
             enum class TCPStatus {
@@ -65,6 +71,8 @@ namespace utils {
                 start_sending,
                 wait_send,
                 sent,
+
+                wait_accept,
             };
 
             inline int ip_version(CNet* ctx) {
@@ -73,6 +81,10 @@ namespace utils {
 
             inline bool set_hostport(CNet* ctx, const char* host, const char* port) {
                 return set_ptr(ctx, host_name, (void*)host) && set_ptr(ctx, port_number, (void*)port);
+            }
+
+            inline bool set_port(CNet* ctx, const char* port) {
+                return set_ptr(ctx, port_number, (void*)port);
             }
 
             inline bool retry_after_connect(CNet* ctx, bool flag) {
@@ -100,7 +112,16 @@ namespace utils {
                 return s == TCPStatus::wait_resolving_name ||
                        s == TCPStatus::wait_connect ||
                        s == TCPStatus::wait_recv ||
-                       s == TCPStatus::wait_async_recv;
+                       s == TCPStatus::wait_async_recv ||
+                       s == TCPStatus::wait_accept;
+            }
+
+            inline CNet* accept(CNet* ctx) {
+                return (CNet*)query_ptr(ctx, wait_for_accept);
+            }
+
+            inline bool set_resuse_address(CNet* ctx, bool flag) {
+                return set_number(ctx, reuse_address, flag);
             }
 
         }  // namespace tcp
