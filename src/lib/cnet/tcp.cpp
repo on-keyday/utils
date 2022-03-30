@@ -9,6 +9,7 @@
 #include "../../include/cnet/tcp.h"
 #include "../../include/net/core/init_net.h"
 #include <cstdint>
+#include <atomic>
 #include "../../include/number/array.h"
 #include "../../include/wrap/light/char.h"
 #include "../../include/helper/appender.h"
@@ -52,13 +53,15 @@ namespace utils {
 
             DEFINE_ENUM_FLAGOP(Flag)
 
+            constexpr std::uint32_t reserved_byte = 0x434e5450;
+
             struct MultiIOState {
 #ifdef _WIN32
                 ::OVERLAPPED ol{0};
 #endif
+                std::uint32_t reserved = reserved_byte;
                 size_t recvsize = 0;
-                bool done = false;
-                CNet* ctx = nullptr;
+                std::atomic_bool done = false;
             };
 
             struct OsTCPSocket {
@@ -211,14 +214,28 @@ namespace utils {
                 return true;
             }
 
+            bool STDCALL io_completion(void* ol, size_t recvsize) {
+                if (!ol) {
+                    return false;
+                }
+                auto check = static_cast<MultiIOState*>(ol);
+                if (check->reserved != reserved_byte) {
+                    return false;
+                }
+                check->recvsize = recvsize;
+                check->done = true;
+                return true;
+            }
+
             bool read_socket(CNet* ctx, OsTCPSocket* sock, Buffer<char>* buf) {
                 sock->status = TCPStatus::start_recving;
                 invoke_callback(ctx);
                 if (any(sock->flag & Flag::multiple_io)) {
-#ifdef _WIN32
                     MultiIOState state;
                     state.done = false;
-                    state.ctx = ctx;
+                    state.reserved = reserved_byte;
+                    state.recvsize = 0;
+#ifdef _WIN32
                     WSABUF wbuf;
                     wbuf.buf = buf->ptr;
                     wbuf.len = buf->size;
@@ -231,7 +248,7 @@ namespace utils {
                         }
                     }
                     while (!state.done) {
-                        sock->status = TCPStatus::wait_recv;
+                        sock->status = TCPStatus::wait_async_recv;
                         invoke_callback(ctx);
                     }
                     buf->proced = state.recvsize;

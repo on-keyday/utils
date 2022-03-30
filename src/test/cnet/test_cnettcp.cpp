@@ -106,13 +106,28 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
     // cout << body << "\n";
     cout << wrap::pack(index, ":", std::this_thread::get_id(), ":http responding:", d, "\n");
     cnet::delete_cnet(conn);
+    cout << wrap::pack(index, ":", std::this_thread::get_id(), ":context deleted:", local_timer.delta(), "\n");
 }
 
 void task_run(wrap::shared_ptr<async::light::TaskPool> pool) {
+    async::light::SearchContext<async::light::Task*> sctx{0};
+    async::light::TimeContext tctx;
+    tctx.limit = std::chrono::milliseconds(2000);
+    tctx.update_delta = std::chrono::milliseconds(50);
+    tctx.wait = std::chrono::milliseconds(10);
     while (true) {
-        async::light::SearchContext<async::light::Task*> sctx{0};
-        pool->run_task(&sctx);
-        std::this_thread::yield();
+        pool->run_task_with_wait(
+            tctx, [](async::light::TimeContext<>& tctx) {
+                auto hit = tctx.hit_delta();
+                auto not_hit = tctx.not_hit_delta();
+                if (not_hit > hit) {
+                    tctx.wait *= 2;
+                }
+                if (tctx.wait > tctx.limit) {
+                    tctx.wait = tctx.limit;
+                }
+            },
+            &sctx);
     }
 }
 
@@ -131,7 +146,14 @@ int main() {
     spawn("amazon.com", "/");
     spawn("stackoverflow.com", "/");
     spawn("go.dev", "/");
+    spawn("httpbin.org", "/get");
+    spawn("syosetu.com", "/");
+    spawn("docs.microsoft.com", "/");
+    spawn("youtube.com", "/");
+    test::Timer timer;
     while (pool->size()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    cout << "total\n"
+         << timer.delta() << "\n";
 }

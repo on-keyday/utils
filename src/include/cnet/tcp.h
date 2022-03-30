@@ -18,6 +18,9 @@ namespace utils {
             // create tcp client
             DLL CNet* STDCALL create_client();
 
+            // report io completion
+            DLL bool STDCALL io_completion(void* ol, size_t recvsize);
+
             enum TCPConfig {
                 // ip version
                 ipver = user_defined_start + 1,
@@ -53,6 +56,7 @@ namespace utils {
 
                 start_recving,
                 wait_recv,
+                wait_async_recv,
                 recieved,
 
                 start_sending,
@@ -92,7 +96,8 @@ namespace utils {
                 auto s = get_current_state(ctx);
                 return s == TCPStatus::wait_resolving_name ||
                        s == TCPStatus::wait_connect ||
-                       s == TCPStatus::wait_recv;
+                       s == TCPStatus::wait_recv ||
+                       s == TCPStatus::wait_async_recv;
             }
 
         }  // namespace tcp
