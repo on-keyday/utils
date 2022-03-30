@@ -17,10 +17,12 @@
 #include <wrap/light/hash_map.h>
 #include <number/array.h>
 #include <testutil/timer.h>
+#include <async/light/context.h>
+#include <async/light/pool.h>
 using namespace utils;
 auto& cout = wrap::cout_wrap();
 
-void test_tcp_cnet() {
+void test_tcp_cnet(async::light::Context<void> as, const char* host, const char* path, int index) {
     test::Timer local_timer;
     auto conn = cnet::tcp::create_client();
     auto cb = [&](cnet::CNet* ctx) {
@@ -29,23 +31,25 @@ void test_tcp_cnet() {
         }
         if (cnet::tcp::is_waiting(ctx)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            as.suspend();
             return false;
         }
         auto p = cnet::tcp::get_current_state(ctx);
         if (p == cnet::tcp::TCPStatus::start_resolving_name) {
-            cout << "start timer\n";
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":start timer\n");
             local_timer.reset();
         }
         else if (p == cnet::tcp::TCPStatus::resolve_name_done) {
-            cout << "dns resolving:" << local_timer.delta() << "\n";
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":dns resolving:", local_timer.delta(), "\n");
         }
         else if (p == cnet::tcp::TCPStatus::connected) {
-            cout << "tcp connecting:" << local_timer.delta() << "\n";
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":tcp connecting:", local_timer.delta(), "\n");
         }
+        as.suspend();
         return true;
     };
     cnet::set_lambda(conn, cb);
-    cnet::tcp::set_hostport(conn, "www.google.com", "https");
+    cnet::tcp::set_hostport(conn, host, "https");
     auto suc = cnet::open(conn);
     auto ssl = cnet::ssl::create_client();
     auto cb2 = [&](cnet::CNet* ctx) {
@@ -54,20 +58,27 @@ void test_tcp_cnet() {
         }
         auto cs = cnet::ssl::get_current_state(ctx);
         if (cs == cnet::ssl::TLSStatus::connected) {
-            cout << "ssl connecting:" << local_timer.delta() << "\n";
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":ssl connecting:", local_timer.delta(), "\n");
         }
+        as.suspend();
         return true;
     };
     cnet::set_lambda(ssl, cb2);
     suc = cnet::set_lowlevel_protocol(ssl, conn);
     assert(suc);
     cnet::ssl::set_certificate_file(ssl, "src/test/net/cacert.pem");
+    cnet::ssl::set_host(ssl, host);
     suc = cnet::open(ssl);
-    assert(suc);
+    if (!suc) {
+        cnet::ssl::error_callback(ssl, [](const char* msg, size_t len) {
+            cout << helper::SizedView(msg, len);
+        });
+        assert(suc);
+    }
     conn = ssl;
-    auto text = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
+    auto data = "GET " + wrap::string(path) + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n";
     size_t w = 0;
-    cnet::write(conn, text, ::strlen(text), &w);
+    cnet::write(conn, data.c_str(), data.size(), &w);
     wrap::string buf, body;
     wrap::hash_multimap<wrap::string, wrap::string> h;
     suc = net::h1header::read_response<wrap::string>(buf, helper::nop, h, body, [&](auto& seq, size_t expect, bool finalcall) {
@@ -75,8 +86,15 @@ void test_tcp_cnet() {
         size_t r = 0;
         while (!r) {
             suc = cnet::read(conn, tmpbuf.buf, tmpbuf.capacity(), &r);
-            assert(suc);
+            if (!suc) {
+                cout << "error:" << cnet::get_error(conn) << "\n";
+                cnet::ssl::error_callback(conn, [](const char* msg, size_t len) {
+                    cout << helper::SizedView(msg, len);
+                });
+                assert(suc);
+            }
         }
+        as.suspend();
         seq.buf.buffer.append(tmpbuf.buf, r);
         return true;
     });
@@ -84,13 +102,36 @@ void test_tcp_cnet() {
         cout << "error:" << cnet::get_error(conn) << "\n";
         return;
     }
-
     auto d = local_timer.delta();
     // cout << body << "\n";
-    cout << "http responding:" << d << "\n";
+    cout << wrap::pack(index, ":", std::this_thread::get_id(), ":http responding:", d, "\n");
     cnet::delete_cnet(conn);
 }
 
+void task_run(wrap::shared_ptr<async::light::TaskPool> pool) {
+    while (true) {
+        async::light::SearchContext<async::light::Task*> sctx{0};
+        pool->run_task(&sctx);
+        std::this_thread::yield();
+    }
+}
+
 int main() {
-    test_tcp_cnet();
+    auto pool = wrap::make_shared<async::light::TaskPool>();
+    int index = 0;
+    auto spawn = [&](const char* host, const char* path) {
+        pool->append(async::light::start<void>(true, test_tcp_cnet, host, path, std::move(index)));
+        index++;
+    };
+    for (auto i = 0; i < std::thread::hardware_concurrency(); i++) {
+        std::thread(task_run, pool).detach();
+    }
+    spawn("gmail.com", "/");
+    spawn("www.google.com", "/");
+    spawn("amazon.com", "/");
+    spawn("stackoverflow.com", "/");
+    spawn("go.dev", "/");
+    while (pool->size()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }

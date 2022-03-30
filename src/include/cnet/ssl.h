@@ -31,6 +31,9 @@ namespace utils {
 
                 // alpn selected (get only)
                 alpn_selected,
+
+                // invoke ssl error callback
+                invoke_ssl_error_callback,
             };
 
             enum class TLSStatus {
@@ -79,6 +82,25 @@ namespace utils {
                 auto s = get_current_state(ctx);
                 return s == TLSStatus::writing_to_low ||
                        s == TLSStatus::reading_from_low;
+            }
+
+            struct ErrorCallback {
+                int (*cb)(const char* msg, size_t len, void* user);
+                void* user;
+            };
+
+            template <class Fn>
+            bool error_callback(CNet* ctx, Fn&& fn) {
+                struct Local {
+                    decltype(std::addressof(fn)) ptr;
+                } loc{std::addressof(fn)};
+                ErrorCallback cbobj;
+                cbobj.cb = [](const char* msg, size_t len, void* user) {
+                    (*decltype (&loc)(user)->ptr)(msg, len);
+                    return 1;
+                };
+                cbobj.user = &loc;
+                return set_ptr(ctx, invoke_ssl_error_callback, &cbobj);
             }
 
         }  // namespace ssl

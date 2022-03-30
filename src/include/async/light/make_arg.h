@@ -53,13 +53,13 @@ namespace utils {
             };
 
             template <class T>
-            struct AnArg<T&> {
+            struct AnArg<std::reference_wrapper<T>> {
                 T* value;
 
                 static constexpr ArgTrait traits = ArgTrait::lref;
                 constexpr AnArg() {}
-                constexpr AnArg(T& t)
-                    : value(std::addressof(t)) {}
+                constexpr AnArg(std::reference_wrapper<T> t)
+                    : value(std::addressof(t.get())) {}
                 constexpr T& get() {
                     return *value;
                 }

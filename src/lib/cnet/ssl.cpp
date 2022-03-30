@@ -56,6 +56,9 @@ namespace utils {
             };
 
             int write_to_bio(CNet* ctx, OpenSSLContext* tls) {
+                if (tls->buf_index == 0) {
+                    return 1;
+                }
                 size_t w = 0;
                 auto err = ::BIO_write_ex(tls->bio, tls->buffer.c_str(), tls->buf_index - tls->write_index, &w);
                 if (!err) {
@@ -76,11 +79,10 @@ namespace utils {
             bool need_IO(OpenSSLContext* tls) {
                 auto err = ::SSL_get_error(tls->ssl, -1);
                 return err == SSL_ERROR_WANT_READ ||
-                       err == SSL_ERROR_WANT_WRITE ||
-                       err == SSL_ERROR_SYSCALL;
+                       err == SSL_ERROR_WANT_WRITE;
             }
 
-            bool do_IO(CNet* ctx, OpenSSLContext* tls) {
+            bool do_IO(CNet* ctx, OpenSSLContext* tls, bool shutdown_mode = false) {
                 if (tls->buf_index) {
                     auto err = write_to_bio(ctx, tls);
                     if (err <= 0) {
@@ -118,12 +120,19 @@ namespace utils {
                 if (tls->buffer.size() < 1024) {
                     tls->buffer.resize(1024);
                 }
+                size_t count = 0;
                 while (true) {
                     if (!cnet::read(lowconn, tls->buffer.data(), tls->buffer.size(), &tls->buf_index)) {
                         return false;
                     }
                     if (tls->buf_index != 0) {
                         break;
+                    }
+                    if (shutdown_mode) {
+                        count++;
+                        if (count > 200) {
+                            break;
+                        }
                     }
                     tls->status = TLSStatus::reading_from_low;
                     invoke_callback(ctx);
@@ -156,13 +165,17 @@ namespace utils {
                     return false;
                 }
                 ::SSL_set_bio(tls->ssl, ssl_side, ssl_side);
-                if (!::SSL_set_alpn_protos(tls->ssl, tls->alpn.c_str(), tls->alpn.size())) {
-                    return false;
+                if (tls->alpn.size()) {
+                    if (!::SSL_set_alpn_protos(tls->ssl, tls->alpn.c_str(), tls->alpn.size())) {
+                        return false;
+                    }
                 }
-                ::SSL_set_tlsext_host_name(tls->ssl, tls->host.c_str());
-                auto param = SSL_get0_param(tls->ssl);
-                if (!X509_VERIFY_PARAM_add1_host(param, tls->host.c_str(), tls->host.size())) {
-                    return false;
+                if (tls->host.size()) {
+                    ::SSL_set_tlsext_host_name(tls->ssl, tls->host.c_str());
+                    auto param = SSL_get0_param(tls->ssl);
+                    if (!X509_VERIFY_PARAM_add1_host(param, tls->host.c_str(), tls->host.size())) {
+                        return false;
+                    }
                 }
                 tls->status = TLSStatus::start_connect;
                 invoke_callback(ctx);
@@ -191,8 +204,31 @@ namespace utils {
             }
 
             void close_tls(CNet* ctx, OpenSSLContext* tls) {
-                if (tls->setup) {
+                size_t count = 0;
+                while (tls->setup && count < 200) {
+                    count++;
                     auto err = ::SSL_shutdown(tls->ssl);
+                    if (err == -1 && need_IO(tls)) {
+                        if (!do_IO(ctx, tls, true)) {
+                            break;
+                        }
+                        continue;
+                    }
+                    else if (err == 0) {
+                        number::Array<1024, char> tmpbuf;
+                        err = SSL_read_ex(tls->ssl, tmpbuf.buf, tmpbuf.capacity(), &tmpbuf.i);
+                        if (!err) {
+                            if (need_IO(tls)) {
+                                if (!do_IO(ctx, tls, true)) {
+                                    break;
+                                }
+                                continue;
+                            }
+                            break;
+                        }
+                        continue;
+                    }
+                    break;
                 }
                 ::SSL_free(tls->ssl);
                 tls->ssl = nullptr;
@@ -213,6 +249,7 @@ namespace utils {
                             }
                             continue;
                         }
+                        tls->setup = false;
                         return false;
                     }
                     break;
@@ -267,6 +304,11 @@ namespace utils {
                     auto alpn_str = (const char*)value;
                     tls->alpn = {};
                     helper::append(tls->alpn, alpn_str);
+                }
+                else if (key == invoke_ssl_error_callback) {
+                    auto cb = (ErrorCallback*)(value);
+                    ::ERR_print_errors_cb(cb->cb, cb->user);
+                    return true;
                 }
                 else {
                     return false;

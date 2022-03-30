@@ -69,15 +69,20 @@ namespace utils {
             ctx->proto = *proto;
             delete ctx->next;
             ctx->next = nullptr;
-            if (ctx->proto.initialize && !any(flag & CNetFlag::init_before_io)) {
-                if (!ctx->proto.initialize(ctx, user)) {
-                    ctx->proto.deleter(user);
-                    ctx->user = nullptr;
-                    ctx->proto = {};
-                    ctx->proto.deleter = [](void*) {};
-                    return false;
+            if (ctx->proto.initialize) {
+                if (any(flag & CNetFlag::init_before_io)) {
+                    ctx->inflag = InternalFlag::none;
                 }
-                ctx->inflag = InternalFlag::initialized | InternalFlag::init_succeed;
+                else {
+                    if (!ctx->proto.initialize(ctx, user)) {
+                        ctx->proto.deleter(user);
+                        ctx->user = nullptr;
+                        ctx->proto = {};
+                        ctx->proto.deleter = [](void*) {};
+                        return false;
+                    }
+                    ctx->inflag = InternalFlag::initialized | InternalFlag::init_succeed;
+                }
             }
             else {
                 ctx->inflag = InternalFlag::init_succeed;

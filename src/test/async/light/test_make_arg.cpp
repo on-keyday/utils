@@ -23,7 +23,7 @@ const auto& as_const(auto& v) {
 void test_make_arg(V& arg) {
     int object = 0;
     auto m = make_arg(9, "hello", std::move(object), arg, "boke");
-    auto a = make_arg(as_const(object), object, 0.3);
+    auto a = make_arg(as_const(object), std::ref(object), 0.3);
     a.invoke([](int&& m, int& n, const double& f) {
         auto arg = make_arg(std::move(m), n, f);
     });
