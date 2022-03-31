@@ -34,7 +34,10 @@ namespace utils {
             };
 
             bool tcp_server_init(CNet* ctx, TCPServer* serv) {
-                ::addrinfo hint, *result = nullptr;
+                if (!net::network().initialized()) {
+                    return false;
+                }
+                ::addrinfo hint{0}, *result = nullptr;
                 if (serv->ipver == 4) {
                     hint.ai_family = AF_INET;
                 }
@@ -144,6 +147,9 @@ namespace utils {
                 }
                 else if (key == error_code) {
                     return net::errcode();
+                }
+                else if (key == current_status) {
+                    return (std::int64_t)serv->status;
                 }
                 return 0;
             }

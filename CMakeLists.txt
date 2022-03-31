@@ -89,6 +89,7 @@ add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
 add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
 add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
 add_executable(cnettcp "src/test/cnet/test_cnettcp.cpp")
+add_executable(cnetserver "src/test/cnet/test_cnetserver.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -201,7 +202,7 @@ target_link_libraries(run_on_single_thread utils)
 target_link_libraries(shared_context utils)
 target_link_libraries(taskpool2 utils)
 target_link_libraries(cnettcp utils)
-
+target_link_libraries(cnetserver utils)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
