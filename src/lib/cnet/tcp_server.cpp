@@ -30,6 +30,7 @@ namespace utils {
                 ::addrinfo* selected = nullptr;
                 int ipver = 0;
                 ServFlag flag = ServFlag::none;
+                size_t timeout = 0;
             };
 
             bool tcp_server_init(CNet* ctx, TCPServer* serv) {
@@ -86,7 +87,7 @@ namespace utils {
 
             CNet* waiting_for_accept(CNet* ctx, TCPServer* serv) {
                 serv->status = TCPStatus::wait_accept;
-                if (!selecting_loop(ctx, serv->litener, false, serv->status)) {
+                if (!selecting_loop(ctx, serv->litener, false, serv->status, serv->timeout)) {
                     return nullptr;
                 }
                 ::sockaddr_storage st;

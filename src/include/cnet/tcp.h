@@ -49,6 +49,11 @@ namespace utils {
 
                 // resuse address flag
                 reuse_address,
+
+                // connect timeout
+                conn_timeout_msec,
+                // recv timeout
+                recv_timeout_msec,
             };
 
             enum class TCPStatus {
@@ -116,7 +121,7 @@ namespace utils {
                        s == TCPStatus::wait_accept;
             }
 
-            inline CNet* accept(CNet* ctx) {
+            [[nodiscard]] inline CNet* accept(CNet* ctx) {
                 return (CNet*)query_ptr(ctx, wait_for_accept);
             }
 

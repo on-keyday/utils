@@ -13,6 +13,7 @@
 #include "../../include/number/array.h"
 #include "../../include/wrap/light/char.h"
 #include "../../include/helper/appender.h"
+#include "../../include/testutil/timer.h"
 #include "sock_inc.h"
 
 namespace utils {
@@ -54,6 +55,8 @@ namespace utils {
                 ::ADDRINFOEXW* selected = nullptr;
                 Flag flag = Flag::none;
                 TCPStatus status = TCPStatus::idle;
+                size_t connect_timeout = 0;
+                size_t recieve_timeout = 0;
             };
 
             ADDRINFOEXW* dns_query(CNet* ctx, OsTCPSocket* sock) {
@@ -98,7 +101,8 @@ namespace utils {
                 return result;
             }
 
-            bool selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status) {
+            int selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, size_t timeout) {
+                test::Timer timer;
                 ::fd_set base{0};
                 FD_ZERO(&base);
                 FD_SET(proto, &base);
@@ -116,12 +120,17 @@ namespace utils {
                         }
                     }
                     if (FD_ISSET(proto, &suc)) {
-                        return true;
+                        return 1;
                     }
                     else if (FD_ISSET(proto, &fail)) {
-                        return false;
+                        return 0;
                     }
                     invoke_callback(ctx);
+                    if (timeout != 0) {
+                        if (timer.delta().count() > timeout) {
+                            return -1;
+                        }
+                    }
                 }
             }
 
@@ -154,14 +163,14 @@ namespace utils {
                     }
                     if (net::errcode() == WSAEWOULDBLOCK) {
                         sock->sock = proto;
-                        if (selecting_loop(ctx, sock->sock, true, sock->status)) {
+                        auto sel = selecting_loop(ctx, sock->sock, true, sock->status, sock->connect_timeout);
+                        if (sel == 1) {
                             sock->selected = p;
                             break;
                         }
                     }
                     sock->sock = -1;
                     ::closesocket(proto);
-
                     if (any(sock->flag & Flag::retry_after_connect)) {
                         continue;
                     }
@@ -248,11 +257,13 @@ namespace utils {
                         if (err < 0) {
                             if (net::errcode() == WSAEWOULDBLOCK) {
                                 if (any(sock->flag & Flag::poll_recv)) {
-                                    if (!selecting_loop(ctx, sock->sock, false, sock->status)) {
+                                    auto sel = selecting_loop(ctx, sock->sock, false, sock->status, sock->recieve_timeout);
+                                    if (!sel) {
                                         return false;
                                     }
-                                    sock->status = TCPStatus::wait_recv;
-                                    invoke_callback(ctx);
+                                    if (sel < 0) {
+                                        return true;
+                                    }
                                     continue;
                                 }
                                 return true;
