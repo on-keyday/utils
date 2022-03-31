@@ -98,7 +98,7 @@ namespace utils {
                     return nullptr;
                 }
                 ::sockaddr_storage st;
-                ::socklen_t len = 0;
+                ::socklen_t len = sizeof(st);
                 auto sock = ::accept(serv->litener, (::sockaddr*)&st, &len);
                 if (sock < 0 || sock == -1) {
                     return nullptr;
