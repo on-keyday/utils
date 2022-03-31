@@ -87,7 +87,11 @@ namespace utils {
 
             CNet* waiting_for_accept(CNet* ctx, TCPServer* serv) {
                 serv->status = TCPStatus::wait_accept;
-                if (!selecting_loop(ctx, serv->litener, false, serv->status, serv->timeout)) {
+                auto sel = selecting_loop(ctx, serv->litener, false, serv->status, serv->timeout);
+                if (sel <= 0) {
+                    if (sel < 0) {
+                        serv->status = TCPStatus::timeout;
+                    }
                     return nullptr;
                 }
                 ::sockaddr_storage st;

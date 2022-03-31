@@ -78,6 +78,7 @@ namespace utils {
                 sent,
 
                 wait_accept,
+                timeout,
             };
 
             inline int ip_version(CNet* ctx) {

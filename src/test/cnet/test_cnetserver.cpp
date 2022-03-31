@@ -7,8 +7,11 @@
 
 
 #include <cnet/tcp.h>
+using namespace utils;
 
 void test_cnet_server() {
+    auto server = cnet::tcp::create_server();
+    cnet::tcp::set_port(server, "8080");
 }
 
 int main() {
