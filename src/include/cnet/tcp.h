@@ -126,7 +126,7 @@ namespace utils {
                 return (CNet*)query_ptr(ctx, wait_for_accept);
             }
 
-            inline bool set_resuse_address(CNet* ctx, bool flag) {
+            inline bool set_reuse_address(CNet* ctx, bool flag) {
                 return set_number(ctx, reuse_address, flag);
             }
 

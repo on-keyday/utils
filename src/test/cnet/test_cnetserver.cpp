@@ -16,6 +16,7 @@ void test_cnet_server() {
     auto server = cnet::tcp::create_server();
     cnet::tcp::set_port(server, "8080");
     cnet::tcp::set_connect_timeout(server, 500);
+    cnet::tcp::set_reuse_address(server, true);
     auto cb = [](cnet::CNet* ctx) {
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
         return true;
