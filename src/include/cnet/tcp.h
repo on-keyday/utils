@@ -138,6 +138,10 @@ namespace utils {
                 return set_number(ctx, recv_timeout_msec, timeout);
             }
 
+            inline bool is_timeout(CNet* ctx) {
+                return get_current_state(ctx) == TCPStatus::timeout;
+            }
+
         }  // namespace tcp
     }      // namespace cnet
 }  // namespace utils
