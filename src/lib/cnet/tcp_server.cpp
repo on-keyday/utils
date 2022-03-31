@@ -65,6 +65,7 @@ namespace utils {
                         }
                     }
                     if (any(serv->flag & ServFlag::reuse_addr)) {
+                        flag = 1;
                         err = ::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag));
                         if (err < 0) {
                             ::closesocket(sock);
