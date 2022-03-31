@@ -55,8 +55,8 @@ namespace utils {
                 ::ADDRINFOEXW* selected = nullptr;
                 Flag flag = Flag::none;
                 TCPStatus status = TCPStatus::idle;
-                size_t connect_timeout = 0;
-                size_t recieve_timeout = 0;
+                std::int64_t connect_timeout = -1;
+                std::int64_t recieve_timeout = -1;
             };
 
             ADDRINFOEXW* dns_query(CNet* ctx, OsTCPSocket* sock) {
@@ -101,7 +101,7 @@ namespace utils {
                 return result;
             }
 
-            int selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, size_t timeout) {
+            int selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, std::int64_t timeout) {
                 test::Timer timer;
                 ::fd_set base{0};
                 FD_ZERO(&base);
@@ -126,7 +126,7 @@ namespace utils {
                         return 0;
                     }
                     invoke_callback(ctx);
-                    if (timeout != 0) {
+                    if (timeout >= 0) {
                         if (timer.delta().count() > timeout) {
                             return -1;
                         }
@@ -296,6 +296,12 @@ namespace utils {
                 }
                 else if (key == recv_polling) {
                     set(Flag::poll_recv);
+                }
+                else if (key == conn_timeout_msec) {
+                    sock->connect_timeout = value;
+                }
+                else if (key == recv_timeout_msec) {
+                    sock->recieve_timeout = value;
                 }
                 else if (key == ipver) {
                     sock->ipver = value;

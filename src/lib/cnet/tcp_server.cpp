@@ -30,7 +30,7 @@ namespace utils {
                 ::addrinfo* selected = nullptr;
                 int ipver = 0;
                 ServFlag flag = ServFlag::none;
-                size_t timeout = 0;
+                std::int64_t timeout = -1;
             };
 
             bool tcp_server_init(CNet* ctx, TCPServer* serv) {
@@ -104,7 +104,6 @@ namespace utils {
             bool server_setting_number(CNet* ctx, TCPServer* serv, std::int64_t key, std::int64_t value) {
                 if (key == ipver) {
                     serv->ipver = value;
-                    return true;
                 }
                 else if (key == reuse_address) {
                     if (value) {
@@ -113,9 +112,14 @@ namespace utils {
                     else {
                         serv->flag &= ~ServFlag::reuse_addr;
                     }
-                    return true;
                 }
-                return false;
+                else if (key == conn_timeout_msec) {
+                    serv->timeout = value;
+                }
+                else {
+                    return false;
+                }
+                return true;
             }
 
             bool server_setting_ptr(CNet* ctx, TCPServer* serv, std::int64_t key, void* value) {
@@ -123,9 +127,11 @@ namespace utils {
                     auto port = (const char*)value;
                     serv->port = {};
                     helper::append(serv->port, port);
-                    return true;
                 }
-                return false;
+                else {
+                    return false;
+                }
+                return true;
             }
 
             std::int64_t query_server_num(CNet* ctx, TCPServer* serv, std::int64_t key) {

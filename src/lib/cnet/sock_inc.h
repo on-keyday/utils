@@ -39,7 +39,7 @@ namespace utils {
         namespace tcp {
             CNet* create_server_conn(::SOCKET sock, ::sockaddr_storage* info, size_t len);
 
-            int selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, size_t timeout);
+            int selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, std::int64_t timeout);
         }  // namespace tcp
     }      // namespace cnet
 }  // namespace utils
