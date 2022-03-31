@@ -58,19 +58,21 @@ namespace utils {
                     }
                     u_long flag = 0;
                     if (serv->ipver == 6) {
-                        err = ::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&flag, sizeof(flag));
-                        if (err < 0) {
-                            ::closesocket(sock);
-                            continue;
-                        }
+                        flag = 1;
                     }
+                    err = ::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&flag, sizeof(flag));
+                    if (err < 0) {
+                        ::closesocket(sock);
+                        continue;
+                    }
+                    flag = 0;
                     if (any(serv->flag & ServFlag::reuse_addr)) {
                         flag = 1;
-                        err = ::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag));
-                        if (err < 0) {
-                            ::closesocket(sock);
-                            continue;
-                        }
+                    }
+                    err = ::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag));
+                    if (err < 0) {
+                        ::closesocket(sock);
+                        continue;
                     }
                     err = ::bind(sock, p->ai_addr, p->ai_addrlen);
                     if (err < 0) {
