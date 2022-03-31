@@ -129,6 +129,14 @@ namespace utils {
                 return set_number(ctx, reuse_address, flag);
             }
 
+            inline bool set_connect_timeout(CNet* ctx, std::int64_t timeout) {
+                return set_number(ctx, conn_timeout_msec, timeout);
+            }
+
+            inline bool set_recieve_timeout(CNet* ctx, std::int64_t timeout) {
+                return set_number(ctx, recv_timeout_msec, timeout);
+            }
+
         }  // namespace tcp
     }      // namespace cnet
 }  // namespace utils
