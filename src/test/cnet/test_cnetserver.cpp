@@ -32,9 +32,10 @@ void test_cnet_server() {
             cout << "error:" << cnet::get_error(server);
             assert(conn);
         }
-        auto text = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+        auto text = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 28\r\nContent-Type: text/html\r\n\r\n<h1>Server is not working</h1>";
         size_t w = 0;
-        cnet::write(server, text, ::strlen(text), &w);
+        cnet::write(conn, text, ::strlen(text), &w);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
         cnet::delete_cnet(conn);
     }
 }
