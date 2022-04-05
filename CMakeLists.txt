@@ -90,6 +90,7 @@ add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
 add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
 add_executable(cnettcp "src/test/cnet/test_cnettcp.cpp")
 add_executable(cnetserver "src/test/cnet/test_cnetserver.cpp")
+add_executable(expression "src/test/parser/test_expression.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"

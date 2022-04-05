@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../helper/strutil.h"
+#include "parse.h"
 
 namespace utils {
     namespace number {
@@ -39,6 +40,45 @@ namespace utils {
                 return 2;
             }
             return 0;
+        }
+
+        template <class T, class Int>
+        NumErr prefix_integer(Sequencer<T>& seq, Int& res) {
+            int radix = 10;
+            bool minus = false;
+            if (seq.consume_if('+')) {
+            }
+            else if (std::is_signed_v<Int> && seq.consume_if('-')) {
+                minus = true;
+            }
+            if (auto v = has_prefix(seq)) {
+                radix = v;
+                seq.consume(2);
+                if (seq.current() == '+' || seq.current() == '-') {
+                    return NumError::invalid;
+                }
+            }
+            auto err = number::parse_integer(seq, res, radix);
+            if (!err) {
+                return err;
+            }
+            if (minus) {
+                res = -res;
+            }
+            return true;
+        }
+
+        template <class T, class Int>
+        NumErr prefix_integer(T&& input, Int& res, size_t offset = 0, bool expect_eof = true) {
+            auto seq = make_ref_seq(input);
+            seq.rptr = offset;
+            if (auto err = prefix_integer(seq, res); !err) {
+                return err;
+            }
+            if (expect_eof && !seq.eos()) {
+                return NumError::not_eof;
+            }
+            return true;
         }
 
     }  // namespace number

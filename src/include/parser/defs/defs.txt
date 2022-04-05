@@ -1,0 +1,19 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+
+SPACE(input) {
+    eq input " " | eq input "\t"
+}
+
+STRUCT(input) {
+    eq input "struct"
+    least 1 SPACE(input)
+    if eq input ":" 
+    eq input "{"   
+}
+
+BIN(input) {
+
+}

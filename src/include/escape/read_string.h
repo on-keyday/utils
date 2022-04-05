@@ -36,6 +36,7 @@ namespace utils {
             escape = 0x1,
             need_prefix = 0x2,
             allow_line = 0x4,
+            raw_unescaped = 0x8,
         };
 
         DEFINE_ENUM_FLAGOP(ReadFlag)
@@ -66,7 +67,7 @@ namespace utils {
                 key.push_back(s);
             }
             seq.consume();
-            if (esc) {
+            if (esc && !any(flag & ReadFlag::raw_unescaped)) {
                 String tmp;
                 if (!escape::unescape_str(key, tmp, escset)) {
                     return false;
