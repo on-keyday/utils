@@ -204,6 +204,7 @@ target_link_libraries(shared_context utils)
 target_link_libraries(taskpool2 utils)
 target_link_libraries(cnettcp utils)
 target_link_libraries(cnetserver utils)
+target_link_libraries(expression utils)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 

@@ -38,6 +38,7 @@ namespace utils {
                 using self_t = JSONBase<String, Vec, Object>;
                 using object_t = Object<String, self_t>;
                 using array_t = Vec<self_t>;
+                using string_t = String;
 
                private:
                 union {

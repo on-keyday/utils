@@ -17,6 +17,26 @@ namespace utils {
     namespace parser {
         namespace expr {
 
+            struct PushBacker {
+               private:
+                void* ptr;
+                void (*push_back_)(void*, std::uint8_t);
+
+                template <class T>
+                static void push_back_fn(void* self, std::uint8_t c) {
+                    static_cast<T*>(self)->push_back(c);
+                }
+
+               public:
+                template <class T>
+                PushBacker(T& pb)
+                    : ptr(std::addressof(pb)), push_back_(push_back_fn<T>) {}
+
+                void push_back(std::uint8_t c) {
+                    push_back_(ptr, c);
+                }
+            };
+
             template <class T>
             bool boolean(Sequencer<T>& seq, bool& v) {
                 size_t start = seq.rptr;
@@ -68,7 +88,7 @@ namespace utils {
             }
 
             struct Expr {
-                virtual Expr* index(size_t index) {
+                virtual Expr* index(size_t index) const {
                     return nullptr;
                 }
                 virtual bool as_int(std::int64_t& val) {
@@ -82,6 +102,10 @@ namespace utils {
                     return false;
                 }
 
+                virtual bool stringify(PushBacker pb) const {
+                    return false;
+                }
+
                 virtual ~Expr() {}
             };
 
@@ -90,6 +114,11 @@ namespace utils {
                 VarExpr(String&& n)
                     : name(std::move(n)) {}
                 String name;
+
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, name);
+                    return true;
+                }
             };
 
             template <class String, class T>
@@ -102,9 +131,7 @@ namespace utils {
                     })) {
                     return false;
                 }
-                if (!helper::space::consume_space(seq, true)) {
-                    return false;
-                }
+                helper::space::consume_space(seq, true);
                 expr = new VarExpr<String>{std::move(name)};
                 return true;
             }
@@ -113,6 +140,10 @@ namespace utils {
                 bool value;
                 BoolExpr(bool v)
                     : value(v) {}
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, value ? "true" : "false");
+                    return true;
+                }
                 bool as_bool(bool& val) override {
                     val = value;
                     return true;
@@ -130,6 +161,11 @@ namespace utils {
                 IntExpr(std::int64_t v)
                     : value(v) {}
 
+                bool stringify(PushBacker pb) const override {
+                    number::to_string(pb, value);
+                    return true;
+                }
+
                 bool as_bool(bool& val) override {
                     val = value ? true : false;
                     return true;
@@ -146,6 +182,11 @@ namespace utils {
                 String value;
                 StringExpr(String&& v)
                     : value(std::move(v)) {}
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, value);
+                    return true;
+                }
+
                 bool as_string(void* str) override {
                     auto val = static_cast<String*>(str);
                     *val = value;
@@ -175,12 +216,50 @@ namespace utils {
             enum class Op {
                 add,
                 sub,
+                and_,
+                or_,
+                mul,
+                div,
+                mod,
+                assign,
             };
 
             struct BinExpr : Expr {
                 Expr* left;
                 Expr* right;
                 Op op;
+                const char* str;
+
+                Expr* index(size_t i) const override {
+                    if (i == 0) {
+                        return left;
+                    }
+                    if (i == 1) {
+                        return right;
+                    }
+                    return nullptr;
+                }
+
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, str);
+                    return true;
+                }
+
+                bool get_bothval(bool& lval, bool& rval) {
+                    if (!right) {
+                        return false;
+                    }
+                    if (left) {
+                        if (!left->as_bool(lval)) {
+                            return false;
+                        }
+                    }
+                    if (!right->as_bool(rval)) {
+                        return false;
+                    }
+                    return true;
+                }
+
                 bool get_bothval(std::int64_t& lval, std::int64_t& rval) {
                     if (!right) {
                         return false;
@@ -196,6 +275,24 @@ namespace utils {
                     return true;
                 }
 
+                bool as_bool(bool& val) override {
+                    bool lval = false, rval = false;
+                    if (!get_bothval(lval, rval)) {
+                        return false;
+                    }
+                    if (op == Op::and_) {
+                        val = lval && rval;
+                    }
+                    else if (op == Op::or_) {
+                        val = lval || rval;
+                    }
+
+                    else {
+                        return false;
+                    }
+                    return true;
+                }
+
                 bool as_int(std::int64_t& val) override {
                     std::int64_t lval = 0, rval = 0;
                     if (!get_bothval(lval, rval)) {
@@ -206,6 +303,21 @@ namespace utils {
                     }
                     else if (op == Op::sub) {
                         val = lval - rval;
+                    }
+                    else if (op == Op::mul) {
+                        val = lval * rval;
+                    }
+                    else if (op == Op::div) {
+                        if (rval == 0) {
+                            return false;
+                        }
+                        val = lval / rval;
+                    }
+                    else if (op == Op::mod) {
+                        if (rval == 0) {
+                            return false;
+                        }
+                        val = lval % rval;
                     }
                     else {
                         return false;
@@ -227,6 +339,7 @@ namespace utils {
                 auto bexpr = new BinExpr();
                 bexpr->left = expr;
                 bexpr->op = op;
+                bexpr->str = expect;
                 expr = bexpr;
                 Expr* right = nullptr;
                 if (!next(seq, right)) {
@@ -266,8 +379,8 @@ namespace utils {
             }
 
             template <class Fn, class... OpSet>
-            auto define_binary(Fn& next, OpSet&&... ops) {
-                return [&, ops...]<class T>(Sequencer<T>& seq, Expr*& expr) {
+            auto define_binary(Fn next, OpSet... ops) {
+                return [next, ops...]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     if (!next(seq, expr)) {
                         return false;
                     }
@@ -278,9 +391,92 @@ namespace utils {
                         cont = (... || expect(ops.expect, ops.op));
                     }
                     if (err) {
+                        expr = nullptr;
                         return false;
                     }
                     return true;
+                };
+            }
+
+            struct PlaceHolder {
+                virtual bool invoke(void* seq, Expr*& expr) {
+                    return false;
+                }
+            };
+
+            namespace internal {
+
+                template <class Fn, class T>
+                struct Replacement : PlaceHolder {
+                    Fn fn;
+
+                    Replacement(Fn&& f)
+                        : fn(std::move(f)) {}
+
+                    bool invoke(void* seq, Expr*& expr) override {
+                        return fn(*static_cast<Sequencer<T>*>(seq), expr);
+                    }
+                };
+            }  // namespace internal
+
+            template <class T, class Fn>
+            auto make_replacement(const Sequencer<T>&, Fn fn) {
+                return new internal::Replacement<Fn, T>(std::move(fn));
+            }
+
+            auto define_replacement(PlaceHolder*& place) {
+                return [&]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    if (!place) {
+                        return false;
+                    }
+                    return place->invoke(&seq, expr);
+                };
+            }
+
+            template <class Fn, class... OpSet>
+            auto define_assignment(Fn next, OpSet... ops) {
+                auto fn = [next, ops...]<class T>(auto& self, Sequencer<T>& seq, Expr*& expr) {
+                    if (!next(seq, expr)) {
+                        return false;
+                    }
+                    bool err = false;
+                    auto expect = make_expect(
+                        seq, expr, [&](Sequencer<T>& seq, Expr*& expr) {
+                            return self(self, seq, expr);
+                        },
+                        err);
+                    bool cont = true;
+                    while (cont) {
+                        cont = (... || expect(ops.expect, ops.op));
+                    }
+                    if (err) {
+                        expr = nullptr;
+                        return false;
+                    }
+                    return true;
+                };
+                return [fn]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    return fn(fn, seq, expr);
+                };
+            }
+
+            template <class Fn1, class Fn2>
+            auto define_bracket(Fn1 next, Fn2 recur) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    size_t start = seq.rptr;
+                    utils::helper::space::consume_space(seq, true);
+                    if (seq.consume_if('(')) {
+                        if (!recur(seq, expr)) {
+                            return false;
+                        }
+                        utils::helper::space::consume_space(seq, true);
+                        if (!seq.consume_if(')')) {
+                            return false;
+                        }
+                        return true;
+                    }
+                    seq.rptr = start;
+                    return next(seq, expr);
                 };
             }
 

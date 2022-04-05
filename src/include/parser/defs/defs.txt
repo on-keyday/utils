@@ -4,16 +4,19 @@
 #    https://opensource.org/licenses/mit-license.php
 
 SPACE(input) {
-    eq input " " | eq input "\t"
+    consume input == " " || input == "\t"
 }
 
-STRUCT(input) {
-    eq input "struct"
-    least 1 SPACE(input)
-    if eq input ":" 
-    eq input "{"   
+STRUCT {
+    least 1 SPACE()
+    consume "struct"
+    require SPACE() || input == "{"
+    any SPACE()
+    consume "{"
+    any MEMBER()
+    consume "}"
 }
 
-BIN(input) {
-
+MEMBER {
+    
 }

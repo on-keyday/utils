@@ -34,15 +34,22 @@ namespace utils {
         template <class String, template <class...> class Vec, template <class...> class Object>
         struct JSONBase {
            private:
+            using holder_t = internal::JSONHolder<String, Vec, Object>;
+
+           public:
+            using object_t = typename holder_t::object_t;
+            using array_t = typename holder_t::array_t;
+            using string_t = typename holder_t::string_t;
+            using char_t = std::remove_cvref_t<decltype(String{}[0])>;
+
+           private:
             template <class T, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json, bool eof);
             template <class Out, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr internal::to_string_detail(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
 
-            using holder_t = internal::JSONHolder<String, Vec, Object>;
             holder_t obj;
-            using object_t = typename holder_t::object_t;
-            using array_t = typename holder_t::array_t;
+
             using self_t = JSONBase<String, Vec, Object>;
 
             [[noreturn]] static void bad_type(const char* err) {
@@ -79,8 +86,7 @@ namespace utils {
                 : obj(s) {}
             JSONBase(String&& s)
                 : obj(std::move(s)) {}
-            template <class C = char>
-            JSONBase(C* p)
+            JSONBase(const char_t* p)
                 : obj(String(p)) {}
             JSONBase(const object_t& o)
                 : obj(o) {}

@@ -24,6 +24,7 @@ namespace utils {
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct ToJSONHelper {
                 using JSON = JSONBase<String, Vec, Object>;
+                using char_t = typename JSON::char_t;
 
                 SFINAE_BLOCK_T_BEGIN(has_array_interface, (std::declval<T&>()[0], std::declval<T&>().size()))
                 static bool invoke(T& t, JSON& json) {
@@ -104,16 +105,29 @@ namespace utils {
                 }
                 SFINAE_BLOCK_T_END()
 
-                SFINAE_BLOCK_T_BEGIN(is_primitive, std::declval<JSON&>() = std::declval<T>())
-                static bool invoke(T& t, JSON& json) {
-                    json = t;
-                    return true;
-                }
-                SFINAE_BLOCK_T_ELSE(is_primitive)
-                static bool invoke(T& t, JSON& json) {
-                    return is_pointer<T>::invoke(t, json);
-                }
-                SFINAE_BLOCK_T_END()
+                template <class T>
+                struct prim_t {
+                    static constexpr bool cst = std::is_constructible_v<JSON, T>;
+                    using remptr = std::remove_cvref_t<std::remove_pointer_t<T>>;
+                    static constexpr bool ptr = std::is_pointer_v<T>;
+                    static constexpr bool charptr = std::is_same_v<char_t, remptr>;
+                    static constexpr bool value = cst && (ptr ? charptr : true);
+                };
+
+                template <class T, bool v = prim_t<T>::value>
+                struct is_primitive {
+                    static bool invoke(T& t, JSON& json) {
+                        json = t;
+                        return true;
+                    }
+                };
+
+                template <class T>
+                struct is_primitive<T, false> {
+                    static bool invoke(T& t, JSON& json) {
+                        return is_pointer<T>::invoke(t, json);
+                    }
+                };
 
                 template <class T>
                 static bool invoke(T& t, JSON& json) {
