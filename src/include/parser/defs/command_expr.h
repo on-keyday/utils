@@ -18,6 +18,21 @@ namespace utils {
                 mnemonic::Command cmd;
                 Expr* first;
                 Expr* second;
+
+                Expr* index(size_t i) const override {
+                    if (i == 0) {
+                        return first;
+                    }
+                    if (i == 1) {
+                        return second;
+                    }
+                    return nullptr;
+                }
+
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, mnemonic::mnemonics[int(cmd)].str);
+                    return true;
+                }
             };
 
             template <class Fn>
@@ -47,7 +62,7 @@ namespace utils {
             }
 
             template <class Fn>
-            auto define_command_list(Fn cond_expr) {
+            auto define_command_each(Fn cond_expr) {
                 auto consume = define_command(cond_expr, mnemonic::Command::consume);
                 auto require = define_command(cond_expr, mnemonic::Command::require);
                 auto any = define_command(cond_expr, mnemonic::Command::any);
@@ -77,11 +92,17 @@ namespace utils {
                 String name;
                 Vec<Expr*> exprs;
 
-                Expr* index(size_t index) override {
-                    if (exprs.size() >= index) {
+                Expr* index(size_t index) const override {
+                    if (exprs.size() <= index) {
                         return nullptr;
                     }
+
                     return exprs[index];
+                }
+
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, name);
+                    return true;
                 }
 
                 ~StructExpr() {
@@ -92,27 +113,48 @@ namespace utils {
             };
 
             template <class String, template <class...> class Vec, class Fn>
-            auto define_command_set(Fn cond_expr) {
-                auto list = define_command_set(cond_expr);
-                return []<class T>(Sequencer<T>& seq, Expr*& expr) {
+            auto define_command_struct(Fn cond_expr, bool reqname) {
+                auto list = define_command_each(cond_expr);
+                return [list, reqname]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     auto start = seq.rptr;
                     auto space = [&] {
                         helper::space::consume_space(seq, true);
                     };
                     space();
                     String name;
-                    auto v = helper::read_whilef<true>(name, seq, [](auto c) {
-                        return number::is_alnum(c);
-                    });
-                    if (!v) {
-                        start = seq.rptr;
-                        return false;
+                    if (reqname) {
+                        if (!helper::read_whilef<true>(name, seq, [](auto c) {
+                                return number::is_alnum(c);
+                            })) {
+                            return false;
+                        }
                     }
                     space();
                     if (!seq.consume_if('{')) {
                         start = seq.rptr;
                         return false;
                     }
+                    Vec<Expr*> vexpr;
+                    while (true) {
+                        space();
+                        if (seq.consume_if('}')) {
+                            break;
+                        }
+                        if (!list(seq, expr)) {
+                            for (auto v : vexpr) {
+                                delete v;
+                            }
+                            expr = nullptr;
+                            return false;
+                        }
+                        vexpr.push_back(expr);
+                        expr = nullptr;
+                    }
+                    auto sexpr = new StructExpr<String, Vec>{};
+                    sexpr->name = std::move(name);
+                    sexpr->exprs = std::move(vexpr);
+                    expr = sexpr;
+                    return true;
                 };
             }
         }  // namespace expr

@@ -56,7 +56,7 @@ namespace utils {
                     if (i >= int(Command::LastIndex)) {
                         return Command::not_found;
                     }
-                    if (seq.seek_if(mnemonics[i])) {
+                    if (seq.seek_if(mnemonics[i].str)) {
                         if (!helper::space::consume_space(seq, true)) {
                             seq.rptr = start;
                             return Command::not_found;

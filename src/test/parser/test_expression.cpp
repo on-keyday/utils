@@ -12,6 +12,7 @@
 #include <parser/defs/jsoncvt.h>
 #include <json/json_export.h>
 #include <wrap/cout.h>
+#include <parser/defs/command_expr.h>
 
 using namespace utils::parser;
 using namespace utils::json;
@@ -27,8 +28,11 @@ void test_expr() {
             mul,
             expr::Ops{"+", expr::Op::add},
             expr::Ops{"-", expr::Op::sub});
-        auto assign = expr::define_assignment(
+        auto or_ = expr::define_binary(
             add,
+            expr::Ops{"||", expr::Op::or_});
+        auto assign = expr::define_assignment(
+            or_,
             expr::Ops{"=", expr::Op::assign});
         return assign;
     };
@@ -39,13 +43,17 @@ void test_expr() {
         6+(42-0x53)/4
     )");
     auto prim = expr::define_primitive<utils::wrap::string>();
-    ph = expr::make_replacement(seq, expr::define_bracket(prim, assign));
+    auto br = expr::define_bracket(prim, assign);
+    ph = expr::make_replacement(seq, br);
     expr::Expr* expr = nullptr;
     assign(seq, expr);
     assert(expr);
     std::int64_t val = 0;
-    auto js = convert_to_json<OrderedJSON>(expr);
-    utils::wrap::cout_wrap() << to_string<utils::wrap::string>(js, FmtFlag::unescape_slash);
+    auto print_json = [&] {
+        auto js = convert_to_json<OrderedJSON>(expr);
+        utils::wrap::cout_wrap() << to_string<utils::wrap::string>(js, FmtFlag::unescape_slash) << "\n";
+    };
+    print_json();
     auto res = expr->as_int(val);
     assert(res == true);
     assert(val == (6 + (42 - 0x53) / 4));
@@ -56,7 +64,22 @@ void test_expr() {
     expr = nullptr;
     assign(seq, expr);
     assert(expr);
-    utils::wrap::cout_wrap() << to_string<utils::wrap::string>(convert_to_json<OrderedJSON>(expr), FmtFlag::unescape_slash);
+    print_json();
+
+    auto stparse = expr::define_command_struct<utils::wrap::string, utils::wrap::vector>(assign, true);
+    seq = utils::make_ref_seq(R"(
+        STRUCT {
+            consume "A"||"B"
+            require "C"
+            any 1 || 2
+            bind name "abs"
+            bindany name "rule"
+        }
+    )");
+    delete expr;
+    stparse(seq, expr);
+    assert(expr);
+    print_json();
 }
 
 int main() {

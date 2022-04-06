@@ -194,8 +194,8 @@ namespace utils {
                 }
             };
 
-            template <class String, class T>
-            bool primitive(Sequencer<T>& seq, Expr*& expr) {
+            template <class String, class T, class Fn>
+            bool primitive(Sequencer<T>& seq, Expr*& expr, Fn custom) {
                 if (bool v = false; boolean(seq, v)) {
                     expr = new BoolExpr{v};
                 }
@@ -205,7 +205,7 @@ namespace utils {
                 else if (String s; string(seq, s)) {
                     expr = new StringExpr<String>{std::move(s)};
                 }
-                else if (variable<String>(seq, expr)) {
+                else if (custom(seq, expr)) {
                 }
                 else {
                     return false;
@@ -372,9 +372,16 @@ namespace utils {
             };
 
             template <class String>
-            auto define_primitive() {
+            auto define_variable() {
                 return []<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    return primitive<String>(seq, expr);
+                    return variable<String>(seq, expr);
+                };
+            }
+
+            template <class String, class Fn = decltype(define_variable<String>())>
+            auto define_primitive(Fn fn = define_variable<String>()) {
+                return [fn]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    return primitive<String>(seq, expr, fn);
                 };
             }
 
@@ -478,6 +485,10 @@ namespace utils {
                     seq.rptr = start;
                     return next(seq, expr);
                 };
+            }
+
+            template <template <class...> class Vec>
+            auto define_callexpr() {
             }
 
         }  // namespace expr
