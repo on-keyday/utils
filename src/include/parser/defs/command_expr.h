@@ -21,7 +21,7 @@ namespace utils {
             };
 
             template <class Fn>
-            auto define_consume(Fn cond_expr, mnemonic::Command cmd) {
+            auto define_command(Fn cond_expr, mnemonic::Command cmd) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     if (mnemonic::consume(seq, int(cmd)) != cmd) {
                         return false;
@@ -32,6 +32,8 @@ namespace utils {
                     Expr* second = nullptr;
                     if (mnemonic::mnemonics[int(cmd)].exprcount >= 2) {
                         if (!cond_expr(seq, second)) {
+                            delete expr;
+                            expr = nullptr;
                             return false;
                         }
                     }
@@ -42,6 +44,32 @@ namespace utils {
                     expr = cexpr;
                     return true;
                 };
+            }
+
+            template <class Fn>
+            auto define_command_list(Fn cond_expr) {
+                auto consume = define_command(cond_expr, mnemonic::Command::consume);
+                auto require = define_command(cond_expr, mnemonic::Command::require);
+                auto any = define_command(cond_expr, mnemonic::Command::any);
+                auto bindany = define_command(cond_expr, mnemonic::Command::bindany);
+                auto bind = define_command(cond_expr, mnemonic::Command::bind);
+                return [consume, require, any, bindany, bind]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    auto start = seq.rptr;
+#define CALL(FUNC)                               \
+    if (!FUNC(seq, expr) && start != seq.rptr) { \
+        return false;                            \
+    }                                            \
+    if (expr) {                                  \
+        return true;                             \
+    }
+                    CALL(consume)
+                    CALL(require)
+                    CALL(any)
+                    CALL(bindany)
+                    CALL(bind)
+                    return false;
+                };
+#undef CALL
             }
         }  // namespace expr
     }      // namespace parser
