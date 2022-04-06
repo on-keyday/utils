@@ -96,12 +96,20 @@ namespace utils {
                 auto list = define_command_set(cond_expr);
                 return []<class T>(Sequencer<T>& seq, Expr*& expr) {
                     auto start = seq.rptr;
-                    helper::space::consume_space(seq, true);
+                    auto space = [&] {
+                        helper::space::consume_space(seq, true);
+                    };
+                    space();
                     String name;
                     auto v = helper::read_whilef<true>(name, seq, [](auto c) {
                         return number::is_alnum(c);
                     });
                     if (!v) {
+                        start = seq.rptr;
+                        return false;
+                    }
+                    space();
+                    if (!seq.consume_if('{')) {
                         start = seq.rptr;
                         return false;
                     }
