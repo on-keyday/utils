@@ -19,6 +19,7 @@ namespace utils {
                 using str = typename js::string_t;
                 str name;
                 ptr.stringify(name);
+                json["type"] = ptr.type();
                 json["value"] = std::move(name);
                 size_t i = 0;
                 js* val = nullptr;

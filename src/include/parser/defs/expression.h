@@ -88,9 +88,21 @@ namespace utils {
             }
 
             struct Expr {
+               protected:
+                const char* type_ = "expr";
+
+               public:
+                Expr(const char* ty)
+                    : type_(ty) {}
+
                 virtual Expr* index(size_t index) const {
                     return nullptr;
                 }
+
+                const char* type() const {
+                    return type_;
+                }
+
                 virtual bool as_int(std::int64_t& val) {
                     return false;
                 }
@@ -108,7 +120,7 @@ namespace utils {
             template <class String>
             struct VarExpr : Expr {
                 VarExpr(String&& n)
-                    : name(std::move(n)) {}
+                    : name(std::move(n)), Expr("variable") {}
                 String name;
 
                 bool stringify(PushBacker pb) const override {
@@ -135,7 +147,7 @@ namespace utils {
             struct BoolExpr : Expr {
                 bool value;
                 BoolExpr(bool v)
-                    : value(v) {}
+                    : value(v), Expr("bool") {}
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, value ? "true" : "false");
                     return true;
@@ -155,7 +167,7 @@ namespace utils {
                 std::int64_t value;
 
                 IntExpr(std::int64_t v)
-                    : value(v) {}
+                    : value(v), Expr("integer") {}
 
                 bool stringify(PushBacker pb) const override {
                     number::to_string(pb, value);
@@ -177,7 +189,7 @@ namespace utils {
             struct StringExpr : Expr {
                 String value;
                 StringExpr(String&& v)
-                    : value(std::move(v)) {}
+                    : value(std::move(v)), Expr("string") {}
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, value);
                     return true;
@@ -217,6 +229,9 @@ namespace utils {
                 Expr* right;
                 Op op;
                 const char* str;
+
+                BinExpr()
+                    : Expr("binary") {}
 
                 Expr* index(size_t i) const override {
                     if (i == 0) {
@@ -483,6 +498,9 @@ namespace utils {
                 String name;
                 Vec<Expr*> args;
 
+                CallExpr()
+                    : Expr("call") {}
+
                 Expr* index(size_t i) const override {
                     if (i >= args.size()) {
                         return nullptr;
@@ -543,8 +561,7 @@ namespace utils {
                         expr = cexpr;
                     }
                     else {
-                        auto var = new VarExpr<String>{};
-                        var->name = std::move(name);
+                        auto var = new VarExpr<String>{std::move(name)};
                         expr = var;
                     }
                     return true;

@@ -42,7 +42,8 @@ void test_expr() {
     auto seq = utils::make_ref_seq(R"(
         6+(42-0x53)/4
     )");
-    auto prim = expr::define_primitive<utils::wrap::string>();
+    auto call = expr::define_callexpr<utils::wrap::string, utils::wrap::vector>(assign);
+    auto prim = expr::define_primitive<utils::wrap::string>(call);
     auto br = expr::define_bracket(prim, assign);
     ph = expr::make_replacement(seq, br);
     expr::Expr* expr = nullptr;
@@ -58,7 +59,7 @@ void test_expr() {
     assert(res == true);
     assert(val == (6 + (42 - 0x53) / 4));
     seq = utils::make_ref_seq(R"(
-        name=42-63*2
+        name=42-63*2+invoke()
     )");
     delete expr;
     expr = nullptr;
@@ -71,7 +72,7 @@ void test_expr() {
         STRUCT {
             consume "A"||"B"
             require "C"
-            any 1 || 2
+            any 1 || 2 || WHY()
             bind name "abs"
             bindany name "rule"
         }

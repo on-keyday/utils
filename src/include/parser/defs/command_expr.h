@@ -19,6 +19,9 @@ namespace utils {
                 Expr* first;
                 Expr* second;
 
+                CommandExpr()
+                    : Expr("command") {}
+
                 Expr* index(size_t i) const override {
                     if (i == 0) {
                         return first;
@@ -91,6 +94,9 @@ namespace utils {
             struct StructExpr : Expr {
                 String name;
                 Vec<Expr*> exprs;
+
+                StructExpr()
+                    : Expr("struct") {}
 
                 Expr* index(size_t index) const override {
                     if (exprs.size() <= index) {
