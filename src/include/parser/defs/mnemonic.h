@@ -14,32 +14,48 @@ namespace utils {
     namespace parser {
         namespace mnemonic {
             enum class Command {
-                eq,
-                if_,
-                loop,
-                least,
-                const_,
-                do_,
-                else_,
+                consume,
+                require,
+                any,
+                bindany,
+                bind,
+
                 LastIndex,
                 not_found,
             };
 
-            constexpr char* mnemonics[int(Command::LastIndex)] = {
-                "eq",
-                "if",
-                "loop",
-                "least",
-                "const",
-                "do",
-                "else",
+            struct Mnemonic {
+                const char* str;
+                size_t exprcount;
+            };
+
+            constexpr Mnemonic mnemonics[int(Command::LastIndex)] = {
+                {"consume", 1},
+                {"require", 1},
+                {"any", 1},
+                {"bindany", 2},
+                {"bind", 2},
             };
 
             template <class T>
-            Command consume(Sequencer<T>& seq) {
-                helper::space::consume_space(seq, true);
+            Command consume(Sequencer<T>& seq, int i = -1) {
                 size_t start = seq.rptr;
-                for (int i = 0; i < int(Command::LastIndex); i++) {
+                helper::space::consume_space(seq, true);
+                if (i < 0) {
+                    for (i = 0; i < int(Command::LastIndex); i++) {
+                        if (seq.seek_if(mnemonics[i].str)) {
+                            if (!helper::space::consume_space(seq, true)) {
+                                seq.rptr = start;
+                                return Command::not_found;
+                            }
+                            return Command(i);
+                        }
+                    }
+                }
+                else {
+                    if (i >= int(Command::LastIndex)) {
+                        return Command::not_found;
+                    }
                     if (seq.seek_if(mnemonics[i])) {
                         if (!helper::space::consume_space(seq, true)) {
                             seq.rptr = start;

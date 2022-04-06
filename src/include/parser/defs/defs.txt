@@ -3,20 +3,43 @@
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 
-SPACE(input) {
-    consume input == " " || input == "\t"
+SPACE {
+    consume " " || "\t"
 }
 
+KEYWORD {
+    consume "if"||"else"||"for"
+    require SPACE()||"{"||";"
+}
+
+VARNAME() {
+    require !KEYWORD()
+    consume "a" - "z" || "A" - "Z"
+    any "a" - "z" || "A" - "Z" || "0" -  "9"
+}
+
+// consume - 入力が指定された文字であれば消費
+// require - 現時点で条件を満たしていることを確認
+// any - 条件を満たす要素0個以上を消費
+// bind - 条件を満たす要素1個以上を変数に束縛
+// bindany - 条件を満たす要素0個以上を変数に束縛
+
+
 STRUCT {
-    least 1 SPACE()
     consume "struct"
     require SPACE() || input == "{"
     any SPACE()
+    bindany "name" VARNAME()
     consume "{"
     any MEMBER()
     consume "}"
 }
 
 MEMBER {
+    bind "member[index].name" VARNAME()
+
+}
+
+EXPR {
     
 }
