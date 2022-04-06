@@ -98,10 +98,6 @@ namespace utils {
                     return false;
                 }
 
-                virtual bool as_string(void* str) {
-                    return false;
-                }
-
                 virtual bool stringify(PushBacker pb) const {
                     return false;
                 }
@@ -186,16 +182,10 @@ namespace utils {
                     helper::append(pb, value);
                     return true;
                 }
-
-                bool as_string(void* str) override {
-                    auto val = static_cast<String*>(str);
-                    *val = value;
-                    return true;
-                }
             };
 
-            template <class String, class T, class Fn>
-            bool primitive(Sequencer<T>& seq, Expr*& expr, Fn custom) {
+            template <class String, class T>
+            bool primitive(Sequencer<T>& seq, Expr*& expr) {
                 if (bool v = false; boolean(seq, v)) {
                     expr = new BoolExpr{v};
                 }
@@ -204,8 +194,6 @@ namespace utils {
                 }
                 else if (String s; string(seq, s)) {
                     expr = new StringExpr<String>{std::move(s)};
-                }
-                else if (custom(seq, expr)) {
                 }
                 else {
                     return false;
@@ -379,9 +367,12 @@ namespace utils {
             }
 
             template <class String, class Fn = decltype(define_variable<String>())>
-            auto define_primitive(Fn fn = define_variable<String>()) {
-                return [fn]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    return primitive<String>(seq, expr, fn);
+            auto define_primitive(Fn custom = define_variable<String>()) {
+                return [custom]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    if (primitive<String>(seq, expr)) {
+                        return true;
+                    }
+                    return custom(seq, expr);
                 };
             }
 
@@ -487,8 +478,77 @@ namespace utils {
                 };
             }
 
-            template <template <class...> class Vec>
-            auto define_callexpr() {
+            template <class String, template <class...> class Vec>
+            struct CallExpr : Expr {
+                String name;
+                Vec<Expr*> args;
+
+                Expr* index(size_t i) const override {
+                    if (i >= args.size()) {
+                        return nullptr;
+                    }
+                    return args[i];
+                }
+
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, name);
+                    return true;
+                }
+            };
+
+            template <class String, template <class...> class Vec, class Fn>
+            auto define_callexpr(Fn next) {
+                return [next]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    size_t start = 0;
+                    auto space = [&] {
+                        helper::space::consume_space(seq, true);
+                    };
+                    space();
+                    String name;
+                    if (!helper::read_whilef<true>(name, seq, [](auto c) {
+                            return number::is_alnum(c);
+                        })) {
+                        return false;
+                    }
+                    space();
+                    if (seq.consume_if('(')) {
+                        Vec<Expr*> vexpr;
+                        auto delexpr = [&]() {
+                            for (auto v : vexpr) {
+                                delete v;
+                            }
+                        };
+                        space();
+                        while (true) {
+                            if (seq.consume_if(')')) {
+                                break;
+                            }
+                            if (vexpr.size()) {
+                                if (!seq.consume_if(',')) {
+                                    delexpr();
+                                    return false;
+                                }
+                                space();
+                            }
+                            if (!next(seq, expr)) {
+                                delexpr();
+                                return false;
+                            }
+                            vexpr.push_back(expr);
+                            expr = nullptr;
+                        }
+                        auto cexpr = new CallExpr<String, Vec>{};
+                        cexpr->name = std::move(name);
+                        cexpr->args = std::move(vexpr);
+                        expr = cexpr;
+                    }
+                    else {
+                        auto var = new VarExpr<String>{};
+                        var->name = std::move(name);
+                        expr = var;
+                    }
+                    return true;
+                };
             }
 
         }  // namespace expr
