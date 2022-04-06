@@ -71,6 +71,42 @@ namespace utils {
                 };
 #undef CALL
             }
+
+            template <class String, template <class...> class Vec>
+            struct StructExpr : Expr {
+                String name;
+                Vec<Expr*> exprs;
+
+                Expr* index(size_t index) override {
+                    if (exprs.size() >= index) {
+                        return nullptr;
+                    }
+                    return exprs[index];
+                }
+
+                ~StructExpr() {
+                    for (auto v : exprs) {
+                        delete v;
+                    }
+                }
+            };
+
+            template <class String, template <class...> class Vec, class Fn>
+            auto define_command_set(Fn cond_expr) {
+                auto list = define_command_set(cond_expr);
+                return []<class T>(Sequencer<T>& seq, Expr*& expr) {
+                    auto start = seq.rptr;
+                    helper::space::consume_space(seq, true);
+                    String name;
+                    auto v = helper::read_whilef<true>(name, seq, [](auto c) {
+                        return number::is_alnum(c);
+                    });
+                    if (!v) {
+                        start = seq.rptr;
+                        return false;
+                    }
+                };
+            }
         }  // namespace expr
     }      // namespace parser
 }  // namespace utils
