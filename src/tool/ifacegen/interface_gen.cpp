@@ -8,9 +8,6 @@
 
 // interface_gen - generate golang like interface
 
-#include "../../include/cmdline/make_opt.h"
-#include "../../include/cmdline/parse.h"
-
 #include "../../include/syntax/syntaxc/make_syntaxc.h"
 
 #include "../../include/wrap/cout.h"

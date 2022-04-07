@@ -95,6 +95,9 @@ namespace utils {
                 String name;
                 Vec<Expr*> exprs;
 
+                StructExpr(const char* t)
+                    : Expr(t) {}
+
                 StructExpr()
                     : Expr("struct") {}
 
@@ -119,9 +122,9 @@ namespace utils {
             };
 
             template <class String, template <class...> class Vec, class Fn>
-            auto define_command_struct(Fn cond_expr, bool reqname) {
+            auto define_set(Fn cond_expr, bool reqname, bool reqbrack = true, const char* type = "struct") {
                 auto list = define_command_each(cond_expr);
-                return [list, reqname]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                return [cond_expr, reqname, type, reqbrack]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     auto start = seq.rptr;
                     auto space = [&] {
                         helper::space::consume_space(seq, true);
@@ -136,17 +139,27 @@ namespace utils {
                         }
                     }
                     space();
-                    if (!seq.consume_if('{')) {
+                    if (reqbrack && !seq.consume_if('{')) {
                         start = seq.rptr;
                         return false;
                     }
                     Vec<Expr*> vexpr;
                     while (true) {
                         space();
-                        if (seq.consume_if('}')) {
-                            break;
+                        if (reqbrack) {
+                            if (seq.consume_if('}')) {
+                                break;
+                            }
+                            if (seq.eos()) {
+                                return false;
+                            }
                         }
-                        if (!list(seq, expr)) {
+                        else {
+                            if (seq.eos()) {
+                                break;
+                            }
+                        }
+                        if (!cond_expr(seq, expr)) {
                             for (auto v : vexpr) {
                                 delete v;
                             }
@@ -156,13 +169,19 @@ namespace utils {
                         vexpr.push_back(expr);
                         expr = nullptr;
                     }
-                    auto sexpr = new StructExpr<String, Vec>{};
+                    auto sexpr = new StructExpr<String, Vec>{type};
                     sexpr->name = std::move(name);
                     sexpr->exprs = std::move(vexpr);
                     expr = sexpr;
                     return true;
                 };
             }
+
+            template <class String, template <class...> class Vec, class Fn>
+            auto define_command_struct(Fn cond_expr, bool reqname) {
+                return define_set<String, Vec>(define_command_each(cond_expr), reqname);
+            }
+
         }  // namespace expr
     }      // namespace parser
 }  // namespace utils

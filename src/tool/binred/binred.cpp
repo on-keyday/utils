@@ -12,9 +12,6 @@
 
 #include "../../include/wrap/cout.h"
 
-#include "../../include/cmdline/parse.h"
-#include "../../include/cmdline/make_opt.h"
-
 #include "../../include/file/file_view.h"
 
 #include "../../include/cmdline/option/optcontext.h"
