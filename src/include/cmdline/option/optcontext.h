@@ -178,7 +178,7 @@ namespace utils {
                         help, argdesc, flag);
                 }
 
-                bool VarBool(bool* ptr, auto& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
+                bool VarBool(bool* ptr, auto&& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     if (!ptr) {
                         return false;
                     }

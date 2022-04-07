@@ -184,8 +184,8 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec, class Fn>
-            auto define_command_struct(Fn cond_expr, bool reqname) {
-                return define_set<String, Vec>(define_command_each(cond_expr), reqname);
+            auto define_command_struct(Fn cond_expr, bool reqname, const char* type = "struct") {
+                return define_set<String, Vec>(define_command_each(cond_expr), reqname, true, type);
             }
 
         }  // namespace expr

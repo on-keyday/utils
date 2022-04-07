@@ -39,9 +39,20 @@ namespace pscmpl {
             expr::Ops{"||", expr::Op::or_});
         auto call = expr::define_callexpr<string, vector>(exp);
         auto prim = expr::define_primitive<string>(call);
-        ph = expr::make_replacement(seq, expr::define_bracket(prim, exp));
         auto st = expr::define_command_struct<string, vector>(exp, true);
+        auto anonymous_blcok = expr::define_command_struct<string, vector>(exp, false,"block");
         auto parser = expr::define_set<string, vector>(st, false, false, "program");
+        auto br = expr::define_bracket(prim, exp);
+        auto recursive = [br, anonymous_blcok]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
+            size_t start = seq.rptr;
+            utils::helper::space::consume_space(seq, true);
+            if (seq.match("{")) {
+                return anonymous_blcok(seq, expr);
+            }
+            seq.rptr = start;
+            return br(seq, expr);
+        };
+        ph = expr::make_replacement(seq, recursive);
         return parser;
     }
     struct CompileContext {
@@ -51,16 +62,22 @@ namespace pscmpl {
         utils::wrap::vector<expr::Expr*> errstack;
         utils::wrap::hash_map<utils::wrap::string, expr::Expr*> defs;
         void write(auto&&... v) {
-            helper::append(buffer, v...);
+            utils::helper::appends(buffer, v...);
         }
 
         bool error(auto&&... v) {
-            helper::append(err, v);
+            utils::helper::appends(err, v...);
             return false;
         }
 
-        void pushstack(auto&&... v) {
-            (errstack.push_back(v)...);
+        void push(expr::Expr* e) {
+            errstack.push_back(e);
+        }
+        void pushstack() {}
+
+        void pushstack(auto&& f, auto&&... v) {
+            push(f);
+            pushstack(v...);
         }
     };
 

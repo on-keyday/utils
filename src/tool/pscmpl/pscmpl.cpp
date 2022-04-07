@@ -14,22 +14,33 @@
 #include <json/json_export.h>
 #include "pscmpl.h"
 #include <wrap/light/smart_ptr.h>
+#include <fstream>
 
 auto& cout = utils::wrap::cout_wrap();
+auto& cerr = utils::wrap::cerr_wrap();
 
 int main(int argc, char** argv) {
     using namespace utils::cmdline;
     option::Context ctx;
     auto input = ctx.String<utils::wrap::string>("input,i", "", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
     auto output = ctx.String<utils::wrap::string>("output,o", "", "output file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
+    bool verbose = false, help = false;
+    ctx.VarBool(&verbose, "verbose,v", "verbose log");
+    ctx.VarBool(&help, "help,h", "show help");
     auto err = option::parse_required(argc, argv, ctx, utils::helper::nop, option::ParseFlag::assignable_mode);
     auto error = [](auto&&... args) {
-        cout << "pscmpl: error: ";
-        (cout << ... << args) << "\n";
+        cerr << "pscmpl: error: ";
+        (cerr << ... << args) << "\n";
         return -1;
     };
     if (auto msg = error_msg(err)) {
         return error(ctx.erropt(), ": ", msg);
+    }
+    if (help) {
+        utils::number::Array<400, char, true> buf;
+        ctx.Usage(buf, option::ParseFlag::assignable_mode, argv[0]);
+        cout << buf;
+        return 1;
     }
     utils::file::View view;
     if (!view.open(*input)) {
@@ -50,23 +61,41 @@ int main(int argc, char** argv) {
     auto write_loc = [&]() {
         utils::wrap::string loc;
         utils::helper::write_src_loc(loc, seq);
-        cout << loc << "\n";
+        cerr << loc << "\n";
     };
     if (!parse(seq, expr)) {
         error("failed to parse file ", *input);
-        cout << "failed location\n";
+        cerr << "failed location\n";
         write_loc();
         return -1;
     }
-    print_json(expr);
+    if (verbose) {
+        print_json(expr);
+    }
     pscmpl::CompileContext cc;
     if (!pscmpl::compile(expr, cc)) {
         error(cc.err);
-        cout << "failed locations\n";
+        cerr << "failed locations\n";
         for (auto err : cc.errstack) {
+            utils::wrap::string key;
+            err->stringify(key);
+            cerr << "object:" << key << "\n";
+            cerr << "type:" << err->type() << "\n";
             seq.rptr = err->pos();
             write_loc();
         }
         return -1;
     }
+    view.close();
+    if (verbose) {
+        cout << cc.buffer;
+    }
+    {
+        std::ofstream fs(*output);
+        if (!fs) {
+            return error("failed to open output file ", *output);
+        }
+        fs << cc.buffer;
+    }
+    cout << "generated\n";
 }

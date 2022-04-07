@@ -16,7 +16,7 @@ VARNAME {
 
 STRUCT {
     consume "struct"
-    require SPACE() || input == "{"
+    require SPACE() || "{"
     any SPACE()
     bindany "name" VARNAME()
     consume "{"
@@ -26,9 +26,12 @@ STRUCT {
 
 MEMBER {
     bind "member[index].name" VARNAME()
-
 }
 
 EXPR {
-    
+    consume VARNAME()
+    any "+" && VARNAME()
+    require {
+        consume " "
+    }
 }

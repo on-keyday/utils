@@ -449,7 +449,7 @@ namespace utils {
                 return new internal::Replacement<Fn, T>(std::move(fn));
             }
 
-            auto define_replacement(PlaceHolder*& place) {
+            inline auto define_replacement(PlaceHolder*& place) {
                 return [&]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     if (!place) {
                         return false;
