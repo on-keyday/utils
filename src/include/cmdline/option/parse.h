@@ -81,7 +81,7 @@ namespace utils {
                         auto reserved = result.reserved.find(option->mainname);
                         if (reserved != result.reserved.end()) {
                             auto& place = get<1>(*reserved);
-                            if (!option->bindonce || place.set_count == 0) {
+                            if (!any(option->mode & OptMode::bindonce) || place.set_count == 0) {
                                 if (!option->parser.parse(place.value, state, true, place.set_count)) {
                                     set_user_err();
                                     return false;
@@ -115,6 +115,18 @@ namespace utils {
             FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg = helper::nop,
                            ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
                 return parse(argc, argv, ctx.desc, ctx.result, arg, flag, start_index);
+            }
+
+            template <class Ctx, class Arg = decltype(helper::nop)>
+            FlagType parse_required(int argc, char** argv, Ctx& ctx, Arg& arg = helper::nop,
+                                    ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
+                auto err = parse(argc, argv, ctx, arg, flag, start_index);
+                if (err == FlagType::end_of_arg) {
+                    if (auto v = ctx.check_required(); v != FlagType::end_of_arg) {
+                        return v;
+                    }
+                }
+                return err;
             }
         }  // namespace option
     }      // namespace cmdline

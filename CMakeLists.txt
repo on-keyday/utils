@@ -103,6 +103,7 @@ add_executable(netutil "src/tool/netutil/netmain.cpp"
                        "src/tool/netutil/http_do.cpp"
                        "src/tool/netutil/debug_log.cpp"
                        "src/tool/netutil/tagcmd.cpp")
+add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp")
 
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
@@ -209,6 +210,7 @@ target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
 target_link_libraries(netutil utils)
+target_link_libraries(pscmpl utils)
 
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)

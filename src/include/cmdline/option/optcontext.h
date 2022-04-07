@@ -20,6 +20,7 @@ namespace utils {
                 none = 0,
                 appear_once = 0x1,
                 bind_once = 0x2,
+                required = 0x4,
             };
 
             DEFINE_ENUM_FLAGOP(CustomFlag)
@@ -31,6 +32,17 @@ namespace utils {
                 return std::move(ps);
             }
 
+            inline OptMode convert_flag(CustomFlag flag) {
+                OptMode mode = OptMode::none;
+                if (any(flag & CustomFlag::bind_once)) {
+                    mode |= OptMode::bindonce;
+                }
+                if (any(flag & CustomFlag::required)) {
+                    mode |= OptMode::required;
+                }
+                return mode;
+            }
+
             struct Context {
                private:
                 Description desc;
@@ -40,6 +52,25 @@ namespace utils {
                 friend FlagType parse(int argc, char** argv, Ctx& ctx, Arg& arg, ParseFlag flag, int start_index);
 
                public:
+                FlagType check_required() {
+                    for (auto& opt : desc.list) {
+                        if (any(opt->mode & OptMode::required)) {
+                            auto found = result.find(opt->mainname);
+                            if (found.empty()) {
+                                auto reserved = result.reserved.find(opt->mainname);
+                                if (reserved != result.reserved.end()) {
+                                    if (get<1>(*reserved).set_count) {
+                                        continue;
+                                    }
+                                }
+                                result.erropt = opt->mainname;
+                                return FlagType::required;
+                            }
+                        }
+                    }
+                    return FlagType::end_of_arg;
+                }
+
                 template <class Str>
                 void help(Str& str, ParseFlag flag, const char* indent = "    ") {
                     option::desc(str, flag, desc.list, indent);
@@ -75,13 +106,13 @@ namespace utils {
                     return result.index;
                 }
 
-                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc, bool bindonce) {
-                    return desc.set(option, std::move(parser), help, argdesc, bindonce) != nullptr;
+                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode) {
+                    return desc.set(option, std::move(parser), help, argdesc, mode) != nullptr;
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc, bool bindonce) {
-                    auto opt = desc.set(option, std::move(parser), help, argdesc, bindonce);
+                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode) {
+                    auto opt = desc.set(option, std::move(parser), help, argdesc, mode);
                     if (!opt) {
                         return nullptr;
                     }
@@ -97,14 +128,14 @@ namespace utils {
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag=CustomFlag::none) {
+                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     return custom_option_reserved(
                         std::move(defaultv), option,
-                        bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
+                        bind_custom(std::move(ps), flag), help, argdesc, convert_flag(flag));
                 }
 
                 bool UnboundOption(auto&& option, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
-                    return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, any(flag & CustomFlag::bind_once));
+                    return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, convert_flag(flag));
                 }
 
                 bool UnboundBool(auto&& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {

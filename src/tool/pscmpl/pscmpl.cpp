@@ -10,6 +10,8 @@
 #include <parser/defs/jsoncvt.h>
 #include <wrap/light/string.h>
 #include <wrap/light/vector.h>
+#include <cmdline/option/optcontext.h>
+#include <wrap/cout.h>
 
 using namespace utils::parser;
 
@@ -40,5 +42,17 @@ auto define_parser(const utils::Sequencer<T>& seq, expr::PlaceHolder*& ph) {
     return parser;
 }
 
+auto& cout = utils::wrap::cout_wrap();
+
 int main(int argc, char** argv) {
+    using namespace utils::cmdline;
+    option::Context ctx;
+    auto input = ctx.String<utils::wrap::string>("input,i", "", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
+    auto output = ctx.String<utils::wrap::string>("output,o", "", "output file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
+    auto err = option::parse_required(argc, argv, ctx, utils::helper::nop, option::ParseFlag::assignable_mode);
+    if (auto msg = error_msg(err)) {
+        cout << "error: " << ctx.erropt() << ": "
+             << msg << "\n";
+        return -1;
+    }
 }

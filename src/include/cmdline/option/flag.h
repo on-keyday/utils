@@ -160,6 +160,7 @@ namespace utils {
                 require_once,
                 subcmd_not_found,
                 require_subcmd,
+                required,
             };
 
             DEFINE_ENUM_FLAGOP(FlagType)
@@ -180,7 +181,16 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::require_once, "option must be only once in command line")
             ENUM_STRING_MSG(FlagType::subcmd_not_found, "subcommand not found")
             ENUM_STRING_MSG(FlagType::require_subcmd, "require subcommand")
+            ENUM_STRING_MSG(FlagType::required, "must be set this option")
             END_ENUM_STRING_MSG(nullptr)
+
+            enum class OptMode {
+                none = 0,
+                bindonce = 0x1,
+                required = 0x2,
+            };
+
+            DEFINE_ENUM_FLAGOP(OptMode)
 
             struct CmdParseState {
                 FlagType state;
