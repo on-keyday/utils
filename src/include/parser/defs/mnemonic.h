@@ -38,9 +38,10 @@ namespace utils {
             };
 
             template <class T>
-            Command consume(Sequencer<T>& seq, int i = -1) {
+            Command consume(Sequencer<T>& seq, size_t& pos, int i = -1) {
                 size_t start = seq.rptr;
                 helper::space::consume_space(seq, true);
+                pos = seq.rptr;
                 if (i < 0) {
                     for (i = 0; i < int(Command::LastIndex); i++) {
                         if (seq.seek_if(mnemonics[i].str)) {

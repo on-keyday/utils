@@ -19,8 +19,8 @@ namespace utils {
                 Expr* first;
                 Expr* second;
 
-                CommandExpr()
-                    : Expr("command") {}
+                CommandExpr(size_t pos)
+                    : Expr("command", pos) {}
 
                 Expr* index(size_t i) const override {
                     if (i == 0) {
@@ -41,7 +41,8 @@ namespace utils {
             template <class Fn>
             auto define_command(Fn cond_expr, mnemonic::Command cmd) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    if (mnemonic::consume(seq, int(cmd)) != cmd) {
+                    size_t pos = 0;
+                    if (mnemonic::consume(seq, pos, int(cmd)) != cmd) {
                         return false;
                     }
                     if (!cond_expr(seq, expr)) {
@@ -55,7 +56,7 @@ namespace utils {
                             return false;
                         }
                     }
-                    auto cexpr = new CommandExpr{};
+                    auto cexpr = new CommandExpr{pos};
                     cexpr->cmd = cmd;
                     cexpr->first = expr;
                     cexpr->second = second;
@@ -95,11 +96,11 @@ namespace utils {
                 String name;
                 Vec<Expr*> exprs;
 
-                StructExpr(const char* t)
-                    : Expr(t) {}
+                StructExpr(const char* t, size_t pos)
+                    : Expr(t, pos) {}
 
-                StructExpr()
-                    : Expr("struct") {}
+                StructExpr(size_t pos)
+                    : Expr("struct", pos) {}
 
                 Expr* index(size_t index) const override {
                     if (exprs.size() <= index) {
@@ -131,7 +132,9 @@ namespace utils {
                     };
                     space();
                     String name;
+                    size_t pos = seq.rptr;
                     if (reqname) {
+                        pos = seq.rptr;
                         if (!helper::read_whilef<true>(name, seq, [](auto c) {
                                 return number::is_alnum(c);
                             })) {
@@ -139,6 +142,9 @@ namespace utils {
                         }
                     }
                     space();
+                    if (!name.size() && reqbrack) {
+                        pos = seq.rptr;
+                    }
                     if (reqbrack && !seq.consume_if('{')) {
                         start = seq.rptr;
                         return false;
@@ -169,7 +175,7 @@ namespace utils {
                         vexpr.push_back(expr);
                         expr = nullptr;
                     }
-                    auto sexpr = new StructExpr<String, Vec>{type};
+                    auto sexpr = new StructExpr<String, Vec>{type, pos};
                     sexpr->name = std::move(name);
                     sexpr->exprs = std::move(vexpr);
                     expr = sexpr;

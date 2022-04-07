@@ -1,0 +1,34 @@
+
+SPACE {
+    consume " " || "\t"
+}
+
+KEYWORD {
+    consume "if"||"else"||"for"
+    require SPACE()||"{"||";"
+}
+
+VARNAME {
+    require KEYWORD()
+    consume "a" - "z" || "A" - "Z"
+    any "a" - "z" || "A" - "Z" || "0" -  "9"
+}
+
+STRUCT {
+    consume "struct"
+    require SPACE() || input == "{"
+    any SPACE()
+    bindany "name" VARNAME()
+    consume "{"
+    any MEMBER()
+    consume "}"
+}
+
+MEMBER {
+    bind "member[index].name" VARNAME()
+
+}
+
+EXPR {
+    
+}

@@ -38,9 +38,10 @@ namespace utils {
             };
 
             template <class T>
-            bool boolean(Sequencer<T>& seq, bool& v) {
+            bool boolean(Sequencer<T>& seq, bool& v, size_t& pos) {
                 size_t start = seq.rptr;
                 helper::space::consume_space(seq, true);
+                pos = seq.rptr;
                 if (seq.seek_if("true")) {
                     v = true;
                 }
@@ -60,9 +61,10 @@ namespace utils {
             }
 
             template <class T, class Int>
-            bool integer(Sequencer<T>& seq, Int& v) {
+            bool integer(Sequencer<T>& seq, Int& v, size_t& pos) {
                 size_t start = seq.rptr;
                 helper::space::consume_space(seq, true);
+                pos = seq.rptr;
                 if (!number::prefix_integer(seq, v)) {
                     seq.rptr = start;
                     return false;
@@ -76,9 +78,10 @@ namespace utils {
             }
 
             template <class T, class String>
-            bool string(Sequencer<T>& seq, String& str) {
+            bool string(Sequencer<T>& seq, String& str, size_t& pos) {
                 size_t start = seq.rptr;
                 helper::space::consume_space(seq, true);
+                pos = seq.rptr;
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape)) {
                     start = seq.rptr;
                     return false;
@@ -90,10 +93,11 @@ namespace utils {
             struct Expr {
                protected:
                 const char* type_ = "expr";
+                size_t pos_ = 0;
 
                public:
-                Expr(const char* ty)
-                    : type_(ty) {}
+                Expr(const char* ty, size_t p)
+                    : type_(ty), pos_(p) {}
 
                 virtual Expr* index(size_t index) const {
                     return nullptr;
@@ -101,6 +105,10 @@ namespace utils {
 
                 const char* type() const {
                     return type_;
+                }
+
+                size_t pos() const {
+                    return pos_;
                 }
 
                 virtual bool as_int(std::int64_t& val) {
@@ -119,8 +127,8 @@ namespace utils {
 
             template <class String>
             struct VarExpr : Expr {
-                VarExpr(String&& n)
-                    : name(std::move(n)), Expr("variable") {}
+                VarExpr(String&& n, size_t pos)
+                    : name(std::move(n)), Expr("variable", pos) {}
                 String name;
 
                 bool stringify(PushBacker pb) const override {
@@ -134,20 +142,21 @@ namespace utils {
                 size_t start = seq.rptr;
                 String name;
                 helper::space::consume_space(seq, true);
+                size_t pos = seq.rptr;
                 if (!helper::read_whilef<true>(name, seq, [](auto&& c) {
                         return number::is_alnum(c);
                     })) {
                     return false;
                 }
                 helper::space::consume_space(seq, true);
-                expr = new VarExpr<String>{std::move(name)};
+                expr = new VarExpr<String>{std::move(name), pos};
                 return true;
             }
 
             struct BoolExpr : Expr {
                 bool value;
-                BoolExpr(bool v)
-                    : value(v), Expr("bool") {}
+                BoolExpr(bool v, size_t pos)
+                    : value(v), Expr("bool", pos) {}
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, value ? "true" : "false");
                     return true;
@@ -166,8 +175,8 @@ namespace utils {
             struct IntExpr : Expr {
                 std::int64_t value;
 
-                IntExpr(std::int64_t v)
-                    : value(v), Expr("integer") {}
+                IntExpr(std::int64_t v, size_t pos)
+                    : value(v), Expr("integer", pos) {}
 
                 bool stringify(PushBacker pb) const override {
                     number::to_string(pb, value);
@@ -188,8 +197,8 @@ namespace utils {
             template <class String>
             struct StringExpr : Expr {
                 String value;
-                StringExpr(String&& v)
-                    : value(std::move(v)), Expr("string") {}
+                StringExpr(String&& v, size_t pos)
+                    : value(std::move(v)), Expr("string", pos) {}
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, value);
                     return true;
@@ -198,14 +207,15 @@ namespace utils {
 
             template <class String, class T>
             bool primitive(Sequencer<T>& seq, Expr*& expr) {
-                if (bool v = false; boolean(seq, v)) {
-                    expr = new BoolExpr{v};
+                size_t pos = 0;
+                if (bool v = false; boolean(seq, v, pos)) {
+                    expr = new BoolExpr{v, pos};
                 }
-                else if (std::int64_t i = 0; integer(seq, i)) {
-                    expr = new IntExpr{i};
+                else if (std::int64_t i = 0; integer(seq, i, pos)) {
+                    expr = new IntExpr{i, pos};
                 }
-                else if (String s; string(seq, s)) {
-                    expr = new StringExpr<String>{std::move(s)};
+                else if (String s; string(seq, s, pos)) {
+                    expr = new StringExpr<String>{std::move(s), pos};
                 }
                 else {
                     return false;
@@ -222,6 +232,7 @@ namespace utils {
                 div,
                 mod,
                 assign,
+                equal,
             };
 
             struct BinExpr : Expr {
@@ -230,8 +241,8 @@ namespace utils {
                 Op op;
                 const char* str;
 
-                BinExpr()
-                    : Expr("binary") {}
+                BinExpr(size_t pos)
+                    : Expr("binary", pos) {}
 
                 Expr* index(size_t i) const override {
                     if (i == 0) {
@@ -336,10 +347,11 @@ namespace utils {
 
             template <class T, class Callback>
             int binexpr(Sequencer<T>& seq, Expr*& expr, const char* expect, Op op, Callback&& next) {
+                size_t pos = seq.rptr;
                 if (!seq.seek_if(expect)) {
                     return 0;
                 }
-                auto bexpr = new BinExpr();
+                auto bexpr = new BinExpr(pos);
                 bexpr->left = expr;
                 bexpr->op = op;
                 bexpr->str = expect;
@@ -498,8 +510,8 @@ namespace utils {
                 String name;
                 Vec<Expr*> args;
 
-                CallExpr()
-                    : Expr("call") {}
+                CallExpr(size_t pos)
+                    : Expr("call", pos) {}
 
                 Expr* index(size_t i) const override {
                     if (i >= args.size()) {
@@ -523,6 +535,7 @@ namespace utils {
                     };
                     space();
                     String name;
+                    size_t pos = seq.rptr;
                     if (!helper::read_whilef<true>(name, seq, [](auto c) {
                             return number::is_alnum(c);
                         })) {
@@ -555,13 +568,14 @@ namespace utils {
                             vexpr.push_back(expr);
                             expr = nullptr;
                         }
-                        auto cexpr = new CallExpr<String, Vec>{};
+                        space();
+                        auto cexpr = new CallExpr<String, Vec>{pos};
                         cexpr->name = std::move(name);
                         cexpr->args = std::move(vexpr);
                         expr = cexpr;
                     }
                     else {
-                        auto var = new VarExpr<String>{std::move(name)};
+                        auto var = new VarExpr<String>{std::move(name), pos};
                         expr = var;
                     }
                     return true;
