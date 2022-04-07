@@ -181,7 +181,7 @@ namespace utils {
             ENUM_STRING_MSG(FlagType::require_once, "option must be only once in command line")
             ENUM_STRING_MSG(FlagType::subcmd_not_found, "subcommand not found")
             ENUM_STRING_MSG(FlagType::require_subcmd, "require subcommand")
-            ENUM_STRING_MSG(FlagType::required, "must be set this option")
+            ENUM_STRING_MSG(FlagType::required, "this option must be set")
             END_ENUM_STRING_MSG(nullptr)
 
             enum class OptMode {
