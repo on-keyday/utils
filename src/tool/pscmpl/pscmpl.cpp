@@ -19,13 +19,41 @@
 auto& cout = utils::wrap::cout_wrap();
 auto& cerr = utils::wrap::cerr_wrap();
 
+utils::Sequencer<utils::file::View&>* seqptr;
+
+void write_loc() {
+    utils::wrap::string loc;
+    utils::helper::write_src_loc(loc, *seqptr);
+    cerr << loc << "\n";
+}
+
+namespace pscmpl {
+    void parse_msg(const char* msg) {
+        if (seqptr) {
+            cerr << msg << "\n";
+        }
+    }
+
+    void verbose_parse(expr::Expr* expr) {
+        if (seqptr && expr) {
+            utils::wrap::string key;
+            expr->stringify(key);
+            cerr << "object:" << key << "\n";
+            cerr << "type:" << expr->type() << "\n";
+            seqptr->rptr = expr->pos();
+            write_loc();
+        }
+    }
+}  // namespace pscmpl
+
 int main(int argc, char** argv) {
     using namespace utils::cmdline;
     option::Context ctx;
     auto input = ctx.String<utils::wrap::string>("input,i", "", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
     auto output = ctx.String<utils::wrap::string>("output,o", "", "output file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
-    bool verbose = false, help = false;
+    bool verbose = false, help = false, parse_verbose = false;
     ctx.VarBool(&verbose, "verbose,v", "verbose log");
+    ctx.VarBool(&parse_verbose, "parse-verbose,p", "verbose parse log");
     ctx.VarBool(&help, "help,h", "show help");
     auto err = option::parse_required(argc, argv, ctx, utils::helper::nop, option::ParseFlag::assignable_mode);
     auto error = [](auto&&... args) {
@@ -47,9 +75,13 @@ int main(int argc, char** argv) {
         return error("failed to open file ", *input);
     }
     auto seq = utils::make_ref_seq(view);
+    if (parse_verbose) {
+        seqptr = &seq;
+    }
     utils::wrap::unique_ptr<expr::PlaceHolder> deffer;
     expr::PlaceHolder* ph;
-    auto parse = pscmpl::define_parser(seq, ph);
+    pscmpl::ProgramState state;
+    auto parse = pscmpl::define_parser(seq, ph, state);
     deffer.reset(ph);
     expr::Expr* expr;
     auto print_json = [](auto&& obj) {
@@ -58,31 +90,32 @@ int main(int argc, char** argv) {
                     utils::json::FmtFlag::unescape_slash)
              << "\n";
     };
-    auto write_loc = [&]() {
-        utils::wrap::string loc;
-        utils::helper::write_src_loc(loc, seq);
-        cerr << loc << "\n";
-    };
     if (!parse(seq, expr)) {
         error("failed to parse file ", *input);
         cerr << "failed location\n";
+        seqptr = &seq;
         write_loc();
         return -1;
     }
     if (verbose) {
         print_json(expr);
     }
+    if (state.package >= 2) {
+        error("multiple package declaration");
+        cerr << "failed locations\n";
+        seqptr = &seq;
+        for (auto err : state.locs) {
+            pscmpl::verbose_parse(err);
+        }
+        return -1;
+    }
     pscmpl::CompileContext cc;
     if (!pscmpl::compile(expr, cc)) {
         error(cc.err);
+        seqptr = &seq;
         cerr << "failed locations\n";
         for (auto err : cc.errstack) {
-            utils::wrap::string key;
-            err->stringify(key);
-            cerr << "object:" << key << "\n";
-            cerr << "type:" << err->type() << "\n";
-            seq.rptr = err->pos();
-            write_loc();
+            pscmpl::verbose_parse(err);
         }
         return -1;
     }

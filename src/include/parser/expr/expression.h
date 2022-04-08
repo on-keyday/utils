@@ -485,18 +485,41 @@ namespace utils {
                 };
             }
 
+            struct WrapExpr : Expr {
+                Expr* child;
+
+                WrapExpr(const char* ty, size_t pos)
+                    : Expr(ty, pos) {}
+
+                Expr* index(size_t i) const override {
+                    return i == 0 ? child : nullptr;
+                }
+
+                ~WrapExpr() {
+                    delete child;
+                }
+            };
+
             template <class Fn1, class Fn2>
-            auto define_bracket(Fn1 next, Fn2 recur) {
+            auto define_brackets(Fn1 next, Fn2 recur, const char* wrap = nullptr) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     size_t start = seq.rptr;
                     utils::helper::space::consume_space(seq, true);
+                    size_t pos = seq.rptr;
                     if (seq.consume_if('(')) {
                         if (!recur(seq, expr)) {
                             return false;
                         }
                         utils::helper::space::consume_space(seq, true);
                         if (!seq.consume_if(')')) {
+                            delete expr;
+                            expr = nullptr;
                             return false;
+                        }
+                        if (wrap) {
+                            auto wexpr = new WrapExpr{wrap, pos};
+                            wexpr->child = expr;
+                            expr = wexpr;
                         }
                         return true;
                     }

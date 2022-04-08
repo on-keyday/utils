@@ -1,4 +1,5 @@
 
+
 SPACE {
     consume " " || "\t"
 }
@@ -29,9 +30,9 @@ MEMBER {
 }
 
 EXPR {
-    consume VARNAME()
-    any "+" && VARNAME()
-    require {
-        consume " "
+    consume {
+        any "+"||"*"||"-"
+        consume VARNAME()
     }
+    any "+" && VARNAME()
 }

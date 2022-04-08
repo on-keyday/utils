@@ -44,7 +44,7 @@ void test_expr() {
     )");
     auto call = expr::define_callexpr<utils::wrap::string, utils::wrap::vector>(assign);
     auto prim = expr::define_primitive<utils::wrap::string>(call);
-    auto br = expr::define_bracket(prim, assign);
+    auto br = expr::define_brackets(prim, assign);
     ph = expr::make_replacement(seq, br);
     expr::Expr* expr = nullptr;
     assign(seq, expr);
