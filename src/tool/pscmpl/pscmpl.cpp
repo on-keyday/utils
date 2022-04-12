@@ -21,9 +21,9 @@ auto& cerr = utils::wrap::cerr_wrap();
 
 utils::Sequencer<utils::file::View&>* seqptr;
 
-void write_loc() {
+void write_loc(size_t sz = 1) {
     utils::wrap::string loc;
-    utils::helper::write_src_loc(loc, *seqptr);
+    utils::helper::write_src_loc(loc, *seqptr, sz);
     cerr << loc << "\n";
 }
 
@@ -38,16 +38,22 @@ namespace pscmpl {
         if (seqptr && expr) {
             utils::wrap::string key;
             expr->stringify(key);
+            if (hlp::equal(expr->type(), "string")) {
+                utils::wrap::string tmp;
+                utils::escape::escape_str(key, tmp);
+                key = "\"" + tmp + "\"";
+            }
             cerr << "object:" << key << "\n";
             cerr << "type:" << expr->type() << "\n";
             seqptr->rptr = expr->pos();
-            write_loc();
+            write_loc(key.size());
         }
     }
 }  // namespace pscmpl
 
 int main(int argc, char** argv) {
     using namespace utils::cmdline;
+    pscmpl::CompileContext cc;
     option::Context ctx;
     auto input = ctx.String<utils::wrap::string>("input,i", "", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
     auto output = ctx.String<utils::wrap::string>("output,o", "", "output file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
@@ -55,6 +61,7 @@ int main(int argc, char** argv) {
     ctx.VarBool(&verbose, "verbose,v", "verbose log");
     ctx.VarBool(&parse_verbose, "parse-verbose,p", "verbose parse log");
     ctx.VarBool(&help, "help,h", "show help");
+    ctx.VarFlagSet(&cc.flag, "main", pscmpl::CompileFlag::with_main, "generate main()");
     auto err = option::parse_required(argc, argv, ctx, utils::helper::nop, option::ParseFlag::assignable_mode);
     auto error = [](auto&&... args) {
         cerr << "pscmpl: error: ";
@@ -65,7 +72,7 @@ int main(int argc, char** argv) {
         return error(ctx.erropt(), ": ", msg);
     }
     if (help) {
-        utils::number::Array<400, char, true> buf;
+        utils::wrap::string buf;
         ctx.Usage(buf, option::ParseFlag::assignable_mode, argv[0]);
         cout << buf;
         return 1;
@@ -78,11 +85,11 @@ int main(int argc, char** argv) {
     if (parse_verbose) {
         seqptr = &seq;
     }
-    utils::wrap::unique_ptr<expr::PlaceHolder> deffer;
+    utils::wrap::unique_ptr<expr::PlaceHolder> defer;
     expr::PlaceHolder* ph;
     pscmpl::ProgramState state;
     auto parse = pscmpl::define_parser(seq, ph, state);
-    deffer.reset(ph);
+    defer.reset(ph);
     expr::Expr* expr;
     auto print_json = [](auto&& obj) {
         cout << utils::json::to_string<utils::wrap::string>(
@@ -109,7 +116,7 @@ int main(int argc, char** argv) {
         }
         return -1;
     }
-    pscmpl::CompileContext cc;
+
     if (!pscmpl::compile(expr, cc)) {
         error(cc.err);
         seqptr = &seq;

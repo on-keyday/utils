@@ -107,6 +107,10 @@ add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp"
                       "src/tool/pscmpl/compile.cpp")
 
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
+
+add_executable(pscmplgen "src/gentest/pscmpl.cpp")
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "lib")
@@ -229,6 +233,10 @@ endif()
 target_link_libraries(asynctcp2 Threads::Threads)
 endif()
 
+# gentest code
+target_link_libraries(pscmplgen utils)
+
+
 if(WIN32)
 if(UTILS_BUILD_SHARED_LIBS)
 add_custom_command(
@@ -239,5 +247,11 @@ add_custom_command(
   TARGET utils POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"
 )
+add_custom_command(
+  TARGET utils POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "gentest/libutils.dll"
+)
 endif()
 endif()
+
+

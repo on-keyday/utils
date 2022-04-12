@@ -290,6 +290,7 @@ namespace utils {
                     return ctx->replace_function(std::forward<Fn>(fn), std::forward<Arg>(arg)...);
                 }
             }
+
         }  // namespace light
     }      // namespace async
 }  // namespace utils

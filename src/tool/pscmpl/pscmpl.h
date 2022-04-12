@@ -92,7 +92,16 @@ namespace pscmpl {
         ph = expr::make_replacement(seq, recursive);
         return parser;
     }
+
+    enum class CompileFlag {
+        none = 0,
+        with_main = 0x1,
+    };
+
+    DEFINE_ENUM_FLAGOP(CompileFlag)
+
     struct CompileContext {
+        CompileFlag flag = CompileFlag::none;
         size_t pos = 0;
         utils::wrap::string buffer;
         utils::wrap::string err;

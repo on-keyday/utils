@@ -296,6 +296,62 @@ namespace pscmpl {
                 return false;
             }
         }
+
+        if (any(ctx.flag & CompileFlag::with_main)) {
+            auto found = ctx.defs.find("EntryPoint");
+            if (found == ctx.defs.end()) {
+                return ctx.error("EntryPoint was not found when --main flag set");
+            }
+            ctx.write(R"(
+#include<file/file_view.h>
+#include<core/sequencer.h>
+
+template<class T>
+struct Input{
+    utils::Sequencer<utils::buffer_t<T>> seq;
+    Input(T& t)
+        :seq(utils::make_ref_seq(t)){}
+    
+    Input(T& t,size_t pos)
+        :seq(utils::make_ref_seq(t)){
+        seq.rptr=pos;
+    }
+    
+    size_t pos() const{
+        return seq.rptr;
+    }
+
+    void set_pos(size_t pos) {
+        seq.rptr=pos;
+    }
+
+    Input copy(){
+        return Input{seq.buf.buffer,seq.rptr};
+    }
+
+    bool expect(auto&& value){
+        return seq.seek_if(value);
+    }
+
+    auto current() {
+        return seq.current();
+    }
+};
+
+struct Output{};
+
+int main(int argc,char** argv){
+    utils::file::View view;
+    if(!view.open(argv[1])){
+        return -1;
+    }
+    Output v;
+    auto input=Input{view};
+    return EntryPoint(input,v)?0:1;
+}
+
+)");
+        }
         return true;
     }
 }  // namespace pscmpl

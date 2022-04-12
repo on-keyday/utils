@@ -36,3 +36,7 @@ EXPR {
     }
     any "+" && VARNAME()
 }
+
+EntryPoint {
+    consume STRUCT()
+}
