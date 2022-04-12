@@ -59,11 +59,11 @@ bool VARNAME(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_0_s3ucr7MIhkK3ezBKFvcT = input.pos();
+    size_t tmpvar_0_2qemq4Cm25CP5e3GzuRu = input.pos();
     while (((input.current() >= 'a' && input.current() <= 'z') ? input.read(1) : false) || ((input.current() >= 'A' && input.current() <= 'Z') ? input.read(1) : false) || ((input.current() >= '0' && input.current() <= '9') ? input.read(1) : false)) {
-        tmpvar_0_s3ucr7MIhkK3ezBKFvcT = input.pos();  // update index
+        tmpvar_0_2qemq4Cm25CP5e3GzuRu = input.pos();  // update index
     }
-    input.set_pos(tmpvar_0_s3ucr7MIhkK3ezBKFvcT);
+    input.set_pos(tmpvar_0_2qemq4Cm25CP5e3GzuRu);
     return true;
 }
 
@@ -80,22 +80,22 @@ bool STRUCT(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_1_p5OCNmnV1pPoCBsLn7OE = input.pos();
+    size_t tmpvar_1_BwGEt6qMTilmdDzQwGVb = input.pos();
     while (SPACE(input, output)) {
-        tmpvar_1_p5OCNmnV1pPoCBsLn7OE = input.pos();  // update index
+        tmpvar_1_BwGEt6qMTilmdDzQwGVb = input.pos();  // update index
     }
-    input.set_pos(tmpvar_1_p5OCNmnV1pPoCBsLn7OE);
+    input.set_pos(tmpvar_1_BwGEt6qMTilmdDzQwGVb);
     // consume tokens
     if (!(input.expect(u8"{"))) {
         return false;
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_2_NtBFlBklToF65p6PeoXX = input.pos();
+    size_t tmpvar_2_KujZm2R5FvtVivalw14e = input.pos();
     while (MEMBER(input, output)) {
-        tmpvar_2_NtBFlBklToF65p6PeoXX = input.pos();  // update index
+        tmpvar_2_KujZm2R5FvtVivalw14e = input.pos();  // update index
     }
-    input.set_pos(tmpvar_2_NtBFlBklToF65p6PeoXX);
+    input.set_pos(tmpvar_2_KujZm2R5FvtVivalw14e);
     // consume tokens
     if (!(input.expect(u8"}"))) {
         return false;
@@ -114,11 +114,11 @@ bool EXPR(Input&& input, Output& output) {
     // consume tokens
     if (!([&input, &output] {
             // consume tokens while condition is true
-            size_t tmpvar_3_JWiXAz84TJeXnyYpyicD = input.pos();
+            size_t tmpvar_3_SEO6x56vlEmnp4iiwITO = input.pos();
             while (input.expect(u8"+") || input.expect(u8"*") || input.expect(u8"-")) {
-                tmpvar_3_JWiXAz84TJeXnyYpyicD = input.pos();  // update index
+                tmpvar_3_SEO6x56vlEmnp4iiwITO = input.pos();  // update index
             }
-            input.set_pos(tmpvar_3_JWiXAz84TJeXnyYpyicD);
+            input.set_pos(tmpvar_3_SEO6x56vlEmnp4iiwITO);
             // consume tokens
             if (!(VARNAME(input, output))) {
                 return false;
@@ -130,11 +130,11 @@ bool EXPR(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_4_f0FmFqK6M2OLgXpzqxRJ = input.pos();
+    size_t tmpvar_4_htPqKjJqQXoJXTiwowRX = input.pos();
     while (input.expect(u8"+") && VARNAME(input, output)) {
-        tmpvar_4_f0FmFqK6M2OLgXpzqxRJ = input.pos();  // update index
+        tmpvar_4_htPqKjJqQXoJXTiwowRX = input.pos();  // update index
     }
-    input.set_pos(tmpvar_4_f0FmFqK6M2OLgXpzqxRJ);
+    input.set_pos(tmpvar_4_htPqKjJqQXoJXTiwowRX);
     return true;
 }
 
@@ -162,7 +162,7 @@ struct Input {
         seq.rptr = pos;
     }
 
-    void pos() const {
+    size_t pos() const {
         return seq.rptr;
     }
 
@@ -192,5 +192,5 @@ int main(int argc, char** argv) {
     }
     Output v;
     auto input = Input{view};
-    // return EntryPoint(input, v) ? 0 : 1;
+    return EntryPoint(input, v) ? 0 : 1;
 }

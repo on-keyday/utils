@@ -81,6 +81,54 @@ namespace pscmpl {
         return false;
     }
 
+    bool is_invalid_string_expr(expr::Expr* bin, bool rec = false) {
+        if (is(bin, "string")) {
+            return false;
+        }
+        else if (is(bin, "binary")) {
+            auto e = static_cast<expr::BinExpr*>(bin);
+            if (e->op == expr::Op::add) {
+                return is_invalid_string_expr(e->left, true) &&
+                       is_invalid_string_expr(e->right, true);
+            }
+            return rec;
+        }
+        return false;
+    }
+
+    bool is_valid_arithmetic_binary(expr::Expr* bin, expr::Op rootop, CompileContext& ctx, bool strchecked = false) {
+        auto expr = static_cast<expr::BinExpr*>(bin);
+        auto left = expr->left;
+        auto right = expr->right;
+        auto op = expr->op;
+        if (!expr::is_arithmetic(op)) {
+            ctx.push(bin);
+            return ctx.error("expect artithmetic operator but not");
+        }
+        if (!strchecked && expr->op == expr::Op::add) {
+            if (is_invalid_string_expr(expr)) {
+                ctx.push(bin);
+                return ctx.error("detected invalid string operation here");
+            }
+            strchecked = true;
+        }
+        bool muststr = false;
+        auto check_vaild = [&](expr::Expr* v) {
+            if (is(v, "binary")) {
+                return is_valid_arithmetic_binary(v, rootop, ctx, strchecked);
+            }
+            if (!is(v, "integer") && !is(v, "string") && !is(v, "variable")) {
+                ctx.push(v);
+                return ctx.error("boolean value is detected at arithmetic operation");
+            }
+            return true;
+        };
+        if (!check_vaild(left) || !check_vaild(right)) {
+            return false;
+        }
+        return true;
+    }
+
     bool compile_binary(expr::Expr* bin, CompileContext& ctx, bool not_consume = false) {
         verbose_parse(bin);
         if (is(bin, "binary")) {
@@ -310,10 +358,10 @@ template<class T>
 struct Input{
     utils::Sequencer<utils::buffer_t<T>> seq;
     Input(T& t)
-        :seq(utils::make_ref_seq(t)){}
+        :seq(t){}
     
     Input(T& t,size_t pos)
-        :seq(utils::make_ref_seq(t)){
+        :seq(t){
         seq.rptr=pos;
     }
     

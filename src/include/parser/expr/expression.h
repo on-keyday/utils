@@ -235,6 +235,11 @@ namespace utils {
                 equal,
             };
 
+            constexpr bool is_arithmetic(Op op) {
+                return op == Op::add || op == Op::sub || op == Op::mul ||
+                       op == Op::div || op == Op::mod;
+            }
+
             struct BinExpr : Expr {
                 Expr* left;
                 Expr* right;
