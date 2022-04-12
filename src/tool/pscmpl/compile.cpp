@@ -96,7 +96,8 @@ namespace pscmpl {
         return false;
     }
 
-    bool is_valid_arithmetic_binary(expr::Expr* bin, expr::Op rootop, CompileContext& ctx, bool strchecked = false) {
+    bool is_valid_arithmetic_binary(expr::Expr* bin, CompileContext& ctx, bool strchecked = false) {
+        assert(bin);
         auto expr = static_cast<expr::BinExpr*>(bin);
         auto left = expr->left;
         auto right = expr->right;
@@ -115,7 +116,10 @@ namespace pscmpl {
         bool muststr = false;
         auto check_vaild = [&](expr::Expr* v) {
             if (is(v, "binary")) {
-                return is_valid_arithmetic_binary(v, rootop, ctx, strchecked);
+                return is_valid_arithmetic_binary(v, ctx, strchecked);
+            }
+            if (is(v, "brackets")) {
+                return is_valid_arithmetic_binary(v->index(0), ctx, strchecked);
             }
             if (!is(v, "integer") && !is(v, "string") && !is(v, "variable")) {
                 ctx.push(v);
