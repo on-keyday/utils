@@ -46,6 +46,9 @@ namespace pscmpl {
             cerr << "object:" << key << "\n";
             cerr << "type:" << expr->type() << "\n";
             seqptr->rptr = expr->pos();
+            if (key.size() == 0) {
+                key.push_back(' ');
+            }
             write_loc(key.size());
         }
     }

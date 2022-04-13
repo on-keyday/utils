@@ -299,7 +299,7 @@ namespace pscmpl {
         }
         else if (is(bin, "brackets")) {
             ctx.write("(");
-            if (!compile_binary(bin->index(0), ctx, not_consume)) {
+            if (!compile_binary(bin->index(0), ctx, not_consume, arithmetric)) {
                 return false;
             }
             ctx.write(")");

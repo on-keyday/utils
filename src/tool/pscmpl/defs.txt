@@ -36,7 +36,7 @@ EXPR {
         consume VARNAME()
     }
     any "+" && VARNAME()
-    consume 1+0x53
+    consume 1+0x53||"AAA"||(1+2+3+4+5+6+7+8+9)*(1+2+(3-4)+5+6+7+8+9)
 }
 
 EntryPoint {
