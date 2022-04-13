@@ -1,4 +1,4 @@
-
+sysimport "string"
 
 SPACE {
     consume " " || "\t"

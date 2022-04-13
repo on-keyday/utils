@@ -383,12 +383,12 @@ namespace pscmpl {
             return false;
         }
         ctx.write(")){\nreturn false;\n}\n");
-        if (!is(bindto, "string") && !is(bindto, "varable")) {
+        if (!is(bindto, "string") && !is(bindto, "variable")) {
             ctx.pushstack(bindto, b);
             return ctx.error("expect string or variable for bind but not");
         }
         bindto->stringify(name);
-        ctx.write("if(!input.bind(", tmpvar, " , output", name, ")){\n");
+        ctx.write("if(!input.bind(", tmpvar, " , ", is(bindto, "string") ? "output" : "", name, ")){\n");
         ctx.write("return false;\n");
         ctx.write("}\n\n");
         return true;
@@ -483,8 +483,10 @@ namespace pscmpl {
         parse_msg("definition...");
         index = 0;
         for (auto p = expr->index(0); p; index++, p = expr->index(index)) {
-            if (!compile_function(p, ctx)) {
-                return false;
+            if (is(p, "struct")) {
+                if (!compile_function(p, ctx)) {
+                    return false;
+                }
             }
         }
 
