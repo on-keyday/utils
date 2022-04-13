@@ -178,6 +178,16 @@ namespace pscmpl {
         }
     };
 
+    struct Stack {
+        Stack* parent = nullptr;
+        utils::wrap::vector<Stack> children;
+
+        Stack* child() {
+            children.push_back({});
+            return &children.back();
+        }
+    };
+
     void verbose_parse(expr::Expr* expr);
     void parse_msg(const char* msg);
 

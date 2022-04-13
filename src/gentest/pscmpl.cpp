@@ -59,11 +59,11 @@ bool VARNAME(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_0_h8pozzuBVF7ybuZGpVgm = input.pos();
+    size_t tmpvar_0_caAGFAQ3Be2oyMLIy0pd = input.pos();
     while (((input.current() >= 'a' && input.current() <= 'z') ? input.read(1) : false) || ((input.current() >= 'A' && input.current() <= 'Z') ? input.read(1) : false) || ((input.current() >= '0' && input.current() <= '9') ? input.read(1) : false)) {
-        tmpvar_0_h8pozzuBVF7ybuZGpVgm = input.pos();  // update index
+        tmpvar_0_caAGFAQ3Be2oyMLIy0pd = input.pos();  // update index
     }
-    input.set_pos(tmpvar_0_h8pozzuBVF7ybuZGpVgm);
+    input.set_pos(tmpvar_0_caAGFAQ3Be2oyMLIy0pd);
 
     return true;
 }
@@ -81,11 +81,11 @@ bool STRUCT(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_1_4ag8l9d40xSe1bLsQ1BJ = input.pos();
+    size_t tmpvar_1_W1GNKeNoqCheZom39Bzt = input.pos();
     while (SPACE(input, output)) {
-        tmpvar_1_4ag8l9d40xSe1bLsQ1BJ = input.pos();  // update index
+        tmpvar_1_W1GNKeNoqCheZom39Bzt = input.pos();  // update index
     }
-    input.set_pos(tmpvar_1_4ag8l9d40xSe1bLsQ1BJ);
+    input.set_pos(tmpvar_1_W1GNKeNoqCheZom39Bzt);
 
     // consume tokens
     if (!(input.expect(u8"{"))) {
@@ -93,11 +93,11 @@ bool STRUCT(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_2_XvI0RQMos45z5n1h3vXm = input.pos();
+    size_t tmpvar_2_K1AaC7cxjTyKkbtn3wPO = input.pos();
     while (MEMBER(input, output)) {
-        tmpvar_2_XvI0RQMos45z5n1h3vXm = input.pos();  // update index
+        tmpvar_2_K1AaC7cxjTyKkbtn3wPO = input.pos();  // update index
     }
-    input.set_pos(tmpvar_2_XvI0RQMos45z5n1h3vXm);
+    input.set_pos(tmpvar_2_K1AaC7cxjTyKkbtn3wPO);
 
     // consume tokens
     if (!(input.expect(u8"}"))) {
@@ -109,6 +109,18 @@ bool STRUCT(Input&& input, Output& output) {
 
 template <class Input, class Output>
 bool MEMBER(Input&& input, Output& output) {
+    // define variable
+    auto index = 0;
+
+    // bind to variable
+    auto tmpvar_3_8Jc7uyVvmZBkgnbDkV9L = input.pos();
+    if (!(VARNAME(input, output))) {
+        return false;
+    }
+    if (!input.bind(tmpvar_3_8Jc7uyVvmZBkgnbDkV9L, output.member[index].name)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -120,11 +132,11 @@ bool EXPR(Input&& input, Output& output) {
     // consume tokens
     if (!([&input, &output] {
             // consume tokens while condition is true
-            size_t tmpvar_3_Bz8D8oUwYBRzjaXv0dP2 = input.pos();
+            size_t tmpvar_4_ul1n42ZkiHae6iNHGsX8 = input.pos();
             while (input.expect(u8"+") || input.expect(u8"*") || input.expect(u8"-")) {
-                tmpvar_3_Bz8D8oUwYBRzjaXv0dP2 = input.pos();  // update index
+                tmpvar_4_ul1n42ZkiHae6iNHGsX8 = input.pos();  // update index
             }
-            input.set_pos(tmpvar_3_Bz8D8oUwYBRzjaXv0dP2);
+            input.set_pos(tmpvar_4_ul1n42ZkiHae6iNHGsX8);
 
             // consume tokens
             if (!(VARNAME(input, output))) {
@@ -137,14 +149,14 @@ bool EXPR(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_4_YXsrMZ1f1qsqefUseXJv = input.pos();
+    size_t tmpvar_5_gCyp4w6nag9DmM4vcOdZ = input.pos();
     while (input.expect(u8"+") && VARNAME(input, output)) {
-        tmpvar_4_YXsrMZ1f1qsqefUseXJv = input.pos();  // update index
+        tmpvar_5_gCyp4w6nag9DmM4vcOdZ = input.pos();  // update index
     }
-    input.set_pos(tmpvar_4_YXsrMZ1f1qsqefUseXJv);
+    input.set_pos(tmpvar_5_gCyp4w6nag9DmM4vcOdZ);
 
     // consume tokens
-    if (!(input.read(1 + 83) || input.expect(u8"AAA") || input.read((1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9) * (1 + 2 + (3 - 4) + 5 + 6 + 7 + 8 + 9)))) {
+    if (!(input.read(1 + 83) || input.expect(u8"AAA") || input.read((1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9) / (1 + 2 + 3 * 4 + 5 + 6 + 7 + 8 + 9)))) {
         return false;
     }
 
@@ -191,12 +203,26 @@ struct Input {
         return seq.seek_if(value);
     }
 
+    bool read(size_t v) {
+        return seq.consume(v);
+    }
+
     auto current() {
         return seq.current();
     }
+
+    bool bind(size_t start, auto& v) {
+        return v;
+    }
 };
 
-struct Output {};
+struct Tmp {
+    int name;
+};
+
+struct Output {
+    Tmp member[2];
+};
 
 int main(int argc, char** argv) {
     utils::file::View view;

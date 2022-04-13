@@ -369,6 +369,31 @@ namespace pscmpl {
         return true;
     }
 
+    bool compile_bind(expr::Expr* b, CompileContext& ctx) {
+        ctx.write("// bind to variable\n");
+        auto bindto = b->index(0);
+        auto expr = b->index(1);
+        verbose_parse(bindto);
+        string name;
+        auto tmpvar = make_tmpvar(ctx);
+        ctx.write("auto ", tmpvar, " = input.pos();\n");
+        ctx.write("if(!(");
+        if (!compile_binary(expr, ctx)) {
+            ctx.push(b);
+            return false;
+        }
+        ctx.write(")){\nreturn false;\n}\n");
+        if (!is(bindto, "string") && !is(bindto, "varable")) {
+            ctx.pushstack(bindto, b);
+            return ctx.error("expect string or variable for bind but not");
+        }
+        bindto->stringify(name);
+        ctx.write("if(!input.bind(", tmpvar, " , output", name, ")){\n");
+        ctx.write("return false;\n");
+        ctx.write("}\n\n");
+        return true;
+    }
+
     bool compile_each_command(expr::Expr* st, CompileContext& ctx) {
         parse_msg("command...");
         ctx.write(" {\n\n");
@@ -403,6 +428,12 @@ namespace pscmpl {
                 }
                 else if (command(mnemonic::Command::any)) {
                     if (!compile_any(p, ctx)) {
+                        ctx.push(st);
+                        return false;
+                    }
+                }
+                else if (command(mnemonic::Command::bind)) {
+                    if (!compile_bind(p, ctx)) {
                         ctx.push(st);
                         return false;
                     }
