@@ -459,6 +459,22 @@ namespace pscmpl {
                     return false;
                 }
             }
+            else if (is(p, "import") || is(p, "sysimport")) {
+                auto str = p->index(0);
+                string key, value;
+                str->stringify(key);
+                ctx.write("#include ");
+                if (!utils::escape::escape_str(key, value)) {
+                    ctx.push(str);
+                    return ctx.error("failed to escape string");
+                }
+                if (is(p, "sysimport")) {
+                    ctx.write("<", value, ">\n");
+                }
+                else {
+                    ctx.write("\"", value, "\"\n");
+                }
+            }
             else {
                 ctx.push(p);
                 return ctx.error("unknown object");
@@ -506,6 +522,14 @@ struct Input{
 
     bool expect(auto&& value){
         return seq.seek_if(value);
+    }
+
+    bool read(size_t value){
+        return seq.consume(value);
+    }
+
+    bool bind(size_t start,auto& tobind){
+        return bind_object(*this,start,tobind);
     }
 
     auto current() {

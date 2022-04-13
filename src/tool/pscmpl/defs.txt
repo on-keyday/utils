@@ -26,8 +26,8 @@ STRUCT {
 }
 
 MEMBER {
-    var index 0
-    bind ".member[index].name" VARNAME()
+    var name std::string()
+    bind name VARNAME()
 }
 
 EXPR {
