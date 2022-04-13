@@ -28,6 +28,9 @@ namespace utils {
                 }
 
                public:
+                PushBacker(const PushBacker& b)
+                    : ptr(b.ptr), push_back_(b.push_back_) {}
+
                 template <class T>
                 PushBacker(T& pb)
                     : ptr(std::addressof(pb)), push_back_(push_back_fn<T>) {}
@@ -61,11 +64,11 @@ namespace utils {
             }
 
             template <class T, class Int>
-            bool integer(Sequencer<T>& seq, Int& v, size_t& pos) {
+            bool integer(Sequencer<T>& seq, Int& v, size_t& pos, int& pf) {
                 size_t start = seq.rptr;
                 helper::space::consume_space(seq, true);
                 pos = seq.rptr;
-                if (!number::prefix_integer(seq, v)) {
+                if (!number::prefix_integer(seq, v, &pf)) {
                     seq.rptr = start;
                     return false;
                 }
@@ -138,14 +141,24 @@ namespace utils {
             };
 
             template <class String, class T>
-            bool variable(Sequencer<T>& seq, Expr*& expr) {
+            bool variable(Sequencer<T>& seq, String& name, size_t& pos) {
                 size_t start = seq.rptr;
-                String name;
                 helper::space::consume_space(seq, true);
-                size_t pos = seq.rptr;
+                pos = seq.rptr;
                 if (!helper::read_whilef<true>(name, seq, [](auto&& c) {
-                        return number::is_alnum(c);
+                        return number::is_alnum(c) || c == '_' || c == ':';
                     })) {
+                    seq.rptr = start;
+                    return false;
+                }
+                return true;
+            }
+
+            template <class String, class T>
+            bool variable(Sequencer<T>& seq, Expr*& expr) {
+                String name;
+                size_t pos = 0;
+                if (!variable(seq, name, pos)) {
                     return false;
                 }
                 helper::space::consume_space(seq, true);
@@ -174,13 +187,19 @@ namespace utils {
 
             struct IntExpr : Expr {
                 std::int64_t value;
+                int radix = 10;
 
-                IntExpr(std::int64_t v, size_t pos)
-                    : value(v), Expr("integer", pos) {}
+                IntExpr(std::int64_t v, int radix, size_t pos)
+                    : value(v), radix(radix), Expr("integer", pos) {}
+
+                bool stringify(PushBacker pb, int rd) const {
+                    number::append_prefix(pb, rd);
+                    number::to_string(pb, value, rd);
+                    return true;
+                }
 
                 bool stringify(PushBacker pb) const override {
-                    number::to_string(pb, value);
-                    return true;
+                    return stringify(pb, radix);
                 }
 
                 bool as_bool(bool& val) override {
@@ -208,11 +227,12 @@ namespace utils {
             template <class String, class T>
             bool primitive(Sequencer<T>& seq, Expr*& expr) {
                 size_t pos = 0;
+                int radix = 0;
                 if (bool v = false; boolean(seq, v, pos)) {
                     expr = new BoolExpr{v, pos};
                 }
-                else if (std::int64_t i = 0; integer(seq, i, pos)) {
-                    expr = new IntExpr{i, pos};
+                else if (std::int64_t i = 0; integer(seq, i, pos, radix)) {
+                    expr = new IntExpr{i, radix, pos};
                 }
                 else if (String s; string(seq, s, pos)) {
                     expr = new StringExpr<String>{std::move(s), pos};
@@ -557,16 +577,13 @@ namespace utils {
             template <class String, template <class...> class Vec, class Fn>
             auto define_callexpr(Fn next) {
                 return [next]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    size_t start = 0;
                     auto space = [&] {
                         helper::space::consume_space(seq, true);
                     };
                     space();
                     String name;
                     size_t pos = seq.rptr;
-                    if (!helper::read_whilef<true>(name, seq, [](auto c) {
-                            return number::is_alnum(c);
-                        })) {
+                    if (!variable(seq, name, pos)) {
                         return false;
                     }
                     space();

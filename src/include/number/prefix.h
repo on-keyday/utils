@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../helper/strutil.h"
+#include "../helper/appender.h"
 #include "parse.h"
 
 namespace utils {
@@ -43,7 +44,7 @@ namespace utils {
         }
 
         template <class T, class Int>
-        NumErr prefix_integer(Sequencer<T>& seq, Int& res) {
+        NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr) {
             int radix = 10;
             bool minus = false;
             if (seq.consume_if('+')) {
@@ -65,14 +66,17 @@ namespace utils {
             if (minus) {
                 res = -res;
             }
+            if (pradix) {
+                *pradix = radix;
+            }
             return true;
         }
 
         template <class T, class Int>
-        NumErr prefix_integer(T&& input, Int& res, size_t offset = 0, bool expect_eof = true) {
+        NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, size_t offset = 0, bool expect_eof = true) {
             auto seq = make_ref_seq(input);
             seq.rptr = offset;
-            if (auto err = prefix_integer(seq, res); !err) {
+            if (auto err = prefix_integer(seq, res, pradix); !err) {
                 return err;
             }
             if (expect_eof && !seq.eos()) {
@@ -81,5 +85,21 @@ namespace utils {
             return true;
         }
 
+        template <class Out>
+        bool append_prefix(Out& out, int radix, bool upper = false) {
+            if (radix == 16) {
+                helper::append(out, upper ? "0X" : "0x");
+            }
+            else if (radix == 2) {
+                helper::append(out, upper ? "0B" : "0b");
+            }
+            else if (radix == 8) {
+                helper::append(out, upper ? "0O" : "0o");
+            }
+            else {
+                return false;
+            }
+            return true;
+        }
     }  // namespace number
 }  // namespace utils

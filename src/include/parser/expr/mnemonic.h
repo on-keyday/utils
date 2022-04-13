@@ -19,6 +19,7 @@ namespace utils {
                 any,
                 bindany,
                 bind,
+                var,
 
                 LastIndex,
                 not_found,
@@ -35,6 +36,7 @@ namespace utils {
                 {"any", 1},
                 {"bindany", 2},
                 {"bind", 2},
+                {"var", 2},
             };
 
             template <class T>

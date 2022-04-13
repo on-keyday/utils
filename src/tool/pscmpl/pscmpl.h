@@ -22,6 +22,22 @@ namespace pscmpl {
         utils::wrap::vector<expr::Expr*> locs;
     };
 
+    struct VarDefExpr : expr::Expr {
+        utils::wrap::string name;
+        expr::Expr* init = nullptr;
+        VarDefExpr(utils::wrap::string&& vn, size_t pos)
+            : name(std::move(vn)), expr::Expr("vardef", pos) {}
+
+        bool stringify(expr::PushBacker pb) const override {
+            hlp::append(pb, name);
+            return true;
+        }
+
+        expr::Expr* index(size_t i) const override {
+            return i == 0 ? init : nullptr;
+        }
+    };
+
     template <class T>
     auto define_parser(const utils::Sequencer<T>& seq, expr::PlaceHolder*& ph, ProgramState& state) {
         using namespace utils::wrap;
@@ -46,8 +62,33 @@ namespace pscmpl {
             expr::Ops{"||", expr::Op::or_});
         auto call = expr::define_callexpr<string, vector>(exp);
         auto prim = expr::define_primitive<string>(call);
-        auto st = expr::define_command_struct<string, vector>(exp, true);
-        auto anonymous_blcok = expr::define_command_struct<string, vector>(exp, false, "block");
+        auto cmds = expr::define_command_each(exp);
+        auto fn = [cmds, exp]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
+            size_t start = seq.rptr;
+            hlp::space::consume_space(seq, true);
+            if (seq.seek_if("var")) {
+                if (!hlp::space::consume_space(seq, true)) {
+                    seq.rptr = start;
+                    goto OUT;
+                }
+                string name;
+                size_t pos;
+                if (!expr::variable(seq, name, pos)) {
+                    return false;
+                }
+                if (!exp(seq, expr)) {
+                    return false;
+                }
+                auto vexpr = new VarDefExpr(std::move(name), pos);
+                vexpr->init = expr;
+                expr = vexpr;
+                return true;
+            }
+        OUT:
+            return cmds(seq, expr);
+        };
+        auto st = expr::define_set<string, vector>(fn, true);
+        auto anonymous_blcok = expr::define_set<string, vector>(fn, false, true, "block");
         auto parser = expr::define_set<string, vector>(
             [st, &state]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
                 size_t start = seq.rptr;

@@ -30,11 +30,13 @@ MEMBER {
 }
 
 EXPR {
+    var A std::string()
     consume {
         any "+"||"*"||"-"
         consume VARNAME()
     }
     any "+" && VARNAME()
+    consume 1+0x53
 }
 
 EntryPoint {

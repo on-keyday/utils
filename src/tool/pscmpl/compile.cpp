@@ -81,15 +81,15 @@ namespace pscmpl {
         return false;
     }
 
-    bool is_invalid_string_expr(expr::Expr* bin, bool rec = false) {
+    bool is_valid_string_expr(expr::Expr* bin, bool rec = false) {
         if (is(bin, "string")) {
-            return false;
+            return true;
         }
         else if (is(bin, "binary")) {
             auto e = static_cast<expr::BinExpr*>(bin);
             if (e->op == expr::Op::add) {
-                return is_invalid_string_expr(e->left, true) &&
-                       is_invalid_string_expr(e->right, true);
+                return is_valid_string_expr(e->left, true) &&
+                       is_valid_string_expr(e->right, true);
             }
             return rec;
         }
@@ -106,13 +106,6 @@ namespace pscmpl {
             ctx.push(bin);
             return ctx.error("expect artithmetic operator but not");
         }
-        if (!strchecked && expr->op == expr::Op::add) {
-            if (is_invalid_string_expr(expr)) {
-                ctx.push(bin);
-                return ctx.error("detected invalid string operation here");
-            }
-            strchecked = true;
-        }
         bool muststr = false;
         auto check_vaild = [&](expr::Expr* v) {
             if (is(v, "binary")) {
@@ -121,7 +114,7 @@ namespace pscmpl {
             if (is(v, "brackets")) {
                 return is_valid_arithmetic_binary(v->index(0), ctx, strchecked);
             }
-            if (!is(v, "integer") && !is(v, "string") && !is(v, "variable")) {
+            if (!is(v, "integer") && !is(v, "variable")) {
                 ctx.push(v);
                 return ctx.error("boolean value is detected at arithmetic operation");
             }
@@ -133,14 +126,71 @@ namespace pscmpl {
         return true;
     }
 
-    bool compile_binary(expr::Expr* bin, CompileContext& ctx, bool not_consume = false) {
+    bool is_valid_variable(expr::Expr* bin, string& key, CompileContext& ctx) {
+        auto varerr = [&] {
+            ctx.push(bin);
+            return ctx.error(key, " is invalid c++ variable name");
+        };
+        if (utils::number::is_digit(key[0])) {
+            return varerr();
+        }
+        bool must = false;
+        bool alnum = false;
+        for (auto& c : key) {
+            if (must) {
+                if (c != ':') {
+                    return varerr();
+                }
+                must = false;
+                alnum = true;
+            }
+            else if (c == ':') {
+                if (alnum) {
+                    return varerr();
+                }
+                must = true;
+            }
+            else {
+                alnum = false;
+            }
+        }
+        if (must || alnum) {
+            return varerr();
+        }
+        return true;
+    }
+
+    bool compile_binary(expr::Expr* bin, CompileContext& ctx, bool not_consume = false, bool arithmetric = false) {
         verbose_parse(bin);
         if (is(bin, "binary")) {
             bool err = false;
             if (is_range_expr(bin, ctx, err, not_consume)) {
                 return err;
             }
-            if (!compile_binary(bin->index(0), ctx, not_consume)) {
+            auto e = static_cast<expr::BinExpr*>(bin);
+            auto& arithmetic_set = err;
+            if (!arithmetric && expr::is_arithmetic(e->op)) {
+                bool is_str = false;
+                if (is_valid_string_expr(bin)) {
+                    is_str = true;
+                }
+                else if (!is_valid_arithmetic_binary(bin, ctx)) {
+                    return false;
+                }
+                arithmetric = true;
+                arithmetic_set = true;
+                ctx.write("input");
+                if (not_consume) {
+                    ctx.write(".copy()");
+                }
+                if (is_str) {
+                    ctx.write(".expect(");
+                }
+                else {
+                    ctx.write(".read(");
+                }
+            }
+            if (!compile_binary(bin->index(0), ctx, not_consume, arithmetric)) {
                 return false;
             }
             ctx.write(" ");
@@ -152,11 +202,19 @@ namespace pscmpl {
             }
             ctx.write(key);
             ctx.write(" ");
-            return compile_binary(bin->index(1), ctx, not_consume);
+            if (!compile_binary(bin->index(1), ctx, not_consume, arithmetric)) {
+                return false;
+            }
+            if (arithmetic_set) {
+                ctx.write(")");
+            }
         }
         else if (is(bin, "call")) {
             string key;
             bin->stringify(key);
+            if (!is_valid_variable(bin, key, ctx)) {
+                return false;
+            }
             ctx.write(key);
             ctx.write("(");
             auto i = 0;
@@ -178,27 +236,38 @@ namespace pscmpl {
             ctx.write(")");
         }
         else if (is(bin, "string")) {
-            ctx.write("input");
-            if (not_consume) {
-                ctx.write(".copy()");
+            if (!arithmetric) {
+                ctx.write("input");
+                if (not_consume) {
+                    ctx.write(".copy()");
+                }
+                ctx.write(".expect(");
             }
-            ctx.write(".expect(u8\"");
+            ctx.write("u8\"");
             string key;
             bin->stringify(key);
             if (!utils::escape::escape_str(key, ctx.buffer)) {
                 ctx.pushstack(bin);
                 return ctx.error("failed to escape string");
             }
-            ctx.write("\")");
+            ctx.write("\"");
+            if (!arithmetric) {
+                ctx.write(")");
+            }
         }
         else if (is(bin, "integer")) {
-            ctx.write("input");
-            if (not_consume) {
-                ctx.write(".copy()");
+            if (!arithmetric) {
+                ctx.write("input");
+                if (not_consume) {
+                    ctx.write(".copy()");
+                }
+                ctx.write(".read(");
             }
-            ctx.write(".read(");
-            bin->stringify(ctx.buffer);
-            ctx.write(")");
+            auto iexpr = static_cast<expr::IntExpr*>(bin);
+            iexpr->stringify(ctx.buffer, 10);
+            if (!arithmetric) {
+                ctx.write(")");
+            }
         }
         else if (is(bin, "bool")) {
             bin->stringify(ctx.buffer);
@@ -209,6 +278,9 @@ namespace pscmpl {
             if (key == "input" || key == "output") {
                 ctx.push(bin);
                 return ctx.error(key, " is special word so that you can't use this variable");
+            }
+            if (!is_valid_variable(bin, key, ctx)) {
+                return false;
             }
             ctx.write(key);
         }
@@ -280,7 +352,20 @@ namespace pscmpl {
             return false;
         }
         ctx.write(") {\n", tmpvar, "= input.pos(); // update index\n}\n");
-        ctx.write("input.set_pos(", tmpvar, ");\n");
+        ctx.write("input.set_pos(", tmpvar, ");\n\n");
+        return true;
+    }
+
+    bool compile_vardef(expr::Expr* b, CompileContext& ctx) {
+        ctx.write("//define variable\n");
+        ctx.write("auto ");
+        b->stringify(ctx.buffer);
+        ctx.write(" = ");
+        if (!compile_binary(b->index(0), ctx, true, true)) {
+            ctx.push(b);
+            return false;
+        }
+        ctx.write(";\n\n");
         return true;
     }
 
@@ -290,30 +375,37 @@ namespace pscmpl {
         size_t i = 0;
         for (auto p = st->index(0); p; i++, p = st->index(i)) {
             verbose_parse(p);
-            utils::number::Array<10, char, true> val;
-            p->stringify(val);
-            auto cmd = [](mnemonic::Command v) {
-                return mnemonic::mnemonics[int(v)].str;
-            };
-            auto command = [&](mnemonic::Command v) {
-                return hlp::equal(val, cmd(v));
-            };
-            if (command(mnemonic::Command::consume)) {
-                if (!compile_consume(p, ctx)) {
-                    ctx.push(st);
+            if (is(p, "vardef")) {
+                if (!compile_vardef(p, ctx)) {
                     return false;
                 }
             }
-            else if (command(mnemonic::Command::require)) {
-                if (!compile_require(p, ctx)) {
-                    ctx.push(st);
-                    return false;
+            else {
+                utils::number::Array<10, char, true> val;
+                p->stringify(val);
+                auto cmd = [](mnemonic::Command v) {
+                    return mnemonic::mnemonics[int(v)].str;
+                };
+                auto command = [&](mnemonic::Command v) {
+                    return hlp::equal(val, cmd(v));
+                };
+                if (command(mnemonic::Command::consume)) {
+                    if (!compile_consume(p, ctx)) {
+                        ctx.push(st);
+                        return false;
+                    }
                 }
-            }
-            else if (command(mnemonic::Command::any)) {
-                if (!compile_any(p, ctx)) {
-                    ctx.push(st);
-                    return false;
+                else if (command(mnemonic::Command::require)) {
+                    if (!compile_require(p, ctx)) {
+                        ctx.push(st);
+                        return false;
+                    }
+                }
+                else if (command(mnemonic::Command::any)) {
+                    if (!compile_any(p, ctx)) {
+                        ctx.push(st);
+                        return false;
+                    }
                 }
             }
         }
