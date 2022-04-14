@@ -121,6 +121,7 @@ namespace pscmpl {
                 else if (seq.seek_if("sysimport")) {
                     return read_str_and_pack("sysimport");
                 }
+                pos.err();
                 return st(seq, expr);
             },
             false, "program", 0);

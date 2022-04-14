@@ -25,8 +25,61 @@ namespace minilang {
             : expr::Expr("for", p) {}
     };
 
-    auto define_for(auto&& fn) {
-        return [=]<class T>(Sequencer<T>& seq, expr::Expr*& e) {
+    auto define_for(auto first_prim, auto prim, auto block) {
+        return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr) {
+            auto pos = expr::save_and_space(seq);
+            if (!seq.seek_if("for")) {
+                return false;
+            }
+            auto space = expr::bind_space(seq);
+            if (!space() && seq.current() != '{') {
+                return false;
+            }
+            pos.ok();
+            expr::Expr *bexpr = nullptr, *first = nullptr, *second = nullptr, *third = nullptr;
+            auto delall = [&] {
+                delete first;
+                delete second;
+                delete third;
+                return false;
+            };
+            auto make_expr = [&] {
+                if (!block(seq, bexpr)) {
+                    return delall();
+                }
+                auto fexpr = new ForExpr{pos.pos};
+                fexpr->block = bexpr;
+                fexpr->first = first;
+                fexpr->second = second;
+                fexpr->third = third;
+                expr = fexpr;
+                return true;
+            };
+            if (seq.match("{")) {
+                return make_expr();
+            }
+            bool end = false;
+            auto bindto = [&](auto& func, auto& e, bool fin = false) {
+                if (!func(seq, e)) {
+                    return delall();
+                }
+                space();
+                if (seq.match("{")) {
+                    end = true;
+                    return make_expr();
+                }
+                if (fin || !seq.match(";")) {
+                    return delall();
+                }
+                return true;
+            };
+            if (!bindto(first_prim, first) || end) {
+                return end;
+            }
+            if (!bindto(prim, second) || end) {
+                return end;
+            }
+            return bindto(prim, third, true);
         };
     }
 

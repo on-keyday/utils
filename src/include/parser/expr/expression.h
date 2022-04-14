@@ -96,6 +96,13 @@ namespace utils {
             }
 
             template <class T>
+            auto bind_space(Sequencer<T>& seq) {
+                return [&](bool line = true) {
+                    return helper::space::consume_space(seq, line);
+                };
+            }
+
+            template <class T>
             bool boolean(Sequencer<T>& seq, bool& v, size_t& pos) {
                 auto pos_ = save_and_space(seq);
                 pos = pos_.pos;
@@ -619,9 +626,7 @@ namespace utils {
             template <class String, template <class...> class Vec, class Fn>
             auto define_callexpr(Fn next) {
                 return [next]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    auto space = [&] {
-                        helper::space::consume_space(seq, true);
-                    };
+                    auto space = bind_space(seq);
                     String name;
                     size_t pos;
                     if (!variable(seq, name, pos)) {
