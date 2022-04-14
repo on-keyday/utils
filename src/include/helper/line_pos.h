@@ -18,7 +18,7 @@
 namespace utils {
     namespace helper {
         template <class Out, class T>
-        void write_src_loc(Out& w, Sequencer<T>& seq, size_t poslen = 1, char posc = '^', const char* show_endof = "[EOF]") {
+        void write_src_loc(Out& w, Sequencer<T>& seq, size_t poslen = 1, char posc = '^', const char* show_endof = " [EOF]") {
             CountPushBacker<Out&> c{w};
             size_t line, pos;
             get_linepos(seq, line, pos);
