@@ -369,7 +369,7 @@ namespace pscmpl {
         return true;
     }
 
-    bool compile_bind(expr::Expr* b, CompileContext& ctx) {
+    bool compile_bind(expr::Expr* b, CompileContext& ctx, bool bany = false) {
         ctx.write("// bind to variable\n");
         auto bindto = b->index(0);
         auto expr = b->index(1);
@@ -382,7 +382,12 @@ namespace pscmpl {
             ctx.push(b);
             return false;
         }
-        ctx.write(")){\nreturn false;\n}\n");
+        if (!bany) {
+            ctx.write(")){\nreturn false;\n}\n");
+        }
+        else {
+            ctx.write(")){\ninput.set_pos(", tmpvar, ");\n}\n");
+        }
         if (!is(bindto, "string") && !is(bindto, "variable")) {
             ctx.pushstack(bindto, b);
             return ctx.error("expect string or variable for bind but not");
@@ -501,7 +506,7 @@ namespace pscmpl {
 
 template<class T>
 struct Input{
-    utils::Sequencer<utils::buffer_t<T>> seq;
+    utils::Sequencer<utils::buffer_t<T&>> seq;
     Input(T& t)
         :seq(t){}
     

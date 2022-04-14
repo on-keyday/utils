@@ -19,6 +19,13 @@ namespace utils {
             mutable platform::ReadFileInfo info;
 
            public:
+            constexpr View() {}
+            View(const View&) = delete;
+            View(View&& v) {
+                info = std::move(v.info);
+                v.info = platform::ReadFileInfo{};
+            }
+
             bool open(const wrap::path_char* path);
 
             template <class Tmpbuf = wrap::path_string, class String>

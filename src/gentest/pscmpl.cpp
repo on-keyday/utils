@@ -60,11 +60,11 @@ bool VARNAME(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_0_JGFn157LHNY87gJAPWs4 = input.pos();
+    size_t tmpvar_0_sXloUwxz9YVlxWyqro7y = input.pos();
     while (((input.current() >= 'a' && input.current() <= 'z') ? input.read(1) : false) || ((input.current() >= 'A' && input.current() <= 'Z') ? input.read(1) : false) || ((input.current() >= '0' && input.current() <= '9') ? input.read(1) : false)) {
-        tmpvar_0_JGFn157LHNY87gJAPWs4 = input.pos();  // update index
+        tmpvar_0_sXloUwxz9YVlxWyqro7y = input.pos();  // update index
     }
-    input.set_pos(tmpvar_0_JGFn157LHNY87gJAPWs4);
+    input.set_pos(tmpvar_0_sXloUwxz9YVlxWyqro7y);
 
     return true;
 }
@@ -82,11 +82,23 @@ bool STRUCT(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_1_8mPDnfq9al77z0kuQCuv = input.pos();
+    size_t tmpvar_1_NTCCsfiERixXJWNkwO1f = input.pos();
     while (SPACE(input, output)) {
-        tmpvar_1_8mPDnfq9al77z0kuQCuv = input.pos();  // update index
+        tmpvar_1_NTCCsfiERixXJWNkwO1f = input.pos();  // update index
     }
-    input.set_pos(tmpvar_1_8mPDnfq9al77z0kuQCuv);
+    input.set_pos(tmpvar_1_NTCCsfiERixXJWNkwO1f);
+
+    // define variable
+    auto name = std::string();
+
+    // bind to variable
+    auto tmpvar_2_GhpvKN0duiOqI2tt11Hg = input.pos();
+    if (!(VARNAME(input, output))) {
+        return false;
+    }
+    if (!input.bind(tmpvar_2_GhpvKN0duiOqI2tt11Hg, name)) {
+        return false;
+    }
 
     // consume tokens
     if (!(input.expect(u8"{"))) {
@@ -94,11 +106,11 @@ bool STRUCT(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_2_pf1Fky25bSHiV0wEVSkq = input.pos();
+    size_t tmpvar_3_j4YK0fgLIPTVdkyJb27j = input.pos();
     while (MEMBER(input, output)) {
-        tmpvar_2_pf1Fky25bSHiV0wEVSkq = input.pos();  // update index
+        tmpvar_3_j4YK0fgLIPTVdkyJb27j = input.pos();  // update index
     }
-    input.set_pos(tmpvar_2_pf1Fky25bSHiV0wEVSkq);
+    input.set_pos(tmpvar_3_j4YK0fgLIPTVdkyJb27j);
 
     // consume tokens
     if (!(input.expect(u8"}"))) {
@@ -114,11 +126,11 @@ bool MEMBER(Input&& input, Output& output) {
     auto name = std::string();
 
     // bind to variable
-    auto tmpvar_3_GP5x7AsDWgVq2HpT43Oi = input.pos();
+    auto tmpvar_4_G5McKU0kwzO2NJi1Foix = input.pos();
     if (!(VARNAME(input, output))) {
         return false;
     }
-    if (!input.bind(tmpvar_3_GP5x7AsDWgVq2HpT43Oi, name)) {
+    if (!input.bind(tmpvar_4_G5McKU0kwzO2NJi1Foix, name)) {
         return false;
     }
 
@@ -133,11 +145,11 @@ bool EXPR(Input&& input, Output& output) {
     // consume tokens
     if (!([&input, &output] {
             // consume tokens while condition is true
-            size_t tmpvar_4_iWvklzQjalKuzXA4nm5p = input.pos();
+            size_t tmpvar_5_1pgsbrrzzII9dHoGTTfI = input.pos();
             while (input.expect(u8"+") || input.expect(u8"*") || input.expect(u8"-")) {
-                tmpvar_4_iWvklzQjalKuzXA4nm5p = input.pos();  // update index
+                tmpvar_5_1pgsbrrzzII9dHoGTTfI = input.pos();  // update index
             }
-            input.set_pos(tmpvar_4_iWvklzQjalKuzXA4nm5p);
+            input.set_pos(tmpvar_5_1pgsbrrzzII9dHoGTTfI);
 
             // consume tokens
             if (!(VARNAME(input, output))) {
@@ -150,11 +162,11 @@ bool EXPR(Input&& input, Output& output) {
     }
 
     // consume tokens while condition is true
-    size_t tmpvar_5_cmcdxTjNzoRrNplfzKPi = input.pos();
+    size_t tmpvar_6_BoWwmBAcqXDzgF9fsl6p = input.pos();
     while (input.expect(u8"+") && VARNAME(input, output)) {
-        tmpvar_5_cmcdxTjNzoRrNplfzKPi = input.pos();  // update index
+        tmpvar_6_BoWwmBAcqXDzgF9fsl6p = input.pos();  // update index
     }
-    input.set_pos(tmpvar_5_cmcdxTjNzoRrNplfzKPi);
+    input.set_pos(tmpvar_6_BoWwmBAcqXDzgF9fsl6p);
 
     // consume tokens
     if (!(input.read(1 + 83) || input.expect(u8"AAA") || input.read((1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9) / (1 + 2 + 3 * 4 + 5 + 6 + 7 + 8 + 9)))) {
@@ -179,7 +191,7 @@ bool EntryPoint(Input&& input, Output& output) {
 
 template <class T>
 struct Input {
-    utils::Sequencer<utils::buffer_t<T>> seq;
+    utils::Sequencer<utils::buffer_t<T&>> seq;
     Input(T& t)
         : seq(t) {}
 
@@ -209,7 +221,7 @@ struct Input {
     }
 
     bool bind(size_t start, auto& tobind) {
-        return true;  // bind_object(*this, start, tobind);
+        return bind_object(*this, start, tobind);
     }
 
     auto current() {

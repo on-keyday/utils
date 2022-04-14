@@ -19,7 +19,8 @@ STRUCT {
     consume "struct"
     require SPACE() || "{"
     any SPACE()
-    bindany "name" VARNAME()
+    var name std::string()
+    bind name VARNAME()
     consume "{"
     any MEMBER()
     consume "}"
