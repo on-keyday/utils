@@ -1,0 +1,44 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+
+# iocloser - iocloser interface
+
+# generate code
+# release
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -V -S
+# debug
+# tool\ifacegen -i src/include/net/generate/iocloser.iface -o src/include/net/generate/iocloser.h  -v -n --license --helper-deref "\"../../helper/deref.h\"" -S
+
+package utils::net
+
+import "../core/iodef.h"
+import "../../async/worker.h"
+
+interface IOClose {
+    write(ptr *const char,size size_t,written *size_t) State = panic
+    read(ptr *char,size size_t,red *size_t) State = panic
+    close(force bool) State = panic
+    decltype() type
+}
+
+interface IO {
+    write(ptr *const char,size size_t,written *size_t) State = panic
+    read(ptr *char,size size_t,red *size_t) State = panic
+    decltype() type
+}
+
+interface AsyncIOClose {
+    read(ptr *char,size size_t) async::Future<ReadInfo>
+    write(ptr *const char,size size_t) async::Future<WriteInfo>
+    read(ctx &async::Context,ptr *char,size size_t) ReadInfo
+    write(ctx &async::Context,ptr *const char,size size_t) WriteInfo
+    close(force bool) State
+    decltype() type
+}
+
+interface IBuffer {
+    push_back(c std::uint8_t) void
+    __sso__() type = 3
+}

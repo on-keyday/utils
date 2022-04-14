@@ -15,7 +15,7 @@ namespace pscmpl {
     }
     using namespace utils::wrap;
 
-    bool compile_each_command(expr::Expr* st, CompileContext& ctx);
+    bool compile_each_command(expr::Expr* st, CompileContext& ctx, bool no_return = false);
 
     bool declare_function(expr::Expr* st, CompileContext& ctx, bool decl) {
         verbose_parse(st);
@@ -216,24 +216,35 @@ namespace pscmpl {
                 return false;
             }
             ctx.write(key);
-            ctx.write("(");
-            auto i = 0;
-            for (auto p = bin->index(0); p; i++, p = bin->index(i)) {
-                if (i != 0) {
-                    ctx.write(" , ");
+            if (key == "output") {
+                auto p = bin->index(0);
+                auto ig = bin->index(1);
+                if (!p || ig) {
+                    ctx.push(bin);
+                    return ctx.error("`output` requires one argument but ", ig ? "too many" : "no", " arguments are provided");
                 }
-                if (!compile_binary(p, ctx, not_consume)) {
-                    return false;
-                }
+                p->stringify(ctx.buffer);
             }
-            if (i == 0 && ctx.defs.contains(key)) {
-                ctx.write("input");
-                if (not_consume) {
-                    ctx.write(".copy()");
+            else {
+                ctx.write("(");
+                auto i = 0;
+                for (auto p = bin->index(0); p; i++, p = bin->index(i)) {
+                    if (i != 0) {
+                        ctx.write(" , ");
+                    }
+                    if (!compile_binary(p, ctx, not_consume)) {
+                        return false;
+                    }
                 }
-                ctx.write(",output");
+                if (i == 0 && ctx.defs.contains(key)) {
+                    ctx.write("input");
+                    if (not_consume) {
+                        ctx.write(".copy()");
+                    }
+                    ctx.write(",output");
+                }
+                ctx.write(")");
             }
-            ctx.write(")");
         }
         else if (is(bin, "string")) {
             if (!arithmetric) {
@@ -399,7 +410,28 @@ namespace pscmpl {
         return true;
     }
 
-    bool compile_each_command(expr::Expr* st, CompileContext& ctx) {
+    bool compile_if(expr::Expr* b, CompileContext& ctx) {
+        ctx.write("// if statement\n");
+        ctx.write("if(");
+        auto cond = b->index(0);
+        auto block = b->index(1);
+        if (!compile_binary(cond, ctx, true, true)) {
+            ctx.push(b);
+            return false;
+        }
+        ctx.write(") ");
+        if (!is(block, "block")) {
+            ctx.push(block);
+            return ctx.error("block expression is expected but not.");
+        }
+        if (!compile_each_command(block, ctx, true)) {
+            ctx.push(block);
+            return false;
+        }
+        return true;
+    }
+
+    bool compile_each_command(expr::Expr* st, CompileContext& ctx, bool no_return) {
         parse_msg("command...");
         ctx.write(" {\n\n");
         size_t i = 0;
@@ -443,9 +475,24 @@ namespace pscmpl {
                         return false;
                     }
                 }
+                else if (command(mnemonic::Command::bindany)) {
+                    if (!compile_bind(p, ctx, true)) {
+                        ctx.push(st);
+                        return false;
+                    }
+                }
+                else if (command(mnemonic::Command::if_)) {
+                    if (!compile_if(p, ctx)) {
+                        ctx.push(st);
+                        return false;
+                    }
+                }
             }
         }
-        ctx.write("return true;\n}\n");
+        if (!no_return) {
+            ctx.write("return true;");
+        }
+        ctx.write("\n}\n");
         return true;
     }
 

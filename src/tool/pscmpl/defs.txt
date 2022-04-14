@@ -44,3 +44,21 @@ EXPR {
 EntryPoint {
     consume STRUCT()
 }
+
+FRAME {
+    bind ".len" {
+        consume 3
+    }
+    bind ".type" {
+        consume 1
+    }
+    bind ".flag" {
+        consume 1
+    }
+    bind ".id" {
+        consume 4
+    }
+    if output(".type") == 0x0 {
+
+    }
+}

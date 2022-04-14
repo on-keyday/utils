@@ -60,10 +60,12 @@ int main(int argc, char** argv) {
     option::Context ctx;
     auto input = ctx.String<utils::wrap::string>("input,i", "", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
     auto output = ctx.String<utils::wrap::string>("output,o", "", "output file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
-    bool verbose = false, help = false, parse_verbose = false;
-    ctx.VarBool(&verbose, "verbose,v", "verbose log");
-    ctx.VarBool(&parse_verbose, "parse-verbose,p", "verbose parse log");
+    bool verbose = false, help = false, parse_verbose = false, tree_verbose = false, dry_run = false;
+    ctx.VarBool(&verbose, "print-code,v", "show compiled code before save");
+    ctx.VarBool(&parse_verbose, "parse-verbose,p", "show verbose parse log");
+    ctx.VarBool(&tree_verbose, "tree-verbose,t", "show verbose parse tree as json");
     ctx.VarBool(&help, "help,h", "show help");
+    ctx.VarBool(&dry_run, "dry-run,d", "dry run to compile");
     ctx.VarFlagSet(&cc.flag, "main", pscmpl::CompileFlag::with_main, "generate main()");
     auto err = option::parse_required(argc, argv, ctx, utils::helper::nop, option::ParseFlag::assignable_mode);
     auto error = [](auto&&... args) {
@@ -107,7 +109,7 @@ int main(int argc, char** argv) {
         write_loc();
         return -1;
     }
-    if (verbose) {
+    if (tree_verbose) {
         print_json(expr);
     }
     if (state.package >= 2) {
@@ -132,6 +134,10 @@ int main(int argc, char** argv) {
     view.close();
     if (verbose) {
         cout << cc.buffer;
+    }
+    if (dry_run) {
+        cout << "no error\n";
+        return 0;
     }
     {
         std::ofstream fs(*output);
