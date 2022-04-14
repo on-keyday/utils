@@ -90,24 +90,22 @@ namespace pscmpl {
         OUT:
             return cmds(seq, expr);
         };
-        auto st = expr::define_set<string, vector>(fn, true);
-        auto anonymous_blcok = expr::define_set<string, vector>(fn, false, true, "block");
-        auto parser = expr::define_set<string, vector>(
+        auto st = expr::define_block<string, vector>(fn, true);
+        auto anonymous_blcok = expr::define_block<string, vector>(fn, false, "block");
+        auto parser = expr::define_block<string, vector>(
             [st, &state]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
-                size_t start = seq.rptr;
-                hlp::space::consume_space(seq, true);
-                size_t pos = seq.rptr;
+                auto pos = expr::save_and_space(seq);
                 auto read_str_and_pack = [&](const char* type) {
                     hlp::space::consume_space(seq, true);
                     string v;
                     size_t strpos = 0;
                     if (!expr::string(seq, v, strpos)) {
-                        return false;
+                        return pos.fatal();
                     }
-                    auto wexpr = new expr::WrapExpr{type, pos};
+                    auto wexpr = new expr::WrapExpr{type, pos.pos};
                     wexpr->child = new expr::StringExpr<string>{std::move(v), strpos};
                     expr = wexpr;
-                    return true;
+                    return pos.ok();
                 };
                 if (seq.seek_if("package")) {
                     auto res = read_str_and_pack("package");
@@ -125,7 +123,7 @@ namespace pscmpl {
                 }
                 return st(seq, expr);
             },
-            false, false, "program");
+            false, "program", 0);
         auto br = expr::define_brackets(prim, exp, "brackets");
         auto recursive = [br, anonymous_blcok]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
             size_t start = seq.rptr;

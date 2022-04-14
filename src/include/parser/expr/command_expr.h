@@ -94,14 +94,14 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec>
-            struct StructExpr : Expr {
+            struct BlockExpr : Expr {
                 String name;
                 Vec<Expr*> exprs;
 
-                StructExpr(const char* t, size_t pos)
+                BlockExpr(const char* t, size_t pos)
                     : Expr(t, pos) {}
 
-                StructExpr(size_t pos)
+                BlockExpr(size_t pos)
                     : Expr("struct", pos) {}
 
                 Expr* index(size_t index) const override {
@@ -117,7 +117,7 @@ namespace utils {
                     return true;
                 }
 
-                ~StructExpr() {
+                ~BlockExpr() {
                     for (auto v : exprs) {
                         delete v;
                     }
@@ -125,18 +125,14 @@ namespace utils {
             };
 
             template <class String, template <class...> class Vec, class Fn>
-            auto define_set(Fn cond_expr, bool reqname, bool reqbrack = true, const char* type = "struct") {
-                auto list = define_command_each(cond_expr);
-                return [cond_expr, reqname, type, reqbrack]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    auto start = seq.rptr;
+            auto define_block(Fn cond_expr, bool reqname = false, const char* type = "struct", char brackbegin = '{', char brackend = '}') {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
                     auto space = [&] {
                         helper::space::consume_space(seq, true);
                     };
-                    space();
+                    auto pos = save_and_space(seq);
                     String name;
-                    size_t pos = seq.rptr;
                     if (reqname) {
-                        pos = seq.rptr;
                         if (!helper::read_whilef<true>(name, seq, [](auto c) {
                                 return number::is_alnum(c);
                             })) {
@@ -144,22 +140,22 @@ namespace utils {
                         }
                     }
                     space();
+                    auto reqbrack = brackbegin && brackend;
                     if (!name.size() && reqbrack) {
-                        pos = seq.rptr;
+                        pos.pos = seq.rptr;
                     }
                     if (reqbrack && !seq.consume_if('{')) {
-                        start = seq.rptr;
                         return false;
                     }
                     Vec<Expr*> vexpr;
                     while (true) {
                         space();
                         if (reqbrack) {
-                            if (seq.consume_if('}')) {
+                            if (seq.consume_if(brackend)) {
                                 break;
                             }
                             if (seq.eos()) {
-                                return false;
+                                return pos.fatal();
                             }
                         }
                         else {
@@ -172,22 +168,22 @@ namespace utils {
                                 delete v;
                             }
                             expr = nullptr;
-                            return false;
+                            return pos.fatal();
                         }
                         vexpr.push_back(expr);
                         expr = nullptr;
                     }
-                    auto sexpr = new StructExpr<String, Vec>{type, pos};
+                    auto sexpr = new BlockExpr<String, Vec>{type, pos.pos};
                     sexpr->name = std::move(name);
                     sexpr->exprs = std::move(vexpr);
                     expr = sexpr;
-                    return true;
+                    return pos.ok();
                 };
             }
 
             template <class String, template <class...> class Vec, class Fn>
             auto define_command_struct(Fn cond_expr, bool reqname, const char* type = "struct") {
-                return define_set<String, Vec>(define_command_each(cond_expr), reqname, true, type);
+                return define_block<String, Vec>(define_command_each(cond_expr), reqname, type);
             }
 
         }  // namespace expr
