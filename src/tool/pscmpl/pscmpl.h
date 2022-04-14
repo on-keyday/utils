@@ -57,9 +57,12 @@ namespace pscmpl {
         auto and_ = expr::define_binary(
             eq,
             expr::Ops{"&&", expr::Op::and_});
-        auto exp = expr::define_binary(
+        auto or_ = expr::define_binary(
             and_,
             expr::Ops{"||", expr::Op::or_});
+        auto exp = expr::define_assignment(
+            or_,
+            expr::Ops{"=", expr::Op::assign});
         auto call = expr::define_callexpr<string, vector>(exp);
         auto prim = expr::define_primitive<string>(call);
         auto cmds = expr::define_command_each(exp);

@@ -58,7 +58,7 @@ FRAME {
     bind ".id" {
         consume 4
     }
-    if output(".type") == 0x0 {
-
-    
+    if output(".object") == 0x0 {
+        
+    }
 }

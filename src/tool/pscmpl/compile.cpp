@@ -223,6 +223,10 @@ namespace pscmpl {
                     ctx.push(bin);
                     return ctx.error("`output` requires one argument but ", ig ? "too many" : "no", " arguments are provided");
                 }
+                if (!is(p, "string")) {
+                    ctx.push(p);
+                    return ctx.error("requires string but not");
+                }
                 p->stringify(ctx.buffer);
             }
             else {

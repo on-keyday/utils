@@ -40,11 +40,65 @@ namespace utils {
                 }
             };
 
+            struct StartPos {
+                size_t start;
+                size_t pos;
+                bool reset;
+                size_t* ptr;
+                constexpr StartPos() {}
+                StartPos(StartPos&& p) {
+                    ::memcpy(this, &p, sizeof(StartPos));
+                    p.reset = false;
+                    p.ptr = nullptr;
+                }
+
+                bool ok() {
+                    reset = false;
+                    return true;
+                }
+
+                bool fatal() {
+                    reset = false;
+                    return false;
+                }
+
+                bool err() {
+                    reset = false;
+                    *ptr = start;
+                    return false;
+                }
+
+                ~StartPos() {
+                    if (reset && ptr) {
+                        err();
+                    }
+                }
+            };
+            template <class T>
+            [[nodiscard]] StartPos save(Sequencer<T>& seq) {
+                StartPos pos;
+                pos.start = seq.rptr;
+                pos.reset = true;
+                pos.pos = seq.rptr;
+                pos.ptr = &seq.rptr;
+                return pos;
+            }
+
+            template <class T>
+            [[nodiscard]] StartPos save_and_space(Sequencer<T>& seq, bool line = true) {
+                StartPos pos;
+                pos.start = seq.rptr;
+                pos.reset = true;
+                helper::space::consume_space(seq, line);
+                pos.pos = seq.rptr;
+                pos.ptr = &seq.rptr;
+                return pos;
+            }
+
             template <class T>
             bool boolean(Sequencer<T>& seq, bool& v, size_t& pos) {
-                size_t start = seq.rptr;
-                helper::space::consume_space(seq, true);
-                pos = seq.rptr;
+                auto pos_ = save_and_space(seq);
+                pos = pos_.pos;
                 if (seq.seek_if("true")) {
                     v = true;
                 }
@@ -52,45 +106,37 @@ namespace utils {
                     v = false;
                 }
                 else {
-                    seq.rptr = start;
                     return false;
                 }
                 if (!helper::space::consume_space(seq, true) &&
                     number::is_alnum(seq.current())) {
-                    seq.rptr = start;
                     return false;
                 }
-                return true;
+                return pos_.ok();
             }
 
             template <class T, class Int>
             bool integer(Sequencer<T>& seq, Int& v, size_t& pos, int& pf) {
-                size_t start = seq.rptr;
-                helper::space::consume_space(seq, true);
-                pos = seq.rptr;
+                auto pos_ = save_and_space(seq);
+                pos = pos_.pos;
                 if (!number::prefix_integer(seq, v, &pf)) {
-                    seq.rptr = start;
                     return false;
                 }
                 if (!helper::space::consume_space(seq, true) &&
                     number::is_alnum(seq.current())) {
-                    seq.rptr = start;
                     return false;
                 }
-                return true;
+                return pos_.ok();
             }
 
             template <class T, class String>
             bool string(Sequencer<T>& seq, String& str, size_t& pos) {
-                size_t start = seq.rptr;
-                helper::space::consume_space(seq, true);
-                pos = seq.rptr;
+                auto pos_ = save_and_space(seq);
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape)) {
-                    start = seq.rptr;
                     return false;
                 }
                 helper::space::consume_space(seq, true);
-                return true;
+                return pos_.ok();
             }
 
             struct Expr {
@@ -142,16 +188,14 @@ namespace utils {
 
             template <class String, class T>
             bool variable(Sequencer<T>& seq, String& name, size_t& pos) {
-                size_t start = seq.rptr;
-                helper::space::consume_space(seq, true);
-                pos = seq.rptr;
+                auto pos_ = save_and_space(seq);
+                pos = pos_.pos;
                 if (!helper::read_whilef<true>(name, seq, [](auto&& c) {
                         return number::is_alnum(c) || c == '_' || c == ':';
                     })) {
-                    seq.rptr = start;
                     return false;
                 }
-                return true;
+                return pos_.ok();
             }
 
             template <class String, class T>
@@ -528,27 +572,25 @@ namespace utils {
             template <class Fn1, class Fn2>
             auto define_brackets(Fn1 next, Fn2 recur, const char* wrap = nullptr) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    size_t start = seq.rptr;
-                    utils::helper::space::consume_space(seq, true);
-                    size_t pos = seq.rptr;
+                    auto pos = save_and_space(seq);
                     if (seq.consume_if('(')) {
                         if (!recur(seq, expr)) {
-                            return false;
+                            return pos.fatal();
                         }
                         utils::helper::space::consume_space(seq, true);
                         if (!seq.consume_if(')')) {
                             delete expr;
                             expr = nullptr;
-                            return false;
+                            return pos.fatal();
                         }
                         if (wrap) {
-                            auto wexpr = new WrapExpr{wrap, pos};
+                            auto wexpr = new WrapExpr{wrap, pos.pos};
                             wexpr->child = expr;
                             expr = wexpr;
                         }
-                        return true;
+                        return pos.ok();
                     }
-                    seq.rptr = start;
+                    pos.err();
                     return next(seq, expr);
                 };
             }
@@ -580,9 +622,8 @@ namespace utils {
                     auto space = [&] {
                         helper::space::consume_space(seq, true);
                     };
-                    space();
                     String name;
-                    size_t pos = seq.rptr;
+                    size_t pos;
                     if (!variable(seq, name, pos)) {
                         return false;
                     }
