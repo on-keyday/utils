@@ -47,7 +47,8 @@ void test_expr() {
     auto br = expr::define_brackets(prim, assign);
     ph = expr::make_replacement(seq, br);
     expr::Expr* expr = nullptr;
-    assign(seq, expr);
+    expr::ErrorStack stack;
+    assign(seq, expr, stack);
     assert(expr);
     std::int64_t val = 0;
     auto print_json = [&] {
@@ -63,7 +64,7 @@ void test_expr() {
     )");
     delete expr;
     expr = nullptr;
-    assign(seq, expr);
+    assign(seq, expr, stack);
     assert(expr);
     print_json();
 
@@ -78,7 +79,7 @@ void test_expr() {
         }
     )");
     delete expr;
-    stparse(seq, expr);
+    stparse(seq, expr, stack);
     assert(expr);
     print_json();
 }

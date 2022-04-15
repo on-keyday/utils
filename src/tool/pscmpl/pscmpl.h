@@ -66,7 +66,7 @@ namespace pscmpl {
         auto call = expr::define_callexpr<string, vector>(exp);
         auto prim = expr::define_primitive<string>(call);
         auto cmds = expr::define_command_each(exp);
-        auto fn = [cmds, exp]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
+        auto fn = [cmds, exp]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             size_t start = seq.rptr;
             hlp::space::consume_space(seq, true);
             if (seq.seek_if("var")) {
@@ -79,7 +79,7 @@ namespace pscmpl {
                 if (!expr::variable(seq, name, pos)) {
                     return false;
                 }
-                if (!exp(seq, expr)) {
+                if (!exp(seq, expr, stack)) {
                     return false;
                 }
                 auto vexpr = new VarDefExpr(std::move(name), pos);
@@ -88,18 +88,19 @@ namespace pscmpl {
                 return true;
             }
         OUT:
-            return cmds(seq, expr);
+            return cmds(seq, expr, stack);
         };
         auto st = expr::define_block<string, vector>(fn, true);
         auto anonymous_blcok = expr::define_block<string, vector>(fn, false, "block");
         auto parser = expr::define_block<string, vector>(
-            [st, &state]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
+            [st, &state]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
                 auto pos = expr::save_and_space(seq);
                 auto read_str_and_pack = [&](const char* type) {
                     hlp::space::consume_space(seq, true);
                     string v;
                     size_t strpos = 0;
                     if (!expr::string(seq, v, strpos)) {
+                        PUSH_ERROR(stack, type, "expect string but not", strpos, seq.rptr)
                         return pos.fatal();
                     }
                     auto wexpr = new expr::WrapExpr{type, pos.pos};
@@ -122,18 +123,18 @@ namespace pscmpl {
                     return read_str_and_pack("sysimport");
                 }
                 pos.err();
-                return st(seq, expr);
+                return st(seq, expr, stack);
             },
             false, "program", 0);
         auto br = expr::define_brackets(prim, exp, "brackets");
-        auto recursive = [br, anonymous_blcok]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr) {
+        auto recursive = [br, anonymous_blcok]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             size_t start = seq.rptr;
             utils::helper::space::consume_space(seq, true);
             if (seq.match("{")) {
-                return anonymous_blcok(seq, expr);
+                return anonymous_blcok(seq, expr, stack);
             }
             seq.rptr = start;
-            return br(seq, expr);
+            return br(seq, expr, stack);
         };
         ph = expr::make_replacement(seq, recursive);
         return parser;

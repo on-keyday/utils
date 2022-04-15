@@ -12,6 +12,7 @@
 #include "../../helper/space.h"
 #include "../../number/prefix.h"
 #include "../../escape/read_string.h"
+#include "../../helper/equal.h"
 
 namespace utils {
     namespace parser {
@@ -39,6 +40,65 @@ namespace utils {
                     push_back_(ptr, c);
                 }
             };
+
+            struct ErrorStack {
+               private:
+                void* ptr = nullptr;
+                void (*pusher)(void* ptr, const char* type, const char* msg, const char* loc, size_t begin, size_t end, void* aditional) = nullptr;
+                void (*poper)(void* ptr, size_t index) = nullptr;
+                size_t (*indexer)(void* ptr) = nullptr;
+
+                template <class T>
+                static void push_fn(void* ptr, const char* type, const char* msg, const char* loc, size_t line, size_t begin, size_t end, void* aditional) {
+                    static_cast<T>(ptr)->push(msg, type, loc, line, begin, end, aditional);
+                }
+
+                template <class T>
+                static void pop_fn(void* ptr, size_t index) {
+                    static_cast<T>(ptr)->pop(index);
+                }
+
+                template <class T>
+                static size_t index_fn(void* ptr) {
+                    return static_cast<T>(ptr)->index();
+                }
+
+               public:
+                ErrorStack() {}
+                ErrorStack(const ErrorStack& b)
+                    : ptr(b.ptr),
+                      pusher(b.pusher),
+                      poper(b.poper),
+                      indexer(b.indexer) {}
+
+                template <class T>
+                ErrorStack(T& pb)
+                    : ptr(std::addressof(pb)),
+                      pusher(push_fn<T>),
+                      poper(pop_fn<T>),
+                      indexer(index_fn<T>) {}
+
+                bool push(const char* type, const char* msg, size_t begin, size_t end, const char* loc, size_t line, void* additional = nullptr) {
+                    if (pusher) {
+                        pusher(ptr, type, msg, loc, begin, end, additional);
+                    }
+                    return false;
+                }
+
+                bool pop(size_t index) {
+                    if (poper) {
+                        poper(ptr, index);
+                    }
+                    return true;
+                }
+
+                size_t index() {
+                    return indexer(ptr);
+                }
+            };
+
+#define PUSH_ERROR(stack, type, msg, begin, end) stack.push(type, msg, begin, end, __FILE__, __LINE__, nullptr);
+#define PUSH_ERRORA(stack, type, msg, begin, end, additional) stack.push(type, msg, begin, end, __FILE__, __LINE__, additional);
 
             struct StartPos {
                 size_t start;
@@ -180,6 +240,10 @@ namespace utils {
 
                 virtual ~Expr() {}
             };
+
+            inline bool is(expr::Expr* p, const char* ty) {
+                return p && helper::equal(p->type(), ty);
+            }
 
             template <class String>
             struct VarExpr : Expr {
@@ -422,7 +486,7 @@ namespace utils {
             };
 
             template <class T, class Callback>
-            int binexpr(Sequencer<T>& seq, Expr*& expr, const char* expect, Op op, Callback&& next) {
+            int binexpr(Sequencer<T>& seq, Expr*& expr, const char* expect, Op op, Callback&& next, ErrorStack& stack) {
                 size_t pos = seq.rptr;
                 if (!seq.seek_if(expect)) {
                     return 0;
@@ -433,7 +497,7 @@ namespace utils {
                 bexpr->str = expect;
                 expr = bexpr;
                 Expr* right = nullptr;
-                if (!next(seq, right)) {
+                if (!next(seq, right, stack)) {
                     delete bexpr;
                     return -1;
                 }
@@ -443,12 +507,12 @@ namespace utils {
             }
 
             template <class T>
-            auto make_expect(Sequencer<T>& seq, Expr*& expr, auto&& next, bool& err) {
+            auto make_expect(Sequencer<T>& seq, Expr*& expr, auto&& next, bool& err, ErrorStack& stack) {
                 return [&](const char* expect, Op op) {
                     if (err) {
                         return false;
                     }
-                    auto res = binexpr(seq, expr, expect, op, next);
+                    auto res = binexpr(seq, expr, expect, op, next, stack);
                     if (res < 0) {
                         err = true;
                         return false;
@@ -464,29 +528,29 @@ namespace utils {
 
             template <class String>
             auto define_variable() {
-                return []<class T>(Sequencer<T>& seq, Expr*& expr) {
+                return []<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     return variable<String>(seq, expr);
                 };
             }
 
             template <class String, class Fn = decltype(define_variable<String>())>
             auto define_primitive(Fn custom = define_variable<String>()) {
-                return [custom]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                return [custom]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     if (primitive<String>(seq, expr)) {
                         return true;
                     }
-                    return custom(seq, expr);
+                    return custom(seq, expr, stack);
                 };
             }
 
             template <class Fn, class... OpSet>
             auto define_binary(Fn next, OpSet... ops) {
-                return [next, ops...]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    if (!next(seq, expr)) {
+                return [next, ops...]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    if (!next(seq, expr, stack)) {
                         return false;
                     }
                     bool err = false;
-                    auto expect = make_expect(seq, expr, next, err);
+                    auto expect = make_expect(seq, expr, next, err, stack);
                     bool cont = true;
                     while (cont) {
                         cont = (... || expect(ops.expect, ops.op));
@@ -500,7 +564,7 @@ namespace utils {
             }
 
             struct PlaceHolder {
-                virtual bool invoke(void* seq, Expr*& expr) {
+                virtual bool invoke(void* seq, Expr*& expr, ErrorStack& stack) {
                     return false;
                 }
             };
@@ -514,8 +578,8 @@ namespace utils {
                     Replacement(Fn&& f)
                         : fn(std::move(f)) {}
 
-                    bool invoke(void* seq, Expr*& expr) override {
-                        return fn(*static_cast<Sequencer<T>*>(seq), expr);
+                    bool invoke(void* seq, Expr*& expr, ErrorStack& stack) override {
+                        return fn(*static_cast<Sequencer<T>*>(seq), expr, stack);
                     }
                 };
             }  // namespace internal
@@ -526,26 +590,26 @@ namespace utils {
             }
 
             inline auto define_replacement(PlaceHolder*& place) {
-                return [&]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                return [&]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     if (!place) {
                         return false;
                     }
-                    return place->invoke(&seq, expr);
+                    return place->invoke(&seq, expr, stack);
                 };
             }
 
             template <class Fn, class... OpSet>
             auto define_assignment(Fn next, OpSet... ops) {
-                auto fn = [next, ops...]<class T>(auto& self, Sequencer<T>& seq, Expr*& expr) {
-                    if (!next(seq, expr)) {
+                auto fn = [next, ops...]<class T>(auto& self, Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    if (!next(seq, expr, stack)) {
                         return false;
                     }
                     bool err = false;
                     auto expect = make_expect(
-                        seq, expr, [&](Sequencer<T>& seq, Expr*& expr) {
-                            return self(self, seq, expr);
+                        seq, expr, [&](Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                            return self(self, seq, expr, stack);
                         },
-                        err);
+                        err, stack);
                     bool cont = true;
                     while (cont) {
                         cont = (... || expect(ops.expect, ops.op));
@@ -556,8 +620,8 @@ namespace utils {
                     }
                     return true;
                 };
-                return [fn]<class T>(Sequencer<T>& seq, Expr*& expr) {
-                    return fn(fn, seq, expr);
+                return [fn]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    return fn(fn, seq, expr, stack);
                 };
             }
 
@@ -578,14 +642,15 @@ namespace utils {
 
             template <class Fn1, class Fn2>
             auto define_brackets(Fn1 next, Fn2 recur, const char* wrap = nullptr) {
-                return [=]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto pos = save_and_space(seq);
                     if (seq.consume_if('(')) {
-                        if (!recur(seq, expr)) {
+                        if (!recur(seq, expr, stack)) {
                             return pos.fatal();
                         }
                         utils::helper::space::consume_space(seq, true);
                         if (!seq.consume_if(')')) {
+                            PUSH_ERROR(stack, "brackets", "expect `)` but not", pos.pos, seq.rptr)
                             delete expr;
                             expr = nullptr;
                             return pos.fatal();
@@ -598,7 +663,7 @@ namespace utils {
                         return pos.ok();
                     }
                     pos.err();
-                    return next(seq, expr);
+                    return next(seq, expr, stack);
                 };
             }
 
@@ -625,11 +690,12 @@ namespace utils {
 
             template <class String, template <class...> class Vec, class Fn>
             auto define_callexpr(Fn next) {
-                return [next]<class T>(Sequencer<T>& seq, Expr*& expr) {
+                return [next]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto space = bind_space(seq);
                     String name;
                     size_t pos;
                     if (!variable(seq, name, pos)) {
+                        PUSH_ERROR(stack, "primitive", "expect primitive value but not", pos, seq.rptr)
                         return false;
                     }
                     space();
@@ -652,7 +718,7 @@ namespace utils {
                                 }
                                 space();
                             }
-                            if (!next(seq, expr)) {
+                            if (!next(seq, expr, stack)) {
                                 delexpr();
                                 return false;
                             }

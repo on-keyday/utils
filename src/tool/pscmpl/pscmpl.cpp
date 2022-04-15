@@ -102,7 +102,8 @@ int main(int argc, char** argv) {
                     utils::json::FmtFlag::unescape_slash)
              << "\n";
     };
-    if (!parse(seq, expr)) {
+    expr::ErrorStack stack;
+    if (!parse(seq, expr, stack)) {
         error("failed to parse file ", *input);
         cerr << "failed location\n";
         seqptr = &seq;

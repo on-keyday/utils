@@ -10,9 +10,6 @@
 
 namespace pscmpl {
 
-    bool is(expr::Expr* p, const char* ty) {
-        return p && hlp::equal(p->type(), ty);
-    }
     using namespace utils::wrap;
 
     bool compile_each_command(expr::Expr* st, CompileContext& ctx, bool no_return = false);
