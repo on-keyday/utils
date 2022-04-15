@@ -97,21 +97,22 @@ namespace utils {
                 }
             };
 
+            template <class Str>
             struct StackObj {
-                const char* type;
-                const char* msg;
-                const char* loc;
+                Str type;
+                Str msg;
+                Str loc;
                 size_t line;
                 size_t begin;
                 size_t end;
                 void* additional;
             };
 
-            template <template <class...> class Vec>
+            template <class String, template <class...> class Vec>
             struct Errors {
-                Vec<StackObj> stack;
+                Vec<StackObj<String>> stack;
                 void push(auto... v) {
-                    stack.push_back(StackObj{v...});
+                    stack.push_back(StackObj<String>{v...});
                 }
 
                 void pop(size_t) {}
