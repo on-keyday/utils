@@ -25,6 +25,7 @@ namespace minilang {
             append_child(node->children, convert_to_node(block, node->owns));
         }
         else if (is(expr, "type")) {
+            auto type = static_cast<TypeExpr*>(expr);
         }
         else {
             for (auto i = 0; expr->index(i); i++) {

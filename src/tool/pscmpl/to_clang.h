@@ -27,8 +27,8 @@ namespace minilang {
             : kind(k), expr::Expr("type", pos) {}
         wrap::string val;
         TypeKind kind;
-        expr::Expr* next;
-        expr::Expr* expr;
+        expr::Expr* next = nullptr;
+        expr::Expr* expr = nullptr;
 
         expr::Expr* index(size_t i) const override {
             if (i == 0) return next;
@@ -104,10 +104,12 @@ namespace minilang {
     struct LetExpr : expr::Expr {
         LetExpr(size_t pos)
             : expr::Expr("let", pos) {}
-        wrap::string val;
+        wrap::string idname;
+        expr::Expr* type_expr = nullptr;
+        expr::Expr* init_expr = nullptr;
     };
 
-    auto define_let(auto exp, auto type) {
+    auto define_let(auto exp, auto type_) {
         return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             auto pos = expr::save_and_space(seq);
             if (seq.seek_if("let")) {
@@ -124,6 +126,28 @@ namespace minilang {
                 return false;
             }
             space();
+            expr::Expr *texpr = nullptr, eexpr = nullptr;
+            if (seq.seek_if(":")) {
+                if (!type_(seq, texpr, stack)) {
+                    PUSH_ERROR(stack, "let", "expect type but not", pos.pos, seq.rptr)
+                    return false;
+                }
+                space();
+            }
+            if (seq.seek_if("=")) {
+                if (!exp(seq, eexpr, stack)) {
+                    PUSH_ERROR(stack, "let", "expect expr but not", pos.pos, seq.rptr);
+                    delete texpr;
+                    return false;
+                }
+                space();
+            }
+            auto lexpr = new LetExpr{pos.pos};
+            lexpr->idname = std::move(name);
+            lexpr->type_expr = texpr;
+            lexpr->init_expr = eexpr;
+            expr = lexpr;
+            return true;
         };
     }
 
@@ -158,6 +182,8 @@ namespace minilang {
         auto block = expr::define_block<wrap::string, wrap::vector>(rp2, false, "block");
         auto for_ = expr::define_statement("for", 3, exp, exp, block);
         auto if_ = expr::define_statement("if", 2, exp, exp, block);
+        auto type_ = define_type(exp);
+        auto let = define_let(exp, type_);
         auto stat = expr::define_statements(for_, if_);
 
         ph = expr::make_replacement(seq, brackets);
