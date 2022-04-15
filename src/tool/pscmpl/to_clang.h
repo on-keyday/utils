@@ -101,56 +101,6 @@ namespace minilang {
         };
     }
 
-    struct LetExpr : expr::Expr {
-        LetExpr(size_t pos)
-            : expr::Expr("let", pos) {}
-        wrap::string idname;
-        expr::Expr* type_expr = nullptr;
-        expr::Expr* init_expr = nullptr;
-    };
-
-    auto define_let(auto exp, auto type_) {
-        return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
-            auto pos = expr::save_and_space(seq);
-            if (seq.seek_if("let")) {
-                return false;
-            }
-            auto space = expr::bind_space(seq);
-            if (!space()) {
-                return false;
-            }
-            pos.ok();
-            wrap::string name;
-            if (!expr::variable(seq, name, seq.pos)) {
-                PUSH_ERROR(stack, "let", "expect identifier name but not", pos.pos, seq.rptr)
-                return false;
-            }
-            space();
-            expr::Expr *texpr = nullptr, eexpr = nullptr;
-            if (seq.seek_if(":")) {
-                if (!type_(seq, texpr, stack)) {
-                    PUSH_ERROR(stack, "let", "expect type but not", pos.pos, seq.rptr)
-                    return false;
-                }
-                space();
-            }
-            if (seq.seek_if("=")) {
-                if (!exp(seq, eexpr, stack)) {
-                    PUSH_ERROR(stack, "let", "expect expr but not", pos.pos, seq.rptr);
-                    delete texpr;
-                    return false;
-                }
-                space();
-            }
-            auto lexpr = new LetExpr{pos.pos};
-            lexpr->idname = std::move(name);
-            lexpr->type_expr = texpr;
-            lexpr->init_expr = eexpr;
-            expr = lexpr;
-            return true;
-        };
-    }
-
     template <class T>
     auto define_minilang(Sequencer<T>& seq, expr::PlaceHolder*& ph, expr::PlaceHolder*& ph2) {
         auto rp = expr::define_replacement(ph);
@@ -183,7 +133,7 @@ namespace minilang {
         auto for_ = expr::define_statement("for", 3, exp, exp, block);
         auto if_ = expr::define_statement("if", 2, exp, exp, block);
         auto type_ = define_type(exp);
-        auto let = define_let(exp, type_);
+        auto let = expr::define_vardef("let", exp, type_);
         auto stat = expr::define_statements(for_, if_);
 
         ph = expr::make_replacement(seq, brackets);
