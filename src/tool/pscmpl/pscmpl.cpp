@@ -108,10 +108,12 @@ int main(int argc, char** argv) {
         error("failed to parse file ", *input);
         cerr << "failed location\n";
         seqptr = &seq;
+        cerr << "parse end at:\n";
+        write_loc();
         for (auto v : errs.stack) {
             seq.rptr = v.end;
-            cerr << "type:" << v.type << "\n";
-            cerr << "message:" << v.msg << "\n";
+            cerr << "type: " << v.type << "\n";
+            cerr << "message: " << v.msg << "\n";
             write_loc();
         }
         return -1;

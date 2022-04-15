@@ -724,7 +724,6 @@ namespace utils {
                     String name;
                     size_t pos;
                     if (!variable(seq, name, pos)) {
-                        PUSH_ERROR(stack, "primitive", "expect primitive value but not", pos, seq.rptr)
                         return false;
                     }
                     space();
