@@ -44,10 +44,11 @@ namespace utils {
             };
         }
 
-        constexpr auto no_check() {
-            return [](auto&&) -> bool {
-                return true;
+        constexpr auto no_check(bool ret = true) {
+            return [=](auto&&) -> bool {
+                return ret;
             };
         }
+
     }  // namespace helper
 }  // namespace utils

@@ -281,23 +281,23 @@ namespace utils {
                 }
             };
 
-            template <class String, class T>
-            bool variable(Sequencer<T>& seq, String& name, size_t& pos) {
+            template <class String, class T, class Filter = decltype(helper::no_check(false))>
+            bool variable(Sequencer<T>& seq, String& name, size_t& pos, Filter&& filter = helper::no_check(false)) {
                 auto pos_ = save_and_space(seq);
                 pos = pos_.pos;
-                if (!helper::read_whilef<true>(name, seq, [](auto&& c) {
-                        return number::is_alnum(c) || c == '_' || c == ':';
+                if (!helper::read_whilef<true>(name, seq, [&](auto&& c) {
+                        return number::is_alnum(c) || c == '_' || filter(seq);
                     })) {
                     return false;
                 }
                 return pos_.ok();
             }
 
-            template <class String, class T>
-            bool variable(Sequencer<T>& seq, Expr*& expr) {
+            template <class String, class T, class Filter = decltype(helper::no_check(false))>
+            bool variable(Sequencer<T>& seq, Expr*& expr, Filter&& filter = helper::no_check(false)) {
                 String name;
                 size_t pos = 0;
-                if (!variable(seq, name, pos)) {
+                if (!variable(seq, name, pos, filter)) {
                     return false;
                 }
                 helper::space::consume_space(seq, true);
@@ -550,10 +550,10 @@ namespace utils {
                 Op op;
             };
 
-            template <class String>
-            auto define_variable() {
-                return []<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
-                    return variable<String>(seq, expr);
+            template <class String, class Filter = decltype(helper::no_check(false))>
+            auto define_variable(Filter filter = helper::no_check(false)) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    return variable<String>(seq, expr, filter);
                 };
             }
 
@@ -717,13 +717,13 @@ namespace utils {
                 }
             };
 
-            template <class String, template <class...> class Vec, class Fn>
-            auto define_callexpr(Fn next) {
-                return [next]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+            template <class String, template <class...> class Vec, class Fn, class Filter = decltype(helper::no_check(false))>
+            auto define_callexpr(Fn next, Filter filter = helper::no_check(false)) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto space = bind_space(seq);
                     String name;
                     size_t pos;
-                    if (!variable(seq, name, pos)) {
+                    if (!variable(seq, name, pos, filter)) {
                         return false;
                     }
                     space();

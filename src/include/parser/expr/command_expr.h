@@ -206,7 +206,9 @@ namespace utils {
                         }
                         return false;
                     };
-                    (... || check(fn));
+                    if ((... || check(fn)) == false) {
+                        PUSH_ERROR(stack, "statements", "expect statement but not", start, seq.rptr);
+                    }
                     return res;
                 };
             }

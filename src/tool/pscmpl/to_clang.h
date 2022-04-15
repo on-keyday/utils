@@ -19,18 +19,111 @@ namespace minilang {
     enum class TypeKind {
         primitive,
         ptr,
+        array,
     };
 
     struct TypeExpr : expr::Expr {
-        TypeExpr(size_t pos)
-            : expr::Expr("type", pos) {}
+        TypeExpr(TypeKind k, size_t pos)
+            : kind(k), expr::Expr("type", pos) {}
         wrap::string val;
         TypeKind kind;
+        expr::Expr* next;
+        expr::Expr* expr;
+
+        expr::Expr* index(size_t i) const override {
+            if (i == 0) return next;
+            if (i == 1) return expr;
+            return nullptr;
+        }
+
+        bool stringify(expr::PushBacker pb) const override {
+            helper::append(pb, val);
+            return true;
+        }
     };
 
-    auto define_type() {
-        return []<class T>(Sequencer<T>& seq, expr::Expr*& expr) {
+    auto define_type(auto exp) {
+        auto fn = [=]<class T>(auto& self, Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
+            auto pos = expr::save_and_space(seq);
+            auto space = expr::bind_space(seq);
+            auto recall = [&]() {
+                return self(self, seq, expr, stack);
+            };
+            TypeExpr* texpr = nullptr;
+            auto make_type = [&](TypeKind kind) {
+                texpr = new TypeExpr{kind, pos.pos};
+                texpr->next = expr;
+            };
+            if (seq.seek_if("*")) {
+                if (!recall(TypeKind::ptr)) {
+                    return false;
+                }
+                make_type();
+                texpr->val = "*";
+            }
+            else if (seq.seek_if("[")) {
+                space();
+                if (!seq.match("]")) {
+                    if (!exp(seq, expr, stack)) {
+                        PUSH_ERROR(stack, "type", "expect expr but error occurred", pos.pos, pos.pos)
+                        return false;
+                    }
+                }
+                expr::Expr* rec = expr;
+                expr = nullptr;
+                if (!seq.seek_if("]")) {
+                    delete rec;
+                    PUSH_ERROR(stack, "type", "expect `]` but not", pos.pos, seq.rptr);
+                    return false;
+                }
+                if (!recall()) {
+                    delete rec;
+                    return false;
+                }
+                make_type(TypeKind::array);
+                texpr->expr = rec;
+                texpr->val = "[]";
+            }
+            else {
+                wrap::string name;
+                if (!expr::variable(seq, name, pos.pos)) {
+                    PUSH_ERROR(stack, "type", "expect identifier but not", pos.pos, pos.pos)
+                    return false;
+                }
+                make_type(TypeKind::primitive);
+                texpr->val = std::move(name);
+            }
+            expr = texpr;
+            return true;
+        };
+        return [fn]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
+            return fn(fn, seq, expr, stack);
+        };
+    }
 
+    struct LetExpr : expr::Expr {
+        LetExpr(size_t pos)
+            : expr::Expr("let", pos) {}
+        wrap::string val;
+    };
+
+    auto define_let(auto exp, auto type) {
+        return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
+            auto pos = expr::save_and_space(seq);
+            if (seq.seek_if("let")) {
+                return false;
+            }
+            auto space = expr::bind_space(seq);
+            if (!space()) {
+                return false;
+            }
+            pos.ok();
+            wrap::string name;
+            if (!expr::variable(seq, name, seq.pos)) {
+                PUSH_ERROR(stack, "let", "expect identifier name but not", pos.pos, seq.rptr)
+                return false;
+            }
+            space();
         };
     }
 
