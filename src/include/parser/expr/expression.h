@@ -536,10 +536,15 @@ namespace utils {
             template <class String, class Fn = decltype(define_variable<String>())>
             auto define_primitive(Fn custom = define_variable<String>()) {
                 return [custom]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    size_t start = seq.rptr;
                     if (primitive<String>(seq, expr)) {
                         return true;
                     }
-                    return custom(seq, expr, stack);
+                    if (!custom(seq, expr, stack)) {
+                        PUSH_ERROR(stack, "primitive", "expect primitive value but not", start, seq.rptr)
+                        return false;
+                    }
+                    return true;
                 };
             }
 
