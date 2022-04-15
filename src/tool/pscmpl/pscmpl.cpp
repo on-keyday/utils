@@ -102,12 +102,15 @@ int main(int argc, char** argv) {
                     utils::json::FmtFlag::unescape_slash)
              << "\n";
     };
-    expr::ErrorStack stack;
+    expr::Errors<utils::wrap::vector> errs;
+    expr::ErrorStack stack = errs;
     if (!parse(seq, expr, stack)) {
         error("failed to parse file ", *input);
         cerr << "failed location\n";
         seqptr = &seq;
-        write_loc();
+        for (auto v : errs.stack) {
+            write_loc();
+        }
         return -1;
     }
     if (tree_verbose) {

@@ -44,23 +44,23 @@ namespace utils {
             struct ErrorStack {
                private:
                 void* ptr = nullptr;
-                void (*pusher)(void* ptr, const char* type, const char* msg, const char* loc, size_t begin, size_t end, void* aditional) = nullptr;
+                void (*pusher)(void* ptr, const char* type, const char* msg, const char* loc, size_t line, size_t begin, size_t end, void* aditional) = nullptr;
                 void (*poper)(void* ptr, size_t index) = nullptr;
                 size_t (*indexer)(void* ptr) = nullptr;
 
                 template <class T>
                 static void push_fn(void* ptr, const char* type, const char* msg, const char* loc, size_t line, size_t begin, size_t end, void* aditional) {
-                    static_cast<T>(ptr)->push(msg, type, loc, line, begin, end, aditional);
+                    static_cast<T*>(ptr)->push(type, msg, loc, line, begin, end, aditional);
                 }
 
                 template <class T>
                 static void pop_fn(void* ptr, size_t index) {
-                    static_cast<T>(ptr)->pop(index);
+                    static_cast<T*>(ptr)->pop(index);
                 }
 
                 template <class T>
                 static size_t index_fn(void* ptr) {
-                    return static_cast<T>(ptr)->index();
+                    return static_cast<T*>(ptr)->index();
                 }
 
                public:
@@ -80,7 +80,7 @@ namespace utils {
 
                 bool push(const char* type, const char* msg, size_t begin, size_t end, const char* loc, size_t line, void* additional = nullptr) {
                     if (pusher) {
-                        pusher(ptr, type, msg, loc, begin, end, additional);
+                        pusher(ptr, type, msg, loc, line, begin, end, additional);
                     }
                     return false;
                 }
@@ -94,6 +94,29 @@ namespace utils {
 
                 size_t index() {
                     return indexer(ptr);
+                }
+            };
+
+            struct StackObj {
+                const char* type;
+                const char* msg;
+                const char* loc;
+                size_t line;
+                size_t begin;
+                size_t end;
+                void* additional;
+            };
+
+            template <template <class...> class Vec>
+            struct Errors {
+                Vec<StackObj> stack;
+                void push(auto... v) {
+                    stack.push_back(StackObj{v...});
+                }
+
+                void pop(size_t) {}
+                size_t index() {
+                    return 0;
                 }
             };
 
