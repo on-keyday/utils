@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "to_clang.h"
+#include "minilang.h"
 
 namespace minilang {
 
@@ -24,8 +24,26 @@ namespace minilang {
             }
             append_child(node->children, convert_to_node(block, node->owns));
         }
+        else if (is(expr, "let")) {
+            auto let = static_cast<expr::LetExpr<wrap::string>*>(expr);
+            append_symbol(scope, node, let->idname);
+            if (let->type_expr) {
+                append_child(node->children, convert_to_node(let->type_expr, scope));
+            }
+            if (let->init_expr) {
+                append_child(node->children, convert_to_node(let->init_expr, scope));
+            }
+        }
+        else if (is(expr, "variable")) {
+        }
         else if (is(expr, "type")) {
-            auto type = static_cast<TypeExpr*>(expr);
+            auto texpr = static_cast<TypeExpr*>(expr);
+            if (texpr->kind == TypeKind::primitive) {
+                node->relate = resolve_symbol(scope, "type", texpr->val);
+                if (node->relate) {
+                    node->resolved_at = 1;
+                }
+            }
         }
         else {
             for (auto i = 0; expr->index(i); i++) {

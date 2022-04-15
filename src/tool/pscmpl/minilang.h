@@ -133,8 +133,8 @@ namespace minilang {
         auto for_ = expr::define_statement("for", 3, exp, exp, block);
         auto if_ = expr::define_statement("if", 2, exp, exp, block);
         auto type_ = define_type(exp);
-        auto let = expr::define_vardef("let", exp, type_);
-        auto stat = expr::define_statements(for_, if_);
+        auto let = expr::define_vardef<wrap::string>("let", exp, type_);
+        auto stat = expr::define_statements(for_, if_, let);
 
         ph = expr::make_replacement(seq, brackets);
         ph2 = expr::make_replacement(seq, stat);
@@ -151,12 +151,23 @@ namespace minilang {
         return res;
     }
 
+    struct Node;
+
     struct Symbols {
+        wrap::vector<Node*> symbol_source;
+        wrap::hash_map<wrap::string, wrap::hash_map<wrap::string, wrap::vector<Node*>>> classfied;
     };
 
     struct Scope {
         Symbols* symbols = nullptr;
+        Scope* parent = nullptr;
     };
+
+    inline Scope* child_scope(Scope* sc) {
+        auto ret = new Scope{};
+        ret->parent = sc;
+        return ret;
+    }
 
     struct NodeChildren;
 
@@ -166,6 +177,8 @@ namespace minilang {
         Scope* owns = nullptr;
         Node* parent = nullptr;
         NodeChildren* children = nullptr;
+        Symbols* relate = nullptr;
+        int resolved_at = 0;
         bool root;
     };
 
@@ -173,10 +186,34 @@ namespace minilang {
         wrap::vector<Node*> node;
     };
 
-    void append_child(NodeChildren*& nch, Node* child) {
+    inline void append_child(NodeChildren*& nch, Node* child) {
         if (nch) {
             nch = new NodeChildren{};
         }
         nch->node.push_back(child);
+    }
+
+    inline void append_symbol(Scope* scope, Node* node, wrap::string& name) {
+        if (!scope) return;
+        if (!scope->symbols) {
+            scope->symbols = new Symbols{};
+        }
+        scope->symbols->symbol_source.push_back(node);
+        node->relate = scope->symbols;
+        auto& symbols = scope->symbols->classfied[node->expr->type()][name];
+        symbols.push_back(node);
+    }
+
+    inline Symbols* resolve_symbol(Scope* scope, const char* type, wrap::string& name) {
+        if (scope->symbols) {
+            auto& table = scope->symbols->classfied[type];
+            if (table.contains(name)) {
+                return scope->symbols;
+            }
+        }
+        if (scope->parent) {
+            return resolve_symbol(scope->parent, type, name);
+        }
+        return nullptr;
     }
 }  // namespace minilang
