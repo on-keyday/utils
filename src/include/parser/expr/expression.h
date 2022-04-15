@@ -281,20 +281,27 @@ namespace utils {
                 }
             };
 
-            template <class String, class T, class Filter = decltype(helper::no_check(false))>
-            bool variable(Sequencer<T>& seq, String& name, size_t& pos, Filter&& filter = helper::no_check(false)) {
+            constexpr auto default_filter() {
+                return []<class T>(Sequencer<T>& seq) {
+                    auto c = seq.current();
+                    return number::is_alnum(c) || c == '_';
+                };
+            }
+
+            template <class String, class T, class Filter = decltype(default_filter())>
+            bool variable(Sequencer<T>& seq, String& name, size_t& pos, Filter&& filter = default_filter()) {
                 auto pos_ = save_and_space(seq);
                 pos = pos_.pos;
-                if (!helper::read_whilef<true>(name, seq, [&](auto&& c) {
-                        return number::is_alnum(c) || c == '_' || filter(seq);
+                if (!helper::read_whilef<true>(name, seq, [&](auto&&) {
+                        return filter(seq);
                     })) {
                     return false;
                 }
                 return pos_.ok();
             }
 
-            template <class String, class T, class Filter = decltype(helper::no_check(false))>
-            bool variable(Sequencer<T>& seq, Expr*& expr, Filter&& filter = helper::no_check(false)) {
+            template <class String, class T, class Filter = decltype(default_filter())>
+            bool variable(Sequencer<T>& seq, Expr*& expr, Filter&& filter = default_filter()) {
                 String name;
                 size_t pos = 0;
                 if (!variable(seq, name, pos, filter)) {
@@ -550,8 +557,8 @@ namespace utils {
                 Op op;
             };
 
-            template <class String, class Filter = decltype(helper::no_check(false))>
-            auto define_variable(Filter filter = helper::no_check(false)) {
+            template <class String, class Filter = decltype(default_filter())>
+            auto define_variable(Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     return variable<String>(seq, expr, filter);
                 };
@@ -717,8 +724,8 @@ namespace utils {
                 }
             };
 
-            template <class String, template <class...> class Vec, class Fn, class Filter = decltype(helper::no_check(false))>
-            auto define_callexpr(Fn next, Filter filter = helper::no_check(false)) {
+            template <class String, template <class...> class Vec, class Fn, class Filter = decltype(default_filter())>
+            auto define_callexpr(Fn next, Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto space = bind_space(seq);
                     String name;

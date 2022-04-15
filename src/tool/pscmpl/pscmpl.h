@@ -63,7 +63,10 @@ namespace pscmpl {
         auto exp = expr::define_assignment(
             or_,
             expr::Ops{"=", expr::Op::assign});
-        auto call = expr::define_callexpr<string, vector>(exp);
+        auto call = expr::define_callexpr<string, vector>(exp, [](auto& v) {
+            constexpr auto default_ = expr::default_filter();
+            return v.current() == ':' || default_(v);
+        });
         auto prim = expr::define_primitive<string>(call);
         auto cmds = expr::define_command_each(exp);
         auto fn = [cmds, exp]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
