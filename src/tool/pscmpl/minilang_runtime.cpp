@@ -24,38 +24,85 @@
         current = scope.parent;    \
     }
 namespace minilang {
-    bool Interpreter::eval_for(Node* node) {
-        auto len = length(node->children);
-        if (len == 1) {
-            auto block = node->children->node[0];
-            CHANGE_SCOPE(res, walk_node(block));
-            return res;
-        }
-        else if (len == 2) {
-            auto cond = node->children->node[0];
-            auto block = node->children->node[1];
-            while (true) {
-                NOT_ERROR(auto res = eval_as_bool(cond, err), err) {
-                    if (res == false) {
-                        break;
+    namespace runtime {
+        bool Interpreter::eval_for(Node* node) {
+            auto len = length(node->children);
+            auto cond_repeat = [&](Node* inits, Node* cond, Node* rep, Node* block) {
+                auto repeat = [&] {
+                    while (true) {
+                        bool brek = false;
+                        auto func = [&] {
+                            NOT_ERROR(auto res = !cond || eval_as_bool(cond, err), err) {
+                                if (res == false) {
+                                    brek = true;
+                                    return true;
+                                }
+                                if (!walk_node(block)) {
+                                    return false;
+                                }
+                            }
+                        };
+                        CHANGE_SCOPE(res, func())
+                        if (!res) {
+                            return false;
+                        }
+                        if (brek) {
+                            break;
+                        }
                     }
-                    CHANGE_SCOPE(walk, walk_node(block));
-                    if (!walk) {
-                        return false;
+                };
+                if (inits) {
+                    auto with_init = [&] {
+                        if (!walk_node(inits)) {
+                            return false;
+                        }
+                        return repeat();
+                    };
+                }
+                else {
+                    return repeat();
+                }
+                return true;
+            };
+            if (len == 1) {
+                auto block = node->children->node[0];
+                return cond_repeat(nullptr, nullptr, nullptr, block);
+            }
+            else if (len == 2) {
+                auto cond = node->children->node[0];
+                auto block = node->children->node[1];
+                return cond_repeat(nullptr, cond, nullptr, block);
+            }
+            else if (len == 3) {
+                auto inits = node->children->node[0];
+                auto cond = node->children->node[1];
+                auto block = node->children->node[2];
+                return cond_repeat(inits, cond, nullptr, block);
+            }
+            else if (len == 4) {
+                auto inits = node->children->node[0];
+                auto cond = node->children->node[1];
+                auto rep = node->children->node[2];
+                auto block = node->children->node[3];
+                return cond_repeat(inits, cond, rep, block);
+            }
+            return false;
+        }
+
+        bool Interpreter::walk_node(Node* node) {
+            if (is(node->expr, "for")) {
+                return eval_for(node);
+            }
+            else if (is(node->expr, "block")) {
+                if (length(node->children)) {
+                    for (auto ch : node->children->node) {
+                        if (!walk_node(ch)) {
+                            return false;
+                        }
                     }
                 }
+                return true;
             }
-            return true;
         }
-        else if (len == 3) {
-            auto cond = node->children->node[0];
-        }
-        return false;
-    }
-
-    bool Interpreter::walk_node(Node* node) {
-        if (is(node->expr, "for")) {
-            return eval_for(node);
-        }
-    }
+    }  // namespace runtime
 }  // namespace minilang

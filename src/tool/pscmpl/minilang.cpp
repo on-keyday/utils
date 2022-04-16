@@ -22,7 +22,26 @@ namespace minilang {
         if (is(expr, "for") || is(expr, "if")) {
             auto block = expr->index(0);
             node->owns = child_scope(scope, ScopeKind::local);
-            append_each(1);
+            auto ptr = static_cast<expr::StatExpr*>(expr);
+            if (ptr->first) {
+                append_child(node->children, convert_to_node(ptr->first, node->owns));
+            }
+            if (ptr->second) {
+                if (!ptr->first) {
+                    append_child(node->children, nullptr);
+                }
+                append_child(node->children, convert_to_node(ptr->second, node->owns));
+            }
+            if (ptr->third) {
+                if (!ptr->second) {
+                    append_child(node->children, nullptr);
+                }
+                else if (!ptr->first) {
+                    append_child(node->children, nullptr);
+                    append_child(node->children, nullptr);
+                }
+                append_child(node->children, convert_to_node(ptr->third, node->owns));
+            }
             append_child(node->children, convert_to_node(block, node->owns));
         }
         else if (is(expr, "let")) {

@@ -11,6 +11,7 @@
 #include <wrap/light/string.h>
 #include <wrap/light/vector.h>
 #include <wrap/light/hash_map.h>
+#include <variant>
 
 namespace minilang {
     using namespace utils;
@@ -235,22 +236,78 @@ namespace minilang {
     }
 
     Node* convert_to_node(expr::Expr* expr, Scope* scope, bool root = false);
+    namespace runtime {
+        struct RuntimeVar {
+            template <class T>
+            struct Place {
+                T value;
+            };
+        };
 
-    struct RuntimeVar {
-    };
+        struct RuntimeScope {
+            RuntimeScope* parent = nullptr;
+            wrap::hash_map<wrap::string, RuntimeVar> vars;
+            Scope* relate;
+        };
 
-    struct RuntimeScope {
-        RuntimeScope* parent = nullptr;
-        wrap::hash_map<wrap::string, RuntimeVar> vars;
-        Scope* relate;
-    };
+        struct Boolean {
+            Node* node;
+            bool value;
+        };
 
-    struct Interpreter {
-        RuntimeScope root;
-        RuntimeScope* current = nullptr;
-        bool walk_node(Node* node);
-        bool eval_for(Node* node);
+        struct Integer {
+            Node* node;
+            std::int64_t value;
+        };
 
-        bool eval_as_bool(Node* node, bool& err);
-    };
+        struct String {
+            Node* node;
+            wrap::string value;
+        };
+
+        struct BuiltIn {
+            Node* node;
+            void* object;
+            void (*proc)(void* obj, const char* key);
+        };
+
+        enum class OpFilter {
+            none = 0,
+            add = 0x1,
+            sub = 0x2,
+            mul = 0x4,
+            div = 0x8,
+            mod = 0x10,
+            and_ = 0x20,
+            or_ = 0x40,
+        };
+
+        DEFINE_ENUM_FLAGOP(OpFilter)
+
+        struct RuntimeValue {
+            std::variant<std::monostate, Boolean, Integer, String, BuiltIn> value;
+            OpFilter reflect(const RuntimeValue& other) const {
+                if (std::holds_alternative<Boolean>(value)) {
+                    return OpFilter::and_ | OpFilter::or_;
+                }
+                else if (std::holds_alternative<Integer>(value)) {
+                    return OpFilter::add | OpFilter::sub | OpFilter::mul | OpFilter::div | OpFilter::mod |
+                           OpFilter::and_ | OpFilter::or_;
+                }
+                else if (std::holds_alternative<String>(value)) {
+                    return OpFilter::add;
+                }
+                return OpFilter::none;
+            }
+        };
+
+        struct Interpreter {
+            RuntimeScope root;
+            RuntimeScope* current = nullptr;
+            bool walk_node(Node* node);
+            bool eval_for(Node* node);
+
+            bool eval_as_bool(Node* node, bool& err);
+        };
+    }  // namespace runtime
 }  // namespace minilang
