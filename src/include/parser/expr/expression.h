@@ -17,6 +17,13 @@
 namespace utils {
     namespace parser {
         namespace expr {
+            constexpr auto typeExpr = "expr";
+            constexpr auto typeBool = "bool";
+            constexpr auto typeInt = "integer";
+            constexpr auto typeString = "string";
+            constexpr auto typeVariable = "variable";
+            constexpr auto typeCall = "call";
+            constexpr auto typeBinary = "binary";
 
             struct PushBacker {
                private:
@@ -232,7 +239,7 @@ namespace utils {
 
             struct Expr {
                protected:
-                const char* type_ = "expr";
+                const char* type_ = typeExpr;
                 size_t pos_ = 0;
 
                public:
@@ -272,7 +279,7 @@ namespace utils {
             template <class String>
             struct VarExpr : Expr {
                 VarExpr(String&& n, size_t pos)
-                    : name(std::move(n)), Expr("variable", pos) {}
+                    : name(std::move(n)), Expr(typeVariable, pos) {}
                 String name;
 
                 bool stringify(PushBacker pb) const override {
@@ -315,7 +322,7 @@ namespace utils {
             struct BoolExpr : Expr {
                 bool value;
                 BoolExpr(bool v, size_t pos)
-                    : value(v), Expr("bool", pos) {}
+                    : value(v), Expr(typeBool, pos) {}
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, value ? "true" : "false");
                     return true;
@@ -336,7 +343,7 @@ namespace utils {
                 int radix = 10;
 
                 IntExpr(std::int64_t v, int radix, size_t pos)
-                    : value(v), radix(radix), Expr("integer", pos) {}
+                    : value(v), radix(radix), Expr(typeInt, pos) {}
 
                 bool stringify(PushBacker pb, int rd) const {
                     number::append_prefix(pb, rd);
@@ -363,7 +370,7 @@ namespace utils {
             struct StringExpr : Expr {
                 String value;
                 StringExpr(String&& v, size_t pos)
-                    : value(std::move(v)), Expr("string", pos) {}
+                    : value(std::move(v)), Expr(typeString, pos) {}
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, value);
                     return true;
@@ -413,7 +420,7 @@ namespace utils {
                 const char* str;
 
                 BinExpr(size_t pos)
-                    : Expr("binary", pos) {}
+                    : Expr(typeBinary, pos) {}
 
                 Expr* index(size_t i) const override {
                     if (i == 0) {
@@ -709,7 +716,7 @@ namespace utils {
                 Vec<Expr*> args;
 
                 CallExpr(size_t pos)
-                    : Expr("call", pos) {}
+                    : Expr(typeCall, pos) {}
 
                 Expr* index(size_t i) const override {
                     if (i >= args.size()) {

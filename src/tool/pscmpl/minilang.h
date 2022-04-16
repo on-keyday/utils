@@ -133,8 +133,9 @@ namespace minilang {
         auto for_ = expr::define_statement("for", 3, exp, exp, block);
         auto if_ = expr::define_statement("if", 2, exp, exp, block);
         auto type_ = define_type(exp);
-        auto let = expr::define_vardef<wrap::string>("let", exp, type_);
-        auto stat = expr::define_statements(for_, if_, let);
+        auto let = expr::define_vardef<wrap::string>("let", "let", exp, type_);
+        auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
+        auto stat = expr::define_statements(for_, if_, typedef_, let);
 
         ph = expr::make_replacement(seq, brackets);
         ph2 = expr::make_replacement(seq, stat);
@@ -158,14 +159,22 @@ namespace minilang {
         wrap::hash_map<wrap::string, wrap::hash_map<wrap::string, wrap::vector<Node*>>> classfied;
     };
 
+    enum class ScopeKind {
+        func_local,
+        local,
+        global,
+    };
+
     struct Scope {
         Symbols* symbols = nullptr;
         Scope* parent = nullptr;
+        ScopeKind kind;
     };
 
-    inline Scope* child_scope(Scope* sc) {
+    inline Scope* child_scope(Scope* parent, ScopeKind kind) {
         auto ret = new Scope{};
-        ret->parent = sc;
+        ret->parent = parent;
+        ret->kind = kind;
         return ret;
     }
 
@@ -184,7 +193,15 @@ namespace minilang {
 
     struct NodeChildren {
         wrap::vector<Node*> node;
+        size_t len() const {
+            return node.size();
+        }
     };
+
+    size_t length(NodeChildren* ptr) {
+        if (!ptr) return 0;
+        return ptr->len();
+    }
 
     inline void append_child(NodeChildren*& nch, Node* child) {
         if (nch) {
@@ -193,14 +210,14 @@ namespace minilang {
         nch->node.push_back(child);
     }
 
-    inline void append_symbol(Scope* scope, Node* node, wrap::string& name) {
+    inline void append_symbol(Scope* scope, Node* node, const char* type, wrap::string& name) {
         if (!scope) return;
         if (!scope->symbols) {
             scope->symbols = new Symbols{};
         }
         scope->symbols->symbol_source.push_back(node);
         node->relate = scope->symbols;
-        auto& symbols = scope->symbols->classfied[node->expr->type()][name];
+        auto& symbols = scope->symbols->classfied[type][name];
         symbols.push_back(node);
     }
 
@@ -216,4 +233,24 @@ namespace minilang {
         }
         return nullptr;
     }
+
+    Node* convert_to_node(expr::Expr* expr, Scope* scope, bool root = false);
+
+    struct RuntimeVar {
+    };
+
+    struct RuntimeScope {
+        RuntimeScope* parent = nullptr;
+        wrap::hash_map<wrap::string, RuntimeVar> vars;
+        Scope* relate;
+    };
+
+    struct Interpreter {
+        RuntimeScope root;
+        RuntimeScope* current = nullptr;
+        bool walk_node(Node* node);
+        bool eval_for(Node* node);
+
+        bool eval_as_bool(Node* node, bool& err);
+    };
 }  // namespace minilang

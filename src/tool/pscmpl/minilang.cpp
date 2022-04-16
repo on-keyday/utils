@@ -9,32 +9,56 @@
 
 namespace minilang {
 
-    Node* convert_to_node(expr::Expr* expr, Scope* scope, bool root = false) {
+    Node* convert_to_node(expr::Expr* expr, Scope* scope, bool root) {
         auto node = new Node{};
         node->expr = expr;
         node->belongs = scope;
         node->root = root;
+        auto append_each = [&](int start = 0) {
+            for (auto i = start; expr->index(i); i++) {
+                append_child(node->children, convert_to_node(expr->index(i), scope));
+            }
+        };
         if (is(expr, "for") || is(expr, "if")) {
             auto block = expr->index(0);
-            node->owns = new Scope{};
-            for (auto i = 1; expr->index(i); i++) {
-                auto cond = expr->index(i);
-                auto cond_node = convert_to_node(cond, scope);
-                append_child(node->children, cond_node);
-            }
+            node->owns = child_scope(scope, ScopeKind::local);
+            append_each(1);
             append_child(node->children, convert_to_node(block, node->owns));
         }
         else if (is(expr, "let")) {
             auto let = static_cast<expr::LetExpr<wrap::string>*>(expr);
-            append_symbol(scope, node, let->idname);
             if (let->type_expr) {
                 append_child(node->children, convert_to_node(let->type_expr, scope));
             }
             if (let->init_expr) {
                 append_child(node->children, convert_to_node(let->init_expr, scope));
             }
+            append_symbol(scope, node, "var", let->idname);
         }
-        else if (is(expr, "variable")) {
+        else if (is(expr, "typedef")) {
+            auto tdef = static_cast<expr::LetExpr<wrap::string>*>(expr);
+            if (tdef->type_expr) {
+                append_child(node->children, convert_to_node(tdef->type_expr, scope));
+            }
+            if (tdef->init_expr) {
+                append_child(node->children, convert_to_node(tdef->init_expr, scope));
+            }
+            append_symbol(scope, node, "type", tdef->idname);
+        }
+        else if (is(expr, expr::typeVariable)) {
+            auto vexpr = static_cast<expr::VarExpr<wrap::string>*>(expr);
+            node->relate = resolve_symbol(scope, "var", vexpr->name);
+            if (node->relate) {
+                node->resolved_at = 1;
+            }
+        }
+        else if (is(expr, expr::typeCall)) {
+            auto cexpr = static_cast<expr::CallExpr<wrap::string, wrap::vector>*>(expr);
+            node->relate = resolve_symbol(scope, "var", cexpr->name);
+            if (node->relate) {
+                node->resolved_at = 1;
+            }
+            append_each();
         }
         else if (is(expr, "type")) {
             auto texpr = static_cast<TypeExpr*>(expr);
@@ -44,12 +68,12 @@ namespace minilang {
                     node->resolved_at = 1;
                 }
             }
+            append_each();
         }
         else {
-            for (auto i = 0; expr->index(i); i++) {
-                append_child(node->children, convert_to_node(expr->index(i), scope));
-            }
+            append_each();
         }
         return node;
     }
+
 }  // namespace minilang

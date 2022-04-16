@@ -42,7 +42,7 @@ namespace utils {
                 }
             };
 
-            auto define_statement(const char* type, int count, auto first_prim, auto prim, auto block) {
+            auto define_statement(const char* type, int count, auto first_prim, auto prim, auto block, bool allow_omit = false) {
                 return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, ErrorStack& stack) {
                     auto pos = expr::save_and_space(seq);
                     if (!seq.seek_if(type)) {
@@ -80,8 +80,10 @@ namespace utils {
                     }
                     bool end = false;
                     auto bindto = [&](auto& func, auto& e, bool fin = false) {
-                        if (!func(seq, e, stack)) {
-                            return delall();
+                        if (!allow_omit || !seq.match(";")) {
+                            if (!func(seq, e, stack)) {
+                                return delall();
+                            }
                         }
                         space();
                         if (seq.match("{")) {
@@ -244,11 +246,11 @@ namespace utils {
                 }
             };
 
-            template <class String>
-            auto define_vardef(const char* tyname, auto exp, auto type_, const char* type_sig = ":") {
+            template <class String, class Filter = decltype(default_filter())>
+            auto define_vardef(const char* tyname, const char* keyword, auto exp, auto type_, const char* type_sig = ":", const char* init_sig = "=", Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto pos = save_and_space(seq);
-                    if (seq.seek_if(tyname)) {
+                    if (seq.seek_if(keyword)) {
                         return false;
                     }
                     auto space = bind_space(seq);
@@ -257,22 +259,22 @@ namespace utils {
                     }
                     pos.ok();
                     String name;
-                    if (!expr::variable(seq, name, seq.pos)) {
-                        PUSH_ERROR(stack, "let", "expect identifier name but not", pos.pos, seq.rptr)
+                    if (!expr::variable(seq, name, seq.pos, filter)) {
+                        PUSH_ERROR(stack, keyword, "expect identifier name but not", pos.pos, seq.rptr)
                         return false;
                     }
                     space();
                     Expr *texpr = nullptr, *eexpr = nullptr;
-                    if (!type_sig || seq.seek_if(type_sig)) {
+                    if (type_sig && seq.seek_if(type_sig)) {
                         if (!type_(seq, texpr, stack)) {
-                            PUSH_ERROR(stack, "let", "expect type but not", pos.pos, seq.rptr)
+                            PUSH_ERROR(stack, keyword, "expect type but not", pos.pos, seq.rptr)
                             return false;
                         }
                         space();
                     }
-                    if (seq.seek_if("=")) {
+                    if (init_sig && seq.seek_if("=")) {
                         if (!exp(seq, eexpr, stack)) {
-                            PUSH_ERROR(stack, "let", "expect expr but not", pos.pos, seq.rptr);
+                            PUSH_ERROR(stack, keyword, "expect expr but not", pos.pos, seq.rptr);
                             delete texpr;
                             return false;
                         }

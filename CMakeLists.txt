@@ -105,7 +105,7 @@ add_executable(netutil "src/tool/netutil/netmain.cpp"
                        "src/tool/netutil/tagcmd.cpp")
 add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp"
                       "src/tool/pscmpl/compile.cpp"
-                      "src/tool/pscmpl/to_clang.cpp")
+                      "src/tool/pscmpl/minilang.cpp")
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
