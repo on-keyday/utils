@@ -13,9 +13,11 @@ auto& cerr = utils::wrap::cerr_wrap();
 struct CmdLineOption {
     wrap::string input;
     bool dbginfo = false;
+    bool help = false;
     void bind(option::Context& ctx) {
         ctx.VarString(&input, "input,i", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
         ctx.VarBool(&dbginfo, "debug-info,d", "show debug info");
+        ctx.VarBool(&help, "help,h", "show this help");
     }
 };
 
@@ -29,8 +31,13 @@ int main(int argc, char** argv) {
         (cerr << ... << err);
         cerr << "\n";
     };
+    if (perfect_parsed(perr) && opt.help) {
+        cout << "minilang - minimum programing language\n";
+        cout << ctx.Usage<wrap::string>(option::ParseFlag::assignable_mode, argv[0]);
+        return 1;
+    }
     if (auto msg = error_msg(perr)) {
-        report(msg);
+        report(ctx.erropt(), ": ", msg);
         return -1;
     }
     minilang::expr::Expr* expr = nullptr;

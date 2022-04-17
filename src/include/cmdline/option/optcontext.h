@@ -43,6 +43,10 @@ namespace utils {
                 return mode;
             }
 
+            constexpr bool perfect_parsed(FlagType ty) {
+                return ty == FlagType::end_of_arg || ty == FlagType::required;
+            }
+
             struct Context {
                private:
                 Description desc;

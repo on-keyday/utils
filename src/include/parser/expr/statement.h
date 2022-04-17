@@ -128,7 +128,8 @@ namespace utils {
                         }
                         return false;
                     };
-                    if ((... || check(fn)) == false) {
+                    auto v = (... || check(fn));
+                    if (v == false) {
                         PUSH_ERROR(stack, "statements", "expect statement but not", start, seq.rptr);
                     }
                     return res;
@@ -250,7 +251,7 @@ namespace utils {
             auto define_vardef(const char* tyname, const char* keyword, auto exp, auto type_, const char* type_sig = ":", const char* init_sig = "=", Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto pos = save_and_space(seq);
-                    if (seq.seek_if(keyword)) {
+                    if (!seq.seek_if(keyword)) {
                         return false;
                     }
                     auto space = bind_space(seq);
