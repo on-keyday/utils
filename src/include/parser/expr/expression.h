@@ -574,6 +574,13 @@ namespace utils {
                 }
             };
 
+            template <class Fn>
+            struct OpsCheck {
+                const char* expect = nullptr;
+                Op op;
+                Fn check;
+            };
+
             template <class String, class Filter = decltype(default_filter())>
             auto define_variable(Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
