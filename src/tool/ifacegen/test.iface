@@ -1,0 +1,114 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
+
+# test - ifacegen test
+
+# generate code
+# tool\ifacegen -i src/tool/ifacegen/test.iface -o generated/generated.h -eDV
+
+package reflect # `package` will be namespace
+
+# iface
+# const identifier(param type) rettype
+# convert to c++
+# rettype identifier(type param) const 
+# convert to golang (unimplemented)
+# identifier(param type) rettype
+
+
+# warning: type_assert, raw__ and type__ is implicit used if `decltype` appered
+#          copy__ , implicit used if `copy` appered 
+#          so type_assert, raw__, type__, copy__ function is not usable
+
+import <string>
+
+interface Hey {
+    hey(name &const std::string) std::string 
+    hey(name *const char) std::string
+    const is_boy() bool = false # set default value. if not set, 
+                                # default is below 
+                                # value type: type{}
+                                # pointer type: nullptr
+                                # reference type: throw std::bad_function_call()
+    decltype() type # `decltype` is special value that generate type_assert template function 
+                    # ignore return type and argument
+}
+
+interface Stringer {
+    String() std::string = panic # `panic` is special value that generate `throw std::bad_function_call()`
+}
+
+# alias expand using statement or expand directry 
+# (because of incomplete lexer, you have to make alias if the type has over two type parameter)
+macro IOResult std::pair<size_t,bool>
+
+interface Writer {
+    Write(ptr *const char,size size_t) IOResult
+}
+
+interface Reader {
+    Read(ptr *char,size size_t) IOResult
+}
+
+interface Any {
+    __copy__() type # `__copy__` is special value that generate copy assign operator and copy constructor 
+    decltype() type
+}
+
+typeparam T = size_t , ... Arg
+interface Template {
+    invoke(arg ...Arg) T
+    __call__(arg ...Arg) T
+}
+
+typeparam T
+alias TemplateS Template<T,int>
+
+
+
+typeparam ^T
+alias ValueA T<int>
+
+typeparam T
+interface Array {
+    const __array__(index size_t) T
+}
+
+interface Unsafe {
+    typeid() type
+    __unsafe__() type
+}
+
+interface NoExcept {
+    noexcept __call__() int
+}
+
+interface NoGenVtable {
+    __vtable__() type
+}
+
+
+interface GenVtable {
+    dummy(i int) int
+    __call__(u *void) int
+    __vtable__() lastthis
+}
+
+interface UseSSO {
+    __copy__() type
+    decltype() type
+    __sso__() type
+}
+
+interface Value {
+    decltype() type
+    typeid() type
+    __copy__() type
+    __vtable__() type
+}
+
+interface ReturnVoid {
+    func() void
+}
