@@ -127,9 +127,10 @@ namespace minilang {
         auto exp = expr::define_assignment(
             or_,
             expr::Ops{"=", expr::Op::assign});
-        auto call = expr::define_callexpr<wrap::string, wrap::vector>(exp);
-        auto prim = expr::define_primitive<wrap::string>(call);
-        auto brackets = expr::define_brackets(prim, exp, "brackets");
+        auto call = expr::define_callop<wrap::vector>("fcall", exp);
+        auto prim = expr::define_primitive<wrap::string>();
+        auto single = expr::define_after(prim, call);
+        auto brackets = expr::define_brackets(single, exp, "brackets");
         auto block = expr::define_block<wrap::string, wrap::vector>(rp2, false, "block");
         auto for_ = expr::define_statement("for", 3, exp, exp, block);
         auto if_ = expr::define_statement("if", 2, exp, exp, block);

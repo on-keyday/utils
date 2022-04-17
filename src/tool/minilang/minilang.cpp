@@ -77,14 +77,6 @@ namespace minilang {
                 node->resolved_at = 1;
             }
         }
-        else if (is(expr, expr::typeCall)) {
-            auto cexpr = static_cast<expr::CallExpr<wrap::string, wrap::vector>*>(expr);
-            node->symbol = resolve_symbol(scope, "var", cexpr->name);
-            if (node->symbol) {
-                node->resolved_at = 1;
-            }
-            append_each();
-        }
         else if (is(expr, "type")) {
             auto texpr = static_cast<TypeExpr*>(expr);
             if (texpr->kind == TypeKind::primitive) {

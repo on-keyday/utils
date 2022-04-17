@@ -4,3 +4,7 @@ let value = 20
 value=56
 
 print(value)
+
+func print(value) {
+    __builtin_print(value)
+}

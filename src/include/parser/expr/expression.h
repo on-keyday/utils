@@ -528,9 +528,7 @@ namespace utils {
             struct CallExpr : Expr {
                 String name;
                 Vec<Expr*> args;
-
-                CallExpr(size_t pos)
-                    : Expr(typeCall, pos) {}
+                using Expr::Expr;
 
                 Expr* index(size_t i) const override {
                     if (i >= args.size()) {
@@ -543,11 +541,20 @@ namespace utils {
                     helper::append(pb, name);
                     return true;
                 }
+
+                ~CallExpr() {
+                    for (auto v : args) {
+                        delete v;
+                    }
+                }
             };
 
             template <class T, template <class...> class Vec, class Callback>
-            bool brackets_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, bool& err, Callback&& callback) {
+            bool brackets_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, size_t* ppos, bool& err, Callback&& callback) {
                 auto pos = save_and_space(seq);
+                if (ppos) {
+                    *ppos = pos.pos;
+                }
                 if (!seq.consume_if('(')) {
                     return false;
                 }
@@ -585,7 +592,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec, class Fn, class Filter = decltype(default_filter())>
-            auto define_callexpr(Fn next, Filter filter = default_filter()) {
+            auto define_callexpr(Fn next, const char* type = typeCall, bool must_not_var = false, Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto space = bind_space(seq);
                     String name;
@@ -596,19 +603,95 @@ namespace utils {
                     space();
                     Vec<expr::Expr*> vexpr;
                     bool err = false;
-                    if (auto res = brackets_each(seq, vexpr, stack, err, next); res || err) {
+                    if (auto res = brackets_each(seq, vexpr, stack, nullptr, err, next); res || err) {
                         if (!res && err) {
                             return false;
                         }
-                        auto cexpr = new CallExpr<String, Vec>{pos};
+                        auto cexpr = new CallExpr<String, Vec>{type, pos};
                         cexpr->name = std::move(name);
                         cexpr->args = std::move(vexpr);
                         expr = cexpr;
                     }
                     else {
+                        if (must_not_var) {
+                            PUSH_ERROR(stack, type, "expect call expr but not", pos, seq.rptr)
+                            return false;
+                        }
                         auto var = new VarExpr<String>{std::move(name), pos};
                         expr = var;
                     }
+                    return true;
+                };
+            }
+
+            auto define_after(auto prev, auto... after) {
+                return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, ErrorStack& stack) {
+                    if (!prev(seq, expr, stack)) {
+                        return false;
+                    }
+                    auto cpy = expr;
+                    bool err = false;
+                    auto call = [&](auto& fn) {
+                        auto start = seq.rptr;
+                        auto res = fn(seq, expr, stack);
+                        if (!res && seq.rptr != start) {
+                            err = true;
+                            return true;
+                        }
+                        return res;
+                    };
+                    while ((... || call(after))) {
+                        if (err) {
+                            delete cpy;
+                            return false;
+                        }
+                        cpy = expr;
+                    }
+                    return true;
+                };
+            }
+
+            template <template <class...> class Vec>
+            struct FuncCallExpr : Expr {
+                Expr* target;
+                Vec<Expr*> args;
+
+                using Expr::Expr;
+
+                Expr* index(size_t i) const override {
+                    if (i == 0) return target;
+                    if (i - 1 >= args.size()) {
+                        return nullptr;
+                    }
+                    return args[i - 1];
+                }
+
+                bool stringify(PushBacker pb) {
+                    helper::append(pb, type_);
+                    return true;
+                }
+
+                ~FuncCallExpr() {
+                    delete target;
+                    for (auto v : args) {
+                        delete v;
+                    }
+                }
+            };
+
+            template <template <class...> class Vec>
+            auto define_callop(const char* ty, auto each) {
+                return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, ErrorStack& stack) {
+                    Vec<Expr*> vexpr;
+                    bool err;
+                    size_t pos = 0;
+                    if (!brackets_each(seq, vexpr, stack, &pos, err, each)) {
+                        return false;
+                    }
+                    auto cexpr = new FuncCallExpr<Vec>{ty, pos};
+                    cexpr->target = expr;
+                    cexpr->args = std::move(vexpr);
+                    expr = cexpr;
                     return true;
                 };
             }

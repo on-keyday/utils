@@ -63,7 +63,7 @@ namespace pscmpl {
         auto exp = expr::define_assignment(
             or_,
             expr::Ops{"=", expr::Op::assign});
-        auto call = expr::define_callexpr<string, vector>(exp, [](auto& v) {
+        auto call = expr::define_callexpr<string, vector>(exp, expr::typeCall, false, [](auto& v) {
             constexpr auto default_ = expr::default_filter();
             return v.current() == ':' || default_(v);
         });
