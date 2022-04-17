@@ -41,6 +41,7 @@ namespace minilang {
                                     return false;
                                 }
                             }
+                            return true;
                         };
                         CHANGE_SCOPE(res, func())
                         if (!res) {
@@ -50,6 +51,7 @@ namespace minilang {
                             break;
                         }
                     }
+                    return true;
                 };
                 if (inits) {
                     auto with_init = [&] {
@@ -93,6 +95,25 @@ namespace minilang {
             if (is(node->expr, "for")) {
                 return eval_for(node);
             }
+            else if (is(node->expr, "let")) {
+                auto let = static_cast<expr::LetExpr<wrap::string>*>(node->expr);
+                if (!let->init_expr) {
+                    error("initial expr must be required", node);
+                    return false;
+                }
+                auto init = node->child(1);
+                RuntimeValue value;
+                if (!eval_expr(value, init)) {
+                    return false;
+                }
+                auto var = current->define_var(let->idname, node);
+                if (!var) {
+                    error("failed to define symbol", node);
+                    return false;
+                }
+                var->value = value;
+                return true;
+            }
             else if (is(node->expr, "program") || is(node->expr, "block")) {
                 if (length(node->children)) {
                     for (auto ch : node->children->node) {
@@ -103,6 +124,7 @@ namespace minilang {
                 }
                 return true;
             }
+            error("unknown node", node);
             return false;
         }
 
@@ -240,20 +262,28 @@ namespace minilang {
                 varnode->symbol = resolve_symbol(current->static_scope, "var", var->name);
                 if (!varnode->symbol) {
                     error("symbol not resolved", varnode);
-                    return false;
+                    return nullptr;
                 }
                 if (varnode->symbol->kind != ScopeKind::global) {
                     error("unresolved symbol must be global but local symbol is here", varnode);
-                    return false;
+                    return nullptr;
                 }
                 varnode->resolved_at = 2;
             }
             auto instance = current->find_var(var->name, varnode->symbol);
             if (!instance) {
                 error("no symbol instance found", varnode);
-                return false;
+                return nullptr;
             }
             return instance;
+        }
+
+        bool Interpreter::eval_as_bool(Node* node, bool& err) {
+            RuntimeValue value;
+            if (!eval_expr(value, node)) {
+                err = true;
+            }
+            return value.get_bool();
         }
     }  // namespace runtime
 }  // namespace minilang

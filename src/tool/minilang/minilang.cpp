@@ -49,8 +49,14 @@ namespace minilang {
             if (let->type_expr) {
                 append_child(node->children, convert_to_node(let->type_expr, scope));
             }
+            else {
+                append_child(node->children, nullptr);
+            }
             if (let->init_expr) {
                 append_child(node->children, convert_to_node(let->init_expr, scope));
+            }
+            else {
+                append_child(node->children, nullptr);
             }
             append_symbol(scope, node, "var", let->idname);
         }

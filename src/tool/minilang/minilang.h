@@ -44,10 +44,10 @@ namespace minilang {
     };
 
     auto define_type(auto exp) {
-        auto fn = [=]<class T>(auto& self, Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
+        auto fn = [=]<class T>(auto& self, Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) -> bool {
             auto pos = expr::save_and_space(seq);
             auto space = expr::bind_space(seq);
-            auto recall = [&]() {
+            auto recall = [&]() -> bool {
                 return self(self, seq, expr, stack);
             };
             TypeExpr* texpr = nullptr;
@@ -56,10 +56,10 @@ namespace minilang {
                 texpr->next = expr;
             };
             if (seq.seek_if("*")) {
-                if (!recall(TypeKind::ptr)) {
+                if (!recall()) {
                     return false;
                 }
-                make_type();
+                make_type(TypeKind::ptr);
                 texpr->val = "*";
             }
             else if (seq.seek_if("[")) {
@@ -128,7 +128,7 @@ namespace minilang {
             or_,
             expr::Ops{"=", expr::Op::assign});
         auto call = expr::define_callexpr<wrap::string, wrap::vector>(exp);
-        auto prim = expr::define_primitive(call);
+        auto prim = expr::define_primitive<wrap::string>(call);
         auto brackets = expr::define_brackets(prim, exp, "brackets");
         auto block = expr::define_block<wrap::string, wrap::vector>(rp2, false, "block");
         auto for_ = expr::define_statement("for", 3, exp, exp, block);
@@ -144,10 +144,10 @@ namespace minilang {
     }
 
     template <class T>
-    bool parse(Sequencer<T>& seq, expr::Expr*& expr) {
+    bool parse(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack stack) {
         expr::PlaceHolder *ph1, *ph2;
         auto parser = define_minilang(seq, ph1, ph2);
-        auto res = parser(seq, expr);
+        auto res = parser(seq, expr, stack);
         delete ph1;
         delete ph2;
         return res;
@@ -206,7 +206,7 @@ namespace minilang {
         }
     };
 
-    size_t length(NodeChildren* ptr) {
+    inline size_t length(NodeChildren* ptr) {
         if (!ptr) return 0;
         return ptr->len();
     }
@@ -243,6 +243,7 @@ namespace minilang {
     }
 
     Node* convert_to_node(expr::Expr* expr, Scope* scope, bool root = false);
+
     namespace runtime {
 
         struct Boolean {
@@ -285,8 +286,9 @@ namespace minilang {
             RuntimeVar* relvar = nullptr;
             std::variant<std::monostate, Boolean, Integer, String, BuiltIn> value;
 
-            auto emplace(auto&&... val) {
-                return value.emplace(std::move(val)...);
+            template <class T>
+            auto emplace(T&& val) {
+                return value.emplace<T>(std::move(val));
             }
 
             bool* as_bool() {
@@ -383,10 +385,11 @@ namespace minilang {
         };
 
         struct Interpreter {
+            wrap::vector<Error> stack;
+
            private:
             RuntimeScope root;
             RuntimeScope* current = nullptr;
-            wrap::vector<Error> stack;
 
             RuntimeVar* resolve(Node* node);
             bool walk_node(Node* node);
@@ -403,8 +406,9 @@ namespace minilang {
             bool eval_binary(RuntimeValue& value, Node* node);
 
            public:
-            bool run(Node* node) {
+            bool eval(Node* node) {
                 current = &root;
+                current->static_scope = node->owns;
                 auto res = walk_node(node);
                 current = nullptr;
                 return res;

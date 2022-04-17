@@ -64,7 +64,7 @@ namespace utils {
                         if (!block(seq, bexpr, stack)) {
                             return delall();
                         }
-                        auto fexpr = new StatExpr{pos.pos};
+                        auto fexpr = new StatExpr{type, pos.pos};
                         fexpr->block = bexpr;
                         fexpr->first = first;
                         fexpr->second = second;
@@ -259,7 +259,7 @@ namespace utils {
                     }
                     pos.ok();
                     String name;
-                    if (!expr::variable(seq, name, seq.pos, filter)) {
+                    if (!expr::variable(seq, name, seq.rptr, filter)) {
                         PUSH_ERROR(stack, keyword, "expect identifier name but not", pos.pos, seq.rptr)
                         return false;
                     }

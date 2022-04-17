@@ -104,8 +104,11 @@ add_executable(netutil "src/tool/netutil/netmain.cpp"
                        "src/tool/netutil/debug_log.cpp"
                        "src/tool/netutil/tagcmd.cpp")
 add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp"
-                      "src/tool/pscmpl/compile.cpp"
-                      "src/tool/pscmpl/minilang.cpp")
+                      "src/tool/pscmpl/compile.cpp")
+add_executable(minilang "src/tool/minilang/minilang.cpp"
+                        "src/tool/minilang/minilang_runtime.cpp"
+                        "src/tool/minilang/main.cpp")
+
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
@@ -217,6 +220,7 @@ target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
 target_link_libraries(netutil utils)
 target_link_libraries(pscmpl utils)
+target_link_libraries(minilang utils)
 
 if(WIN32)
 target_link_libraries(netcore libssl libcrypto ws2_32)
