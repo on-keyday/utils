@@ -95,10 +95,55 @@ namespace minilang {
                 texpr->val = std::move(name);
             }
             expr = texpr;
+            pos.ok();
             return true;
         };
         return [fn]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             return fn(fn, seq, expr, stack);
+        };
+    }
+
+    struct FuncExpr : expr::Expr {
+        expr::Expr* fsig = nullptr;
+        expr::Expr* block = nullptr;
+
+        using Expr::Expr;
+
+        Expr* index(size_t i) const override {
+            if (i == 0) return fsig;
+            if (i == 1) return block;
+            return nullptr;
+        }
+    };
+
+    auto define_funcsig(auto tsig, auto block) {
+        auto csig = expr::define_callexpr<wrap::string, wrap::vector>(tsig, "fdef", true);
+        return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
+            auto pos = expr::save_and_space(seq);
+            if (!seq.seek_if("func")) {
+                return false;
+            }
+            auto space = expr::bind_space(seq);
+            if (!space()) {
+                return false;
+            }
+            pos.ok();
+            if (!csig(seq, expr, stack)) {
+                return false;
+            }
+            space();
+            auto fexpr = new FuncExpr{"func", pos.pos};
+            fexpr->fsig = expr;
+            expr = nullptr;
+            if (seq.current() == '{') {
+                if (!block(seq, expr, stack)) {
+                    delete fexpr;
+                    return false;
+                }
+                fexpr->block = expr;
+            }
+            expr = fexpr;
+            return true;
         };
     }
 
@@ -138,7 +183,8 @@ namespace minilang {
         auto let = expr::define_vardef<wrap::string>("let", "let", exp, type_);
         auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
         auto exprstat = expr::define_wrapexpr("expr_stat", exp);
-        auto stat = expr::define_statements(for_, if_, typedef_, let, exprstat);
+        auto funcsig = define_funcsig(type_, block);
+        auto stat = expr::define_statements(for_, if_, typedef_, let, funcsig, exprstat);
 
         ph = expr::make_replacement(seq, brackets);
         ph2 = expr::make_replacement(seq, stat);
