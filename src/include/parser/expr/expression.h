@@ -776,6 +776,45 @@ namespace utils {
                 }
             };
 
+            template <class T, template <class...> class Vec, class Callback>
+            bool bracket_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, bool& err, Callback&& callback) {
+                auto pos = save_and_space(seq);
+                if (!seq.consume_if('(')) {
+                    return false;
+                }
+                pos.ok();
+                auto space = bind_space(seq);
+                space();
+                auto delexpr = [&]() {
+                    for (auto v : vexpr) {
+                        delete v;
+                    }
+                };
+                space();
+                while (true) {
+                    expr::Expr* expr = nullptr;
+                    if (seq.consume_if(')')) {
+                        break;
+                    }
+                    if (vexpr.size()) {
+                        if (!seq.consume_if(',')) {
+                            delexpr();
+                            err = true;
+                            return false;
+                        }
+                        space();
+                    }
+                    if (!callback(seq, expr, stack)) {
+                        delexpr();
+                        err = true;
+                        return false;
+                    }
+                    vexpr.push_back(expr);
+                }
+                space();
+                return true;
+            }
+
             template <class String, template <class...> class Vec, class Fn, class Filter = decltype(default_filter())>
             auto define_callexpr(Fn next, Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
@@ -786,33 +825,12 @@ namespace utils {
                         return false;
                     }
                     space();
-                    if (seq.consume_if('(')) {
-                        Vec<Expr*> vexpr;
-                        auto delexpr = [&]() {
-                            for (auto v : vexpr) {
-                                delete v;
-                            }
-                        };
-                        space();
-                        while (true) {
-                            if (seq.consume_if(')')) {
-                                break;
-                            }
-                            if (vexpr.size()) {
-                                if (!seq.consume_if(',')) {
-                                    delexpr();
-                                    return false;
-                                }
-                                space();
-                            }
-                            if (!next(seq, expr, stack)) {
-                                delexpr();
-                                return false;
-                            }
-                            vexpr.push_back(expr);
-                            expr = nullptr;
+                    Vec<expr::Expr*> vexpr;
+                    bool err = false;
+                    if (auto res = bracket_each(seq, vexpr, stack, err, next); res || err) {
+                        if (!res && err) {
+                            return false;
                         }
-                        space();
                         auto cexpr = new CallExpr<String, Vec>{pos};
                         cexpr->name = std::move(name);
                         cexpr->args = std::move(vexpr);

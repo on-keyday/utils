@@ -170,7 +170,7 @@ namespace minilang {
     struct Scope {
         Symbols* symbols = nullptr;
         Scope* parent = nullptr;
-        ScopeKind kind;
+        ScopeKind kind = ScopeKind::local;
     };
 
     inline Scope* child_scope(Scope* parent, ScopeKind kind) {
@@ -344,10 +344,10 @@ namespace minilang {
         struct RuntimeScope;
 
         struct RuntimeVar {
-            Node* node;
+            Node* node = nullptr;
             wrap::string name;
             RuntimeValue value;
-            RuntimeScope* scope;
+            RuntimeScope* scope = nullptr;
         };
 
         struct RuntimeScope {
@@ -409,7 +409,7 @@ namespace minilang {
            public:
             bool eval(Node* node) {
                 current = &root;
-                current->static_scope = node->owns;
+                current->static_scope = node->belongs;
                 auto res = walk_node(node);
                 current = nullptr;
                 return res;
