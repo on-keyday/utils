@@ -742,6 +742,19 @@ namespace utils {
                 };
             }
 
+            template <class Fn>
+            auto define_wrapexpr(const char* type, Fn fn) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    if (!fn(seq, expr, stack)) {
+                        return false;
+                    }
+                    auto wexpr = new WrapExpr{type, expr->pos()};
+                    wexpr->child = expr;
+                    expr = wexpr;
+                    return true;
+                };
+            }
+
             template <class String, template <class...> class Vec>
             struct CallExpr : Expr {
                 String name;

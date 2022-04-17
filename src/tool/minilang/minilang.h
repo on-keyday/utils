@@ -136,7 +136,8 @@ namespace minilang {
         auto type_ = define_type(exp);
         auto let = expr::define_vardef<wrap::string>("let", "let", exp, type_);
         auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
-        auto stat = expr::define_statements(for_, if_, typedef_, let);
+        auto exprstat = expr::define_wrapexpr("expr_stat", exp);
+        auto stat = expr::define_statements(for_, if_, typedef_, let, exprstat);
 
         ph = expr::make_replacement(seq, brackets);
         ph2 = expr::make_replacement(seq, stat);
@@ -212,7 +213,7 @@ namespace minilang {
     }
 
     inline void append_child(NodeChildren*& nch, Node* child) {
-        if (nch) {
+        if (!nch) {
             nch = new NodeChildren{};
         }
         nch->node.push_back(child);

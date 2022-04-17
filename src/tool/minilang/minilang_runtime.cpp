@@ -124,6 +124,13 @@ namespace minilang {
                 }
                 return true;
             }
+            else if (is(node->expr, "expr_stat")) {
+                RuntimeValue val;
+                if (!eval_expr(val, node->child(0))) {
+                    return false;
+                }
+                return true;
+            }
             error("unknown node", node);
             return false;
         }
