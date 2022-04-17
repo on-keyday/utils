@@ -9,10 +9,10 @@
 // expression - simple expression
 #pragma once
 
-#include "../../helper/space.h"
-#include "../../number/prefix.h"
-#include "../../escape/read_string.h"
+#include "simple_parse.h"
 #include "../../helper/equal.h"
+#include "interface.h"
+#include "simple_parse.h"
 
 namespace utils {
     namespace parser {
@@ -24,218 +24,6 @@ namespace utils {
             constexpr auto typeVariable = "variable";
             constexpr auto typeCall = "call";
             constexpr auto typeBinary = "binary";
-
-            struct PushBacker {
-               private:
-                void* ptr;
-                void (*push_back_)(void*, std::uint8_t);
-
-                template <class T>
-                static void push_back_fn(void* self, std::uint8_t c) {
-                    static_cast<T*>(self)->push_back(c);
-                }
-
-               public:
-                PushBacker(const PushBacker& b)
-                    : ptr(b.ptr), push_back_(b.push_back_) {}
-
-                template <class T>
-                PushBacker(T& pb)
-                    : ptr(std::addressof(pb)), push_back_(push_back_fn<T>) {}
-
-                void push_back(std::uint8_t c) {
-                    push_back_(ptr, c);
-                }
-            };
-
-            struct ErrorStack {
-               private:
-                void* ptr = nullptr;
-                void (*pusher)(void* ptr, const char* type, const char* msg, const char* loc, size_t line, size_t begin, size_t end, void* aditional) = nullptr;
-                void (*poper)(void* ptr, size_t index) = nullptr;
-                size_t (*indexer)(void* ptr) = nullptr;
-
-                template <class T>
-                static void push_fn(void* ptr, const char* type, const char* msg, const char* loc, size_t line, size_t begin, size_t end, void* aditional) {
-                    static_cast<T*>(ptr)->push(type, msg, loc, line, begin, end, aditional);
-                }
-
-                template <class T>
-                static void pop_fn(void* ptr, size_t index) {
-                    static_cast<T*>(ptr)->pop(index);
-                }
-
-                template <class T>
-                static size_t index_fn(void* ptr) {
-                    return static_cast<T*>(ptr)->index();
-                }
-
-               public:
-                ErrorStack() {}
-                ErrorStack(const ErrorStack& b)
-                    : ptr(b.ptr),
-                      pusher(b.pusher),
-                      poper(b.poper),
-                      indexer(b.indexer) {}
-
-                template <class T>
-                ErrorStack(T& pb)
-                    : ptr(std::addressof(pb)),
-                      pusher(push_fn<T>),
-                      poper(pop_fn<T>),
-                      indexer(index_fn<T>) {}
-
-                bool push(const char* type, const char* msg, size_t begin, size_t end, const char* loc, size_t line, void* additional = nullptr) {
-                    if (pusher) {
-                        pusher(ptr, type, msg, loc, line, begin, end, additional);
-                    }
-                    return false;
-                }
-
-                bool pop(size_t index) {
-                    if (poper) {
-                        poper(ptr, index);
-                    }
-                    return true;
-                }
-
-                size_t index() {
-                    return indexer(ptr);
-                }
-            };
-
-            template <class Str>
-            struct StackObj {
-                Str type;
-                Str msg;
-                Str loc;
-                size_t line;
-                size_t begin;
-                size_t end;
-                void* additional;
-            };
-
-            template <class String, template <class...> class Vec>
-            struct Errors {
-                Vec<StackObj<String>> stack;
-                void push(auto... v) {
-                    stack.push_back(StackObj<String>{v...});
-                }
-
-                void pop(size_t) {}
-                size_t index() {
-                    return 0;
-                }
-            };
-
-#define PUSH_ERROR(stack, type, msg, begin, end) stack.push(type, msg, begin, end, __FILE__, __LINE__, nullptr);
-#define PUSH_ERRORA(stack, type, msg, begin, end, additional) stack.push(type, msg, begin, end, __FILE__, __LINE__, additional);
-
-            struct StartPos {
-                size_t start;
-                size_t pos;
-                bool reset;
-                size_t* ptr;
-                constexpr StartPos() {}
-                StartPos(StartPos&& p) {
-                    ::memcpy(this, &p, sizeof(StartPos));
-                    p.reset = false;
-                    p.ptr = nullptr;
-                }
-
-                bool ok() {
-                    reset = false;
-                    return true;
-                }
-
-                bool fatal() {
-                    reset = false;
-                    return false;
-                }
-
-                bool err() {
-                    reset = false;
-                    *ptr = start;
-                    return false;
-                }
-
-                ~StartPos() {
-                    if (reset && ptr) {
-                        err();
-                    }
-                }
-            };
-            template <class T>
-            [[nodiscard]] StartPos save(Sequencer<T>& seq) {
-                StartPos pos;
-                pos.start = seq.rptr;
-                pos.reset = true;
-                pos.pos = seq.rptr;
-                pos.ptr = &seq.rptr;
-                return pos;
-            }
-
-            template <class T>
-            [[nodiscard]] StartPos save_and_space(Sequencer<T>& seq, bool line = true) {
-                StartPos pos;
-                pos.start = seq.rptr;
-                pos.reset = true;
-                helper::space::consume_space(seq, line);
-                pos.pos = seq.rptr;
-                pos.ptr = &seq.rptr;
-                return pos;
-            }
-
-            template <class T>
-            auto bind_space(Sequencer<T>& seq) {
-                return [&](bool line = true) {
-                    return helper::space::consume_space(seq, line);
-                };
-            }
-
-            template <class T>
-            bool boolean(Sequencer<T>& seq, bool& v, size_t& pos) {
-                auto pos_ = save_and_space(seq);
-                pos = pos_.pos;
-                if (seq.seek_if("true")) {
-                    v = true;
-                }
-                else if (seq.seek_if("false")) {
-                    v = false;
-                }
-                else {
-                    return false;
-                }
-                if (!helper::space::consume_space(seq, true) &&
-                    number::is_alnum(seq.current())) {
-                    return false;
-                }
-                return pos_.ok();
-            }
-
-            template <class T, class Int>
-            bool integer(Sequencer<T>& seq, Int& v, size_t& pos, int& pf) {
-                auto pos_ = save_and_space(seq);
-                pos = pos_.pos;
-                if (!number::prefix_integer(seq, v, &pf)) {
-                    return false;
-                }
-                if (!helper::space::consume_space(seq, true) &&
-                    number::is_alnum(seq.current())) {
-                    return false;
-                }
-                return pos_.ok();
-            }
-
-            template <class T, class String>
-            bool string(Sequencer<T>& seq, String& str, size_t& pos) {
-                auto pos_ = save_and_space(seq);
-                if (!escape::read_string(str, seq, escape::ReadFlag::escape)) {
-                    return false;
-                }
-                helper::space::consume_space(seq, true);
-                return pos_.ok();
-            }
 
             struct Expr {
                protected:
@@ -287,25 +75,6 @@ namespace utils {
                     return true;
                 }
             };
-
-            constexpr auto default_filter() {
-                return []<class T>(Sequencer<T>& seq) {
-                    auto c = seq.current();
-                    return number::is_alnum(c) || c == '_';
-                };
-            }
-
-            template <class String, class T, class Filter = decltype(default_filter())>
-            bool variable(Sequencer<T>& seq, String& name, size_t& pos, Filter&& filter = default_filter()) {
-                auto pos_ = save_and_space(seq);
-                pos = pos_.pos;
-                if (!helper::read_whilef<true>(name, seq, [&](auto&&) {
-                        return filter(seq);
-                    })) {
-                    return false;
-                }
-                return pos_.ok();
-            }
 
             template <class String, class T, class Filter = decltype(default_filter())>
             bool variable(Sequencer<T>& seq, Expr*& expr, Filter&& filter = default_filter()) {
@@ -777,7 +546,7 @@ namespace utils {
             };
 
             template <class T, template <class...> class Vec, class Callback>
-            bool bracket_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, bool& err, Callback&& callback) {
+            bool brackets_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, bool& err, Callback&& callback) {
                 auto pos = save_and_space(seq);
                 if (!seq.consume_if('(')) {
                     return false;
@@ -827,7 +596,7 @@ namespace utils {
                     space();
                     Vec<expr::Expr*> vexpr;
                     bool err = false;
-                    if (auto res = bracket_each(seq, vexpr, stack, err, next); res || err) {
+                    if (auto res = brackets_each(seq, vexpr, stack, err, next); res || err) {
                         if (!res && err) {
                             return false;
                         }
