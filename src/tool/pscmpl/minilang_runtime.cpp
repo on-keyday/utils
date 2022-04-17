@@ -104,5 +104,10 @@ namespace minilang {
                 return true;
             }
         }
+
+        bool Interpreter::eval_expr(RuntimeValue& value, Node* node) {
+            if (is(node->expr, "binary")) {
+            }
+        }
     }  // namespace runtime
 }  // namespace minilang

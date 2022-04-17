@@ -287,6 +287,9 @@ namespace minilang {
         struct RuntimeValue {
             std::variant<std::monostate, Boolean, Integer, String, BuiltIn> value;
             OpFilter reflect(const RuntimeValue& other) const {
+                if (value.index() != other.value.index()) {
+                    return OpFilter::none;
+                }
                 if (std::holds_alternative<Boolean>(value)) {
                     return OpFilter::and_ | OpFilter::or_;
                 }
@@ -306,6 +309,8 @@ namespace minilang {
             RuntimeScope* current = nullptr;
             bool walk_node(Node* node);
             bool eval_for(Node* node);
+
+            bool eval_expr(RuntimeValue& value, Node* node);
 
             bool eval_as_bool(Node* node, bool& err);
         };

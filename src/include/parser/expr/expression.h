@@ -523,10 +523,14 @@ namespace utils {
                 }
             };
 
-            template <class T, class Callback>
-            int binexpr(Sequencer<T>& seq, Expr*& expr, const char* expect, Op op, Callback&& next, ErrorStack& stack) {
+            template <class T, class Callback, class AddCheck>
+            int binexpr(Sequencer<T>& seq, Expr*& expr, const char* expect, Op op, AddCheck&& check, Callback&& next, ErrorStack& stack) {
                 size_t pos = seq.rptr;
                 if (!seq.seek_if(expect)) {
+                    return 0;
+                }
+                if (!check(seq)) {
+                    seq.rptr = pos;
                     return 0;
                 }
                 auto bexpr = new BinExpr(pos);
@@ -546,11 +550,12 @@ namespace utils {
 
             template <class T>
             auto make_expect(Sequencer<T>& seq, Expr*& expr, auto&& next, bool& err, ErrorStack& stack) {
-                return [&](const char* expect, Op op) {
+                return [&](auto& ops) {
                     if (err) {
                         return false;
                     }
-                    auto res = binexpr(seq, expr, expect, op, next, stack);
+                    auto res = binexpr(
+                        seq, expr, ops.expect, ops.op, [&](auto& seq) { return ops.check(seq); }, next, stack);
                     if (res < 0) {
                         err = true;
                         return false;
@@ -562,6 +567,11 @@ namespace utils {
             struct Ops {
                 const char* expect = nullptr;
                 Op op;
+
+                template <class T>
+                bool check(Sequencer<T>& seq) const {
+                    return true;
+                }
             };
 
             template <class String, class Filter = decltype(default_filter())>
@@ -596,7 +606,7 @@ namespace utils {
                     auto expect = make_expect(seq, expr, next, err, stack);
                     bool cont = true;
                     while (cont) {
-                        cont = (... || expect(ops.expect, ops.op));
+                        cont = (... || expect(ops));
                     }
                     if (err) {
                         expr = nullptr;
@@ -655,7 +665,7 @@ namespace utils {
                         err, stack);
                     bool cont = true;
                     while (cont) {
-                        cont = (... || expect(ops.expect, ops.op));
+                        cont = (... || expect(ops));
                     }
                     if (err) {
                         expr = nullptr;
