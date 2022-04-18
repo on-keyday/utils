@@ -247,10 +247,14 @@ namespace minilang {
                 }
                 auto fnode = value.as_function();
                 if (!fnode) {
+                    auto builtin = value.as_builtin();
+                    if (builtin) {
+                        return invoke_builtin(builtin, node);
+                    }
                     error("expect function but not", node);
                     return false;
                 }
-                return call_function(fnode, node);
+                return call_function(fnode, node, value);
             }
             else if (is(node->expr, expr::typeVariable)) {
                 auto var = resolve(node);
@@ -318,7 +322,7 @@ namespace minilang {
             return value.get_bool();
         }
 
-        bool Interpreter::call_function(Node* fnode, Node* node) {
+        bool Interpreter::call_function(Node* fnode, Node* node, RuntimeValue& value) {
             auto instance = fnode->child(0);  // include func name
             auto block = fnode->child(1);     // include block
             auto argument = node->children;
@@ -334,7 +338,6 @@ namespace minilang {
                         error("defined here", fnode);
                         return false;
                     }
-                    RuntimeValue value;
                     if (!eval_expr(value, argument->node[i])) {
                         return false;
                     }
@@ -355,7 +358,40 @@ namespace minilang {
             current = &scope;
             auto res = walk_node(block);
             current = scope.parent;
+            value.emplace(std::monostate{});  // now return statement is not surpported
             return res;
+        }
+
+        bool Interpreter::add_builtin(wrap::string key, BuiltInProc proc, void* obj) {
+            auto var = root.define_var(key, nullptr);
+            if (!var) {
+                return false;
+            }
+            var->value.emplace(BuiltIn{
+                .node = nullptr,
+                .name = key,
+                .object = obj,
+                .proc = proc,
+
+            });
+            return true;
+        }
+
+        bool Interpreter::invoke_builtin(BuiltIn* builtin, Node* node) {
+            auto argument = node->children;
+            size_t i = 1;
+            RuntimeEnv env;
+            if (argument) {
+                for (; i < argument->node.size(); i++) {
+                    RuntimeValue value;
+                    if (!eval_expr(value, argument->node[i])) {
+                        return false;
+                    }
+                    env.args.push_back(std::move(value));
+                }
+            }
+            builtin->proc(builtin->object, builtin->name.c_str(), &env);
+            return !env.abort;
         }
     }  // namespace runtime
 }  // namespace minilang

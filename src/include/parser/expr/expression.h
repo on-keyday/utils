@@ -479,6 +479,11 @@ namespace utils {
                     return i == 0 ? child : nullptr;
                 }
 
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, type_);
+                    return true;
+                }
+
                 ~WrapExpr() {
                     delete child;
                 }

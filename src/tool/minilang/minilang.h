@@ -185,7 +185,8 @@ namespace minilang {
         auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
         auto exprstat = expr::define_wrapexpr("expr_stat", exp);
         auto funcsig = define_funcsig(arg, block);
-        auto stat = expr::define_statements(for_, if_, typedef_, let, funcsig, exprstat);
+        auto return_ = expr::define_return("return", "return", exp);
+        auto stat = expr::define_statements(for_, if_, typedef_, let, funcsig, return_, exprstat);
 
         ph = expr::make_replacement(seq, brackets);
         ph2 = expr::make_replacement(seq, stat);
@@ -310,10 +311,15 @@ namespace minilang {
             wrap::string value;
         };
 
+        struct RuntimeEnv;
+
+        using BuiltInProc = void (*)(void* obj, const char* key, RuntimeEnv* args);
+
         struct BuiltIn {
             Node* node;
+            wrap::string name;
             void* object;
-            void (*proc)(void* obj, const char* key);
+            BuiltInProc proc;
         };
 
         struct Function {
@@ -365,6 +371,13 @@ namespace minilang {
                 return nullptr;
             }
 
+            BuiltIn* as_builtin() {
+                if (auto ptr = std::get_if<4>(&value)) {
+                    return ptr;
+                }
+                return nullptr;
+            }
+
             Node* as_function() {
                 if (auto ptr = std::get_if<5>(&value)) {
                     return ptr->node;
@@ -398,6 +411,11 @@ namespace minilang {
                 }
                 return OpFilter::none;
             }
+        };
+
+        struct RuntimeEnv {
+            wrap::vector<RuntimeValue> args;
+            bool abort = false;
         };
 
         struct RuntimeScope;
@@ -444,12 +462,27 @@ namespace minilang {
             Node* node;
         };
 
+        enum class BackTo {
+            none,
+            loop,
+            func,
+        };
+
         struct Interpreter {
             wrap::vector<Error> stack;
 
            private:
             RuntimeScope root;
             RuntimeScope* current = nullptr;
+
+            BackTo state = BackTo::none;
+
+            bool add_builtin(wrap::string key, BuiltInProc proc, void* obj);
+
+            template <class T>
+            bool add_builtin(const char* key, void (*proc)(T* obj, const char* key, RuntimeEnv* args), T* obj) {
+                return add_builtin(std::move(key), reinterpret_cast<BuiltInProc>(proc), obj);
+            }
 
             RuntimeVar* resolve(Node* node);
             bool walk_node(Node* node);
@@ -459,13 +492,15 @@ namespace minilang {
 
             bool eval_as_bool(Node* node, bool& err);
 
-            bool call_function(Node* fnode, Node* node);
+            bool call_function(Node* fnode, Node* node, RuntimeValue& val);
 
             void error(auto msg, Node* node) {
                 stack.push_back({msg, node});
             }
 
             bool eval_binary(RuntimeValue& value, Node* node);
+
+            bool invoke_builtin(BuiltIn* builtin, Node* node);
 
            public:
             bool eval(Node* node) {

@@ -299,6 +299,26 @@ namespace utils {
                     return true;
                 };
             }
+
+            auto define_return(const char* tyname, const char* keyword, auto exp) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    auto pos = save_and_space(seq);
+                    if (!seq.seek_if(keyword)) {
+                        return false;
+                    }
+                    auto space = bind_space(seq);
+                    if (!space()) {
+                        return false;
+                    }
+                    if (!exp(seq, expr, stack)) {
+                        return false;
+                    }
+                    auto wexpr = new WrapExpr{tyname, pos.pos};
+                    wexpr->child = expr;
+                    expr = wexpr;
+                    return true;
+                };
+            };
         }  // namespace expr
     }      // namespace parser
 }  // namespace utils
