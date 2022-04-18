@@ -310,6 +310,7 @@ namespace utils {
                     if (!space()) {
                         return false;
                     }
+                    pos.ok();
                     if (!exp(seq, expr, stack)) {
                         return false;
                     }
