@@ -55,12 +55,12 @@ int main(int argc, char** argv) {
             cerr << "type: " << v.type << "\n";
             cerr << v.msg << "\n";
             if (opt.dbginfo) {
-                cout << "src: " << v.loc << ":" << v.line << "\n";
+                cout << "log location: " << v.loc << ":" << v.line << "\n";
             }
             wrap::string err;
             seq.rptr = v.end;
             auto linepos = hlp::write_src_loc(err, seq);
-            cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
+            cout << "src: " << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
             cout << err << "\n";
         }
         return -1;
