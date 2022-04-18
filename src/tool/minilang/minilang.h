@@ -116,8 +116,8 @@ namespace minilang {
         }
     };
 
-    auto define_funcsig(auto tsig, auto block) {
-        auto csig = expr::define_callexpr<wrap::string, wrap::vector>(tsig, "fdef", true);
+    auto define_funcsig(auto arg, auto block) {
+        auto csig = expr::define_callexpr<wrap::string, wrap::vector>(arg, "fdef", true);
         return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             auto pos = expr::save_and_space(seq);
             if (!seq.seek_if("func")) {
@@ -181,9 +181,10 @@ namespace minilang {
         auto if_ = expr::define_statement("if", 2, exp, exp, block);
         auto type_ = define_type(exp);
         auto let = expr::define_vardef<wrap::string>("let", "let", exp, type_);
+        auto arg = expr::define_vardef<wrap::string>("arg", nullptr, exp, type_);
         auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
         auto exprstat = expr::define_wrapexpr("expr_stat", exp);
-        auto funcsig = define_funcsig(type_, block);
+        auto funcsig = define_funcsig(arg, block);
         auto stat = expr::define_statements(for_, if_, typedef_, let, funcsig, exprstat);
 
         ph = expr::make_replacement(seq, brackets);
@@ -315,6 +316,10 @@ namespace minilang {
             void (*proc)(void* obj, const char* key);
         };
 
+        struct Function {
+            Node* node;
+        };
+
         enum class OpFilter {
             none = 0,
             add = 0x1,
@@ -332,7 +337,7 @@ namespace minilang {
 
         struct RuntimeValue {
             RuntimeVar* relvar = nullptr;
-            std::variant<std::monostate, Boolean, Integer, String, BuiltIn> value;
+            std::variant<std::monostate, Boolean, Integer, String, BuiltIn, Function> value;
 
             template <class T>
             auto emplace(T&& val) {
@@ -356,6 +361,13 @@ namespace minilang {
             wrap::string* as_str() {
                 if (auto ptr = std::get_if<3>(&value)) {
                     return &ptr->value;
+                }
+                return nullptr;
+            }
+
+            Node* as_function() {
+                if (auto ptr = std::get_if<5>(&value)) {
+                    return ptr->node;
                 }
                 return nullptr;
             }
@@ -446,6 +458,8 @@ namespace minilang {
             bool eval_expr(RuntimeValue& value, Node* node);
 
             bool eval_as_bool(Node* node, bool& err);
+
+            bool call_function(Node* fnode, Node* node);
 
             void error(auto msg, Node* node) {
                 stack.push_back({msg, node});

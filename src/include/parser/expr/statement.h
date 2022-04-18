@@ -245,25 +245,35 @@ namespace utils {
                     helper::append(pb, idname);
                     return true;
                 }
+
+                Expr* index(size_t i) const override {
+                    if (i == 0) return type_expr;
+                    if (i == 1) return init_expr;
+                    return nullptr;
+                }
             };
 
             template <class String, class Filter = decltype(default_filter())>
             auto define_vardef(const char* tyname, const char* keyword, auto exp, auto type_, const char* type_sig = ":", const char* init_sig = "=", Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto pos = save_and_space(seq);
-                    if (!seq.seek_if(keyword)) {
-                        return false;
-                    }
                     auto space = bind_space(seq);
-                    if (!space()) {
-                        return false;
+                    if (keyword) {
+                        if (!seq.seek_if(keyword)) {
+                            return false;
+                        }
+
+                        if (!space()) {
+                            return false;
+                        }
+                        pos.ok();
                     }
-                    pos.ok();
                     String name;
                     if (!expr::variable(seq, name, seq.rptr, filter)) {
                         PUSH_ERROR(stack, keyword, "expect identifier name but not", pos.pos, seq.rptr)
                         return false;
                     }
+                    pos.ok();
                     space();
                     Expr *texpr = nullptr, *eexpr = nullptr;
                     if (type_sig && seq.seek_if(type_sig)) {

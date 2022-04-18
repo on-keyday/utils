@@ -44,7 +44,7 @@ namespace minilang {
             }
             append_child(node->children, convert_to_node(block, node->owns));
         }
-        else if (is(expr, "let")) {
+        else if (is(expr, "let") || is(expr, "arg")) {
             auto let = static_cast<expr::LetExpr<wrap::string>*>(expr);
             if (let->type_expr) {
                 append_child(node->children, convert_to_node(let->type_expr, scope));
@@ -86,6 +86,14 @@ namespace minilang {
                 }
             }
             append_each();
+        }
+        else if (is(expr, "func")) {
+            auto fexpr = static_cast<FuncExpr*>(expr);
+            auto signature = static_cast<expr::CallExpr<wrap::string, wrap::vector>*>(fexpr->fsig);
+            append_symbol(scope, node, "var", signature->name);
+            node->owns = child_scope(scope, ScopeKind::func_local);
+            append_child(node->children, convert_to_node(fexpr->fsig, node->owns));
+            append_child(node->children, convert_to_node(fexpr->block, node->owns));
         }
         else {
             append_each();

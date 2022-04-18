@@ -124,6 +124,19 @@ namespace minilang {
                 }
                 return true;
             }
+            else if (is(node->expr, "func")) {
+                auto signode = node->child(0);
+                auto signature = static_cast<expr::CallExpr<wrap::string, wrap::vector>*>(signode->expr);
+                auto func = current->define_var(signature->name, node);
+                if (!func) {
+                    error("failed to define function", node);
+                    return false;
+                }
+                func->value.emplace(Function{
+                    .node = node,
+                });
+                return true;
+            }
             else if (is(node->expr, "expr_stat")) {
                 RuntimeValue val;
                 if (!eval_expr(val, node->child(0))) {
@@ -227,6 +240,18 @@ namespace minilang {
             if (is(node->expr, "binary")) {
                 return eval_binary(value, node);
             }
+            else if (is(node->expr, "fcall")) {
+                auto target = node->child(0);
+                if (!eval_expr(value, target)) {
+                    return false;
+                }
+                auto fnode = value.as_function();
+                if (!fnode) {
+                    error("expect function but not", node);
+                    return false;
+                }
+                return call_function(fnode, node);
+            }
             else if (is(node->expr, expr::typeVariable)) {
                 auto var = resolve(node);
                 if (!var) {
@@ -291,6 +316,46 @@ namespace minilang {
                 err = true;
             }
             return value.get_bool();
+        }
+
+        bool Interpreter::call_function(Node* fnode, Node* node) {
+            auto instance = fnode->child(0);  // include func name
+            auto block = fnode->child(1);     // include block
+            auto argument = node->children;
+            size_t i = 1;
+            RuntimeScope scope;
+            scope.static_scope = fnode->owns;
+            scope.parent = &root;
+            if (argument) {
+                for (; i < argument->node.size(); i++) {
+                    auto arg = instance->child(i - 1);
+                    if (!arg) {
+                        error("too many arguments are provided", node);
+                        error("defined here", fnode);
+                        return false;
+                    }
+                    RuntimeValue value;
+                    if (!eval_expr(value, argument->node[i])) {
+                        return false;
+                    }
+                    auto argexpr = static_cast<expr::LetExpr<wrap::string>*>(arg->expr);
+                    auto def = scope.define_var(argexpr->idname, arg);
+                    if (!def) {
+                        error("multiple define detected", arg);
+                        return false;
+                    }
+                }
+            }
+            if (instance->child(i)) {
+                error("too few arguments are provided", node);
+                error("defined here", fnode);
+                return false;
+            }
+            scope.parent = current;
+            current = &scope;
+            auto res = walk_node(block);
+            current = scope.parent;
+            return res;
         }
     }  // namespace runtime
 }  // namespace minilang

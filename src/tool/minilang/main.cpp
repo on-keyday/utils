@@ -65,6 +65,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     minilang::Scope scope;
+    scope.kind = minilang::ScopeKind::global;
     auto node = minilang::convert_to_node(expr, &scope, true);
     minilang::runtime::Interpreter inpret;
     if (!inpret.eval(node)) {
