@@ -4,10 +4,13 @@ let value = 20
 value=56
 
 func print(value) {
-    return 0
     __builtin_print(value)
+    return "omega?\n"
 }
 
 
-print(value)
+value = "hello world\n"
 
+value = print(value)
+
+print(value)

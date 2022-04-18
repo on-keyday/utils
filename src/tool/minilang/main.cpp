@@ -68,6 +68,14 @@ int main(int argc, char** argv) {
     scope.kind = minilang::ScopeKind::global;
     auto node = minilang::convert_to_node(expr, &scope, true);
     minilang::runtime::Interpreter inpret;
+    inpret.add_builtin(
+        "__builtin_print", nullptr, [](void*, const char*, minilang::runtime::RuntimeEnv* env) {
+            for (auto& arg : env->args) {
+                if (auto str = arg.as_str()) {
+                    cout << *str;
+                }
+            }
+        });
     if (!inpret.eval(node)) {
         report("eval error!");
         for (auto& v : inpret.stack) {
@@ -78,6 +86,9 @@ int main(int argc, char** argv) {
             cout << err << "\n";
         }
         return -1;
+    }
+    if (opt.dbginfo) {
+        cout << "eval succeeded\n";
     }
     return 0;
 }

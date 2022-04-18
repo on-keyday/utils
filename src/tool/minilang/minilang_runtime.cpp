@@ -25,7 +25,7 @@
     }
 namespace minilang {
     namespace runtime {
-        bool Interpreter::eval_for(Node* node) {
+        bool Interpreter::eval_for(Node* node, RuntimeValue& value) {
             auto len = length(node->children);
             auto cond_repeat = [&](Node* inits, Node* cond, Node* rep, Node* block) {
                 auto repeat = [&] {
@@ -37,7 +37,7 @@ namespace minilang {
                                     brek = true;
                                     return true;
                                 }
-                                if (!walk_node(block)) {
+                                if (!walk_node(block, value)) {
                                     return false;
                                 }
                             }
@@ -55,7 +55,7 @@ namespace minilang {
                 };
                 if (inits) {
                     auto with_init = [&] {
-                        if (!walk_node(inits)) {
+                        if (!walk_node(inits, value)) {
                             return false;
                         }
                         return repeat();
@@ -91,9 +91,9 @@ namespace minilang {
             return false;
         }
 
-        bool Interpreter::walk_node(Node* node) {
+        bool Interpreter::walk_node(Node* node, RuntimeValue& value) {
             if (is(node->expr, "for")) {
-                return eval_for(node);
+                return eval_for(node, value);
             }
             else if (is(node->expr, "let")) {
                 auto let = static_cast<expr::LetExpr<wrap::string>*>(node->expr);
@@ -117,8 +117,11 @@ namespace minilang {
             else if (is(node->expr, "program") || is(node->expr, "block")) {
                 if (length(node->children)) {
                     for (auto ch : node->children->node) {
-                        if (!walk_node(ch)) {
+                        if (!walk_node(ch, value)) {
                             return false;
+                        }
+                        if (state != BackTo::none) {
+                            break;
                         }
                     }
                 }
@@ -135,6 +138,14 @@ namespace minilang {
                 func->value.emplace(Function{
                     .node = node,
                 });
+                return true;
+            }
+            else if (is(node->expr, "return")) {
+                auto val = node->child(0);
+                if (!eval_expr(value, val)) {
+                    return false;
+                }
+                state = BackTo::func;
                 return true;
             }
             else if (is(node->expr, "expr_stat")) {
@@ -207,7 +218,7 @@ namespace minilang {
                     }
                     else {
                         auto s1 = value.as_str();
-                        auto s2 = value.as_str();
+                        auto s2 = other.as_str();
                         value.emplace(String{
                             .node = node,
                             .value = *s1 + *s2,
@@ -297,6 +308,10 @@ namespace minilang {
             if (!varnode->symbol) {
                 varnode->symbol = resolve_symbol(current->static_scope, "var", var->name);
                 if (!varnode->symbol) {
+                    auto builtin = root.find_var(var->name, rootnode->belongs);
+                    if (builtin && builtin->value.as_builtin()) {
+                        return builtin;
+                    }
                     error("symbol not resolved", varnode);
                     return nullptr;
                 }
@@ -347,6 +362,7 @@ namespace minilang {
                         error("multiple define detected", arg);
                         return false;
                     }
+                    def->value = std::move(value);
                 }
             }
             if (instance->child(i)) {
@@ -356,13 +372,13 @@ namespace minilang {
             }
             scope.parent = current;
             current = &scope;
-            auto res = walk_node(block);
+            auto res = walk_node(block, value);
             current = scope.parent;
-            value.emplace(std::monostate{});  // now return statement is not surpported
+            state = BackTo::none;
             return res;
         }
 
-        bool Interpreter::add_builtin(wrap::string key, BuiltInProc proc, void* obj) {
+        bool Interpreter::add_builtin(wrap::string key, void* obj, BuiltInProc proc) {
             auto var = root.define_var(key, nullptr);
             if (!var) {
                 return false;

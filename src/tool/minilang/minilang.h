@@ -471,22 +471,23 @@ namespace minilang {
         struct Interpreter {
             wrap::vector<Error> stack;
 
+            bool add_builtin(wrap::string key, void* obj, BuiltInProc proc);
+
+            template <class T>
+            bool add_builtin(const char* key, T* obj, void (*proc)(T* obj, const char* key, RuntimeEnv* args)) {
+                return add_builtin(std::move(key), obj, reinterpret_cast<BuiltInProc>(proc));
+            }
+
            private:
             RuntimeScope root;
             RuntimeScope* current = nullptr;
+            Node* rootnode = nullptr;
 
             BackTo state = BackTo::none;
 
-            bool add_builtin(wrap::string key, BuiltInProc proc, void* obj);
-
-            template <class T>
-            bool add_builtin(const char* key, void (*proc)(T* obj, const char* key, RuntimeEnv* args), T* obj) {
-                return add_builtin(std::move(key), reinterpret_cast<BuiltInProc>(proc), obj);
-            }
-
             RuntimeVar* resolve(Node* node);
-            bool walk_node(Node* node);
-            bool eval_for(Node* node);
+            bool walk_node(Node* node, RuntimeValue& value);
+            bool eval_for(Node* node, RuntimeValue& value);
 
             bool eval_expr(RuntimeValue& value, Node* node);
 
@@ -506,8 +507,11 @@ namespace minilang {
             bool eval(Node* node) {
                 current = &root;
                 current->static_scope = node->belongs;
-                auto res = walk_node(node);
+                rootnode = node;
+                RuntimeValue value;
+                auto res = walk_node(node, value);
                 current = nullptr;
+                rootnode = nullptr;
                 return res;
             }
         };
