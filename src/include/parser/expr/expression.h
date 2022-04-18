@@ -584,6 +584,7 @@ namespace utils {
                     }
                     if (vexpr.size()) {
                         if (!seq.consume_if(',')) {
+                            PUSH_ERROR(stack, "callexpr", "expect `,` but not", pos.pos, seq.rptr);
                             delexpr();
                             err = true;
                             return false;

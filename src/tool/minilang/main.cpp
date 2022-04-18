@@ -59,7 +59,8 @@ int main(int argc, char** argv) {
             }
             wrap::string err;
             seq.rptr = v.end;
-            hlp::write_src_loc(err, seq);
+            auto linepos = hlp::write_src_loc(err, seq);
+            cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
             cout << err << "\n";
         }
         return -1;
@@ -82,7 +83,8 @@ int main(int argc, char** argv) {
             cerr << v.msg << "\n";
             seq.rptr = v.node->expr->pos();
             wrap::string err;
-            hlp::write_src_loc(err, seq);
+            auto linepos = hlp::write_src_loc(err, seq);
+            cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
             cout << err << "\n";
         }
         return -1;

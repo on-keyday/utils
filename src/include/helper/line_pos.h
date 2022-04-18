@@ -18,8 +18,13 @@
 namespace utils {
     namespace helper {
 
+        struct SrcLoc {
+            size_t line;
+            size_t pos;
+        };
+
         template <class Out, class T>
-        void write_src_loc(Out& w, Sequencer<T>& seq, size_t poslen = 1, char posc = '^', const char* show_endof = " [EOF]") {
+        SrcLoc write_src_loc(Out& w, Sequencer<T>& seq, size_t poslen = 1, char posc = '^', const char* show_endof = " [EOF]") {
             CountPushBacker<Out&> c{w};
             size_t line, pos;
             get_linepos(seq, line, pos);
@@ -64,6 +69,7 @@ namespace utils {
                 }
             }
             seq.rptr = bs;
+            return SrcLoc{.line = line, .pos = pos};
         }
     }  // namespace helper
 }  // namespace utils
