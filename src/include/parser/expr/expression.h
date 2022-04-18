@@ -147,19 +147,23 @@ namespace utils {
             };
 
             template <class String, class T>
-            bool primitive(Sequencer<T>& seq, Expr*& expr) {
+            bool primitive(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                 size_t pos = 0;
                 int radix = 0;
+                bool fatal = false;
                 if (bool v = false; boolean(seq, v, pos)) {
                     expr = new BoolExpr{v, pos};
                 }
                 else if (std::int64_t i = 0; integer(seq, i, pos, radix)) {
                     expr = new IntExpr{i, radix, pos};
                 }
-                else if (String s; string(seq, s, pos)) {
+                else if (String s; string(seq, s, pos, fatal)) {
                     expr = new StringExpr<String>{std::move(s), pos};
                 }
                 else {
+                    if (fatal) {
+                        PUSH_ERROR(stack, "string", "failed to unescape string", pos, pos);
+                    }
                     return false;
                 }
                 return true;
@@ -319,6 +323,7 @@ namespace utils {
                 }
                 auto bexpr = new BinExpr(pos);
                 bexpr->left = expr;
+                bexpr->right = nullptr;
                 bexpr->op = op;
                 bexpr->str = expect;
                 expr = bexpr;
@@ -376,7 +381,7 @@ namespace utils {
             auto define_primitive(Fn custom = define_variable<String>()) {
                 return [custom]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     size_t start = seq.rptr;
-                    if (primitive<String>(seq, expr)) {
+                    if (primitive<String>(seq, expr, stack)) {
                         return true;
                     }
                     if (!custom(seq, expr, stack)) {

@@ -9,8 +9,10 @@ func print(value) {
 }
 
 
-value = "hello world\n"
+value = "hello world"
 
-value = print(value)
+value = print(value+"\n") + value + "!\"
 
-print(value)
+print(value) 
+
+

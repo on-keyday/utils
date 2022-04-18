@@ -102,7 +102,8 @@ namespace pscmpl {
                     hlp::space::consume_space(seq, true);
                     string v;
                     size_t strpos = 0;
-                    if (!expr::string(seq, v, strpos)) {
+                    bool fatal = false;
+                    if (!expr::string(seq, v, strpos, fatal)) {
                         PUSH_ERROR(stack, type, "expect string but not", strpos, seq.rptr)
                         return pos.fatal();
                     }

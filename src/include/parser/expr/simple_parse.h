@@ -51,9 +51,12 @@ namespace utils {
             }
 
             template <class T, class String>
-            bool string(Sequencer<T>& seq, String& str, size_t& pos) {
+            bool string(Sequencer<T>& seq, String& str, size_t& pos, bool& fatal) {
                 auto pos_ = save_and_space(seq);
                 if (!escape::read_string(str, seq, escape::ReadFlag::escape)) {
+                    if (str.size()) {
+                        fatal = true;
+                    }
                     return false;
                 }
                 helper::space::consume_space(seq, true);
