@@ -25,12 +25,12 @@
     }
 namespace minilang {
     namespace runtime {
-        bool Interpreter::eval_for(Node* node, RuntimeValue& value) {
+        bool Interpreter::eval_for(Node* node, RuntimeValue& value, bool as_if) {
             auto len = length(node->children);
             auto cond_repeat = [&](Node* inits, Node* cond, Node* rep, Node* block) {
                 auto repeat = [&] {
                     while (true) {
-                        bool brek = false;
+                        bool brek = as_if;
                         auto func = [&] {
                             NOT_ERROR(auto res = !cond || eval_as_bool(cond, err), err) {
                                 if (res == false) {
@@ -50,6 +50,12 @@ namespace minilang {
                         if (brek) {
                             break;
                         }
+                        if (state != BackTo::none) {
+                            break;
+                        }
+                    }
+                    if (state == BackTo::loop) {
+                        state = BackTo::none;
                     }
                     return true;
                 };
@@ -60,11 +66,12 @@ namespace minilang {
                         }
                         return repeat();
                     };
+                    CHANGE_SCOPE(res, with_init())
+                    return res;
                 }
                 else {
                     return repeat();
                 }
-                return true;
             };
             if (len == 1) {
                 auto block = node->children->node[0];
@@ -91,9 +98,25 @@ namespace minilang {
             return false;
         }
 
+        bool Interpreter::eval_if(Node* node, RuntimeValue& value) {
+            auto len = length(node->children);
+            if (len == 1) {
+                error("if statement requires least one conditional", node);
+                return false;
+            }
+            if (len == 4) {
+                error("if statement requires no repeat", node);
+                return false;
+            }
+            return eval_for(node, value, true);
+        }
+
         bool Interpreter::walk_node(Node* node, RuntimeValue& value) {
             if (is(node->expr, "for")) {
-                return eval_for(node, value);
+                return eval_for(node, value, false);
+            }
+            else if (is(node->expr, "if")) {
+                return eval_if(node, value);
             }
             else if (is(node->expr, "let")) {
                 auto let = static_cast<expr::LetExpr<wrap::string>*>(node->expr);
@@ -149,8 +172,7 @@ namespace minilang {
                 return true;
             }
             else if (is(node->expr, "expr_stat")) {
-                RuntimeValue val;
-                if (!eval_expr(val, node->child(0))) {
+                if (!eval_expr(value, node->child(0))) {
                     return false;
                 }
                 return true;
@@ -248,7 +270,10 @@ namespace minilang {
         }
 
         bool Interpreter::eval_expr(RuntimeValue& value, Node* node) {
-            if (is(node->expr, "binary")) {
+            if (is(node->expr, "expr_stat")) {
+                return eval_expr(value, node->child(0));
+            }
+            else if (is(node->expr, "binary")) {
                 return eval_binary(value, node);
             }
             else if (is(node->expr, "fcall")) {
@@ -370,10 +395,10 @@ namespace minilang {
                 error("defined here", fnode);
                 return false;
             }
-            scope.parent = current;
+            auto save = current;
             current = &scope;
             auto res = walk_node(block, value);
-            current = scope.parent;
+            current = save;
             state = BackTo::none;
             return res;
         }

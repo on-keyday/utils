@@ -560,7 +560,7 @@ namespace utils {
             };
 
             template <class T, template <class...> class Vec, class Callback>
-            bool brackets_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, size_t* ppos, bool& err, Callback&& callback) {
+            bool brackets_each(Sequencer<T>& seq, Vec<expr::Expr*>& vexpr, ErrorStack& stack, size_t* ppos, bool& err, char beg, char end, Callback&& callback) {
                 auto pos = save_and_space(seq);
                 if (ppos) {
                     *ppos = pos.pos;
@@ -603,7 +603,7 @@ namespace utils {
             }
 
             template <class String, template <class...> class Vec, class Fn, class Filter = decltype(default_filter())>
-            auto define_callexpr(Fn next, const char* type = typeCall, bool must_not_var = false, Filter filter = default_filter()) {
+            auto define_callexpr(Fn next, const char* type = typeCall, bool must_not_var = false, char begin = '(', char end = ')', Filter filter = default_filter()) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto space = bind_space(seq);
                     String name;
@@ -614,7 +614,7 @@ namespace utils {
                     space();
                     Vec<expr::Expr*> vexpr;
                     bool err = false;
-                    if (auto res = brackets_each(seq, vexpr, stack, nullptr, err, next); res || err) {
+                    if (auto res = brackets_each(seq, vexpr, stack, nullptr, err, begin, end, next); res || err) {
                         if (!res && err) {
                             return false;
                         }
@@ -691,12 +691,12 @@ namespace utils {
             };
 
             template <template <class...> class Vec>
-            auto define_callop(const char* ty, auto each) {
+            auto define_callop(const char* ty, auto each, char begin = '(', char end = ')') {
                 return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, ErrorStack& stack) {
                     Vec<Expr*> vexpr;
                     bool err;
                     size_t pos = 0;
-                    if (!brackets_each(seq, vexpr, stack, &pos, err, each)) {
+                    if (!brackets_each(seq, vexpr, stack, &pos, err, begin, end, each)) {
                         return false;
                     }
                     auto cexpr = new FuncCallExpr<Vec>{ty, pos};

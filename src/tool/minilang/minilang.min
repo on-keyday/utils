@@ -1,11 +1,23 @@
 
-func print(value) {
+func print(value :string) {
     __builtin_print(value)
-    return "omega?\n"
+    return value
+}
+
+func callback(object) {
+    return object("WHY!\n")
+}
+
+func begin_thread(func_0){
+    return __builtin_thread(func_0)
+}
+
+func wait_thread(obj) {
+    return __builtin_join(obj)
 }
 
 func main() {
-    let value = 20
+    let value :string = 20
     
     value=56
 
@@ -15,6 +27,15 @@ func main() {
 
     print(value)
 
+    if let omega = value; omega {
+        omega = print(print("called ")+"!\n")
+        print(omega)
+    }
+
+    func DO(value){
+        print(value)
+    }
+    print(callback(DO))
 }
 
 main()

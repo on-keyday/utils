@@ -177,15 +177,16 @@ namespace minilang {
         auto single = expr::define_after(prim, call);
         auto brackets = expr::define_brackets(single, exp, "brackets");
         auto block = expr::define_block<wrap::string, wrap::vector>(rp2, false, "block");
-        auto for_ = expr::define_statement("for", 3, exp, exp, block);
-        auto if_ = expr::define_statement("if", 2, exp, exp, block);
         auto type_ = define_type(exp);
         auto let = expr::define_vardef<wrap::string>("let", "let", exp, type_);
         auto arg = expr::define_vardef<wrap::string>("arg", nullptr, exp, type_);
         auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
         auto exprstat = expr::define_wrapexpr("expr_stat", exp);
         auto funcsig = define_funcsig(arg, block);
+        auto initstat = expr::define_statements(let, exprstat);
         auto return_ = expr::define_return("return", "return", exp);
+        auto for_ = expr::define_statement("for", 3, initstat, exp, block);
+        auto if_ = expr::define_statement("if", 2, initstat, exp, block);
         auto stat = expr::define_statements(for_, if_, typedef_, let, funcsig, return_, exprstat);
 
         ph = expr::make_replacement(seq, brackets);
@@ -487,7 +488,8 @@ namespace minilang {
 
             RuntimeVar* resolve(Node* node);
             bool walk_node(Node* node, RuntimeValue& value);
-            bool eval_for(Node* node, RuntimeValue& value);
+            bool eval_for(Node* node, RuntimeValue& value, bool as_if);
+            bool eval_if(Node* node, RuntimeValue& value);
 
             bool eval_expr(RuntimeValue& value, Node* node);
 

@@ -90,7 +90,7 @@ namespace utils {
                             end = true;
                             return make_expr();
                         }
-                        if (fin || !seq.match(";")) {
+                        if (fin || !seq.seek_if(";")) {
                             return delall();
                         }
                         space();
