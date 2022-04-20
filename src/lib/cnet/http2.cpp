@@ -23,6 +23,7 @@ namespace utils {
                 net::http2::internal::FrameReader<> r;
                 void* callback_this;
                 bool (*callback)(void* this_, Frames* frames);
+                bool opened = false;
             };
 
             struct Frames {
@@ -49,9 +50,10 @@ namespace utils {
                 state->ctx.make_settings(frame, sets);
                 state->ctx.update_send(frame);
                 net::http2::encode(&frame, wr);
-                if (!write(low, frame.setting.c_str(), frame.setting.size(), &w)) {
+                if (!write(low, wr.str.c_str(), wr.str.size(), &w)) {
                     return false;
                 }
+                state->opened = true;
                 return true;
             }
 
@@ -73,7 +75,7 @@ namespace utils {
             }
 
             bool poll_frame(CNet* ctx, Http2State* state) {
-                if (!state->callback) {
+                if (!state->opened || !state->callback) {
                     return false;
                 }
                 auto low = cnet::get_lowlevel_protocol(ctx);
