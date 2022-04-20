@@ -151,11 +151,13 @@ namespace minilang {
     auto define_minilang(Sequencer<T>& seq, expr::PlaceHolder*& ph, expr::PlaceHolder*& ph2) {
         auto rp = expr::define_replacement(ph);
         auto rp2 = expr::define_replacement(ph2);
-        auto comment = expr::define_comment(false, rp, expr::Comment{.begin = "//"});
+        auto comment = expr::define_comment(true, rp, expr::Comment{.begin = "//"}, expr::Comment{.begin = "/*", .end = "*/"});
         auto mul = expr::define_binary(
             comment,
             expr::Ops{"*", expr::Op::mul},
-            expr::Ops{"/", expr::Op::div},
+            expr::OpsCheck{"/", expr::Op::div, [](auto& seq) {
+                               return seq.current() != '/';
+                           }},
             expr::Ops{"%", expr::Op::mod});
         auto add = expr::define_binary(
             mul,
@@ -190,7 +192,7 @@ namespace minilang {
         auto for_ = expr::define_statement("for", 3, initstat, exp, block);
         auto if_ = expr::define_statement("if", 2, initstat, exp, block);
         auto stat = expr::define_statements(for_, if_, typedef_, let, funcsig, return_, exprstat);
-        auto cmts = expr::define_comment(false, stat, expr::Comment{.begin = "//"}, expr::Comment{.begin = "/*", .end = "*/"});
+        auto cmts = expr::define_comment(true, stat, expr::Comment{.begin = "//"}, expr::Comment{.begin = "/*", .end = "*/"});
         ph = expr::make_replacement(seq, brackets);
         ph2 = expr::make_replacement(seq, cmts);
         return expr::define_block<wrap::string, wrap::vector>(cmts, false, "program", 0);

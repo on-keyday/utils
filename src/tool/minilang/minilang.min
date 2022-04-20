@@ -24,25 +24,27 @@ func wait_thread(obj) {
 }
 
 func main() {
-    let value :string = 20
-    
-    value=56
+    for {
+        let value :string = 20
+        if value  {
+            value = "hello world"
+        }
 
-    value = "hello world"
+        value = print(value+"\n") + value + "!\n"
 
-    value = print(value+"\n") + value + "!\n"
-
-    print(value)
-
-    if let omega = value; omega {
-        omega = print(print("called ")+"!\n")
-        print(omega)
-    }
-
-    func DO(value){
         print(value)
+
+        if let omega = value; omega {
+            omega = print(print("called ")+"!\n")
+            print(omega)
+        }
+
+        func DO(value){
+            print(value)
+        }
+        print(callback(DO))
+        // return 0
     }
-    print(callback(DO))
 }
 
 main()

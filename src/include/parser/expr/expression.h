@@ -369,6 +369,9 @@ namespace utils {
                 const char* expect = nullptr;
                 Op op;
                 Fn check;
+
+                constexpr OpsCheck(const char* e, Op o, Fn c)
+                    : expect(e), op(o), check(c) {}
             };
 
             template <class String, class Filter = decltype(default_filter())>
