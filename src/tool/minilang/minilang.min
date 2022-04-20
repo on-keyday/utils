@@ -23,6 +23,8 @@ func wait_thread(obj) {
     return __builtin_join(obj)
 }
 
+
+
 func main() {
     for {
         let value :string = 20

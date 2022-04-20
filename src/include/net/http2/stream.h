@@ -120,6 +120,27 @@ namespace utils {
                 bool make_continuous(std::int32_t id, wrap::string& remain, Continuation& frame);
                 Connection();
 
+                template <class Set>
+                bool make_settings(SettingsFrame& frame, Set&& settings) {
+                    frame.type = FrameType::settings;
+                    frame.flag = Flag::none;
+                    frame.len = 0;
+                    for (auto& s : settings) {
+                        auto key = get<0>(s);
+                        auto value = get<1>(s);
+                        static_assert(sizeof(key) == 2, "require 2 octect value for http2 settings key");
+                        static_assert(sizeof(value) == 4, "require 4 octect value for http2 settings value");
+                        key = endian::to_network(&key);
+                        value = endian::to_network(&value);
+                        const char* kptr = reinterpret_cast<const char*>(&key);
+                        const char* vptr = reinterpret_cast<const char*>(&value);
+                        frame.setting.append(kptr, 2);
+                        frame.setting.append(vptr, 4);
+                        frame.len += 6;
+                    }
+                    return true;
+                }
+
                private:
                 wrap::shared_ptr<internal::ConnectionImpl> impl;
             };
