@@ -132,8 +132,24 @@ namespace utils {
                 }
             }
 
+            bool settings(CNet* ctx, Http2State* state, std::int64_t key, void* value) {
+                if (key == poll) {
+                    return poll_frame(ctx, state);
+                }
+                else if (key == set_callback) {
+                    auto ptr = static_cast<Callback*>(value);
+                    state->callback = ptr->callback;
+                    state->callback_this = ptr->this_;
+                    return true;
+                }
+                return false;
+            }
+
             CNet* STDCALL create_client() {
-                cnet::ProtocolSuite<Http2State> protocol{};
+                cnet::ProtocolSuite<Http2State> protocol{
+                    .initialize = open_http2,
+
+                };
                 return cnet::create_cnet(CNetFlag::once_set_no_delete_link, new Http2State{}, protocol);
             }
         }  // namespace http2

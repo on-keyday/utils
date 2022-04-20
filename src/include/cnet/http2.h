@@ -23,6 +23,18 @@ namespace utils {
 
             wrap::shared_ptr<net::http2::Frame>* end(Frames*);
 
+            enum Http2Setting {
+                // invoke poll method
+                poll = user_defined_start + 1,
+                // register callback
+                set_callback,
+            };
+
+            struct Callback {
+                bool (*callback)(void*, Frames*);
+                void* this_;
+            };
+
         }  // namespace http2
     }      // namespace cnet
 }  // namespace utils
