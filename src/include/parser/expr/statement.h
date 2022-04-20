@@ -341,7 +341,7 @@ namespace utils {
                 }
             };
 
-            auto define_comment(auto next, auto... comments) {
+            auto define_comment(bool runafter, auto next, auto... comments) {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto pos = save_and_space(seq);
                     auto space = bind_space(seq);
@@ -394,17 +394,38 @@ namespace utils {
                         }
                         return true;
                     };
-                    while ((... || comment_read(comments))) {
-                        if (err) {
-                            PUSH_ERROR(stack, "comment", "error while reading comment", pos.pos, seq.rptr)
-                            return false;
+                    auto read = [&] {
+                        while ((... || comment_read(comments))) {
+                            if (err) {
+                                PUSH_ERROR(stack, "comment", "error while reading comment", pos.pos, seq.rptr)
+                                return false;
+                            }
+                            if (expr) {
+                                return true;
+                            }
                         }
-                        if (expr) {
-                            return true;
-                        }
+                        return true;
+                    };
+                    if (!read()) {
+                        return false;
+                    }
+                    if (expr) {
+                        return true;
                     }
                     if (!next(seq, err, stack)) {
                         return false;
+                    }
+                    if (runafter) {
+                        auto cpy = expr;
+                        expr = nullptr;
+                        if (!read()) {
+                            delete cpy;
+                            return false;
+                        }
+                        if (expr) {
+                            delete expr;
+                        }
+                        expr = cpy;
                     }
                     pos.ok();
                     return true;

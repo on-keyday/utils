@@ -151,8 +151,9 @@ namespace minilang {
     auto define_minilang(Sequencer<T>& seq, expr::PlaceHolder*& ph, expr::PlaceHolder*& ph2) {
         auto rp = expr::define_replacement(ph);
         auto rp2 = expr::define_replacement(ph2);
+        auto comment = expr::define_comment(rp, expr::Comment{.begin = "//"});
         auto mul = expr::define_binary(
-            rp,
+            comment,
             expr::Ops{"*", expr::Op::mul},
             expr::Ops{"/", expr::Op::div},
             expr::Ops{"%", expr::Op::mod});
