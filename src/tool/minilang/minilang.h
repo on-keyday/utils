@@ -521,5 +521,49 @@ namespace minilang {
                 return res;
             }
         };
+
     }  // namespace runtime
+
+    namespace assembly {
+
+        enum class asmcode {
+            nop,
+            ld,
+            str,
+            push,
+            pop,
+            call,
+            ret,
+            add,
+            sub,
+            mul,
+            mod,
+            div,
+        };
+
+        struct AsmValue {
+            bool addr = false;
+            bool relative = false;
+            size_t value;
+        };
+
+        struct Asm {
+            asmcode code = asmcode::nop;
+            AsmValue op[3];
+        };
+
+        struct NodeAnalyzer {
+           private:
+            bool save_types(Node* node);
+            bool save_scope(Node* node);
+            bool save_variable(Node* node);
+            bool save_function(Node* node);
+
+           public:
+            bool collect_symbols(Node* node);
+            bool resolve_symbols(Node* node);
+            bool dump_pseudo_asm(Node* node);
+            bool dump_cpp_code(Node* node);
+        };
+    }  // namespace assembly
 }  // namespace minilang
