@@ -134,7 +134,7 @@ namespace utils {
                 }
             }
 
-            bool settings(CNet* ctx, Http2State* state, std::int64_t key, void* value) {
+            bool http2_settings(CNet* ctx, Http2State* state, std::int64_t key, void* value) {
                 if (key == poll) {
                     return poll_frame(ctx, state);
                 }
@@ -150,7 +150,8 @@ namespace utils {
             CNet* STDCALL create_client() {
                 cnet::ProtocolSuite<Http2State> protocol{
                     .initialize = open_http2,
-
+                    .settings_ptr = http2_settings,
+                    .deleter = [](Http2State* state) { delete state; },
                 };
                 return cnet::create_cnet(CNetFlag::once_set_no_delete_link, new Http2State{}, protocol);
             }
