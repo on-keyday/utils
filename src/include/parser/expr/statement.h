@@ -319,7 +319,97 @@ namespace utils {
                     expr = wexpr;
                     return true;
                 };
+            }
+
+            template <class String>
+            struct CommentExpr : Expr {
+                const char* begin;
+                const char* end;
+                String comment;
+                using Expr::Expr;
+                bool stringify(PushBacker pb) const override {
+                    helper::append(pb, comment);
+                }
             };
+
+            struct Comment {
+                const char* begin;
+                const char* end;
+                bool recursive;
+                CommentExpr<number::Array<1, char>>* as_expr(size_t pos) {
+                    return nullptr;
+                }
+            };
+
+            auto define_comment(auto next, auto... comments) {
+                return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
+                    auto pos = save_and_space(seq);
+                    auto space = bind_space(seq);
+                    bool err = false;
+                    auto comment_read = [&](auto comment) {
+                        auto pos = seq.rptr;
+                        if (!seq.seek_if(comment.begin)) {
+                            return false;
+                        }
+                        auto cexpr = comment.as_expr(pos);
+                        size_t rec = 1;
+                        while (rec != 0) {
+                            if (comment.end) {
+                                if (seq.seek_if(comment.end)) {
+                                    rec--;
+                                    if (rec == 0) {
+                                        break;
+                                    }
+                                    if (cexpr) {
+                                        helper::append(cexpr->comment, comment.end);
+                                    }
+                                }
+                            }
+                            else {
+                                if (helper::match_eol<true>(seq) || seq.eos()) {
+                                    break;
+                                }
+                            }
+                            if (comment.recursive && seq.seek_if(comment.begin)) {
+                                rec++;
+                                if (cexpr) {
+                                    helper::append(cexpr->comment, comment.begin);
+                                }
+                            }
+                            else {
+                                if (cexpr) {
+                                    cexpr->comment.push_back(seq.current());
+                                }
+                                seq.consume();
+                            }
+                            if (seq.eos()) {
+                                err = true;
+                                delete cexpr;
+                                cexpr = nullptr;
+                                break;
+                            }
+                        }
+                        if (cexpr) {
+                            expr = cexpr;
+                        }
+                        return true;
+                    };
+                    while ((... || comment_read(comments))) {
+                        if (err) {
+                            PUSH_ERROR(stack, "comment", "error while reading comment", pos.pos, seq.rptr)
+                            return false;
+                        }
+                        if (expr) {
+                            return true;
+                        }
+                    }
+                    if (!next(seq, err, stack)) {
+                        return false;
+                    }
+                    pos.ok();
+                    return true;
+                };
+            }
         }  // namespace expr
     }      // namespace parser
 }  // namespace utils
