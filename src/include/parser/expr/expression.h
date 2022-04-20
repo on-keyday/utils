@@ -179,6 +179,7 @@ namespace utils {
                 mod,
                 assign,
                 equal,
+                not_equal,
                 less,
                 greater,
                 less_equal,

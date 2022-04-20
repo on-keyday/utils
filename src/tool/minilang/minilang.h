@@ -163,7 +163,8 @@ namespace minilang {
             expr::Ops{"-", expr::Op::sub});
         auto eq = expr::define_binary(
             add,
-            expr::Ops{"==", expr::Op::equal});
+            expr::Ops{"==", expr::Op::equal},
+            expr::Ops{"!=", expr::Op::not_equal});
         auto and_ = expr::define_binary(
             eq,
             expr::Ops{"&&", expr::Op::and_});
