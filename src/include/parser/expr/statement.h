@@ -119,10 +119,11 @@ namespace utils {
                     bool res = false;
                     size_t start = seq.rptr;
                     auto check = [&](auto& f) {
-                        if (!f(seq, expr, stack) && seq.rptr != start) {
+                        auto r = f(seq, expr, stack);
+                        if (!r && seq.rptr != start) {
                             return true;
                         }
-                        if (expr) {
+                        if (r) {
                             res = true;
                             return true;
                         }
@@ -329,13 +330,14 @@ namespace utils {
                 using Expr::Expr;
                 bool stringify(PushBacker pb) const override {
                     helper::append(pb, comment);
+                    return true;
                 }
             };
 
             struct Comment {
-                const char* begin;
-                const char* end;
-                bool recursive;
+                const char* begin = nullptr;
+                const char* end = nullptr;
+                bool recursive = false;
                 CommentExpr<number::Array<1, char>>* as_expr(size_t pos) {
                     return nullptr;
                 }
@@ -412,7 +414,7 @@ namespace utils {
                     if (expr) {
                         return true;
                     }
-                    if (!next(seq, err, stack)) {
+                    if (!next(seq, expr, stack)) {
                         return false;
                     }
                     if (runafter) {

@@ -654,6 +654,7 @@ namespace utils {
                     while ((... || call(after))) {
                         if (err) {
                             delete cpy;
+                            expr = nullptr;
                             return false;
                         }
                         cpy = expr;
