@@ -18,18 +18,18 @@ namespace utils {
     namespace cnet {
         namespace http2 {
 
-            struct Frames {
-                wrap::vector<wrap::shared_ptr<net::http2::Frame>> frame;
-                net::http2::UpdateResult result;
-                wrap::string* opaque = nullptr;
-                wrap::string wreq;
-            };
-
             struct Http2State {
                 net::http2::Connection ctx;
                 net::http2::internal::FrameReader<> r;
                 void* callback_this;
                 bool (*callback)(void* this_, Frames* frames);
+            };
+
+            struct Frames {
+                wrap::vector<wrap::shared_ptr<net::http2::Frame>> frame;
+                net::http2::UpdateResult result;
+                wrap::string wreq;
+                Http2State* state;
             };
 
             constexpr auto preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
@@ -78,7 +78,7 @@ namespace utils {
                 }
                 auto low = cnet::get_lowlevel_protocol(ctx);
                 Frames frames;
-                frames.opaque = &state->r.ref;
+                frames.state = state;
                 bool ret = false;
                 auto read_frames = [&] {
                     while (state->r.ref.size()) {
