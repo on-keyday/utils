@@ -255,6 +255,10 @@ namespace minilang {
         struct AsmData {
             Instance* instance = nullptr;
         };
+
+        struct Context {
+            size_t offset_sum = 0;
+        };
     }  // namespace assembly
 
     struct Node {
