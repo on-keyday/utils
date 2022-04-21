@@ -234,13 +234,28 @@ namespace minilang {
         return ret;
     }
 
-    struct Node;
     struct NodeChildren {
         wrap::vector<Node*> node;
         size_t len() const {
             return node.size();
         }
     };
+
+    namespace assembly {
+        struct Type {
+        };
+
+        struct Instance {
+            Node* base = nullptr;
+            size_t instance = 0;
+            Type* type = nullptr;
+            size_t offset = 0;
+        };
+
+        struct AsmData {
+            Instance* instance = nullptr;
+        };
+    }  // namespace assembly
 
     struct Node {
         expr::Expr* expr = nullptr;
@@ -249,6 +264,7 @@ namespace minilang {
         Node* parent = nullptr;
         NodeChildren* children = nullptr;
         Scope* symbol = nullptr;
+        assembly::AsmData* data = nullptr;
         int resolved_at = 0;
         bool root;
 

@@ -10,6 +10,20 @@
 
 namespace minilang {
     namespace assembly {
-
-    }
+        bool NodeAnalyzer::collect_symbols(Node* node) {
+            auto collect_each = [&](int start = 0) {
+                for (auto i = 0; i < length(node->children); i++) {
+                    if (!node->child(i)) {
+                        continue;
+                    }
+                    if (!collect_symbols(node->child(i))) {
+                        return false;
+                    }
+                }
+            };
+            if (is(node->expr, "program") || is(node->expr, "block")) {
+                return collect_each();
+            }
+        }
+    }  // namespace assembly
 }  // namespace minilang
