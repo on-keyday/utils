@@ -94,6 +94,9 @@ namespace minilang {
             node->owns = child_scope(scope, ScopeKind::func_local);
             append_child(node->children, convert_to_node(fexpr->fsig, node->owns));
             append_child(node->children, convert_to_node(fexpr->block, node->owns));
+            if (fexpr->rettype) {
+                append_child(node->children, convert_to_node(fexpr->rettype, node->owns));
+            }
         }
         else {
             append_each();

@@ -106,17 +106,19 @@ namespace minilang {
     struct FuncExpr : expr::Expr {
         expr::Expr* fsig = nullptr;
         expr::Expr* block = nullptr;
+        expr::Expr* rettype = nullptr;
 
         using Expr::Expr;
 
         Expr* index(size_t i) const override {
             if (i == 0) return fsig;
             if (i == 1) return block;
+            if (i == 2) return rettype;
             return nullptr;
         }
     };
 
-    auto define_funcsig(auto arg, auto block) {
+    auto define_funcsig(auto arg, auto block, auto tysig) {
         auto csig = expr::define_callexpr<wrap::string, wrap::vector>(arg, "fdef", true);
         return [=]<class T>(Sequencer<T>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             auto pos = expr::save_and_space(seq);
@@ -135,6 +137,15 @@ namespace minilang {
             auto fexpr = new FuncExpr{"func", pos.pos};
             fexpr->fsig = expr;
             expr = nullptr;
+            if (seq.seek_if("->")) {
+                if (!tysig(seq, expr, stack)) {
+                    delete fexpr;
+                    return false;
+                }
+                fexpr->rettype = expr;
+                expr = nullptr;
+                space();
+            }
             if (seq.current() == '{') {
                 if (!block(seq, expr, stack)) {
                     delete fexpr;
@@ -186,7 +197,7 @@ namespace minilang {
         auto arg = expr::define_vardef<wrap::string>("arg", nullptr, exp, type_);
         auto typedef_ = expr::define_vardef<wrap::string>("typedef", "type", type_, type_, "");
         auto exprstat = expr::define_wrapexpr("expr_stat", exp);
-        auto funcsig = define_funcsig(arg, block);
+        auto funcsig = define_funcsig(arg, block, type_);
         auto initstat = expr::define_statements(let, exprstat);
         auto return_ = expr::define_return("return", "return", exp);
         auto for_ = expr::define_statement("for", 3, initstat, exp, block);
@@ -254,10 +265,32 @@ namespace minilang {
 
         struct AsmData {
             Instance* instance = nullptr;
+            size_t llvmindex = 0;
+        };
+
+        enum class Location {
+            global,
+            func,
         };
 
         struct Context {
             size_t offset_sum = 0;
+            Location loc = Location::global;
+            size_t tmpindex = 0;
+
+            wrap::string buffer;
+            void write(auto&&... v) {
+                helper::appends(buffer, v...);
+            }
+
+            void error(auto&&... v) {
+            }
+        };
+
+        struct LLVMValue {
+            size_t index = 0;
+            Type* type = nullptr;
+            Node* ref = nullptr;
         };
     }  // namespace assembly
 
@@ -584,6 +617,7 @@ namespace minilang {
             bool resolve_symbols(Node* node);
             bool dump_pseudo_asm(Node* node);
             bool dump_cpp_code(Node* node);
+            bool dump_llvm(Node* node, Context& ctx);
         };
     }  // namespace assembly
 }  // namespace minilang

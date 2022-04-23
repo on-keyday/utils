@@ -32,5 +32,6 @@ namespace minilang {
                 node->data->instance->instance = 0;
             }
         }
+
     }  // namespace assembly
 }  // namespace minilang
