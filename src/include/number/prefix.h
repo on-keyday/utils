@@ -43,8 +43,8 @@ namespace utils {
             return 0;
         }
 
-        template <class T, class Int>
-        constexpr NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr) {
+        template <class T, class Int, class Config = internal::ReadConfig>
+        constexpr NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr, Config config = Config{}) {
             int radix = 10;
             bool minus = false;
             if (seq.consume_if('+')) {
@@ -72,14 +72,14 @@ namespace utils {
             return true;
         }
 
-        template <class T, class Int>
-        constexpr NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, size_t offset = 0, bool expect_eof = true) {
+        template <class T, class Int, class Config = internal::ReadConfig>
+        constexpr NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, Config config = Config{}) {
             auto seq = make_ref_seq(input);
-            seq.rptr = offset;
+            seq.rptr = config.offset;
             if (auto err = prefix_integer(seq, res, pradix); !err) {
                 return err;
             }
-            if (expect_eof && !seq.eos()) {
+            if (config.expect_eof && !seq.eos()) {
                 return NumError::not_eof;
             }
             return true;
