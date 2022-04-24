@@ -74,6 +74,14 @@ namespace minilang {
         }
 
         bool dump_binary(Node* node, Context& ctx, LLVMValue& value) {
+            auto type = [&](const char* str) {
+                return is(node->expr, str);
+            };
+            auto ch = [&](auto i) {
+                return node->child(i);
+            };
+            if (type("binary")) {
+            }
         }
 
         bool NodeAnalyzer::dump_llvm(Node* node, Context& ctx) {

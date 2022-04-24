@@ -226,6 +226,27 @@ namespace minilang {
                     return false;
                 }
                 auto filter = value.reflect(other);
+                auto binab = [&](OpFilter op, const char* symbol, auto fn) {
+                    if (!any(filter & op)) {
+                        number::Array<50, char, true> tmp;
+                        helper::appends(tmp, "operator ", symbol, " is not surpported here");
+                        error(tmp.c_str(), node);
+                        return false;
+                    }
+                    auto i1 = value.as_int();
+                    auto i2 = other.as_int();
+                    if (op == OpFilter::div || op == OpFilter::mod) {
+                        if (*i2 == 0) {
+                            error("div by zero error!", node);
+                            return false;
+                        }
+                    }
+                    value.emplace(Integer{
+                        .node = node,
+                        .value = fn(*i1, *i2),
+                    });
+                    return true;
+                };
                 if (bin->op == expr::Op::add) {
                     if (!any(filter & OpFilter::add)) {
                         error("operator + is not supported on here", node);
@@ -248,21 +269,107 @@ namespace minilang {
                     }
                     return true;
                 }
+                else if (bin->op == expr::Op::sub) {
+                    return binab(OpFilter::sub, "-", [](auto a, auto b) { return a - b; });
+                }
+                else if (bin->op == expr::Op::mul) {
+                    return binab(OpFilter::mul, "*", [](auto a, auto b) { return a * b; });
+                }
+                else if (bin->op == expr::Op::div) {
+                    return binab(OpFilter::div, "/", [](auto a, auto b) { return a / b; });
+                }
+                else if (bin->op == expr::Op::mod) {
+                    return binab(OpFilter::mod, "%", [](auto a, auto b) { return a % b; });
+                }
+            }
+            else if (expr::is_compare(bin->op)) {
+                RuntimeValue other;
+                if (!eval_expr(value, node->child(0))) {
+                    return false;
+                }
+                if (!eval_expr(other, node->child(1))) {
+                    return false;
+                }
+                auto compare = [&](auto fn) {
+                    if (value.value.index() != other.value.index()) {
+                        value.emplace(Boolean{
+                            .node = node,
+                            .value = false,
+                        });
+                        return true;
+                    }
+                    if (auto b1 = value.as_bool()) {
+                        auto b2 = other.as_bool();
+                        value.emplace(Boolean{
+                            .node = node,
+                            .value = fn(*b1, *b2),
+                        });
+                    }
+                    else if (auto i1 = value.as_int()) {
+                        auto i2 = other.as_int();
+                        value.emplace(Boolean{
+                            .node = node,
+                            .value = fn(*i1, *i2),
+                        });
+                    }
+                    else if (auto s1 = value.as_str()) {
+                        auto s2 = other.as_str();
+                        value.emplace(Boolean{
+                            .node = node,
+                            .value = fn(*s1, *s2),
+                        });
+                    }
+                    else if (auto f1 = value.as_function()) {
+                        auto f2 = other.as_function();
+                        value.emplace(Boolean{
+                            .node = node,
+                            .value = fn(f1, f2),
+                        });
+                    }
+                    else if (auto v1 = value.as_builtin()) {
+                        auto v2 = other.as_builtin();
+                        value.emplace(Boolean{
+                            .node = node,
+                            .value = fn(v1, v2),
+                        });
+                    }
+                    else {
+                        error("unexpected type", node);
+                        return false;
+                    }
+                    return true;
+                };
+                if (bin->op == expr::Op::equal) {
+                    return compare([](auto&& a, auto&& b) { return a == b; });
+                }
+                else if (bin->op == expr::Op::not_equal) {
+                    return compare([](auto&& a, auto&& b) { return a != b; });
+                }
+                else if (bin->op == expr::Op::less || bin->op == expr::Op::greater_equal) {
+                    return compare([](auto&& a, auto&& b) { return a < b; });
+                }
+                else if (bin->op == expr::Op::greater || bin->op == expr::Op::less_equal) {
+                    return compare([](auto&& a, auto&& b) { return a > b; });
+                }
+                else {
+                    error("this operator not surpported", node);
+                    return false;
+                }
+                return true;
             }
             else if (bin->op == expr::Op::assign) {
-                auto varnode = node->child(0);
-                if (!is(varnode->expr, expr::typeVariable)) {
-                    error("left of operator = must be variable", varnode);
+                RuntimeValue place;
+                if (!eval_expr(place, node->child(1))) {
                     return false;
                 }
-                auto place = resolve(varnode);
-                if (!place) {
+                if (!eval_expr(value, node->child(0))) {
                     return false;
                 }
-                if (!eval_expr(value, node->child(1))) {
+                if (!value.relvar) {
+                    error("left of = must have reference to variable", node);
                     return false;
                 }
-                place->value = value;
+                value.relvar->value = place;
                 return true;
             }
             error("this operator is not supported", node);
@@ -400,6 +507,7 @@ namespace minilang {
             auto res = walk_node(block, value);
             current = save;
             state = BackTo::none;
+            value.relvar = nullptr;
             return res;
         }
 

@@ -180,6 +180,8 @@ namespace utils {
                 assign,
                 equal,
                 not_equal,
+                with_type_equal,
+                with_type_not_equal,
                 less,
                 greater,
                 less_equal,
@@ -199,7 +201,8 @@ namespace utils {
             constexpr bool is_compare(Op op) {
                 return op == Op::equal || op == Op::less || op == Op::greater ||
                        op == Op::less_equal || op == Op::greater_equal ||
-                       op == Op::three_way_compare;
+                       op == Op::three_way_compare || op == Op::with_type_equal ||
+                       op == Op::with_type_not_equal;
             }
 
             struct BinExpr : Expr {

@@ -29,7 +29,7 @@ let obj :[2]int = print
 func main() -> int {
     for {
         let value :string = 20
-        if value  {
+        if value == 20  {
             value = "hello world"
         }
 
