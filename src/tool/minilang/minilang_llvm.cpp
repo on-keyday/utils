@@ -109,7 +109,7 @@ namespace minilang {
                         return false;
                     }
                     ctx.write(done, ":\n");
-                    ctx.write("br label %", end);
+                    ctx.write("br label %", end, "\n");
                     ctx.write(end, ":\n");
                     auto phi = ctx.make_tmp("tmp", "");
                     ctx.write("%", phi, " = phi [");
@@ -162,6 +162,7 @@ namespace minilang {
                     ctx.error("now, return type inference is not supported", node);
                     return false;
                 }
+                ctx.write(" ");
                 if (ctx.loc == Location::global) {
                     ctx.write("@");
                 }
@@ -175,7 +176,7 @@ namespace minilang {
                 auto locsave = ctx.loc;
                 ctx.tmpindex = 0;
                 ctx.loc = Location::func;
-                if (!dump_llvm(node, ctx)) {
+                if (!dump_llvm(ch(1), ctx)) {
                     return false;
                 }
                 ctx.loc = locsave;
@@ -193,7 +194,14 @@ namespace minilang {
                 if (!dump_expr(node->child(0), ctx, value)) {
                     return false;
                 }
-                ctx.write("ret i32", value.val, "\n");
+                ctx.write("ret i32 ", value.val, "\n");
+            }
+            else if (type("program") || type("block")) {
+                for (auto i = 0; ch(i); i++) {
+                    if (!dump_llvm(ch(i), ctx)) {
+                        return false;
+                    }
+                }
             }
             else {
                 ctx.error("unimplemented", node);

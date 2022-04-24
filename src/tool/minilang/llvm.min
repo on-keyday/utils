@@ -8,8 +8,7 @@
 // llvm
 
 func main() -> int {
-    4||0&&3
-    return 0
+    return 4||3&&0
 }
 
-main()
+
