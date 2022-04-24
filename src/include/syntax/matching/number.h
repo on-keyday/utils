@@ -164,7 +164,7 @@ namespace utils {
                     base = pf;
                     i = 2;
                 }
-                if (number::is_integer(pt.str, base, i)) {
+                if (number::is_integer(pt.str, base, number::OffsetConfig{.offset = size_t(i)})) {
                     pt.exists();
                     ctx.r.current = cr.current;
                     ctx.r.count = cr.count;
@@ -174,7 +174,7 @@ namespace utils {
                     report("expect integer but token is " + pt.str);
                     return 0;
                 }
-                auto e = number::is_float_number(pt.str, base, i);
+                auto e = number::is_float_number(pt.str, base, number::OffsetConfig{.offset = size_t(i)});
                 if (e) {
                     ctx.r.current = cr.current;
                     ctx.r.count = cr.count;

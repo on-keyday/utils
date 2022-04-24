@@ -10,7 +10,7 @@
 
 constexpr bool test_is_number() {
     bool is_float;
-    return utils::number::is_number("3", 16, 0, &is_float);
+    return utils::number::is_number("3", 16, &is_float);
 }
 
 constexpr int test_parse_integer() {

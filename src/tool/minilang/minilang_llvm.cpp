@@ -94,6 +94,7 @@ namespace minilang {
                         return false;
                     }
                     auto cond = ctx.make_tmp(str, ".begin");
+                    ctx.write("br label %", cond, "\n");
                     ctx.write(cond, ":\n");
                     auto then = ctx.make_tmp(str, ".then");
                     auto done = ctx.make_tmp(str, ".done");
@@ -108,11 +109,12 @@ namespace minilang {
                     if (!dump_expr(ch(0), ctx, value)) {
                         return false;
                     }
+                    ctx.write("br label %", done, "\n");
                     ctx.write(done, ":\n");
                     ctx.write("br label %", end, "\n");
                     ctx.write(end, ":\n");
                     auto phi = ctx.make_tmp("tmp", "");
-                    ctx.write("%", phi, " = phi [");
+                    ctx.write("%", phi, " = phi i1 [");
                     if (bin->op == expr::Op::and_) {
                         ctx.write("false");
                     }
@@ -133,6 +135,7 @@ namespace minilang {
                 auto n = static_cast<expr::IntExpr*>(node->expr);
                 value.val = "";
                 n->stringify(value.val, 10);
+                value.type.as_int(32);
                 return true;
             }
             else {

@@ -16,7 +16,7 @@
 namespace utils {
     namespace number {
         template <class String>
-        int has_prefix(String&& str) {
+        constexpr int has_prefix(String&& str) {
             if (helper::starts_with(str, "0x") || helper::starts_with(str, "0X")) {
                 return 16;
             }
@@ -30,7 +30,7 @@ namespace utils {
         }
 
         template <class T>
-        int has_prefix(Sequencer<T>& seq) {
+        constexpr int has_prefix(Sequencer<T>& seq) {
             if (seq.match("0x") || seq.match("0X")) {
                 return 16;
             }
@@ -44,7 +44,7 @@ namespace utils {
         }
 
         template <class T, class Int>
-        NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr) {
+        constexpr NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr) {
             int radix = 10;
             bool minus = false;
             if (seq.consume_if('+')) {
@@ -73,7 +73,7 @@ namespace utils {
         }
 
         template <class T, class Int>
-        NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, size_t offset = 0, bool expect_eof = true) {
+        constexpr NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, size_t offset = 0, bool expect_eof = true) {
             auto seq = make_ref_seq(input);
             seq.rptr = offset;
             if (auto err = prefix_integer(seq, res, pradix); !err) {
@@ -86,7 +86,7 @@ namespace utils {
         }
 
         template <class Out>
-        bool append_prefix(Out& out, int radix, bool upper = false) {
+        constexpr bool append_prefix(Out& out, int radix, bool upper = false) {
             if (radix == 16) {
                 helper::append(out, upper ? "0X" : "0x");
             }

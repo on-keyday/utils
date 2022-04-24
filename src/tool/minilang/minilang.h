@@ -303,9 +303,23 @@ namespace minilang {
             }
         };
 
+        enum class LLVMBasicType {
+            integer,
+        };
+
+        struct LLVMType {
+            LLVMBasicType type = LLVMBasicType::integer;
+            size_t size;
+
+            void as_int(size_t bit) {
+                type = LLVMBasicType::integer;
+                size = bit;
+            }
+        };
+
         struct LLVMValue {
             wrap::string val;
-            Type* type = nullptr;
+            LLVMType type;
             Node* node = nullptr;
         };
     }  // namespace assembly
