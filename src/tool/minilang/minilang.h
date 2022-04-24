@@ -167,7 +167,7 @@ namespace minilang {
             comment,
             expr::Ops{"*", expr::Op::mul},
             expr::OpsCheck{"/", expr::Op::div, [](auto& seq) {
-                               return seq.current() != '/';
+                               return seq.current() != '/' & seq.current() != '*';
                            }},
             expr::Ops{"%", expr::Op::mod});
         auto add = expr::define_binary(
@@ -252,6 +252,11 @@ namespace minilang {
         }
     };
 
+    struct Error {
+        wrap::string msg;
+        Node* node;
+    };
+
     namespace assembly {
         struct Type {
         };
@@ -279,18 +284,29 @@ namespace minilang {
             size_t tmpindex = 0;
 
             wrap::string buffer;
+            wrap::vector<Error> stack;
+
             void write(auto&&... v) {
                 helper::appends(buffer, v...);
             }
 
-            void error(auto&&... v) {
+            void error(auto&& v, Node* node) {
+                stack.push_back({.msg = v, .node = node});
+            }
+
+            wrap::string make_tmp(auto prefix = "", auto suffix = "") {
+                wrap::string ret = prefix;
+                number::to_string(ret, tmpindex);
+                tmpindex++;
+                helper::append(ret, suffix);
+                return ret;
             }
         };
 
         struct LLVMValue {
-            size_t index = 0;
+            wrap::string val;
             Type* type = nullptr;
-            Node* ref = nullptr;
+            Node* node = nullptr;
         };
     }  // namespace assembly
 
@@ -513,11 +529,6 @@ namespace minilang {
                 }
                 return nullptr;
             }
-        };
-
-        struct Error {
-            wrap::string msg;
-            Node* node;
         };
 
         enum class BackTo {

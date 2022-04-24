@@ -100,6 +100,23 @@ namespace utils {
                 }
 
                public:
+                Result* get_result(auto&& name, size_t index = 0) {
+                    auto found = reserved.find(name);
+                    if (found != reserved.end()) {
+                        return &get<1>(*found);
+                    }
+                    auto it = find(name);
+                    if (!it.empty()) {
+                        auto d = it.begin();
+                        for (size_t i = 0; i < index && d != it.end(); i++, d++)
+                            ;
+                        if (d != it.end()) {
+                            return &*d;
+                        }
+                    }
+                    return nullptr;
+                }
+
                 template <class T>
                 T* value_ptr(auto&& name, size_t index = 0) {
                     auto found = reserved.find(name);

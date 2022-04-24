@@ -405,6 +405,7 @@ namespace utils {
                             if (expr) {
                                 return true;
                             }
+                            space();
                         }
                         return true;
                     };

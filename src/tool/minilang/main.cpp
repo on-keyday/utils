@@ -10,22 +10,46 @@
 #include <wrap/cout.h>
 #include <file/file_view.h>
 #include <helper/line_pos.h>
+#include <fstream>
 using namespace utils::cmdline;
 namespace hlp = utils::helper;
 namespace wrap = utils::wrap;
 auto& cout = utils::wrap::cout_wrap();
 auto& cerr = utils::wrap::cerr_wrap();
 
+enum class OutputFormat {
+    none,
+    llvm,
+};
+
 struct CmdLineOption {
     wrap::string input;
     bool dbginfo = false;
     bool help = false;
+    wrap::string output;
+    OutputFormat format;
     void bind(option::Context& ctx) {
         ctx.VarString(&input, "input,i", "input file", "FILE", option::CustomFlag::required | option::CustomFlag::appear_once);
+        ctx.VarString(&output, "output,o", "output file", "FILE", option::CustomFlag::appear_once);
         ctx.VarBool(&dbginfo, "debug-info,d", "show debug info");
         ctx.VarBool(&help, "help,h", "show this help");
+        auto parser = option::MappingParser<wrap::string, OutputFormat, wrap::hash_map>{};
+        parser.mapping["none"] = OutputFormat::none;
+        parser.mapping["llvm"] = OutputFormat::llvm;
+        ctx.Option("format,f", &format, std::move(parser), "set output format. if not set run on interpreter mode", "none|llvm");
     }
 };
+
+void dump_stack(auto& opt, auto& stack, auto& seq) {
+    for (auto& v : stack) {
+        cerr << v.msg << "\n";
+        seq.rptr = v.node->expr->pos();
+        wrap::string err;
+        auto linepos = hlp::write_src_loc(err, seq);
+        cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
+        cout << err << "\n";
+    }
+}
 
 int main(int argc, char** argv) {
     CmdLineOption opt;
@@ -74,29 +98,51 @@ int main(int argc, char** argv) {
     minilang::Scope scope;
     scope.kind = minilang::ScopeKind::global;
     auto node = minilang::convert_to_node(expr, &scope, true);
-    minilang::runtime::Interpreter inpret;
-    inpret.add_builtin(
-        "__builtin_print", nullptr, [](void*, const char*, minilang::runtime::RuntimeEnv* env) {
-            for (auto& arg : env->args) {
-                if (auto str = arg.as_str()) {
-                    cout << *str;
+    if (opt.format == OutputFormat::none) {
+        minilang::runtime::Interpreter inpret;
+        inpret.add_builtin(
+            "__builtin_print", nullptr, [](void*, const char*, minilang::runtime::RuntimeEnv* env) {
+                for (auto& arg : env->args) {
+                    if (auto str = arg.as_str()) {
+                        cout << *str;
+                    }
                 }
-            }
-        });
-    if (!inpret.eval(node)) {
-        report("eval error!");
-        for (auto& v : inpret.stack) {
-            cerr << v.msg << "\n";
-            seq.rptr = v.node->expr->pos();
-            wrap::string err;
-            auto linepos = hlp::write_src_loc(err, seq);
-            cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
-            cout << err << "\n";
+            });
+        if (!inpret.eval(node)) {
+            report("eval error!");
+            dump_stack(opt, inpret.stack, seq);
+            return -1;
         }
-        return -1;
+        if (opt.dbginfo) {
+            cout << "eval succeeded\n";
+        }
     }
-    if (opt.dbginfo) {
-        cout << "eval succeeded\n";
+    else if (opt.format == OutputFormat::llvm) {
+        minilang::assembly::NodeAnalyzer analyzer;
+        minilang::assembly::Context actx;
+        if (!analyzer.dump_llvm(node, actx)) {
+            report("generate error!");
+            dump_stack(opt, actx.stack, seq);
+            return -1;
+        }
+        if (!ctx.is_set("output")) {
+            report("output file not set!. use option --output");
+            return -1;
+        }
+        std::ofstream fs(opt.output);
+        if (!fs) {
+            report("output file ", opt.output, " couldn't open");
+            return -1;
+        }
+        fs << actx.buffer;
+        fs.close();
+        if (opt.dbginfo) {
+            cout << "saved\n";
+        }
+    }
+    else {
+        report("unknown format");
+        return -1;
     }
     return 0;
 }

@@ -49,6 +49,11 @@ namespace minilang {
                     notyet = true;
                 }
             }
+            else if (seq.seek_if("bool")) {
+                if (seq.eos()) {
+                    select = "i1";
+                }
+            }
             if (!select || notyet) {
                 select = "void";
             }
@@ -68,12 +73,13 @@ namespace minilang {
                 ctx.write(select_primitive(v));
             }
             else {
-                ctx.error("unsupported type");
+                ctx.error("unsupported type", type);
                 return false;
             }
+            return true;
         }
 
-        bool dump_binary(Node* node, Context& ctx, LLVMValue& value) {
+        bool dump_expr(Node* node, Context& ctx, LLVMValue& value) {
             auto type = [&](const char* str) {
                 return is(node->expr, str);
             };
@@ -81,7 +87,59 @@ namespace minilang {
                 return node->child(i);
             };
             if (type("binary")) {
+                auto bin = static_cast<expr::BinExpr*>(node->expr);
+                if (expr::is_logical(bin->op)) {
+                    auto str = bin->op == expr::Op::and_ ? "and." : "or.";
+                    if (!dump_expr(ch(0), ctx, value)) {
+                        return false;
+                    }
+                    auto cond = ctx.make_tmp(str, ".begin");
+                    ctx.write(cond, ":\n");
+                    auto then = ctx.make_tmp(str, ".then");
+                    auto done = ctx.make_tmp(str, ".done");
+                    auto end = ctx.make_tmp(str, ".end");
+                    if (bin->op == expr::Op::and_) {
+                        ctx.write("br i1 ", value.val, ", label %", then, ", label %", end, "\n");
+                    }
+                    else {
+                        ctx.write("br i1 ", value.val, ", label %", end, ", label %", then, "\n");
+                    }
+                    ctx.write(then, ":\n");
+                    if (!dump_expr(ch(0), ctx, value)) {
+                        return false;
+                    }
+                    ctx.write(done, ":\n");
+                    ctx.write("br label %", end);
+                    ctx.write(end, ":\n");
+                    auto phi = ctx.make_tmp("tmp", "");
+                    ctx.write("%", phi, " = phi [");
+                    if (bin->op == expr::Op::and_) {
+                        ctx.write("false");
+                    }
+                    else {
+                        ctx.write("true");
+                    }
+                    ctx.write(", %", cond, "], [", value.val, ", %", done, "]\n");
+                    value.val = "%" + phi;
+                    value.node = node;
+                    return true;
+                }
+                else {
+                    ctx.error("unimplemented", node);
+                    return false;
+                }
             }
+            else if (type(expr::typeInt)) {
+                auto n = static_cast<expr::IntExpr*>(node->expr);
+                value.val = "";
+                n->stringify(value.val, 10);
+                return true;
+            }
+            else {
+                ctx.error("unimplemented", node);
+                return false;
+            }
+            return true;
         }
 
         bool NodeAnalyzer::dump_llvm(Node* node, Context& ctx) {
@@ -101,7 +159,7 @@ namespace minilang {
                     }
                 }
                 else {
-                    ctx.error("now, return type inference is not supported");
+                    ctx.error("now, return type inference is not supported", node);
                     return false;
                 }
                 if (ctx.loc == Location::global) {
@@ -111,7 +169,8 @@ namespace minilang {
                     ctx.write("%");
                 }
                 ctx.write(fsig->name);
-                ctx.write("{");
+                ctx.write("() ");
+                ctx.write("{\nentry:\n");
                 auto save = ctx.tmpindex;
                 auto locsave = ctx.loc;
                 ctx.tmpindex = 0;
@@ -121,10 +180,26 @@ namespace minilang {
                 }
                 ctx.loc = locsave;
                 ctx.tmpindex = save;
-                ctx.write("}");
+                ctx.write("}\n");
             }
             else if (type("expr_stat")) {
+                LLVMValue value;
+                if (!dump_expr(node->child(0), ctx, value)) {
+                    return false;
+                }
             }
+            else if (type("return")) {
+                LLVMValue value;
+                if (!dump_expr(node->child(0), ctx, value)) {
+                    return false;
+                }
+                ctx.write("ret i32", value.val, "\n");
+            }
+            else {
+                ctx.error("unimplemented", node);
+                return false;
+            }
+            return true;
         }
     }  // namespace assembly
 }  // namespace minilang
