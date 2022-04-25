@@ -21,9 +21,21 @@ namespace utils {
             struct Http2State {
                 net::http2::Connection ctx;
                 net::http2::internal::FrameReader<> r;
-                void* callback_this;
-                bool (*callback)(void* this_, Frames* frames);
+                void* callback_this = nullptr;
+                bool (*callback)(void* this_, Frames* frames) = nullptr;
+                void (*deleter)(void*) = nullptr;
                 bool opened = false;
+
+                void delete_callback() {
+                    if (deleter) {
+                        deleter(callback_this);
+                    }
+                    callback = nullptr;
+                    callback_this = nullptr;
+                }
+
+                ~Http2State() {
+                }
             };
 
             struct Frames {
@@ -32,6 +44,14 @@ namespace utils {
                 wrap::string wreq;
                 Http2State* state;
             };
+
+            wrap::shared_ptr<net::http2::Frame>* begin(Frames* fr) {
+                return fr ? fr->frame.data() + 0 : nullptr;
+            }
+
+            wrap::shared_ptr<net::http2::Frame>* end(Frames* fr) {
+                return fr ? fr->frame.data() + fr->frame.size() : nullptr;
+            }
 
             constexpr auto preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
@@ -140,8 +160,10 @@ namespace utils {
                 }
                 else if (key == set_callback) {
                     auto ptr = static_cast<Callback*>(value);
+                    state->delete_callback();
                     state->callback = ptr->callback;
                     state->callback_this = ptr->this_;
+                    state->deleter = ptr->deleter;
                     return true;
                 }
                 return false;
