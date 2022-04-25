@@ -147,6 +147,7 @@ namespace utils {
             .frame = frame.type,                         \
         };                                               \
     }
+
         }  // namespace http2
     }      // namespace net
 }  // namespace utils

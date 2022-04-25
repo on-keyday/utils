@@ -166,7 +166,7 @@ namespace utils {
                 }
                 ::SSL_set_bio(tls->ssl, ssl_side, ssl_side);
                 if (tls->alpn.size()) {
-                    if (!::SSL_set_alpn_protos(tls->ssl, tls->alpn.c_str(), tls->alpn.size())) {
+                    if (::SSL_set_alpn_protos(tls->ssl, tls->alpn.c_str(), tls->alpn.size()) != 0) {
                         return false;
                     }
                 }

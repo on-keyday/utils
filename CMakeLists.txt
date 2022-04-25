@@ -170,6 +170,7 @@ PRIVATE
 "src/lib/cnet/tcp.cpp"
 "src/lib/cnet/ssl.cpp"
 "src/lib/cnet/tcp_server.cpp"
+"src/lib/cnet/http2.cpp"
 )
 #if(WIN32)
 target_sources(utils

@@ -78,6 +78,14 @@ namespace utils {
             bool poll_frame(CNet* ctx) {
                 return cnet::set_ptr(ctx, poll, nullptr);
             }
+
+            enum class DefaultProc {
+                none,
+                send_window_update = 0x1,
+                ping = 0x2,
+            };
+
+            DEFINE_ENUM_FLAGOP(DefaultProc)
         }  // namespace http2
     }      // namespace cnet
 }  // namespace utils

@@ -22,6 +22,7 @@ void test_cnet_http2() {
     ssl::set_host(tls, "google.com");
     set_lowlevel_protocol(tls, tcp);
     ok = open(tls);
+    auto code = get_error(tls);
     assert(ok);
     auto alpn = ssl::get_alpn_selected(tls);
     assert(strncmp(alpn, "h2", 2) == 0);

@@ -122,6 +122,7 @@ namespace utils {
 
                 template <class Set>
                 bool make_settings(SettingsFrame& frame, Set&& settings) {
+                    frame.id = 0;
                     frame.type = FrameType::settings;
                     frame.flag = Flag::none;
                     frame.len = 0;

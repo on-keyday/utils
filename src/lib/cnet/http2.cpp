@@ -35,6 +35,7 @@ namespace utils {
                 }
 
                 ~Http2State() {
+                    delete_callback();
                 }
             };
 
@@ -44,6 +45,41 @@ namespace utils {
                 wrap::string wreq;
                 Http2State* state;
             };
+
+            bool STDCALL default_proc(Frames* fr, wrap::shared_ptr<net::http2::Frame>& frame, DefaultProc filter) {
+                if (any(filter & DefaultProc::ping)) {
+                    if (!(frame->flag & net::http2::Flag::ack)) {
+                        auto save = frame->flag;
+                        frame->flag |= net::http2::Flag::ack;
+                        fr->state->ctx.update_send(*frame);
+                        net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                        net::http2::encode(&*frame, w);
+                        frame->flag = save;
+                    }
+                }
+                if (any(filter & DefaultProc::send_window_update)) {
+                    if (frame->type == net::http2::FrameType::data) {
+                        net::http2::WindowUpdateFrame update;
+                        update.type = net::http2::FrameType::window_update;
+                        update.id = 0;
+                        update.increment = frame->len;
+                        fr->state->ctx.update_send(update);
+                        net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                        net::http2::encode(&update, w);
+                        update.id = frame->id;
+                        fr->state->ctx.update_send(update);
+                        net::http2::encode(&update, w);
+                    }
+                }
+                return true;
+            }
+
+            bool STDCALL default_procs(Frames* fr, DefaultProc filter) {
+                for (auto& frame : fr->frame) {
+                    default_proc(fr, frame, filter);
+                }
+                return true;
+            }
 
             wrap::shared_ptr<net::http2::Frame>* begin(Frames* fr) {
                 return fr ? fr->frame.data() + 0 : nullptr;
@@ -175,7 +211,7 @@ namespace utils {
                     .settings_ptr = http2_settings,
                     .deleter = [](Http2State* state) { delete state; },
                 };
-                return cnet::create_cnet(CNetFlag::once_set_no_delete_link, new Http2State{}, protocol);
+                return cnet::create_cnet(CNetFlag::once_set_no_delete_link | CNetFlag::init_before_io, new Http2State{}, protocol);
             }
         }  // namespace http2
     }      // namespace cnet
