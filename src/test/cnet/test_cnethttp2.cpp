@@ -12,6 +12,7 @@
 
 void test_cnet_http2() {
     using namespace utils::cnet;
+    namespace h2 = utils::net::http2;
     auto tcp = tcp::create_client();
     tcp::set_hostport(tcp, "google.com", "https");
     bool ok = open(tcp);
@@ -28,6 +29,11 @@ void test_cnet_http2() {
     assert(strncmp(alpn, "h2", 2) == 0);
     auto client = http2::create_client();
     http2::set_frame_callback(client, [](http2::Frames* fr) {
+        for (auto& frame : fr) {
+            http2::default_proc(fr, frame, http2::DefaultProc::all);
+            if (frame->type == h2::FrameType::settings) {
+            }
+        }
         return false;
     });
     set_lowlevel_protocol(client, tls);

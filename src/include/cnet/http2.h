@@ -10,6 +10,7 @@
 #pragma once
 #include "cnet.h"
 #include "../net/http2/frame.h"
+#include "../helper/pushbacker.h"
 
 namespace utils {
     namespace net {
@@ -27,11 +28,11 @@ namespace utils {
 
             struct Frames;
 
-            wrap::shared_ptr<net::http2::Frame>* begin(Frames*);
+            DLL wrap::shared_ptr<net::http2::Frame>* STDCALL begin(Frames*);
 
-            wrap::shared_ptr<net::http2::Frame>* end(Frames*);
+            DLL wrap::shared_ptr<net::http2::Frame>* STDCALL end(Frames*);
 
-            net::http2::Stream* get_stream(Frames*);
+            DLL net::http2::Stream* STDCALL get_stream(Frames*);
 
             enum Http2Setting {
                 // invoke poll method
@@ -75,7 +76,7 @@ namespace utils {
                 return cnet::set_ptr(ctx, set_callback, &callback);
             }
 
-            bool poll_frame(CNet* ctx) {
+            inline bool poll_frame(CNet* ctx) {
                 return cnet::set_ptr(ctx, poll, nullptr);
             }
 
@@ -83,9 +84,55 @@ namespace utils {
                 none,
                 send_window_update = 0x1,
                 ping = 0x2,
+                settings = 0x4,
+                all = send_window_update | ping | settings,
             };
 
             DEFINE_ENUM_FLAGOP(DefaultProc)
+
+            DLL bool STDCALL default_proc(Frames* fr, wrap::shared_ptr<net::http2::Frame>& frame, DefaultProc filter);
+            DLL bool STDCALL default_procs(Frames* fr, DefaultProc filter);
+
+            struct Fetcher {
+               private:
+                template <class T>
+                static void fetch_fn(void* ptr, helper::IPushBacker first, helper::IPushBacker second) {
+                    auto iface = static_cast<T*>(ptr);
+                    helper::append(first, iface->first);
+                    helper::append(first, iface->second);
+                    ++*iface;
+                }
+
+                template <class End, class T>
+                static bool on_end_fn(void* mptr, void* ptr) {
+                    auto iface = static_cast<T*>(ptr);
+                    auto ends = static_cast<End*>(mptr);
+                    return *iface == *ends;
+                }
+
+                void (*fetcher)(void* ptr, helper::IPushBacker first, helper::IPushBacker second);
+                bool (*ender)(void* ends, void* ptr);
+                void* it;
+                void* ends;
+
+               public:
+                Fetcher(const Fetcher&) = default;
+                template <class It, class End>
+                Fetcher(It& it, End& end)
+                    : it(std::addressof(it)), ends(std::addressof(end)), fetcher(fetch_fn<It>), ender(on_end_fn<End, It>) {}
+
+                void fetch(helper::IPushBacker first, helper::IPushBacker second) {
+                    fetcher(it, first, second);
+                }
+
+                bool on_end() const {
+                    return ender(ends, it);
+                }
+            };
+
+            template <class Header>
+            bool header(Frames* fr, const Header& h) {
+            }
         }  // namespace http2
     }      // namespace cnet
 }  // namespace utils

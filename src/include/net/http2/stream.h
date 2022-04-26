@@ -105,6 +105,10 @@ namespace utils {
                 bool stream_level = false;
             };
 
+            namespace internal {
+                wrap::shared_ptr<internal::ConnectionImpl>& get_impl(Connection&);
+            }
+
             struct DLL Connection {
                 Stream* stream(int id);
                 Stream* new_stream();
@@ -143,6 +147,7 @@ namespace utils {
                 }
 
                private:
+                friend wrap::shared_ptr<internal::ConnectionImpl>& internal::get_impl(Connection&);
                 wrap::shared_ptr<internal::ConnectionImpl> impl;
             };
 

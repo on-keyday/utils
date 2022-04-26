@@ -13,6 +13,9 @@
 #include "../net/http2/frame_reader.h"
 #include "../../include/wrap/light/vector.h"
 #include "../../include/number/array.h"
+#include "../../include/net_util/hpack.h"
+#include "../net/http2/stream_impl.h"
+#include "../../include/wrap/pair_iter.h"
 
 namespace utils {
     namespace cnet {
@@ -65,10 +68,24 @@ namespace utils {
                         update.increment = frame->len;
                         fr->state->ctx.update_send(update);
                         net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
-                        net::http2::encode(&update, w);
+                        net::http2::encode(update, w);
                         update.id = frame->id;
                         fr->state->ctx.update_send(update);
-                        net::http2::encode(&update, w);
+                        net::http2::encode(update, w);
+                    }
+                }
+                if (any(filter & DefaultProc::settings)) {
+                    if (frame->type == net::http2::FrameType::settings) {
+                        if (!(frame->flag & net::http2::Flag::ack)) {
+                            auto save = frame->flag;
+                            auto save2 = frame->len;
+                            frame->len = 0;
+                            frame->flag |= net::http2::Flag::ack;
+                            net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                            net::http2::encode(&*frame, w);
+                            frame->flag = save;
+                            frame->len = save2;
+                        }
                     }
                 }
                 return true;
@@ -81,12 +98,45 @@ namespace utils {
                 return true;
             }
 
-            wrap::shared_ptr<net::http2::Frame>* begin(Frames* fr) {
+            wrap::shared_ptr<net::http2::Frame>* STDCALL begin(Frames* fr) {
                 return fr ? fr->frame.data() + 0 : nullptr;
             }
 
-            wrap::shared_ptr<net::http2::Frame>* end(Frames* fr) {
+            wrap::shared_ptr<net::http2::Frame>* STDCALL end(Frames* fr) {
                 return fr ? fr->frame.data() + fr->frame.size() : nullptr;
+            }
+
+            struct UnwrapCb {
+                std::pair<std::string, std::string> obj;
+                auto& unwrap(auto& v) {
+                    if (obj.first.empty() && obj.second.empty()) {
+                        v.fetch(obj.first, obj.second);
+                    }
+                    return obj;
+                }
+
+                auto const_unwrap(auto&) {
+                    return obj;
+                }
+
+                void increment(auto& v) {
+                    obj.first.clear();
+                    obj.second.clear();
+                }
+
+                void decrement(auto&) {}
+
+                bool equal(auto& v1, auto&) const {
+                    return v1.on_end();
+                }
+            };
+
+            bool header_encode(Frames* fr, Fetcher& fetch) {
+                wrap::string buf;
+                auto& b = net::http2::internal::get_impl(fr->state->ctx);
+                auto range = wrap::make_wraprange(fetch, UnwrapCb{}, 0, wrap::NothingUnwrap{});
+                net::hpack::encode(buf, b->send.encode_table, range, b->send.setting[k(net::http2::SettingKey::table_size)]);
+                return true;
             }
 
             constexpr auto preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";

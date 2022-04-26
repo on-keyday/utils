@@ -128,6 +128,10 @@ namespace utils {
                         return stream;
                     }
                 };
+
+                inline wrap::shared_ptr<ConnectionImpl>& get_impl(Connection& conn) {
+                    return conn.impl;
+                }
             }  // namespace internal
 
 #define ASSERT_STREAM()                                  \

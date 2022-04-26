@@ -56,5 +56,28 @@ namespace utils {
             }
         };
 
+        struct IPushBacker {
+           private:
+            void* ptr;
+            void (*push_back_)(void*, std::uint8_t);
+
+            template <class T>
+            static void push_back_fn(void* self, std::uint8_t c) {
+                static_cast<T*>(self)->push_back(c);
+            }
+
+           public:
+            IPushBacker(const IPushBacker& b)
+                : ptr(b.ptr), push_back_(b.push_back_) {}
+
+            template <class T>
+            IPushBacker(T& pb)
+                : ptr(std::addressof(pb)), push_back_(push_back_fn<T>) {}
+
+            void push_back(std::uint8_t c) {
+                push_back_(ptr, c);
+            }
+        };
+
     }  // namespace helper
 }  // namespace utils

@@ -770,10 +770,10 @@ namespace utils {
                     }
 
                    public:
-                    static HpkErr encode(bool adddy, const header_t& src, string_t& dst,
+                    static HpkErr encode(bool adddy, header_t& src, string_t& dst,
                                          table_t& dymap, std::uint32_t maxtablesize) {
                         endian::Writer<string_t&> se(dst);
-                        for (auto& h : src) {
+                        for (auto&& h : src) {
                             size_t idx = 0;
                             if (get_idx(
                                     [&](const auto& k, const auto& v) {

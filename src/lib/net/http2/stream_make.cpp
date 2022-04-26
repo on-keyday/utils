@@ -134,7 +134,7 @@ namespace utils {
                         c = helper::to_lower(c);
                     }
                 }
-                if (auto e = hpack::encode(f.data, impl->send.encode_table, *raw_h, impl->send.setting[k(SettingKey::table_size)], true); !e) {
+                if (auto e = hpack::encode(f.data, impl->send.encode_table, cpy, impl->send.setting[k(SettingKey::table_size)], true); !e) {
                     return false;
                 }
                 auto mxsz = impl->send.setting[k(SettingKey::max_frame_size)];
