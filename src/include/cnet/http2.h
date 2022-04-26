@@ -32,13 +32,11 @@ namespace utils {
 
             DLL wrap::shared_ptr<net::http2::Frame>* STDCALL end(Frames*);
 
-            DLL net::http2::Stream* STDCALL get_stream(Frames*);
-
-            enum Http2Setting {
+            enum Http2Config {
                 // invoke poll method
-                poll = user_defined_start + 1,
+                config_frame_poll = user_defined_start + 1,
                 // register callback
-                set_callback,
+                config_set_callback,
             };
 
             struct Callback {
@@ -55,7 +53,7 @@ namespace utils {
                 };
                 if constexpr (sizeof(Pack) <= sizeof(void*)) {
                     Pack* ptr = reinterpret_cast<Pack*>(&callback.this_);
-                    *ptr = Pack{std::move(fn)};
+                    new (ptr) Pack{std::move(fn)};
                     callback.callback = [](void* p, Frames* fr) {
                         Pack* ptr = reinterpret_cast<Pack*>(&p);
                         return ptr->fn(fr);
@@ -63,8 +61,8 @@ namespace utils {
                     callback.deleter = nullptr;
                 }
                 else {
-                    callback.this_ = new Pack{fn};
-                    callback.this_ = [](void* p, Frames* fr) {
+                    callback.this_ = new Pack{std::move(fn)};
+                    callback.callback = [](void* p, Frames* fr) {
                         Pack* ptr = static_cast<Pack*>(p);
                         return ptr->fn(fr);
                     };
@@ -73,11 +71,11 @@ namespace utils {
                         delete ptr;
                     };
                 }
-                return cnet::set_ptr(ctx, set_callback, &callback);
+                return cnet::set_ptr(ctx, config_set_callback, &callback);
             }
 
             inline bool poll_frame(CNet* ctx) {
-                return cnet::set_ptr(ctx, poll, nullptr);
+                return cnet::set_ptr(ctx, config_frame_poll, nullptr);
             }
 
             enum class DefaultProc {
@@ -93,13 +91,42 @@ namespace utils {
             DLL bool STDCALL default_proc(Frames* fr, wrap::shared_ptr<net::http2::Frame>& frame, DefaultProc filter);
             DLL bool STDCALL default_procs(Frames* fr, DefaultProc filter);
 
+            inline bool is_settings_ack(const wrap::shared_ptr<net::http2::Frame>& frame) {
+                return frame &&
+                       frame->type == net::http2::FrameType::settings &&
+                       frame->flag & net::http2::Flag::ack;
+            }
+
+            inline bool is_close_stream_signal(const wrap::shared_ptr<net::http2::Frame>& frame) {
+                if (!frame) {
+                    return false;
+                }
+                if (frame->type == net::http2::FrameType::rst_stream ||
+                    frame->type == net::http2::FrameType::goaway) {
+                    return true;
+                }
+                if (frame->type == net::http2::FrameType::data ||
+                    frame->type == net::http2::FrameType::continuous) {
+                    return any(frame->flag & net::http2::Flag::end_stream);
+                }
+                return false;
+            }
+
+            template <class Header, class Method = const char*, class Scheme = const char*>
+            inline void set_request(Header& h, auto authority, auto path, Method method = "GET", Scheme scheme = "https") {
+                h.emplace(":method", method);
+                h.emplace(":path", path);
+                h.emplace(":authority", authority);
+                h.emplace(":scheme", scheme);
+            }
+
             struct Fetcher {
                private:
                 template <class T>
                 static void fetch_fn(void* ptr, helper::IPushBacker first, helper::IPushBacker second) {
                     auto iface = static_cast<T*>(ptr);
-                    helper::append(first, iface->first);
-                    helper::append(first, iface->second);
+                    helper::append(first, get<0>(**iface));
+                    helper::append(second, get<1>(**iface));
                 }
 
                 template <class T>
@@ -141,13 +168,37 @@ namespace utils {
                 }
             };
 
-            DLL bool STDCALL write_header(Frames* v, Fetcher fetch, std::int32_t& id);
+            struct RFetcher {
+               private:
+                void (*emplacer)(void* p, const char* key, const char* value);
+                void* ptr;
+                template <class T>
+                static void emplace_fn(void* p, const char* key, const char* value) {
+                    auto f = static_cast<T*>(p);
+                    f->emplace(key, value);
+                }
+
+               public:
+                RFetcher(const RFetcher&) = default;
+
+                template <class T>
+                RFetcher(T& t)
+                    : ptr(std::addressof(t)), emplacer(emplace_fn<T>) {}
+
+                void emplace(const char* key, const char* value) {
+                    emplacer(ptr, key, value);
+                }
+            };
+
+            DLL bool STDCALL read_header(Frames* v, RFetcher fetch, std::int32_t id);
+            DLL bool STDCALL read_data(Frames* v, helper::IPushBacker pb, std::int32_t id);
+            DLL bool STDCALL write_header(Frames* v, Fetcher fetch, std::int32_t& id, bool no_data);
 
             template <class Header>
-            bool header(Frames* fr, const Header& h, std::int32_t& id) {
+            bool write_header(Frames* fr, const Header& h, std::int32_t& id, bool no_data = true) {
                 auto begin = h.begin();
                 auto end = h.end();
-                return write_header(fr, Fetcher{begin, end}, id);
+                return write_header(fr, Fetcher{begin, end}, id, no_data);
             }
         }  // namespace http2
     }      // namespace cnet

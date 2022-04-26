@@ -17,10 +17,11 @@
 namespace utils {
     namespace net {
         namespace http2 {
+            struct Stream;
             namespace internal {
                 struct ConnectionImpl;
                 struct StreamImpl;
-
+                wrap::shared_ptr<internal::StreamImpl>& get_impl(Stream&);
             }  // namespace internal
 
             enum class Status {
@@ -93,6 +94,7 @@ namespace utils {
                private:
                 friend struct internal::ConnectionImpl;
                 friend struct Connection;
+                friend wrap::shared_ptr<internal::StreamImpl>& internal::get_impl(Stream&);
                 wrap::shared_ptr<internal::StreamImpl> impl;
             };
 

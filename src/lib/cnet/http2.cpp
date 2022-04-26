@@ -111,22 +111,34 @@ namespace utils {
 
             struct UnwrapCb {
                 mutable std::pair<std::string, std::string> obj;
+                bool first = true;
                 void fetching(auto& v) {
                     constexpr auto valid = net::h1header::default_validator();
                     constexpr auto h2key = net::h1header::http2_key_validator();
                     while (!v.on_end()) {
                         v.fetch(obj.first, obj.second);
                         if (!h2key(obj) && !valid(obj)) {
+                            obj.first.clear();
+                            obj.second.clear();
                             continue;
                         }
-                        if (obj.first == "connection" || obj.first == "host") {
+                        if (helper::equal(obj.first, "connection", helper::ignore_case()) ||
+                            helper::equal(obj.first, "host", helper::ignore_case())) {
                             continue;
                         }
+                        auto to_lower = [](auto& c) {
+                            c = helper::to_lower(c);
+                        };
+                        std::for_each(obj.first.begin(), obj.first.end(), to_lower);
                         break;
                     }
+                    first = false;
                 }
 
                 auto& unwrap(auto& v) {
+                    if (first) {
+                        fetching(v);
+                    }
                     return obj;
                 }
 
@@ -137,7 +149,7 @@ namespace utils {
                 void increment(auto& v) {
                     obj.first.clear();
                     obj.second.clear();
-                    fetching(v);
+                    first = true;
                 }
 
                 void decrement(auto&) {}
@@ -147,7 +159,29 @@ namespace utils {
                 }
             };
 
-            bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id) {
+            bool STDCALL read_header(Frames* fr, RFetcher fetch, std::int32_t id) {
+                auto stream = fr->state->ctx.stream(id);
+                if (!stream) {
+                    return false;
+                }
+                auto& impl = net::http2::internal::get_impl(*stream);
+                for (auto& kv : impl->h) {
+                    fetch.emplace(kv.first.c_str(), kv.second.c_str());
+                }
+                return true;
+            }
+
+            bool STDCALL read_data(Frames* fr, helper::IPushBacker pb, std::int32_t id) {
+                auto stream = fr->state->ctx.stream(id);
+                if (!stream) {
+                    return false;
+                }
+                auto& impl = net::http2::internal::get_impl(*stream);
+                helper::append(pb, impl->data);
+                return true;
+            }
+
+            bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id, bool no_data) {
                 if (!fr) {
                     return false;
                 }
@@ -163,6 +197,9 @@ namespace utils {
                     return false;
                 }
                 net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                if (no_data) {
+                    frame.flag |= net::http2::Flag::end_stream;
+                }
                 net::http2::encode(frame, w);
                 id = frame.id;
                 while (buf.size()) {
@@ -276,10 +313,10 @@ namespace utils {
             }
 
             bool http2_settings(CNet* ctx, Http2State* state, std::int64_t key, void* value) {
-                if (key == poll) {
+                if (key == config_frame_poll) {
                     return poll_frame(ctx, state);
                 }
-                else if (key == set_callback) {
+                else if (key == config_set_callback) {
                     auto ptr = static_cast<Callback*>(value);
                     state->delete_callback();
                     state->callback = ptr->callback;

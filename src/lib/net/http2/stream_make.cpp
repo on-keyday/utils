@@ -160,6 +160,7 @@ namespace utils {
                 f = {};
                 f.type = FrameType::header;
                 auto mxsz = impl->send.setting[k(SettingKey::max_frame_size)];
+                f.data = std::move(remain);
                 if (f.data.size() > mxsz) {
                     auto b = f.data.begin() + mxsz;
                     auto e = f.data.end();
