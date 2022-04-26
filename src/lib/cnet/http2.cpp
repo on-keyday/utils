@@ -52,13 +52,15 @@ namespace utils {
 
             bool STDCALL default_proc(Frames* fr, wrap::shared_ptr<net::http2::Frame>& frame, DefaultProc filter) {
                 if (any(filter & DefaultProc::ping)) {
-                    if (!(frame->flag & net::http2::Flag::ack)) {
-                        auto save = frame->flag;
-                        frame->flag |= net::http2::Flag::ack;
-                        fr->state->ctx.update_send(*frame);
-                        net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
-                        net::http2::encode(&*frame, w);
-                        frame->flag = save;
+                    if (frame->type == net::http2::FrameType::ping) {
+                        if (!(frame->flag & net::http2::Flag::ack)) {
+                            auto save = frame->flag;
+                            frame->flag |= net::http2::Flag::ack;
+                            fr->state->ctx.update_send(*frame);
+                            net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                            net::http2::encode(&*frame, w);
+                            frame->flag = save;
+                        }
                     }
                 }
                 if (any(filter & DefaultProc::send_window_update)) {
@@ -120,6 +122,7 @@ namespace utils {
                         if (obj.first == "connection" || obj.first == "host") {
                             continue;
                         }
+                        break;
                     }
                 }
 
@@ -260,6 +263,7 @@ namespace utils {
                             if (buf.size() == buf.capacity()) {
                                 continue;
                             }
+                            break;
                         }
                         continue;
                     }

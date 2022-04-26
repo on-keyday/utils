@@ -9,6 +9,8 @@
 #include <cnet/http2.h>
 #include <cnet/tcp.h>
 #include <cnet/ssl.h>
+#include <map>
+#include <string>
 
 void test_cnet_http2() {
     using namespace utils::cnet;
@@ -31,13 +33,19 @@ void test_cnet_http2() {
     http2::set_frame_callback(client, [](http2::Frames* fr) {
         for (auto& frame : fr) {
             http2::default_proc(fr, frame, http2::DefaultProc::all);
-            if (frame->type == h2::FrameType::settings) {
+            if (frame->type == h2::FrameType::window_update) {
+                auto update = static_cast<h2::WindowUpdateFrame*>(frame.get());
+                auto incr = update->increment;
+                incr += 1;
             }
         }
-        return false;
+        return true;
     });
     set_lowlevel_protocol(client, tls);
     ok = open(client);
+    assert(ok);
+    ok = http2::poll_frame(client);
+    code = get_error(tcp);
     assert(ok);
 }
 
