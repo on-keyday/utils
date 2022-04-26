@@ -156,6 +156,28 @@ namespace utils {
                 return true;
             }
 
+            bool Connection::split_header(HeaderFrame& f, wrap::string& remain) {
+                f = {};
+                f.type = FrameType::header;
+                auto mxsz = impl->send.setting[k(SettingKey::max_frame_size)];
+                if (f.data.size() > mxsz) {
+                    auto b = f.data.begin() + mxsz;
+                    auto e = f.data.end();
+                    remain.assign(b, e);
+                    f.data.erase(mxsz, ~0);
+                }
+                else {
+                    f.flag |= Flag::end_headers;
+                }
+                f.len = (int)f.data.size();
+                auto stream = new_stream();
+                if (!stream) {
+                    return false;
+                }
+                f.id = stream->id();
+                return true;
+            }
+
             bool Connection::make_continuous(std::int32_t id, wrap::string& remain, Continuation& f) {
                 if (remain.size() == 0) {
                     return false;

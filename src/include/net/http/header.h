@@ -14,6 +14,7 @@
 #include "../../helper/pushbacker.h"
 #include "../../number/parse.h"
 #include "../../helper/appender.h"
+#include "../../helper/equal.h"
 
 namespace utils {
     namespace net {
@@ -167,6 +168,16 @@ namespace utils {
             constexpr auto default_validator() {
                 return [](auto&& keyval) {
                     return is_valid_key(get<0>(keyval)) && is_valid_value(get<1>(keyval));
+                };
+            }
+
+            constexpr auto http2_key_validator() {
+                return [](auto&& kv) {
+                    return helper::equal(get<0>(kv), ":path") ||
+                           helper::equal(get<0>(kv), ":authority") ||
+                           helper::equal(get<0>(kv), ":status") ||
+                           helper::equal(get<0>(kv), ":scheme") ||
+                           helper::equal(get<0>(kv), ":method");
                 };
             }
 

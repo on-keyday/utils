@@ -100,6 +100,11 @@ namespace utils {
                     auto iface = static_cast<T*>(ptr);
                     helper::append(first, iface->first);
                     helper::append(first, iface->second);
+                }
+
+                template <class T>
+                static void increment_fn(void* ptr) {
+                    auto iface = static_cast<T*>(ptr);
                     ++*iface;
                 }
 
@@ -111,6 +116,7 @@ namespace utils {
                 }
 
                 void (*fetcher)(void* ptr, helper::IPushBacker first, helper::IPushBacker second);
+                void (*incr)(void* ptr);
                 bool (*ender)(void* ends, void* ptr);
                 void* it;
                 void* ends;
@@ -119,9 +125,14 @@ namespace utils {
                 Fetcher(const Fetcher&) = default;
                 template <class It, class End>
                 Fetcher(It& it, End& end)
-                    : it(std::addressof(it)), ends(std::addressof(end)), fetcher(fetch_fn<It>), ender(on_end_fn<End, It>) {}
+                    : it(std::addressof(it)), ends(std::addressof(end)), fetcher(fetch_fn<It>), incr(increment_fn<It>), ender(on_end_fn<End, It>) {}
 
                 void fetch(helper::IPushBacker first, helper::IPushBacker second) {
+                    fetcher(it, first, second);
+                    incr(it);
+                }
+
+                void prefetch(helper::IPushBacker first, helper::IPushBacker second) const {
                     fetcher(it, first, second);
                 }
 
@@ -130,8 +141,13 @@ namespace utils {
                 }
             };
 
+            DLL bool STDCALL write_header(Frames* v, Fetcher fetch, std::int32_t& id);
+
             template <class Header>
-            bool header(Frames* fr, const Header& h) {
+            bool header(Frames* fr, const Header& h, std::int32_t& id) {
+                auto begin = h.begin();
+                auto end = h.end();
+                return write_header(fr, Fetcher{begin, end}, id);
             }
         }  // namespace http2
     }      // namespace cnet

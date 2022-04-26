@@ -16,6 +16,7 @@
 #include "../../include/net_util/hpack.h"
 #include "../net/http2/stream_impl.h"
 #include "../../include/wrap/pair_iter.h"
+#include "../../include/net/http/http_headers.h"
 
 namespace utils {
     namespace cnet {
@@ -107,11 +108,22 @@ namespace utils {
             }
 
             struct UnwrapCb {
-                std::pair<std::string, std::string> obj;
-                auto& unwrap(auto& v) {
-                    if (obj.first.empty() && obj.second.empty()) {
+                mutable std::pair<std::string, std::string> obj;
+                void fetching(auto& v) {
+                    constexpr auto valid = net::h1header::default_validator();
+                    constexpr auto h2key = net::h1header::http2_key_validator();
+                    while (!v.on_end()) {
                         v.fetch(obj.first, obj.second);
+                        if (!h2key(obj) && !valid(obj)) {
+                            continue;
+                        }
+                        if (obj.first == "connection" || obj.first == "host") {
+                            continue;
+                        }
                     }
+                }
+
+                auto& unwrap(auto& v) {
                     return obj;
                 }
 
@@ -122,6 +134,7 @@ namespace utils {
                 void increment(auto& v) {
                     obj.first.clear();
                     obj.second.clear();
+                    fetching(v);
                 }
 
                 void decrement(auto&) {}
@@ -131,11 +144,29 @@ namespace utils {
                 }
             };
 
-            bool header_encode(Frames* fr, Fetcher& fetch) {
+            bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id) {
+                if (!fr) {
+                    return false;
+                }
                 wrap::string buf;
                 auto& b = net::http2::internal::get_impl(fr->state->ctx);
                 auto range = wrap::make_wraprange(fetch, UnwrapCb{}, 0, wrap::NothingUnwrap{});
-                net::hpack::encode(buf, b->send.encode_table, range, b->send.setting[k(net::http2::SettingKey::table_size)]);
+                auto err = net::hpack::encode(buf, b->send.encode_table, range, b->send.setting[k(net::http2::SettingKey::table_size)]);
+                if (!err) {
+                    return false;
+                }
+                net::http2::HeaderFrame frame;
+                if (!fr->state->ctx.split_header(frame, buf)) {
+                    return false;
+                }
+                net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                net::http2::encode(frame, w);
+                id = frame.id;
+                while (buf.size()) {
+                    net::http2::Continuation cont;
+                    fr->state->ctx.make_continuous(id, buf, cont);
+                    net::http2::encode(cont, w);
+                }
                 return true;
             }
 
