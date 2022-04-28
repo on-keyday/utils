@@ -11,6 +11,7 @@
 #include "../../include/wrap/light/string.h"
 #include "../../include/number/array.h"
 #include "../../include/helper/appender.h"
+#include "../../include/testutil/timer.h"
 #ifndef USE_OPENSSL
 #define USE_OPENSSL 1
 #endif
@@ -18,6 +19,9 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
+#define OPENSSL_THREAD_DEFINES
+#include <openssl/opensslconf.h>
+#include <openssl/crypto.h>
 #endif
 
 namespace utils {
@@ -42,6 +46,8 @@ namespace utils {
                 size_t buf_index = 0;
                 size_t write_index = 0;
                 TLSStatus status;
+                time_t read_timeout = 0;
+                bool loose_check = false;
 
                 void append_to_buffer(const char* data, size_t size_) {
                     auto now_cap = buffer.size() - buf_index;
@@ -82,7 +88,7 @@ namespace utils {
                        err == SSL_ERROR_WANT_WRITE;
             }
 
-            bool do_IO(CNet* ctx, OpenSSLContext* tls, bool shutdown_mode = false) {
+            bool do_IO(CNet* ctx, OpenSSLContext* tls, test::Timer* timer, bool shutdown_mode = false) {
                 if (tls->buf_index) {
                     auto err = write_to_bio(ctx, tls);
                     if (err <= 0) {
@@ -136,6 +142,11 @@ namespace utils {
                     }
                     tls->status = TLSStatus::reading_from_low;
                     invoke_callback(ctx);
+                    if (tls->read_timeout && timer) {
+                        if (timer->delta().count() >= tls->read_timeout) {
+                            break;
+                        }
+                    }
                 }
                 tls->status = TLSStatus::read_from_low_done;
                 invoke_callback(ctx);
@@ -189,13 +200,21 @@ namespace utils {
                     }
                     else {
                         if (need_IO(tls)) {
-                            if (!do_IO(ctx, tls)) {
+                            if (!do_IO(ctx, tls, nullptr)) {
                                 return false;
                             }
                             continue;
                         }
                         return false;
                     }
+                }
+                if (!tls->loose_check) {
+                    auto result = ::SSL_get_verify_result(tls->ssl);
+                    auto cert = ::SSL_get_peer_certificate(tls->ssl);
+                    if (result != X509_V_OK || !cert) {
+                        return false;
+                    }
+                    ::X509_free(cert);
                 }
                 tls->status = TLSStatus::connected;
                 invoke_callback(ctx);
@@ -209,7 +228,7 @@ namespace utils {
                     count++;
                     auto err = ::SSL_shutdown(tls->ssl);
                     if (err == -1 && need_IO(tls)) {
-                        if (!do_IO(ctx, tls, true)) {
+                        if (!do_IO(ctx, tls, nullptr, true)) {
                             break;
                         }
                         continue;
@@ -219,7 +238,7 @@ namespace utils {
                         err = SSL_read_ex(tls->ssl, tmpbuf.buf, tmpbuf.capacity(), &tmpbuf.i);
                         if (!err) {
                             if (need_IO(tls)) {
-                                if (!do_IO(ctx, tls, true)) {
+                                if (!do_IO(ctx, tls, nullptr, true)) {
                                     break;
                                 }
                                 continue;
@@ -239,13 +258,16 @@ namespace utils {
             }
 
             template <class Callback>
-            bool io_common_loop(CNet* ctx, OpenSSLContext* tls, Callback&& callback) {
+            bool io_common_loop(CNet* ctx, OpenSSLContext* tls, test::Timer* timer, Callback&& callback) {
                 while (true) {
                     auto err = callback();
                     if (!err) {
                         if (need_IO(tls)) {
-                            if (!do_IO(ctx, tls)) {
+                            if (!do_IO(ctx, tls, timer)) {
                                 return false;
+                            }
+                            if (timer && timer->delta().count() >= tls->read_timeout) {
+                                break;
                             }
                             continue;
                         }
@@ -260,8 +282,9 @@ namespace utils {
             bool read_tls(CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
                 tls->status = TLSStatus::start_read;
                 invoke_callback(ctx);
+                test::Timer timer;
                 if (!io_common_loop(
-                        ctx, tls,
+                        ctx, tls, &timer,
                         [&]() {
                             return ::SSL_read_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
                         })) {
@@ -276,7 +299,7 @@ namespace utils {
                 tls->status = TLSStatus::start_write;
                 invoke_callback(ctx);
                 if (!io_common_loop(
-                        ctx, tls,
+                        ctx, tls, nullptr,
                         [&]() {
                             return ::SSL_write_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
                         })) {
@@ -351,12 +374,33 @@ namespace utils {
                 return nullptr;
             }
 
+            bool tls_settings_number(CNet* ctx, OpenSSLContext* tls, std::int64_t key, std::int64_t value) {
+                if (key == reading_timeout) {
+                    tls->read_timeout = value;
+                }
+                else if (key == multi_thread) {
+#ifdef OPENSSL_THREADS
+                    return true;
+#else
+                    return false;
+#endif
+                }
+                else if (key == looser_check) {
+                    tls->loose_check = bool(value);
+                }
+                else {
+                    return false;
+                }
+                return true;
+            }
+
             CNet* STDCALL create_client() {
                 ProtocolSuite<OpenSSLContext> ssl_proto{
                     .initialize = open_tls,
                     .write = write_tls,
                     .read = read_tls,
                     .uninitialize = close_tls,
+                    .settings_number = tls_settings_number,
                     .settings_ptr = tls_settings_ptr,
                     .query_number = tls_query_number,
                     .query_ptr = tls_query_ptr,

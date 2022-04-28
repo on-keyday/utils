@@ -194,7 +194,7 @@ namespace utils {
             template <class Output>
             H2Error encode(const PriorityFrame& input, Output& output) {
                 if (!(input.len == 5)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
                 }
                 if (!(input.type == FrameType::priority)) {
                     return H2Error::type_mismatch;
@@ -219,7 +219,7 @@ namespace utils {
                     }
                 }
                 if (!(output.len == 5)) {
-                    return H2Error::unknown;
+                    return H2Error::frame_size;
                 }
                 if (auto e__ = decode(input, output.priority); H2Error::none != e__) {
                     return e__;
@@ -322,7 +322,7 @@ namespace utils {
                     }
                 }
                 if (!input.read(output.dummy)) {
-                    return H2Error::unknown;
+                    return H2Error::internal;
                 }
                 if (!(((output.flag & Flag::ack) == 0) || (output.len == 0))) {
                     return H2Error::frame_size;
@@ -385,10 +385,10 @@ namespace utils {
                     return H2Error::internal;
                 }
                 if (!input.read(output.data, output.len - output.padding)) {
-                    return H2Error::unknown;
+                    return H2Error::read_data;
                 }
                 if (!input.read(output.pad, output.padding)) {
-                    return H2Error::unknown;
+                    return H2Error::read_padding;
                 }
                 return H2Error::none;
             }

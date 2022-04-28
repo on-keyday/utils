@@ -159,6 +159,20 @@ namespace utils {
                 }
             };
 
+            bool STDCALL write_window_update(Frames* fr, std::uint32_t increment, std::int32_t id) {
+                if (!fr) {
+                    return false;
+                }
+                net::http2::WindowUpdateFrame update;
+                update.type = net::http2::FrameType::window_update;
+                update.increment = increment;
+                update.len = 4;
+                update.id = id;
+                net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                net::http2::encode(update, w);
+                return true;
+            }
+
             bool STDCALL read_header(Frames* fr, RFetcher fetch, std::int32_t id) {
                 auto stream = fr->state->ctx.stream(id);
                 if (!stream) {
@@ -265,6 +279,7 @@ namespace utils {
                         auto store = state->r.pos;
                         auto err = net::http2::decode(state->r, frame);
                         if (any(err & net::http2::H2Error::user_defined_bit)) {
+                            state->r.pos = store;
                             state->r.tidy();
                             break;
                         }

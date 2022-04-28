@@ -34,6 +34,15 @@ namespace utils {
 
                 // invoke ssl error callback
                 invoke_ssl_error_callback,
+
+                // set reading timeout
+                reading_timeout,
+
+                // multi thread config
+                multi_thread,
+
+                // allow anonymous
+                looser_check,
             };
 
             enum class TLSStatus {
@@ -101,6 +110,18 @@ namespace utils {
                 };
                 cbobj.user = &loc;
                 return set_ptr(ctx, invoke_ssl_error_callback, &cbobj);
+            }
+
+            inline bool set_timeout(CNet* ctx, time_t time) {
+                return set_number(ctx, reading_timeout, time);
+            }
+
+            inline bool set_loose_check(CNet* ctx, bool loose) {
+                return set_number(ctx, looser_check, loose);
+            }
+
+            inline bool set_multi_thread(CNet* ctx, bool multi) {
+                return set_number(ctx, multi_thread, multi);
             }
 
         }  // namespace ssl

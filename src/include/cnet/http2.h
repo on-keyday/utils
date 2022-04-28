@@ -194,6 +194,8 @@ namespace utils {
             DLL bool STDCALL read_data(Frames* v, helper::IPushBacker pb, std::int32_t id);
             DLL bool STDCALL write_header(Frames* v, Fetcher fetch, std::int32_t& id, bool no_data);
 
+            DLL bool STDCALL write_window_update(Frames* frame, std::uint32_t increment, std::int32_t id);
+
             template <class Header>
             bool write_header(Frames* fr, const Header& h, std::int32_t& id, bool no_data = true) {
                 auto begin = h.begin();
