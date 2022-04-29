@@ -217,6 +217,10 @@ namespace utils {
             DLL bool STDCALL write_window_update(Frames* fr, std::uint32_t increment, std::int32_t id);
             DLL void STDCALL write_goaway(Frames* fr, std::uint32_t code, bool notify_graceful = false);
 
+            inline void write_goaway(Frames* fr, net::http2::H2Error code, bool notify_geraceful = false) {
+                return write_goaway(fr, std::uint32_t(code), notify_geraceful);
+            }
+
             DLL bool STDCALL flush_write_buffer(Frames* fr);
 
             template <class Header>

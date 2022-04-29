@@ -53,6 +53,7 @@ void test_cnet_http2() {
     std::int32_t first_id = 0, second_id = 0;
     bool done_first = false;
     bool done_second = false;
+    size_t expected_sum = 0;
     http2::set_frame_write_callback(client, [](const h2::Frame* fr) {
         print_frame("send", fr);
     });
