@@ -48,7 +48,7 @@ void test_cnet_http2() {
     assert(ok);
     auto alpn = ssl::get_alpn_selected(tls);
     assert(strncmp(alpn, "h2", 2) == 0);
-    cout << start.next_step() << "\n";
+    cout << start.delta() << "\n";
     auto client = http2::create_client();
     std::int32_t first_id = 0, second_id = 0;
     bool done_first = false;
