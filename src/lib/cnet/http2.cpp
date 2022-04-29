@@ -360,6 +360,7 @@ namespace utils {
                     }
                     return true;
                 };
+                bool on_error = false;
                 while (true) {
                     if (!read_frames()) {
                         return false;
@@ -367,7 +368,11 @@ namespace utils {
                     if (!frames.frame.size()) {
                         while (true) {
                             number::Array<1024, char> buf;
-                            if (!read(ctx, buf.buf, buf.capacity(), &buf.i)) {
+                            if (on_error || !read(ctx, buf.buf, buf.capacity(), &buf.i)) {
+                                if (!on_error && state->r.ref.size()) {
+                                    on_error = true;
+                                    break;
+                                }
                                 if (state->goneaway) {
                                     return true;
                                 }
