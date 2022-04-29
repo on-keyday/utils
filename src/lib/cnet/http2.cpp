@@ -25,21 +25,31 @@ namespace utils {
             struct Http2State {
                 net::http2::Connection ctx;
                 net::http2::internal::FrameReader<> r;
-                void* callback_this = nullptr;
-                bool (*callback)(void* this_, Frames* frames) = nullptr;
-                void (*deleter)(void*) = nullptr;
+
+                ReadCallback rcb{0};
+
+                WriteCallback wcb{0};
+
+                bool goneaway = false;
                 bool opened = false;
 
-                void delete_callback() {
-                    if (deleter) {
-                        deleter(callback_this);
+                void delete_read_callback() {
+                    if (rcb.deleter) {
+                        rcb.deleter(rcb.this_);
                     }
-                    callback = nullptr;
-                    callback_this = nullptr;
+                    rcb = {0};
+                }
+
+                void delete_write_callback() {
+                    if (wcb.deleter) {
+                        wcb.deleter(wcb.this_);
+                    }
+                    wcb = {0};
                 }
 
                 ~Http2State() {
-                    delete_callback();
+                    delete_read_callback();
+                    delete_write_callback();
                 }
             };
 
@@ -48,7 +58,14 @@ namespace utils {
                 net::http2::UpdateResult result;
                 wrap::string wreq;
                 Http2State* state;
+                CNet* low;
             };
+
+            void callback_on_write(Http2State* state, const net::http2::Frame* frame) {
+                if (state->wcb.callback) {
+                    state->wcb.callback(state, frame);
+                }
+            }
 
             bool STDCALL default_proc(Frames* fr, wrap::shared_ptr<net::http2::Frame>& frame, DefaultProc filter) {
                 if (any(filter & DefaultProc::ping)) {
@@ -56,9 +73,11 @@ namespace utils {
                         if (!(frame->flag & net::http2::Flag::ack)) {
                             auto save = frame->flag;
                             frame->flag |= net::http2::Flag::ack;
-                            fr->state->ctx.update_send(*frame);
+                            auto& ref = *frame;
+                            fr->state->ctx.update_send(ref);
                             net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
-                            net::http2::encode(&*frame, w);
+                            net::http2::encode(&ref, w);
+                            callback_on_write(fr->state, &ref);
                             frame->flag = save;
                         }
                     }
@@ -72,9 +91,11 @@ namespace utils {
                         fr->state->ctx.update_send(update);
                         net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
                         net::http2::encode(update, w);
+                        callback_on_write(fr->state, &update);
                         update.id = frame->id;
                         fr->state->ctx.update_send(update);
                         net::http2::encode(update, w);
+                        callback_on_write(fr->state, &update);
                     }
                 }
                 if (any(filter & DefaultProc::settings)) {
@@ -85,7 +106,9 @@ namespace utils {
                             frame->len = 0;
                             frame->flag |= net::http2::Flag::ack;
                             net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
-                            net::http2::encode(&*frame, w);
+                            auto ptr = &*frame;
+                            net::http2::encode(ptr, w);
+                            callback_on_write(fr->state, ptr);
                             frame->flag = save;
                             frame->len = save2;
                         }
@@ -195,7 +218,7 @@ namespace utils {
                 return true;
             }
 
-            bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id, bool no_data) {
+            bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id, bool no_data, net::http2::Priority* prio) {
                 if (!fr) {
                     return false;
                 }
@@ -210,18 +233,38 @@ namespace utils {
                 if (!fr->state->ctx.split_header(frame, buf)) {
                     return false;
                 }
-                net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
                 if (no_data) {
                     frame.flag |= net::http2::Flag::end_stream;
                 }
+                if (prio) {
+                    frame.flag |= net::http2::Flag::priority;
+                    frame.priority = *prio;
+                }
+                net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
                 net::http2::encode(frame, w);
+                callback_on_write(fr->state, &frame);
                 id = frame.id;
                 while (buf.size()) {
                     net::http2::Continuation cont;
                     fr->state->ctx.make_continuous(id, buf, cont);
                     net::http2::encode(cont, w);
+                    callback_on_write(fr->state, &cont);
                 }
                 return true;
+            }
+
+            void STDCALL write_goaway(Frames* fr, std::uint32_t code) {
+                net::http2::GoAwayFrame goaway;
+                goaway.type = net::http2::FrameType::goaway;
+                goaway.id = 0;
+                goaway.code = code;
+                auto& impl = net::http2::internal::get_impl(fr->state->ctx);
+                goaway.processed_id = impl->id_max;
+                goaway.len = 8;
+                net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
+                net::http2::encode(goaway, w);
+                callback_on_write(fr->state, &goaway);
+                fr->state->goneaway = true;
             }
 
             constexpr auto preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
@@ -241,6 +284,7 @@ namespace utils {
                 state->ctx.make_settings(frame, sets);
                 state->ctx.update_send(frame);
                 net::http2::encode(&frame, wr);
+                callback_on_write(state, &frame);
                 if (!write(low, wr.str.c_str(), wr.str.size(), &w)) {
                     return false;
                 }
@@ -248,30 +292,42 @@ namespace utils {
                 return true;
             }
 
-            bool callback_and_write(CNet* ctx, CNet* low, Http2State* state, Frames& frames, bool& ret) {
-                auto res = state->callback(state->callback_this, &frames);
-                cnet::invoke_callback(ctx);
-                if (frames.wreq.size()) {
+            bool STDCALL flush_write_buffer(Frames* fr) {
+                if (!fr) {
+                    return false;
+                }
+                if (fr->wreq.size()) {
                     size_t s;
-                    if (!write(low, frames.wreq.c_str(), frames.wreq.size(), &s)) {
-                        frames.result.err = net::http2::H2Error::transport;
-                        frames.result.detail = net::http2::StreamError::writing_frame;
-                        state->callback(state->callback_this, &frames);
-                        ret = false;
+                    if (!write(fr->low, fr->wreq.c_str(), fr->wreq.size(), &s)) {
+                        fr->result.err = net::http2::H2Error::transport;
+                        fr->result.detail = net::http2::StreamError::writing_frame;
                         return false;
                     }
+                    fr->wreq.clear();
+                }
+                return true;
+            }
+
+            bool callback_and_write(CNet* ctx, Http2State* state, Frames& frames, bool& ret) {
+                auto res = state->rcb.callback(state->rcb.this_, &frames);
+                cnet::invoke_callback(ctx);
+                if (!flush_write_buffer(&frames)) {
+                    state->rcb.callback(state->rcb.this_, &frames);
+                    ret = false;
+                    return false;
                 }
                 ret = true;
                 return res;
             }
 
             bool poll_frame(CNet* ctx, Http2State* state) {
-                if (!state->opened || !state->callback) {
+                if (!state->opened || !state->rcb.callback) {
                     return false;
                 }
                 auto low = cnet::get_lowlevel_protocol(ctx);
                 Frames frames;
                 frames.state = state;
+                frames.low = low;
                 bool ret = false;
                 auto read_frames = [&] {
                     while (state->r.ref.size()) {
@@ -286,12 +342,12 @@ namespace utils {
                         else if (err != net::http2::H2Error::none) {
                             frames.result.err = err;
                             frames.result.detail = net::http2::StreamError::internal_data_read;
-                            callback_and_write(ctx, low, state, frames, ret);
+                            callback_and_write(ctx, state, frames, ret);
                             return false;
                         }
                         frames.result = state->ctx.update_recv(*frame);
                         if (frames.result.err != net::http2::H2Error::none) {
-                            callback_and_write(ctx, low, state, frames, ret);
+                            callback_and_write(ctx, state, frames, ret);
                             return false;
                         }
                         frames.frame.push_back(std::move(frame));
@@ -308,7 +364,7 @@ namespace utils {
                             if (!read(ctx, buf.buf, buf.capacity(), &buf.i)) {
                                 frames.result.err = net::http2::H2Error::transport;
                                 frames.result.detail = net::http2::StreamError::reading_frame;
-                                callback_and_write(ctx, low, state, frames, ret);
+                                callback_and_write(ctx, state, frames, ret);
                                 return false;
                             }
                             state->r.ref.append(buf.c_str(), buf.size());
@@ -319,11 +375,10 @@ namespace utils {
                         }
                         continue;
                     }
-                    if (!callback_and_write(ctx, low, state, frames, ret)) {
+                    if (!callback_and_write(ctx, state, frames, ret)) {
                         return ret;
                     }
                     frames.frame.clear();
-                    frames.wreq.clear();
                 }
             }
 
@@ -331,13 +386,16 @@ namespace utils {
                 if (key == config_frame_poll) {
                     return poll_frame(ctx, state);
                 }
-                else if (key == config_set_callback) {
-                    auto ptr = static_cast<Callback*>(value);
-                    state->delete_callback();
-                    state->callback = ptr->callback;
-                    state->callback_this = ptr->this_;
-                    state->deleter = ptr->deleter;
+                else if (key == config_set_read_callback) {
+                    auto ptr = static_cast<ReadCallback*>(value);
+                    state->delete_read_callback();
+                    state->rcb = *ptr;
                     return true;
+                }
+                else if (key == config_set_write_callback) {
+                    auto ptr = static_cast<WriteCallback*>(value);
+                    state->delete_write_callback();
+                    state->wcb = *ptr;
                 }
                 return false;
             }

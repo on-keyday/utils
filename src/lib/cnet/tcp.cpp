@@ -274,9 +274,9 @@ namespace utils {
                         break;
                     }
                 }
-                sock->status = TCPStatus::recieved;
+                sock->status = buf->proced == 0 ? TCPStatus::eos : TCPStatus::recieved;
                 invoke_callback(ctx);
-                return true;
+                return buf->proced != 0;
             }
 
             bool tcp_settings_number(CNet* ctx, OsTCPSocket* sock, std::int64_t key, std::int64_t value) {
@@ -305,6 +305,18 @@ namespace utils {
                 }
                 else if (key == ipver) {
                     sock->ipver = value;
+                }
+                else if (key == notify_shutdown_sig) {
+                    if (value == ShutdownMode::RECV) {
+                        ::shutdown(sock->sock, SD_RECEIVE);
+                    }
+                    else if (value == ShutdownMode::SEND) {
+                        ::shutdown(sock->sock, SD_SEND);
+                    }
+                    else if (value == ShutdownMode::BOTH) {
+                        ::shutdown(sock->sock, SD_BOTH);
+                    }
+                    return true;
                 }
                 else {
                     return false;

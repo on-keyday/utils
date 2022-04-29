@@ -35,18 +35,26 @@ namespace utils {
             enum Http2Config {
                 // invoke poll method
                 config_frame_poll = user_defined_start + 1,
-                // register callback
-                config_set_callback,
+                // register read frame callback
+                config_set_read_callback,
+                // register write frame callback
+                config_set_write_callback,
             };
 
-            struct Callback {
+            struct ReadCallback {
                 bool (*callback)(void*, Frames*);
                 void* this_ = nullptr;
                 void (*deleter)(void*);
             };
 
-            template <class Fn>
-            bool set_frame_callback(CNet* ctx, Fn fn) {
+            struct WriteCallback {
+                void (*callback)(void*, const net::http2::Frame*);
+                void* this_ = nullptr;
+                void (*deleter)(void*);
+            };
+
+            template <class Callback, class Fn, class... Args>
+            Callback make_callback(Fn fn) {
                 Callback callback;
                 struct Pack {
                     Fn fn;
@@ -54,24 +62,36 @@ namespace utils {
                 if constexpr (sizeof(Pack) <= sizeof(void*)) {
                     Pack* ptr = reinterpret_cast<Pack*>(&callback.this_);
                     new (ptr) Pack{std::move(fn)};
-                    callback.callback = [](void* p, Frames* fr) {
+                    callback.callback = [](void* p, Args... fr) {
                         Pack* ptr = reinterpret_cast<Pack*>(&p);
-                        return ptr->fn(fr);
+                        return ptr->fn(std::forward<Args>(fr)...);
                     };
                     callback.deleter = nullptr;
                 }
                 else {
                     callback.this_ = new Pack{std::move(fn)};
-                    callback.callback = [](void* p, Frames* fr) {
+                    callback.callback = [](void* p, Args... fr) {
                         Pack* ptr = static_cast<Pack*>(p);
-                        return ptr->fn(fr);
+                        return ptr->fn(std::forward<Args>(fr)...);
                     };
                     callback.deleter = [](void* p) {
                         Pack* ptr = static_cast<Pack*>(p);
                         delete ptr;
                     };
                 }
-                return cnet::set_ptr(ctx, config_set_callback, &callback);
+                return callback;
+            }
+
+            template <class Fn>
+            bool set_frame_read_callback(CNet* ctx, Fn fn) {
+                auto callback = make_callback<ReadCallback, Fn, Frames*>(std::move(fn));
+                return cnet::set_ptr(ctx, config_set_read_callback, &callback);
+            }
+
+            template <class Fn>
+            bool set_frame_write_callback(CNet* ctx, Fn fn) {
+                auto callback = make_callback<WriteCallback, Fn, const net::http2::Frame*>(std::move(fn));
+                return cnet::set_ptr(ctx, config_set_write_callback, &callback);
             }
 
             inline bool poll_frame(CNet* ctx) {
@@ -190,17 +210,20 @@ namespace utils {
                 }
             };
 
-            DLL bool STDCALL read_header(Frames* v, RFetcher fetch, std::int32_t id);
-            DLL bool STDCALL read_data(Frames* v, helper::IPushBacker pb, std::int32_t id);
-            DLL bool STDCALL write_header(Frames* v, Fetcher fetch, std::int32_t& id, bool no_data);
+            DLL bool STDCALL read_header(Frames* fr, RFetcher fetch, std::int32_t id);
+            DLL bool STDCALL read_data(Frames* fr, helper::IPushBacker pb, std::int32_t id);
+            DLL bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id, bool no_data, net::http2::Priority* prio);
 
-            DLL bool STDCALL write_window_update(Frames* frame, std::uint32_t increment, std::int32_t id);
+            DLL bool STDCALL write_window_update(Frames* fr, std::uint32_t increment, std::int32_t id);
+            DLL void STDCALL write_goaway(Frames* fr, std::uint32_t code);
+
+            DLL bool STDCALL flush_write_buffer(Frames* fr);
 
             template <class Header>
-            bool write_header(Frames* fr, const Header& h, std::int32_t& id, bool no_data = true) {
+            bool write_header(Frames* fr, const Header& h, std::int32_t& id, bool no_data = true, net::http2::Priority* prio = nullptr) {
                 auto begin = h.begin();
                 auto end = h.end();
-                return write_header(fr, Fetcher{begin, end}, id, no_data);
+                return write_header(fr, Fetcher{begin, end}, id, no_data, prio);
             }
         }  // namespace http2
     }      // namespace cnet

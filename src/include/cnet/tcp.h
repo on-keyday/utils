@@ -54,6 +54,9 @@ namespace utils {
                 conn_timeout_msec,
                 // recv timeout
                 recv_timeout_msec,
+
+                // send shutdown
+                notify_shutdown_sig,
             };
 
             enum class TCPStatus {
@@ -79,6 +82,8 @@ namespace utils {
 
                 wait_accept,
                 timeout,
+
+                eos,
             };
 
             inline int ip_version(CNet* ctx) {
@@ -140,6 +145,16 @@ namespace utils {
 
             inline bool is_timeout(CNet* ctx) {
                 return get_current_state(ctx) == TCPStatus::timeout;
+            }
+
+            enum ShutdownMode {
+                RECV,
+                SEND,
+                BOTH,
+            };
+
+            inline bool shutdown(CNet* ctx, ShutdownMode mode) {
+                return set_number(ctx, notify_shutdown_sig, mode);
             }
 
         }  // namespace tcp

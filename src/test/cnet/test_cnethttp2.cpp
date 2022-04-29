@@ -15,10 +15,22 @@
 #include <testutil/timer.h>
 #include <wrap/cout.h>
 auto& cout = utils::wrap::cout_wrap();
+namespace h2 = utils::net::http2;
+
+void print_frame(const char* on, const h2::Frame* frame) {
+    cout << "\n";
+    cout << on;
+    cout << " frame\n";
+    cout << "type: " << h2::frame_name(frame->type) << "\n";
+    cout << "id: " << frame->id << "\n";
+    cout << "len: " << frame->len << "\n";
+    cout << "flag: " << h2::flag_state<std::string>(frame->flag, frame->type == h2::FrameType::ping || frame->type == h2::FrameType::settings)
+         << "\n";
+}
 
 void test_cnet_http2() {
     using namespace utils::cnet;
-    namespace h2 = utils::net::http2;
+
     utils::test::Timer start;
     auto tcp = tcp::create_client();
     auto host = "www.google.com";
@@ -38,18 +50,25 @@ void test_cnet_http2() {
     assert(strncmp(alpn, "h2", 2) == 0);
     cout << start.next_step() << "\n";
     auto client = http2::create_client();
-    std::int32_t id = 0;
-    size_t data_size_sum = 0;
-    http2::set_frame_callback(client, [&](http2::Frames* fr) {
-        bool res = true;
+    std::int32_t first_id = 0, second_id = 0;
+    bool done_first = false;
+    bool done_second = false;
+    http2::set_frame_write_callback(client, [](const h2::Frame* fr) {
+        print_frame("send", fr);
+    });
+    http2::set_frame_read_callback(client, [&](http2::Frames* fr) {
         for (auto& frame : fr) {
+            print_frame("recv", frame.get());
             http2::default_proc(fr, frame, http2::DefaultProc::all);
             if (http2::is_settings_ack(frame)) {
                 std::map<std::string, std::string> h;
                 http2::set_request(h, host, path);
-                http2::write_header(fr, h, id);
+                http2::write_header(fr, h, first_id);
+                h.clear();
+                http2::set_request(h, host, "/teapot");
+                http2::write_header(fr, h, second_id);
             }
-            if (id != 0 && frame->id == id) {
+            if (first_id != 0 && second_id != 0) {
                 if (frame->type == h2::FrameType::header) {
                     std::multimap<std::string, std::string> h;
                     http2::read_header(fr, h, frame->id);
@@ -62,23 +81,28 @@ void test_cnet_http2() {
                             http2::write_window_update(fr, incr, frame->id);
                             no_length = false;
                         }
+                        cout << field.first << ": " << field.second << "\n";
                     }
                     if (no_length) {
                         http2::write_window_update(fr, 0xffffff, 0);
-                        http2::write_window_update(fr, 0xffffff, id);
+                        http2::write_window_update(fr, 0xffffff, frame->id);
                     }
                 }
                 std::string data;
                 if (frame->type == h2::FrameType::data) {
                     http2::read_data(fr, data, frame->id);
-                    data_size_sum += frame->len;
                 }
                 if (http2::is_close_stream_signal(frame)) {
-                    res = false;
+                    done_first = done_first || frame->id == first_id;
+                    done_second = done_second || frame->id == second_id;
                 }
             }
         }
-        return res;
+        if (done_first && done_second) {
+            http2::write_goaway(fr, 0);
+            return false;
+        }
+        return true;
     });
     set_lowlevel_protocol(client, tls);
     ok = open(client);
