@@ -253,13 +253,19 @@ namespace utils {
                 return true;
             }
 
-            void STDCALL write_goaway(Frames* fr, std::uint32_t code) {
+            void STDCALL write_goaway(Frames* fr, std::uint32_t code, bool notify_graceful) {
                 net::http2::GoAwayFrame goaway;
                 goaway.type = net::http2::FrameType::goaway;
                 goaway.id = 0;
                 goaway.code = code;
                 auto& impl = net::http2::internal::get_impl(fr->state->ctx);
-                goaway.processed_id = impl->id_max;
+                if (notify_graceful) {
+                    constexpr auto graceful = static_cast<std::uint32_t>(~0) >> 1;
+                    goaway.processed_id = graceful;
+                }
+                else {
+                    goaway.processed_id = impl->id_max;
+                }
                 goaway.len = 8;
                 net::http2::internal::FrameWriter<wrap::string&> w{fr->wreq};
                 net::http2::encode(goaway, w);
@@ -362,6 +368,9 @@ namespace utils {
                         while (true) {
                             number::Array<1024, char> buf;
                             if (!read(ctx, buf.buf, buf.capacity(), &buf.i)) {
+                                if (state->goneaway) {
+                                    return true;
+                                }
                                 frames.result.err = net::http2::H2Error::transport;
                                 frames.result.detail = net::http2::StreamError::reading_frame;
                                 callback_and_write(ctx, state, frames, ret);

@@ -100,6 +100,8 @@ void test_cnet_http2() {
         }
         if (done_first && done_second) {
             http2::write_goaway(fr, 0);
+            http2::flush_write_buffer(fr);
+            tcp::shutdown(tcp, tcp::SEND);
             return false;
         }
         return true;

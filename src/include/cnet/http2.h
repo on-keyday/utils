@@ -215,7 +215,7 @@ namespace utils {
             DLL bool STDCALL write_header(Frames* fr, Fetcher fetch, std::int32_t& id, bool no_data, net::http2::Priority* prio);
 
             DLL bool STDCALL write_window_update(Frames* fr, std::uint32_t increment, std::int32_t id);
-            DLL void STDCALL write_goaway(Frames* fr, std::uint32_t code);
+            DLL void STDCALL write_goaway(Frames* fr, std::uint32_t code, bool notify_graceful = false);
 
             DLL bool STDCALL flush_write_buffer(Frames* fr);
 
