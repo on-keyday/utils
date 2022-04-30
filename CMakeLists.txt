@@ -91,6 +91,7 @@ add_executable(cnettcp "src/test/cnet/test_cnettcp.cpp")
 add_executable(cnetserver "src/test/cnet/test_cnetserver.cpp")
 add_executable(expression "src/test/parser/test_expression.cpp")
 add_executable(cnethttp2 "src/test/cnet/test_cnethttp2.cpp")
+add_executable(cnetmem "src/test/cnet/test_cnetmem.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -171,6 +172,7 @@ PRIVATE
 "src/lib/cnet/ssl.cpp"
 "src/lib/cnet/tcp_server.cpp"
 "src/lib/cnet/http2.cpp"
+"src/lib/cnet/mem.cpp"
 )
 #if(WIN32)
 target_sources(utils
@@ -217,6 +219,7 @@ target_link_libraries(cnettcp utils)
 target_link_libraries(cnetserver utils)
 target_link_libraries(expression utils)
 target_link_libraries(cnethttp2 utils)
+target_link_libraries(cnetmem utils)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 

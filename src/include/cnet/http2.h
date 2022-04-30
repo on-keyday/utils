@@ -108,6 +108,8 @@ namespace utils {
 
             DEFINE_ENUM_FLAGOP(DefaultProc)
 
+            constexpr auto preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+
             DLL bool STDCALL default_proc(Frames* fr, wrap::shared_ptr<net::http2::Frame>& frame, DefaultProc filter);
             DLL bool STDCALL default_procs(Frames* fr, DefaultProc filter);
 

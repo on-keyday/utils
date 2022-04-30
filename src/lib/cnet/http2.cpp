@@ -273,8 +273,6 @@ namespace utils {
                 fr->state->goneaway = true;
             }
 
-            constexpr auto preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-
             bool open_http2(CNet* ctx, Http2State* state) {
                 auto low = cnet::get_lowlevel_protocol(ctx);
                 if (!low) {
