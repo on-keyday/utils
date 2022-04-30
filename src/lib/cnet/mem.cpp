@@ -186,13 +186,11 @@ namespace utils {
                     return 0;
                 }
                 auto v = static_cast<const char*>(m);
-                if (b->wpos == b->rpos) {
-                    return 0;
-                }
                 size_t i = 0, offset = 0;
                 for (; i < s; i++) {
                     b->area[b->wpos] = v[i];
                     if (!write_increment(b)) {
+                        i++;
                         break;
                     }
                 }
@@ -212,6 +210,7 @@ namespace utils {
                     v[count] = b->area[b->rpos];
                     b->area[b->rpos] = 0;
                     if (!read_increment(b)) {
+                        count++;
                         break;
                     }
                 }
