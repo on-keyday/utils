@@ -20,15 +20,34 @@ namespace utils {
 
             DEFINE_ENUM_FLAGOP(Strategy)
 
+            enum class State {
+                // |r| |w| |e|
+                pre_loop,
+                // |w| |r| |e|
+                on_loop,
+                // | | |o|r|s|w| | |e|
+                after_loop,
+
+                // state
+                // pre_loop -w reaches e-> on_loop -w reaches r-> after_loop
+                //                                |  -r reaches s-> pre_loop
+                //                                |
+                //                                | r reaches e
+                //                                -> pre_loop
+                // pre_loop -r reaches w-> block
+                // on_loop -r reaches e-> pre_loop
+            };
+
             struct MemoryBuffer {
                 Strategy strategy = Strategy::none;
                 char* area = nullptr;
-                size_t size_ = 0;
-                size_t physical_rpos = 0;
-                size_t logical_wpos = 0;
-                size_t physical_wpos = 0;
-                size_t locking_place = 0;
-                size_t passed_place = 0;
+                State state = State::pre_loop;
+                size_t size_ = 0;    // e - end of sequence
+                size_t wpos = 0;     // w - writer
+                size_t rpos = 0;     // r - reader
+                size_t over = 0;     // o - overtaken place
+                size_t sub_end = 0;  // s - sub sequence end
+
                 void* (*alloc)(size_t) = nullptr;
                 void* (*realloc)(void*, size_t) = nullptr;
                 void (*deleter)(void*) = nullptr;
@@ -76,7 +95,6 @@ namespace utils {
                     }
                     b->size_ = s + s;
                     b->strategy = strategy;
-                    b->locking_place = b->size_;
                 }
                 return true;
             }
@@ -92,65 +110,44 @@ namespace utils {
                 }
                 b->area = new_area;
                 b->size_ = new_size;
-                b->locking_place = new_size;
-                b->passed_place = new_size;
                 return true;
             }
 
-            bool expand_loop(MemoryBuffer* b, size_t s) {
-                auto w_remain = b->size_ - b->physical_wpos;
-                auto r_remain = b->physical_rpos;
-                auto remain = w_remain + r_remain;
-                if (s < remain) {
-                    return true;
-                }
-                // if memory write(w) and read(r) and end(e) are like below
-                // |r| |w| |e|
-                // or like below
-                // |r|p| |w|e|
-                // we can expand this simply
-                // |r| |w| | | | | | |e|
-                if (b->physical_rpos < b->physical_wpos) {
-                    const auto new_size = b->size_ + s;
-                    return expand_memory(b, new_size);
-                }
-                // if memory write and read and end are like below
-                // |w| |r| |e|
-                // we must save previous end(p) and expand area
-                // |w| |r| |p| | | | |e|
-                else {
-                    const auto new_size = b->size_ + s - remain;
-                    const auto lock = b->locking_place;
-                    const auto passed = b->passed_place;
-                    if (!expand_memory(b, new_size)) {
-                        return false;
+            bool write_increment(MemoryBuffer* b) {
+                b->wpos++;
+                if (b->state == State::pre_loop) {
+                    if (b->wpos == b->size_) {
+                        b->wpos = 0;
+                        b->state = State::on_loop;
                     }
-                    b->locking_place = lock;
-                    b->passed_place = passed;
-                    return true;
                 }
-                // when reader reached loop point and pass loop
-                // |r|w| | |p| | | | |e|
-                // we have to move objects
-                // |r|w| | | | | | | |e|
+                if (b->state == State::on_loop) {
+                    if (b->wpos == b->rpos) {
+                        b->over = b->wpos;
+                        b->sub_end = b->size_;
+                        if (!expand_memory(b, b->size_ + b->size_)) {
+                            return false;
+                        }
+                        b->wpos = b->sub_end;
+                        b->state = State::after_loop;
+                    }
+                }
+                if (b->state == State::after_loop) {
+                    if (b->wpos == b->size_) {
+                        if (!expand_memory(b, b->size_ + b->size_)) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
             }
 
-            void carry_wpos(MemoryBuffer* b) {
-                if (b->physical_wpos == b->size_) {
-                    // here is like below (o=we)
-                    // | | |r| |p| | | | |o|
-                    // so jump to first point
-                    // |w| |r| |p| | | | |e|
-                    b->physical_wpos = 0;
-                }
-                if (b->physical_wpos == b->physical_rpos) {
-                    // here is like below (b=wr)
-                    // | | |b| |p| | | | |e|
-                    // so jump to after loop point
-                    // and save passed place(s) (u=sr)
-                    // | | |u| |p|w| | | |e|
-                    b->passed_place = b->physical_wpos;
-                    b->physical_wpos = b->locking_place + 1;
+            bool read_increment(MemoryBuffer* b) {
+                b->rpos++;
+                if (b->state == State::pre_loop) {
+                    if (b->rpos == b->wpos) {
+                        return false;
+                    }
                 }
             }
 
@@ -161,51 +158,15 @@ namespace utils {
                 if (!alloc_memory(b, s, b->strategy)) {
                     return 0;
                 }
-                if (!expand_loop(b, s)) {
-                    return 0;
-                }
                 auto v = static_cast<const char*>(m);
                 size_t i = 0, offset = 0;
                 for (; i < s; i++) {
-                    b->area[b->physical_wpos] = v[i];
-                    b->physical_wpos++;
-                    carry_wpos(b);
                 }
-                b->logical_wpos += i;
+
                 return i;
             }
 
             char* get_rpos(MemoryBuffer* b) {
-                if (b->physical_rpos == b->locking_place) {
-                    // here is like below (b=wp)
-                    // | | |w| |b| | | | |e|
-                    // | | |s| |b| |w| | |e|
-                    // so jump to first
-                    // |r| |w| |p| | | | |e|
-                    // |r| |s| |p| |w| | |e|
-                    b->physical_rpos = 0;
-                    // if like below
-                    // |r| |w| |p| | | | |e| -> |r| |w| | | | | | |e|
-                    if (b->physical_wpos < b->locking_place) {
-                        auto start = b->area + b->locking_place;
-                        ::memmove(start, start + 1, b->size_ - b->locking_place);
-                    }
-                    // else like below
-                    // |r| |s| |p| |w| | |e| -> |r| |w| | | | | | |e|
-                    else {
-                        auto src = b->area + b->locking_place + 1;
-                        auto dst = b->area + b->passed_place;
-                        ::memmove(dst, src, b->size_ - b->locking_place);
-                    }
-                }
-                else {
-                    b->physical_rpos++;
-                }
-                if (b->physical_rpos == b->physical_wpos) {
-                    b->physical_rpos--;
-                    return nullptr;
-                }
-                return b->area + b->physical_rpos;
             }
 
             size_t STDCALL remove(MemoryBuffer* b, void* m, size_t s) {
@@ -223,6 +184,8 @@ namespace utils {
                         break;
                     }
                     v[count] = *r;
+                    *r = 0;
+                    count++;
                 }
                 return count;
             }

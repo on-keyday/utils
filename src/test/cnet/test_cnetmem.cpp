@@ -19,8 +19,18 @@ void test_cnet_mem() {
     Array<6, char> arr;
     arr.i = mem::remove(buf, arr.buf, arr.capacity());
     assert(arr.i == 6);
-    ok = mem::append(buf, "client ack and require server hello");
-    assert(ok == 35);
+    ok = mem::append(buf, "client");
+    assert(ok == 6);
+    arr.i = mem::remove(buf, arr.buf, arr.capacity());
+    mem::append(buf, "gaisikei card");
+    Array<12, char> arr2;
+    arr2.i = mem::remove(buf, arr2.buf, arr2.capacity());
+    mem::append(buf, "gaisikei card");
+    arr2.i = mem::remove(buf, arr2.buf, arr2.capacity());
+    mem::append(buf, "gaisikei card");
+    mem::append(buf, "ex card");
+    mem::append(buf, "looping mem together");
+    mem::remove(buf, arr2.buf, arr2.capacity());
 }
 
 int main() {
