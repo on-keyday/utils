@@ -149,6 +149,33 @@ namespace utils {
                         return false;
                     }
                 }
+                if (b->state == State::on_loop) {
+                    if (b->rpos == b->size_) {
+                        b->rpos = 0;
+                        b->state = State::pre_loop;
+                        if (b->rpos == b->wpos) {
+                            return false;
+                        }
+                    }
+                }
+                if (b->state == State::after_loop) {
+                    if (b->rpos == b->sub_end) {
+                        b->rpos = 0;
+                        b->state = State::pre_loop;
+                        // d = data
+                        // |r|d|o| |s|d|d|w| |e|
+                        // |r|d|s|d|d|w| | | |e|
+                        auto dst = b->area + b->over;
+                        auto src = b->area + b->sub_end;
+                        auto size = b->wpos - b->sub_end;
+                        ::memmove(dst, src, size);
+                        b->wpos = b->over + size;
+                        if (b->rpos == b->wpos) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
             }
 
             size_t STDCALL append(MemoryBuffer* b, const void* m, size_t s) {
@@ -159,33 +186,34 @@ namespace utils {
                     return 0;
                 }
                 auto v = static_cast<const char*>(m);
+                if (b->wpos == b->rpos) {
+                    return 0;
+                }
                 size_t i = 0, offset = 0;
                 for (; i < s; i++) {
+                    b->area[b->wpos] = v[i];
+                    if (!write_increment(b)) {
+                        break;
+                    }
                 }
-
                 return i;
-            }
-
-            char* get_rpos(MemoryBuffer* b) {
             }
 
             size_t STDCALL remove(MemoryBuffer* b, void* m, size_t s) {
                 if (!m) {
                     return 0;
                 }
+                if (b->state == State::pre_loop && b->rpos == b->wpos) {
+                    return 0;
+                }
                 auto v = static_cast<char*>(m);
                 size_t count = 0;
-                while (true) {
-                    if (count == s) {
+                for (; count < s; count++) {
+                    v[count] = b->area[b->rpos];
+                    b->area[b->rpos] = 0;
+                    if (!read_increment(b)) {
                         break;
                     }
-                    auto r = get_rpos(b);
-                    if (!r) {
-                        break;
-                    }
-                    v[count] = *r;
-                    *r = 0;
-                    count++;
                 }
                 return count;
             }
