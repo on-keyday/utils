@@ -96,14 +96,14 @@ namespace utils {
                 delete buf;
             }
 
-            void* allocate(MemoryBuffer* b, size_t s) {
+            static void* allocate(MemoryBuffer* b, size_t s) {
                 if (!b->a.alloc) {
                     return nullptr;
                 }
                 return b->a.alloc(b->a.ctx, s);
             }
 
-            void* reallocate(MemoryBuffer* b, void* old, size_t s) {
+            static void* reallocate(MemoryBuffer* b, void* old, size_t s) {
                 if (!b->a.realloc) {
                     return nullptr;
                 }
@@ -134,7 +134,7 @@ namespace utils {
                 return true;
             }
 
-            bool alloc_memory(MemoryBuffer* b, size_t s, Strategy strategy) {
+            static bool alloc_memory(MemoryBuffer* b, size_t s, Strategy strategy) {
                 if (!b->area) {
                     if (s == 0) return false;
                     b->area = static_cast<char*>(allocate(b, s + s));
@@ -150,7 +150,7 @@ namespace utils {
                 return true;
             }
 
-            bool expand_memory(MemoryBuffer* b, size_t new_size) {
+            static bool expand_memory(MemoryBuffer* b, size_t new_size) {
                 if (any(b->strategy & Strategy::fixed)) {
                     return false;
                 }
@@ -164,7 +164,7 @@ namespace utils {
                 return true;
             }
 
-            bool write_increment(MemoryBuffer* b) {
+            static bool write_increment(MemoryBuffer* b) {
                 b->wpos++;
                 if (b->state == State::pre_loop) {
                     if (b->wpos == b->size_) {
@@ -193,7 +193,7 @@ namespace utils {
                 return true;
             }
 
-            bool read_increment(MemoryBuffer* b) {
+            static bool read_increment(MemoryBuffer* b) {
                 b->rpos++;
                 if (b->state == State::pre_loop) {
                     if (b->rpos == b->wpos) {

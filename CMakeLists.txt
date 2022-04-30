@@ -172,7 +172,7 @@ PRIVATE
 "src/lib/cnet/ssl.cpp"
 "src/lib/cnet/tcp_server.cpp"
 "src/lib/cnet/http2.cpp"
-"src/lib/cnet/mem.cpp"
+"src/lib/cnet/mem_buffer.cpp"
 )
 #if(WIN32)
 target_sources(utils
