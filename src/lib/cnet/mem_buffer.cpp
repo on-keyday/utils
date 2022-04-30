@@ -29,9 +29,7 @@ namespace utils {
                 after_loop,
 
                 // state
-                // pre_loop -w reaches e-> on_loop -w reaches r-> after_loop
-                //                                |  -r reaches s-> pre_loop
-                //                                |
+                // pre_loop -w reaches e-> on_loop -w reaches r-> after_loop  -r reaches s-> pre_loop
                 //                                | r reaches e
                 //                                -> pre_loop
                 // pre_loop -r reaches w-> block
@@ -47,6 +45,8 @@ namespace utils {
                 size_t rpos = 0;     // r - reader
                 size_t over = 0;     // o - overtaken place
                 size_t sub_end = 0;  // s - sub sequence end
+
+                size_t virtual_size = 0;
 
                 CustomAllocator a;
             };
@@ -94,6 +94,14 @@ namespace utils {
                     buf->a.ctxdeleter(buf->a.ctx);
                 }
                 delete buf;
+            }
+
+            size_t STDCALL size(const MemoryBuffer* b) {
+                return b->virtual_size;
+            }
+
+            size_t STDCALL capacity(const MemoryBuffer* b) {
+                return b->size_;
             }
 
             static void* allocate(MemoryBuffer* b, size_t s) {
@@ -256,6 +264,7 @@ namespace utils {
                         break;
                     }
                 }
+                b->virtual_size += i;
                 return i;
             }
 
@@ -276,6 +285,7 @@ namespace utils {
                         break;
                     }
                 }
+                b->virtual_size -= count;
                 return count;
             }
 

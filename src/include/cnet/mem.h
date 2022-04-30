@@ -10,10 +10,12 @@
 #pragma once
 #include "cnet.h"
 #include <cstring>
+#include "../wrap/light/smart_ptr.h"
 
 namespace utils {
     namespace cnet {
         namespace mem {
+            // buffer module
             struct MemoryBuffer;
             struct CustomAllocator {
                 void* (*alloc)(void*, size_t) = nullptr;
@@ -31,7 +33,46 @@ namespace utils {
             }
             DLL size_t STDCALL remove(MemoryBuffer* b, void* m, size_t s);
 
+            DLL size_t STDCALL size(const MemoryBuffer* b);
+
+            DLL size_t STDCALL capacity(const MemoryBuffer* b);
+
             DLL bool STDCALL clear_and_allocate(MemoryBuffer* b, size_t new_size, bool fixed);
+
+            // cnet interface
+
+            struct LockedIO;
+
+            enum BufferConfig {
+                io_pair,
+                mem_buffer_set,
+            };
+
+            struct LockPair {
+                wrap::shared_ptr<LockedIO> io;
+                bool set = false;
+            };
+
+            inline bool set_buffer(CNet* ctx, MemoryBuffer* b) {
+                return set_ptr(ctx, mem_buffer_set, b);
+            }
+
+            inline bool set_link(CNet* ctx, wrap::shared_ptr<LockedIO> io) {
+                LockPair pair;
+                pair.set = true;
+                pair.io = std::move(io);
+                return set_ptr(ctx, io_pair, &pair);
+            }
+
+            inline wrap::shared_ptr<LockedIO> get_link(CNet* ctx) {
+                LockPair pair;
+                if (!set_ptr(ctx, io_pair, &pair)) {
+                    return nullptr;
+                }
+                return pair.io;
+            }
+
+            CNet* STDCALL create_mem();
         }  // namespace mem
     }      // namespace cnet
 }  // namespace utils
