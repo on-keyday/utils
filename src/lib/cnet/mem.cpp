@@ -48,39 +48,90 @@ namespace utils {
                 size_t over = 0;     // o - overtaken place
                 size_t sub_end = 0;  // s - sub sequence end
 
+                CustomAllocator a;
+            };
+
+            struct MallocContext {
                 void* (*alloc)(size_t) = nullptr;
                 void* (*realloc)(void*, size_t) = nullptr;
                 void (*deleter)(void*) = nullptr;
             };
 
-            MemoryBuffer* STDCALL new_buffer(void* (*alloc)(size_t), void* (*realloc)(void*, size_t), void (*deleter)(void*)) {
+            MemoryBuffer* STDCALL new_buffer(CustomAllocator allocs) {
                 auto ret = new MemoryBuffer{};
-                ret->alloc = alloc;
-                ret->realloc = realloc;
-                ret->deleter = deleter;
+                ret->a = allocs;
                 return ret;
+            }
+
+            MemoryBuffer* STDCALL new_buffer(void* (*alloc)(size_t), void* (*realloc)(void*, size_t), void (*deleter)(void*)) {
+                CustomAllocator a;
+                a.alloc = [](void* p, size_t size) {
+                    auto ctx = static_cast<MallocContext*>(p);
+                    return ctx->alloc ? ctx->alloc(size) : nullptr;
+                };
+                a.realloc = [](void* p, void* old, size_t size) {
+                    auto ctx = static_cast<MallocContext*>(p);
+                    return ctx->realloc ? ctx->realloc(old, size) : nullptr;
+                };
+                a.deleter = [](void* p, void* ptr) {
+                    auto ctx = static_cast<MallocContext*>(p);
+                    return ctx->deleter ? ctx->deleter(ptr) : (void)0;
+                };
+                a.ctxdeleter = [](void* p) {
+                    auto ctx = static_cast<MallocContext*>(p);
+                    delete ctx;
+                };
+                a.ctx = new MallocContext{.alloc = alloc, .realloc = realloc, .deleter = deleter};
+                return new_buffer(a);
             }
 
             void STDCALL delete_buffer(MemoryBuffer* buf) {
                 if (!buf) return;
-                if (buf->deleter) {
-                    buf->deleter(buf->area);
+                if (buf->a.deleter) {
+                    buf->a.deleter(buf->a.ctx, buf->area);
+                }
+                if (buf->a.ctxdeleter) {
+                    buf->a.ctxdeleter(buf->a.ctx);
                 }
                 delete buf;
             }
 
             void* allocate(MemoryBuffer* b, size_t s) {
-                if (!b->alloc) {
+                if (!b->a.alloc) {
                     return nullptr;
                 }
-                return b->alloc(s);
+                return b->a.alloc(b->a.ctx, s);
             }
 
             void* reallocate(MemoryBuffer* b, void* old, size_t s) {
-                if (!b->realloc) {
+                if (!b->a.realloc) {
                     return nullptr;
                 }
-                return b->realloc(old, s);
+                return b->a.realloc(b->a.ctx, old, s);
+            }
+
+            bool STDCALL clear_and_allocate(MemoryBuffer* b, size_t new_size, bool fixed) {
+                if (b->a.deleter) {
+                    b->a.deleter(b->a.ctx, b->area);
+                }
+                b->area = nullptr;
+                b->area = static_cast<char*>(allocate(b, new_size));
+                if (!b->area) {
+                    return false;
+                }
+                if (fixed) {
+                    b->strategy = Strategy::fixed;
+                }
+                else {
+                    b->strategy = Strategy::none;
+                }
+                b->size_ = new_size;
+                b->wpos = 0;
+                b->rpos = 0;
+                b->over = 0;
+                b->sub_end = 0;
+                b->state = State::pre_loop;
+                return true;
             }
 
             bool alloc_memory(MemoryBuffer* b, size_t s, Strategy strategy) {
@@ -164,7 +215,10 @@ namespace utils {
                         b->state = State::pre_loop;
                         // d = data
                         // |r|d|o| |s|d|d|w| |e|
-                        // |r|d|s|d|d|w| | | |e|
+                        // on s the data also exists so
+                        // |r|d|o| |d|d|d|w| |e|
+                        // memmove make data compaction
+                        // |r|d|d|d|d|w| | | |e|
                         auto dst = b->area + b->over;
                         auto src = b->area + b->sub_end;
                         auto size = b->wpos - b->sub_end;
@@ -184,6 +238,14 @@ namespace utils {
                 }
                 if (!alloc_memory(b, s, b->strategy)) {
                     return 0;
+                }
+                if (b->state == State::on_loop && b->rpos == b->wpos) {
+                    return 0;
+                }
+                else if (b->state == State::after_loop && b->wpos == b->size_) {
+                    if (!expand_memory(b, b->size_ + b->size_)) {
+                        return 0;
+                    }
                 }
                 auto v = static_cast<const char*>(m);
                 size_t i = 0, offset = 0;

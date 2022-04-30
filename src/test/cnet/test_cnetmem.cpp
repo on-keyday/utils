@@ -23,6 +23,7 @@ void test_cnet_mem() {
     assert(arr.i == 19);
     mem::append(buf, "client hello ultra super derax part 3");
     arr.i = mem::remove(buf, arr.buf, 37);
+    assert(arr.i == 37);
 }
 
 int main() {
