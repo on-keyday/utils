@@ -173,6 +173,7 @@ PRIVATE
 "src/lib/cnet/tcp_server.cpp"
 "src/lib/cnet/http2.cpp"
 "src/lib/cnet/mem_buffer.cpp"
+"src/lib/cnet/mem_iface.cpp"
 )
 #if(WIN32)
 target_sources(utils

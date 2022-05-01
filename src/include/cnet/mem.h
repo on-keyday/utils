@@ -72,7 +72,7 @@ namespace utils {
                 return pair.io;
             }
 
-            CNet* STDCALL create_mem();
+            DLL CNet* STDCALL create_mem();
         }  // namespace mem
     }      // namespace cnet
 }  // namespace utils

@@ -9,6 +9,7 @@
 #include <cnet/mem.h>
 #include <cstdlib>
 #include <number/array.h>
+#include <helper/appender.h>
 
 void test_cnet_mem_buffer() {
     using namespace utils::cnet;
@@ -29,6 +30,7 @@ void test_cnet_mem_buffer() {
 
 void test_cnet_mem_interface() {
     using namespace utils::cnet;
+    using namespace utils::number;
     auto mem1 = mem::create_mem();
     auto mem2 = mem::create_mem();
     auto make = []() { return mem::new_buffer(::malloc, ::realloc, ::free); };
@@ -36,6 +38,12 @@ void test_cnet_mem_interface() {
     mem::set_buffer(mem2, make());
     mem::set_link(mem1, mem::get_link(mem2));
     mem::set_link(mem2, mem::get_link(mem1));
+    Array<50, char> arr{0};
+    utils::helper::append(arr, "client hello");
+    auto old = arr.i;
+    write(mem1, arr.buf, arr.size(), &arr.i);
+    read(mem1, arr.buf, arr.capacity(), &arr.i);
+    assert(old == arr.i);
 }
 
 int main() {
