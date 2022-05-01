@@ -63,7 +63,7 @@ namespace utils {
             }
 
             template <class TmpBuffer, class Buffer, class Method, class Path, class Header, class Body, class Callback>
-            bool read_response(Buffer& buf, Method& method, Path& path, Header& h, Body& body, Callback&& callback) {
+            bool read_request(Buffer& buf, Method& method, Path& path, Header& h, Body& body, Callback&& callback) {
                 auto seq = make_ref_seq(buf);
                 if (!guess_and_read_raw_header(seq, callback, [](auto& seq) { return number::is_alnum(seq.current()); })) {
                     return false;

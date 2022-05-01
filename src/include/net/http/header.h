@@ -74,7 +74,7 @@ namespace utils {
 
             template <class String, class T, class Result, class Method, class Path, class Version, class PreView = decltype(helper::no_check())>
             bool parse_request(Sequencer<T>& seq, Method& method, Path& path, Version& ver, Result& result, PreView&& preview = helper::no_check()) {
-                if (!helper::read_while<true>(method, seq, [](auto v) {
+                if (!helper::read_whilef<true>(method, seq, [](auto v) {
                         return v != ' ';
                     })) {
                     return false;
@@ -82,7 +82,7 @@ namespace utils {
                 if (!seq.consume_if(' ')) {
                     return false;
                 }
-                if (!helper::read_while<true>(path, seq, [](auto v) {
+                if (!helper::read_whilef<true>(path, seq, [](auto v) {
                         return v != ' ';
                     })) {
                     return false;
@@ -90,7 +90,7 @@ namespace utils {
                 if (!seq.consume_if(' ')) {
                     return false;
                 }
-                if (!helper::read_while<true>(ver, seq, [](auto v) {
+                if (!helper::read_whilef<true>(ver, seq, [](auto v) {
                         return v != '\r' && v != '\n';
                     })) {
                     return false;
@@ -98,7 +98,7 @@ namespace utils {
                 if (!helper::match_eol(seq)) {
                     return false;
                 }
-                return parse_common(seq, result, preview);
+                return parse_common<String>(seq, result, preview);
             }
 
             template <class String, class T, class Result, class Version, class Status, class Phrase, class PreView = decltype(helper::no_check())>

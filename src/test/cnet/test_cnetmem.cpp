@@ -12,6 +12,9 @@
 #include <helper/appender.h>
 #include <helper/equal.h>
 #include <thread>
+#include <net/http/http_headers.h>
+#include <string>
+#include <map>
 
 void test_cnet_mem_buffer() {
     using namespace utils::cnet;
@@ -86,10 +89,65 @@ void test_thread_io() {
     std::thread s_thread{server, sv}, c_thread{client, cl};
     s_thread.join();
     c_thread.join();
+    delete_cnet(cl);
+    delete_cnet(sv);
+}
+
+void test_http_protocol() {
+    using namespace utils::cnet;
+    using namespace utils::net::h1header;
+    using namespace utils::number;
+    auto reader = [](CNet *mem) {
+        return [=](auto &seq, size_t expect, bool end) {
+            Array<1024, char> v{0};
+            auto &buf = seq.buf.buffer;
+            while (v.size() == 0) {
+                read(mem, v.buf, v.capacity(), &v.i);
+            }
+            utils::helper::append(buf, v);
+            return true;
+        };
+    };
+    auto server = [&](CNet *mem) {
+        std::string buf, meth, path, body;
+        std::map<std::string, std::string> h;
+        auto r = reader(mem);
+        read_request<std::string>(buf, meth, path, h, body, r);
+        buf.clear();
+        h.clear();
+        h["Content-Length"] = "3";
+        render_response(buf, 200, "OK", h);
+        size_t s;
+        write(mem, buf.c_str(), buf.size(), &s);
+        write(mem, "OK!", 3, &s);
+    };
+
+    auto client = [&](CNet *mem) {
+        std::string buf, body;
+        std::map<std::string, std::string> h;
+        auto r = reader(mem);
+        StatusCode code;
+        h["Host"] = "localhost";
+        render_request(buf, "GET", "/", h);
+        size_t s;
+        write(mem, buf.c_str(), buf.size(), &s);
+        buf.clear();
+        h.clear();
+        read_response<std::string>(buf, code, h, body, r);
+    };
+
+    CNet *cl, *sv;
+    mem::make_pair(cl, sv, ::malloc, ::realloc, ::free);
+    std::thread s_thread{server, sv}, c_thread{client, cl};
+    s_thread.join();
+    c_thread.join();
+    delete_cnet(cl);
+    delete_cnet(sv);
 }
 
 int main() {
     test_cnet_mem_buffer();
     test_cnet_mem_interface();
     test_thread_io();
+    test_http_protocol();
 }

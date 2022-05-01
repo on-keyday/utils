@@ -67,10 +67,12 @@ namespace utils {
             return true;
         }
 
-        template <class Result, class T, class Cmp, class Compare = decltype(default_compare())>
+        template <bool nozero = false, class Result, class T, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
+            bool first = true;
             while (!seq.eos()) {
                 if (auto n = seq.match_n(cmp, compare)) {
+                    first = false;
                     for (size_t i = 0; i < n; i++) {
                         result.push_back(seq.current());
                         seq.consume();
@@ -78,6 +80,9 @@ namespace utils {
                     continue;
                 }
                 break;
+            }
+            if constexpr (nozero) {
+                return first != true;
             }
             return true;
         }
