@@ -25,6 +25,16 @@ namespace utils {
                 void* ctx = nullptr;
             };
             DLL MemoryBuffer* STDCALL new_buffer(CustomAllocator allocs);
+            inline MemoryBuffer* new_buffer(void* (*alloc)(void*, size_t), void* (*realloc)(void*, void*, size_t), void (*deleter)(void*, void*),
+                                            void* ctx, void (*ctxdeleter)(void*)) {
+                CustomAllocator a;
+                a.alloc = alloc;
+                a.realloc = realloc;
+                a.deleter = deleter;
+                a.ctx = ctx;
+                a.ctxdeleter = ctxdeleter;
+                return new_buffer(a);
+            }
             DLL MemoryBuffer* STDCALL new_buffer(void* (*alloc)(size_t), void* (*realloc)(void*, size_t), void (*deleter)(void*));
             DLL void STDCALL delete_buffer(MemoryBuffer* buf);
             DLL size_t STDCALL append(MemoryBuffer* b, const void* m, size_t s);
@@ -73,6 +83,16 @@ namespace utils {
             }
 
             DLL CNet* STDCALL create_mem();
+
+            inline void make_pair(CNet*& mem1, CNet*& mem2, auto... allocs) {
+                mem1 = mem::create_mem();
+                mem2 = mem::create_mem();
+                auto make = [&]() { return mem::new_buffer(allocs...); };
+                mem::set_buffer(mem1, make());
+                mem::set_buffer(mem2, make());
+                mem::set_link(mem1, mem::get_link(mem2));
+                mem::set_link(mem2, mem::get_link(mem1));
+            }
         }  // namespace mem
     }      // namespace cnet
 }  // namespace utils

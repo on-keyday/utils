@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <number/array.h>
 #include <helper/appender.h>
+#include <helper/equal.h>
+#include <thread>
 
 void test_cnet_mem_buffer() {
     using namespace utils::cnet;
@@ -31,21 +33,63 @@ void test_cnet_mem_buffer() {
 void test_cnet_mem_interface() {
     using namespace utils::cnet;
     using namespace utils::number;
-    auto mem1 = mem::create_mem();
-    auto mem2 = mem::create_mem();
-    auto make = []() { return mem::new_buffer(::malloc, ::realloc, ::free); };
-    mem::set_buffer(mem1, make());
-    mem::set_buffer(mem2, make());
-    mem::set_link(mem1, mem::get_link(mem2));
-    mem::set_link(mem2, mem::get_link(mem1));
+    CNet *mem1, *mem2;
+    mem::make_pair(mem1, mem2, ::malloc, ::realloc, ::free);
     Array<50, char> arr{0};
     utils::helper::append(arr, "client hello");
     auto old = arr.i;
     write(mem1, arr.buf, arr.size(), &arr.i);
-    read(mem1, arr.buf, arr.capacity(), &arr.i);
+    read(mem2, arr.buf, arr.capacity(), &arr.i);
     assert(old == arr.i);
+}
+
+void test_thread_io() {
+    using namespace utils::cnet;
+    using namespace utils::number;
+    using namespace utils::helper;
+    // protocol
+    // peer1 -> hello -> peer2
+    // peer1 <- hello <- peer2
+    // peer1 -> how are you? -> peer2
+    // peer1 <- (respond emotion) <- peer2
+    using Buf = Array<100, char>;
+    auto read_while = [](CNet *mem, Buf &arr) {
+        arr.i = 0;
+        while (arr.size() == 0) {
+            read(mem, arr.buf, arr.capacity(), &arr.i);
+        }
+    };
+    auto write_str = [](CNet *mem, auto str) {
+        size_t s = 0;
+        write(mem, str, ::strlen(str), &s);
+    };
+    auto client = [&](CNet *mem) {
+        Buf arr{};
+        write_str(mem, "hello");
+        read_while(mem, arr);
+        assert(equal(arr, "hello"));
+        write_str(mem, "how are you?");
+        read_while(mem, arr);
+        assert(equal(arr, "I'm fine, thank you!"));
+    };
+    auto server = [&](CNet *mem) {
+        Buf arr{};
+        read_while(mem, arr);
+        assert(equal(arr, "hello"));
+        write_str(mem, "hello");
+        read_while(mem, arr);
+        assert(equal(arr, "how are you?"));
+        write_str(mem, "I'm fine, thank you!");
+    };
+    CNet *cl, *sv;
+    mem::make_pair(cl, sv, ::malloc, ::realloc, ::free);
+    std::thread s_thread{server, sv}, c_thread{client, cl};
+    s_thread.join();
+    c_thread.join();
 }
 
 int main() {
     test_cnet_mem_buffer();
+    test_cnet_mem_interface();
+    test_thread_io();
 }

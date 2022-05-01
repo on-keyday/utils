@@ -14,18 +14,16 @@
 namespace utils {
     namespace net {
         namespace h1header {
-            template <class TmpBuffer, class Buffer, class Status, class Header, class Body, class Callback>
-            bool read_response(Buffer& buf, Status& status, Header& h, Body& body, Callback&& callback) {
-                auto seq = make_ref_seq(buf);
+            template <class T, class Callback, class BeginCheck>
+            bool guess_and_read_raw_header(Sequencer<T>& seq, Callback&& callback, BeginCheck&& check) {
                 while (seq.size() == 0) {
                     if (!callback(seq, 0, false)) {
                         return false;
                     }
                 }
-                if (!helper::starts_with(buf, "HTTP/1.1")) {
+                if (!check(seq)) {
                     return false;
                 }
-                seq.seek(9);
                 while (true) {
                     if (seq.seek_if("\r\n\r\n") ||
                         seq.seek_if("\r\r") || seq.seek_if("\n\n")) {
@@ -39,11 +37,11 @@ namespace utils {
                     }
                 }
                 seq.seek(0);
-                size_t expect = 0;
-                h1body::BodyType btype = h1body::BodyType::no_info;
-                if (!h1header::parse_response<TmpBuffer>(seq, helper::nop, status, helper::nop, h, h1body::bodyinfo_preview(btype, expect))) {
-                    return false;
-                }
+                return true;
+            }
+
+            template <class T, class Body, class Callback>
+            bool read_body_with_info(Sequencer<T>& seq, Body& body, h1body::BodyType btype, size_t expect, Callback&& callback) {
                 if (btype == h1body::BodyType::no_info) {
                     if (!callback(seq, 0, true)) {
                         return false;
@@ -60,6 +58,41 @@ namespace utils {
                     if (!callback(seq, expect, false)) {
                         return false;
                     }
+                }
+                return true;
+            }
+
+            template <class TmpBuffer, class Buffer, class Method, class Path, class Header, class Body, class Callback>
+            bool read_response(Buffer& buf, Method& method, Path& path, Header& h, Body& body, Callback&& callback) {
+                auto seq = make_ref_seq(buf);
+                if (!guess_and_read_raw_header(seq, callback, [](auto& seq) { return number::is_alnum(seq.current()); })) {
+                    return false;
+                }
+                size_t expect = 0;
+                h1body::BodyType btype = h1body::BodyType::no_info;
+                if (!h1header::parse_request<TmpBuffer>(seq, method, path, helper::nop, h, h1body::bodyinfo_preview(btype, expect))) {
+                    return false;
+                }
+                if (!read_body_with_info(seq, body, btype, expect, callback)) {
+                    return false;
+                }
+                return true;
+            }
+
+            template <class TmpBuffer, class Buffer, class Status, class Header, class Body, class Callback>
+            bool read_response(Buffer& buf, Status& status, Header& h, Body& body, Callback&& callback) {
+                auto seq = make_ref_seq(buf);
+                if (!guess_and_read_raw_header(seq, callback, [](auto& seq) { return seq.seek_if("HTTP/1.1") ||
+                                                                                     seq.seek_if("HTTP/1.0"); })) {
+                    return false;
+                }
+                size_t expect = 0;
+                h1body::BodyType btype = h1body::BodyType::no_info;
+                if (!h1header::parse_response<TmpBuffer>(seq, helper::nop, status, helper::nop, h, h1body::bodyinfo_preview(btype, expect))) {
+                    return false;
+                }
+                if (!read_body_with_info(seq, body, btype, expect, callback)) {
+                    return false;
                 }
                 return true;
             }
