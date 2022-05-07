@@ -111,7 +111,7 @@ namespace utils {
 #define APPLY1_FN(func_name, ...) func_name##_fn<std::remove_cvref_t<T> __VA_OPT__(, ) __VA_ARGS__>
 #define APPLY2_FN(func_name, ...) \
     func_name##_ptr(APPLY1_FN(func_name, __VA_ARGS__))
-#define DEFAULT_CALL(func_name, defaultv, ...) return func_name##_ptr ? func_name##_ptr(this->refptr __VA_OPT__(, ) __VA_ARGS__) : defaultv;
+#define DEFAULT_CALL(func_name, defaultv, ...) return this->refptr && func_name##_ptr ? func_name##_ptr(this->refptr __VA_OPT__(, ) __VA_ARGS__) : defaultv;
 
         template <class Box>
         struct String : Box {
