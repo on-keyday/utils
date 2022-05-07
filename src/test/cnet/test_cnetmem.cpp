@@ -103,6 +103,9 @@ void test_http_protocol() {
             auto &buf = seq.buf.buffer;
             while (v.size() == 0) {
                 read(mem, v.buf, v.capacity(), &v.i);
+                if (end) {
+                    break;
+                }
             }
             utils::helper::append(buf, v);
             return true;
