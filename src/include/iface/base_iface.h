@@ -48,7 +48,7 @@ namespace utils {
                                           alignof(T) <= alignof(void*);
 
         template <class T>
-        void* select_pointer(T&& ptr) {
+        void* select_pointer(T ptr) {
             if constexpr (is_narrow_enough<T>) {
                 void** res = static_cast<void**>(std::addressof(ptr));
                 return *res;
@@ -81,9 +81,14 @@ namespace utils {
             constexpr Owns() = default;
 
             template <class T>
+            constexpr Owns(const T& t)
+                : deleter(select_deleter<std::remove_cvref_t<T>>()),
+                  Ref(t, select_pointer<const T&>) {}
+
+            template <class T, std::enable_if_t<!std::is_lvalue_reference_v<T>, int> = 0>
             constexpr Owns(T&& t)
                 : deleter(select_deleter<std::remove_cvref_t<T>>()),
-                  Ref(t, select_pointer<T>) {}
+                  Ref(t, select_pointer<T&&>) {}
 
             template <class T, class O>
             constexpr Owns(T* t, void (*del)(O*))
@@ -196,6 +201,29 @@ namespace utils {
 
             void pop_back() {
                 DEFAULT_CALL(pop_back, (void)0)
+            }
+        };
+
+        template <class Box>
+        struct Copy : Box {
+           private:
+            Copy (*copy_ptr)(void*) = nullptr;
+
+            template <class T>
+            static Copy copy_fn(void* p) {
+                return *static_cast<T*>(p);
+            }
+
+           public:
+            DEFAULT_METHODS(Copy)
+
+            template <class T>
+            Copy(T&& t)
+                : APPLY2_FN(copy),
+                  Box(t) {}
+
+            Copy clone() const {
+                return this->refptr && copy_ptr ? copy_ptr(this->refptr) : Copy{};
             }
         };
     }  // namespace iface

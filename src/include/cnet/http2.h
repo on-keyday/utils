@@ -119,12 +119,12 @@ namespace utils {
                        frame->flag & net::http2::Flag::ack;
             }
 
-            inline bool is_close_stream_signal(const wrap::shared_ptr<net::http2::Frame>& frame) {
+            inline bool is_close_stream_signal(const wrap::shared_ptr<net::http2::Frame>& frame, bool include_goaway = true) {
                 if (!frame) {
                     return false;
                 }
                 if (frame->type == net::http2::FrameType::rst_stream ||
-                    frame->type == net::http2::FrameType::goaway) {
+                    (include_goaway && frame->type == net::http2::FrameType::goaway)) {
                     return true;
                 }
                 if (frame->type == net::http2::FrameType::data ||

@@ -359,6 +359,9 @@ namespace utils {
                     return true;
                 };
                 bool on_error = false;
+                if (!callback_and_write(ctx, state, frames, ret)) {
+                    return ret;
+                }
                 while (true) {
                     if (!read_frames()) {
                         return false;

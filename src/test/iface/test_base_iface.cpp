@@ -21,12 +21,23 @@ void test_base_iface() {
     mv = std::move(str1);
     Buffer<PushBacker<String<Ref>>> buf;
     buf = ref;
-    sizeof(buf);
+
     buf.push_back('!');
     assert(ref == "game over!");
 
-    auto val = buf;
-    val.pop_back();
+    Copy<PushBacker<String<Owns>>> copy;
+
+    copy = ref;
+
+    auto clone = copy.clone();
+
+    clone.push_back('o');
+
+    ptr = clone.c_str();
+
+    assert(copy.c_str() != ptr);
+
+    assert(ref == "game over!");
 }
 
 int main() {

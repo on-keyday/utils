@@ -90,6 +90,10 @@ namespace utils {
                 return query_number(ctx, ipver);
             }
 
+            inline bool set_ip_version(CNet* ctx, int version) {
+                return set_number(ctx, ipver, version);
+            }
+
             inline bool set_hostport(CNet* ctx, const char* host, const char* port) {
                 return set_ptr(ctx, host_name, (void*)host) && set_ptr(ctx, port_number, (void*)port);
             }
