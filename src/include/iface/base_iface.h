@@ -12,14 +12,24 @@
 
 namespace utils {
     namespace iface {
+#define DEFAULT_METHODS(Type)                         \
+    constexpr Type() = default;                       \
+    constexpr Type(Type&) = default;                  \
+    constexpr Type(const Type&) = default;            \
+    constexpr Type(Type&&) = default;                 \
+    constexpr Type& operator=(const Type&) = default; \
+    constexpr Type& operator=(Type&&) = default;
+
         struct Ref {
            protected:
             void* refptr = nullptr;
 
+            constexpr Ref(void* p)
+                : refptr(p) {}
+
            public:
-            constexpr Ref() = default;
-            constexpr Ref(const Ref&) = default;
-            constexpr Ref& operator=(const Ref&) = default;
+            DEFAULT_METHODS(Ref)
+
             template <class T>
             constexpr Ref(T& t)
                 : refptr(std::addressof(t)) {}
@@ -27,9 +37,6 @@ namespace utils {
             template <class T, class Fn>
             constexpr Ref(T& t, Fn&& from)
                 : refptr(from(t)) {}
-
-            constexpr Ref(void* p)
-                : refptr(p) {}
 
             constexpr void* ptr() const {
                 return refptr;
@@ -108,33 +115,87 @@ namespace utils {
     static retty func_name##_fn(void* ptr, Args... args) {                   \
         return static_cast<T*>(ptr)->func_name(std::forward<Args>(args)...); \
     }
+#define MAKE_FN_VOID(func_name, ...)                                     \
+    void (*func_name##_ptr)(void* __VA_OPT__(, ) __VA_ARGS__) = nullptr; \
+    template <class T, class... Args>                                    \
+    static void func_name##_fn(void* ptr, Args... args) {                \
+        static_cast<T*>(ptr)->func_name(std::forward<Args>(args)...);    \
+    }
 #define APPLY1_FN(func_name, ...) func_name##_fn<std::remove_cvref_t<T> __VA_OPT__(, ) __VA_ARGS__>
 #define APPLY2_FN(func_name, ...) \
     func_name##_ptr(APPLY1_FN(func_name, __VA_ARGS__))
 #define DEFAULT_CALL(func_name, defaultv, ...) return this->refptr && func_name##_ptr ? func_name##_ptr(this->refptr __VA_OPT__(, ) __VA_ARGS__) : defaultv;
 
         template <class Box>
-        struct String : Box {
+        struct Sized : Box {
            private:
-            MAKE_FN(data, char*)
             MAKE_FN(size, size_t)
            public:
-            constexpr String() = default;
+            DEFAULT_METHODS(Sized)
+
+            template <class T>
+            constexpr Sized(T&& t)
+                : APPLY2_FN(size), Box(t) {}
+        };
+
+        template <class Box, class Char = char>
+        struct String : Box {
+           private:
+            MAKE_FN(data, Char*)
+           public:
+            DEFAULT_METHODS(String)
+
             template <class T>
             constexpr String(T&& t)
                 : APPLY2_FN(data),
-                  APPLY2_FN(size),
                   Box(t) {}
 
-            char* data() {
+            Char* data() {
                 DEFAULT_CALL(data, nullptr)
             }
 
-            const char* c_str() const {
-                DEFAULT_CALL(data, nullptr)}
+            const Char* c_str() const {
+                DEFAULT_CALL(data, nullptr)
+            }
+        };
 
-            size_t size() const {
-                DEFAULT_CALL(size, 0)
+        template <class Box, class Char = char>
+        struct PushBacker : Box {
+           private:
+            MAKE_FN_VOID(push_back, Char)
+           public:
+            DEFAULT_METHODS(PushBacker)
+
+            template <class T>
+            constexpr PushBacker(T&& t)
+                : APPLY2_FN(push_back, Char),
+                  Box(t) {}
+
+            void push_back(Char c) {
+                DEFAULT_CALL(push_back, (void)0, c)
+            }
+        };
+
+        template <class Box, class Char = char>
+        struct Buffer : Box {
+           private:
+            MAKE_FN_VOID(erase, size_t, size_t)
+            MAKE_FN_VOID(pop_back)
+           public:
+            DEFAULT_METHODS(Buffer)
+
+            template <class T>
+            constexpr Buffer(T&& t)
+                : APPLY2_FN(erase, size_t, size_t),
+                  APPLY2_FN(pop_back),
+                  Box(t) {}
+
+            void erase(size_t offset, size_t count) {
+                DEFAULT_CALL(erase, (void)0, offset, count)
+            }
+
+            void pop_back() {
+                DEFAULT_CALL(pop_back, (void)0)
             }
         };
     }  // namespace iface
