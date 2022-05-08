@@ -49,28 +49,17 @@ namespace utils {
 
         template <class T>
         void* select_pointer(T ptr) {
-            if constexpr (is_narrow_enough<T>) {
-                void** res = static_cast<void**>(std::addressof(ptr));
-                return *res;
-            }
-            else {
-                using T_ = std::remove_cvref_t<T>;
-                return new T_{std::move(ptr)};
-            }
+            using T_ = std::remove_cvref_t<T>;
+            return new T_{std::move(ptr)};
         }
 
         using deleter_t = void (*)(void*);
 
         template <class T>
         deleter_t select_deleter() {
-            if constexpr (is_narrow_enough<T>) {
-                return nullptr;
-            }
-            else {
-                return [](void* p) {
-                    delete static_cast<T*>(p);
-                };
-            }
+            return [](void* p) {
+                delete static_cast<T*>(p);
+            };
         }
 
         struct Owns : Ref {
@@ -141,6 +130,10 @@ namespace utils {
             template <class T>
             constexpr Sized(T&& t)
                 : APPLY2_FN(size), Box(t) {}
+
+            size_t size() const {
+                DEFAULT_CALL(size, 0)
+            }
         };
 
         template <class Box, class Char = char>
@@ -226,5 +219,156 @@ namespace utils {
                 return this->refptr && copy_ptr ? copy_ptr(this->refptr) : Copy{};
             }
         };
+
+        template <class Value>
+        Value select_traits() {
+            if constexpr (std::is_reference_v<Value>) {
+                int* fatal = 0;
+                *fatal = 0;
+            }
+            else {
+                return Value{};
+            }
+        }
+
+        template <class Box, class Key = size_t, class Value = char>
+        struct Subscript : Box {
+           private:
+            Value (*subscript_ptr)(void*, Key) = nullptr;
+
+            template <class U>
+            static Value subscript_fn(void* p, Key i) {
+                return (*static_cast<U*>(p))[std::move(i)];
+            }
+
+           public:
+            DEFAULT_METHODS(Subscript)
+
+            template <class T>
+            Subscript(T&& t)
+                : APPLY2_FN(subscript),
+                  Box(t) {}
+
+            Value operator[](Key index) const {
+                return subscript_ptr ? subscript_ptr(this->refptr, std::move(index)) : select_traits<Value>();
+            }
+        };
+
+        template <class Box, class Value>
+        struct Deref : Box {
+           private:
+            Value (*deref_ptr)(void*) = nullptr;
+            template <class T>
+            static Value deref_fn(void* p) {
+                return **static_cast<T*>(p);
+            }
+
+           public:
+            DEFAULT_METHODS(Deref)
+
+            template <class T>
+            Deref(T&& t)
+                : APPLY2_FN(deref),
+                  Box(t) {}
+
+            Value operator*() const {
+                return deref_ptr ? deref_ptr(this->refptr) : select_traits<Value>();
+            }
+        };
+
+        template <class Box>
+        struct Increment : Box {
+           private:
+            void (*increment_ptr)(void*) = nullptr;
+            template <class T>
+            static void increment_fn(void* p) {
+                ++*static_cast<T*>(p);
+            }
+
+           public:
+            DEFAULT_METHODS(Increment)
+
+            template <class T>
+            Increment(T&& t)
+                : APPLY2_FN(increment),
+                  Box(t) {}
+
+            Increment& operator++() {
+                increment_ptr ? increment_ptr(this->refptr) : (void)0;
+                return *this;
+            }
+
+            Increment& operator++(int) {
+                return ++*this;
+            }
+        };
+
+        template <class Box>
+        struct Compare : Box {
+           private:
+            bool (*compare_ptr)(void*, void*) = nullptr;
+
+            template <class T>
+            static bool compare_fn(void* left, void* right) {
+                return *static_cast<T*>(left) == *static_cast<T*>(right);
+            }
+
+           public:
+            DEFAULT_METHODS(Compare)
+
+            template <class T>
+            Compare(T&& t)
+                : APPLY2_FN(compare),
+                  Box(t) {}
+
+            bool operator==(const Compare& right) const {
+                if (!this->refptr || !right.refptr) {
+                    return false;
+                }
+                if (compare_ptr != right.compare_ptr) {
+                    return false;
+                }
+                return compare_ptr(this->refptr, right.refptr);
+            }
+        };
+
+        template <class Box>
+        struct Compare2 : Box {
+           private:
+            bool (*compare1)(void* right, void* left) = nullptr;
+            bool (*compare2)(void* right, void* left) = nullptr;
+
+            template <class T, class U>
+            static bool compare_fn(void* left, void* right) {
+                return *static_cast<T*>(left) == *static_cast<U*>(right);
+            }
+
+           public:
+            DEFAULT_METHODS(Compare2)
+
+            template <class T, class U>
+            Compare2(T&& t, U&& u)
+                : compare1(compare_fn<std::remove_cvref_t<T>, std::remove_cvref_t<U>>),
+                  compare2(compare_fn<std::remove_cvref_t<U>, std::remove_cvref_t<T>>),
+                  Box(t) {}
+
+            bool operator==(const Compare2& right) const {
+                if (!this->refptr || !right.refptr) {
+                    return false;
+                }
+                // T U
+                if (compare1 == right.compare2) {
+                    return compare1(this->refptr, right.refptr);
+                }
+                // U T
+                if (compare2 == right.compare1) {
+                    return compare2(right.refptr, this->refptr);
+                }
+                return false;
+            }
+        };
+
+        template <class Box, class T>
+        using ForwardIterator = Compare<Increment<Deref<Box, T>>>;
     }  // namespace iface
 }  // namespace utils

@@ -9,6 +9,14 @@
 #include <iface/base_iface.h>
 #include <string>
 #include <cassert>
+#include <map>
+
+struct Empty {
+    size_t empty;
+    size_t size() const {
+        return empty;
+    }
+};
 
 void test_base_iface() {
     using namespace utils::iface;
@@ -38,6 +46,33 @@ void test_base_iface() {
     assert(copy.c_str() != ptr);
 
     assert(ref == "game over!");
+
+    Sized<Owns> owns = Empty{92};
+
+    assert(owns.size() == 92);
+
+    Subscript<Sized<Ref>> subscript = ref;
+
+    assert(subscript[0] == 'g');
+
+    Subscript<Ref, const char*, String<Ref>> maplike;
+    std::map<std::string, std::string> map;
+    maplike = map;
+    map["key"] = "value";
+
+    auto value = maplike["key"];
+    assert(value.c_str() == std::string{"value"});
+
+    ForwardIterator<Ref, char> it, end;
+    auto baseit = ref.begin(), baseend = ref.end();
+    it = baseit;
+    end = baseend;
+
+    assert(it != end);
+
+    auto v = *it;
+
+    assert(v == 'g');
 }
 
 int main() {
