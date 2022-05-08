@@ -370,5 +370,8 @@ namespace utils {
 
         template <class Box, class T>
         using ForwardIterator = Compare<Increment<Deref<Box, T>>>;
+
+        template <class Box, class T>
+        using ForwardIterator2 = Compare2<Increment<Deref<Box, T>>>;
     }  // namespace iface
 }  // namespace utils
