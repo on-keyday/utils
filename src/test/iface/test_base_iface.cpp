@@ -10,6 +10,7 @@
 #include <string>
 #include <cassert>
 #include <map>
+#include <wrap/pair_iter.h>
 
 struct Empty {
     size_t empty;
@@ -73,6 +74,13 @@ void test_base_iface() {
     auto v = *it;
 
     assert(v == 'g');
+
+    ForwardIterator2<Ref, char> it2{baseit, baseend}, end2{baseend, baseit};
+
+    auto pair = std::make_pair(std::move(it2), std::move(end2));
+
+    for (auto c : utils::wrap::iter(pair)) {
+    }
 }
 
 int main() {
