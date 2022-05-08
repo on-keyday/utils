@@ -93,6 +93,7 @@ add_executable(expression "src/test/parser/test_expression.cpp")
 add_executable(cnethttp2 "src/test/cnet/test_cnethttp2.cpp")
 add_executable(cnetmem "src/test/cnet/test_cnetmem.cpp")
 add_executable(base_iface "src/test/iface/test_base_iface.cpp")
+add_executable(guessurl "src/test/net/test_guessurl.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"

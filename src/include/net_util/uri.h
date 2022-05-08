@@ -13,6 +13,7 @@
 #include "../helper/strutil.h"
 #include "../wrap/light/string.h"
 #include "../helper/readutil.h"
+#include "../number/array.h"
 
 namespace utils {
     namespace net {
@@ -167,6 +168,7 @@ namespace utils {
                     unknown_data = true;
                 }
             }
+
             template <class T>
             void parse_path(bool& unknown_data, Sequencer<T>& seq, URI& parsed) {
                 bool on_query = false;
@@ -190,10 +192,148 @@ namespace utils {
                     seq.consume();
                 }
             }
+
+            enum class URIParts : std::uint8_t {
+                opaque,
+                shceme,
+                double_slash,
+                user,
+                user_with_password,
+                password,
+                host,
+                ipv6_host,
+                port,
+                abstract_path,
+                relative_path,
+                query,
+                tag,
+            };
+
+            struct URIStruct {
+                using Struct = number::Array<10, URIParts>;
+                Struct suggest;
+            };
+
+            template <class T>
+            URIStruct guess_uri_structure(T&& seq) {
+                constexpr size_t npos = ~0;
+                constexpr size_t first = 0;
+                URIStruct uri{};
+                // get element position
+                auto at_ = helper::find(seq, "@");
+                size_t colons[4] = {0};
+                colons[0] = helper::find(seq, ":");
+                colons[1] = helper::find(seq, ":", 0, colons[0] + 1);
+                colons[2] = helper::find(seq, ":", 0, colons[1] + 1);
+                auto ss_begin = helper::find(seq, "[");
+                auto ss_end = helper::find(seq, "]");
+                auto double_slash = helper::find(seq, "//");
+                auto query = helper::find(seq, "?");
+                auto tag = helper::find(seq, "#");
+                size_t ss_colon = npos;
+                if (ss_end != npos) {
+                    auto tmp = make_ref_seq(seq);
+                    tmp.rptr = ss_end + 1;
+                    if (tmp.current() == ':') {
+                        // [ipv6_address]:port
+                        ss_colon = ss_end + 1;
+                    }
+                }
+                size_t slash = 0;
+                if (double_slash != npos) {
+                    slash = helper::find(seq, "/", 2);
+                }
+                else {
+                    slash = helper::find(seq, "/");
+                }
+                // make pattern
+                size_t colon_index = 0;
+                if (slash < at_) {
+                    // /using@path
+                    at_ = npos;
+                }
+                if (double_slash == first) {
+                    /* //host... */
+                    uri.suggest.push_back(URIParts::double_slash);
+                }
+                else if (double_slash != npos && colons[colon_index] == double_slash - 1) {
+                    // scheme://host...
+                    uri.suggest.push_back(URIParts::shceme);
+                    uri.suggest.push_back(URIParts::double_slash);
+                    colon_index++;
+                }
+                if (at_ != npos) {
+                    if (colons[colon_index] < at_) {
+                        // user:password@host...
+                        uri.suggest.push_back(URIParts::user_with_password);
+                        uri.suggest.push_back(URIParts::password);
+                        colon_index++;
+                    }
+                    else {
+                        // user@host...
+                        uri.suggest.push_back(URIParts::user);
+                    }
+                }
+                if (double_slash != npos &&
+                    double_slash + 2 == slash) {
+                    /* ...///path */
+                    // skip
+                }
+                else if (slash == first || query == first || tag == first) {
+                    // /path
+                    // ?query
+                    // #tag
+                    // skip
+                }
+                else if (at_ != npos &&
+                         at_ + 1 == slash) {
+                    // ...@/path
+                    // skip
+                    // TODO: is this Ok?
+                }
+                else if (ss_begin != npos && ss_end != npos &&
+                         ss_begin < ss_end && ss_end < slash) {
+                    // ...[ipv6str]/path
+                    uri.suggest.push_back(URIParts::ipv6_host);
+                    if (ss_colon != npos) {
+                        uri.suggest.push_back(URIParts::port);
+                    }
+                }
+                else if (colons[colon_index] < slash) {
+                    // ...host:port/path
+                    uri.suggest.push_back(URIParts::host);
+                    uri.suggest.push_back(URIParts::port);
+                }
+                else {
+                    uri.suggest.push_back(URIParts::host);
+                }
+                if (slash != npos) {
+                    uri.suggest.push_back(URIParts::abstract_path);
+                }
+                if (query != npos && (slash == npos || slash < query)) {
+                    uri.suggest.push_back(URIParts::query);
+                }
+                if (tag != npos &&
+                    (slash == npos || slash < tag) &&
+                    (query == npos || slash < tag)) {
+                    uri.suggest.push_back(URIParts::tag);
+                }
+                return uri;
+            }
         }  // namespace internal
 
         template <class String>
         void rough_uri_parse(String&& str, URI& parsed) {
+            enum {
+                unknown,
+                abstract_path,
+                user_name,
+                ipv6_addr,
+                without_scheme,
+                relative_path,
+                host_name,
+                with_scheme,
+            } expect = unknown;
             auto seq = make_ref_seq(str);
             wrap::string current;
             bool has_user = false;
@@ -203,7 +343,9 @@ namespace utils {
             if (helper::starts_with(str, "/") && !helper::starts_with(str, "//")) {
                 // abstract path
                 no_host = true;
+                expect = abstract_path;
             }
+
             if (!no_host && helper::contains(str, "@")) {
                 // user name
                 has_user = true;
@@ -211,23 +353,28 @@ namespace utils {
             while (!seq.eos()) {
                 if (seq.match("[")) {
                     // ipv6 address
+                    expect = ipv6_addr;
                     break;
                 }
-                if (seq.match("//")) {
+                if (helper::starts_with(str, "//")) {
                     // without scheme
+                    expect = without_scheme;
                     break;
                 }
                 if (seq.match("/")) {
                     // relative path
+                    expect = relative_path;
                     break;
                 }
                 if (seq.match(".")) {
                     // host name
+                    expect = host_name;
                     break;
                 }
                 if (seq.match(":")) {
                     // with scheme
                     has_scheme = true;
+                    expect = with_scheme;
                     break;
                 }
                 seq.consume();
@@ -236,6 +383,7 @@ namespace utils {
             if (has_scheme) {
                 helper::read_until(parsed.scheme, seq, ":");
                 parsed.scheme.push_back(':');
+                expect = host_name;
             }
             if (!no_host) {
                 parsed.has_double_slash = seq.seek_if("//");

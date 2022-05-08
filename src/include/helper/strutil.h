@@ -39,12 +39,13 @@ namespace utils {
 
         // very simple search
         template <class In, class Cmp, class Compare = decltype(default_compare())>
-        constexpr size_t find(In&& in, Cmp&& cmp, Compare&& compare = default_compare(), size_t pos = 0) {
+        constexpr size_t find(In&& in, Cmp&& cmp, size_t pos = 0, size_t offset = 0, Compare&& compare = default_compare()) {
             Sequencer<buffer_t<In&>> intmp(in);
             Buffer<buffer_t<Cmp&>> cmptmp(cmp);
             if (cmptmp.size() == 0) {
                 return ~0;
             }
+            intmp.rptr = offset;
             size_t count = 0;
             while (!intmp.eos()) {
                 if (intmp.remain() < cmptmp.size()) {
@@ -63,7 +64,14 @@ namespace utils {
 
         template <class In, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool contains(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
-            return find(in, cmp, compare) != ~0;
+            return find(in, cmp, 0, 0, compare) != ~0;
+        }
+
+        template <class In, class Cmp, class Before, class Compare = decltype(default_compare())>
+        constexpr bool contains_before(In&& in, Cmp&& cmp, Before&& before, Compare&& compare = default_compare()) {
+            auto target = find(in, cmp, 0, 0, compare);
+            auto bef = find(in, before, 0, 0, compare);
+            return target != ~0 && target < bef;
         }
 
         template <bool no_zero = false, class String, class Validate>
@@ -108,8 +116,8 @@ namespace utils {
 
             constexpr auto operator[](size_t index) const {
                 constexpr auto eq = default_compare();
-                size_t first = index == 0 ? 0 : find(buf.buffer, sep, eq, index - 1);
-                size_t second = find(buf.buffer, sep, eq, index);
+                size_t first = index == 0 ? 0 : find(buf.buffer, sep, index - 1, 0, eq);
+                size_t second = find(buf.buffer, sep, index, 0, eq);
                 if (first == ~0 && second == ~0) {
                     return make_ref_slice(buf.buffer, 0, 0);
                 }
