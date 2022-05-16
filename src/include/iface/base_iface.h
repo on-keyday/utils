@@ -34,37 +34,29 @@ namespace utils {
             constexpr Ref(T& t)
                 : refptr(std::addressof(t)) {}
 
-            template <class T, class Fn>
-            constexpr Ref(T& t, Fn&& from)
-                : refptr(from(t)) {}
-
             constexpr void* ptr() const {
                 return refptr;
             }
         };
 
-        template <class T>
-        constexpr bool is_narrow_enough = sizeof(T) <= sizeof(void*) &&
-                                          alignof(T) <= alignof(void*);
-
-        template <class T>
-        void* select_pointer(T ptr) {
-            using T_ = std::remove_cvref_t<T>;
-            return new T_{std::move(ptr)};
-        }
-
-        using deleter_t = void (*)(void*);
-
-        template <class T>
-        deleter_t select_deleter() {
-            return [](void* p) {
-                delete static_cast<T*>(p);
-            };
-        }
+        using deleter_t = void (*)(void*, void*);
 
         struct Owns : Ref {
            private:
             deleter_t deleter = nullptr;
+
+            template <class T>
+            static void* select_pointer(T ptr) {
+                using T_ = std::remove_cvref_t<T>;
+                return new T_{std::move(ptr)};
+            }
+
+            template <class T>
+            static deleter_t select_deleter() {
+                return [](void* p, void*) {
+                    delete static_cast<T*>(p);
+                };
+            }
 
            public:
             constexpr Owns() = default;
@@ -72,17 +64,12 @@ namespace utils {
             template <class T>
             constexpr Owns(const T& t)
                 : deleter(select_deleter<std::remove_cvref_t<T>>()),
-                  Ref(t, select_pointer<const T&>) {}
+                  Ref(select_pointer<const T&>(t)) {}
 
             template <class T, std::enable_if_t<!std::is_lvalue_reference_v<T>, int> = 0>
             constexpr Owns(T&& t)
                 : deleter(select_deleter<std::remove_cvref_t<T>>()),
-                  Ref(t, select_pointer<T&&>) {}
-
-            template <class T, class O>
-            constexpr Owns(T* t, void (*del)(O*))
-                : deleter(static_cast<deleter_t>(del)),
-                  Ref(static_cast<void*>(t)) {}
+                  Ref(select_pointer<T&&>(std::forward<T>(t))) {}
 
             constexpr Owns(const Owns&) = delete;
 
@@ -99,10 +86,73 @@ namespace utils {
 
             constexpr ~Owns() {
                 if (deleter) {
-                    deleter(refptr);
+                    deleter(refptr, nullptr);
                 }
             }
         };
+
+        template <class Alloc>
+        struct Aowns : Ref {
+            using allocator_t = Alloc;
+            using traits_t = std::allocator_traits<Alloc>;
+
+           private:
+            allocator_t alloc{};
+            deleter_t deleter = nullptr;
+
+            template <class T>
+            static void* select_pointer(T t, allocator_t& alloc) {
+                using T_ = std::remove_cvref_t<T>;
+                auto p = traits_t::allocate(alloc, std::move(t));
+                traits_t::construct(alloc, p);
+                return p;
+            }
+
+            template <class T>
+            static deleter_t select_deleter() {
+                return [](void* ptr, void* alloc) {
+                    auto t = static_cast<T*>(ptr);
+                    auto al = static_cast<allocator_t*>(alloc);
+                    traits_t::destory(*alloc, ptr);
+                    traits_t::deallocate(*alloc, ptr);
+                };
+            }
+
+           public:
+            constexpr Aowns() = default;
+
+            template <class T>
+            constexpr Aowns(const T& t)
+                : deleter(select_deleter<std::remove_cvref_t<T>>()),
+                  Ref(select_pointer<const T&>(t, alloc)) {}
+
+            template <class T, std::enable_if_t<!std::is_lvalue_reference_v<T>, int> = 0>
+            constexpr Aowns(T&& t)
+                : deleter(select_deleter<std::remove_cvref_t<T>>()),
+                  Ref(select_pointer<T&&>(std::forward<T>(t), alloc)) {}
+
+            constexpr Aowns(const Aowns&) = delete;
+
+            constexpr Aowns(Aowns&& in)
+                : deleter(std::exchange(in.deleter, nullptr)),
+                  alloc(std::exchange(in.alloc, {})),
+                  Ref(std::exchange(in.refptr, nullptr)) {}
+
+            constexpr Aowns& operator=(Aowns&& in) {
+                this->~Aowns();
+                deleter = std::exchange(in.deleter, nullptr);
+                refptr = std::exchange(in.refptr, nullptr);
+                alloc = std::exchange(in.alloc, {});
+                return *this;
+            }
+
+            constexpr ~Aowns() {
+                if (deleter) {
+                    deleter(refptr, &alloc);
+                }
+            }
+        };
+
 #define MAKE_FN(func_name, retty, ...)                                       \
     retty (*func_name##_ptr)(void* __VA_OPT__(, ) __VA_ARGS__) = nullptr;    \
     template <class T, class... Args>                                        \
@@ -129,7 +179,7 @@ namespace utils {
 
             template <class T>
             constexpr Sized(T&& t)
-                : APPLY2_FN(size), Box(t) {}
+                : APPLY2_FN(size), Box(std::forward<T>(t)) {}
 
             size_t size() const {
                 DEFAULT_CALL(size, 0)
@@ -146,7 +196,7 @@ namespace utils {
             template <class T>
             constexpr String(T&& t)
                 : APPLY2_FN(data),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             Char* data() {
                 DEFAULT_CALL(data, nullptr)
@@ -167,7 +217,7 @@ namespace utils {
             template <class T>
             constexpr PushBacker(T&& t)
                 : APPLY2_FN(push_back, Char),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             void push_back(Char c) {
                 DEFAULT_CALL(push_back, (void)0, c)
@@ -186,7 +236,7 @@ namespace utils {
             constexpr Buffer(T&& t)
                 : APPLY2_FN(erase, size_t, size_t),
                   APPLY2_FN(pop_back),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             void erase(size_t offset, size_t count) {
                 DEFAULT_CALL(erase, (void)0, offset, count)
@@ -213,7 +263,7 @@ namespace utils {
             template <class T>
             Copy(T&& t)
                 : APPLY2_FN(copy),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             Copy clone() const {
                 return this->refptr && copy_ptr ? copy_ptr(this->refptr) : Copy{};
@@ -247,7 +297,7 @@ namespace utils {
             template <class T>
             Subscript(T&& t)
                 : APPLY2_FN(subscript),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             Value operator[](Key index) const {
                 return subscript_ptr ? subscript_ptr(this->refptr, std::move(index)) : select_traits<Value>();
@@ -269,7 +319,7 @@ namespace utils {
             template <class T>
             Deref(T&& t)
                 : APPLY2_FN(deref),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             Value operator*() const {
                 return deref_ptr ? deref_ptr(this->refptr) : select_traits<Value>();
@@ -291,7 +341,7 @@ namespace utils {
             template <class T>
             Increment(T&& t)
                 : APPLY2_FN(increment),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             Increment& operator++() {
                 increment_ptr ? increment_ptr(this->refptr) : (void)0;
@@ -319,7 +369,7 @@ namespace utils {
             template <class T>
             Compare(T&& t)
                 : APPLY2_FN(compare),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             bool operator==(const Compare& right) const {
                 if (!this->refptr || !right.refptr) {
@@ -350,7 +400,7 @@ namespace utils {
             Compare2(T&& t, U&& u)
                 : compare1(compare_fn<std::remove_cvref_t<T>, std::remove_cvref_t<U>>),
                   compare2(compare_fn<std::remove_cvref_t<U>, std::remove_cvref_t<T>>),
-                  Box(t) {}
+                  Box(std::forward<T>(t)) {}
 
             bool operator==(const Compare2& right) const {
                 if (!this->refptr || !right.refptr) {
@@ -373,5 +423,175 @@ namespace utils {
 
         template <class Box, class T>
         using ForwardIterator2 = Compare2<Increment<Deref<Box, T>>>;
+
+        template <class T1, class T2, class Box>
+        struct Pair : Box {
+           private:
+            T1(*get_0_ptr)
+            (void*) = nullptr;
+            T2(*get_1_ptr)
+            (void*) = nullptr;
+
+            template <class Ret, size_t N, class T>
+            static Ret get_N_fn(void* ptr) {
+                auto ptr = static_cast<T*>(ptr);
+                return get<N>(*ptr);
+            }
+
+           public:
+            DEFAULT_METHODS(Pair)
+            template <class T>
+            Pair(T&& t)
+                : get_0_ptr(get_N_fn<T1, 0, std::remove_cvref_t<T>>),
+                  get_1_ptr(get_N_fn<T2, 2, std::remove_cvref_t<T>>),
+                  Box(std::forward<T>(t)) {}
+
+            T1 get_0() const {
+                DEFAULT_CALL(get_0, select_traits<T1>());
+            }
+
+            T2 get_1() const {
+                DEFAULT_CALL(get_1, select_traits<T2>());
+            }
+        };
+
+        namespace internal {
+            template <size_t>
+            class CallIface;
+            template <>
+            class CallIface<0> {
+                decltype(auto) get(auto& p) {
+                    return p.get_0();
+                }
+            };
+            template <>
+            class CallIface<1> {
+                decltype(auto) get(auto& p) {
+                    return p.get_1();
+                }
+            };
+        }  // namespace internal
+
+        template <size_t N, class T, class U, class Box>
+        decltype(auto) get(Pair<T, U, Box>& b) {
+            return internal::CallIface<N>::get(b);
+        }
+
+        namespace internal {
+            template <class T>
+            concept has_code = requires(T t) {
+                { t.code() } -> std::integral;
+            };
+
+            template <class T>
+            concept has_kind_of = requires(T t) {
+                {!t.kind_of("kind")};
+            };
+
+            template <class T>
+            concept has_unwrap = requires(T t) {
+                {t.unwrap()};
+            };
+        }  // namespace internal
+
+        template <size_t N>
+        struct fixedBuf {
+            char buf[N + 1]{0};
+            size_t index = 0;
+            const char* c_str() const {
+                return buf;
+            }
+            void push_back(char v) {
+                if (index >= N) {
+                    return;
+                }
+                buf[index] = v;
+                index++;
+            }
+            char operator[](size_t i) {
+                if (index >= i) {
+                    return char();
+                }
+                return buf[i];
+            }
+        };
+
+        template <class Box>
+        struct Error : Box {
+           private:
+            void (*error_ptr)(void*, PushBacker<Ref> msg) = nullptr;
+            std::int64_t (*code_ptr)(void*) = nullptr;
+            bool (*kind_of_ptr)(void*, const char* key) = nullptr;
+            Error (*unwrap_ptr)(void*) = nullptr;
+
+            template <class T>
+            static void error_fn(void* ptr, PushBacker<Ref> msg) {
+                return static_cast<T*>(ptr)->error(msg);
+            }
+
+            template <class T>
+            static std::int64_t code_fn(void* ptr) {
+                if constexpr (internal::has_code<T>) {
+                    return static_cast<T*>(ptr)->code();
+                }
+                else {
+                    return false;
+                }
+            }
+
+            template <class T>
+            static bool kind_of_fn(void* ptr, const char* kind) {
+                if constexpr (internal::has_kind_of<T>) {
+                    return static_cast<T*>(ptr)->kind_of(kind);
+                }
+                else {
+                    return false;
+                }
+            }
+
+            template <class T>
+            static Error unwrap_fn(void* ptr) {
+                if constexpr (internal::has_kind_of<T>) {
+                    return static_cast<T*>(ptr)->unwrap();
+                }
+                else {
+                    return {};
+                }
+            }
+
+           public:
+            DEFAULT_METHODS(Error)
+
+            template <class T>
+            Error(T&& t)
+                : APPLY2_FN(error),
+                  APPLY2_FN(code),
+                  APPLY2_FN(kind_of),
+                  APPLY2_FN(unwrap),
+                  Box(std::forward<T>(t)) {}
+
+            void error(PushBacker<Ref> ref) const {
+                DEFAULT_CALL(error, (void)0, ref);
+            }
+
+            template <class String = fixedBuf<100>>
+            String serror() const {
+                String s;
+                error(s);
+                return s;
+            }
+
+            std::int64_t code() const {
+                DEFAULT_CALL(code, 0);
+            }
+
+            bool kind_of(const char* kind) const {
+                DEFAULT_CALL(kind_of, false, kind);
+            }
+
+            Error unwrap() const {
+                DEFAULT_CALL(unwrap, Error{});
+            }
+        };
     }  // namespace iface
 }  // namespace utils

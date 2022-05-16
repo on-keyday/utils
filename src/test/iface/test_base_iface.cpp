@@ -11,6 +11,7 @@
 #include <cassert>
 #include <map>
 #include <wrap/pair_iter.h>
+#include <helper/appender.h>
 
 struct Empty {
     size_t empty;
@@ -81,6 +82,20 @@ void test_base_iface() {
 
     for (auto c : utils::wrap::iter(pair)) {
     }
+
+    struct localError {
+        void error(PushBacker<Ref> r) {
+            utils::helper::append(r, "errors");
+        }
+    };
+
+    Error<Owns> err;
+
+    err = localError{};
+
+    err.serror().c_str();
+
+    auto cpy = std::move(err);
 }
 
 int main() {
