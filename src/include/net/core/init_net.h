@@ -20,6 +20,8 @@ namespace utils {
 
            public:
             bool initialized();
+
+            int errcode();
         };
 
         DLL Init& STDCALL network();

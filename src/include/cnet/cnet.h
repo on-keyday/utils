@@ -27,6 +27,7 @@ namespace utils {
             openssl,
             should_retry,
             wrap,
+            fatal,
         };
 
         constexpr const char* default_kinds[] = {
@@ -35,12 +36,17 @@ namespace utils {
             "openssl",
             "should_retry",
             "wrap",
+            "fatal",
         };
+
+        constexpr auto kind_c(Kind kind) {
+            return default_kinds[int(kind)];
+        }
 
         struct Error : iface::Error<iface::Powns, Error> {
             using iface::Error<iface::Powns, Error>::Error;
             bool as(Kind kind) const {
-                return kind_of(default_kinds[int(kind)]);
+                return kind_of(kind_c(kind));
             }
         };
 
@@ -54,8 +60,22 @@ namespace utils {
                 err.error(pb);
             }
 
+            bool kind_of(const char* k) {
+                return helper::equal(k, kind_c(Kind::wrap));
+            }
+
             Error unwrap() {
                 return std::move(err);
+            }
+        };
+
+        struct consterror {
+            const char* msg;
+            void error(pushbacker pb) {
+                helper::append(pb, msg);
+            }
+            bool kind_of(const char* k) {
+                return helper::equal(k, kind_c(Kind::fatal));
             }
         };
 
@@ -96,7 +116,7 @@ namespace utils {
         };
 
         struct Protocol {
-            bool (*initialize)(CNet* ctx, void* user);
+            Error (*initialize)(CNet* ctx, void* user);
             bool (*write)(CNet* ctx, void* user, Buffer<const char>* buf);
             bool (*read)(CNet* ctx, void* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, void* user, MadeBuffer* buf, Buffer<const char>* input);
@@ -112,7 +132,7 @@ namespace utils {
 
         template <class T, class SettingValue = void>
         struct ProtocolSuite {
-            bool (*initialize)(CNet* ctx, T* user);
+            Error (*initialize)(CNet* ctx, T* user);
             bool (*write)(CNet* ctx, T* user, Buffer<const char>* buf);
             bool (*read)(CNet* ctx, T* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
@@ -169,10 +189,10 @@ namespace utils {
         DLL bool STDCALL invoke_callback(CNet* ctx);
 
         // initialize protocol context
-        DLL bool STDCALL initialize(CNet* ctx);
+        DLL Error STDCALL initialize(CNet* ctx);
 
         // open connection
-        inline bool open(CNet* ctx) {
+        inline Error open(CNet* ctx) {
             return initialize(ctx);
         }
 

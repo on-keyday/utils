@@ -74,7 +74,7 @@ namespace utils {
                     ctx->inflag = InternalFlag::none;
                 }
                 else {
-                    if (!ctx->proto.initialize(ctx, user)) {
+                    if (auto err = ctx->proto.initialize(ctx, user); err != nullptr) {
                         ctx->proto.deleter(user);
                         ctx->user = nullptr;
                         ctx->proto = {};
@@ -128,7 +128,7 @@ namespace utils {
             return ctx->next;
         }
 
-        bool STDCALL initialize(CNet* ctx) {
+        Error STDCALL initialize(CNet* ctx) {
             if (!ctx) {
                 return false;
             }
@@ -137,8 +137,9 @@ namespace utils {
                     ctx->inflag = InternalFlag::none;
                 }
             }
+            Error err;
             if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
-                if (ctx->proto.initialize(ctx, ctx->user)) {
+                if (auto err = ctx->proto.initialize(ctx, ctx->user); err == nullptr) {
                     ctx->inflag |= InternalFlag::init_succeed;
                 }
                 ctx->inflag |= InternalFlag::initialized;
@@ -146,7 +147,10 @@ namespace utils {
             else if (!ctx->proto.initialize) {
                 ctx->inflag |= InternalFlag::init_succeed;
             }
-            return any(ctx->inflag & InternalFlag::init_succeed);
+            if (err == nullptr && !any(ctx->inflag & InternalFlag::init_succeed)) {
+                err = consterror{"already failed to initialize"};
+            }
+            return err;
         }
 
         bool STDCALL uninitialize(CNet* ctx) {
@@ -161,7 +165,7 @@ namespace utils {
             if (!ctx || !written) {
                 return false;
             }
-            if (!initialize(ctx)) {
+            if (auto err = initialize(ctx); err != nullptr) {
                 return false;
             }
             auto write_buf = [&](Buffer<const char>* buf) {
@@ -220,7 +224,7 @@ namespace utils {
             if (!ctx || !red) {
                 return false;
             }
-            if (!initialize(ctx)) {
+            if (auto err = initialize(ctx); err != nullptr) {
                 return false;
             }
             Buffer<char> buf;

@@ -153,39 +153,57 @@ namespace utils {
                 return write_to_bio(ctx, tls) >= 0;
             }
 
-            bool open_tls(CNet* ctx, OpenSSLContext* tls) {
+            struct sslconsterror : consterror {
+                void error(pushbacker pb) {
+                    helper::appends(pb, "ssl/tls: ", this->msg);
+                }
+            };
+
+            struct ssloperror : sslconsterror {
+                const char* op;
+                void error(pushbacker pb) {
+                    sslconsterror::error(pb);
+                    helper::append(": ", op);
+                }
+            };
+
+            struct sslcodeerror : sslconsterror {
+                int code;
+            };
+
+            Error open_tls(CNet* ctx, OpenSSLContext* tls) {
                 auto lproto = cnet::get_lowlevel_protocol(ctx);
                 if (!lproto) {
-                    return false;
+                    return sslconsterror{"low level protocol not set"};
                 }
                 tls->sslctx = ::SSL_CTX_new(TLS_method());
-                ::SSL_CTX_set_options(tls->sslctx, SSL_OP_NO_SSLv2);
                 if (!tls->sslctx) {
-                    return false;
+                    return sslconsterror{"SSL_CTX_new returns nullptr"};
                 }
+                ::SSL_CTX_set_options(tls->sslctx, SSL_OP_NO_SSLv2);
                 if (!::SSL_CTX_load_verify_locations(tls->sslctx, tls->cert_file.c_str(), nullptr)) {
-                    return false;
+                    return ssloperror{"failed to load cert file", tls->cert_file.c_str()};
                 }
                 tls->ssl = ::SSL_new(tls->sslctx);
                 if (!tls->ssl) {
-                    return false;
+                    return sslconsterror{"SSL_new returns nullptr"};
                 }
                 ::BIO* ssl_side = nullptr;
                 ::BIO_new_bio_pair(&ssl_side, 0, &tls->bio, 0);
                 if (!ssl_side) {
-                    return false;
+                    return sslconsterror{"BIO_new_bio_pair set nullptr"};
                 }
                 ::SSL_set_bio(tls->ssl, ssl_side, ssl_side);
                 if (tls->alpn.size()) {
                     if (::SSL_set_alpn_protos(tls->ssl, tls->alpn.c_str(), tls->alpn.size()) != 0) {
-                        return false;
+                        return ssloperror{"failed to register alpn protocols", (const char*)tls->alpn.c_str()};
                     }
                 }
                 if (tls->host.size()) {
                     ::SSL_set_tlsext_host_name(tls->ssl, tls->host.c_str());
                     auto param = SSL_get0_param(tls->ssl);
                     if (!X509_VERIFY_PARAM_add1_host(param, tls->host.c_str(), tls->host.size())) {
-                        return false;
+                        return ssloperror{"failed to register host name", tls->host.c_str()};
                     }
                 }
                 tls->status = TLSStatus::start_connect;
@@ -196,12 +214,12 @@ namespace utils {
                         break;
                     }
                     else if (!err) {
-                        return false;
+                        return sslcodeerror{"SSL_connect failed", ::SSL_get_error(tls->ssl, 0)};
                     }
                     else {
                         if (need_IO(tls)) {
                             if (!do_IO(ctx, tls, nullptr)) {
-                                return false;
+                                return sslconsterror{"do_IO failed"};
                             }
                             continue;
                         }
@@ -212,7 +230,7 @@ namespace utils {
                     auto result = ::SSL_get_verify_result(tls->ssl);
                     auto cert = ::SSL_get_peer_certificate(tls->ssl);
                     if (result != X509_V_OK || !cert) {
-                        return false;
+                        return sslcodeerror{"verfication of certificate failed", result};
                     }
                     ::X509_free(cert);
                 }

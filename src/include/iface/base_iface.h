@@ -248,7 +248,7 @@ namespace utils {
             }
 
             constexpr bool operator==(std::nullptr_t) const {
-                return get_deleter(types) != nullptr;
+                return types != 0;
             }
 
             ~Powns() {

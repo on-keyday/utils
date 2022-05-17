@@ -134,9 +134,21 @@ namespace utils {
                 }
             }
 
-            bool open_socket(CNet* ctx, OsTCPSocket* sock) {
-                if (!net::network().initialized()) {
-                    return false;
+            struct sockError {
+                const char* proc;
+                std::int64_t err;
+
+                void error(pushbacker pb) {
+                }
+
+                bool kind_of(const char* k) {
+                    return helper::equal(k, kind_c(Kind::os));
+                }
+            };
+
+            Error open_socket(CNet* ctx, OsTCPSocket* sock) {
+                if (auto& init = net::network(); !init.initialized()) {
+                    return sockError{"net::network/::WSAStart", init.errcode()};
                 }
                 sock->info = dns_query(ctx, sock);
                 if (!sock->info) {

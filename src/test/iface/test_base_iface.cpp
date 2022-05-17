@@ -106,8 +106,6 @@ void test_base_iface() {
     cneterr = utils::cnet::wraperror{.err = localError{}};
 
     auto unwraped = cneterr.unwrap();
-    if (cneterr == nullptr) {
-    }
 }
 
 int main() {

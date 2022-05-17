@@ -18,9 +18,9 @@ namespace utils {
             struct InitImpl {
 #ifdef _WIN32
                 ::WSAData data;
-                bool succeed = false;
+                int succeed;
                 InitImpl() {
-                    succeed = ::WSAStartup(MAKEWORD(2, 2), &data) == 0;
+                    succeed = ::WSAStartup(MAKEWORD(2, 2), &data);
                 }
 
                 ~InitImpl() {
@@ -47,6 +47,10 @@ namespace utils {
         }
 
         bool Init::initialized() {
+            return internal::init().succeed == 0;
+        }
+
+        int errcode() {
             return internal::init().succeed;
         }
 

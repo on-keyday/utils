@@ -273,14 +273,14 @@ namespace utils {
                 fr->state->goneaway = true;
             }
 
-            bool open_http2(CNet* ctx, Http2State* state) {
+            Error open_http2(CNet* ctx, Http2State* state) {
                 auto low = cnet::get_lowlevel_protocol(ctx);
                 if (!low) {
                     return false;
                 }
                 size_t w = 0;
                 if (!write(low, preface, 24, &w)) {
-                    return false;
+                    return consterror{"http2: failed to write connection preface"};
                 }
                 net::http2::internal::FrameWriter<wrap::string> wr;
                 net::http2::SettingsFrame frame;
@@ -290,7 +290,7 @@ namespace utils {
                 net::http2::encode(&frame, wr);
                 callback_on_write(state, &frame);
                 if (!write(low, wr.str.c_str(), wr.str.size(), &w)) {
-                    return false;
+                    return consterror{"http2: failed to write initial settings"};
                 }
                 state->opened = true;
                 return true;
