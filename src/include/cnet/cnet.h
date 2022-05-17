@@ -11,12 +11,53 @@
 #include "../platform/windows/dllexport_header.h"
 #include "../wrap/light/enum.h"
 #include "../helper/equal.h"
+#include "../iface/base_iface.h"
+#include "../helper/appender.h"
 
 namespace utils {
     namespace cnet {
 
         // cnet context
         struct CNet;
+
+        // error interface like golang
+        enum class Kind {
+            note,
+            os,
+            openssl,
+            should_retry,
+            wrap,
+        };
+
+        constexpr const char* default_kinds[] = {
+            "note",
+            "os",
+            "openssl",
+            "should_retry",
+            "wrap",
+        };
+
+        struct Error : iface::Error<iface::Powns, Error> {
+            using iface::Error<iface::Powns, Error>::Error;
+            bool as(Kind kind) const {
+                return kind_of(default_kinds[int(kind)]);
+            }
+        };
+
+        using pushbacker = iface::PushBacker<iface::Ref>;
+
+        struct wraperror {
+            iface::Subscript<iface::Sized<iface::Powns>> now;
+            Error err;
+            void error(pushbacker pb) {
+                helper::appends(pb, now, ": ");
+                err.error(pb);
+            }
+
+            Error unwrap() {
+                return std::move(err);
+            }
+        };
 
         enum class CNetFlag {
             none = 0,

@@ -12,6 +12,8 @@
 #include <map>
 #include <wrap/pair_iter.h>
 #include <helper/appender.h>
+#include <number/to_string.h>
+#include <cnet/cnet.h>
 
 struct Empty {
     size_t empty;
@@ -84,18 +86,28 @@ void test_base_iface() {
     }
 
     struct localError {
+        int code;
         void error(PushBacker<Ref> r) {
-            utils::helper::append(r, "errors");
+            utils::helper::append(r, "errors:");
+            utils::number::to_string(r, code);
         }
     };
 
-    Error<Owns> err;
+    Error<Powns> err;
 
-    err = localError{};
+    err = localError{10};
 
     err.serror().c_str();
 
     auto cpy = std::move(err);
+
+    utils::cnet::Error cneterr;
+
+    cneterr = utils::cnet::wraperror{.err = localError{}};
+
+    auto unwraped = cneterr.unwrap();
+    if (cneterr == nullptr) {
+    }
 }
 
 int main() {

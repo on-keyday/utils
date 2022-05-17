@@ -9,6 +9,8 @@
 // base_iface - basic interface class
 #pragma once
 #include <memory>
+#include <type_traits>
+#include <cassert>
 
 namespace utils {
     namespace iface {
@@ -36,6 +38,10 @@ namespace utils {
 
             constexpr void* ptr() const {
                 return refptr;
+            }
+
+            bool operator==(std::nullptr_t) const {
+                return refptr == nullptr;
             }
         };
 
@@ -103,8 +109,8 @@ namespace utils {
             template <class T>
             static void* select_pointer(T t, allocator_t& alloc) {
                 using T_ = std::remove_cvref_t<T>;
-                auto p = traits_t::allocate(alloc, std::move(t));
-                traits_t::construct(alloc, p);
+                auto p = traits_t::allocate(alloc, sizeof(T));
+                traits_t::construct(alloc, p, std::forward<T>(t));
                 return p;
             }
 
@@ -153,6 +159,105 @@ namespace utils {
             }
         };
 
+        struct Powns : Ref {
+           private:
+            static constexpr std::uintptr_t prim = 0x1;
+            static constexpr std::uintptr_t mask = prim;
+            std::uintptr_t types = 0;
+
+            template <class T>
+            static constexpr bool is_prim = sizeof(T) <= sizeof(void*) &&
+                                            alignof(T) <= alignof(void*) &&
+                                            std::is_trivial_v<T>;
+
+            template <class T>
+            static void* select_pointer(T t) {
+                using T_ = std::remove_cvref_t<T>;
+                if constexpr (is_prim<T_>) {
+                    void* v = nullptr;
+                    *reinterpret_cast<T_*>(&v) = std::forward<T>(t);
+                    return v;
+                }
+                else {
+                    return new T_{std::forward<T>(t)};
+                }
+            }
+
+            template <class T>
+            static std::uintptr_t select_deleter() {
+                if constexpr (is_prim<T>) {
+                    return prim;
+                }
+                else {
+                    static deleter_t delptr = [](void* del, void*) {
+                        delete static_cast<T*>(del);
+                    };
+                    std::uintptr_t unsafeptr = reinterpret_cast<std::uintptr_t>(&delptr);
+                    assert((unsafeptr & mask) == 0);
+                    return unsafeptr;
+                }
+            }
+
+            static deleter_t get_deleter(std::uintptr_t ptr) {
+                if (ptr & prim || ptr == 0) {
+                    return nullptr;
+                }
+                ptr &= ~mask;
+                deleter_t* del = reinterpret_cast<deleter_t*>(ptr);
+                return *del;
+            }
+
+           public:
+            constexpr Powns() {}
+
+            template <class T>
+            constexpr Powns(T& t)
+                : types(select_deleter<std::remove_cvref_t<T>>()),
+                  Ref(select_pointer<T&>(t)) {}
+
+            template <class T>
+            constexpr Powns(const T& t)
+                : types(select_deleter<std::remove_cvref_t<T>>()),
+                  Ref(select_pointer<const T&>(t)) {}
+
+            template <class T, std::enable_if_t<!std::is_lvalue_reference_v<T>, int> = 0>
+            constexpr Powns(T&& t)
+                : types(select_deleter<std::remove_cvref_t<T>>()),
+                  Ref(select_pointer<T&&>(std::forward<T>(t))) {}
+
+            constexpr Powns(const Powns&) = delete;
+
+            constexpr Powns(Powns&& in)
+                : types(std::exchange(in.types, 0)),
+                  Ref(std::exchange(in.refptr, nullptr)) {}
+
+            constexpr Powns& operator=(Powns&& in) {
+                this->~Powns();
+                types = std::exchange(in.types, 0);
+                refptr = std::exchange(in.refptr, nullptr);
+                return *this;
+            }
+
+            constexpr void* ptr() const {
+                if (types & prim) {
+                    return reinterpret_cast<void*>(const_cast<void**>(&refptr));
+                }
+                else {
+                    return Ref::ptr();
+                }
+            }
+
+            constexpr bool operator==(std::nullptr_t) const {
+                return get_deleter(types) != nullptr;
+            }
+
+            ~Powns() {
+                if (auto del = get_deleter(types)) {
+                    del(this->ptr(), nullptr);
+                }
+            }
+        };
+
 #define MAKE_FN(func_name, retty, ...)                                       \
     retty (*func_name##_ptr)(void* __VA_OPT__(, ) __VA_ARGS__) = nullptr;    \
     template <class T, class... Args>                                        \
@@ -168,7 +273,7 @@ namespace utils {
 #define APPLY1_FN(func_name, ...) func_name##_fn<std::remove_cvref_t<T> __VA_OPT__(, ) __VA_ARGS__>
 #define APPLY2_FN(func_name, ...) \
     func_name##_ptr(APPLY1_FN(func_name, __VA_ARGS__))
-#define DEFAULT_CALL(func_name, defaultv, ...) return this->refptr && func_name##_ptr ? func_name##_ptr(this->refptr __VA_OPT__(, ) __VA_ARGS__) : defaultv;
+#define DEFAULT_CALL(func_name, defaultv, ...) return this->ptr() && func_name##_ptr ? func_name##_ptr(this->ptr() __VA_OPT__(, ) __VA_ARGS__) : defaultv;
 
         template <class Box>
         struct Sized : Box {
@@ -266,7 +371,7 @@ namespace utils {
                   Box(std::forward<T>(t)) {}
 
             Copy clone() const {
-                return this->refptr && copy_ptr ? copy_ptr(this->refptr) : Copy{};
+                DEFAULT_CALL(copy, Copy{})
             }
         };
 
@@ -300,7 +405,7 @@ namespace utils {
                   Box(std::forward<T>(t)) {}
 
             Value operator[](Key index) const {
-                return subscript_ptr ? subscript_ptr(this->refptr, std::move(index)) : select_traits<Value>();
+                DEFAULT_CALL(subscript, select_traits<Value>(), std::move(index))
             }
         };
 
@@ -322,7 +427,7 @@ namespace utils {
                   Box(std::forward<T>(t)) {}
 
             Value operator*() const {
-                return deref_ptr ? deref_ptr(this->refptr) : select_traits<Value>();
+                DEFAULT_CALL(deref, select_traits<Value>())
             }
         };
 
@@ -378,7 +483,7 @@ namespace utils {
                 if (compare_ptr != right.compare_ptr) {
                     return false;
                 }
-                return compare_ptr(this->refptr, right.refptr);
+                return compare_ptr(this->ptr(), right.ptr());
             }
         };
 
@@ -403,16 +508,16 @@ namespace utils {
                   Box(std::forward<T>(t)) {}
 
             bool operator==(const Compare2& right) const {
-                if (!this->refptr || !right.refptr) {
+                if (!this->ptr() || !right.ptr()) {
                     return false;
                 }
                 // T U
                 if (compare1 == right.compare2) {
-                    return compare1(this->refptr, right.refptr);
+                    return compare1(this->ptr(), right.ptr());
                 }
                 // U T
                 if (compare2 == right.compare1) {
-                    return compare2(right.refptr, this->refptr);
+                    return compare2(right.ptr(), this->ptr());
                 }
                 return false;
             }
@@ -516,13 +621,14 @@ namespace utils {
             }
         };
 
-        template <class Box>
+        template <class Box, class Unwrap = void>
         struct Error : Box {
            private:
+            using unwrap_t = std::conditional_t<std::is_same_v<Unwrap, void>, Error, Unwrap>;
             void (*error_ptr)(void*, PushBacker<Ref> msg) = nullptr;
             std::int64_t (*code_ptr)(void*) = nullptr;
             bool (*kind_of_ptr)(void*, const char* key) = nullptr;
-            Error (*unwrap_ptr)(void*) = nullptr;
+            unwrap_t (*unwrap_ptr)(void*) = nullptr;
 
             template <class T>
             static void error_fn(void* ptr, PushBacker<Ref> msg) {
@@ -550,8 +656,8 @@ namespace utils {
             }
 
             template <class T>
-            static Error unwrap_fn(void* ptr) {
-                if constexpr (internal::has_kind_of<T>) {
+            static unwrap_t unwrap_fn(void* ptr) {
+                if constexpr (internal::has_unwrap<T>) {
                     return static_cast<T*>(ptr)->unwrap();
                 }
                 else {
@@ -589,8 +695,8 @@ namespace utils {
                 DEFAULT_CALL(kind_of, false, kind);
             }
 
-            Error unwrap() const {
-                DEFAULT_CALL(unwrap, Error{});
+            unwrap_t unwrap() const {
+                DEFAULT_CALL(unwrap, unwrap_t{});
             }
         };
     }  // namespace iface
