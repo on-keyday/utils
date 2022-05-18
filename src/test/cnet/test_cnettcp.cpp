@@ -78,7 +78,7 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
     conn = ssl;
     auto data = "GET " + wrap::string(path) + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n";
     size_t w = 0;
-    cnet::write(conn, data.c_str(), data.size(), &w);
+    cnet::write({}, conn, data.c_str(), data.size(), &w);
     wrap::string buf, body;
     wrap::hash_multimap<wrap::string, wrap::string> h;
     suc = net::h1header::read_response<wrap::string>(buf, helper::nop, h, body, [&](auto& seq, size_t expect, bool finalcall) {

@@ -746,7 +746,7 @@ namespace utils {
                   APPLY2_FN(err),
                   Box(std::forward<T>(t)) {}
 
-            bool stop() const {
+            bool stop() {
                 DEFAULT_CALL(stop, false);
             }
 

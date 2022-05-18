@@ -61,6 +61,37 @@ namespace utils {
                 }
             };
 
+            struct sslconsterror : consterror {
+                void error(pushbacker pb) {
+                    helper::appends(pb, "ssl/tls: ", this->msg);
+                }
+            };
+
+            struct sslwraperror : consterror {
+                Error w;
+                void error(pushbacker pb) {
+                    consterror::error(pb);
+                    helper::append(pb, ": ");
+                    w.error(pb);
+                }
+
+                Error unwrap() {
+                    return std::move(w);
+                }
+            };
+
+            struct ssloperror : sslconsterror {
+                const char* op;
+                void error(pushbacker pb) {
+                    sslconsterror::error(pb);
+                    helper::appends(pb, ": ", op);
+                }
+            };
+
+            struct sslcodeerror : sslconsterror {
+                int code;
+            };
+
             int write_to_bio(CNet* ctx, OpenSSLContext* tls) {
                 if (tls->buf_index == 0) {
                     return 1;
@@ -88,11 +119,14 @@ namespace utils {
                        err == SSL_ERROR_WANT_WRITE;
             }
 
-            bool do_IO(CNet* ctx, OpenSSLContext* tls, test::Timer* timer, bool shutdown_mode = false) {
+            Error do_IO(Stopper stop, CNet* ctx, OpenSSLContext* tls, test::Timer* timer, bool shutdown_mode = false) {
                 if (tls->buf_index) {
                     auto err = write_to_bio(ctx, tls);
                     if (err <= 0) {
-                        return err == 0;
+                        if (err == 0) {
+                            return nil();
+                        }
+                        return sslcodeerror{"failed to write", ::SSL_get_error(tls->ssl, -1)};
                     }
                 }
                 number::Array<1024, char> v;
@@ -109,8 +143,9 @@ namespace utils {
                 invoke_callback(ctx);
                 size_t w = 0;
                 while (true) {
-                    if (!cnet::write(lowconn, tls->buffer.data(), tls->buf_index, &w)) {
-                        return false;
+                    if (auto err = cnet::write(stop, lowconn, tls->buffer.data(), tls->buf_index, &w);
+                        err != nullptr) {
+                        return err;
                     }
                     if (w == tls->buf_index) {
                         break;
@@ -129,7 +164,7 @@ namespace utils {
                 size_t count = 0;
                 while (true) {
                     if (!cnet::read(lowconn, tls->buffer.data(), tls->buffer.size(), &tls->buf_index)) {
-                        return false;
+                        return sslconsterror{"failed to read"};
                     }
                     if (tls->buf_index != 0) {
                         break;
@@ -150,26 +185,11 @@ namespace utils {
                 }
                 tls->status = TLSStatus::read_from_low_done;
                 invoke_callback(ctx);
-                return write_to_bio(ctx, tls) >= 0;
+                if (write_to_bio(ctx, tls) < 0) {
+                    return sslcodeerror{"failed to write to ssl conn", ::SSL_get_error(tls->ssl, -1)};
+                }
+                return nil();
             }
-
-            struct sslconsterror : consterror {
-                void error(pushbacker pb) {
-                    helper::appends(pb, "ssl/tls: ", this->msg);
-                }
-            };
-
-            struct ssloperror : sslconsterror {
-                const char* op;
-                void error(pushbacker pb) {
-                    sslconsterror::error(pb);
-                    helper::appends(pb, ": ", op);
-                }
-            };
-
-            struct sslcodeerror : sslconsterror {
-                int code;
-            };
 
             Error open_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls) {
                 auto lproto = cnet::get_lowlevel_protocol(ctx);
@@ -218,7 +238,7 @@ namespace utils {
                     }
                     else {
                         if (need_IO(tls)) {
-                            if (!do_IO(ctx, tls, nullptr)) {
+                            if (!do_IO(stop, ctx, tls, nullptr)) {
                                 return sslconsterror{"do_IO failed"};
                             }
                             continue;
@@ -246,7 +266,7 @@ namespace utils {
                     count++;
                     auto err = ::SSL_shutdown(tls->ssl);
                     if (err == -1 && need_IO(tls)) {
-                        if (!do_IO(ctx, tls, nullptr, true)) {
+                        if (!do_IO({}, ctx, tls, nullptr, true)) {
                             break;
                         }
                         continue;
@@ -256,7 +276,7 @@ namespace utils {
                         err = SSL_read_ex(tls->ssl, tmpbuf.buf, tmpbuf.capacity(), &tmpbuf.i);
                         if (!err) {
                             if (need_IO(tls)) {
-                                if (!do_IO(ctx, tls, nullptr, true)) {
+                                if (!do_IO({}, ctx, tls, nullptr, true)) {
                                     break;
                                 }
                                 continue;
@@ -276,13 +296,13 @@ namespace utils {
             }
 
             template <class Callback>
-            bool io_common_loop(CNet* ctx, OpenSSLContext* tls, test::Timer* timer, Callback&& callback) {
+            Error io_common_loop(Stopper stop, CNet* ctx, OpenSSLContext* tls, test::Timer* timer, Callback&& callback) {
                 while (true) {
                     auto err = callback();
                     if (!err) {
                         if (need_IO(tls)) {
-                            if (!do_IO(ctx, tls, timer)) {
-                                return false;
+                            if (auto err = do_IO(stop, ctx, tls, timer); err != nullptr) {
+                                return err;
                             }
                             if (timer && timer->delta().count() >= tls->read_timeout) {
                                 break;
@@ -290,11 +310,11 @@ namespace utils {
                             continue;
                         }
                         tls->setup = false;
-                        return false;
+                        return sslcodeerror{"operation failed at code", ::SSL_get_error(tls->ssl, 0)};
                     }
                     break;
                 }
-                return true;
+                return nil();
             }
 
             bool read_tls(CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
@@ -302,7 +322,7 @@ namespace utils {
                 invoke_callback(ctx);
                 test::Timer timer;
                 if (!io_common_loop(
-                        ctx, tls, &timer,
+                        {}, ctx, tls, &timer,
                         [&]() {
                             return ::SSL_read_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
                         })) {
@@ -313,19 +333,20 @@ namespace utils {
                 return true;
             }
 
-            bool write_tls(CNet* ctx, OpenSSLContext* tls, Buffer<const char>* buf) {
+            Error write_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls, Buffer<const char>* buf) {
                 tls->status = TLSStatus::start_write;
                 invoke_callback(ctx);
-                if (!io_common_loop(
-                        ctx, tls, nullptr,
+                if (auto err = io_common_loop(
+                        stop, ctx, tls, nullptr,
                         [&]() {
                             return ::SSL_write_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
-                        })) {
-                    return false;
+                        });
+                    err != nullptr) {
+                    return sslwraperror{"SSL_write_ex failed", std::move(err)};
                 }
                 tls->status = TLSStatus::write_done;
                 invoke_callback(ctx);
-                return true;
+                return nil();
             }
 
             bool tls_settings_ptr(CNet* ctx, OpenSSLContext* tls, std::int64_t key, void* value) {

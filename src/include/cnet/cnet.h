@@ -123,7 +123,7 @@ namespace utils {
 
         struct Protocol {
             Error (*initialize)(Stopper stop, CNet* ctx, void* user);
-            bool (*write)(CNet* ctx, void* user, Buffer<const char>* buf);
+            Error (*write)(Stopper stop, CNet* ctx, void* user, Buffer<const char>* buf);
             bool (*read)(CNet* ctx, void* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, void* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(CNet* ctx, void* user);
@@ -139,7 +139,7 @@ namespace utils {
         template <class T, class SettingValue = void>
         struct ProtocolSuite {
             Error (*initialize)(Stopper stop, CNet* ctx, T* user);
-            bool (*write)(CNet* ctx, T* user, Buffer<const char>* buf);
+            Error (*write)(Stopper stop, CNet* ctx, T* user, Buffer<const char>* buf);
             bool (*read)(CNet* ctx, T* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(CNet* ctx, T* user);
@@ -211,11 +211,11 @@ namespace utils {
         }
 
         // write to context
-        DLL bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written);
+        DLL Error STDCALL write(Stopper stop, CNet* ctx, const char* data, size_t size, size_t* written);
 
         // do protocol request
-        inline bool request(CNet* ctx, size_t* written) {
-            return write(ctx, nullptr, 0, written);
+        inline Error request(CNet* ctx, size_t* written) {
+            return write({}, ctx, nullptr, 0, written);
         }
 
         // read from context

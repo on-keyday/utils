@@ -161,27 +161,27 @@ namespace utils {
             return true;
         }
 
-        bool STDCALL write(CNet* ctx, const char* data, size_t size, size_t* written) {
+        Error STDCALL write(Stopper stop, CNet* ctx, const char* data, size_t size, size_t* written) {
             if (!ctx || !written) {
-                return false;
+                return consterror{"ctx or written is nullptr"};
             }
-            if (auto err = initialize({}, ctx); err != nullptr) {
-                return false;
+            if (auto err = initialize(stop, ctx); err != nullptr) {
+                return err;
             }
             auto write_buf = [&](Buffer<const char>* buf) {
                 WRITE_START:
-                    auto result = ctx->proto.write(ctx, ctx->user, buf);
+                    auto result = ctx->proto.write(stop, ctx, ctx->user, buf);
                     if (result && any(ctx->flag & CNetFlag::repeat_writing) && buf->size != buf->proced) {
                         goto WRITE_START;
                     }
                     return result;
             };
-            auto write_impl = [&](Buffer<const char>* buf) {
-                auto with_make_buf = [&](auto&& cb, bool cond) {
+            auto write_impl = [&](Buffer<const char>* buf) -> Error {
+                auto with_make_buf = [&](auto&& cb, bool cond) -> Error {
                     if (cond) {
                         MadeBuffer mbuf{0};
                         if (!ctx->proto.make_data(ctx, ctx->user, &mbuf, buf)) {
-                            return false;
+                            return consterror{"failed to make"};
                         }
                         Buffer<const char> pbuf;
                         pbuf.ptr = mbuf.buf.ptr;
@@ -189,9 +189,9 @@ namespace utils {
                         pbuf.proced = 0;
                         if (cb(&pbuf)) {
                             buf->proced = mbuf.buf.proced;
-                            return true;
+                            return nil();
                         }
-                        return false;
+                        return consterror{"faild callback"};
                     }
                     else {
                         return cb(buf);
@@ -203,21 +203,22 @@ namespace utils {
                 else if (ctx->next) {
                     return with_make_buf(
                         [&](Buffer<const char>* buf) {
-                            return write(ctx->next, buf->ptr, buf->size, &buf->proced);
+                            return write(stop, ctx->next, buf->ptr, buf->size, &buf->proced);
                         },
                         ctx->proto.make_data);
                 }
-                return false;
+                return consterror{"failed to write buffer"};
             };
             Buffer<const char> buf;
             buf.ptr = data;
             buf.size = size;
             buf.proced = 0;
-            if (write_impl(&buf)) {
+            auto err = write_impl(&buf);
+            if (err == nullptr) {
                 *written = buf.proced;
-                return true;
+                return nil();
             }
-            return false;
+            return err;
         }
 
         bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red) {

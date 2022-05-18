@@ -279,7 +279,7 @@ namespace utils {
                     return consterror{"http2: low level protocol is nullptr"};
                 }
                 size_t w = 0;
-                if (!write(low, preface, 24, &w)) {
+                if (!write(stop, low, preface, 24, &w)) {
                     return consterror{"http2: failed to write connection preface"};
                 }
                 net::http2::internal::FrameWriter<wrap::string> wr;
@@ -289,7 +289,7 @@ namespace utils {
                 state->ctx.update_send(frame);
                 net::http2::encode(&frame, wr);
                 callback_on_write(state, &frame);
-                if (!write(low, wr.str.c_str(), wr.str.size(), &w)) {
+                if (!write(stop, low, wr.str.c_str(), wr.str.size(), &w)) {
                     return consterror{"http2: failed to write initial settings"};
                 }
                 state->opened = true;
@@ -302,7 +302,7 @@ namespace utils {
                 }
                 if (fr->wreq.size()) {
                     size_t s;
-                    if (!write(fr->low, fr->wreq.c_str(), fr->wreq.size(), &s)) {
+                    if (!write({}, fr->low, fr->wreq.c_str(), fr->wreq.size(), &s)) {
                         fr->result.err = net::http2::H2Error::transport;
                         fr->result.detail = net::http2::StreamError::writing_frame;
                         return false;

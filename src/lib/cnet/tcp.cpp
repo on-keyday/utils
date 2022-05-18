@@ -195,20 +195,20 @@ namespace utils {
                 sock->sock = -1;
             }
 
-            bool write_socket(CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf) {
+            Error write_socket(Stopper stop, CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf) {
                 sock->status = TCPStatus::start_sending;
                 invoke_callback(ctx);
                 auto err = ::send(sock->sock, buf->ptr, buf->size, 0);
                 if (err < 0) {
                     if (net::errcode() == WSAEWOULDBLOCK) {
-                        return true;
+                        return nil();
                     }
-                    return false;
+                    return sockerror{"::send error", net::errcode()};
                 }
                 buf->proced = err;
                 sock->status = TCPStatus::sent;
                 invoke_callback(ctx);
-                return true;
+                return nil();
             }
 
             bool STDCALL io_completion(void* ol, size_t recvsize) {

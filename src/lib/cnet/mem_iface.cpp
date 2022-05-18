@@ -64,15 +64,15 @@ namespace utils {
                 return true;
             }
 
-            bool mem_write(CNet* ctx, MemoryIO* io, Buffer<const char>* buf) {
+            Error mem_write(Stopper stop, CNet* ctx, MemoryIO* io, Buffer<const char>* buf) {
                 if (!io->io) {
-                    return false;
+                    return consterror{"mem: target memory buffer not exists"};
                 }
                 buf->proced = io->io->write(buf->ptr, buf->size);
                 if (buf->size != 0 && buf->proced == 0) {
-                    return false;
+                    return consterror{"mem: failed to write to buffer"};
                 }
-                return true;
+                return nil();
             }
 
             bool mem_read(CNet* ctx, MemoryIO* io, Buffer<char>* buf) {

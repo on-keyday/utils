@@ -41,7 +41,7 @@ void test_cnet_mem_interface() {
     Array<50, char> arr{0};
     utils::helper::append(arr, "client hello");
     auto old = arr.i;
-    write(mem1, arr.buf, arr.size(), &arr.i);
+    write({}, mem1, arr.buf, arr.size(), &arr.i);
     read(mem2, arr.buf, arr.capacity(), &arr.i);
     assert(old == arr.i);
 }
@@ -64,7 +64,7 @@ void test_thread_io() {
     };
     auto write_str = [](CNet *mem, auto str) {
         size_t s = 0;
-        write(mem, str, ::strlen(str), &s);
+        write({}, mem, str, ::strlen(str), &s);
     };
     auto client = [&](CNet *mem) {
         Buf arr{};
@@ -121,8 +121,8 @@ void test_http_protocol() {
         h["Content-Length"] = "3";
         render_response(buf, 200, "OK", h);
         size_t s;
-        write(mem, buf.c_str(), buf.size(), &s);
-        write(mem, "OK!", 3, &s);
+        write({}, mem, buf.c_str(), buf.size(), &s);
+        write({}, mem, "OK!", 3, &s);
     };
 
     auto client = [&](CNet *mem) {
@@ -133,7 +133,7 @@ void test_http_protocol() {
         h["Host"] = "localhost";
         render_request(buf, "GET", "/", h);
         size_t s;
-        write(mem, buf.c_str(), buf.size(), &s);
+        write({}, mem, buf.c_str(), buf.size(), &s);
         buf.clear();
         h.clear();
         read_response<std::string>(buf, code, h, body, r);
