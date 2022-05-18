@@ -743,13 +743,13 @@ namespace utils {
                     template <class F>
                     static bool get_idx(F&& f, size_t& idx, table_t& dymap) {
                         if (auto found = std::find_if(predefined_header.begin() + 1, predefined_header.end(), [&](auto& c) {
-                                return f(c.first, c.second);
+                                return f(get<0>(c), get<1>(c));
                             });
                             found != predefined_header.end()) {
                             idx = std::distance(predefined_header.begin(), found);
                         }
                         else if (auto found = std::find_if(dymap.begin(), dymap.end(), [&](auto& c) {
-                                     return f(c.first, c.second);
+                                     return f(get<0>(c), get<1>(c));
                                  });
                                  found != dymap.end()) {
                             idx = std::distance(dymap.begin(), found) + predefined_header_size;
@@ -824,8 +824,8 @@ namespace utils {
                                 if (!dymap.size()) {
                                     return false;
                                 }
-                                tablesize -= dymap.back().first.size();
-                                tablesize -= dymap.back().second.size();
+                                tablesize -= get<0>(dymap.back()).size();
+                                tablesize -= get<1>(dymap.back()).size();
                                 dymap.pop_back();
                             }
                             return true;
