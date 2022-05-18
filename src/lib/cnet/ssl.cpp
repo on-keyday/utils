@@ -32,6 +32,9 @@ namespace utils {
                 return nullptr;
             }
 #else
+
+#define TLSLOG(ctx, record, msg, code) record.log(logobj{__FILE__, __LINE__, "tls", msg, ctx, (std::int64_t)code})
+
             template <class Char>
             using Host = number::Array<254, Char, true>;
             struct OpenSSLContext {
@@ -140,7 +143,7 @@ namespace utils {
                 auto lowconn = cnet::get_lowlevel_protocol(ctx);
                 assert(lowconn);
                 tls->status = TLSStatus::start_write_to_low;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "start writing low level connection", TLSStatus::start_write_to_low);
                 size_t w = 0;
                 while (true) {
                     if (auto err = cnet::write(stop, lowconn, tls->buffer.data(), tls->buf_index, &w);
@@ -151,12 +154,12 @@ namespace utils {
                         break;
                     }
                     tls->status = TLSStatus::writing_to_low;
-                    invoke_callback(ctx);
+                    TLSLOG(ctx, stop, "writing to low level connection", TLSStatus::writing_to_low);
                 }
                 tls->status = TLSStatus::write_to_low_done;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "writing low level connection done", TLSStatus::write_to_low_done);
                 tls->status = TLSStatus::start_read_from_low;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "start reading low level connection", TLSStatus::start_read_from_low);
                 tls->buf_index = 0;
                 if (tls->buffer.size() < 1024) {
                     tls->buffer.resize(1024);
@@ -177,7 +180,7 @@ namespace utils {
                         }
                     }
                     tls->status = TLSStatus::reading_from_low;
-                    invoke_callback(ctx);
+                    TLSLOG(ctx, stop, "reading from low level connection", TLSStatus::reading_from_low);
                     if (tls->read_timeout && timer) {
                         if (timer->delta().count() >= tls->read_timeout) {
                             break;
@@ -185,7 +188,7 @@ namespace utils {
                     }
                 }
                 tls->status = TLSStatus::read_from_low_done;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "reading from low level connection done", TLSStatus::read_from_low_done);
                 if (write_to_bio(ctx, tls) < 0) {
                     return sslcodeerror{"failed to write to ssl conn", ::SSL_get_error(tls->ssl, -1)};
                 }
@@ -228,7 +231,7 @@ namespace utils {
                     }
                 }
                 tls->status = TLSStatus::start_connect;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "start ssl connect", TLSStatus::start_connect);
                 while (true) {
                     auto err = ::SSL_connect(tls->ssl);
                     if (err == 1) {
@@ -256,7 +259,7 @@ namespace utils {
                     ::X509_free(cert);
                 }
                 tls->status = TLSStatus::connected;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "ssl connect done", TLSStatus::connected);
                 tls->setup = true;
                 return nil();
             }
@@ -320,7 +323,7 @@ namespace utils {
 
             Error read_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
                 tls->status = TLSStatus::start_read;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "start reading ssl", TLSStatus::start_read);
                 test::Timer timer;
                 if (auto err = io_common_loop(
                         stop, ctx, tls, &timer,
@@ -331,13 +334,13 @@ namespace utils {
                     return sslwraperror{"SSL_read_ex failed", std::move(err)};
                 }
                 tls->status = TLSStatus::read_done;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "reading ssl done", TLSStatus::read_done);
                 return nil();
             }
 
             Error write_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls, Buffer<const char>* buf) {
                 tls->status = TLSStatus::start_write;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "start writing ssl", TLSStatus::start_write);
                 if (auto err = io_common_loop(
                         stop, ctx, tls, nullptr,
                         [&]() {
@@ -347,7 +350,7 @@ namespace utils {
                     return sslwraperror{"SSL_write_ex failed", std::move(err)};
                 }
                 tls->status = TLSStatus::write_done;
-                invoke_callback(ctx);
+                TLSLOG(ctx, stop, "writing ssl done", TLSStatus::write_done);
                 return nil();
             }
 
