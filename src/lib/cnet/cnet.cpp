@@ -19,6 +19,18 @@ namespace utils {
 
         DEFINE_ENUM_FLAGOP(InternalFlag)
 
+        struct count_stopper {
+            size_t count;
+
+            bool stop() {
+                if (count == 0) {
+                    return true;
+                }
+                count--;
+                return count == 0;
+            }
+        };
+
         struct CNet {
             void* user;
             CNet* next;
@@ -27,38 +39,13 @@ namespace utils {
             CNetFlag flag;
             InternalFlag inflag;
 
-            void* cbctx;
-            bool (*callback)(CNet*, void*);
-
             ~CNet() {
-                uninitialize(this);
+                count_stopper stop{200};
+                uninitialize(stop, this);
                 proto.deleter(user);
                 delete next;
             }
         };
-
-        bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data) {
-            if (!ctx) {
-                return false;
-            }
-            ctx->callback = cb;
-            ctx->cbctx = data;
-            return true;
-        }
-
-        bool STDCALL invoke_callback(CNet* ctx) {
-            if (!ctx) {
-                return false;
-            }
-            for (auto p = ctx; p; p = p->parent) {
-                if (p->callback) {
-                    if (!p->callback(ctx, p->cbctx)) {
-                        break;
-                    }
-                }
-            }
-            return true;
-        }
 
         bool STDCALL reset_protocol_context(CNet* ctx, CNetFlag flag, void* user, const Protocol* proto) {
             if (!ctx || !user || !proto || !proto->deleter) {
@@ -153,9 +140,9 @@ namespace utils {
             return err;
         }
 
-        bool STDCALL uninitialize(CNet* ctx) {
+        bool STDCALL uninitialize(Stopper stop, CNet* ctx) {
             if (!any(ctx->inflag & InternalFlag::uninitialized) && ctx->proto.uninitialize) {
-                ctx->proto.uninitialize(ctx, ctx->user);
+                ctx->proto.uninitialize(stop, ctx, ctx->user);
                 ctx->inflag |= InternalFlag::uninitialized;
             }
             return true;

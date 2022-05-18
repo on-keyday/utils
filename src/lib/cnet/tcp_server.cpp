@@ -167,7 +167,7 @@ namespace utils {
                 return nullptr;
             }
 
-            void close_server(CNet* ctx, TCPServer* serv) {
+            void close_server(Stopper stop, CNet* ctx, TCPServer* serv) {
                 ::closesocket(serv->litener);
                 ::freeaddrinfo(serv->info);
                 serv->litener = -1;

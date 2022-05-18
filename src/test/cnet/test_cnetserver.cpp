@@ -12,17 +12,32 @@
 using namespace utils;
 auto& cout = wrap::cout_wrap();
 
+template <class Fn>
+struct callbacklog {
+    bool stop() {
+        return false;
+    }
+
+    Fn fn;
+
+    callbacklog(Fn f)
+        : fn(std::move(f)) {}
+
+    void log(iface::LogObject<cnet::CNet>* log) {
+        fn(log->ctx);
+    }
+};
+
 void test_cnet_server() {
     auto server = cnet::tcp::create_server();
     cnet::tcp::set_port(server, "8080");
     cnet::tcp::set_connect_timeout(server, 500);
     cnet::tcp::set_reuse_address(server, true);
-    auto cb = [](cnet::CNet* ctx) {
+    auto cb = callbacklog{[](cnet::CNet* ctx) {
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
         return true;
-    };
-    cnet::set_lambda(server, cb);
-    auto suc = cnet::open({}, server);
+    }};
+    auto suc = cnet::open(cb, server);
     assert(suc);
     while (true) {
         auto conn = cnet::tcp::accept(server);

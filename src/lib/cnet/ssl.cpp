@@ -264,7 +264,7 @@ namespace utils {
                 return nil();
             }
 
-            void close_tls(CNet* ctx, OpenSSLContext* tls) {
+            void close_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls) {
                 size_t count = 0;
                 while (tls->setup && count < 200) {
                     count++;
@@ -296,7 +296,7 @@ namespace utils {
                 tls->bio = nullptr;
                 ::SSL_CTX_free(tls->sslctx);
                 tls->sslctx = nullptr;
-                cnet::close(cnet::get_lowlevel_protocol(ctx));
+                cnet::close(stop, cnet::get_lowlevel_protocol(ctx));
             }
 
             template <class Callback>

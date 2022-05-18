@@ -113,7 +113,7 @@ namespace utils {
             Error (*write)(Stopper stop, CNet* ctx, void* user, Buffer<const char>* buf);
             Error (*read)(Stopper stop, CNet* ctx, void* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, void* user, MadeBuffer* buf, Buffer<const char>* input);
-            void (*uninitialize)(CNet* ctx, void* user);
+            void (*uninitialize)(Stopper stop, CNet* ctx, void* user);
 
             bool (*settings_number)(CNet* ctx, void* user, std::int64_t key, std::int64_t value);
             bool (*settings_ptr)(CNet* ctx, void* user, std::int64_t key, void* value);
@@ -129,7 +129,7 @@ namespace utils {
             Error (*write)(Stopper stop, CNet* ctx, T* user, Buffer<const char>* buf);
             Error (*read)(Stopper stop, CNet* ctx, T* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
-            void (*uninitialize)(CNet* ctx, T* user);
+            void (*uninitialize)(Stopper stop, CNet* ctx, T* user);
 
             bool (*settings_number)(CNet* ctx, T* user, std::int64_t key, std::int64_t value);
             bool (*settings_ptr)(CNet* ctx, T* user, std::int64_t key, SettingValue* value);
@@ -164,23 +164,6 @@ namespace utils {
         // get lowlevel protocol
         DLL CNet* STDCALL get_lowlevel_protocol(CNet* ctx);
 
-        // set user defined callback
-        [[deprecated]] DLL bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data);
-
-        template <class Fn>
-        [[deprecated]] bool set_lambda(CNet* ctx, Fn& fn) {
-            using pointer = decltype(std::addressof(fn));
-            return set_callback(
-                ctx, [](CNet* ctx, void* cpt) {
-                    auto res = (*pointer(cpt))(ctx);
-                    return bool(res);
-                },
-                std::addressof(fn));
-        }
-
-        // invoke user defined callback
-        [[deprecated]] DLL bool STDCALL invoke_callback(CNet* ctx);
-
         // initialize protocol context
         DLL Error STDCALL initialize(Stopper stop, CNet* ctx);
 
@@ -190,11 +173,11 @@ namespace utils {
         }
 
         // uninititalize protocol context
-        DLL bool STDCALL uninitialize(CNet* ctx);
+        DLL bool STDCALL uninitialize(Stopper stop, CNet* ctx);
 
         // close connection
-        inline bool close(CNet* ctx) {
-            return uninitialize(ctx);
+        inline bool close(Stopper stop, CNet* ctx) {
+            return uninitialize(stop, ctx);
         }
 
         // write to context

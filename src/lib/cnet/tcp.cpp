@@ -183,7 +183,7 @@ namespace utils {
                 return nil();
             }
 
-            void close_socket(CNet* ctx, OsTCPSocket* sock) {
+            void close_socket(Stopper stop, CNet* ctx, OsTCPSocket* sock) {
                 if (any(sock->flag & Flag::made_from_sockaddr_storage)) {
                     delete (::sockaddr_storage*)sock->info->ai_addr;
                     delete sock->info;
