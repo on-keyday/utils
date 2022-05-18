@@ -11,16 +11,10 @@
 #include <memory>
 #include <type_traits>
 #include <cassert>
+#include "macros.h"
 
 namespace utils {
     namespace iface {
-#define DEFAULT_METHODS(Type)                         \
-    constexpr Type() = default;                       \
-    constexpr Type(Type&) = default;                  \
-    constexpr Type(const Type&) = default;            \
-    constexpr Type(Type&&) = default;                 \
-    constexpr Type& operator=(const Type&) = default; \
-    constexpr Type& operator=(Type&&) = default;
 
         struct Ref {
            protected:
