@@ -186,6 +186,9 @@ namespace utils {
                             break;
                         }
                     }
+                    if (stop.stop()) {
+                        break;
+                    }
                 }
                 tls->status = TLSStatus::read_from_low_done;
                 TLSLOG(ctx, stop, "reading from low level connection done", TLSStatus::read_from_low_done);

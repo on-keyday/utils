@@ -11,7 +11,7 @@
 #include "../platform/windows/dllexport_header.h"
 #include "../wrap/light/enum.h"
 #include "../helper/equal.h"
-#include "../iface/base_iface.h"
+#include "../iface/error_log.h"
 #include "../helper/appender.h"
 
 namespace utils {
