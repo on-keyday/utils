@@ -103,7 +103,15 @@ void test_base_iface() {
 
     utils::cnet::Error cneterr;
 
-    cneterr = utils::cnet::wraperror{.err = localError{}};
+    struct wraperror {
+        Error<Powns> err;
+        void error(PushBacker<Ref>) {}
+        Error<Powns> unwrap() {
+            return std::move(err);
+        }
+    };
+
+    cneterr = wraperror{.err = localError{}};
 
     auto unwraped = cneterr.unwrap();
 }

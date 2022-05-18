@@ -60,23 +60,6 @@ namespace utils {
 
         using pushbacker = iface::PushBacker<iface::Ref>;
 
-        struct wraperror {
-            iface::Subscript<iface::Sized<iface::Powns>> now;
-            Error err;
-            void error(pushbacker pb) {
-                helper::appends(pb, now, ": ");
-                err.error(pb);
-            }
-
-            bool kind_of(const char* k) {
-                return helper::equal(k, kind_c(Kind::wrap));
-            }
-
-            Error unwrap() {
-                return std::move(err);
-            }
-        };
-
         struct consterror {
             const char* msg;
             void error(pushbacker pb) {

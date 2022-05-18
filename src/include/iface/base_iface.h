@@ -582,6 +582,8 @@ namespace utils {
             return internal::CallIface<N>::get(b);
         }
 
+        struct LogObject {};
+
         namespace internal {
             template <class T>
             concept has_code = requires(T t) {
@@ -606,6 +608,11 @@ namespace utils {
             template <class T>
             concept has_err = requires(T t) {
                 {t.err()};
+            };
+
+            template <class T>
+            concept has_log = requires(T t) {
+                {t.log(std::declval<LogObject*>())};
             };
         }  // namespace internal
 
@@ -713,8 +720,16 @@ namespace utils {
         struct Stopper : Box {
            private:
             MAKE_FN(stop, bool)
+            void (*log_ptr)(void*, LogObject* obj) = nullptr;
             bool (*cancel_ptr)(void*) = nullptr;
             Err (*err_ptr)(void*) = nullptr;
+
+            template <class T>
+            static void log_fn(void* ptr, LogObject* b) {
+                if constexpr (internal::has_log<T>) {
+                    static_cast<T*>(ptr)->log(b);
+                }
+            }
 
             template <class T>
             static bool cancel_fn(void* ptr) {
@@ -744,6 +759,7 @@ namespace utils {
                 : APPLY2_FN(stop),
                   APPLY2_FN(cancel),
                   APPLY2_FN(err),
+                  APPLY2_FN(log),
                   Box(std::forward<T>(t)) {}
 
             bool stop() {
@@ -756,6 +772,10 @@ namespace utils {
 
             Err err() {
                 DEFAULT_CALL(err, Err{});
+            }
+
+            void log(LogObject obj) {
+                return this->ptr() && log_ptr ? log_ptr(this->ptr(), &obj) : (void)0;
             }
         };
     }  // namespace iface
