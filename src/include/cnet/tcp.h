@@ -36,6 +36,20 @@ namespace utils {
                 }
             };
 
+            struct sockwraperror : sockerror {
+                Error err;
+
+                void error(pushbacker pb) {
+                    sockerror::error(pb);
+                    helper::append(pb, ": ");
+                    err.error(pb);
+                }
+
+                Error unwrap() {
+                    return std::move(err);
+                }
+            };
+
             struct noteerror {
                 const char* proc;
                 bool kind_of(const char* k) {

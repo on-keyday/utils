@@ -200,14 +200,20 @@ namespace utils {
             Error write_socket(Stopper stop, CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf) {
                 sock->status = TCPStatus::start_sending;
                 SOCKLOG(ctx, stop, "start sending", TCPStatus::start_sending);
-                auto err = ::send(sock->sock, buf->ptr, buf->size, 0);
-                if (err < 0) {
-                    if (net::errcode() == WSAEWOULDBLOCK) {
-                        return nil();
+                while (true) {
+                    auto err = ::send(sock->sock, buf->ptr, buf->size, 0);
+                    if (err < 0) {
+                        if (net::errcode() == WSAEWOULDBLOCK) {
+                            if (stop.stop()) {
+                                return sockwraperror{"::send blocked and stop signaled", net::errcode(), stop.err()};
+                            }
+                            continue;
+                        }
+                        return sockerror{"::send error", net::errcode()};
                     }
-                    return sockerror{"::send error", net::errcode()};
+                    buf->proced = err;
+                    break;
                 }
-                buf->proced = err;
                 sock->status = TCPStatus::sent;
                 SOCKLOG(ctx, stop, "send operation end", TCPStatus::sent);
                 return nil();

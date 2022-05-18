@@ -270,7 +270,7 @@ namespace utils {
                     count++;
                     auto err = ::SSL_shutdown(tls->ssl);
                     if (err == -1 && need_IO(tls)) {
-                        if (!do_IO({}, ctx, tls, nullptr, true)) {
+                        if (!do_IO(stop, ctx, tls, nullptr, true)) {
                             break;
                         }
                         continue;
@@ -280,7 +280,7 @@ namespace utils {
                         err = SSL_read_ex(tls->ssl, tmpbuf.buf, tmpbuf.capacity(), &tmpbuf.i);
                         if (!err) {
                             if (need_IO(tls)) {
-                                if (!do_IO({}, ctx, tls, nullptr, true)) {
+                                if (!do_IO(stop, ctx, tls, nullptr, true)) {
                                     break;
                                 }
                                 continue;
