@@ -36,14 +36,14 @@ void test_cnet_http2() {
     auto host = "www.google.com";
     auto path = "/";
     tcp::set_hostport(tcp, host, "https");
-    auto err = open(tcp);
+    auto err = open({}, tcp);
     assert(err);
     auto tls = ssl::create_client();
     ssl::set_certificate_file(tls, "src/test/net/cacert.pem");
     ssl::set_alpn(tls, "\2h2");
     ssl::set_host(tls, host);
     set_lowlevel_protocol(tls, tcp);
-    err = open(tls);
+    err = open({}, tls);
     auto code = get_error(tls);
     assert(err);
     auto alpn = ssl::get_alpn_selected(tls);
@@ -108,7 +108,7 @@ void test_cnet_http2() {
         return true;
     });
     set_lowlevel_protocol(client, tls);
-    err = open(client);
+    err = open({}, client);
     assert(err);
     auto ok = http2::poll_frame(client);
     code = get_error(tcp);

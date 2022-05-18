@@ -16,6 +16,8 @@
 #include "../../include/testutil/timer.h"
 #include "sock_inc.h"
 
+#define SOCKLOG(ctx, record, msg, code) record.log(logobj{__FILE__, __LINE__, "tcp", msg, ctx, (std::int64_t)code})
+
 namespace utils {
     namespace cnet {
         namespace tcp {
@@ -59,9 +61,9 @@ namespace utils {
                 std::int64_t recieve_timeout = -1;
             };
 
-            ADDRINFOEXW* dns_query(CNet* ctx, OsTCPSocket* sock) {
+            ADDRINFOEXW* dns_query(Stopper stop, CNet* ctx, OsTCPSocket* sock) {
                 sock->status = TCPStatus::start_resolving_name;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "start resolving address", TCPStatus::start_resolving_name);
                 ADDRINFOEXW info{0}, *result = nullptr;
                 if (sock->ipver == 4) {
                     info.ai_family = AF_INET;
@@ -94,14 +96,14 @@ namespace utils {
                         return nullptr;
                     }
                     sock->status = TCPStatus::wait_resolving_name;
-                    invoke_callback(ctx);
+                    SOCKLOG(ctx, stop, "dns resolveing", TCPStatus::wait_resolving_name);
                 }
                 sock->status = TCPStatus::resolve_name_done;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "dns resolved", TCPStatus::resolve_name_done);
                 return result;
             }
 
-            int selecting_loop(CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, std::int64_t timeout) {
+            int selecting_loop(Stopper stop, CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, std::int64_t timeout) {
                 test::Timer timer;
                 ::fd_set base{0};
                 FD_ZERO(&base);
@@ -125,7 +127,7 @@ namespace utils {
                     else if (FD_ISSET(proto, &fail)) {
                         return 0;
                     }
-                    invoke_callback(ctx);
+                    SOCKLOG(ctx, stop, "selecting wait", status);
                     if (timeout >= 0) {
                         if (timer.delta().count() > timeout) {
                             return -1;
@@ -138,12 +140,12 @@ namespace utils {
                 if (auto& init = net::network(); !init.initialized()) {
                     return sockerror{"net::network: WSAStartUp failed", init.errcode()};
                 }
-                sock->info = dns_query(ctx, sock);
+                sock->info = dns_query(stop, ctx, sock);
                 if (!sock->info) {
                     return sockerror{"dns_query failed", net::errcode()};
                 }
                 sock->status = TCPStatus::start_connectig;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "start connecting", TCPStatus::start_connectig);
                 for (auto p = sock->info; p; p = p->ai_next) {
 #ifdef _WIN32
                     auto proto = ::WSASocketW(p->ai_family, p->ai_socktype, p->ai_protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
@@ -163,7 +165,7 @@ namespace utils {
                     }
                     if (net::errcode() == WSAEWOULDBLOCK) {
                         sock->sock = proto;
-                        auto sel = selecting_loop(ctx, sock->sock, true, sock->status, sock->connect_timeout);
+                        auto sel = selecting_loop(stop, ctx, sock->sock, true, sock->status, sock->connect_timeout);
                         if (sel == 1) {
                             sock->selected = p;
                             break;
@@ -177,7 +179,7 @@ namespace utils {
                     return sockerror{"faild to connect", net::errcode()};
                 }
                 sock->status = TCPStatus::connected;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "tcp connected", TCPStatus::connected);
                 return nil();
             }
 
@@ -197,7 +199,7 @@ namespace utils {
 
             Error write_socket(Stopper stop, CNet* ctx, OsTCPSocket* sock, Buffer<const char>* buf) {
                 sock->status = TCPStatus::start_sending;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "start sending", TCPStatus::start_sending);
                 auto err = ::send(sock->sock, buf->ptr, buf->size, 0);
                 if (err < 0) {
                     if (net::errcode() == WSAEWOULDBLOCK) {
@@ -207,7 +209,7 @@ namespace utils {
                 }
                 buf->proced = err;
                 sock->status = TCPStatus::sent;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "send operation end", TCPStatus::sent);
                 return nil();
             }
 
@@ -226,7 +228,7 @@ namespace utils {
 
             Error read_socket(Stopper stop, CNet* ctx, OsTCPSocket* sock, Buffer<char>* buf) {
                 sock->status = TCPStatus::start_recving;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "start reading", TCPStatus::start_recving);
                 if (any(sock->flag & Flag::multiple_io)) {
                     MultiIOState state;
                     state.done = false;
@@ -246,7 +248,7 @@ namespace utils {
                     }
                     while (!state.done) {
                         sock->status = TCPStatus::wait_async_recv;
-                        invoke_callback(ctx);
+                        SOCKLOG(ctx, stop, "wait async", TCPStatus::wait_async_recv);
                     }
                     buf->proced = state.recvsize;
 #endif
@@ -257,7 +259,7 @@ namespace utils {
                         if (err < 0) {
                             if (net::errcode() == WSAEWOULDBLOCK) {
                                 if (any(sock->flag & Flag::poll_recv)) {
-                                    auto sel = selecting_loop(ctx, sock->sock, false, sock->status, sock->recieve_timeout);
+                                    auto sel = selecting_loop(stop, ctx, sock->sock, false, sock->status, sock->recieve_timeout);
                                     if (!sel) {
                                         return sockerror{"while ::recv ::select failed", net::errcode()};
                                     }
@@ -275,7 +277,7 @@ namespace utils {
                     }
                 }
                 sock->status = buf->proced == 0 ? TCPStatus::eos : TCPStatus::recieved;
-                invoke_callback(ctx);
+                SOCKLOG(ctx, stop, "reading operation end", sock->status);
                 if (buf->proced != 0) {
                     return nil();
                 }

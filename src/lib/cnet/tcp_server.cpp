@@ -91,9 +91,9 @@ namespace utils {
                 return sockerror{"Failed to open server with ::listen and ::bind", net::errcode()};
             }
 
-            CNet* waiting_for_accept(CNet* ctx, TCPServer* serv) {
+            CNet* waiting_for_accept(Stopper stop, CNet* ctx, TCPServer* serv) {
                 serv->status = TCPStatus::wait_accept;
-                auto sel = selecting_loop(ctx, serv->litener, false, serv->status, serv->timeout);
+                auto sel = selecting_loop(stop, ctx, serv->litener, false, serv->status, serv->timeout);
                 if (sel <= 0) {
                     if (sel < 0) {
                         serv->status = TCPStatus::timeout;
@@ -162,7 +162,7 @@ namespace utils {
                     return (void*)"tcp-server";
                 }
                 else if (key == wait_for_accept) {
-                    return waiting_for_accept(ctx, serv);
+                    return waiting_for_accept({}, ctx, serv);
                 }
                 return nullptr;
             }

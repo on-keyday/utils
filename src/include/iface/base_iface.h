@@ -582,7 +582,15 @@ namespace utils {
             return internal::CallIface<N>::get(b);
         }
 
-        struct LogObject {};
+        template <class T = void>
+        struct LogObject {
+            const char* file;
+            size_t line;
+            const char* kind;
+            const char* msg;
+            T* ctx;
+            std::int64_t code;
+        };
 
         namespace internal {
             template <class T>
@@ -610,9 +618,9 @@ namespace utils {
                 {t.err()};
             };
 
-            template <class T>
+            template <class T, class C>
             concept has_log = requires(T t) {
-                {t.log(std::declval<LogObject*>())};
+                {t.log(std::declval<LogObject<C>*>())};
             };
         }  // namespace internal
 
@@ -716,17 +724,17 @@ namespace utils {
             }
         };
 
-        template <class Box, class Err>
+        template <class Box, class Err, class LogT = void>
         struct Stopper : Box {
            private:
             MAKE_FN(stop, bool)
-            void (*log_ptr)(void*, LogObject* obj) = nullptr;
+            void (*log_ptr)(void*, LogObject<LogT>* obj) = nullptr;
             bool (*cancel_ptr)(void*) = nullptr;
             Err (*err_ptr)(void*) = nullptr;
 
             template <class T>
-            static void log_fn(void* ptr, LogObject* b) {
-                if constexpr (internal::has_log<T>) {
+            static void log_fn(void* ptr, LogObject<LogT>* b) {
+                if constexpr (internal::has_log<T, LogT>) {
                     static_cast<T*>(ptr)->log(b);
                 }
             }
@@ -774,7 +782,7 @@ namespace utils {
                 DEFAULT_CALL(err, Err{});
             }
 
-            void log(LogObject obj) {
+            void log(LogObject<LogT> obj) {
                 return this->ptr() && log_ptr ? log_ptr(this->ptr(), &obj) : (void)0;
             }
         };

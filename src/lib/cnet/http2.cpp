@@ -18,6 +18,11 @@
 #include "../../include/wrap/pair_iter.h"
 #include "../../include/net/http/http_headers.h"
 
+#define LOGHTTP2(ctx, record, msg) record.log(logobj{ \
+    __FILE__,                                         \
+    __LINE__,                                         \
+    "http2", msg, ctx})
+
 namespace utils {
     namespace cnet {
         namespace http2 {
@@ -312,9 +317,9 @@ namespace utils {
                 return true;
             }
 
-            bool callback_and_write(CNet* ctx, Http2State* state, Frames& frames, bool& ret) {
+            bool callback_and_write(Stopper stop, CNet* ctx, Http2State* state, Frames& frames, bool& ret) {
                 auto res = state->rcb.callback(state->rcb.this_, &frames);
-                cnet::invoke_callback(ctx);
+                LOGHTTP2(ctx, stop, "reading callback invoked");
                 if (!flush_write_buffer(&frames)) {
                     state->rcb.callback(state->rcb.this_, &frames);
                     ret = false;
@@ -324,7 +329,7 @@ namespace utils {
                 return res;
             }
 
-            bool poll_frame(CNet* ctx, Http2State* state) {
+            bool poll_frame(Stopper stop, CNet* ctx, Http2State* state) {
                 if (!state->opened || !state->rcb.callback) {
                     return false;
                 }
@@ -346,12 +351,12 @@ namespace utils {
                         else if (err != net::http2::H2Error::none) {
                             frames.result.err = err;
                             frames.result.detail = net::http2::StreamError::internal_data_read;
-                            callback_and_write(ctx, state, frames, ret);
+                            callback_and_write(stop, ctx, state, frames, ret);
                             return false;
                         }
                         frames.result = state->ctx.update_recv(*frame);
                         if (frames.result.err != net::http2::H2Error::none) {
-                            callback_and_write(ctx, state, frames, ret);
+                            callback_and_write(stop, ctx, state, frames, ret);
                             return false;
                         }
                         frames.frame.push_back(std::move(frame));
@@ -359,7 +364,7 @@ namespace utils {
                     return true;
                 };
                 bool on_error = false;
-                if (!callback_and_write(ctx, state, frames, ret)) {
+                if (!callback_and_write(stop, ctx, state, frames, ret)) {
                     return ret;
                 }
                 while (true) {
@@ -379,7 +384,7 @@ namespace utils {
                                 }
                                 frames.result.err = net::http2::H2Error::transport;
                                 frames.result.detail = net::http2::StreamError::reading_frame;
-                                callback_and_write(ctx, state, frames, ret);
+                                callback_and_write(stop, ctx, state, frames, ret);
                                 return false;
                             }
                             state->r.ref.append(buf.c_str(), buf.size());
@@ -390,7 +395,7 @@ namespace utils {
                         }
                         continue;
                     }
-                    if (!callback_and_write(ctx, state, frames, ret)) {
+                    if (!callback_and_write(stop, ctx, state, frames, ret)) {
                         return ret;
                     }
                     frames.frame.clear();
@@ -399,7 +404,7 @@ namespace utils {
 
             bool http2_settings(CNet* ctx, Http2State* state, std::int64_t key, void* value) {
                 if (key == config_frame_poll) {
-                    return poll_frame(ctx, state);
+                    return poll_frame({}, ctx, state);
                 }
                 else if (key == config_set_read_callback) {
                     auto ptr = static_cast<ReadCallback*>(value);

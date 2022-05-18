@@ -22,7 +22,7 @@ void test_cnet_server() {
         return true;
     };
     cnet::set_lambda(server, cb);
-    auto suc = cnet::open(server);
+    auto suc = cnet::open({}, server);
     assert(suc);
     while (true) {
         auto conn = cnet::tcp::accept(server);

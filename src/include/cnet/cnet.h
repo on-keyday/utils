@@ -56,9 +56,11 @@ namespace utils {
             return {};
         }
 
-        using Stopper = iface::Stopper<iface::Ref, Error>;
+        using Stopper = iface::Stopper<iface::Ref, Error, CNet>;
 
         using pushbacker = iface::PushBacker<iface::Ref>;
+
+        using logobj = iface::LogObject<CNet>;
 
         struct consterror {
             const char* msg;
@@ -163,10 +165,10 @@ namespace utils {
         DLL CNet* STDCALL get_lowlevel_protocol(CNet* ctx);
 
         // set user defined callback
-        DLL bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data);
+        [[deprecated]] DLL bool STDCALL set_callback(CNet* ctx, bool (*cb)(CNet*, void*), void* data);
 
         template <class Fn>
-        bool set_lambda(CNet* ctx, Fn& fn) {
+        [[deprecated]] bool set_lambda(CNet* ctx, Fn& fn) {
             using pointer = decltype(std::addressof(fn));
             return set_callback(
                 ctx, [](CNet* ctx, void* cpt) {
@@ -177,14 +179,14 @@ namespace utils {
         }
 
         // invoke user defined callback
-        DLL bool STDCALL invoke_callback(CNet* ctx);
+        [[deprecated]] DLL bool STDCALL invoke_callback(CNet* ctx);
 
         // initialize protocol context
         DLL Error STDCALL initialize(Stopper stop, CNet* ctx);
 
         // open connection
-        inline Error open(CNet* ctx) {
-            return initialize({}, ctx);
+        inline Error open(Stopper stop, CNet* ctx) {
+            return initialize(stop, ctx);
         }
 
         // uninititalize protocol context

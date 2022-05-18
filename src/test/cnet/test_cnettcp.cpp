@@ -22,10 +22,44 @@
 using namespace utils;
 auto& cout = wrap::cout_wrap();
 
+template <class Fn>
+struct callbacklog {
+    bool stop() {
+        return false;
+    }
+
+    Fn fn;
+
+    callbacklog(Fn f)
+        : fn(std::move(f)) {}
+
+    void log(iface::LogObject<cnet::CNet>* log) {
+        fn(log->ctx);
+    }
+};
+
+template <class Fn1, class Fn2>
+struct multilog {
+    bool stop() {
+        return false;
+    }
+
+    Fn1 fn1;
+    Fn2 fn2;
+
+    multilog(Fn1 f1, Fn2 f2)
+        : fn1(std::move(f1)), fn2(std::move(f2)) {}
+
+    void log(iface::LogObject<cnet::CNet>* log) {
+        fn1.log(log);
+        fn2.log(log);
+    }
+};
+
 void test_tcp_cnet(async::light::Context<void> as, const char* host, const char* path, int index) {
     test::Timer local_timer;
     auto conn = cnet::tcp::create_client();
-    auto cb = [&](cnet::CNet* ctx) {
+    auto cb = callbacklog{[&](cnet::CNet* ctx) {
         if (!cnet::protocol_is(ctx, "tcp")) {
             return true;
         }
@@ -47,12 +81,12 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
         }
         as.suspend();
         return true;
-    };
-    cnet::set_lambda(conn, cb);
+    }};
+    // cnet::set_lambda(conn, cb);
     cnet::tcp::set_hostport(conn, host, "https");
-    auto sb = cnet::open(conn);
+    auto sb = cnet::open(cb, conn);
     auto ssl = cnet::ssl::create_client();
-    auto cb2 = [&](cnet::CNet* ctx) {
+    auto cb2 = callbacklog{[&](cnet::CNet* ctx) {
         if (!cnet::protocol_is(ctx, "tls")) {
             return true;
         }
@@ -62,13 +96,14 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
         }
         as.suspend();
         return true;
-    };
-    cnet::set_lambda(ssl, cb2);
+    }};
+    // cnet::set_lambda(ssl, cb2);
+    auto multi = multilog{cb, cb2};
     auto suc = cnet::set_lowlevel_protocol(ssl, conn);
     assert(suc);
     cnet::ssl::set_certificate_file(ssl, "src/test/net/cacert.pem");
     cnet::ssl::set_host(ssl, host);
-    auto err = cnet::open(ssl);
+    auto err = cnet::open(multi, ssl);
     if (!err) {
         cnet::ssl::error_callback(ssl, [](const char* msg, size_t len) {
             cout << helper::SizedView(msg, len);
