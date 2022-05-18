@@ -44,15 +44,15 @@ namespace utils {
             }
         };
 
-        template <class T, class Box>
+        template <class U, class Box>
         struct Queue : Box {
            private:
-            MAKE_FN(push_front)
+            MAKE_FN_VOID(push_front)
             MAKE_FN_VOID(pop_back)
 
            public:
-            void push_front(T t) {
-                DEFAULT_CALL(push_front, (void)0, std::forward<T>(t))
+            void push_front(U t) {
+                DEFAULT_CALL(push_front, (void)0, std::forward<U>(t))
             }
 
             void pop_back() {
@@ -65,7 +65,7 @@ namespace utils {
         namespace internal {
             struct HpackDefHelper {
                 template <class Box, class T>
-                using iterator = ForwardIterator2<Box, T>;
+                using iterator = ForwardIterator2<Box, T&>;
 
                 template <class T>
                 using T_ = std::remove_cvref_t<T>;

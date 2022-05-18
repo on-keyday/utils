@@ -11,6 +11,15 @@
 
 void test_container() {
     using namespace utils;
+    using stringlike = iface::Subscript<iface::Sized<iface::Ref>>;
+
+    using Test = iface::HpackQueue<iface::Pair<stringlike, stringlike, iface::Powns>, iface::Powns>;
+    Test queue;
+    auto& v = *queue.begin();
+
+    for (auto&& i : queue) {
+        auto v = get<0>(i);
+    }
 }
 
 int main() {

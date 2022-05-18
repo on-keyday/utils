@@ -119,6 +119,9 @@ namespace utils {
             if constexpr (std::is_reference_v<Value>) {
                 int* fatal = 0;
                 *fatal = 0;
+                using V = std::remove_cvref_t<Value>;
+                static V v;
+                return v;
             }
             else {
                 return Value{};
@@ -301,16 +304,16 @@ namespace utils {
 
         namespace internal {
             template <size_t>
-            class CallIface;
+            struct CallIface;
             template <>
-            class CallIface<0> {
-                decltype(auto) get(auto& p) {
+            struct CallIface<0> {
+                static decltype(auto) get(auto& p) {
                     return p.get_0();
                 }
             };
             template <>
-            class CallIface<1> {
-                decltype(auto) get(auto& p) {
+            struct CallIface<1> {
+                static decltype(auto) get(auto& p) {
                     return p.get_1();
                 }
             };
