@@ -45,6 +45,10 @@ namespace utils {
                     err.error(pb);
                 }
 
+                bool kind_of(const char* k) {
+                    return helper::equal(k, kind_c(Kind::wrap));
+                }
+
                 Error unwrap() {
                     return std::move(err);
                 }
@@ -55,12 +59,18 @@ namespace utils {
                 bool kind_of(const char* k) {
                     return helper::equal(k, kind_c(Kind::note));
                 }
-                void error(pushbacker) {}
+                void error(pushbacker pb) {
+                    helper::append(pb, proc);
+                }
             };
 
             struct EOFError {
                 void error(pushbacker pb) {
                     helper::append(pb, "EOF");
+                }
+
+                bool kind_of(const char* k) {
+                    return helper::equal(k, kind_c(Kind::eof));
                 }
             };
 
