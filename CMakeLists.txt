@@ -94,7 +94,7 @@ add_executable(cnethttp2 "src/test/cnet/test_cnethttp2.cpp")
 add_executable(cnetmem "src/test/cnet/test_cnetmem.cpp")
 add_executable(base_iface "src/test/iface/test_base_iface.cpp")
 add_executable(guessurl "src/test/net/test_guessurl.cpp")
-add_executable(conteiner_iface "src/test/iface/test_container.cpp")
+add_executable(container_iface "src/test/iface/test_container.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -224,6 +224,7 @@ target_link_libraries(cnetserver utils)
 target_link_libraries(expression utils)
 target_link_libraries(cnethttp2 utils)
 target_link_libraries(cnetmem utils)
+target_link_libraries(container_iface utils)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 

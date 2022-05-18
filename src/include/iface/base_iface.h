@@ -280,8 +280,8 @@ namespace utils {
             (void*) = nullptr;
 
             template <class Ret, size_t N, class T>
-            static Ret get_N_fn(void* ptr) {
-                auto ptr = static_cast<T*>(ptr);
+            static Ret get_N_fn(void* p) {
+                auto ptr = static_cast<T*>(p);
                 return get<N>(*ptr);
             }
 
@@ -290,7 +290,7 @@ namespace utils {
             template <class T>
             Pair(T&& t)
                 : get_0_ptr(get_N_fn<T1, 0, std::remove_cvref_t<T>>),
-                  get_1_ptr(get_N_fn<T2, 2, std::remove_cvref_t<T>>),
+                  get_1_ptr(get_N_fn<T2, 1, std::remove_cvref_t<T>>),
                   Box(std::forward<T>(t)) {}
 
             T1 get_0() const {
