@@ -74,7 +74,7 @@ namespace utils {
                     ctx->inflag = InternalFlag::none;
                 }
                 else {
-                    if (auto err = ctx->proto.initialize(ctx, user); err != nullptr) {
+                    if (auto err = ctx->proto.initialize({}, ctx, user); err != nullptr) {
                         ctx->proto.deleter(user);
                         ctx->user = nullptr;
                         ctx->proto = {};
@@ -128,9 +128,9 @@ namespace utils {
             return ctx->next;
         }
 
-        Error STDCALL initialize(CNet* ctx) {
+        Error STDCALL initialize(Stopper stop, CNet* ctx) {
             if (!ctx) {
-                return false;
+                return consterror{"ctx is nullptr"};
             }
             if (any(ctx->flag & CNetFlag::reinitializable)) {
                 if (any(ctx->inflag & InternalFlag::uninitialized)) {
@@ -139,7 +139,7 @@ namespace utils {
             }
             Error err;
             if (ctx->proto.initialize && !any(ctx->inflag & InternalFlag::initialized)) {
-                if (auto err = ctx->proto.initialize(ctx, ctx->user); err == nullptr) {
+                if (auto err = ctx->proto.initialize(stop, ctx, ctx->user); err == nullptr) {
                     ctx->inflag |= InternalFlag::init_succeed;
                 }
                 ctx->inflag |= InternalFlag::initialized;
@@ -165,7 +165,7 @@ namespace utils {
             if (!ctx || !written) {
                 return false;
             }
-            if (auto err = initialize(ctx); err != nullptr) {
+            if (auto err = initialize({}, ctx); err != nullptr) {
                 return false;
             }
             auto write_buf = [&](Buffer<const char>* buf) {
@@ -224,7 +224,8 @@ namespace utils {
             if (!ctx || !red) {
                 return false;
             }
-            if (auto err = initialize(ctx); err != nullptr) {
+            auto err = initialize({}, ctx);
+            if (err != nullptr) {
                 return false;
             }
             Buffer<char> buf;

@@ -163,7 +163,7 @@ namespace utils {
                 const char* op;
                 void error(pushbacker pb) {
                     sslconsterror::error(pb);
-                    helper::append(": ", op);
+                    helper::appends(pb, ": ", op);
                 }
             };
 
@@ -171,7 +171,7 @@ namespace utils {
                 int code;
             };
 
-            Error open_tls(CNet* ctx, OpenSSLContext* tls) {
+            Error open_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls) {
                 auto lproto = cnet::get_lowlevel_protocol(ctx);
                 if (!lproto) {
                     return sslconsterror{"low level protocol not set"};
@@ -223,7 +223,7 @@ namespace utils {
                             }
                             continue;
                         }
-                        return false;
+                        return sslcodeerror{"SSL_connect failed", ::SSL_get_error(tls->ssl, -1)};
                     }
                 }
                 if (!tls->loose_check) {
@@ -237,7 +237,7 @@ namespace utils {
                 tls->status = TLSStatus::connected;
                 invoke_callback(ctx);
                 tls->setup = true;
-                return true;
+                return nil();
             }
 
             void close_tls(CNet* ctx, OpenSSLContext* tls) {

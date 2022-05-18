@@ -273,10 +273,10 @@ namespace utils {
                 fr->state->goneaway = true;
             }
 
-            Error open_http2(CNet* ctx, Http2State* state) {
+            Error open_http2(Stopper stop, CNet* ctx, Http2State* state) {
                 auto low = cnet::get_lowlevel_protocol(ctx);
                 if (!low) {
-                    return false;
+                    return consterror{"http2: low level protocol is nullptr"};
                 }
                 size_t w = 0;
                 if (!write(low, preface, 24, &w)) {
@@ -293,7 +293,7 @@ namespace utils {
                     return consterror{"http2: failed to write initial settings"};
                 }
                 state->opened = true;
-                return true;
+                return nil();
             }
 
             bool STDCALL flush_write_buffer(Frames* fr) {

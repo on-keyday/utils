@@ -50,7 +50,7 @@ namespace utils {
             return internal::init().succeed == 0;
         }
 
-        int errcode() {
+        int Init::errcode() {
             return internal::init().succeed;
         }
 

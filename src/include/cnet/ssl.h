@@ -15,20 +15,6 @@ namespace utils {
         namespace ssl {
             DLL CNet* STDCALL create_client();
 
-            struct sslconsterror : consterror {
-                void error(pushbacker pb) {
-                    helper::appends(pb, "ssl/tls: ", this->msg);
-                }
-            };
-
-            struct ssloperror : sslconsterror {
-                const char* op;
-                void error(pushbacker pb) {
-                    sslconsterror::error(pb);
-                    helper::append(": ", op);
-                }
-            };
-
             enum TLSConfig {
                 // alpn string
                 alpn,

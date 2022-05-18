@@ -33,9 +33,9 @@ namespace utils {
                 std::int64_t timeout = -1;
             };
 
-            bool tcp_server_init(CNet* ctx, TCPServer* serv) {
-                if (!net::network().initialized()) {
-                    return false;
+            Error tcp_server_init(Stopper stop, CNet* ctx, TCPServer* serv) {
+                if (auto& init = net::network(); init.initialized()) {
+                    return sockerror{"net::network: WSAStartUp failed", init.errcode()};
                 }
                 ::addrinfo hint{0}, *result = nullptr;
                 if (serv->ipver == 4) {
@@ -48,7 +48,7 @@ namespace utils {
                 hint.ai_socktype = SOCK_STREAM;
                 auto err = ::getaddrinfo(nullptr, serv->port.c_str(), &hint, &result);
                 if (err != 0) {
-                    return false;
+                    return sockerror{"tcp/server: ::getaddrinfo failed", net::errcode()};
                 }
                 serv->info = result;
                 for (auto p = result; p; p = p->ai_next) {
@@ -86,9 +86,9 @@ namespace utils {
                     }
                     serv->litener = sock;
                     serv->selected = p;
-                    return true;
+                    return {};
                 }
-                return false;
+                return sockerror{"Failed to open server with ::listen and ::bind", net::errcode()};
             }
 
             CNet* waiting_for_accept(CNet* ctx, TCPServer* serv) {

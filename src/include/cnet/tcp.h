@@ -24,6 +24,18 @@ namespace utils {
             // report io completion
             DLL bool STDCALL io_completion(void* ol, size_t recvsize);
 
+            struct sockerror {
+                const char* proc;
+                std::int64_t err;
+
+                void error(pushbacker pb) {
+                }
+
+                bool kind_of(const char* k) {
+                    return helper::equal(k, kind_c(Kind::os));
+                }
+            };
+
             enum TCPConfig {
                 // ip version
                 ipver = user_defined_start + 1,

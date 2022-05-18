@@ -50,6 +50,12 @@ namespace utils {
             }
         };
 
+        inline Error nil() {
+            return {};
+        }
+
+        using Stopper = iface::Stopper<iface::Ref, Error>;
+
         using pushbacker = iface::PushBacker<iface::Ref>;
 
         struct wraperror {
@@ -116,7 +122,7 @@ namespace utils {
         };
 
         struct Protocol {
-            Error (*initialize)(CNet* ctx, void* user);
+            Error (*initialize)(Stopper stop, CNet* ctx, void* user);
             bool (*write)(CNet* ctx, void* user, Buffer<const char>* buf);
             bool (*read)(CNet* ctx, void* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, void* user, MadeBuffer* buf, Buffer<const char>* input);
@@ -132,7 +138,7 @@ namespace utils {
 
         template <class T, class SettingValue = void>
         struct ProtocolSuite {
-            Error (*initialize)(CNet* ctx, T* user);
+            Error (*initialize)(Stopper stop, CNet* ctx, T* user);
             bool (*write)(CNet* ctx, T* user, Buffer<const char>* buf);
             bool (*read)(CNet* ctx, T* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
@@ -189,11 +195,11 @@ namespace utils {
         DLL bool STDCALL invoke_callback(CNet* ctx);
 
         // initialize protocol context
-        DLL Error STDCALL initialize(CNet* ctx);
+        DLL Error STDCALL initialize(Stopper stop, CNet* ctx);
 
         // open connection
         inline Error open(CNet* ctx) {
-            return initialize(ctx);
+            return initialize({}, ctx);
         }
 
         // uninititalize protocol context

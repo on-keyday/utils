@@ -50,7 +50,7 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
     };
     cnet::set_lambda(conn, cb);
     cnet::tcp::set_hostport(conn, host, "https");
-    auto suc = cnet::open(conn);
+    auto sb = cnet::open(conn);
     auto ssl = cnet::ssl::create_client();
     auto cb2 = [&](cnet::CNet* ctx) {
         if (!cnet::protocol_is(ctx, "tls")) {
@@ -64,12 +64,12 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
         return true;
     };
     cnet::set_lambda(ssl, cb2);
-    suc = cnet::set_lowlevel_protocol(ssl, conn);
+    auto suc = cnet::set_lowlevel_protocol(ssl, conn);
     assert(suc);
     cnet::ssl::set_certificate_file(ssl, "src/test/net/cacert.pem");
     cnet::ssl::set_host(ssl, host);
-    suc = cnet::open(ssl);
-    if (!suc) {
+    auto err = cnet::open(ssl);
+    if (!err) {
         cnet::ssl::error_callback(ssl, [](const char* msg, size_t len) {
             cout << helper::SizedView(msg, len);
         });
@@ -91,7 +91,7 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
                 cnet::ssl::error_callback(conn, [](const char* msg, size_t len) {
                     cout << helper::SizedView(msg, len);
                 });
-                assert(suc);
+                return false;
             }
         }
         as.suspend();

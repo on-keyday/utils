@@ -248,7 +248,7 @@ namespace utils {
             }
 
             constexpr bool operator==(std::nullptr_t) const {
-                return types != 0;
+                return types == 0;
             }
 
             ~Powns() {
@@ -597,6 +597,16 @@ namespace utils {
             concept has_unwrap = requires(T t) {
                 {t.unwrap()};
             };
+
+            template <class T>
+            concept has_cancel = requires(T t) {
+                {!t.cancel()};
+            };
+
+            template <class T>
+            concept has_err = requires(T t) {
+                {t.err()};
+            };
         }  // namespace internal
 
         template <size_t N>
@@ -625,15 +635,10 @@ namespace utils {
         struct Error : Box {
            private:
             using unwrap_t = std::conditional_t<std::is_same_v<Unwrap, void>, Error, Unwrap>;
-            void (*error_ptr)(void*, PushBacker<Ref> msg) = nullptr;
+            MAKE_FN_VOID(error, PushBacker<Ref>)
             std::int64_t (*code_ptr)(void*) = nullptr;
             bool (*kind_of_ptr)(void*, const char* key) = nullptr;
             unwrap_t (*unwrap_ptr)(void*) = nullptr;
-
-            template <class T>
-            static void error_fn(void* ptr, PushBacker<Ref> msg) {
-                return static_cast<T*>(ptr)->error(msg);
-            }
 
             template <class T>
             static std::int64_t code_fn(void* ptr) {
@@ -669,8 +674,8 @@ namespace utils {
             DEFAULT_METHODS(Error)
 
             template <class T>
-            Error(T&& t)
-                : APPLY2_FN(error),
+            constexpr Error(T&& t)
+                : APPLY2_FN(error, PushBacker<Ref>),
                   APPLY2_FN(code),
                   APPLY2_FN(kind_of),
                   APPLY2_FN(unwrap),
@@ -681,7 +686,7 @@ namespace utils {
             }
 
             template <class String = fixedBuf<100>>
-            String serror() const {
+            constexpr String serror() const {
                 String s;
                 error(s);
                 return s;
@@ -697,6 +702,60 @@ namespace utils {
 
             unwrap_t unwrap() const {
                 DEFAULT_CALL(unwrap, unwrap_t{});
+            }
+
+            operator bool() const {
+                return (*this) == nullptr;
+            }
+        };
+
+        template <class Box, class Err>
+        struct Stopper : Box {
+           private:
+            MAKE_FN(stop, bool)
+            bool (*cancel_ptr)(void*) = nullptr;
+            Err (*err_ptr)(void*) = nullptr;
+
+            template <class T>
+            static bool cancel_fn(void* ptr) {
+                if constexpr (internal::has_cancel<T>) {
+                    return static_cast<T*>(ptr)->cancel();
+                }
+                else {
+                    return false;
+                }
+            }
+
+            template <class T>
+            static Err err_fn(void* ptr) {
+                if constexpr (internal::has_err<T>) {
+                    return static_cast<T*>(ptr)->err();
+                }
+                else {
+                    return {};
+                }
+            }
+
+           public:
+            DEFAULT_METHODS(Stopper)
+
+            template <class T>
+            constexpr Stopper(T&& t)
+                : APPLY2_FN(stop),
+                  APPLY2_FN(cancel),
+                  APPLY2_FN(err),
+                  Box(std::forward<T>(t)) {}
+
+            bool stop() const {
+                DEFAULT_CALL(stop, false);
+            }
+
+            bool cancel() {
+                DEFAULT_CALL(cancel, false);
+            }
+
+            Err err() {
+                DEFAULT_CALL(err, Err{});
             }
         };
     }  // namespace iface
