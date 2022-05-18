@@ -704,7 +704,7 @@ namespace utils {
                 DEFAULT_CALL(unwrap, unwrap_t{});
             }
 
-            operator bool() const {
+            explicit operator bool() const {
                 return (*this) == nullptr;
             }
         };
