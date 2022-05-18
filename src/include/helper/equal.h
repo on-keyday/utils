@@ -21,5 +21,20 @@ namespace utils {
             Buffer<buffer_t<Cmp&>> cmptmp(cmp);
             return intmp.size() == cmptmp.size() && intmp.seek_if(cmp, compare) && intmp.eos();
         }
+
+        template <class T, class U>
+        concept has_equal = requires(T t, U u) {
+            {t == u};
+        };
+
+        template <class T, class U>
+        constexpr bool default_equal(T&& t, U&& u) {
+            if constexpr (has_equal<T, U>) {
+                return t == u;
+            }
+            else {
+                return helper::equal(t, u);
+            }
+        }
     }  // namespace helper
 }  // namespace utils

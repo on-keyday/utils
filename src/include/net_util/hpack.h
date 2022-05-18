@@ -15,6 +15,7 @@
 #include "../wrap/light/enum.h"
 #include "../endian/reader.h"
 #include "../endian/writer.h"
+#include "../helper/equal.h"
 
 namespace utils {
     namespace net {
@@ -777,7 +778,7 @@ namespace utils {
                             size_t idx = 0;
                             if (get_idx(
                                     [&](const auto& k, const auto& v) {
-                                        return k == h.first && v == h.second;
+                                        return helper::default_equal(k, get<0>(h)) && helper::default_equal(v, get<1>(h));
                                     },
                                     idx, dymap)) {
                                 TRY(integer_coder::template encode<7>(se, idx, 0x80));
@@ -785,7 +786,7 @@ namespace utils {
                             else {
                                 if (get_idx(
                                         [&](const auto& k, const auto&) {
-                                            return k == h.first;
+                                            return helper::default_equal(k, get<0>(h));
                                         },
                                         idx, dymap)) {
                                     if (adddy) {
