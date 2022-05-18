@@ -163,8 +163,9 @@ namespace utils {
                 }
                 size_t count = 0;
                 while (true) {
-                    if (!cnet::read(lowconn, tls->buffer.data(), tls->buffer.size(), &tls->buf_index)) {
-                        return sslconsterror{"failed to read"};
+                    if (auto err = cnet::read(stop, lowconn, tls->buffer.data(), tls->buffer.size(), &tls->buf_index);
+                        err != nullptr) {
+                        return err;
                     }
                     if (tls->buf_index != 0) {
                         break;
@@ -317,20 +318,21 @@ namespace utils {
                 return nil();
             }
 
-            bool read_tls(CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
+            Error read_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls, Buffer<char>* buf) {
                 tls->status = TLSStatus::start_read;
                 invoke_callback(ctx);
                 test::Timer timer;
-                if (!io_common_loop(
-                        {}, ctx, tls, &timer,
+                if (auto err = io_common_loop(
+                        stop, ctx, tls, &timer,
                         [&]() {
                             return ::SSL_read_ex(tls->ssl, buf->ptr, buf->size, &buf->proced);
-                        })) {
-                    return false;
+                        });
+                    err != nullptr) {
+                    return sslwraperror{"SSL_read_ex failed", std::move(err)};
                 }
                 tls->status = TLSStatus::read_done;
                 invoke_callback(ctx);
-                return true;
+                return nil();
             }
 
             Error write_tls(Stopper stop, CNet* ctx, OpenSSLContext* tls, Buffer<const char>* buf) {

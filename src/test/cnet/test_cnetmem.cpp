@@ -42,7 +42,7 @@ void test_cnet_mem_interface() {
     utils::helper::append(arr, "client hello");
     auto old = arr.i;
     write({}, mem1, arr.buf, arr.size(), &arr.i);
-    read(mem2, arr.buf, arr.capacity(), &arr.i);
+    read({}, mem2, arr.buf, arr.capacity(), &arr.i);
     assert(old == arr.i);
 }
 
@@ -59,7 +59,7 @@ void test_thread_io() {
     auto read_while = [](CNet *mem, Buf &arr) {
         arr.i = 0;
         while (arr.size() == 0) {
-            read(mem, arr.buf, arr.capacity(), &arr.i);
+            read({}, mem, arr.buf, arr.capacity(), &arr.i);
         }
     };
     auto write_str = [](CNet *mem, auto str) {
@@ -102,7 +102,7 @@ void test_http_protocol() {
             Array<1024, char> v{0};
             auto &buf = seq.buf.buffer;
             while (v.size() == 0) {
-                read(mem, v.buf, v.capacity(), &v.i);
+                read({}, mem, v.buf, v.capacity(), &v.i);
                 if (end) {
                     break;
                 }

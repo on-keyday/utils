@@ -369,7 +369,7 @@ namespace utils {
                     if (!frames.frame.size()) {
                         while (true) {
                             number::Array<1024, char> buf;
-                            if (on_error || !read(ctx, buf.buf, buf.capacity(), &buf.i)) {
+                            if (on_error || !read({}, ctx, buf.buf, buf.capacity(), &buf.i)) {
                                 if (!on_error && state->r.ref.size()) {
                                     on_error = true;
                                     break;

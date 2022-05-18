@@ -221,28 +221,30 @@ namespace utils {
             return err;
         }
 
-        bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red) {
+        Error STDCALL read(Stopper stop, CNet* ctx, char* buffer, size_t size, size_t* red) {
             if (!ctx || !red) {
-                return false;
+                return consterror{"cnet: ctx or red is nullptr"};
             }
             auto err = initialize({}, ctx);
             if (err != nullptr) {
-                return false;
+                return err;
             }
             Buffer<char> buf;
             if (ctx->proto.read) {
                 buf.ptr = buffer;
                 buf.size = size;
                 buf.proced = 0;
-                if (ctx->proto.read(ctx, ctx->user, &buf)) {
+                auto err = ctx->proto.read(stop, ctx, ctx->user, &buf);
+                if (err == nullptr) {
                     *red = buf.proced;
-                    return true;
+                    return nil();
                 }
+                return err;
             }
             else if (ctx->next) {
-                return read(ctx->next, buffer, size, red);
+                return read(stop, ctx->next, buffer, size, red);
             }
-            return false;
+            return consterror{"cnet: no read is set"};
         }
 
         bool STDCALL set_number(CNet* ctx, std::int64_t key, std::int64_t value) {

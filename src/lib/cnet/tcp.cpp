@@ -224,7 +224,7 @@ namespace utils {
                 return true;
             }
 
-            bool read_socket(CNet* ctx, OsTCPSocket* sock, Buffer<char>* buf) {
+            Error read_socket(Stopper stop, CNet* ctx, OsTCPSocket* sock, Buffer<char>* buf) {
                 sock->status = TCPStatus::start_recving;
                 invoke_callback(ctx);
                 if (any(sock->flag & Flag::multiple_io)) {
@@ -241,7 +241,7 @@ namespace utils {
                     if (err == SOCKET_ERROR) {
                         auto err = net::errcode();
                         if (err != WSA_IO_PENDING) {
-                            return false;
+                            return sockerror{"WSARecv failed", err};
                         }
                     }
                     while (!state.done) {
@@ -259,16 +259,16 @@ namespace utils {
                                 if (any(sock->flag & Flag::poll_recv)) {
                                     auto sel = selecting_loop(ctx, sock->sock, false, sock->status, sock->recieve_timeout);
                                     if (!sel) {
-                                        return false;
+                                        return sockerror{"while ::recv ::select failed", net::errcode()};
                                     }
                                     if (sel < 0) {
-                                        return true;
+                                        return noteerror{"timeout"};
                                     }
                                     continue;
                                 }
-                                return true;
+                                return nil();
                             }
-                            return false;
+                            return sockerror{"while ::recv failed", net::errcode()};
                         }
                         buf->proced = err;
                         break;
@@ -276,7 +276,10 @@ namespace utils {
                 }
                 sock->status = buf->proced == 0 ? TCPStatus::eos : TCPStatus::recieved;
                 invoke_callback(ctx);
-                return buf->proced != 0;
+                if (buf->proced != 0) {
+                    return nil();
+                }
+                return EOFError{};
             }
 
             bool tcp_settings_number(CNet* ctx, OsTCPSocket* sock, std::int64_t key, std::int64_t value) {

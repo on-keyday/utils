@@ -28,6 +28,7 @@ namespace utils {
             should_retry,
             wrap,
             fatal,
+            eof,
         };
 
         constexpr const char* default_kinds[] = {
@@ -37,6 +38,7 @@ namespace utils {
             "should_retry",
             "wrap",
             "fatal",
+            "eof",
         };
 
         constexpr auto kind_c(Kind kind) {
@@ -124,7 +126,7 @@ namespace utils {
         struct Protocol {
             Error (*initialize)(Stopper stop, CNet* ctx, void* user);
             Error (*write)(Stopper stop, CNet* ctx, void* user, Buffer<const char>* buf);
-            bool (*read)(CNet* ctx, void* user, Buffer<char>* buf);
+            Error (*read)(Stopper stop, CNet* ctx, void* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, void* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(CNet* ctx, void* user);
 
@@ -140,7 +142,7 @@ namespace utils {
         struct ProtocolSuite {
             Error (*initialize)(Stopper stop, CNet* ctx, T* user);
             Error (*write)(Stopper stop, CNet* ctx, T* user, Buffer<const char>* buf);
-            bool (*read)(CNet* ctx, T* user, Buffer<char>* buf);
+            Error (*read)(Stopper stop, CNet* ctx, T* user, Buffer<char>* buf);
             bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(CNet* ctx, T* user);
 
@@ -219,11 +221,11 @@ namespace utils {
         }
 
         // read from context
-        DLL bool STDCALL read(CNet* ctx, char* buffer, size_t size, size_t* red);
+        DLL Error STDCALL read(Stopper stop, CNet* ctx, char* buffer, size_t size, size_t* red);
 
         // receive protocol response
-        inline bool response(CNet* ctx, size_t* red) {
-            return read(ctx, nullptr, 0, red);
+        inline Error response(CNet* ctx, size_t* red) {
+            return read({}, ctx, nullptr, 0, red);
         }
 
         // set number setting

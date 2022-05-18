@@ -36,6 +36,20 @@ namespace utils {
                 }
             };
 
+            struct noteerror {
+                const char* proc;
+                bool kind_of(const char* k) {
+                    return helper::equal(k, kind_c(Kind::note));
+                }
+                void error(pushbacker) {}
+            };
+
+            struct EOFError {
+                void error(pushbacker pb) {
+                    helper::append(pb, "EOF");
+                }
+            };
+
             enum TCPConfig {
                 // ip version
                 ipver = user_defined_start + 1,

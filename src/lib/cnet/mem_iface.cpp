@@ -75,16 +75,13 @@ namespace utils {
                 return nil();
             }
 
-            bool mem_read(CNet* ctx, MemoryIO* io, Buffer<char>* buf) {
-                if (!io->io) {
-                    return false;
-                }
+            Error mem_read(Stopper stop, CNet* ctx, MemoryIO* io, Buffer<char>* buf) {
                 auto lock = io->link.lock();
                 if (!lock) {
-                    return false;
+                    return consterror{"mem: failed to get memory buffer"};
                 }
                 buf->proced = lock->read(buf->ptr, buf->size);
-                return true;
+                return nil();
             }
 
             CNet* STDCALL create_mem() {

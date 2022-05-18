@@ -85,7 +85,7 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
         number::Array<1024, char> tmpbuf{0};
         size_t r = 0;
         while (!r) {
-            suc = cnet::read(conn, tmpbuf.buf, tmpbuf.capacity(), &r);
+            auto suc = cnet::read({}, conn, tmpbuf.buf, tmpbuf.capacity(), &r);
             if (!suc) {
                 cout << "error:" << cnet::get_error(conn) << "\n";
                 cnet::ssl::error_callback(conn, [](const char* msg, size_t len) {
