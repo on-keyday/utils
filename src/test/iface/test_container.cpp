@@ -31,6 +31,7 @@ void test_container() {
         auto value = get<1>(i);
         cout << key << ":" << value << "\n";
     }
+    auto baseptr = static_cast<base_container*>(queue.ptr());
 }
 
 int main() {
