@@ -33,6 +33,7 @@ namespace utils {
                 MAKE_FN_VOID(token, iface::PushBacker<iface::Ref>)
                 MAKE_FN(info, TokenInfo)
                 MAKE_FN(err, Error)
+                MAKE_FN(child, Token, size_t)
                public:
                 DEFAULT_METHODS(TokenBase)
                 template <class T>
@@ -40,6 +41,7 @@ namespace utils {
                     : APPLY2_FN(token, iface::PushBacker<iface::Ref>),
                       APPLY2_FN(info),
                       APPLY2_FN(err),
+                      APPLY2_FN(child),
                       iface::Powns(std::forward<T>(t)) {}
 
                 void token(iface::PushBacker<iface::Ref> out) const {
@@ -52,6 +54,10 @@ namespace utils {
 
                 Error err() {
                     DEFAULT_CALL(err, Error{});
+                }
+
+                Token child(size_t i) const {
+                    DEFAULT_CALL(child, Token{}, i)
                 }
             };
 
@@ -101,6 +107,7 @@ namespace utils {
                 MAKE_FN(get_token, Token)
                 MAKE_FN_VOID(push_token, Token&&)
                 MAKE_FN(info, StreamInfo)
+                MAKE_FN(child, Stream, size_t)
 
                 static StreamInfo null_info() {
                     StreamInfo info{0};
@@ -117,6 +124,8 @@ namespace utils {
                 Stream(T&& t)
                     : APPLY2_FN(get_token),
                       APPLY2_FN(push_token, Token &&),
+                      APPLY2_FN(info),
+                      APPLY2_FN(child, size_t),
                       iface::Powns(std::forward<T>(t)) {}
 
                 Token get_token() {
@@ -128,7 +137,11 @@ namespace utils {
                 }
 
                 StreamInfo info() const {
-                    DEFAULT_CALL(info, null_info())
+                    DEFAULT_CALL(info, null_info());
+                }
+
+                Stream child(size_t i) {
+                    DEFAULT_CALL(child, Stream{}, i);
                 }
             };
         }  // namespace stream
