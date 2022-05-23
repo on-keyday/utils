@@ -41,6 +41,11 @@ namespace utils {
                     {t.substream(Stream{})};
                 };
 
+                template <class T>
+                concept has_truncate = requires(T t) {
+                    {t.truncate()};
+                };
+
             }  // namespace internal
 
             struct TokenInfo {
@@ -139,6 +144,7 @@ namespace utils {
                 MAKE_FN(seek, bool, std::size_t)
                 MAKE_FN_EXISTS(raw, Input, internal::has_raw<T>, {})
                 MAKE_FN_EXISTS(info, InputStat, internal::has_info<T>, {})
+                MAKE_FN_EXISTS(truncate, bool, internal::has_truncate<T>, false)
 
                 static InputStat err_stat() {
                     InputStat stat{0};
@@ -185,6 +191,7 @@ namespace utils {
                       APPLY2_FN(seek, std::size_t),
                       APPLY2_FN(info),
                       APPLY2_FN(raw),
+                      APPLY2_FN(truncate),
                       iface::Ref(t) {}
 
                 size_t peek(char* ptr, size_t size) {
@@ -236,6 +243,10 @@ namespace utils {
 
                 Input raw() {
                     DEFAULT_CALL(raw, Input{});
+                }
+
+                bool truncate() {
+                    DEFAULT_CALL(truncate, false);
                 }
             };
 
