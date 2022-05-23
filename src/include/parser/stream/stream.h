@@ -225,6 +225,11 @@ namespace utils {
                     DEFAULT_CALL(seek, false, pos);
                 }
 
+                bool offset_seek(std::int64_t pos) {
+                    auto info_ = info();
+                    return seek(info_.pos + pos);
+                }
+
                 InputStat info() {
                     DEFAULT_CALL(info, err_stat());
                 }
