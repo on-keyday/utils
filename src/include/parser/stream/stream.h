@@ -24,6 +24,11 @@ namespace utils {
                 concept has_child = requires(T t) {
                     {t.child(size_t{})};
                 };
+
+                template <class T>
+                concept has_borrow = requires(T t) {
+                    {t.borrow()};
+                };
             }  // namespace internal
 
             struct TokenInfo {
@@ -113,6 +118,7 @@ namespace utils {
                 const char* kind;
                 bool broken;
                 bool eos;
+                bool endless;
                 size_t pos;
                 size_t exists_token;
                 size_t raw_bytes_remain;
@@ -122,6 +128,7 @@ namespace utils {
             struct StreamBorrows {
                 iface::Subscript<iface::Powns> src;
                 size_t srclen;
+                size_t* index;
             };
 
             constexpr auto ErrNullStream = simpleErrToken{"null stream"};
@@ -131,18 +138,8 @@ namespace utils {
                 MAKE_FN(get_token, Token)
                 MAKE_FN_VOID(push_token, Token&&)
                 MAKE_FN(info, StreamInfo)
-                size_t (*child_ptr)(void*, size_t) = nullptr;
-                StreamBorrows (*borrow_ptr)(void*);
-
-                template <class T>
-                static Stream child_fn(void* ptr, size_t i) {
-                    if constexpr (internal::has_child<T>) {
-                        return static_cast<T*>(ptr)->child(i);
-                    }
-                    else {
-                        return Stream{};
-                    }
-                }
+                MAKE_FN_EXISTS(child, Stream, internal::has_child<T>, {}, size_t)
+                MAKE_FN_EXISTS(borrow, StreamBorrows, internal::has_borrow<T>, {0})
 
                 static StreamInfo null_info() {
                     StreamInfo info{0};
@@ -160,7 +157,8 @@ namespace utils {
                     : APPLY2_FN(get_token),
                       APPLY2_FN(push_token, Token &&),
                       APPLY2_FN(info),
-                      APPLY2_FN(child),
+                      APPLY2_FN(child, size_t),
+                      APPLY2_FN(borrow),
                       iface::Powns(std::forward<T>(t)) {}
 
                 Token get_token() {

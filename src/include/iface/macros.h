@@ -31,9 +31,9 @@ namespace utils {
     static void func_name##_fn(void* ptr, Args... args) {                \
         static_cast<T*>(ptr)->func_name(std::forward<Args>(args)...);    \
     }
-#define APPLY1_FN(func_name, ...) func_name##_fn<std::remove_cvref_t<T> __VA_OPT__(, ) __VA_ARGS__>
+
 #define APPLY2_FN(func_name, ...) \
-    func_name##_ptr(APPLY1_FN(func_name, __VA_ARGS__))
+    func_name##_ptr(func_name##_fn<std::remove_cvref_t<T> __VA_OPT__(, ) __VA_ARGS__>)
 #define DEFAULT_CALL(func_name, defaultv, ...) return this->ptr() && func_name##_ptr ? func_name##_ptr(this->ptr() __VA_OPT__(, ) __VA_ARGS__) : defaultv;
 
 #define MAKE_FN_EXISTS(func_name, rettype, cond, defaultv, ...)                      \
