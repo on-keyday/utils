@@ -11,6 +11,7 @@
 
 #include "../../iface/error_log.h"
 #include "../../helper/appender.h"
+#include "../../iface/macros.h"
 
 namespace utils {
     namespace parser {
@@ -26,9 +27,20 @@ namespace utils {
                 };
 
                 template <class T>
-                concept has_borrow = requires(T t) {
-                    {t.borrow()};
+                concept has_info = requires(T t) {
+                    {t.info()};
                 };
+
+                template <class T>
+                concept has_raw = requires(T t) {
+                    {t.raw()};
+                };
+
+                template <class T, class Stream>
+                concept has_substream = requires(T t) {
+                    {t.substream(Stream{})};
+                };
+
             }  // namespace internal
 
             struct TokenInfo {
@@ -36,40 +48,38 @@ namespace utils {
                 size_t pos;
                 size_t len;
                 size_t child;
+                size_t end_child_pos;
                 bool fixed_child;
                 bool has_err;
             };
 
             struct TokenBase : iface::Powns {
                private:
+                using Token = iface::Copy<TokenBase>;
                 MAKE_FN_VOID(token, iface::PushBacker<iface::Ref>)
-                MAKE_FN(info, TokenInfo)
+                MAKE_FN_EXISTS(info, TokenInfo, internal::has_info<T>, {})
                 MAKE_FN(err, Error)
-
-                size_t (*child_ptr)(void*, size_t) = nullptr;
-
-                template <class T>
-                static Stream child_fn(void* ptr, size_t i) {
-                    if constexpr (internal::has_child<T>) {
-                        return static_cast<T*>(ptr)->child(i);
-                    }
-                    else {
-                        return Stream{};
-                    }
-                }
+                MAKE_FN_EXISTS(child, Token, internal::has_child<T>, {}, size_t)
 
                public:
-                DEFAULT_METHODS(TokenBase)
+                DEFAULT_METHODS_MOVE(TokenBase)
                 template <class T>
                 TokenBase(T&& t)
                     : APPLY2_FN(token, iface::PushBacker<iface::Ref>),
                       APPLY2_FN(info),
                       APPLY2_FN(err),
-                      APPLY2_FN(child),
+                      APPLY2_FN(child, size_t),
                       iface::Powns(std::forward<T>(t)) {}
 
                 void token(iface::PushBacker<iface::Ref> out) const {
                     DEFAULT_CALL(token, (void)0, out);
+                }
+
+                template <class Str = iface::fixedBuf<100>>
+                Str stoken() const {
+                    Str tok;
+                    token(tok);
+                    return tok;
                 }
 
                 TokenInfo info() const {
@@ -88,7 +98,7 @@ namespace utils {
             using Token = iface::Copy<TokenBase>;
             using PB = iface::PushBacker<iface::Ref>;
 
-            constexpr bool has_err(const Token& token) {
+            inline bool has_err(const Token& token) {
                 return token.info().has_err;
             }
 
@@ -114,69 +124,146 @@ namespace utils {
                 }
             };
 
-            struct StreamInfo {
-                const char* kind;
-                bool broken;
-                bool eos;
-                bool endless;
+            struct InputStat {
+                bool has_info;
                 size_t pos;
-                size_t exists_token;
-                size_t raw_bytes_remain;
-                size_t child_stream;
+                size_t remain;
+                bool raw;
+                bool eos;
+                bool err;
             };
 
-            struct StreamBorrows {
-                iface::Subscript<iface::Powns> src;
-                size_t srclen;
-                size_t* index;
-            };
-
-            constexpr auto ErrNullStream = simpleErrToken{"null stream"};
-
-            struct Stream : iface::Powns {
+            struct Input : iface::Ref {
                private:
-                MAKE_FN(get_token, Token)
-                MAKE_FN_VOID(push_token, Token&&)
-                MAKE_FN(info, StreamInfo)
-                MAKE_FN_EXISTS(child, Stream, internal::has_child<T>, {}, size_t)
-                MAKE_FN_EXISTS(borrow, StreamBorrows, internal::has_borrow<T>, {0})
+                MAKE_FN(peek, size_t, char*, size_t)
+                MAKE_FN(seek, bool, std::size_t)
+                MAKE_FN_EXISTS(raw, Input, internal::has_raw<T>, {})
+                MAKE_FN_EXISTS(info, InputStat, internal::has_info<T>, {})
 
-                static StreamInfo null_info() {
-                    StreamInfo info{0};
-                    info.kind = "NULL";
-                    info.broken = true;
-                    info.eos = true;
-                    return info;
+                static InputStat err_stat() {
+                    InputStat stat{0};
+                    stat.eos = true;
+                    stat.err = true;
+                    return stat;
                 }
 
                public:
-                DEFAULT_METHODS(Stream)
+                DEFAULT_METHODS(Input)
+                template <class T>
+                Input(T&& t)
+                    : APPLY2_FN(peek, char*, size_t),
+                      APPLY2_FN(seek, std::size_t),
+                      APPLY2_FN(info),
+                      APPLY2_FN(raw),
+                      iface::Ref(t) {}
 
+                size_t peek(char* ptr, size_t size) {
+                    DEFAULT_CALL(peek, 0, ptr, size);
+                }
+
+                bool expect(const char* p, size_t size = 0, char* tmpbuf = nullptr, size_t bufsize = 0) {
+                    if (!p) {
+                        return false;
+                    }
+                    if (size == 0) {
+                        size = ::strlen(p);
+                    }
+                    const auto info_ = info();
+                    if (info_.has_info) {
+                        if (info_.remain < size) {
+                            return false;
+                        }
+                    }
+                    auto input = [&](char* buf, size_t len) {
+                        size_t count = 0;
+                        while (true) {
+                            const size_t remain = size - count;
+                            const size_t to_fetch = remain < len ? remain : len;
+                            const size_t fetched = peek(buf, to_fetch);
+                            if (fetched < to_fetch) {
+                                seek(info_.pos);
+                                return false;
+                            }
+                            if (::strncmp(p + count, buf, fetched) != 0) {
+                                seek(info_.pos);
+                                return false;
+                            }
+                            count += fetched;
+                            if (count >= size) {
+                                break;
+                            }
+                            if (!seek(info_.pos + count)) {
+                                return false;
+                            }
+                        }
+                        seek(info_.pos);
+                        return true;
+                    };
+                    if (tmpbuf && bufsize) {
+                        return input(tmpbuf, bufsize);
+                    }
+                    else if (size >= 100) {
+                        char buf[100];
+                        return input(buf, 100);
+                    }
+                    else {
+                        char buf[20];
+                        return input(buf, 20);
+                    }
+                }
+
+                bool seek(size_t pos) {
+                    DEFAULT_CALL(seek, false, pos);
+                }
+
+                InputStat info() {
+                    DEFAULT_CALL(info, err_stat());
+                }
+
+                Input raw() {
+                    DEFAULT_CALL(raw, Input{});
+                }
+            };
+
+            struct StreamInfo {
+                size_t limsub;
+                size_t cursub;
+            };
+
+            struct Stream : iface::Powns {
+               private:
+                template <class T>
+                static constexpr bool has_substream = internal::has_substream<T, Stream>;
+                MAKE_FN_EXISTS(substream, bool, has_substream<T>, false, Stream&&)
+                MAKE_FN_EXISTS(info, StreamInfo, internal::has_info<T>, {0})
+                MAKE_FN(parse, Token, Input&)
+
+                static Token err_token() {
+                    return simpleErrToken{"NULL Stream"};
+                }
+
+               public:
+                DEFAULT_METHODS_MOVE(Stream)
                 template <class T>
                 Stream(T&& t)
-                    : APPLY2_FN(get_token),
-                      APPLY2_FN(push_token, Token &&),
+                    : APPLY2_FN(substream, Stream &&),
                       APPLY2_FN(info),
-                      APPLY2_FN(child, size_t),
-                      APPLY2_FN(borrow),
+                      APPLY2_FN(parse, Input&),
                       iface::Powns(std::forward<T>(t)) {}
 
-                Token get_token() {
-                    DEFAULT_CALL(get_token, ErrNullStream);
+                bool substream(Stream st) {
+                    DEFAULT_CALL(substream, false, std::move(st));
                 }
 
-                void push_token(Token&& token) {
-                    DEFAULT_CALL(push_token, (void)0, std::move(token));
-                }
+                StreamInfo info(){
+                    DEFAULT_CALL(info, StreamInfo{})}
 
-                StreamInfo info() const {
-                    DEFAULT_CALL(info, null_info());
-                }
-
-                Stream child(size_t i) {
-                    DEFAULT_CALL(child, Stream{}, i);
+                Token parse(Input input) {
+                    DEFAULT_CALL(parse, err_token(), input)
                 }
             };
         }  // namespace stream
     }      // namespace parser
 }  // namespace utils
+
+#include "../../iface/undef_macros.h"

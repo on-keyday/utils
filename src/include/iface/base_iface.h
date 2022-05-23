@@ -326,3 +326,5 @@ namespace utils {
 
     }  // namespace iface
 }  // namespace utils
+
+#include "undef_macros.h"  // clear macros

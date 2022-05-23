@@ -9,6 +9,7 @@
 // container - container like interface
 #pragma once
 #include "base_iface.h"
+#include "macros.h"
 
 namespace utils {
     namespace iface {
@@ -89,3 +90,5 @@ namespace utils {
 
     }  // namespace iface
 }  // namespace utils
+
+#include "undef_macros.h"  // clear macros

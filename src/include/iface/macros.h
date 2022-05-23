@@ -7,7 +7,7 @@
 
 
 // macros - interface definition helper macro
-#pragma once
+// use with undef_macros.h
 
 namespace utils {
     namespace iface {
@@ -18,6 +18,22 @@ namespace utils {
     constexpr Type(Type&&) = default;                 \
     constexpr Type& operator=(const Type&) = default; \
     constexpr Type& operator=(Type&&) = default;
+
+#define DEFAULT_METHODS_NONCONSTEXPR(Type)  \
+    Type() = default;                       \
+    Type(Type&) = default;                  \
+    Type(const Type&) = default;            \
+    Type(Type&&) = default;                 \
+    Type& operator=(const Type&) = default; \
+    Type& operator=(Type&&) = default;
+
+#define DEFAULT_METHODS_MOVE(Type, ...) \
+    __VA_OPT__(constexpr)               \
+    Type() = default;                   \
+    __VA_OPT__(constexpr)               \
+    Type(Type&&) = default;             \
+    __VA_OPT__(constexpr)               \
+    Type& operator=(Type&&) = default;
 
 #define MAKE_FN(func_name, retty, ...)                                       \
     retty (*func_name##_ptr)(void* __VA_OPT__(, ) __VA_ARGS__) = nullptr;    \
@@ -53,6 +69,6 @@ namespace utils {
         }                                                                            \
     }
 #define MAKE_FN_EXISTS_VOID(func_name, cond, ...) MAKE_FN_EXISTS(func_name, void, cond, (void)0 __VA_OPT__(, ) __VA_ARGS__)
-#define MF_DELIM ,
+
     }  // namespace iface
 }  // namespace utils
