@@ -45,7 +45,7 @@ struct MockStream {
     const char* tok;
 
     st::Token parse(st::Input& input) {
-        if (!input.expect(tok)) {
+        if (!input.consume(tok)) {
             return st::simpleErrToken{"input.expect(tok) returns false"};
         }
         return MockToken{tok};
