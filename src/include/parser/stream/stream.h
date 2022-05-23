@@ -147,6 +147,33 @@ namespace utils {
                     return stat;
                 }
 
+                bool input_rotuine(const InputStat& info_, const char* p, size_t size,
+                                   char* buf, size_t len, bool consume) {
+                    size_t count = 0;
+                    while (true) {
+                        const size_t remain = size - count;
+                        const size_t to_fetch = remain < len ? remain : len;
+                        const size_t fetched = peek(buf, to_fetch);
+                        if (fetched < to_fetch) {
+                            seek(info_.pos);
+                            return false;
+                        }
+                        if (::strncmp(p + count, buf, fetched) != 0) {
+                            seek(info_.pos);
+                            return false;
+                        }
+                        count += fetched;
+                        if (count >= size) {
+                            break;
+                        }
+                        if (!seek(info_.pos + count)) {
+                            return false;
+                        }
+                    }
+                    seek(info_.pos);
+                    return true;
+                }
+
                public:
                 DEFAULT_METHODS(Input)
                 template <class T>
@@ -174,41 +201,16 @@ namespace utils {
                             return false;
                         }
                     }
-                    auto input = [&](char* buf, size_t len) {
-                        size_t count = 0;
-                        while (true) {
-                            const size_t remain = size - count;
-                            const size_t to_fetch = remain < len ? remain : len;
-                            const size_t fetched = peek(buf, to_fetch);
-                            if (fetched < to_fetch) {
-                                seek(info_.pos);
-                                return false;
-                            }
-                            if (::strncmp(p + count, buf, fetched) != 0) {
-                                seek(info_.pos);
-                                return false;
-                            }
-                            count += fetched;
-                            if (count >= size) {
-                                break;
-                            }
-                            if (!seek(info_.pos + count)) {
-                                return false;
-                            }
-                        }
-                        seek(info_.pos);
-                        return true;
-                    };
                     if (tmpbuf && bufsize) {
-                        return input(tmpbuf, bufsize);
+                        return input_rotuine(info_, p, size, tmpbuf, bufsize, false);
                     }
                     else if (size >= 100) {
                         char buf[100];
-                        return input(buf, 100);
+                        return input_rotuine(info_, p, size, buf, 100, false);
                     }
                     else {
                         char buf[20];
-                        return input(buf, 20);
+                        return input_rotuine(info_, p, size, buf, 20, false);
                     }
                 }
 
