@@ -170,6 +170,9 @@ namespace utils {
                             return false;
                         }
                     }
+                    if (consume) {
+                        return seek(info_.pos + size);
+                    }
                     seek(info_.pos);
                     return true;
                 }
@@ -188,7 +191,11 @@ namespace utils {
                     DEFAULT_CALL(peek, 0, ptr, size);
                 }
 
-                bool expect(const char* p, size_t size = 0, char* tmpbuf = nullptr, size_t bufsize = 0) {
+                bool consume(const char* p, size_t size = 0, char* tmpbuf = nullptr, size_t bufsize = 0) {
+                    return expect(p, size, tmpbuf, bufsize, true);
+                }
+
+                bool expect(const char* p, size_t size = 0, char* tmpbuf = nullptr, size_t bufsize = 0, bool consume = false) {
                     if (!p) {
                         return false;
                     }
@@ -202,15 +209,15 @@ namespace utils {
                         }
                     }
                     if (tmpbuf && bufsize) {
-                        return input_rotuine(info_, p, size, tmpbuf, bufsize, false);
+                        return input_rotuine(info_, p, size, tmpbuf, bufsize, consume);
                     }
                     else if (size >= 100) {
                         char buf[100];
-                        return input_rotuine(info_, p, size, buf, 100, false);
+                        return input_rotuine(info_, p, size, buf, 100, consume);
                     }
                     else {
                         char buf[20];
-                        return input_rotuine(info_, p, size, buf, 20, false);
+                        return input_rotuine(info_, p, size, buf, 20, consume);
                     }
                 }
 
