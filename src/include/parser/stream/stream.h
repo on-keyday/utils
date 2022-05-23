@@ -119,6 +119,11 @@ namespace utils {
                 size_t child_stream;
             };
 
+            struct StreamBorrows {
+                iface::Subscript<iface::Powns> src;
+                size_t srclen;
+            };
+
             constexpr auto ErrNullStream = simpleErrToken{"null stream"};
 
             struct Stream : iface::Powns {
@@ -127,6 +132,7 @@ namespace utils {
                 MAKE_FN_VOID(push_token, Token&&)
                 MAKE_FN(info, StreamInfo)
                 size_t (*child_ptr)(void*, size_t) = nullptr;
+                StreamBorrows (*borrow_ptr)(void*);
 
                 template <class T>
                 static Stream child_fn(void* ptr, size_t i) {

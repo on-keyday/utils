@@ -36,5 +36,23 @@ namespace utils {
     func_name##_ptr(APPLY1_FN(func_name, __VA_ARGS__))
 #define DEFAULT_CALL(func_name, defaultv, ...) return this->ptr() && func_name##_ptr ? func_name##_ptr(this->ptr() __VA_OPT__(, ) __VA_ARGS__) : defaultv;
 
+#define MAKE_FN_EXISTS(func_name, rettype, cond, defaultv, ...)                      \
+    rettype (*func_name##_ptr)(void* __VA_OPT__(, ) __VA_ARGS__) = nullptr;          \
+    template <class T, class... Args>                                                \
+    static rettype func_name##_fn(void* ptr, Args... args) {                         \
+        if constexpr (cond) {                                                        \
+            if constexpr (std::is_same_v<rettype, void>) {                           \
+                static_cast<T*>(ptr)->func_name(std::forward<Args>(args)...);        \
+            }                                                                        \
+            else {                                                                   \
+                return static_cast<T*>(ptr)->func_name(std::forward<Args>(args)...); \
+            }                                                                        \
+        }                                                                            \
+        else {                                                                       \
+            return defaultv;                                                         \
+        }                                                                            \
+    }
+#define MAKE_FN_EXISTS_VOID(func_name, cond, ...) MAKE_FN_EXISTS(func_name, void, cond, (void)0 __VA_OPT__(, ) __VA_ARGS__)
+#define MF_DELIM ,
     }  // namespace iface
 }  // namespace utils

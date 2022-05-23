@@ -81,39 +81,9 @@ namespace utils {
            private:
             using unwrap_t = std::conditional_t<std::is_same_v<Unwrap, void>, Error, Unwrap>;
             MAKE_FN_VOID(error, PushBacker<Ref>)
-            std::int64_t (*code_ptr)(void*) = nullptr;
-            bool (*kind_of_ptr)(void*, const char* key) = nullptr;
-            unwrap_t (*unwrap_ptr)(void*) = nullptr;
-
-            template <class T>
-            static std::int64_t code_fn(void* ptr) {
-                if constexpr (internal::has_code<T>) {
-                    return static_cast<T*>(ptr)->code();
-                }
-                else {
-                    return false;
-                }
-            }
-
-            template <class T>
-            static bool kind_of_fn(void* ptr, const char* kind) {
-                if constexpr (internal::has_kind_of<T>) {
-                    return static_cast<T*>(ptr)->kind_of(kind);
-                }
-                else {
-                    return false;
-                }
-            }
-
-            template <class T>
-            static unwrap_t unwrap_fn(void* ptr) {
-                if constexpr (internal::has_unwrap<T>) {
-                    return static_cast<T*>(ptr)->unwrap();
-                }
-                else {
-                    return {};
-                }
-            }
+            MAKE_FN_EXISTS(code, std::int64_t, internal::has_code<T>, 0)
+            MAKE_FN_EXISTS(kind_of, bool, internal::has_kind_of<T>, false, const char*)
+            MAKE_FN_EXISTS(unwrap, unwrap_t, internal::has_unwrap<T>, {})
 
            public:
             DEFAULT_METHODS(Error)
@@ -157,37 +127,12 @@ namespace utils {
         template <class Box, class Err, class LogT = void>
         struct Stopper : Box {
            private:
+            template <class T>
+            static constexpr bool has_log = internal::has_log<T, LogT>;
             MAKE_FN(stop, bool)
-            void (*log_ptr)(void*, LogObject<LogT>* obj) = nullptr;
-            bool (*cancel_ptr)(void*) = nullptr;
-            Err (*err_ptr)(void*) = nullptr;
-
-            template <class T>
-            static void log_fn(void* ptr, LogObject<LogT>* b) {
-                if constexpr (internal::has_log<T, LogT>) {
-                    static_cast<T*>(ptr)->log(b);
-                }
-            }
-
-            template <class T>
-            static bool cancel_fn(void* ptr) {
-                if constexpr (internal::has_cancel<T>) {
-                    return static_cast<T*>(ptr)->cancel();
-                }
-                else {
-                    return false;
-                }
-            }
-
-            template <class T>
-            static Err err_fn(void* ptr) {
-                if constexpr (internal::has_err<T>) {
-                    return static_cast<T*>(ptr)->err();
-                }
-                else {
-                    return {};
-                }
-            }
+            MAKE_FN_EXISTS_VOID(log, has_log<T>, LogObject<LogT>*)
+            MAKE_FN_EXISTS(cancel, bool, internal::has_cancel<T>, false)
+            MAKE_FN_EXISTS(err, Err, internal::has_err<T>, {})
 
            public:
             DEFAULT_METHODS(Stopper)
@@ -197,7 +142,7 @@ namespace utils {
                 : APPLY2_FN(stop),
                   APPLY2_FN(cancel),
                   APPLY2_FN(err),
-                  APPLY2_FN(log),
+                  APPLY2_FN(log, LogObject<LogT>*),
                   Box(std::forward<T>(t)) {}
 
             bool stop() {
