@@ -246,7 +246,7 @@ namespace utils {
                     size_t ret = 0;
                     auto cb = [&](size_t pos, size_t count, char* buf, size_t fetched) {
                         for (size_t i = 0; i < fetched; i++) {
-                            if (!cond(buf[i])) {
+                            if (!cond(buf + i)) {
                                 endpos = pos + count + i;
                                 ret = count + i;
                                 ended = true;

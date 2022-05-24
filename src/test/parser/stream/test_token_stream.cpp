@@ -49,7 +49,7 @@ struct MockStream {
         if (!input.expect(tok)) {
             return st::simpleErrToken{"input.expect(tok) returns false"};
         }
-        input.consume_if([](auto v) { return utils::number::is_alnum(v); });
+        input.consume_if([](auto* v) { return utils::number::is_alnum(*v); });
         return MockToken{tok};
     }
 };
