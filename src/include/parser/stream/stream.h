@@ -153,23 +153,25 @@ namespace utils {
                     return stat;
                 }
 
-                bool input_rotuine(const InputStat& info_, const char* p, size_t size,
-                                   char* buf, size_t len, bool consume) {
+                template <class Callback>
+                bool input_rotuine(const InputStat& info_, size_t size,
+                                   char* buf, size_t len, bool consume, bool besteffort,
+                                   Callback cb) {
                     size_t count = 0;
                     while (true) {
                         const size_t remain = size - count;
                         const size_t to_fetch = remain < len ? remain : len;
                         const size_t fetched = peek(buf, to_fetch);
-                        if (fetched < to_fetch) {
+                        if (!besteffort && fetched < to_fetch) {
                             seek(info_.pos);
                             return false;
                         }
-                        if (::strncmp(p + count, buf, fetched) != 0) {
+                        if (!cb(info_.pos, count, buf, fetched)) {
                             seek(info_.pos);
                             return false;
                         }
                         count += fetched;
-                        if (count >= size) {
+                        if (count >= size || fetched < to_fetch) {
                             break;
                         }
                         if (!seek(info_.pos + count)) {
@@ -177,7 +179,8 @@ namespace utils {
                         }
                     }
                     if (consume) {
-                        return seek(info_.pos + size);
+                        auto offset = count <= size ? count : size;
+                        return seek(info_.pos + offset);
                     }
                     seek(info_.pos);
                     return true;
@@ -215,17 +218,51 @@ namespace utils {
                             return false;
                         }
                     }
+                    auto cb = [&](size_t pos, size_t count, char* buf, size_t fetched) {
+                        return ::strncmp(p + count, buf, fetched) == 0;
+                    };
                     if (tmpbuf && bufsize) {
-                        return input_rotuine(info_, p, size, tmpbuf, bufsize, consume);
+                        return input_rotuine(info_, size, tmpbuf, bufsize, consume, false, cb);
                     }
                     else if (size >= 100) {
                         char buf[100];
-                        return input_rotuine(info_, p, size, buf, 100, consume);
+                        return input_rotuine(info_, size, buf, 100, consume, false, cb);
                     }
                     else {
                         char buf[20];
-                        return input_rotuine(info_, p, size, buf, 20, consume);
+                        return input_rotuine(info_, size, buf, 20, consume, false, cb);
                     }
+                }
+
+                template <class Cond>
+                size_t consume_if(Cond&& cond) {
+                    auto info_ = info();
+                    if (info_.has_info && info_.eos) {
+                        return 0;
+                    }
+                    char buf[50];
+                    bool ended = false;
+                    size_t endpos = 0;
+                    size_t ret = 0;
+                    auto cb = [&](size_t pos, size_t count, char* buf, size_t fetched) {
+                        for (size_t i = 0; i < fetched; i++) {
+                            if (!cond(buf[i])) {
+                                endpos = pos + count + i;
+                                ret = count + i;
+                                ended = true;
+                                return false;
+                            }
+                        }
+                        return true;
+                    };
+                    while (true) {
+                        auto res = input_rotuine(info_, 100, buf, 50, false, true, cb);
+                        if (ended) {
+                            break;
+                        }
+                    }
+                    seek(endpos);
+                    return ret;
                 }
 
                 bool seek(size_t pos) {

@@ -8,6 +8,7 @@
 
 #include <parser/stream/stream.h>
 #include <vector>
+#include <number/char_range.h>
 namespace st = utils::parser::stream;
 
 struct MockToken {
@@ -45,9 +46,10 @@ struct MockStream {
     const char* tok;
 
     st::Token parse(st::Input& input) {
-        if (!input.consume(tok)) {
+        if (!input.expect(tok)) {
             return st::simpleErrToken{"input.expect(tok) returns false"};
         }
+        input.consume_if([](auto v) { return utils::number::is_alnum(v); });
         return MockToken{tok};
     }
 };
