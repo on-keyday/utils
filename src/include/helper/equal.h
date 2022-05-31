@@ -25,7 +25,8 @@ namespace utils {
         template <class T, class U>
         concept has_equal = requires(T t, U u) {
             {t == u};
-        };
+        }
+        &&(!std::is_pointer_v<std::decay_t<T>> || !std::is_pointer_v<std::decay_t<U>>);
 
         template <class T, class U>
         constexpr bool default_equal(T&& t, U&& u) {

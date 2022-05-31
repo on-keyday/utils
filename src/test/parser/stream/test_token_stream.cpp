@@ -40,6 +40,10 @@ struct MockInput {
         pos_ = pos;
         return true;
     }
+
+    st::InputStat info() {
+        return st::InputStat{.pos = pos_};
+    }
 };
 
 struct MockStream {

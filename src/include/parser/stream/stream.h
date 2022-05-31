@@ -16,6 +16,7 @@
 namespace utils {
     namespace parser {
         namespace stream {
+
             struct Error : iface::Error<iface::Powns, Error> {
                 using iface::Error<iface::Powns, Error>::Error;
             };
@@ -130,7 +131,6 @@ namespace utils {
             };
 
             struct InputStat {
-                bool has_info;
                 size_t pos;
                 size_t remain;
                 bool raw;
@@ -142,8 +142,8 @@ namespace utils {
                private:
                 MAKE_FN(peek, size_t, char*, size_t)
                 MAKE_FN(seek, bool, std::size_t)
+                MAKE_FN(info, InputStat)
                 MAKE_FN_EXISTS(raw, Input, internal::has_raw<T>, {})
-                MAKE_FN_EXISTS(info, InputStat, internal::has_info<T>, {})
                 MAKE_FN_EXISTS(truncate, bool, internal::has_truncate<T>, false)
 
                 static InputStat err_stat() {
@@ -213,10 +213,8 @@ namespace utils {
                         size = ::strlen(p);
                     }
                     const auto info_ = info();
-                    if (info_.has_info) {
-                        if (info_.remain < size) {
-                            return false;
-                        }
+                    if (info_.remain < size) {
+                        return false;
                     }
                     auto cb = [&](size_t pos, size_t count, char* buf, size_t fetched) {
                         return ::strncmp(p + count, buf, fetched) == 0;
@@ -280,6 +278,10 @@ namespace utils {
 
                 Input raw() {
                     DEFAULT_CALL(raw, Input{});
+                }
+
+                size_t pos() {
+                    return info().pos;
                 }
 
                 bool truncate() {
