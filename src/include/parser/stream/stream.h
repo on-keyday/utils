@@ -133,14 +133,25 @@ namespace utils {
             struct InputStat {
                 size_t pos;
                 size_t remain;
+                bool sized;
                 bool raw;
                 bool eos;
                 bool err;
             };
 
+            template <class T>
+            concept consumer_condition_1 = requires(T t) {
+                {t("string", 7, std::declval<size_t*>())};
+            };
+
+            template <class T>
+            concept consumer_condition_2 = requires(T t) {
+                {t("string", 7)};
+            };
+
             struct Input : iface::Ref {
                private:
-                MAKE_FN(peek, size_t, char*, size_t)
+                MAKE_FN(peek, const char*, char*, size_t, size_t*)
                 MAKE_FN(seek, bool, std::size_t)
                 MAKE_FN(info, InputStat)
                 MAKE_FN_EXISTS(raw, Input, internal::has_raw<T>, {})
@@ -161,17 +172,18 @@ namespace utils {
                     while (true) {
                         const size_t remain = size - count;
                         const size_t to_fetch = remain < len ? remain : len;
-                        const size_t fetched = peek(buf, to_fetch);
-                        if (!besteffort && fetched < to_fetch) {
+                        size_t red = 0;
+                        const char* fetched = peek(buf, to_fetch, &red);
+                        if (!fetched || (!besteffort && red < to_fetch)) {
                             seek(info_.pos);
                             return false;
                         }
-                        if (!cb(info_.pos, count, buf, fetched)) {
+                        if (!cb(info_.pos, count, fetched, red)) {
                             seek(info_.pos);
                             return false;
                         }
-                        count += fetched;
-                        if (count >= size || fetched < to_fetch) {
+                        count += red;
+                        if (count >= size || red < to_fetch) {
                             break;
                         }
                         if (!seek(info_.pos + count)) {
@@ -190,15 +202,15 @@ namespace utils {
                 DEFAULT_METHODS(Input)
                 template <class T>
                 Input(T&& t)
-                    : APPLY2_FN(peek, char*, size_t),
+                    : APPLY2_FN(peek, char*, size_t, size_t*),
                       APPLY2_FN(seek, std::size_t),
                       APPLY2_FN(info),
                       APPLY2_FN(raw),
                       APPLY2_FN(truncate),
                       iface::Ref(t) {}
 
-                size_t peek(char* ptr, size_t size) {
-                    DEFAULT_CALL(peek, 0, ptr, size);
+                const char* peek(char* ptr, size_t size, size_t* red) {
+                    DEFAULT_CALL(peek, 0, ptr, size, red);
                 }
 
                 bool consume(const char* p, size_t size = 0, char* tmpbuf = nullptr, size_t bufsize = 0) {
@@ -213,10 +225,10 @@ namespace utils {
                         size = ::strlen(p);
                     }
                     const auto info_ = info();
-                    if (info_.remain < size) {
+                    if (info_.sized && info_.remain < size) {
                         return false;
                     }
-                    auto cb = [&](size_t pos, size_t count, char* buf, size_t fetched) {
+                    auto cb = [&](size_t pos, size_t count, const char* buf, size_t fetched) {
                         return ::strncmp(p + count, buf, fetched) == 0;
                     };
                     if (tmpbuf && bufsize) {
@@ -235,16 +247,26 @@ namespace utils {
                 template <class Cond>
                 size_t consume_if(Cond&& cond) {
                     auto info_ = info();
-                    if (info_.has_info && info_.eos) {
+                    if (info_.eos) {
                         return 0;
                     }
                     char buf[50];
                     bool ended = false;
                     size_t endpos = 0;
                     size_t ret = 0;
-                    auto cb = [&](size_t pos, size_t count, char* buf, size_t fetched) {
+                    auto cb = [&](size_t pos, size_t count, const char* buf, size_t fetched) {
                         for (size_t i = 0; i < fetched; i++) {
-                            if (!cond(buf + i)) {
+                            bool check = false;
+                            if constexpr (consumer_condition_1<Cond>) {
+                                check = cond(buf + i, fetched - i, &i);
+                            }
+                            else if constexpr (consumer_condition_2<Cond>) {
+                                check = cond(buf + i, fetched);
+                            }
+                            else {
+                                check = cond(buf + i);
+                            }
+                            if (!check) {
                                 endpos = pos + count + i;
                                 ret = count + i;
                                 ended = true;

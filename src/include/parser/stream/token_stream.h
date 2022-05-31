@@ -104,6 +104,16 @@ namespace utils {
                     if (count == 0) {
                         return TokenError{expect, pos};
                     }
+                    return SimpleCondToken<Str>{std::move(str), pos, expect};
+                }
+            };
+
+            template <class Str>
+            struct Variable {
+                Token parse(Input& input) {
+                    input.consume_if([&](const char* str) {
+
+                    });
                 }
             };
 

@@ -25,15 +25,9 @@ struct MockInput {
     const char* raw;
     size_t pos_ = 0;
 
-    size_t peek(char* p, size_t size) {
-        size_t i = 0;
-        for (; i < size; i++) {
-            if (raw[pos_ + i] == 0) {
-                break;
-            }
-            p[i] = raw[pos_ + i];
-        }
-        return i;
+    const char* peek(char* p, size_t size, size_t* red) {
+        *red = remain();
+        return raw;
     }
 
     bool seek(std::size_t pos) {
@@ -41,8 +35,12 @@ struct MockInput {
         return true;
     }
 
+    size_t remain() {
+        return ::strlen(raw) - pos_;
+    }
+
     st::InputStat info() {
-        return st::InputStat{.pos = pos_};
+        return st::InputStat{.pos = pos_, .remain = remain()};
     }
 };
 
