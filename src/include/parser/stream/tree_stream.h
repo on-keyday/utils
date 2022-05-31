@@ -104,6 +104,10 @@ namespace utils {
                     return ret;
                 }
             };
+
+            auto make_binary(Stream one, auto&&... o) {
+                return BinaryStream<decltype(expects(o...))>{expects(o...)};
+            }
         }  // namespace stream
     }      // namespace parser
 }  // namespace utils

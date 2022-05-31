@@ -91,6 +91,7 @@ namespace utils {
             struct SimpleConditinStream {
                 const char* expect;
                 Fn fn;
+
                 Token parse(Input& input) {
                     auto pos = input.pos();
                     Str str;
@@ -107,6 +108,11 @@ namespace utils {
                     return SimpleCondToken<Str>{std::move(str), pos, expect};
                 }
             };
+
+            template <class Str, class Fn>
+            SimpleConditinStream<Str, Fn> make_simplecond(const char* expect, Fn fn) {
+                return SimpleConditinStream<Str, Fn>{expect, std::move(fn)};
+            }
 
             struct CharToken {
                 std::uint8_t C;
