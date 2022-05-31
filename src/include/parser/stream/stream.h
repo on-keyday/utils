@@ -12,13 +12,31 @@
 #include "../../iface/error_log.h"
 #include "../../helper/appender.h"
 #include "../../iface/macros.h"
+#include "../../wrap/light/enum.h"
 
 namespace utils {
     namespace parser {
         namespace stream {
 
+            enum class EKind {
+                fatal,
+                recover,
+                retry,
+                wrapped,
+            };
+
+            BEGIN_ENUM_STRING_MSG(EKind, k)
+            ENUM_STRING_MSG(EKind::fatal, "fatal")
+            ENUM_STRING_MSG(EKind::recover, "recover")
+            ENUM_STRING_MSG(EKind::retry, "retry")
+            ENUM_STRING_MSG(EKind::wrapped, "wrapped")
+            END_ENUM_STRING_MSG("")
+
             struct Error : iface::Error<iface::Powns, Error> {
                 using iface::Error<iface::Powns, Error>::Error;
+                bool is(EKind kind) {
+                    return kind_of(k(kind));
+                }
             };
 
             namespace internal {
@@ -39,7 +57,7 @@ namespace utils {
 
                 template <class T, class Stream>
                 concept has_substream = requires(T t) {
-                    {t.substream(Stream{})};
+                    {t.substream(Stream{}, "key")};
                 };
 
                 template <class T>
@@ -148,6 +166,14 @@ namespace utils {
             concept consumer_condition_2 = requires(T t) {
                 {t("string", 7)};
             };
+
+            template <class T>
+            concept consumer_condition_3 = requires(T t) {
+                {t("string")};
+            };
+
+            constexpr auto consumeStop = false;
+            constexpr auto consumeContinue = true;
 
             struct Input : iface::Ref {
                private:
@@ -264,6 +290,7 @@ namespace utils {
                                 check = cond(buf + i, fetched);
                             }
                             else {
+                                static_assert(consumer_condition_3<Cond>, "require condition");
                                 check = cond(buf + i);
                             }
                             if (!check) {
@@ -320,7 +347,7 @@ namespace utils {
                private:
                 template <class T>
                 static constexpr bool has_substream = internal::has_substream<T, Stream>;
-                MAKE_FN_EXISTS(substream, bool, has_substream<T>, false, Stream&&)
+                MAKE_FN_EXISTS(substream, bool, has_substream<T>, false, Stream&&, const char*)
                 MAKE_FN_EXISTS(info, StreamInfo, internal::has_info<T>, {0})
                 MAKE_FN(parse, Token, Input&)
 
@@ -337,15 +364,20 @@ namespace utils {
                       APPLY2_FN(parse, Input&),
                       iface::Powns(std::forward<T>(t)) {}
 
-                bool substream(Stream st) {
-                    DEFAULT_CALL(substream, false, std::move(st));
+                bool substream(Stream st, const char* key) {
+                    DEFAULT_CALL(substream, false, std::move(st), key);
                 }
 
-                StreamInfo info(){
-                    DEFAULT_CALL(info, StreamInfo{})}
+                StreamInfo info() {
+                    DEFAULT_CALL(info, StreamInfo{});
+                }
 
-                Token parse(Input input) {
-                    DEFAULT_CALL(parse, err_token(), input)
+                Token parse(Input&& input) {
+                    DEFAULT_CALL(parse, err_token(), input);
+                }
+
+                Token parse(Input& input) {
+                    DEFAULT_CALL(parse, err_token(), input);
                 }
             };
         }  // namespace stream

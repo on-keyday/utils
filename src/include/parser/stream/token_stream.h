@@ -54,7 +54,7 @@ namespace utils {
                 }
 
                 bool kind_of(const char* str) {
-                    return helper::default_equal(str, "token_err");
+                    return helper::equal(str, "token_err");
                 }
             };
 
@@ -108,12 +108,86 @@ namespace utils {
                 }
             };
 
-            template <class Str>
-            struct Variable {
-                Token parse(Input& input) {
-                    input.consume_if([&](const char* str) {
+            struct CharToken {
+                std::uint8_t C;
+                size_t repeat;
+                size_t pos;
+                const char* expect;
+                void token(PB pb) {
+                    pb.push_back(C);
+                }
 
+                TokenInfo info() {
+                    return TokenInfo{
+                        .kind = expect,
+                        .pos = pos,
+                        .end_child_pos = pos + 1,
+                    };
+                }
+            };
+
+            struct CharError {
+                std::uint8_t C;
+                size_t pos;
+            };
+
+            struct CharStream {
+                std::uint8_t C;
+                Token parse(Input& input) {
+                    size_t pos = input.pos();
+                    auto count = input.consume_if([&](const char* c, size_t s, size_t* index) {
+                        auto res = consumeStop;
+                        while (*index < s && *c == C) {
+                            ++*index;
+                        }
+                        if (*index == s) {
+                            res = consumeContinue;
+                        }
+                        return res;
                     });
+                    if (count == 0) {
+                        return TokenError{};
+                    }
+                }
+            };
+
+            struct RecoverError {
+                Token tok;
+
+                void token(PB) {}
+                TokenInfo info() {
+                    return TokenInfo{.has_err = true};
+                }
+
+                Token child() {
+                    return tok.clone();
+                }
+
+                Error err() {
+                    return std::move(*this);
+                }
+
+                void error(PB) {}
+
+                bool kind_of(const char* str) {
+                    return helper::equal(str, k(EKind::recover)) ||
+                           helper::equal(str, k(EKind::wrapped));
+                }
+
+                Error unwrap() {
+                    return tok.err();
+                }
+            };
+
+            template <class Sub>
+            struct RecoverStream {
+                Sub stream;
+                Token parse(Input& input) {
+                    auto tok = stream.parse(input);
+                    if (has_err(tok)) {
+                        return RecoverError{std::move(tok)};
+                    }
+                    return tok;
                 }
             };
 

@@ -78,6 +78,7 @@ namespace utils {
                   Ref(std::exchange(in.refptr, nullptr)) {}
 
             constexpr Owns& operator=(Owns&& in) {
+                if (&in == this) return *this;
                 this->~Owns();
                 deleter = std::exchange(in.deleter, nullptr);
                 refptr = std::exchange(in.refptr, nullptr);
@@ -139,6 +140,7 @@ namespace utils {
                   Ref(std::exchange(in.refptr, nullptr)) {}
 
             constexpr Aowns& operator=(Aowns&& in) {
+                if (&in == this) return *this;
                 this->~Aowns();
                 deleter = std::exchange(in.deleter, nullptr);
                 refptr = std::exchange(in.refptr, nullptr);
@@ -226,6 +228,7 @@ namespace utils {
                   Ref(std::exchange(in.refptr, nullptr)) {}
 
             constexpr Powns& operator=(Powns&& in) {
+                if (&in == this) return *this;
                 this->~Powns();
                 types = std::exchange(in.types, 0);
                 refptr = std::exchange(in.refptr, nullptr);
