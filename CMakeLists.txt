@@ -114,6 +114,7 @@ add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp"
 add_executable(minilang "src/tool/minilang/minilang.cpp"
                         "src/tool/minilang/minilang_runtime.cpp"
                         "src/tool/minilang/minilang_llvm.cpp"
+                        "src/tool/minilang/minilang_stream.cpp"
                         "src/tool/minilang/main.cpp")
 
 

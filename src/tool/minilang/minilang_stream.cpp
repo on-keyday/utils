@@ -19,4 +19,7 @@ namespace minilang {
         });
         return st::make_binary(num, st::Expect{"+"}, st::Expect{"-"});
     }
+
+    void test_code() {
+    }
 }  // namespace minilang

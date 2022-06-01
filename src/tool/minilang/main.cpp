@@ -23,6 +23,7 @@ enum class OutputFormat {
 };
 
 struct CmdLineOption {
+    bool test_code = false;
     wrap::string input;
     bool dbginfo = false;
     bool help = false;
@@ -33,6 +34,7 @@ struct CmdLineOption {
         ctx.VarString(&output, "output,o", "output file", "FILE", option::CustomFlag::appear_once);
         ctx.VarBool(&dbginfo, "debug-info,d", "show debug info");
         ctx.VarBool(&help, "help,h", "show this help");
+        ctx.VarBool(&test_code, "test,t", "run test code");
         auto parser = option::MappingParser<wrap::string, OutputFormat, wrap::hash_map>{};
         parser.mapping["none"] = OutputFormat::none;
         parser.mapping["llvm"] = OutputFormat::llvm;
@@ -69,6 +71,10 @@ int main(int argc, char** argv) {
     if (auto msg = error_msg(perr)) {
         report(ctx.erropt(), ": ", msg);
         return -1;
+    }
+    if (opt.test_code) {
+        minilang::test_code();
+        return 0;
     }
     minilang::expr::Expr* expr = nullptr;
     utils::file::View view;

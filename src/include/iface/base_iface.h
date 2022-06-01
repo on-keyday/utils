@@ -91,6 +91,13 @@ namespace utils {
             }
         };
 
+        namespace internal {
+            template <class T>
+            concept has_copy = requires(T t) {
+                {t.copy()};
+            };
+        }  // namespace internal
+
         template <class Box>
         struct Copy : Box {
            private:
@@ -98,7 +105,12 @@ namespace utils {
 
             template <class T>
             static Copy copy_fn(void* p) {
-                return *static_cast<T*>(p);
+                if constexpr (internal::has_copy<T>) {
+                    return static_cast<T*>(p)->copy();
+                }
+                else {
+                    return *static_cast<T*>(p);
+                }
             }
 
            public:

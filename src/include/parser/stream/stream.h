@@ -77,12 +77,19 @@ namespace utils {
                 bool has_err;
             };
 
+            namespace internal {
+                template <class T>
+                concept has_err = requires(T t) {
+                    {t.err()};
+                };
+            }  // namespace internal
+
             struct TokenBase : iface::Powns {
                private:
                 using Token = iface::Copy<TokenBase>;
                 MAKE_FN_VOID(token, iface::PushBacker<iface::Ref>)
                 MAKE_FN_EXISTS(info, TokenInfo, internal::has_info<T>, {})
-                MAKE_FN(err, Error)
+                MAKE_FN_EXISTS(err, Error, internal::has_err<T>, {})
                 MAKE_FN_EXISTS(child, Token, internal::has_child<T>, {}, size_t)
 
                public:

@@ -9,7 +9,7 @@
 // token_stream - token stream
 #pragma once
 #include "stream.h"
-#include "equal.h"
+#include "../../helper/equal.h"
 
 namespace utils {
     namespace parser {
@@ -20,6 +20,10 @@ namespace utils {
 
                 void token(PB pb) {
                     helper::append(pb, tok);
+                }
+
+                Error err() {
+                    return {};
                 }
 
                 TokenInfo info() {
@@ -99,7 +103,7 @@ namespace utils {
                         if (!fn(c)) {
                             return false;
                         }
-                        str.push_back(c);
+                        str.push_back(*c);
                         return true;
                     });
                     if (count == 0) {
@@ -154,6 +158,12 @@ namespace utils {
                     if (count == 0) {
                         return TokenError{};
                     }
+                    return CharToken{
+                        .C = C,
+                        .repeat = count,
+                        .pos = pos,
+                        .expect = "char",
+                    };
                 }
             };
 

@@ -12,6 +12,7 @@
 #include <wrap/light/vector.h>
 #include <wrap/light/hash_map.h>
 #include <variant>
+#include <parser/stream/stream.h>
 
 namespace minilang {
     using namespace utils;
@@ -644,5 +645,10 @@ namespace minilang {
             bool dump_cpp_code(Node* node);
             bool dump_llvm(Node* node, Context& ctx);
         };
+
     }  // namespace assembly
+
+    utils::parser::stream::Stream make_stream();
+
+    void test_code();
 }  // namespace minilang
