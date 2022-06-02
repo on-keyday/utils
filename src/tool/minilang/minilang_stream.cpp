@@ -18,12 +18,14 @@ namespace minilang {
         auto num = st::make_simplecond<wrap::string>("number", [](const char* c) {
             return utils::number::is_digit(*c);
         });
+        auto ur = st::make_unary<true>(std::move(num), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
+                                       st::Expect{"*"}, st::Expect{"&"});
         auto ok_eq = [](st::Input& input) { return !input.expect("="); };
         auto ok_div = [](st::Input& input) { return !input.expect("*") && !input.expect("="); };
         auto ok_band = [](st::Input& input) { return !input.expect("&") && !input.expect("="); };
         auto ok_bor = [](st::Input& input) { return !input.expect("|") && !input.expect("="); };
         auto mul = st::make_binary(
-            num, st::ExpectWith{"*", ok_eq}, st::ExpectWith{"/", ok_eq}, st::ExpectWith{"%", ok_div}, st::ExpectWith{"&", ok_band},
+            std::move(ur), st::ExpectWith{"*", ok_eq}, st::ExpectWith{"/", ok_eq}, st::ExpectWith{"%", ok_div}, st::ExpectWith{"&", ok_band},
             st::ExpectWith{">>", ok_eq}, st::ExpectWith{"<<", ok_eq});
         auto add = st::make_binary(
             std::move(mul), st::ExpectWith{"+", ok_eq}, st::ExpectWith{"-", ok_eq},
@@ -33,6 +35,7 @@ namespace minilang {
                                      st::Expect{"<"}, st::Expect{">"});
         auto assign = st::make_assign(std::move(equal), st::Expect{"="}, st::Expect{"+="},
                                       st::Expect{"-="}, st::Expect{"*="}, st::Expect{"/="}, st::Expect{"%="});
+
         return assign;
     }
 

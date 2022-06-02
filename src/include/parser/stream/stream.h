@@ -162,6 +162,9 @@ namespace utils {
                 }
             };
 
+            struct StreamBase;
+            using Stream = iface::Copy<StreamBase>;
+
             struct InputStat {
                 size_t pos;
                 size_t remain;
@@ -170,6 +173,7 @@ namespace utils {
                 bool eos;
                 bool err;
                 void* semantic_context;
+                Stream* triming_stream;
             };
 
             template <class T>
@@ -361,6 +365,10 @@ namespace utils {
             template <class T>
             T* get_semantics(Input& input) {
                 return static_cast<T*>(input.info().semantic_context);
+            }
+
+            inline Stream* get_triminger(Input& input) {
+                return input.info().triming_stream;
             }
 
             struct StreamInfo {
