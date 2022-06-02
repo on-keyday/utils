@@ -96,14 +96,13 @@ namespace utils {
                 }
             };
 
-            template <class Expecter>
+            template <class Expecter, bool rentrant>
             struct BinaryStream {
-                bool reentrant;
                 Stream one;
                 Expecter expect;
 
-                BinaryStream(bool re, Stream&& st, Expecter exp)
-                    : reentrant(re), one(std::move(st)), expect(std::move(exp)) {}
+                BinaryStream(Stream&& st, Expecter exp)
+                    : one(std::move(st)), expect(std::move(exp)) {}
 
                 Token parse(Input& input) {
                     auto ret = one.parse(input);
@@ -114,7 +113,7 @@ namespace utils {
                     size_t pos = input.pos();
                     while (expect(input, expected, pos)) {
                         Token right;
-                        if (reentrant) {
+                        if constexpr (reentrant) {
                             right = parse(input);
                         }
                         else {
@@ -134,7 +133,11 @@ namespace utils {
             };
 
             auto make_binary(Stream one, auto&&... o) {
-                return BinaryStream<decltype(expects(o...))>{false, std::move(one), expects(o...)};
+                return BinaryStream<decltype(expects(o...)), false>{std::move(one), expects(o...)};
+            }
+
+            auto make_assign(Stream one, auto&&... o) {
+                return BinaryStream<decltype(expects(o...)), true>{std::move(one), expects(o...)};
             }
         }  // namespace stream
     }      // namespace parser
