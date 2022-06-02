@@ -70,6 +70,7 @@ namespace utils {
 
             struct TokenInfo {
                 const char* kind;
+                const char* dirtok;
                 size_t pos;
                 size_t len;
                 size_t child;

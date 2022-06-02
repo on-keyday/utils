@@ -14,12 +14,36 @@
 namespace utils {
     namespace parser {
         namespace stream {
+            constexpr auto tokenBinary = "binary";
+
             struct BinaryToken {
                 const char* tok;
                 Token left;
                 Token right;
+                size_t pos;
                 void token(PB pb) {
                     helper::append(pb, tok);
+                }
+
+                TokenInfo info() {
+                    return TokenInfo{
+                        .kind = tokenBinary,
+                        .dirtok = tok,
+                        .pos = pos,
+                        .len = ::strlen(tok),
+                        .child = 2,
+                        .fixed_child = true,
+                    };
+                }
+
+                Token child(size_t i) {
+                    if (i == 0) {
+                        return left.clone();
+                    }
+                    else if (i == 1) {
+                        return right.clone();
+                    }
+                    return {};
                 }
 
                 Token copy() {
@@ -27,6 +51,7 @@ namespace utils {
                         tok,
                         left.clone(),
                         right.clone(),
+                        pos,
                     };
                 }
             };
@@ -139,6 +164,141 @@ namespace utils {
             auto make_assign(Stream one, auto&&... o) {
                 return BinaryStream<decltype(expects(o...)), true>{std::move(one), expects(o...)};
             }
+
+            constexpr auto tokenUnary = "unary";
+
+            struct UnaryToken {
+                const char* tok;
+                Token target;
+                size_t pos;
+                void token(PB pb) {
+                    helper::append(pb, tok);
+                }
+
+                TokenInfo info() {
+                    TokenInfo info{};
+                    info.kind = tokenUnary;
+                    info.dirtok = tok;
+                    info.pos = pos;
+                    info.len = ::strlen(tok);
+                    info.child = 1;
+                    info.fixed_child = true;
+                    return info;
+                }
+
+                Token child(size_t i) {
+                    if (i == 0) {
+                        return target.clone();
+                    }
+                    return {};
+                }
+
+                Token copy() {
+                    return UnaryToken{tok, target.clone(), pos};
+                }
+            };
+
+            template <class Expecter, bool rentrant>
+            struct UnaryStream {
+                Stream one;
+                Expecter expect;
+                Token parse(Input& input) {
+                    const char* expected = nullptr;
+                    size_t pos = 0;
+                    if (expect(input, expected, pos)) {
+                        Token target;
+                        if (rentrant) {
+                            target = parse(input);
+                        }
+                        else {
+                            target = one.parse(input);
+                        }
+                        if (has_err(target)) {
+                            return AfterTokenError{std::move(target), expected, pos};
+                        }
+                        return UnaryToken{expected, std::move(target), pos};
+                    }
+                    return one.parse(input);
+                }
+            };
+
+            struct ExpectCast {
+                const char* expect;
+                bool ok_before(Input&) {
+                    return true;
+                }
+                bool rollback_before;
+
+                Token ok_after(Input&) {
+                    return true;
+                }
+            };
+
+            constexpr auto tokenCast = "cast";
+
+            struct CastToken {
+                Token incast;
+                Token aftertoken;
+                const char* tok;
+                size_t pos;
+
+                void token(PB pb) {
+                    helper::append(pb, tok);
+                }
+
+                TokenInfo info() {
+                    TokenInfo info{};
+                    info.kind = tokenCast;
+                    info.dirtok = tok;
+                    info.pos = pos;
+                    info.len = ::strlen(tok);
+                    info.child = 2;
+                    info.fixed_child = true;
+                    return info;
+                }
+
+                Token chlid(size_t i) {
+                    if (i == 0) {
+                        return incast.clone();
+                    }
+                    if (i == 1) {
+                        return aftertoken.clone();
+                    }
+                    return {};
+                }
+
+                Token copy() {
+                    return CastToken{incast.clone(), aftertoken.clone(), tok, pos};
+                }
+            };
+
+            template <class Expecter>
+            struct CastStream {
+                Stream other;
+                Stream innercast;
+                Expecter expecter;
+                Token parse(Input& input) {
+                    auto pos = input.pos();
+                    if (!input.consume(expecter.expect)) {
+                        return other.parse(input);
+                    }
+                    if (!expecter.ok_before(input)) {
+                        if (expecter.rollback_before) {
+                            input.seek(pos);
+                            return other.parse(input);
+                        }
+                    }
+                    auto incast = innercast.parse(input);
+                    if (has_err(incast)) {
+                        return AfterTokenError{std::move(incast), expecter.expect, pos};
+                    }
+                    auto after = expecter.ok_after(input);
+                    if (has_err(after)) {
+                        return AfterTokenError{std::move(after), expecter.expect, pos};
+                    }
+                    return CastToken{std::move(incast), std::move(after), expecter.expect, pos};
+                }
+            };
         }  // namespace stream
     }      // namespace parser
 }  // namespace utils
