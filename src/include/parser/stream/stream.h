@@ -173,7 +173,7 @@ namespace utils {
                 bool eos;
                 bool err;
                 void* semantic_context;
-                Stream* triming_stream;
+                Stream* trimming_stream;
             };
 
             template <class T>
@@ -367,8 +367,8 @@ namespace utils {
                 return static_cast<T*>(input.info().semantic_context);
             }
 
-            inline Stream* get_triminger(Input& input) {
-                return input.info().triming_stream;
+            inline Stream* get_trimminger(Input& input) {
+                return input.info().trimming_stream;
             }
 
             struct StreamInfo {

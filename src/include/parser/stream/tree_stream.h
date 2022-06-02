@@ -222,7 +222,7 @@ namespace utils {
                     const char* expected = nullptr;
                     size_t pos = 0;
                     Token trimed;
-                    if (auto trim = get_triminger(input)) {
+                    if (auto trim = get_trimminger(input)) {
                         pos = input.pos();
                         trimed = trim->parse(input);
                         if (has_err(trimed)) {
