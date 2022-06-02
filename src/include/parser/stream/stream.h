@@ -11,6 +11,7 @@
 
 #include "../../iface/error_log.h"
 #include "../../helper/appender.h"
+#include "../../helper/equal.h"
 #include "../../iface/macros.h"
 #include "../../wrap/light/enum.h"
 
@@ -94,7 +95,8 @@ namespace utils {
 
                public:
                 DEFAULT_METHODS_MOVE(TokenBase)
-                template <class T>
+                template <class T,
+                          REJECT_SELF(T, TokenBase)>
                 TokenBase(T&& t)
                     : APPLY2_FN(token, iface::PushBacker<iface::Ref>),
                       APPLY2_FN(info),
@@ -133,6 +135,10 @@ namespace utils {
                 return token.info().has_err;
             }
 
+            inline bool is_kind(const Token& token, const char* key) {
+                return helper::equal(token.info().kind, key);
+            }
+
             struct simpleErrToken {
                 const char* msg;
                 constexpr void token(PB pb) const {
@@ -162,6 +168,7 @@ namespace utils {
                 bool raw;
                 bool eos;
                 bool err;
+                void* semantic_context;
             };
 
             template <class T>
@@ -211,7 +218,7 @@ namespace utils {
                             seek(info_.pos);
                             return false;
                         }
-                        if (!cb(info_.pos, count, fetched, red)) {
+                        if (!cb(info_.pos, count, fetched, red, to_fetch)) {
                             seek(info_.pos);
                             return false;
                         }
@@ -261,8 +268,8 @@ namespace utils {
                     if (info_.sized && info_.remain < size) {
                         return false;
                     }
-                    auto cb = [&](size_t pos, size_t count, const char* buf, size_t fetched) {
-                        return ::strncmp(p + count, buf, fetched) == 0;
+                    auto cb = [&](size_t pos, size_t count, const char* buf, size_t fetched, size_t to_fetch) {
+                        return ::strncmp(p + count, buf, to_fetch) == 0;
                     };
                     if (tmpbuf && bufsize) {
                         return input_rotuine(info_, size, tmpbuf, bufsize, consume, false, cb);
@@ -287,7 +294,9 @@ namespace utils {
                     bool ended = false;
                     size_t endpos = 0;
                     size_t ret = 0;
-                    auto cb = [&](size_t pos, size_t count, const char* buf, size_t fetched) {
+                    bool size_limited = false;
+                    auto cb = [&](size_t pos, size_t count, const char* buf, size_t fetched, size_t to_fetch) {
+                        size_limited = false;
                         for (size_t i = 0; i < fetched; i++) {
                             bool check = false;
                             if constexpr (consumer_condition_1<Cond>) {
@@ -307,11 +316,14 @@ namespace utils {
                                 return false;
                             }
                         }
+                        size_limited = true;
+                        endpos = pos + count + fetched;
+                        ret = count + fetched;
                         return true;
                     };
                     while (true) {
                         auto res = input_rotuine(info_, 100, buf, 50, false, true, cb);
-                        if (ended) {
+                        if (ended || size_limited) {
                             break;
                         }
                     }
@@ -344,6 +356,11 @@ namespace utils {
                     DEFAULT_CALL(truncate, false);
                 }
             };
+
+            template <class T>
+            T* get_semantics(Input& input) {
+                return static_cast<T*>(input.info().semantic_context);
+            }
 
             struct StreamInfo {
                 size_t limsub;

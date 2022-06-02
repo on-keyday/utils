@@ -70,10 +70,14 @@ namespace utils {
                 index++;
             }
             char operator[](size_t i) {
-                if (index >= i) {
+                if (index <= i) {
                     return char();
                 }
                 return buf[i];
+            }
+
+            size_t size() {
+                return index;
             }
         };
 

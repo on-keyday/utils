@@ -33,7 +33,11 @@ namespace utils {
     __VA_OPT__(constexpr)               \
     Type(Type&&) = default;             \
     __VA_OPT__(constexpr)               \
-    Type& operator=(Type&&) = default;
+    Type& operator=(Type&&) = default;  \
+    __VA_OPT__(constexpr)               \
+    Type(const Type&) = delete;         \
+    __VA_OPT__(constexpr)               \
+    Type& operator=(const Type&) = delete;
 
 #define MAKE_FN(func_name, retty, ...)                                       \
     retty (*func_name##_ptr)(void* __VA_OPT__(, ) __VA_ARGS__) = nullptr;    \
@@ -70,5 +74,6 @@ namespace utils {
     }
 #define MAKE_FN_EXISTS_VOID(func_name, cond, ...) MAKE_FN_EXISTS(func_name, void, cond, (void)0 __VA_OPT__(, ) __VA_ARGS__)
 
+#define REJECT_SELF(T, This) std::enable_if_t<!std::is_same_v<std::remove_cvref_t<T>, This>, int> = 0
     }  // namespace iface
 }  // namespace utils

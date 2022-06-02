@@ -19,5 +19,6 @@ namespace utils {
 #undef DEFAULT_CALL
 #undef MAKE_FN_EXISTS
 #undef MAKE_FN_EXISTS_VOID
+#undef REJECT_SELF
     }  // namespace iface
 }  // namespace utils

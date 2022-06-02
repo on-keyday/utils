@@ -22,7 +22,7 @@ namespace utils {
                     helper::append(pb, tok);
                 }
 
-                           Token copy() {
+                Token copy() {
                     return BinaryToken{
                         tok,
                         left.clone(),
@@ -37,6 +37,15 @@ namespace utils {
                 bool ok(Input&) const {
                     return true;
                 }
+            };
+
+            template <class Fn>
+            struct ExpectWith {
+                const char* expect;
+                Fn ok;
+
+                constexpr ExpectWith(const char* e, Fn o)
+                    : expect(e), ok(std::move(o)) {}
             };
 
             auto expects(auto... o) {
@@ -89,11 +98,12 @@ namespace utils {
 
             template <class Expecter>
             struct BinaryStream {
+                bool reentrant;
                 Stream one;
                 Expecter expect;
 
-                BinaryStream(Stream&& st, Expecter exp)
-                    : one(std::move(st)), expect(std::move(exp)) {}
+                BinaryStream(bool re, Stream&& st, Expecter exp)
+                    : reentrant(re), one(std::move(st)), expect(std::move(exp)) {}
 
                 Token parse(Input& input) {
                     auto ret = one.parse(input);
@@ -103,9 +113,15 @@ namespace utils {
                     const char* expected = nullptr;
                     size_t pos = input.pos();
                     while (expect(input, expected, pos)) {
-                        auto right = one.parse(input);
+                        Token right;
+                        if (reentrant) {
+                            right = parse(input);
+                        }
+                        else {
+                            right = one.parse(input);
+                        }
                         if (has_err(right)) {
-                            return AfterTokenError{right, expected, pos};
+                            return AfterTokenError{std::move(right), expected, pos};
                         }
                         ret = std::move(BinaryToken{
                             .tok = expected,
@@ -118,7 +134,7 @@ namespace utils {
             };
 
             auto make_binary(Stream one, auto&&... o) {
-                return BinaryStream<decltype(expects(o...))>{std::move(one), expects(o...)};
+                return BinaryStream<decltype(expects(o...))>{false, std::move(one), expects(o...)};
             }
         }  // namespace stream
     }      // namespace parser
