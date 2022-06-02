@@ -368,8 +368,9 @@ namespace utils {
                 size_t cursub;
             };
 
-            struct Stream : iface::Powns {
+            struct StreamBase : iface::Powns {
                private:
+                using Stream = iface::Copy<StreamBase>;
                 template <class T>
                 static constexpr bool has_substream = internal::has_substream<T, Stream>;
                 MAKE_FN_EXISTS(substream, bool, has_substream<T>, false, Stream&&, const char*)
@@ -381,9 +382,9 @@ namespace utils {
                 }
 
                public:
-                DEFAULT_METHODS_MOVE(Stream)
-                template <class T>
-                Stream(T&& t)
+                DEFAULT_METHODS_MOVE(StreamBase)
+                template <class T, REJECT_SELF(T, StreamBase)>
+                StreamBase(T&& t)
                     : APPLY2_FN(substream, Stream &&),
                       APPLY2_FN(info),
                       APPLY2_FN(parse, Input&),
@@ -405,6 +406,8 @@ namespace utils {
                     DEFAULT_CALL(parse, err_token(), input);
                 }
             };
+
+            using Stream = iface::Copy<StreamBase>;
         }  // namespace stream
     }      // namespace parser
 }  // namespace utils

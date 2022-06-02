@@ -126,6 +126,10 @@ namespace utils {
                 Stream one;
                 Expecter expect;
 
+                Stream copy() {
+                    return BinaryStream{one.clone(), expect};
+                }
+
                 BinaryStream(Stream&& st, Expecter exp)
                     : one(std::move(st)), expect(std::move(exp)) {}
 
@@ -138,7 +142,7 @@ namespace utils {
                     size_t pos = input.pos();
                     while (expect(input, expected, pos)) {
                         Token right;
-                        if constexpr (reentrant) {
+                        if constexpr (rentrant) {
                             right = parse(input);
                         }
                         else {
@@ -202,6 +206,14 @@ namespace utils {
             struct UnaryStream {
                 Stream one;
                 Expecter expect;
+
+                Stream copy() {
+                    return UnaryStream<Expecter, rentrant>{one.clone(), expect};
+                }
+
+                UnaryStream(Stream&& o, Expecter e)
+                    : one(std::move(o)), expect(std::move(e)) {}
+
                 Token parse(Input& input) {
                     const char* expected = nullptr;
                     size_t pos = 0;
@@ -222,6 +234,11 @@ namespace utils {
                 }
             };
 
+            template <bool rentrant = false>
+            auto make_unary(Stream target, auto&&... o) {
+                return UnaryStream<decltype(expects(o...)), rentrant>{std::move(target), expects(o...)};
+            }
+
             struct ExpectCast {
                 const char* expect;
                 bool ok_before(Input&) {
@@ -230,7 +247,7 @@ namespace utils {
                 bool rollback_before;
 
                 Token ok_after(Input&) {
-                    return true;
+                    return {};
                 }
             };
 
@@ -277,6 +294,11 @@ namespace utils {
                 Stream other;
                 Stream innercast;
                 Expecter expecter;
+
+                Stream copy() {
+                    return CastStream<Expecter>{other.clone(), innercast.clone(), expecter};
+                }
+
                 Token parse(Input& input) {
                     auto pos = input.pos();
                     if (!input.consume(expecter.expect)) {
@@ -299,6 +321,11 @@ namespace utils {
                     return CastToken{std::move(incast), std::move(after), expecter.expect, pos};
                 }
             };
+
+            template <class Expecter>
+            auto make_cast(Stream other, Stream incast, Expecter expecter) {
+                return CastStream<Expecter>{std::move(other), std::move(incast), expecter};
+            }
         }  // namespace stream
     }      // namespace parser
 }  // namespace utils
