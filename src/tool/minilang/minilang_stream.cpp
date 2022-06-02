@@ -31,8 +31,9 @@ namespace minilang {
         auto equal = st::make_binary(std::move(add),
                                      st::Expect{"=="}, st::Expect{"!="}, st::Expect{">="}, st::Expect{"<="},
                                      st::Expect{"<"}, st::Expect{">"});
-
-        return equal;
+        auto assign = st::make_assign(std::move(equal), st::Expect{"="}, st::Expect{"+="},
+                                      st::Expect{"-="}, st::Expect{"*="}, st::Expect{"/="}, st::Expect{"%="});
+        return assign;
     }
 
     struct MockInput {
