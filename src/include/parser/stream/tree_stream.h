@@ -174,6 +174,7 @@ namespace utils {
             struct UnaryToken {
                 const char* tok;
                 Token target;
+                Token trimed;
                 size_t pos;
                 void token(PB pb) {
                     helper::append(pb, tok);
@@ -185,7 +186,7 @@ namespace utils {
                     info.dirtok = tok;
                     info.pos = pos;
                     info.len = ::strlen(tok);
-                    info.child = 1;
+                    info.child = 2;
                     info.fixed_child = true;
                     return info;
                 }
@@ -194,11 +195,14 @@ namespace utils {
                     if (i == 0) {
                         return target.clone();
                     }
+                    if (i == 1) {
+                        return trimed.clone();
+                    }
                     return {};
                 }
 
                 Token copy() {
-                    return UnaryToken{tok, target.clone(), pos};
+                    return UnaryToken{tok, target.clone(), trimed.clone(), pos};
                 }
             };
 
@@ -217,6 +221,14 @@ namespace utils {
                 Token parse(Input& input) {
                     const char* expected = nullptr;
                     size_t pos = 0;
+                    Token trimed;
+                    if (auto trim = get_triminger(input)) {
+                        pos = input.pos();
+                        trimed = trim->parse(input);
+                        if (has_err(trimed)) {
+                            return trimed;
+                        }
+                    }
                     if (expect(input, expected, pos)) {
                         Token target;
                         if (rentrant) {
@@ -228,7 +240,10 @@ namespace utils {
                         if (has_err(target)) {
                             return AfterTokenError{std::move(target), expected, pos};
                         }
-                        return UnaryToken{expected, std::move(target), pos};
+                        return UnaryToken{expected, std::move(target), std::move(trimed), pos};
+                    }
+                    if (trimed != nullptr) {
+                        input.seek(pos);
                     }
                     return one.parse(input);
                 }
