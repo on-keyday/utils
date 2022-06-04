@@ -125,7 +125,10 @@ namespace utils {
                 }
 
                 Token child(size_t i) const {
-                    DEFAULT_CALL(child, Token{}, i)
+                    DEFAULT_CALL(child, Token{}, i)}
+
+                size_t pos() const {
+                    return info().pos;
                 }
             };
 
@@ -138,6 +141,11 @@ namespace utils {
 
             inline bool is_kind(const Token& token, const char* key) {
                 return helper::equal(token.info().kind, key);
+            }
+
+            template <class T>
+            T* as(Token& tok) {
+                return static_cast<T*>(tok.ptr());
             }
 
             struct simpleErrToken {

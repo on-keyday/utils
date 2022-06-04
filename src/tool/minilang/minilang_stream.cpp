@@ -10,6 +10,7 @@
 #include <parser/stream/tree_stream.h>
 #include <number/char_range.h>
 #include <wrap/cout.h>
+#include <helper/line_pos.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;
@@ -57,7 +58,7 @@ namespace minilang {
         }
 
         st::InputStat info() {
-            st::InputStat stat;
+            st::InputStat stat{};
             stat.eos = len == pos;
             stat.remain = len - pos;
             stat.sized = true;
@@ -67,15 +68,37 @@ namespace minilang {
         }
     };
 
+    static auto& cout = utils::wrap::cout_wrap();
+    template <class T>
+    void walk(st::Token& tok, Sequencer<T>& seq) {
+        cout << tok.stoken() << "\n";
+        wrap::string s;
+        seq.rptr = tok.pos();
+        helper::write_src_loc(s, seq);
+        cout << s << "\n";
+        if (is_kind(tok, st::tokenBinary)) {
+            walk(as<st::BinaryToken>(tok)->left, seq);
+            walk(as<st::BinaryToken>(tok)->right, seq);
+        }
+        else if (is_kind(tok, st::tokenUnary)) {
+            walk(as<st::UnaryToken>(tok)->target, seq);
+        }
+    }
+
     void test_code() {
         auto st = make_stream();
 
         constexpr auto src = "3+5";
         auto tok = st.parse(MockInput{src, 3});
+        if (has_err(tok)) {
+            cout << tok.err().serror();
+        }
+        auto loc = make_ref_seq(src);
+        walk(tok, loc);
         constexpr auto bad = "55+";
         tok = st.parse(MockInput{bad, 3});
         auto uw = tok.err().unwrap();
-        auto& cout = utils::wrap::cout_wrap();
+
         cout << uw.serror();
     }
 }  // namespace minilang

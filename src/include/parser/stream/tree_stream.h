@@ -155,6 +155,7 @@ namespace utils {
                             .tok = expected,
                             .left = std::move(ret),
                             .right = std::move(right),
+                            .pos = pos,
                         });
                     }
                     return ret;

@@ -14,6 +14,8 @@
 namespace utils {
     namespace parser {
         namespace stream {
+            constexpr auto tokenSimple = "simple";
+
             struct SimpleToken {
                 const char* tok;
                 size_t pos;
@@ -28,8 +30,10 @@ namespace utils {
 
                 TokenInfo info() {
                     return TokenInfo{
-                        .kind = tok,
+                        .kind = tokenSimple,
+                        .dirtok = tok,
                         .pos = pos,
+                        .len = ::strlen(tok),
                         .end_child_pos = pos + ::strlen(tok),
                     };
                 }
@@ -73,6 +77,8 @@ namespace utils {
                 }
             };
 
+            constexpr auto tokenSimpleCond = "simple_cond";
+
             template <class Str>
             struct SimpleCondToken {
                 Str tok;
@@ -84,7 +90,7 @@ namespace utils {
 
                 TokenInfo info() {
                     return TokenInfo{
-                        .kind = expected,
+                        .kind = tokenSimpleCond,
                         .pos = pos,
                         .end_child_pos = pos + tok.size(),
                     };
