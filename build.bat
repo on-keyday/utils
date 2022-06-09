@@ -2,6 +2,9 @@
 setlocal
 set CLANG=true
 set BUILD_TYPE=Debug
+set OPENSSL_DIR=%USERPROFILE%\workspace\git\openssl_built\openssl
+set OPENSSL_LINK=%OPENSSL_DIR%\lib
+set OPENSSL_INCLUDE=%OPENSSL_DIR%\include
 rem -D CMAKE_CXX_CLANG_TIDY=clang-tidy;-header-filter=src/include;--checks=-*
 if "%CLANG%"=="true" (
     cmake -D CMAKE_CXX_COMPILER=clang++ -G Ninja -D CMAKE_BUILD_TYPE=%BUILD_TYPE% .
