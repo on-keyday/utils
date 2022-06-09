@@ -175,7 +175,6 @@ namespace utils {
             struct UnaryToken {
                 const char* tok;
                 Token target;
-                Token trimed;
                 size_t pos;
                 void token(PB pb) {
                     helper::append(pb, tok);
@@ -196,14 +195,11 @@ namespace utils {
                     if (i == 0) {
                         return target.clone();
                     }
-                    if (i == 1) {
-                        return trimed.clone();
-                    }
                     return {};
                 }
 
                 Token copy() {
-                    return UnaryToken{tok, target.clone(), trimed.clone(), pos};
+                    return UnaryToken{tok, target.clone(), pos};
                 }
             };
 
@@ -241,7 +237,10 @@ namespace utils {
                         if (has_err(target)) {
                             return AfterTokenError{std::move(target), expected, pos};
                         }
-                        return UnaryToken{expected, std::move(target), std::move(trimed), pos};
+                        if (trimed != nullptr) {
+                            return TrimedToken{UnaryToken{expected, std::move(target), pos}, std::move(trimed), false};
+                        }
+                        return UnaryToken{expected, std::move(target), pos};
                     }
                     if (trimed != nullptr) {
                         input.seek(pos);
