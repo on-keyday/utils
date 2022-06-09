@@ -220,6 +220,8 @@ namespace utils {
                 }
             };
 
+            constexpr auto tokenTrimed = "trimed";
+
             struct TrimedToken {
                 Token tok;
                 Token trim;
@@ -227,7 +229,7 @@ namespace utils {
                 void token(PB pb) {}
                 TokenInfo info() {
                     TokenInfo info{};
-                    info.kind = "trimed";
+                    info.kind = tokenTrimed;
                     if (after) {
                         info.pos = tok.pos();
                     }
@@ -238,9 +240,13 @@ namespace utils {
                     info.child = 2;
                     return info;
                 }
+
+                Token copy() {
+                    return TrimedToken{tok.clone(), trim.clone(), after};
+                }
             };
 
-            template <bool after, class Sub>
+            template <bool after = false, class Sub>
             Token trimming(Sub& other, Input& input) {
                 auto trim = get_trimminger(input);
                 if (!trim) {
@@ -280,11 +286,11 @@ namespace utils {
             struct TrimingStream {
                 Sub other;
                 Token parse(Input& input) {
-                    return trimming(other, input);
+                    return trimming<after>(other, input);
                 }
             };
 
-            template <bool after>
+            template <bool after = false>
             auto make_trimming(auto&& other) {
                 return TrimingStream<after, std::remove_cvref_t<decltype(other)>>{std::move(other)};
             }

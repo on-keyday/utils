@@ -19,7 +19,8 @@ namespace minilang {
         auto num = st::make_simplecond<wrap::string>("integer", [](const char* c) {
             return utils::number::is_digit(*c);
         });
-        auto ur = st::make_unary<true>(std::move(num), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
+        auto trim = st::make_bothtrimming(std::move(num));
+        auto ur = st::make_unary<true>(std::move(trim), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
                                        st::Expect{"*"}, st::Expect{"&"});
         auto ok_eq = [](st::Input& input) { return !input.expect("="); };
         auto ok_div = [](st::Input& input) { return !input.expect("*") && !input.expect("="); };
