@@ -16,7 +16,7 @@ namespace minilang {
     namespace st = utils::parser::stream;
 
     st::Stream make_stream() {
-        auto num = st::make_simplecond<wrap::string>("number", [](const char* c) {
+        auto num = st::make_simplecond<wrap::string>("integer", [](const char* c) {
             return utils::number::is_digit(*c);
         });
         auto ur = st::make_unary<true>(std::move(num), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
@@ -44,6 +44,7 @@ namespace minilang {
         const char* raw;
         size_t len;
         size_t pos;
+        st::Stream trim;
         const char* peek(char*, size_t, size_t* r) {
             *r = len - pos;
             return raw + pos;
@@ -64,6 +65,7 @@ namespace minilang {
             stat.sized = true;
             stat.err = false;
             stat.pos = pos;
+            stat.trimming_stream = &trim;
             return stat;
         }
     };
@@ -87,16 +89,21 @@ namespace minilang {
 
     void test_code() {
         auto st = make_stream();
-
+        MockInput mock{};
+        mock.trim = st::make_char(' ');
         constexpr auto src = "3+5";
-        auto tok = st.parse(MockInput{src, 3});
+        mock.raw = src;
+        mock.len = 3;
+        auto tok = st.parse(mock);
         if (has_err(tok)) {
             cout << tok.err().serror();
         }
         auto loc = make_ref_seq(src);
         walk(tok, loc);
         constexpr auto bad = "55+";
-        tok = st.parse(MockInput{bad, 3});
+        mock.raw = bad;
+        mock.len = 3;
+        tok = st.parse(mock);
         auto uw = tok.err().unwrap();
 
         cout << uw.serror();
