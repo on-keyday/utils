@@ -99,6 +99,7 @@ add_executable(base_iface "src/test/iface/test_base_iface.cpp")
 add_executable(guessurl "src/test/net/test_guessurl.cpp")
 add_executable(container_iface "src/test/iface/test_container.cpp")
 add_executable(token_stream "src/test/parser/stream/test_token_stream.cpp")
+add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"

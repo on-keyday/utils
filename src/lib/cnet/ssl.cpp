@@ -35,8 +35,6 @@ namespace utils {
 
 #define TLSLOG(ctx, record, msg, code) record.log(logobj{__FILE__, __LINE__, "tls", msg, ctx, (std::int64_t)code})
 
-            template <class Char>
-            using Host = number::Array<254, Char, true>;
             struct OpenSSLContext {
                 ::SSL* ssl;
                 ::SSL_CTX* sslctx;

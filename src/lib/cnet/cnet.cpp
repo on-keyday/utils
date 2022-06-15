@@ -164,35 +164,17 @@ namespace utils {
                     return result;
             };
             auto write_impl = [&](Buffer<const char>* buf) -> Error {
-                auto with_make_buf = [&](auto&& cb, bool cond) -> Error {
-                    if (cond) {
-                        MadeBuffer mbuf{0};
-                        if (!ctx->proto.make_data(ctx, ctx->user, &mbuf, buf)) {
-                            return consterror{"failed to make"};
-                        }
-                        Buffer<const char> pbuf;
-                        pbuf.ptr = mbuf.buf.ptr;
-                        pbuf.size = mbuf.buf.size;
-                        pbuf.proced = 0;
-                        if (cb(&pbuf)) {
-                            buf->proced = mbuf.buf.proced;
-                            return nil();
-                        }
-                        return consterror{"faild callback"};
-                    }
-                    else {
-                        return cb(buf);
-                    }
+                auto with_make_buf = [&](auto&& cb) -> Error {
+                    return cb(buf);
                 };
                 if (ctx->proto.write) {
-                    return with_make_buf(write_buf, any(ctx->flag & CNetFlag::must_make_data) && ctx->proto.make_data);
+                    return with_make_buf(write_buf);
                 }
                 else if (ctx->next) {
                     return with_make_buf(
                         [&](Buffer<const char>* buf) {
                             return write(stop, ctx->next, buf->ptr, buf->size, &buf->proced);
-                        },
-                        ctx->proto.make_data);
+                        });
                 }
                 return consterror{"failed to write buffer"};
             };

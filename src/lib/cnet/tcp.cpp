@@ -21,10 +21,6 @@
 namespace utils {
     namespace cnet {
         namespace tcp {
-            template <class Char>
-            using Host = number::Array<254, Char, true>;
-            template <class Char>
-            using Port = number::Array<10, Char, true>;
 
             enum class Flag {
                 none,

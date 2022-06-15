@@ -24,23 +24,23 @@ namespace utils {
             template <class T>
             concept array_interface = requires(T t) {
                 {t.size()};
-                {t[0]};
+                {t[size_t(0)]};
             };
 
             template <class T>
             concept map_interface = requires(T t) {
-                {get<0>(t.begin())};
+                {get<1>(*t.begin())};
                 {t.end()};
             };
 
             template <class T, class JSON>
-            concept to_json_adl = requires(T t, JSON js) {
-                {to_json(t, js)};
+            concept to_json_adl = requires(T t, JSON j) {
+                {to_json(t, j)};
             };
 
             template <class T, class JSON>
-            concept to_json_method = requires(T t, JSON js) {
-                {t.to_json(js)};
+            concept to_json_method = requires(T t, JSON j) {
+                {t.to_json(j)};
             };
 
             template <class T>
@@ -71,7 +71,7 @@ namespace utils {
                 std::is_same_v<T, const char*>;
 
             template <class T>
-            concept bas_json_type = false;
+            constexpr auto bad_json_type = false;
 
             template <class T, class JSON>
             bool dispatch_to_json(T&& t, JSON& js) {
@@ -97,7 +97,7 @@ namespace utils {
                                    std::is_same_v<T_cv, typename json_t::object_t> ||
                                    std::is_same_v<T_cv, typename json_t::vec_t> ||
                                    std::is_same_v<T_cv, std::nullptr_t> ||
-                                   primitive<T>) {
+                                   primitive<T_>) {
                     js = t;
                     return true;
                 }
@@ -130,7 +130,7 @@ namespace utils {
                     return true;
                 }
                 else {
-                    static_assert(bas_json_type<T>, "json type dispatch failed at this type");
+                    static_assert(to_json_adl<T, JSON> || to_json_method<T, JSON>, "json type dispatch failed at this type");
                 }
             }
 

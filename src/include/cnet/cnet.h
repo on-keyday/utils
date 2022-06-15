@@ -9,10 +9,11 @@
 // cnet - c language style network function
 #pragma once
 #include "../platform/windows/dllexport_header.h"
-#include "../wrap/light/enum.h"
-#include "../helper/equal.h"
-#include "../iface/error_log.h"
+#include <wrap/light/enum.h>
+#include <helper/equal.h>
+#include <iface/error_log.h>
 #include <helper/appender.h>
+#include <number/array.h>
 
 namespace utils {
     namespace cnet {
@@ -112,7 +113,6 @@ namespace utils {
             Error (*initialize)(Stopper stop, CNet* ctx, void* user);
             Error (*write)(Stopper stop, CNet* ctx, void* user, Buffer<const char>* buf);
             Error (*read)(Stopper stop, CNet* ctx, void* user, Buffer<char>* buf);
-            bool (*make_data)(CNet* ctx, void* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(Stopper stop, CNet* ctx, void* user);
 
             bool (*settings_number)(CNet* ctx, void* user, std::int64_t key, std::int64_t value);
@@ -128,7 +128,6 @@ namespace utils {
             Error (*initialize)(Stopper stop, CNet* ctx, T* user);
             Error (*write)(Stopper stop, CNet* ctx, T* user, Buffer<const char>* buf);
             Error (*read)(Stopper stop, CNet* ctx, T* user, Buffer<char>* buf);
-            bool (*make_data)(CNet* ctx, T* user, MadeBuffer* buf, Buffer<const char>* input);
             void (*uninitialize)(Stopper stop, CNet* ctx, T* user);
 
             bool (*settings_number)(CNet* ctx, T* user, std::int64_t key, std::int64_t value);
@@ -245,6 +244,11 @@ namespace utils {
         inline bool protocol_is(CNet* ctx, const char* required) {
             return helper::equal(get_protocol_name(ctx), required);
         }
+
+        template <class Char>
+        using Host = number::Array<254, Char, true>;
+        template <class Char>
+        using Port = number::Array<10, Char, true>;
 
     }  // namespace cnet
 }  // namespace utils

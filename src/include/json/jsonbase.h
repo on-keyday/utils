@@ -86,8 +86,13 @@ namespace utils {
                 : obj(s) {}
             JSONBase(String&& s)
                 : obj(std::move(s)) {}
-            JSONBase(const char_t* p)
-                : obj(String(p)) {}
+            JSONBase(const char_t* p) {
+                if (!p) {
+                    obj = nullptr;
+                    return;
+                }
+                obj = p;
+            }
             JSONBase(const object_t& o)
                 : obj(o) {}
             JSONBase(object_t&& o)
