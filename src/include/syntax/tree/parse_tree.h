@@ -10,7 +10,7 @@
 #pragma once
 #include "../matching/context.h"
 #include "../matching/state.h"
-#include "../../helper/equal.h"
+#include <helper/equal.h>
 #include "../../helper/strutil.h"
 
 #include "../../wrap/light/string.h"

@@ -14,7 +14,7 @@
 #include "../../helper/pushbacker.h"
 #include "../../number/parse.h"
 #include "../../helper/appender.h"
-#include "../../helper/equal.h"
+#include <helper/equal.h>
 
 namespace utils {
     namespace net {

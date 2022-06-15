@@ -10,7 +10,7 @@
 #pragma once
 
 #include "simple_parse.h"
-#include "../../helper/equal.h"
+#include <helper/equal.h>
 #include "interface.h"
 #include "simple_parse.h"
 

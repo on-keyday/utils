@@ -12,7 +12,7 @@
 #include <wrap/light/vector.h>
 #include <wrap/light/hash_map.h>
 #include <variant>
-#include <parser/stream/stream.h>
+#include <stream/stream.h>
 
 namespace minilang {
     using namespace utils;

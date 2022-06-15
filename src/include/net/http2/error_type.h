@@ -8,7 +8,7 @@
 
 // error_type - http2 error definiton
 #pragma once
-#include "../../wrap/light/enum.h"
+#include <wrap/light/enum.h>
 #include "../../helper/appender.h"
 
 namespace utils {

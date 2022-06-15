@@ -6,19 +6,21 @@
 */
 
 #include "minilang.h"
-#include <parser/stream/token_stream.h>
-#include <parser/stream/tree_stream.h>
+#include <stream/token_stream.h>
+#include <stream/tree_stream.h>
 #include <number/char_range.h>
 #include <wrap/cout.h>
+#include <helper/line_pos.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;
 
     st::Stream make_stream() {
-        auto num = st::make_simplecond<wrap::string>("number", [](const char* c) {
+        auto num = st::make_simplecond<wrap::string>("integer", [](const char* c) {
             return utils::number::is_digit(*c);
         });
-        auto ur = st::make_unary<true>(std::move(num), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
+        auto trim = st::make_bothtrimming(std::move(num));
+        auto ur = st::make_unary<true>(std::move(trim), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
                                        st::Expect{"*"}, st::Expect{"&"});
         auto ok_eq = [](st::Input& input) { return !input.expect("="); };
         auto ok_div = [](st::Input& input) { return !input.expect("*") && !input.expect("="); };
@@ -43,6 +45,8 @@ namespace minilang {
         const char* raw;
         size_t len;
         size_t pos;
+        st::Stream trim;
+
         const char* peek(char*, size_t, size_t* r) {
             *r = len - pos;
             return raw + pos;
@@ -57,25 +61,53 @@ namespace minilang {
         }
 
         st::InputStat info() {
-            st::InputStat stat;
+            st::InputStat stat{};
             stat.eos = len == pos;
             stat.remain = len - pos;
             stat.sized = true;
             stat.err = false;
-            stat.pos = pos;
+            stat.trimming_stream = &trim;
+
             return stat;
         }
     };
 
+    static auto& cout = utils::wrap::cout_wrap();
+    template <class T>
+    void walk(st::Token& tok, Sequencer<T>& seq) {
+        cout << tok.stoken() << "\n";
+        wrap::string s;
+        seq.rptr = tok.pos();
+        helper::write_src_loc(s, seq);
+        cout << s << "\n";
+        if (is_kind(tok, st::tokenBinary)) {
+            walk(as<st::BinaryToken>(tok)->left, seq);
+            walk(as<st::BinaryToken>(tok)->right, seq);
+        }
+        else if (is_kind(tok, st::tokenUnary)) {
+            walk(as<st::UnaryToken>(tok)->target, seq);
+        }
+    }
+
     void test_code() {
         auto st = make_stream();
-
+        MockInput mock{};
+        mock.trim = st::make_char(' ');
         constexpr auto src = "3+5";
-        auto tok = st.parse(MockInput{src, 3});
+        mock.raw = src;
+        mock.len = 3;
+        auto tok = st.parse(mock);
+        if (has_err(tok)) {
+            cout << tok.err().serror();
+        }
+        auto loc = make_ref_seq(src);
+        walk(tok, loc);
         constexpr auto bad = "55+";
-        tok = st.parse(MockInput{bad, 3});
+        mock.raw = bad;
+        mock.len = 3;
+        tok = st.parse(mock);
         auto uw = tok.err().unwrap();
-        auto& cout = utils::wrap::cout_wrap();
+
         cout << uw.serror();
     }
 }  // namespace minilang

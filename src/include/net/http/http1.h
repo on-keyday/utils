@@ -11,7 +11,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/light/smart_ptr.h"
 #include "../generate/iocloser.h"
-#include "../../wrap/light/enum.h"
+#include <wrap/light/enum.h>
 
 namespace utils {
     namespace net {

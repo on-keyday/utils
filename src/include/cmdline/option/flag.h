@@ -9,8 +9,8 @@
 // flag - parse flag
 #pragma once
 
-#include "../../wrap/light/enum.h"
-#include "../../helper/equal.h"
+#include <wrap/light/enum.h>
+#include <helper/equal.h>
 #include "../../helper/strutil.h"
 #include "../../helper/appender.h"
 

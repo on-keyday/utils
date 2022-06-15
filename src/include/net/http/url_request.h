@@ -11,7 +11,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "http1.h"
 #include "../../net_util/uri.h"
-#include "../../wrap/light/enum.h"
+#include <wrap/light/enum.h>
 
 namespace utils {
     namespace net {

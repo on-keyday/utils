@@ -12,7 +12,7 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "../../async/worker.h"
 #include "../dns/dns.h"
-#include "../../wrap/light/enum.h"
+#include <wrap/light/enum.h>
 
 namespace utils {
     namespace net {

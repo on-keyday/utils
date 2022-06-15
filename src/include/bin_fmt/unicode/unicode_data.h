@@ -13,7 +13,7 @@
 #include "../../wrap/light/string.h"
 #include "../../number/to_string.h"
 #include "../../number/parse.h"
-#include "../../wrap/light/enum.h"
+#include <wrap/light/enum.h>
 #include "../../wrap/light/vector.h"
 #include "../../wrap/light/map.h"
 

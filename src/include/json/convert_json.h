@@ -21,6 +21,119 @@ namespace utils {
 
         namespace internal {
 
+            template <class T>
+            concept array_interface = requires(T t) {
+                {t.size()};
+                {t[0]};
+            };
+
+            template <class T>
+            concept map_interface = requires(T t) {
+                {get<0>(t.begin())};
+                {t.end()};
+            };
+
+            template <class T, class JSON>
+            concept to_json_adl = requires(T t, JSON js) {
+                {to_json(t, js)};
+            };
+
+            template <class T, class JSON>
+            concept to_json_method = requires(T t, JSON js) {
+                {t.to_json(js)};
+            };
+
+            template <class T>
+            concept derefable = requires(T t) {
+                {*t};
+                {!t};
+            };
+
+            template <class JSON>
+            struct is_json_t {
+                using base_t = void;
+                using string_t = void;
+                using vec_t = void;
+                using object_t = void;
+            };
+
+            template <class String, template <class...> class Vec, template <class...> class Object>
+            struct is_json_t<JSONBase<String, Vec, Object>> {
+                using base_t = JSONBase<String, Vec, Object>;
+                using string_t = String;
+                using vec_t = Vec<base_t>;
+                using object_t = Object<String, base_t>;
+            };
+
+            template <class T>
+            concept primitive =
+                std::is_arithmetic_v<T> ||
+                std::is_same_v<T, const char*>;
+
+            template <class T>
+            concept bas_json_type = false;
+
+            template <class T, class JSON>
+            bool dispatch_to_json(T&& t, JSON& js) {
+                using T_ = std::remove_reference_t<T>;
+                using T_cv = std::remove_cvref_t<T>;
+                using json_t = is_json_t<JSON>;
+                if constexpr (to_json_method<T, JSON>) {
+                    return t.to_json(js);
+                }
+                else if constexpr (to_json_adl<T, JSON>) {
+                    return to_json(t, js);
+                }
+                else if constexpr (std::is_same_v<T_cv, void*>) {
+                    if (!t) {
+                        js = nullptr;
+                        return true;
+                    }
+                    js = std::uintptr_t(t);
+                    return true;
+                }
+                else if constexpr (std::is_same_v<T_cv, typename json_t::base_t> ||
+                                   std::is_same_v<T_cv, typename json_t::string_t> ||
+                                   std::is_same_v<T_cv, typename json_t::object_t> ||
+                                   std::is_same_v<T_cv, typename json_t::vec_t> ||
+                                   std::is_same_v<T_cv, std::nullptr_t> ||
+                                   primitive<T>) {
+                    js = t;
+                    return true;
+                }
+                else if constexpr (derefable<T_>) {
+                    if (!t) {
+                        js = nullptr;
+                        return true;
+                    }
+                    return dispatch_to_json(*t, js);
+                }
+                else if constexpr (map_interface<T>) {
+                    js.init_obj();
+                    for (auto&& v : t) {
+                        if (!dispatch_to_json(get<1>(v), js[get<0>(v)])) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+                else if constexpr (array_interface<T>) {
+                    js.init_array();
+                    for (size_t i = 0; i < t.size(); i++) {
+                        JSON arg;
+                        auto&& target = t[i];
+                        if (!dispatch_to_json(target, arg)) {
+                            return false;
+                        }
+                        js.push_back(std::move(arg));
+                    }
+                    return true;
+                }
+                else {
+                    static_assert(bas_json_type<T>, "json type dispatch failed at this type");
+                }
+            }
+
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct ToJSONHelper {
                 using JSON = JSONBase<String, Vec, Object>;

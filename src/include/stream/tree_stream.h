@@ -9,7 +9,7 @@
 // tree_stream - tree stream
 #pragma once
 #include "stream.h"
-#include "../../helper/equal.h"
+#include <helper/equal.h>
 
 namespace utils {
     namespace parser {
@@ -121,16 +121,17 @@ namespace utils {
                 }
             };
 
-            template <class Expecter, bool rentrant>
+            template <class Sub, class Expecter, bool rentrant>
             struct BinaryStream {
-                Stream one;
+                Sub one;
                 Expecter expect;
 
                 Stream copy() {
-                    return BinaryStream{one.clone(), expect};
+                    auto cpy = one;
+                    return BinaryStream<Sub, Expecter, rentrant>{std::move(cpy), expect};
                 }
 
-                BinaryStream(Stream&& st, Expecter exp)
+                BinaryStream(Sub&& st, Expecter exp)
                     : one(std::move(st)), expect(std::move(exp)) {}
 
                 Token parse(Input& input) {
@@ -155,18 +156,22 @@ namespace utils {
                             .tok = expected,
                             .left = std::move(ret),
                             .right = std::move(right),
+                            .pos = pos,
+
                         });
                     }
                     return ret;
                 }
             };
 
-            auto make_binary(Stream one, auto&&... o) {
-                return BinaryStream<decltype(expects(o...)), false>{std::move(one), expects(o...)};
+            template <class Sub>
+            auto make_binary(Sub one, auto&&... o) {
+                return BinaryStream<Sub, decltype(expects(o...)), false>{std::move(one), expects(o...)};
             }
 
-            auto make_assign(Stream one, auto&&... o) {
-                return BinaryStream<decltype(expects(o...)), true>{std::move(one), expects(o...)};
+            template <class Sub>
+            auto make_assign(Sub one, auto&&... o) {
+                return BinaryStream<Sub, decltype(expects(o...)), true>{std::move(one), expects(o...)};
             }
 
             constexpr auto tokenUnary = "unary";
@@ -174,7 +179,6 @@ namespace utils {
             struct UnaryToken {
                 const char* tok;
                 Token target;
-                Token trimed;
                 size_t pos;
                 void token(PB pb) {
                     helper::append(pb, tok);
@@ -195,27 +199,25 @@ namespace utils {
                     if (i == 0) {
                         return target.clone();
                     }
-                    if (i == 1) {
-                        return trimed.clone();
-                    }
                     return {};
                 }
 
                 Token copy() {
-                    return UnaryToken{tok, target.clone(), trimed.clone(), pos};
+                    return UnaryToken{tok, target.clone(), pos};
                 }
             };
 
-            template <class Expecter, bool rentrant>
+            template <class Sub, class Expecter, bool rentrant>
             struct UnaryStream {
-                Stream one;
+                Sub one;
                 Expecter expect;
 
                 Stream copy() {
-                    return UnaryStream<Expecter, rentrant>{one.clone(), expect};
+                    auto cpy = one;
+                    return UnaryStream<Sub, Expecter, rentrant>{std::move(cpy), expect};
                 }
 
-                UnaryStream(Stream&& o, Expecter e)
+                UnaryStream(Sub&& o, Expecter e)
                     : one(std::move(o)), expect(std::move(e)) {}
 
                 Token parse(Input& input) {
@@ -240,7 +242,9 @@ namespace utils {
                         if (has_err(target)) {
                             return AfterTokenError{std::move(target), expected, pos};
                         }
-                        return UnaryToken{expected, std::move(target), std::move(trimed), pos};
+                        if (trimed != nullptr) {
+                            return TrimedToken{UnaryToken{expected, std::move(target), pos}, std::move(trimed), false};
+                        }
                     }
                     if (trimed != nullptr) {
                         input.seek(pos);
@@ -249,9 +253,9 @@ namespace utils {
                 }
             };
 
-            template <bool rentrant = false>
-            auto make_unary(Stream target, auto&&... o) {
-                return UnaryStream<decltype(expects(o...)), rentrant>{std::move(target), expects(o...)};
+            template <bool rentrant = false, class Sub>
+            auto make_unary(Sub target, auto&&... o) {
+                return UnaryStream<Sub, decltype(expects(o...)), rentrant>{std::move(target), expects(o...)};
             }
 
             struct ExpectCast {

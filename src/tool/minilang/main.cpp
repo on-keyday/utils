@@ -68,13 +68,13 @@ int main(int argc, char** argv) {
         cout << ctx.Usage<wrap::string>(option::ParseFlag::assignable_mode, argv[0]);
         return 1;
     }
+    if (perfect_parsed(perr) && opt.test_code) {
+        minilang::test_code();
+        return 0;
+    }
     if (auto msg = error_msg(perr)) {
         report(ctx.erropt(), ": ", msg);
         return -1;
-    }
-    if (opt.test_code) {
-        minilang::test_code();
-        return 0;
     }
     minilang::expr::Expr* expr = nullptr;
     utils::file::View view;

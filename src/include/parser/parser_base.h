@@ -12,7 +12,7 @@
 #include "../core/sequencer.h"
 #include "token.h"
 #include "ifaces.h"
-#include "../helper/appender.h"
+#include <helper/appender.h>
 #include "../utf/convert.h"
 
 namespace utils {

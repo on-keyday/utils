@@ -9,7 +9,7 @@
 // native_context - low level execution context
 #pragma once
 #include "../../platform/windows/dllexport_header.h"
-#include "../../wrap/light/enum.h"
+#include <wrap/light/enum.h>
 namespace utils {
     namespace async {
         namespace light {

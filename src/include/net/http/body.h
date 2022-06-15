@@ -13,7 +13,7 @@
 #include "../core/iodef.h"
 #include "../../helper/readutil.h"
 #include "../../number/parse.h"
-#include "../../helper/equal.h"
+#include <helper/equal.h>
 
 namespace utils {
     namespace net {

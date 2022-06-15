@@ -9,11 +9,14 @@
 // token_stream - token stream
 #pragma once
 #include "stream.h"
-#include "../../helper/equal.h"
+#include <helper/equal.h>
 
 namespace utils {
     namespace parser {
         namespace stream {
+
+            constexpr auto tokenSimple = "simple";
+
             struct SimpleToken {
                 const char* tok;
                 size_t pos;
@@ -28,8 +31,10 @@ namespace utils {
 
                 TokenInfo info() {
                     return TokenInfo{
-                        .kind = tok,
+                        .kind = tokenSimple,
+                        .dirtok = tok,
                         .pos = pos,
+                        .len = ::strlen(tok),
                         .end_child_pos = pos + ::strlen(tok),
                     };
                 }
@@ -73,6 +78,8 @@ namespace utils {
                 }
             };
 
+            constexpr auto tokenSimpleCond = "simple_cond";
+
             template <class Str>
             struct SimpleCondToken {
                 Str tok;
@@ -84,7 +91,8 @@ namespace utils {
 
                 TokenInfo info() {
                     return TokenInfo{
-                        .kind = expected,
+                        .kind = tokenSimpleCond,
+                        .dirtok = tok.c_str(),
                         .pos = pos,
                         .end_child_pos = pos + tok.size(),
                     };
@@ -143,6 +151,8 @@ namespace utils {
 
             struct CharStream {
                 std::uint8_t C;
+                bool zero_is_not_error;
+
                 Token parse(Input& input) {
                     size_t pos = input.pos();
                     auto count = input.consume_if([&](const char* c, size_t s, size_t* index) {
@@ -156,7 +166,7 @@ namespace utils {
                         return res;
                     });
                     if (count == 0) {
-                        return TokenError{};
+                        return TokenError{"char", pos};
                     }
                     return CharToken{
                         .C = C,
@@ -167,6 +177,10 @@ namespace utils {
                 }
             };
 
+            CharStream make_char(std::uint8_t c, bool zero_is_not_error = false) {
+                return CharStream{c, zero_is_not_error};
+            }
+
             struct RecoverError {
                 Token tok;
 
@@ -175,8 +189,11 @@ namespace utils {
                     return TokenInfo{.has_err = true};
                 }
 
-                Token child() {
-                    return tok.clone();
+                Token child(size_t i) {
+                    if (i == 0) {
+                        return tok.clone();
+                    }
+                    return {};
                 }
 
                 Error err() {
@@ -206,6 +223,85 @@ namespace utils {
                     return tok;
                 }
             };
+
+            constexpr auto tokenTrimed = "trimed";
+
+            struct TrimedToken {
+                Token tok;
+                Token trim;
+                bool after;
+                void token(PB pb) {}
+                TokenInfo info() {
+                    TokenInfo info{};
+                    info.kind = tokenTrimed;
+                    if (after) {
+                        info.pos = tok.pos();
+                    }
+                    else {
+                        info.pos = trim.pos();
+                    }
+                    info.fixed_child = true;
+                    info.child = 2;
+                    return info;
+                }
+
+                Token copy() {
+                    return TrimedToken{tok.clone(), trim.clone(), after};
+                }
+            };
+
+            template <bool after = false, class Sub>
+            Token trimming(Sub& other, Input& input) {
+                auto trim = get_trimminger(input);
+                if (!trim) {
+                    return other.parse(input);
+                }
+                if constexpr (!after) {
+                    auto trimed = trim->parse(input);
+                    if (has_err(trimed)) {
+                        return trimed;
+                    }
+                    auto tok = other.parse(input);
+                    if (has_err(tok)) {
+                        return tok;
+                    }
+                    if (trimed == nullptr) {
+                        return tok;
+                    }
+                    return TrimedToken{std::move(tok), std::move(trimed), false};
+                }
+                else {
+                    auto tok = other.parse(input);
+                    if (has_err(tok)) {
+                        return tok;
+                    }
+                    auto trimed = trim->parse(input);
+                    if (has_err(trimed)) {
+                        return trimed;
+                    }
+                    if (trimed == nullptr) {
+                        return tok;
+                    }
+                    return TrimedToken{std::move(tok), std::move(trimed), true};
+                }
+            }
+
+            template <bool after, class Sub>
+            struct TrimingStream {
+                Sub other;
+                Token parse(Input& input) {
+                    return trimming<after>(other, input);
+                }
+            };
+
+            template <bool after = false>
+            auto make_trimming(auto&& other) {
+                return TrimingStream<after, std::remove_cvref_t<decltype(other)>>{std::move(other)};
+            }
+
+            auto make_bothtrimming(auto&& other) {
+                return make_trimming<false>(make_trimming<true>(std::move(other)));
+            }
 
         }  // namespace stream
     }      // namespace parser
