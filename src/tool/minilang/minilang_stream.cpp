@@ -113,19 +113,22 @@ namespace minilang {
         cout << uw.serror();
         st = st::make_utf<wrap::string>(
             "identifier",
-            st::FnChecker{
-                [](char32_t c, size_t i) {
+            st::RecPrevChecker{
+                [](char32_t c, size_t i, char32_t prev) {
                     if (i == 0) {
-                        return c == '?';
+                        return c == U'定';
                     }
                     else {
-                        return c != '?';
+                        return prev != U'義';
                     }
                 }});
-        constexpr auto utftest = u8"?tell 咄家";
+        constexpr auto utftest = u8"定tell義 型string名 ";
         mock.raw = (const char*)utftest;
-        mock.len = 12;
+        mock.len = 24;
+        mock.pos = 0;
         tok = st.parse(mock);
         assert(!has_err(tok));
+        auto seq = make_ref_seq(utftest);
+        walk(tok, seq);
     }
 }  // namespace minilang

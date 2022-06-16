@@ -120,7 +120,7 @@ namespace utils {
                         }
                         utf8 = {};
                         for (auto i = 0; i < len; i++) {
-                            utf8.push_back(seq.current(-(i + 1)));
+                            utf8.push_back(seq.current(-len + i));
                         }
                         if (should_stop(c, utf8.c_str(), utf8.size())) {
                             input.offset_seek(seq.rptr);
@@ -132,11 +132,40 @@ namespace utils {
                 }
             }
 
+            struct UTFStat {
+                char32_t C;
+                size_t index;
+                const std::uint8_t* utf8;
+                size_t len;
+                size_t actual_offset;
+                InputStat input;
+            };
+
             template <class Fn>
-            struct FnChecker {
-                Fn ok;
-                FnChecker(Fn&& f)
-                    : ok(std::move(f)) {}
+            struct SingleChecker {
+                Fn fn;
+                SingleChecker(Fn&& f)
+                    : fn(std::move(f)) {}
+
+                bool ok(UTFStat* stat) {
+                    return fn(stat->C, stat->index);
+                }
+            };
+
+            template <class Fn>
+            struct RecPrevChecker {
+                char32_t rec;
+                Fn fn;
+                RecPrevChecker(Fn&& f)
+                    : fn(std::move(f)) {}
+                bool ok(UTFStat* stat) {
+                    if (stat->index == 0) {
+                        rec = 0;
+                    }
+                    auto res = fn(stat->C, stat->index, rec);
+                    rec = stat->C;
+                    return res;
+                }
             };
 
             template <class String, class Checker>
@@ -147,11 +176,25 @@ namespace utils {
                     Token err;
                     String str;
                     auto pos = input.pos();
+                    auto offset_base = pos;
+                    size_t offset = 0;
                     size_t index = 0;
                     auto ok = read_utf_string(input, &err, [&](char32_t c, const std::uint8_t* u8, size_t size) {
-                        if (!check.ok(c, index)) {
+                        UTFStat stat;
+                        stat.input = input.info();
+                        if (stat.input.pos != offset_base) {
+                            offset_base = input.pos();
+                            offset = 0;
+                        }
+                        stat.C = c;
+                        stat.index = index;
+                        stat.utf8 = u8;
+                        stat.len = size;
+                        stat.actual_offset = offset;
+                        if (!check.ok(&stat)) {
                             return true;
                         }
+                        offset += size;
                         index++;
                         helper::append(str, helper::SizedView{u8, size});
                         return false;
