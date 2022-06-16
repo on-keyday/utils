@@ -178,7 +178,7 @@ namespace utils {
                 }
             };
             template <class Check, class Str>
-            auto default_utf_callback(Check& check, Str& str, size_t& offset_base, size_t& offset, size_t& index) {
+            auto default_utf_callback(Input& input, Check& check, Str& str, size_t& offset_base, size_t& offset, size_t& index) {
                 return [&](char32_t c, const std::uint8_t* u8, size_t size) {
                     UTFStat stat;
                     stat.input = input.info();
@@ -213,7 +213,7 @@ namespace utils {
                     size_t offset = 0;
                     size_t index = 0;
                     auto ok = read_utf_string(input, &err,
-                                              default_utf_callback(check, str, offset_base, offset, index));
+                                              default_utf_callback(input, check, str, offset_base, offset, index));
                     if (!ok) {
                         return err;
                     }

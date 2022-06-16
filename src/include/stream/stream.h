@@ -149,8 +149,9 @@ namespace utils {
                 return static_cast<T*>(tok.ptr());
             }
 
-            struct simpleErrToken {
-                const char* msg;
+            template <class Str>
+            struct ErrToken {
+                Str msg;
                 constexpr void token(PB pb) const {
                     helper::append(pb, msg);
                 }
@@ -170,6 +171,8 @@ namespace utils {
                     helper::append(pb, msg);
                 }
             };
+
+            using simpleErrToken = ErrToken<const char*>;
 
             struct StreamBase;
             using Stream = iface::Copy<StreamBase>;
