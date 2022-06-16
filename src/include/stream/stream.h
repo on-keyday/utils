@@ -368,7 +368,7 @@ namespace utils {
                                 check = cond(buf + i, fetched - i, &i);
                             }
                             else if constexpr (consumer_condition_2<Cond>) {
-                                check = cond(buf + i, fetched);
+                                check = cond(buf + i, fetched - i);
                             }
                             else {
                                 static_assert(consumer_condition_3<Cond>, "require condition");

@@ -166,6 +166,9 @@ namespace utils {
                         return res;
                     });
                     if (count == 0) {
+                        if (zero_is_not_error) {
+                            return {};
+                        }
                         return TokenError{"char", pos};
                     }
                     return CharToken{

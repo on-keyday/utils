@@ -74,7 +74,7 @@ namespace utils {
                     // reading ascii without utf converting
                     while (seq.remain() >= 8) {
                         auto shift = [&](size_t s) -> std::uint64_t {
-                            return view.ptr[seq.rptr + s] << (8 * s);
+                            return std::uint64_t(view.ptr[seq.rptr + s]) << (8 * s);
                         };
                         // get 8byte == sizeof(std::uint64_t)
                         auto val = shift(0) | shift(1) | shift(2) | shift(3) |
@@ -132,6 +132,13 @@ namespace utils {
                 }
             }
 
+            template <class Fn>
+            struct FnChecker {
+                Fn ok;
+                FnChecker(Fn&& f)
+                    : ok(std::move(f)) {}
+            };
+
             template <class String, class Checker>
             struct UtfParser {
                 Checker check;
@@ -142,7 +149,7 @@ namespace utils {
                     auto pos = input.pos();
                     size_t index = 0;
                     auto ok = read_utf_string(input, &err, [&](char32_t c, const std::uint8_t* u8, size_t size) {
-                        if (!check(c, index)) {
+                        if (!check.ok(c, index)) {
                             return true;
                         }
                         index++;

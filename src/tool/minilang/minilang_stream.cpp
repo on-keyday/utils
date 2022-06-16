@@ -69,7 +69,7 @@ namespace minilang {
             stat.sized = true;
             stat.err = false;
             stat.trimming_stream = &trim;
-
+            stat.pos = pos;
             return stat;
         }
     };
@@ -94,13 +94,13 @@ namespace minilang {
     void test_code() {
         auto st = make_stream();
         MockInput mock{};
-        mock.trim = st::make_char(' ');
+        mock.trim = st::make_char(' ', true);
         constexpr auto src = "3+5";
         mock.raw = src;
         mock.len = 3;
         auto tok = st.parse(mock);
         if (has_err(tok)) {
-            cout << tok.err().serror();
+            cout << tok.err().serror() << "\n";
         }
         auto loc = make_ref_seq(src);
         walk(tok, loc);
@@ -111,16 +111,20 @@ namespace minilang {
         auto uw = tok.err().unwrap();
 
         cout << uw.serror();
-        st = st::make_utf<wrap::string>("identifier", [](char32_t c, size_t i) {
-            if (i == 0) {
-                return c == '?';
-            }
-            else {
-                return c != '?';
-            }
-        });
+        st = st::make_utf<wrap::string>(
+            "identifier",
+            st::FnChecker{
+                [](char32_t c, size_t i) {
+                    if (i == 0) {
+                        return c == '?';
+                    }
+                    else {
+                        return c != '?';
+                    }
+                }});
         constexpr auto utftest = u8"?tell 咄家";
         mock.raw = (const char*)utftest;
+        mock.len = 12;
         tok = st.parse(mock);
         assert(!has_err(tok));
     }
