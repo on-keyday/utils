@@ -43,10 +43,6 @@ namespace utils {
             template <class String, class Check>
             struct IdentifierParser {
                 Check check;
-                const char* record;
-                LookUpLevel level;
-                IDPolicy policy;
-                const char* assgin_context;
                 Token parse(Input& input) {
                     String str;
                     auto pos = input.pos();
@@ -55,15 +51,15 @@ namespace utils {
                         return err;
                     }
                     err = Identifier<String>{std::move(str), pos};
-                    if (auto sem = get_semantics(input)) {
-                        if (policy == IDPolicy::not_exist_is_error) {
-                            if (!sem->exists(record, err, level)) {
-                                return simpleErrToken{"identifier not exists"};
-                            }
-                        }
-                    }
+                    // TODO(on-keyday): add semantics rule
+                    return err;
                 }
             };
+
+            template <class String, class Check>
+            auto make_ident(Check check) {
+                return IdentifierParser<String, Check>{std::move(check)};
+            }
         }  // namespace stream
     }      // namespace parser
 }  // namespace utils

@@ -77,7 +77,7 @@ namespace utils {
 
         template <class C>
         constexpr bool is_symbol_char(C&& c) {
-            return is_in_visible_range(c) && (c != ' ' && !is_alnum(c));
+            return is_in_visible_range(c) && !is_alnum(c);
         }
 
         constexpr bool is_upper(std::uint8_t c) {

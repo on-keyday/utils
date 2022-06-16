@@ -13,11 +13,31 @@
 #include <helper/line_pos.h>
 #include <utf/convert.h>
 #include <stream/utf_stream.h>
+#include <stream/semantics_stream.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;
 
+    struct Identifier {
+        bool ok(st::UTFStat* stat, auto& str) {
+            if (stat->index == 0) {
+                return number::is_alnum(stat->C);
+            }
+            if (number::is_symbol_char(stat->C)) {
+                return false;
+            }
+            return true;
+        }
+        st::Error endok(auto& str) {
+            if (!str.size()) {
+                return st::simpleErrToken{"expect identifier but not"};
+            }
+            return {};
+        }
+    };
+
     st::Stream make_stream() {
+        auto ident = st::make_ident<wrap::string>(Identifier{});
         auto num = st::make_simplecond<wrap::string>("integer", [](const char* c) {
             return utils::number::is_digit(*c);
         });
