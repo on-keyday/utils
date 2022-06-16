@@ -12,6 +12,7 @@
 #include <wrap/cout.h>
 #include <helper/line_pos.h>
 #include <utf/convert.h>
+#include <stream/utf_stream.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;
@@ -110,5 +111,17 @@ namespace minilang {
         auto uw = tok.err().unwrap();
 
         cout << uw.serror();
+        st = st::make_utf<wrap::string>("identifier", [](char32_t c, size_t i) {
+            if (i == 0) {
+                return c == '?';
+            }
+            else {
+                return c != '?';
+            }
+        });
+        constexpr auto utftest = u8"?tell 咄家";
+        mock.raw = (const char*)utftest;
+        tok = st.parse(mock);
+        assert(!has_err(tok));
     }
 }  // namespace minilang

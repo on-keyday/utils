@@ -10,7 +10,7 @@
 #include "stream.h"
 #include <helper/view.h>
 #include <number/array.h>
-#include <utf/convert.h>
+#include <utf/conv_method.h>
 #include <number/to_string.h>
 #include "token_stream.h"
 
@@ -29,8 +29,9 @@ namespace utils {
                 }
                 TokenInfo info() {
                     return TokenInfo{
-                        .has_err = true,
                         .pos = pos,
+                        .has_err = true,
+
                     };
                 }
             };
@@ -53,6 +54,9 @@ namespace utils {
                         }
                         return false;
                     }
+                    auto view = helper::SizedView((const std::uint8_t*)ptr, r);
+                    // here seq.rptr == 0
+                    auto seq = make_ref_seq(view);
                     auto should_stop_seq = [&](size_t e) {
                         const auto s = seq.rptr;
                         for (auto i = s; i < s + e; i++) {
@@ -66,9 +70,6 @@ namespace utils {
                         seq.consume(e);
                         return false;
                     };
-                    auto view = helper::SizedView((const std::uint8_t*)ptr, r);
-                    // here seq.rptr == 0
-                    auto seq = make_ref_seq(view);
                     // ascii shortcut
                     // reading ascii without utf converting
                     while (seq.remain() >= 8) {
@@ -139,11 +140,14 @@ namespace utils {
                     Token err;
                     String str;
                     auto pos = input.pos();
-                    auto ok = read_utf_string(input, &err, [&](char32_t c, const std::uint8_t* u8, size_t s) {
-                        if (!check.ok(c)) {
+                    size_t index = 0;
+                    auto ok = read_utf_string(input, &err, [&](char32_t c, const std::uint8_t* u8, size_t size) {
+                        if (!check(c, index)) {
                             return false;
                         }
+                        index++;
                         helper::append(str, helper::SizedView{u8, size});
+                        return true;
                     });
                     if (!ok) {
                         return err;
@@ -151,6 +155,11 @@ namespace utils {
                     return SimpleCondToken<String>{std::move(str), pos, expect};
                 }
             };
+
+            template <class Str, class Check>
+            auto make_utf(const char* expect, Check check) {
+                return UtfParser<Str, Check>{std::move(check), expect};
+            }
 
         }  // namespace stream
     }      // namespace parser
