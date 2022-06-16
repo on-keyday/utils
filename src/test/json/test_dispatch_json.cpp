@@ -22,12 +22,18 @@ struct Test {
     std::map<std::string, int> mp2;
     TestE enu = TestE::test;
     bool to_json(auto& js) {
-        json::internal::dispatch_to_json(str, js);
-        json::internal::dispatch_to_json(c, js);
-        json::internal::dispatch_to_json(mp, js);
-        json::internal::dispatch_to_json(vec, js);
-        json::internal::dispatch_to_json(veci, js);
-        json::internal::dispatch_to_json(mp2, js);
+        json::internal::dispatch_to_json(str, js["str"]);
+        json::internal::dispatch_to_json(c, js["c"]);
+        json::internal::dispatch_to_json(mp, js["mp"]);
+        json::internal::dispatch_to_json(vec, js["vec"]);
+        json::internal::dispatch_to_json(veci, js["veci"]);
+        json::internal::dispatch_to_json(mp2, js["mp2"]);
+        json::internal::dispatch_to_json(enu, js["enu"]);
+        return true;
+    }
+
+    bool from_json(auto& js) {
+        json::internal::dispatch_from_json(str, js["str"]);
         return true;
     }
 };
@@ -41,6 +47,7 @@ void test_dispatch_json() {
     json::JSON js;
     Test t;
     json::internal::dispatch_to_json(&t, js);
+    json::internal::dispatch_from_json(&t, js);
 }
 
 int main() {
