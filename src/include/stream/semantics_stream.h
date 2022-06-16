@@ -48,15 +48,9 @@ namespace utils {
                 IDPolicy policy;
                 const char* assgin_context;
                 Token parse(Input& input) {
-                    Token err;
-                    size_t offset_base = 0, offset = 0, index = 0;
                     String str;
                     auto pos = input.pos();
-                    if (!read_utf_string(input, &err,
-                                         default_utf_callback(check, str, offset_base, offset, index))) {
-                        return err;
-                    }
-                    err = check.endok();
+                    auto err = read_default_utf(input, str, check);
                     if (has_err(err)) {
                         return err;
                     }

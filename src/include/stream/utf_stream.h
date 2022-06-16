@@ -147,11 +147,11 @@ namespace utils {
                 SingleChecker(Fn&& f)
                     : fn(std::move(f)) {}
 
-                bool ok(UTFStat* stat) {
+                bool ok(UTFStat* stat, auto& str) {
                     return fn(stat->C, stat->index);
                 }
 
-                Token endok() {
+                Token endok(auto& str) {
                     return {};
                 }
             };
@@ -162,7 +162,7 @@ namespace utils {
                 Fn fn;
                 RecPrevChecker(Fn&& f)
                     : fn(std::move(f)) {}
-                bool ok(UTFStat* stat) {
+                bool ok(UTFStat* stat, auto& str) {
                     if (stat->index == 0) {
                         rec = 0;
                     }
@@ -173,7 +173,7 @@ namespace utils {
                     return true;
                 }
 
-                Token endok() {
+                Token endok(auto& str) {
                     return {};
                 }
             };
@@ -191,7 +191,7 @@ namespace utils {
                     stat.utf8 = u8;
                     stat.len = size;
                     stat.actual_offset = offset;
-                    if (!check.ok(&stat)) {
+                    if (!check.ok(&stat, str)) {
                         return true;
                     }
                     offset += size;
@@ -201,23 +201,31 @@ namespace utils {
                 };
             }
 
+            template <class Str, class Check>
+            Token read_default_utf(Input& input, Str& str, Check& check) {
+                auto offset_base = input.pos();
+                size_t offset = 0;
+                size_t index = 0;
+                Token err;
+                if (!read_utf_string(input, &err,
+                                     default_utf_callback(input, check, str, offset_base, offset, index))) {
+                    return err;
+                }
+                err = check.endok(str);
+                if (has_err(err)) {
+                    return err;
+                }
+                return {};
+            }
+
             template <class String, class Checker>
             struct UtfParser {
                 Checker check;
                 const char* expect;
                 Token parse(Input& input) {
-                    Token err;
                     String str;
                     auto pos = input.pos();
-                    auto offset_base = pos;
-                    size_t offset = 0;
-                    size_t index = 0;
-                    auto ok = read_utf_string(input, &err,
-                                              default_utf_callback(input, check, str, offset_base, offset, index));
-                    if (!ok) {
-                        return err;
-                    }
-                    err = check.endok();
+                    auto err = read_default_utf(input, str, check);
                     if (has_err(err)) {
                         return err;
                     }
