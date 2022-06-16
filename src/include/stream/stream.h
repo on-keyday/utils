@@ -189,6 +189,11 @@ namespace utils {
                 {t.scope("record", enter)};
             };
 
+            template <class T>
+            concept has_exists = requires(T t, size_t lookup_level) {
+                {t.exists("record", std::declval<const Token&>(), lookup_level)};
+            };
+
             struct SemanticsBase : iface::Powns {
                private:
                 using Semantics = iface::Copy<SemanticsBase>;
@@ -196,6 +201,7 @@ namespace utils {
                 MAKE_FN_EXISTS(change, const char*, has_change<T>, nullptr, const char*)
                 MAKE_FN_EXISTS(add, Error, has_add<T>, {}, const char*, const Token&)
                 MAKE_FN_EXISTS(scope, Error, has_scope<T>, {}, const char*, bool)
+                MAKE_FN_EXISTS(exists, bool, has_exists<T>, {}, const char*, const Token&, size_t)
                public:
                 DEFAULT_METHODS_MOVE(SemanticsBase)
                 template <class T, REJECT_SELF(T, SemanticsBase)>
@@ -204,22 +210,33 @@ namespace utils {
                       APPLY2_FN(add, const char*, const Token&),
                       APPLY2_FN(change, const char*),
                       APPLY2_FN(scope, const char*, bool),
+                      APPLY2_FN(exists, const char*, const Token&, size_t),
                       iface::Powns(std::forward<T>(t)) {}
 
+                // `on` returns whether parsing context is `name`. this is used to determine parsing rule according to context
                 bool on(const char* name) const {
                     DEFAULT_CALL(on, false, name);
                 }
 
+                // `change` changes parsing context to `name`. this returns previous parsing context name
                 const char* change(const char* name) {
                     DEFAULT_CALL(change, nullptr, name);
                 }
 
+                // `add` adds token to `record` to collect token. if failure this returns error token
                 Error add(const char* record, const Token& tok) {
                     DEFAULT_CALL(add, Error{}, record, tok);
                 }
 
+                // `scope` changes scope of `record`. if `enter` is true, new scope will be created
+                // if else, previous scope will restored
                 Error scope(const char* record, bool enter) {
                     DEFAULT_CALL(scope, Error{}, record, enter);
+                }
+
+                // `exists` returns whether `tok` exists on `record`. `lookup_level` defines how deep this searches symbol
+                bool exists(const char* record, const Token& tok, size_t lookup_level) {
+                    DEFAULT_CALL(exists, false, record, tok, lookup_level);
                 }
             };
 

@@ -150,6 +150,10 @@ namespace utils {
                 bool ok(UTFStat* stat) {
                     return fn(stat->C, stat->index);
                 }
+
+                Token endok() {
+                    return {};
+                }
             };
 
             template <class Fn>
@@ -162,11 +166,40 @@ namespace utils {
                     if (stat->index == 0) {
                         rec = 0;
                     }
-                    auto res = fn(stat->C, stat->index, rec);
+                    if (!fn(stat->C, stat->index, rec)) {
+                        return false;
+                    }
                     rec = stat->C;
-                    return res;
+                    return true;
+                }
+
+                Token endok() {
+                    return {};
                 }
             };
+            template <class Check, class Str>
+            auto default_utf_callback(Check& check, Str& str, size_t& offset_base, size_t& offset, size_t& index) {
+                return [&](char32_t c, const std::uint8_t* u8, size_t size) {
+                    UTFStat stat;
+                    stat.input = input.info();
+                    if (stat.input.pos != offset_base) {
+                        offset_base = input.pos();
+                        offset = 0;
+                    }
+                    stat.C = c;
+                    stat.index = index;
+                    stat.utf8 = u8;
+                    stat.len = size;
+                    stat.actual_offset = offset;
+                    if (!check.ok(&stat)) {
+                        return true;
+                    }
+                    offset += size;
+                    index++;
+                    helper::append(str, helper::SizedView{u8, size});
+                    return false;
+                };
+            }
 
             template <class String, class Checker>
             struct UtfParser {
@@ -179,27 +212,13 @@ namespace utils {
                     auto offset_base = pos;
                     size_t offset = 0;
                     size_t index = 0;
-                    auto ok = read_utf_string(input, &err, [&](char32_t c, const std::uint8_t* u8, size_t size) {
-                        UTFStat stat;
-                        stat.input = input.info();
-                        if (stat.input.pos != offset_base) {
-                            offset_base = input.pos();
-                            offset = 0;
-                        }
-                        stat.C = c;
-                        stat.index = index;
-                        stat.utf8 = u8;
-                        stat.len = size;
-                        stat.actual_offset = offset;
-                        if (!check.ok(&stat)) {
-                            return true;
-                        }
-                        offset += size;
-                        index++;
-                        helper::append(str, helper::SizedView{u8, size});
-                        return false;
-                    });
+                    auto ok = read_utf_string(input, &err,
+                                              default_utf_callback(check, str, offset_base, offset, index));
                     if (!ok) {
+                        return err;
+                    }
+                    err = check.endok();
+                    if (has_err(err)) {
                         return err;
                     }
                     return SimpleCondToken<String>{std::move(str), pos, expect};
