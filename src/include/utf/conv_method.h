@@ -26,6 +26,43 @@ namespace utils {
             return 0xDC00 <= c && c < 0xE000;
         }
 
+        template <class C>
+        constexpr std::uint8_t expect_len(C c) {
+            if (c < 0 || c > 0xff) {
+                return 0;
+            }
+            if (c >= 0 & c <= 0x7f) {
+                return 1;
+            }
+            else if (is_mask_of<2>(c)) {
+                return 2;
+            }
+            else if (is_mask_of<3>(c)) {
+                return 3;
+            }
+            else if (is_mask_of<4>(c)) {
+                return 4;
+            }
+            return 0;
+        }
+
+        constexpr bool is_valid_mask(std::uint8_t len, std::uint8_t one, std::uint8_t two) {
+            switch (len) {
+                case 1:
+                    return true;
+                case 2:
+                    return (internal::utf8bits(internal::two_first) & one) != 0;
+                case 3:
+                    return (internal::utf8bits(internal::three_first) & one) != 0 ||
+                           (internal::utf8bits(internal::three_second) & two) != 0;
+                case 4:
+                    return (internal::utf8bits(internal::four_first) & one) != 0 ||
+                           (internal::utf8bits(internal::four_second) & two) != 0;
+                default:
+                    return false;
+            }
+        }
+
         template <class T, class C = char32_t>
         constexpr bool utf8_to_utf32(Sequencer<T>& input, C& output) {
             using unsigned_t = std::make_unsigned_t<typename Sequencer<T>::char_type>;
@@ -36,44 +73,24 @@ namespace utils {
                 return static_cast<unsigned_t>(input.current(ofs));
             };
             auto in = ofs(0);
-            if (in > 0xff) {
+            auto len = expect_len(in);
+            if (len == 0) {
                 return false;
             }
-            if (in < 0x80) {
+            if (len == 1) {
                 input.consume();
                 output = static_cast<C>(in);
                 return true;
             }
-            auto make = [&](auto len) {
-                internal::make_utf32_from_utf8(len, input.buf.buffer, output, input.rptr);
-            };
-            auto test_mask = [&](size_t offset, std::uint8_t maskkind) -> bool {
-                if (maskkind == 0) {
-                    return false;
-                }
-                return ofs(offset) & internal::utf8bits(maskkind);
-            };
-            auto make_with_check = [&](size_t len, auto test1, auto test2) {
-                if (input.remain() < len) {
-                    return false;
-                }
-                if (!test_mask(0, test1) && !test_mask(1, test2)) {
-                    return false;
-                }
-                make(len);
-                input.consume(len);
-                return true;
-            };
-            if (is_mask_of<2>(in)) {
-                return make_with_check(2, 5, 0);
+            if (input.remain() < len) {
+                return false;
             }
-            else if (is_mask_of<3>(in)) {
-                return make_with_check(3, 6, 7);
+            if (!is_valid_mask(len, ofs(0), ofs(1))) {
+                return false;
             }
-            else if (is_mask_of<4>(in)) {
-                return make_with_check(4, 8, 9);
-            }
-            return false;
+            internal::make_utf32_from_utf8(len, input.buf.buffer, output, input.rptr);
+            input.consume(len);
+            return true;
         }
 
         template <class T, class C = char32_t>

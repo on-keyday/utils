@@ -32,6 +32,14 @@ namespace utils {
                 return i < sizeof(maskbits) ? maskbits[i] : 0;
             }
 
+            enum mask_index {
+                two_first = 5,
+                three_first,
+                three_second,
+                four_first,
+                four_second,
+            };
+
             template <class T, class C = char32_t>
             constexpr void make_utf32_from_utf8(size_t len, T& input, C& output, size_t offset) {
                 using unsigned_t = std::make_unsigned_t<typename Sequencer<T>::char_type>;
