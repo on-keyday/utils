@@ -11,6 +11,7 @@
 #include <number/char_range.h>
 #include <wrap/cout.h>
 #include <helper/line_pos.h>
+#include <utf/convert.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;

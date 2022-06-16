@@ -20,6 +20,8 @@ namespace utils {
             force_element = 0x1,
         };
 
+        DEFINE_ENUM_FLAGOP(FromFlag)
+
         namespace internal {
 
             template <class T>

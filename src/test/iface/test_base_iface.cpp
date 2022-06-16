@@ -41,7 +41,7 @@ void test_base_iface() {
 
     copy = ref;
 
-    auto clone = copy.clone();
+    auto clone = copy.copy();
 
     clone.push_back('o');
 

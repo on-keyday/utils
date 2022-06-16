@@ -38,10 +38,10 @@ namespace utils {
 
                 Token child(size_t i) {
                     if (i == 0) {
-                        return left.clone();
+                        return left.copy();
                     }
                     else if (i == 1) {
-                        return right.clone();
+                        return right.copy();
                     }
                     return {};
                 }
@@ -49,8 +49,8 @@ namespace utils {
                 Token copy() {
                     return BinaryToken{
                         tok,
-                        left.clone(),
-                        right.clone(),
+                        left.copy(),
+                        right.copy(),
                         pos,
                     };
                 }
@@ -101,7 +101,7 @@ namespace utils {
                 }
 
                 Error err() {
-                    return AfterTokenError{intok.clone(), tok};
+                    return AfterTokenError{intok.copy(), tok};
                 }
 
                 TokenInfo info() {
@@ -109,7 +109,7 @@ namespace utils {
                 }
 
                 Token copy() {
-                    return AfterTokenError{intok.clone(), tok, pos};
+                    return AfterTokenError{intok.copy(), tok, pos};
                 }
 
                 Error unwrap() {
@@ -197,13 +197,13 @@ namespace utils {
 
                 Token child(size_t i) {
                     if (i == 0) {
-                        return target.clone();
+                        return target.copy();
                     }
                     return {};
                 }
 
                 Token copy() {
-                    return UnaryToken{tok, target.clone(), pos};
+                    return UnaryToken{tok, target.copy(), pos};
                 }
             };
 
@@ -295,16 +295,16 @@ namespace utils {
 
                 Token chlid(size_t i) {
                     if (i == 0) {
-                        return incast.clone();
+                        return incast.copy();
                     }
                     if (i == 1) {
-                        return aftertoken.clone();
+                        return aftertoken.copy();
                     }
                     return {};
                 }
 
                 Token copy() {
-                    return CastToken{incast.clone(), aftertoken.clone(), tok, pos};
+                    return CastToken{incast.copy(), aftertoken.copy(), tok, pos};
                 }
             };
 

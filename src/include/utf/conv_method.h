@@ -64,13 +64,13 @@ namespace utils {
                 input.consume(len);
                 return true;
             };
-            if (internal::is_mask_of<2>(in)) {
+            if (is_mask_of<2>(in)) {
                 return make_with_check(2, 5, 0);
             }
-            else if (internal::is_mask_of<3>(in)) {
+            else if (is_mask_of<3>(in)) {
                 return make_with_check(3, 6, 7);
             }
-            else if (internal::is_mask_of<4>(in)) {
+            else if (is_mask_of<4>(in)) {
                 return make_with_check(4, 8, 9);
             }
             return false;

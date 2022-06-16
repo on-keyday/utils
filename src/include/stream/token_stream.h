@@ -191,7 +191,7 @@ namespace utils {
 
                 Token child(size_t i) {
                     if (i == 0) {
-                        return tok.clone();
+                        return tok.copy();
                     }
                     return {};
                 }
@@ -246,7 +246,7 @@ namespace utils {
                 }
 
                 Token copy() {
-                    return TrimedToken{tok.clone(), trim.clone(), after};
+                    return TrimedToken{tok.copy(), trim.copy(), after};
                 }
             };
 

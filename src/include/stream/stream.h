@@ -174,6 +174,57 @@ namespace utils {
             struct StreamBase;
             using Stream = iface::Copy<StreamBase>;
 
+            template <class T>
+            concept has_change = requires(T t) {
+                {t.change("context")};
+            };
+
+            template <class T>
+            concept has_add = requires(T t) {
+                {t.add("record", std::declval<const Token&>())};
+            };
+
+            template <class T>
+            concept has_scope = requires(T t, bool enter) {
+                {t.scope("record", enter)};
+            };
+
+            struct SemanticsBase : iface::Powns {
+               private:
+                using Semantics = iface::Copy<SemanticsBase>;
+                MAKE_FN(on, bool, const char*)
+                MAKE_FN_EXISTS(change, const char*, has_change<T>, nullptr, const char*)
+                MAKE_FN_EXISTS(add, Error, has_add<T>, {}, const char*, const Token&)
+                MAKE_FN_EXISTS(scope, Error, has_scope<T>, {}, const char*, bool)
+               public:
+                DEFAULT_METHODS_MOVE(SemanticsBase)
+                template <class T, REJECT_SELF(T, SemanticsBase)>
+                SemanticsBase(T&& t)
+                    : APPLY2_FN(on, const char*),
+                      APPLY2_FN(add, const char*, const Token&),
+                      APPLY2_FN(change, const char*),
+                      APPLY2_FN(scope, const char*, bool),
+                      iface::Powns(std::forward<T>(t)) {}
+
+                bool on(const char* name) const {
+                    DEFAULT_CALL(on, false, name);
+                }
+
+                const char* change(const char* name) {
+                    DEFAULT_CALL(change, nullptr, name);
+                }
+
+                Error add(const char* record, const Token& tok) {
+                    DEFAULT_CALL(add, Error{}, record, tok);
+                }
+
+                Error scope(const char* record, bool enter) {
+                    DEFAULT_CALL(scope, Error{}, record, enter);
+                }
+            };
+
+            using Semantics = iface::Copy<SemanticsBase>;
+
             struct InputStat {
                 size_t pos;
                 size_t remain;
@@ -181,7 +232,7 @@ namespace utils {
                 bool raw;
                 bool eos;
                 bool err;
-                void* semantic_context;
+                Semantics* semantic_context;
                 Stream* trimming_stream;
             };
 
@@ -371,9 +422,8 @@ namespace utils {
                 }
             };
 
-            template <class T>
-            T* get_semantics(Input& input) {
-                return static_cast<T*>(input.info().semantic_context);
+            inline Semantics* get_semantics(Input& input) {
+                return input.info().semantic_context;
             }
 
             inline Stream* get_trimminger(Input& input) {

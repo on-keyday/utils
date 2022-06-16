@@ -114,14 +114,21 @@ namespace utils {
             }
 
            public:
-            DEFAULT_METHODS(Copy)
+            DEFAULT_METHODS_MOVE_NODEL(Copy)
 
             template <class T>
             Copy(T&& t)
                 : APPLY2_FN(copy),
                   Box(std::forward<T>(t)) {}
 
-            Copy clone() const {
+            Copy(const Copy& cp)
+                : Copy(cp.copy()) {}
+
+            Copy& operator=(const Copy& cp) {
+                *this = cp.copy();
+            }
+
+            Copy copy() const {
                 DEFAULT_CALL(copy, Copy{})
             }
         };
