@@ -143,11 +143,11 @@ namespace utils {
                     size_t index = 0;
                     auto ok = read_utf_string(input, &err, [&](char32_t c, const std::uint8_t* u8, size_t size) {
                         if (!check(c, index)) {
-                            return false;
+                            return true;
                         }
                         index++;
                         helper::append(str, helper::SizedView{u8, size});
-                        return true;
+                        return false;
                     });
                     if (!ok) {
                         return err;
