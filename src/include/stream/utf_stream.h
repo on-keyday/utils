@@ -42,7 +42,7 @@ namespace utils {
                 number::Array<5, std::uint8_t, true> utf8;
                 size_t r;
                 while (true) {
-                    auto pos = input.pos();
+                    //  load raw binary data
                     auto ptr = input.peek(tmpbuf, 20, &r);
                     if (r == 0) {
                         return true;
@@ -61,8 +61,8 @@ namespace utils {
                         const auto s = seq.rptr;
                         for (auto i = s; i < s + e; i++) {
                             utf8 = {};
-                            utf8.push_back(ptr[i]);
-                            if (should_stop(ptr[i], utf8.c_str(), utf8.size())) {
+                            utf8.push_back(view.ptr[i]);
+                            if (should_stop(view.ptr[i], utf8.c_str(), utf8.size())) {
                                 input.offset_seek(s + i);
                                 return true;
                             }
@@ -100,34 +100,45 @@ namespace utils {
                             return true;
                         }
                     }
+                    // convertion loop
                     while (!seq.eos()) {
                         char32_t c;
+                        // for prepare utf8 and error
                         auto len = utf::expect_len(seq.current());
-                        if (!utf::utf8_to_utf32(seq, c)) {
+                        // if len==0 then convertion will failure
+                        if (!len || !utf::utf8_to_utf32(seq, c)) {
                             if (seq.remain() < len) {
+                                // convertion is failed by lack of bytes
+                                // break to next loop
                                 break;
                             }
                             if (perr) {
                                 invalid_utf_error err;
-                                err.pos = pos + seq.rptr;
-                                err.input_size = len;
-                                for (auto i = 0; i < len; i++) {
+                                err.pos = input.pos() + seq.rptr;
+                                err.input_size = len == 0 ? 1 : len;
+                                for (auto i = 0; i < err.input_size; i++) {
                                     err.inputs[i] = view.ptr[seq.rptr];
                                 }
                                 *perr = std::move(err);
                             }
                             return false;
                         }
+                        // prepare utf8 string
+                        // here seq.rptr-len is position before convertion
                         utf8 = {};
                         for (auto i = 0; i < len; i++) {
                             utf8.push_back(seq.current(-len + i));
                         }
+                        // if should stop returns true then
+                        // seek input and return
                         if (should_stop(c, utf8.c_str(), utf8.size())) {
-                            input.offset_seek(seq.rptr);
+                            // seq.rptr-len is ok offset
+                            input.offset_seek(seq.rptr - len);
                             return true;
                         }
                     }
                     // seek input with size read by this loop
+                    // here seq.rptr is offset from input.pos()
                     input.offset_seek(seq.rptr);
                 }
             }
@@ -151,7 +162,7 @@ namespace utils {
                     return fn(stat->C, stat->index);
                 }
 
-                Token endok(auto& str) {
+                Token endok(Input&, auto& str) {
                     return {};
                 }
             };
@@ -173,7 +184,7 @@ namespace utils {
                     return true;
                 }
 
-                Token endok(auto& str) {
+                Token endok(Input&, auto& str) {
                     return {};
                 }
             };
@@ -211,7 +222,7 @@ namespace utils {
                                      default_utf_callback(input, check, str, offset_base, offset, index))) {
                     return err;
                 }
-                err = check.endok(str);
+                err = check.endok(input, str);
                 if (has_err(err)) {
                     return err;
                 }

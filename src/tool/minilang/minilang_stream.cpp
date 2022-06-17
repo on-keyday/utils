@@ -21,14 +21,14 @@ namespace minilang {
     struct Identifier {
         bool ok(st::UTFStat* stat, auto& str) {
             if (stat->index == 0) {
-                return number::is_alnum(stat->C);
+                return !number::is_symbol_char(stat->C) && !number::is_digit(stat->C);
             }
             if (number::is_symbol_char(stat->C)) {
                 return false;
             }
             return true;
         }
-        st::Error endok(auto& str) {
+        st::Token endok(auto& str) {
             if (!str.size()) {
                 return st::simpleErrToken{"expect identifier but not"};
             }
