@@ -37,6 +37,9 @@ namespace minilang {
     };
 
     st::Stream make_stream() {
+        st::make_number<wrap::string>([](auto C) {
+            return !number::is_symbol_char(C) && !number::is_digit(C);
+        });
         auto ident = st::make_ident<wrap::string>(Identifier{});
         auto num = st::make_simplecond<wrap::string>("integer", [](const char* c) {
             return utils::number::is_digit(*c);

@@ -100,13 +100,13 @@ namespace utils {
 
             template <class Ident>
             struct NumberCheck {
+                Ident is_ident;
                 char32_t prev = 0;
                 char32_t end = 0;
                 int radix = 0;
                 bool dot = false;
                 bool exp = false;
                 bool exp_op = false;
-                Ident is_ident;
 
                 bool prefix(char32_t C) {
                     if (C == 'x' || C == 'X') {
@@ -129,7 +129,7 @@ namespace utils {
                            radix == 16 && (C == 'p' || C == 'P');
                 }
 
-                bool ok(st::UTFStat* stat, auto& str) {
+                bool ok(UTFStat* stat, auto& str) {
                     if (stat->index == 0) {
                         if (!number::is_digit(stat->C) && stat->C != '.') {
                             end = stat->C;
@@ -238,6 +238,11 @@ namespace utils {
             template <class String, class Check>
             auto make_ident(Check check) {
                 return IdentifierParser<String, Check>{std::move(check)};
+            }
+
+            template <class String, class CheckIdent>
+            auto make_number(CheckIdent check) {
+                return NumberParser<String, CheckIdent>{NumberCheck<CheckIdent>{std::move(check)}};
             }
         }  // namespace stream
     }      // namespace parser
