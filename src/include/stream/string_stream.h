@@ -96,9 +96,17 @@ namespace utils {
                 }
             };
 
+            enum class EscapeMode {
+                escape,
+                raw,
+                no_escape,
+            };
+
             struct DefaultEscaper {
                 size_t escindex;
                 char32_t verb;
+                EscapeMode mode;
+
                 static constexpr size_t invalid_index = ~0 - 1;
                 void start_escape(UTFStat* stat) {
                     verb = 0;
@@ -162,21 +170,76 @@ namespace utils {
                         }
                     }
                     // find escape '\'
-                    if (escindex == invalid_index &&
+                    if (mode == EscapeMode::escape &&
+                        escindex == invalid_index &&
                         stat->C == '\\') {
                         escindex = stat->index;
+                    }
+                    if (mode != EscapeMode::raw &&
+                        (stat->C == '\n' ||
+                         stat->C == '\r')) {
+                        // if mode!=EscapeMode::raw
+                        // line is not allowed
+                        return false;
                     }
                     return true;
                 }
 
                 ErrorToken endok(Input& input, auto& str) {
                     // when parsing string like "\1"
+                    // verb maybe o
                     if (escindex != invalid_index &&
                         verb != 'o') {
                         return simpleErrToken{"invalid escape sequence"};
                     }
+                    return {};
                 }
             };
+
+            constexpr auto tokenString = "string";
+
+            template <class Str>
+            struct StringToken {
+                Str text;
+                size_t pos;
+                void token(PB pb) {
+                    helper::append(pb, text);
+                }
+
+                TokenInfo info() {
+                    TokenInfo stat{};
+                    stat.kind = tokenString;
+                    stat.dirtok = text.c_str();
+                    stat.pos = pos;
+                    stat.len = text.size();
+                    return stat;
+                }
+            };
+
+            template <class Str, class Check>
+            struct StringParser {
+                Check check;
+
+                Token parse(Input& input) {
+                    Str str;
+                    auto pos = input.pos();
+                    auto tok = read_default_utf(input, str, check);
+                    if (has_err(tok)) {
+                        return tok;
+                    }
+                    return StringToken<Str>{std::move(str), pos};
+                }
+            };
+
+            template <class Str>
+            auto make_default_string(const char32_t* begin, const char32_t* end, EscapeMode mode = EscapeMode::escape) {
+                using check_t = StringChecker<FixiedPrefixString<DefaultEscaper>>;
+                StringParser<Str, check_t> v{};
+                v.check.psfix.prefix_v = begin;
+                v.check.psfix.suffix_v = end;
+                v.check.psfix.esc.mode = mode;
+                return v;
+            }
 
         }  // namespace stream
     }      // namespace parser

@@ -235,7 +235,7 @@ namespace utils {
                 }
             };
 
-                        template <class String, class Check>
+            template <class String, class Check>
             auto make_ident(Check check) {
                 return IdentifierParser<String, Check>{std::move(check)};
             }

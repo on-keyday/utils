@@ -213,11 +213,11 @@ namespace utils {
             }
 
             template <class Str, class Check>
-            Token read_default_utf(Input& input, Str& str, Check& check) {
+            ErrorToken read_default_utf(Input& input, Str& str, Check& check) {
                 auto offset_base = input.pos();
                 size_t offset = 0;
                 size_t index = 0;
-                Token err;
+                ErrorToken err;
                 if (!read_utf_string(input, &err,
                                      default_utf_callback(input, check, str, offset_base, offset, index))) {
                     return err;

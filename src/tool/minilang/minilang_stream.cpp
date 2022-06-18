@@ -14,6 +14,7 @@
 #include <utf/convert.h>
 #include <stream/utf_stream.h>
 #include <stream/semantics_stream.h>
+#include <stream/string_stream.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;
@@ -40,6 +41,7 @@ namespace minilang {
         auto num = st::make_number<wrap::string>([](auto C) {
             return !number::is_symbol_char(C) && !number::is_digit(C);
         });
+
         auto trim = st::make_bothtrimming(std::move(num));
         auto ur = st::make_unary<true>(std::move(trim), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
                                        st::Expect{"*"}, st::Expect{"&"});
@@ -147,6 +149,7 @@ namespace minilang {
                         return prev != U'義';
                     }
                 }});
+
         constexpr auto utftest = u8"定tell義 型string名 ";
         mock.raw = (const char*)utftest;
         mock.len = 24;
@@ -154,6 +157,16 @@ namespace minilang {
         tok = st.parse(mock);
         assert(!has_err(tok));
         auto seq = make_ref_seq(utftest);
+        walk(tok, seq);
+
+        st = st::make_default_string<wrap::string>(U"\"", U"\"");
+        constexpr auto stringtest = R"("test\n\u2342\x73\0")";
+        mock.raw = stringtest;
+        mock.len = 20;
+        mock.pos = 0;
+        tok = st.parse(mock);
+        assert(!has_err(tok));
+        loc = make_ref_seq(stringtest);
         walk(tok, seq);
     }
 }  // namespace minilang
