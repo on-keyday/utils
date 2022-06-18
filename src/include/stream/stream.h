@@ -134,6 +134,7 @@ namespace utils {
             };
 
             using Token = iface::Copy<TokenBase>;
+            using ErrorToken = Token;
             using PB = iface::PushBacker<iface::Ref>;
 
             inline bool has_err(const Token& token) {

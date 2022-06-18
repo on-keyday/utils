@@ -162,7 +162,7 @@ namespace utils {
                     return fn(stat->C, stat->index);
                 }
 
-                Token endok(Input&, auto& str) {
+                ErrorToken endok(Input&, auto& str) {
                     return {};
                 }
             };
@@ -184,7 +184,7 @@ namespace utils {
                     return true;
                 }
 
-                Token endok(Input&, auto& str) {
+                ErrorToken endok(Input&, auto& str) {
                     return {};
                 }
             };

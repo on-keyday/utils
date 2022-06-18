@@ -28,7 +28,7 @@ namespace minilang {
             }
             return true;
         }
-        st::Token endok(auto& str) {
+        st::ErrorToken endok(auto& str) {
             if (!str.size()) {
                 return st::simpleErrToken{"expect identifier but not"};
             }
@@ -37,12 +37,8 @@ namespace minilang {
     };
 
     st::Stream make_stream() {
-        st::make_number<wrap::string>([](auto C) {
+        auto num = st::make_number<wrap::string>([](auto C) {
             return !number::is_symbol_char(C) && !number::is_digit(C);
-        });
-        auto ident = st::make_ident<wrap::string>(Identifier{});
-        auto num = st::make_simplecond<wrap::string>("integer", [](const char* c) {
-            return utils::number::is_digit(*c);
         });
         auto trim = st::make_bothtrimming(std::move(num));
         auto ur = st::make_unary<true>(std::move(trim), st::Expect{"+"}, st::Expect{"-"}, st::Expect{"!"},
@@ -111,6 +107,12 @@ namespace minilang {
         }
         else if (is_kind(tok, st::tokenUnary)) {
             walk(as<st::UnaryToken>(tok)->target, seq);
+        }
+        else if (is_kind(tok, st::tokenNumber)) {
+            auto num = as<st::Number<wrap::string>>(tok);
+        }
+        else if (is_kind(tok, st::tokenTrimed)) {
+            walk(as<st::TrimedToken>(tok)->tok, seq);
         }
     }
 

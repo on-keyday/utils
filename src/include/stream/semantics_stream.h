@@ -64,7 +64,7 @@ namespace utils {
                 Str str;
                 void token(PB) {}
                 void error(PB pb) {
-                    helper::appends("");
+                    helper::appends(pb, text, ": ", str);
                 }
 
                 Error err() {
@@ -89,7 +89,7 @@ namespace utils {
                 }
 
                 TokenInfo info() {
-                    TokenInfo info;
+                    TokenInfo info{};
                     info.kind = tokenNumber;
                     info.dirtok = text.c_str();
                     info.len = text.size();
@@ -183,7 +183,7 @@ namespace utils {
                     return true;
                 }
 
-                Token endok(Input& input, auto& str) {
+                ErrorToken endok(Input& input, auto& str) {
                     using Str = std::remove_cvref_t<decltype(str)>;
                     if (str.size() == 0) {
                         return NumberError<Str>{"expect number but not", str};
@@ -235,7 +235,7 @@ namespace utils {
                 }
             };
 
-            template <class String, class Check>
+                        template <class String, class Check>
             auto make_ident(Check check) {
                 return IdentifierParser<String, Check>{std::move(check)};
             }
