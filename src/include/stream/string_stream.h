@@ -36,7 +36,7 @@ namespace utils {
                     if (psfix.suffix(stat)) {
                         return false;
                     }
-                    return false;
+                    return true;
                 }
 
                 ErrorToken endok(Input& input, auto& str) {

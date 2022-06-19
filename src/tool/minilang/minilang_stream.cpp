@@ -160,13 +160,13 @@ namespace minilang {
         walk(tok, seq);
 
         st = st::make_default_string<wrap::string>(U"\"", U"\"");
-        constexpr auto stringtest = R"("test\n\u2342\x73\0")";
+        constexpr auto stringtest = R"("test\"\n\u2342\x73\0")";
         mock.raw = stringtest;
-        mock.len = 20;
+        mock.len = utils::strlen(stringtest);
         mock.pos = 0;
         tok = st.parse(mock);
         assert(!has_err(tok));
         loc = make_ref_seq(stringtest);
-        walk(tok, seq);
+        walk(tok, loc);
     }
 }  // namespace minilang
