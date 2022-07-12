@@ -46,14 +46,14 @@ namespace utils {
                 if (fixed_bit == 0) {
                     // if 0x40 bit is not 1
                     // this can be VersionNegotiation packet
-                    return {FBInfo::should_discard, types::VersionNegotiation, byte{first_byte & 0x7f}};
+                    return {FBInfo::should_discard, types::VersionNegotiation, static_cast<byte>(first_byte & 0x7f)};
                 }
                 auto header_form = first_byte & 0x80;
                 if (header_form == 0) {
-                    return {FBInfo::short_header, types::OneRTT, byte{first_byte & 0x3f}};
+                    return {FBInfo::short_header, types::OneRTT, static_cast<byte>(first_byte & 0x3f)};
                 }
                 byte long_header_type = (first_byte & 0x30) >> 4;
-                return {FBInfo::long_header, types{long_header_type}, byte{first_byte & 0x0f}};
+                return {FBInfo::long_header, types{long_header_type}, static_cast<byte>(first_byte & 0x0f)};
             }
 
             template <class Bytes>

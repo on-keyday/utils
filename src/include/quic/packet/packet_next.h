@@ -103,12 +103,18 @@ namespace utils {
                 }
 
                 void packet_error(auto&& bytes, tsize size, tsize* offset, FirstByte fb, uint version, Error err, const char* where) {
+                    pool::select_bytes_way(
+                        bytes, c->q->g->bpool, size, c->q->g->callback.on_packet_error_f || c->callback.on_packet_error_f, *offset,
+                        [&](const byte* b) {
+                            c->callback.on_packet_error(b, size, *offset, fb, version, err, where);
+                            c->q->g->callback.on_packet_error(b, size, *offset, fb, version, err, where);
+                        });
                 }
 
                 ~ReadContext() {
-                    c->q->bpool.put(std::move(dstID.id));
-                    c->q->bpool.put(std::move(srcID.id));
-                    c->q->bpool.put(std::move(token.token));
+                    c->q->g->bpool.put(std::move(dstID.id));
+                    c->q->g->bpool.put(std::move(srcID.id));
+                    c->q->g->bpool.put(std::move(token.token));
                 }
             };
         }  // namespace packet

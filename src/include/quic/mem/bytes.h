@@ -7,6 +7,7 @@
 
 // bytes - byte interface
 #pragma once
+#include "../common/dll_h.h"
 #include "../doc.h"
 #include "../common/macros.h"
 

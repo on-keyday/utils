@@ -9,8 +9,8 @@
 #pragma once
 
 #include "../doc.h"
-#include "../internal/bytes.h"
-#include "../internal/pool.h"
+#include "../mem/bytes.h"
+#include "../mem/pool.h"
 
 namespace utils {
     namespace quic {
@@ -23,7 +23,7 @@ namespace utils {
 
             constexpr tsize InvalidLength = ~0;
 
-            bool operator==(const ConnID& a, const ConnID& b) {
+            inline bool operator==(const ConnID& a, const ConnID& b) {
                 // validate range
                 if (a.id.size() < a.len || b.id.size() < b.len) {
                     return false;

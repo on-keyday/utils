@@ -6,7 +6,7 @@
 */
 
 
-#include <quic/quic_var_int.h>
+#include <quic/common/variable_int.h>
 #include <cassert>
 
 void test_quic_varint() {

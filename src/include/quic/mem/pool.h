@@ -24,10 +24,11 @@ namespace utils {
             struct BytesPool {
                 allocate::Alloc* a;
                 BytesHolder holder;
+                constexpr BytesPool() {}
                 BytesPool(allocate::Alloc* a, BytesHolder holder)
                     : a(a), holder(holder) {}
                 bytes::Bytes get(tsize len) {
-                    if (len == 0) {
+                    if (len == 0 || !holder.get_) {
                         return {};
                     }
                     auto got = holder.get_(holder.h, len, a);

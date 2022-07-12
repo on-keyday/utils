@@ -7,7 +7,7 @@
 
 // quic_var_int - quic variable integer
 #pragma once
-#include "doc.h"
+#include "../doc.h"
 
 namespace utils {
     namespace quic {
@@ -21,6 +21,10 @@ namespace utils {
                 need_more_length,
                 too_large_number,
             };
+
+            constexpr bool ok(Error e) {
+                return e == Error::none;
+            }
 
             constexpr byte msb_mask = 0b11'00'00'00;
             constexpr byte msb_len1 = 0b00'00'00'00;
@@ -119,7 +123,7 @@ namespace utils {
             T endian_swap(T t) {
                 Swap<T> v{t};
                 reverse(v);
-                return result.t;
+                return v.t;
             }
 
             template <class T>
@@ -130,7 +134,7 @@ namespace utils {
             template <class T, class Bytes>
             Error encode_bytes(Bytes&& bytes, tsize value, tsize size, tsize* offset) {
                 constexpr auto enclen = sizeof(T);
-                if (offset == nullptr || enclen >= size - *offset) {
+                if (offset == nullptr || enclen > size - *offset) {
                     return Error::invalid_argument;
                 }
                 if (!in_range(value, sizeof(T))) {

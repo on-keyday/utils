@@ -9,6 +9,7 @@
 #pragma once
 #include "../doc.h"
 #include "../packet/packet_head.h"
+#include "../core/event.h"
 
 namespace utils {
     namespace quic {
@@ -16,6 +17,12 @@ namespace utils {
             struct GlobalCallbacks {
                 void* C;
                 void (*on_enter_progress_f)(void* C, tsize seq);
+                void (*on_event_f)(void* C, core::EventArg);
+                void on_event(core::EventArg arg) {
+                    if (on_event_f) {
+                        on_event_f(C, arg);
+                    }
+                }
                 void on_enter_progress(tsize seq) {
                     if (on_enter_progress_f) {
                         on_enter_progress_f(C, seq);

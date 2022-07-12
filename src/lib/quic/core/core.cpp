@@ -6,33 +6,187 @@
 */
 
 
+#include <quic/common/dll_cpp.h>
 #include <quic/core/core.h>
 #include <quic/internal/context_internal.h>
+#include <atomic>
+#include <mutex>
+#include <quic/mem/que.h>
 
 namespace utils {
     namespace quic {
         namespace core {
+
+            constexpr auto queinit = 10;
+
             struct QQue {
-                context::QUIC* get_q(tsize seq) {
-                    return nullptr;
+                mem::LinkQue<QUIC*> que;
+                QUIC* mem_exhausted;
+
+                bool en_q(QUIC* q) {
+                    return que.init(queinit) && que.en_q(std::move(q));
+                }
+
+                QUIC* de_q() {
+                    QUIC* q = nullptr;
+                    que.de_q(q);
+                    return q;
                 }
             };
 
-            enum class Status {
+            struct EQue {
+                mem::LinkQue<Event> que;
+                Event mem_exhausted;
 
+                bool en_q(Event&& e) {
+                    return que.init(queinit) && que.en_q(std::move(e));
+                }
+
+                Event de_q() {
+                    Event ev{EventType::idle};
+                    que.lock_callback([&]() {
+                        if (mem_exhausted.arg.type != EventType::idle) {
+                            ev = mem_exhausted;
+                            mem_exhausted = {EventType::idle};
+                            return;
+                        }
+                        que.de_q_nlock(ev);
+                    });
+                    return ev;
+                }
             };
 
-            struct Looper {
+            struct EventLoop {
+                core::global g;
                 tsize seq;
                 QQue q;
+                std::atomic_flag end;
+                QUIC* mem_exhausted;
             };
 
-            void progress_loop(Looper* l) {
-                auto q = l->q.get_q(l->seq);
-                if (!q) {
-                    return;  // nothing to do
+            dll(void) enque_event(QUIC* q, Event e) {
+                if (!q->ev->en_q(std::move(e))) {
+                    q->ev->mem_exhausted = e;
+                    return;
                 }
-                q->gcallback.on_enter_progress(l->seq);
+            }
+
+            Event next(EQue* q) {
+                return q->de_q();
+            }
+
+            void thread_(EventLoop* l) {
+                while (!l->end.test()) {
+                    progress_loop(l);
+                }
+            }
+
+            dll(bool) add_loop(EventLoop* l, QUIC* q) {
+                return l->q.en_q(q);
+            }
+
+            dll(tsize) rem_loop(EventLoop* l, QUIC* q) {
+                return l->q.que.rem_q([&](QUIC* cmp) {
+                    return cmp == q;
+                });
+            }
+
+            dll(bool) progress_loop(EventLoop* l) {
+                auto q = l->q.de_q();
+                if (!q) {
+                    return false;  // nothing to do
+                }
+                q->g->gcallback.on_enter_progress(l->seq);
+                l->seq++;
+                Event event = next(q->ev.get());
+                q->g->gcallback.on_event(event.arg);
+                if (event.arg.type == EventType::idle) {
+                    return false;
+                }
+                auto qstat = que_remove;
+                if (event.callback) {
+                    qstat = event.callback(l, q, event.arg);
+                }
+                if (qstat == que_enque) {
+                    l->q.en_q(q);
+                }
+                return true;
+            }
+
+            dll(EventLoop*) new_Looper(QUIC* q) {
+                if (!q || !q->g) {
+                    return nullptr;
+                }
+                auto l = q->g->alloc.allocate<EventLoop>();
+                if (!l) {
+                    return nullptr;
+                }
+                l->g = q->g;
+                l->q.que.a = &l->g->alloc;
+                return l;
+            }
+
+            dll(allocate::Alloc*) get_alloc(QUIC* q) {
+                return &q->g->alloc;
+            }
+
+            dll(void) del_QUIC(QUIC* q) {
+                if (!q) {
+                    return;
+                }
+                q->ev->que.destruct([&](Event& e) {
+                    e.callback(nullptr, q, e.arg);
+                });
+                q->g->alloc.deallocate(q);
+            }
+
+            dll(bytes::Bytes) get_bytes(QUIC* q, tsize len) {
+                return q->g->bpool.get(len);
+            }
+
+            Dll(void) put_bytes(QUIC* q, bytes::Bytes&& b) {
+                q->g->bpool.put(std::move(b));
+            }
+
+            dll(QUIC*) new_QUIC(allocate::Alloc a) {
+                auto q = a.allocate<QUIC>();
+                if (!q) {
+                    return nullptr;
+                }
+                q->g = mem::make_inner_alloc<Global>(a, [](Global& g, allocate::Alloc a) {
+                    g.alloc = a;
+                    return &g.alloc;
+                });
+                if (!q->g) {
+                    a.deallocate(q);
+                    return nullptr;
+                }
+                q->ev = mem::make_shared<EQue>(&q->g->alloc);
+                if (!q->ev) {
+                    q->g->alloc.deallocate(q);
+                    return nullptr;
+                }
+                q->ev->que.a = &q->g->alloc;
+                q->g->bpool.a = &q->g->alloc;
+                q->io = mem::make_shared<IOHandles>(&q->g->alloc);
+                q->io->ioproc = {};
+                return q;
+            }
+
+            dll(void) set_bpool(QUIC* q, pool::BytesHolder h) {
+                if (q->g->bpool.holder.free_) {
+                    q->g->bpool.holder.free_(q->g->bpool.holder.h, &q->g->alloc);
+                }
+                q->g->bpool.holder = h;
+            }
+
+            dll(void) register_io(QUIC* q, io::IO io) {
+                q->io->ioproc.free();
+                q->io->ioproc = io;
+            }
+
+            Dll(io::IO*) get_io(QUIC* q) {
+                return &q->io->ioproc;
             }
         }  // namespace core
     }      // namespace quic

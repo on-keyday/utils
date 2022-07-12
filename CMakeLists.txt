@@ -101,6 +101,10 @@ add_executable(container_iface "src/test/iface/test_container.cpp")
 add_executable(token_stream "src/test/parser/stream/test_token_stream.cpp")
 add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
 add_executable(quic_varint "src/test/quic/test_quic_varint.cpp")
+add_executable(quic_udp "src/test/quic/test_quic_udp.cpp")
+add_executable(quic_shared_ptr "src/test/quic/test_quic_shared_ptr.cpp")
+add_executable(quic_event "src/test/quic/test_quic_event.cpp")
+add_executable(quic_frame "src/test/quic/test_quic_frame.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -139,12 +143,10 @@ option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
 if(UTILS_BUILD_SHARED_LIBS)
   add_library(utils SHARED)
-  add_compile_options(utils -D UTILS_AS_DLL)
+  add_compile_options(-D UTILS_AS_DLL)
 else()
   add_library(utils STATIC)
 endif()
-
-add_library(quic SHARED)
 
 target_sources(utils
   PRIVATE
@@ -192,9 +194,17 @@ target_sources(utils
   "src/lib/async/worker.cpp"
 )
 
+# libquic
+add_library(quic SHARED)
+
 target_sources(quic
   PRIVATE
-  "src/lib/quic/context.cpp")
+  "src/lib/quic/core/core.cpp"
+  "src/lib/quic/io/udp_wait.cpp"
+  "src/lib/quic/io/udp.cpp"
+  "src/lib/quic/mem/stdalloc.cpp"
+  "src/lib/quic/mem/stdbpool.cpp"
+)
 
 # endif()
 target_link_libraries(fileview utils)
@@ -247,6 +257,12 @@ target_link_libraries(netutil utils)
 target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
 
+# libquic
+target_link_libraries(quic_udp quic utils)
+target_link_libraries(quic_shared_ptr quic)
+target_link_libraries(quic_event quic)
+target_link_libraries(quic_frame quic)
+
 if(WIN32)
   target_link_libraries(netcore libssl libcrypto ws2_32)
   target_link_libraries(http1 libssl libcrypto ws2_32)
@@ -255,6 +271,8 @@ if(WIN32)
   if(UTILS_BUILD_SHARED_LIBS)
     target_link_libraries(utils libssl libcrypto ws2_32)
   endif()
+
+  target_link_libraries(quic ws2_32)
 else()
   target_link_libraries(netcore libssl.so libcrypto.so Threads::Threads)
   target_link_libraries(http1 libssl.so libcrypto.so Threads::Threads)
@@ -274,6 +292,10 @@ if(WIN32)
     add_custom_command(
       TARGET utils POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "test/libutils.dll"
+    )
+    add_custom_command(
+      TARGET quic POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libquic.dll" "test/libquic.dll"
     )
     add_custom_command(
       TARGET utils POST_BUILD
