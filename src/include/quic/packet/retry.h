@@ -13,15 +13,21 @@ namespace utils {
     namespace quic {
         namespace packet {
             // read_retry_packet reads retry packet
-            // TODO: implement reading methods
-            template <class Bytes, class Next>
-            Error read_retry_packet(Bytes&& b, tsize size, tsize* offset, FirstByte fb, Next&& next) {
-                /* by here,
-                   SrcConnectionID,
-                   DstConnectionID
-                   were saved at next
-                */
-                return next.retry_h(b, size, offset, fb, size - *offset);
+            template <class Next>
+            Error read_retry_packet(byte* head, tsize size, tsize* offset, RetryPacket& retry, Next&& next) {
+                auto integity_offset = size - 16;
+                if (*offset > integity_offset) {
+                    next.packet_error(Error::not_enough_length, "read_retry_packet/integrity_tag", &retry);
+                    return Error::not_enough_length;
+                }
+                auto integrity_tag = head + integity_offset;
+                bytes::copy(retry.integrity_tag, integrity_tag, 16);
+                retry.retry_token_len = integity_offset - *offset;
+                retry.retry_token = head + *offset;
+                retry.payload_length = 0;
+                retry.remain = 0;
+                retry.end_offset = size;
+                return next.retry(&retry);
             }
         }  // namespace packet
     }      // namespace quic

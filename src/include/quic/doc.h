@@ -667,6 +667,7 @@ namespace utils {
 
         namespace packet {
             // section 17.2
+            /*
             struct LongHeader {
                 byte* SrcConnectionID;
                 byte* DstConnectionID;
@@ -675,7 +676,8 @@ namespace utils {
             struct ShortHeader {
                 byte* DstConnectionID;
             };
-
+            */
+            
             enum class types {
                 Initial = 0x0,
                 ZeroRTT = 0x1,  // 0-RTT

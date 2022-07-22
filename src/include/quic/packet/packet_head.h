@@ -9,17 +9,13 @@
 #pragma once
 
 #include "../common/variable_int.h"
+#include "../conn/connId.h"
 #include <type_traits>
 #include <concepts>
 
 namespace utils {
     namespace quic {
         namespace packet {
-            enum class FBInfo {
-                should_discard,
-                long_header,
-                short_header,
-            };
 
             enum class Error {
                 none,
@@ -31,34 +27,163 @@ namespace utils {
                 unimplemented_required,  // unimplemented and must fix
                 memory_exhausted,
                 too_long_connection_id,
-                unkown_connection_id,
+                unknown_connection_id,
             };
 
             struct FirstByte {
-                FBInfo behave;
-                types type;
-                byte bits;
+                byte raw;
                 tsize offset;
+
+                constexpr bool invalid() const {
+                    return (raw & 0x40) == 0;
+                }
+
+                constexpr bool is_short() const {
+                    return (raw & 0x80) == 0;
+                }
+
+                constexpr bool is_long() const {
+                    return !is_short() && !invalid();
+                }
+
+                constexpr types type() const {
+                    if (invalid()) {
+                        return types::VersionNegotiation;
+                    }
+                    if (is_short()) {
+                        return types::OneRTT;
+                    }
+                    byte long_header_type = (raw & 0x30) >> 4;
+                    return types{long_header_type};
+                }
+
+                constexpr byte spec_mask() const {
+                    switch (type()) {
+                        case types::VersionNegotiation:
+                            return 0x7f;
+                        case types::OneRTT:
+                            return 0x3f;
+                        default:
+                            return 0x0f;
+                    }
+                }
+
+                constexpr byte flags() const {
+                    return raw & spec_mask();
+                }
+
+                constexpr byte protect_mask() const {
+                    if (is_short()) {
+                        return 0x1f;
+                    }
+                    else {
+                        return 0x0f;
+                    }
+                }
+
+                constexpr void protect(byte of) {
+                    raw ^= (of & protect_mask());
+                }
+
+                constexpr byte packet_number_length() {
+                    return (raw & 0x3) + 1;
+                }
             };
 
             constexpr FirstByte guess_packet(byte first_byte) {
-                auto fixed_bit = first_byte & 0x40;
-                if (fixed_bit == 0) {
-                    // if 0x40 bit is not 1
-                    // this can be VersionNegotiation packet
-                    return {FBInfo::should_discard, types::VersionNegotiation, static_cast<byte>(first_byte & 0x7f)};
-                }
-                auto header_form = first_byte & 0x80;
-                if (header_form == 0) {
-                    return {FBInfo::short_header, types::OneRTT, static_cast<byte>(first_byte & 0x3f)};
-                }
-                byte long_header_type = (first_byte & 0x30) >> 4;
-                return {FBInfo::long_header, types{long_header_type}, static_cast<byte>(first_byte & 0x0f)};
+                return FirstByte{first_byte};
             }
+
+            // common parameter of almost all packet and help parse
+            // for exception, RetryPacket has no payload and no packet_number
+            struct Packet {
+                FirstByte flags;
+                tsize dstID_len;
+                byte* dstID;
+
+                // protected
+                tsize packet_number;
+                byte* raw_header;
+                byte* raw_payload;
+                tsize payload_length;
+                tsize remain;
+
+                // decrepted
+                bytes::Bytes decrypted_payload;
+                tsize decrypted_length;
+
+                tsize end_offset;
+            };
+
+            /*
+            Long Header Packet {
+                Header Form (1) = 1,
+                Fixed Bit (1) = 1,
+                Long Packet Type (2),
+                Type-Specific Bits (4),  // ~ 1 byte
+                Version (32),    // 4 byte
+                Destination Connection ID Length (8),
+                Destination Connection ID (0..160),
+                Source Connection ID Length (8),
+                Source Connection ID (0..160),
+                Type-Specific Payload (..),
+            }
+            */
+            struct LongPacket : Packet {
+                uint version;
+                tsize srcID_len;
+                byte* srcID;
+            };
+
+            /*
+            1-RTT Packet {
+                Header Form (1) = 0,
+                Fixed Bit (1) = 1,
+                Spin Bit (1),
+                Reserved Bits (2),
+                Key Phase (1),
+                Packet Number Length (2), // 1 byte
+                Destination Connection ID (0..160), // 0 ~ 20 byte (size known)
+                Packet Number (8..32), // 1 ~ 4 byte
+                Packet Payload (8..), // 1 byte ~
+            }
+            */
+            struct OneRTTPacket : Packet {
+            };
+
+            constexpr LongPacket* as_long(Packet* p) {
+                if (!p) {
+                    return nullptr;
+                }
+                if (p->flags.is_long()) {
+                    return static_cast<LongPacket*>(p);
+                }
+                return nullptr;
+            }
+
+            struct InitialPacket : LongPacket {
+                tsize token_len;
+                byte* token;
+            };
+
+            struct HandshakePacket : LongPacket {
+            };
+
+            struct ZeroRTTPacket : LongPacket {
+            };
+
+            struct RetryPacket : LongPacket {
+                tsize retry_token_len;
+                byte* retry_token;
+                byte integrity_tag[16];
+            };
+
+            struct VersionNegotiationPacket : LongPacket {
+            };
 
             template <class Bytes>
             bool read_version(Bytes&& b, uint* version, tsize size, tsize* offset) {
-                if (version || offset == nullptr || *offset + 3 >= size) {
+                if (!version || offset == nullptr || *offset + 3 >= size) {
                     return false;
                 }
                 varint::Swap<uint> v;
@@ -71,27 +196,32 @@ namespace utils {
                 return true;
             }
 
-            template <class T, class Bytes>
-            concept PacketHeadNext = requires(T t) {
-                // discard(bytes,size,offset,first_byte,version,versionSuc)
-                { t.discard(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), FirstByte{}, uint{}, bool{}) } -> std::same_as<Error>;
-                // long_h(bytes,size,offset,first_byte,payload_length)
-                { t.long_h(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), FirstByte{}, tsize{}) } -> std::same_as<Error>;
-                // short_h(bytes,size,offset,first_byte)
-                { t.short_h(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), FirstByte{}) } -> std::same_as<Error>;
-                // retry_h(bytes,size,offset,first_byte,payload_length)
-                { t.retry_h(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), FirstByte{}, tsize{}) } -> std::same_as<Error>;
+            template <class T>
+            concept as_pointer = std::is_pointer_v<T>;
 
-                // save_dst(bytes,size,offset,dst_id_length)
-                { t.save_dst(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), 0) } -> std::same_as<Error>;
-                // save_src(bytes,size,offset,src_id_length)
-                { t.save_src(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), 0) } -> std::same_as<Error>;
-                { t.save_initial_token(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), 0) } -> std::same_as<Error>;
-                { t.unmask_fb(std::declval<FirstByte*>()) } -> std::same_as<Error>;
-                { t.save_packet_number(std::declval<tsize*>()) } -> std::same_as<Error>;
-                // packet_error(bytes,size,offset,first_byte,version,err,where)
-                {t.packet_error(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), FirstByte{}, uint{}, Error{}, std::declval<const char*>())};
-                {t.varint_decode_error(std::declval<Bytes>(), tsize{}, std::declval<tsize*>(), FirstByte{}, varint::Error{}, std::declval<const char*>())};
+            template <class T>
+            concept PacketReadContext = requires(T t) {
+                { t.discard((byte*)nullptr, tsize{}, (tsize*)nullptr, FirstByte{}, uint{}, bool{}) } -> std::same_as<Error>;
+
+                { t.initial((InitialPacket*)nullptr) } -> std::same_as<Error>;
+
+                { t.zero_rtt((ZeroRTTPacket*)nullptr) } -> std::same_as<Error>;
+
+                { t.handshake((HandshakePacket*)nullptr) } -> std::same_as<Error>;
+
+                { t.retry((RetryPacket*)nullptr) } -> std::same_as<Error>;
+
+                { t.one_rtt((OneRTTPacket*)nullptr) } -> std::same_as<Error>;
+
+                {t.packet_error(Error{}, (const char*)nullptr, (Packet*)nullptr)};
+
+                {t.varint_error(varint::Error{}, (const char*)nullptr, (Packet*)nullptr)};
+
+                { t.get_bytes(tsize{}) } -> std::same_as<bytes::Bytes>;
+
+                {t.put_bytes(std::declval<bytes::Bytes&&>())};
+
+                { t.get_issued_connid(byte{}) } -> as_pointer;
             };
 
             template <class Bytes>
@@ -123,6 +253,54 @@ namespace utils {
                 if (err != Error::none) {
                     return discard(err, "read_packet_number_long/save_packet_number");
                 }
+                return Error::none;
+            }
+
+            constexpr auto connIDLenLimit = 20;
+
+#define CHECK_OFFSET(LEN)                    \
+    {                                        \
+        if (size < LEN + *offset) {          \
+            return Error::not_enough_length; \
+        }                                    \
+    }
+#define CHECK_OFFSET_CB(LEN, ...)   \
+    {                               \
+        if (size < LEN + *offset) { \
+            __VA_ARGS__             \
+        }                           \
+    }
+
+            template <class Bytes, class Next>
+            Error read_bytes(Bytes&& b, tsize size, tsize* offset, bytes::Bytes& res, tsize* reslen, Next& next, tsize len) {
+                CHECK_OFFSET(len)
+                // protect from remaining id
+                next.put_bytes(std::move(res));
+                *reslen = conn::InvalidLength;
+                auto dst = next.get_bytes(len + 1);
+                byte* target = dst.own();
+                if (!target) {
+                    return Error::memory_exhausted;
+                }
+                bytes::copy(target, b, *offset + len, *offset);
+                target[len] = 0;  // null terminated
+                res = std::move(dst);
+                *reslen = len;
+                *offset += len;
+                return Error::none;
+            }
+
+            template <class Bytes, class Next>
+            Error read_connID(Bytes&& b, tsize size, tsize* offset, byte*& id, tsize& len, Next& next) {
+                CHECK_OFFSET(1)
+                len = b[*offset];
+                ++*offset;
+                if (len > connIDLenLimit) {
+                    return Error::too_long_connection_id;
+                }
+                CHECK_OFFSET(len)
+                id = b + *offset;
+                *offset += len;
                 return Error::none;
             }
 

@@ -14,16 +14,25 @@
 namespace utils {
     namespace quic {
         namespace mem {
-            template <class T>
-            struct Que {
+            struct EmptyLock {
+                void lock() {}
+                bool try_lock() {
+                    return true;
+                }
+                void unlock() {}
+            };
+
+            template <class T, class Lock = std::recursive_mutex>
+            struct VecQue {
                 T* vec = nullptr;
                 tsize cap = 0;
                 tsize len = 0;
                 allocate::Alloc* a = nullptr;
-                std::mutex m;
+
+                Lock m;
 
                 auto lock_callback(auto&& callback) {
-                    std::scoped_lock lock{m};
+                    std::scoped_lock l{m};
                     return callback();
                 }
 
@@ -129,54 +138,131 @@ namespace utils {
             };
 
             template <class T>
-            struct LinkQue {
-                allocate::Alloc* a;
+            void add_node_range(LinkNode<T>*& root, LinkNode<T>*& rootend, LinkNode<T>* f, LinkNode<T>* e) {
+                if (!root) {
+                    assert(rootend == nullptr);
+                    root = f;
+                    rootend = e;
+                }
+                else {
+                    assert(rootend && rootend->next == nullptr);
+                    rootend->next = f;
+                    rootend = e;
+                }
+            }
 
-               private:
-                // lock
-                std::recursive_mutex m;
-
-                LinkNode<T>* first = nullptr;
-                LinkNode<T>* last = nullptr;
-
-                // allocated stcok
+            template <class T>
+            struct StockNode {
                 LinkNode<T>* stock_begin = nullptr;
                 LinkNode<T>* stock_end = nullptr;
+                allocate::Alloc* a = nullptr;
 
-                static void add_node_range(LinkNode<T>*& root, LinkNode<T>*& rootend, LinkNode<T>* f, LinkNode<T>* e) {
-                    if (!root) {
-                        assert(rootend == nullptr);
-                        root = f;
-                        rootend = e;
-                    }
-                    else {
-                        assert(rootend && rootend->next == nullptr);
-                        rootend->next = f;
-                        rootend = e;
-                    }
+                allocate::Alloc* get_alloc() {
+                    return a;
                 }
 
-               public:
-                auto lock_callback(auto&& callback) {
-                    std::scoped_lock lock{m};
-                    return callback();
+                LinkNode<T>** begin() {
+                    return &stock_begin;
                 }
 
-                bool en_q_nlock(T&& q) {
-                    LinkNode<T>* set = nullptr;
-                    // get from stack
+                LinkNode<T>** end() {
+                    return &stock_end;
+                }
+
+                LinkNode<T>* get() {
                     if (stock_begin) {
-                        set = stock_begin;
+                        auto set = stock_begin;
                         if (stock_begin == stock_end) {
                             assert(stock_begin->next == nullptr);
                             stock_end = nullptr;
                         }
                         stock_begin = stock_begin->next;
                         set->next = nullptr;
+                        return set;
                     }
+                    return nullptr;
+                }
+
+                void set_range(LinkNode<T>* begin, LinkNode<T>* end) {
+                    add_node_range(stock_begin, stock_end, begin, end);
+                }
+
+                void set(LinkNode<T>* stock) {
+                    set_range(stock, stock);
+                }
+
+                bool empty() const {
+                    return stock_begin == nullptr;
+                }
+            };
+
+            template <class T>
+            struct SharedStock {
+                StockNode<T>* shared;
+
+                allocate::Alloc* get_alloc() {
+                    return shared->get_alloc();
+                }
+
+                LinkNode<T>** begin() {
+                    return nullptr;
+                }
+
+                LinkNode<T>** end() {
+                    return nullptr;
+                }
+
+                LinkNode<T>* get() {
+                    return shared->get();
+                }
+
+                void set_range(LinkNode<T>* begin, LinkNode<T>* end) {
+                    return shared->set_range(begin, end);
+                }
+
+                void set(LinkNode<T>* stock) {
+                    set_range(stock, stock);
+                }
+
+                bool empty() const {
+                    return shared->empty();
+                }
+            };
+
+            template <class T, class Lock = std::recursive_mutex, class Stock = StockNode<T>>
+            struct LinkQue {
+                // allocated stcok
+                Stock stock;
+
+               private:
+                // lock
+                Lock m;
+
+                LinkNode<T>* first = nullptr;
+                LinkNode<T>* last = nullptr;
+
+               public:
+                auto lock_callback(auto&& callback) {
+                    std::scoped_lock l{m};
+                    return callback();
+                }
+
+                bool en_q_node_nlock(LinkNode<T>* set) {
                     if (!set) {
+                        return false;
+                    }
+                    add_node_range(first, last, set, set);
+                    return true;
+                }
+
+                bool en_q_nlock(T&& q) {
+                    LinkNode<T>* set = nullptr;
+                    // get from stack
+                    set = stock.get();
+                    if (!set) {
+                        allocate::Alloc* al = stock.get_alloc();
                         // allocate new LinkNode
-                        set = a ? a->allocate<LinkNode<T>>() : nullptr;
+                        set = al ? al->allocate<LinkNode<T>>() : nullptr;
                         if (!set) {
                             return false;
                         }
@@ -192,9 +278,9 @@ namespace utils {
                     return en_q_nlock(std::move(q));
                 }
 
-                bool de_q_nlock(T& q) {
+                LinkNode<T>* de_q_node_nlock() {
                     if (!first) {
-                        return false;
+                        return nullptr;
                     }
                     auto get = first;
                     if (first == last) {
@@ -203,9 +289,17 @@ namespace utils {
                     }
                     first = first->next;
                     get->next = nullptr;
+                    return get;
+                }
+
+                bool de_q_nlock(T& q) {
+                    LinkNode<T>* get = de_q_node_nlock();
+                    if (!get) {
+                        return false;
+                    }
                     q = std::move(get->value);
                     get->value = T{};
-                    add_node_range(stock_begin, stock_end, get, get);
+                    stock.set(get);
                     return true;
                 }
 
@@ -215,19 +309,20 @@ namespace utils {
                 }
 
                 bool init_nlock(tsize reserve) {
-                    if (!a) {
+                    allocate::Alloc* al = stock.get_alloc();
+                    if (!al) {
                         return false;
                     }
-                    if (first || stock_begin) {
+                    if (first || !stock.empty()) {
                         return true;
                     }
                     for (auto i = 0; i < reserve; i++) {
-                        auto n = a->allocate<LinkNode<T>>();
+                        auto n = al->allocate<LinkNode<T>>();
                         if (!n) {
                             return i != 0;
                         }
                         n->next = nullptr;
-                        add_node_range(stock_begin, stock_end, n, n);
+                        stock.set(n);
                     }
                     return true;
                 }
@@ -235,6 +330,19 @@ namespace utils {
                 bool init(tsize reserve) {
                     std::scoped_lock l{m};
                     return init_nlock(reserve);
+                }
+
+                void for_each_nlock(auto&& callback) {
+                    for (auto s = first; s; s = s->next) {
+                        if (!callback(s->value)) {
+                            return;
+                        }
+                    }
+                }
+
+                void for_each(auto&& callback) {
+                    std::scoped_lock l{m};
+                    for_each_nlock(callback);
                 }
 
                 tsize rem_q_nlock(auto&& should_remove) {
@@ -261,7 +369,7 @@ namespace utils {
                                 first = next;
                             }
                             s->value = {};
-                            add_node_range(stock_begin, stock_end, s, s);
+                            stock.set(s);
                             s = next;
                             count++;
                         }
@@ -279,12 +387,12 @@ namespace utils {
                 }
 
                private:
-                static tsize steal_(std::mutex* lock, LinkNode<T>*& root, LinkNode<T>*& rootend, tsize max, auto&& callback) {
+                static tsize steal_(std::mutex* l, LinkNode<T>*& root, LinkNode<T>*& rootend, tsize max, auto&& callback) {
                     if (!root) {
                         return 0;
                     }
-                    if (lock) {
-                        lock->lock();
+                    if (l) {
+                        l->lock();
                     }
                     tsize count = 1;
                     LinkNode<T>* start = root;
@@ -298,20 +406,22 @@ namespace utils {
                     }
                     root = goal->next;
                     goal->next = nullptr;
-                    if (lock) {
-                        lock->unlock();
+                    if (l) {
+                        l->unlock();
                     }
                     callback(start, goal);
                     return count;
                 }
 
                public:
-                tsize steal(LinkQue<T>& by, tsize max, bool lock) {
-                    if (a != by.a) {
+                tsize steal(LinkQue<T>& by, tsize max, bool do_lock) {
+                    allocate::Alloc* a = stock.get_alloc();
+                    allocate::Alloc* ba = by.stock.get_alloc();
+                    if (a != ba) {
                         return 0;
                     }
                     return steal_(
-                        lock ? &m : nullptr,
+                        do_lock ? &m : nullptr,
                         first, last, max,
                         [&](LinkNode<T>* b, LinkNode<T>* e) {
                             std::scoped_lock l{by.m};
@@ -319,43 +429,54 @@ namespace utils {
                         });
                 }
 
-                tsize steal_stock(LinkQue<T>& by, tsize max, bool lock) {
-                    if (a != by.a) {
+                tsize steal_stock(LinkQue<T>& by, tsize max, bool do_lock) {
+                    allocate::Alloc* a = stock.get_alloc();
+                    allocate::Alloc* ba = by.stock.get_alloc();
+                    if (a != ba) {
+                        return 0;
+                    }
+                    auto b = stock.begin();
+                    auto e = stock.end();
+                    if (!b || !e) {
                         return 0;
                     }
                     return steal_(
-                        lock ? &m : nullptr,
-                        stock_begin, stock_end, max,
+                        do_lock ? &m : nullptr,
+                        *b, *e, max,
                         [&](LinkNode<T>* b, LinkNode<T>* e) {
                             std::scoped_lock l{by.m};
-                            add_node_range(by.stock_begin, by.stock_end, b, e);
+                            by.stock.set_range(b, e, a);
                         });
                 }
 
-                void free_stock(bool lock) {
-                    if (!stock_begin) {
+                void free_stock(bool do_lock) {
+                    auto b = stock.begin();
+                    auto e = stock.end();
+                    allocate::Alloc* al = stock.get_alloc();
+                    if (!al || !b || !e || stock.empty()) {
                         return;
                     }
-                    if (lock) {
+                    if (do_lock) {
                         m.lock();
                     }
-                    auto stock = stock_begin;
-                    stock_begin = nullptr;
-                    stock_end = nullptr;
-                    if (lock) {
+                    auto stock = *b;
+                    *b = nullptr;
+                    *e = nullptr;
+                    if (do_lock) {
                         m.unlock();
                     }
                     for (LinkNode<T>* s = stock; s;) {
                         auto n = s->next;
                         s->next = nullptr;
-                        a->deallocate(s);
+                        al->deallocate(s);
                         s = n;
                     }
                 }
 
                 void destruct(auto&& callback) {
-                    std::scoped_lock lock{m};
-                    if (!a) {
+                    std::scoped_lock l{m};
+                    allocate::Alloc* al = stock.get_alloc();
+                    if (!al) {
                         return;
                     }
                     free_stock(false);
@@ -363,10 +484,9 @@ namespace utils {
                         auto n = s->next;
                         s->next = nullptr;
                         callback(s->value);
-                        a->deallocate(s);
+                        al->deallocate(s);
                         s = n;
                     }
-                    a = nullptr;
                 }
             };
         }  // namespace mem

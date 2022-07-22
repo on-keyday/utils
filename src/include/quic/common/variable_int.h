@@ -127,6 +127,13 @@ namespace utils {
             }
 
             template <class T>
+            void reverse_if(Swap<T>& t) {
+                if (!netorder()) {
+                    reverse(t);
+                }
+            }
+
+            template <class T>
             T swap_if(T t) {
                 return netorder() ? t : endian_swap(t);
             }

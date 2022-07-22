@@ -12,6 +12,7 @@
 #include <quic/mem/alloc.h>
 #include <quic/common/variable_int.h>
 #include <quic/internal/sock_internal.h>
+#include <quic/internal/external_func_internal.h>
 
 // for initialization
 #include <quic/mem/once.h>
@@ -19,7 +20,7 @@
 namespace utils {
     namespace quic {
         namespace io {
-
+            namespace ext = external;
             bool sockaddr_to_target(::sockaddr_storage* storage, Target* t) {
                 if (storage->ss_family == AF_INET) {
                     auto addr = reinterpret_cast< ::sockaddr_in*>(storage);
@@ -45,22 +46,32 @@ namespace utils {
             namespace sys {
 #ifdef _WIN32
                 struct Info {
-                    mem::Once once;
                     ::WSAData wsadata;
                     int last_code;
                 };
 
                 int initialize_network_windows(Info* info) {
-                    info->once.Do([&] {
-                        info->last_code = ::WSAStartup(MAKEWORD(2, 2), &info->wsadata);
-                    });
+                    ext::load_SockDll(
+                        [](ext::SockDll* dll, void* user) {
+                            auto info = static_cast<Info*>(user);
+                            if (!dll) {
+                                info->last_code = -1;
+                                return;
+                            }
+                            info->last_code = dll->WSAStartup_(MAKEWORD(2, 2), &info->wsadata);
+                        },
+                        info);
                     return info->last_code;
                 }
 
                 void uninitialize_network_windows(Info* info) {
-                    info->once.Undo([] {
-                        ::WSACleanup();
-                    });
+                    ext::unload_SockDll(
+                        [](ext::SockDll* dll, void* user) {
+                            dll->WSACleanup_();
+                            auto info = static_cast<Info*>(user);
+                            info->last_code = -1;
+                        },
+                        info);
                 }
 
                 struct System {
@@ -106,6 +117,9 @@ namespace utils {
                 };
 
                 io::Result read_from(Conn* c, Target* t, byte* d, tsize l) {
+                    if (!ext::sockdll.loaded()) {
+                        return {io::Status::fatal, invalid, true};
+                    }
                     if (!t) {
                         return {io::Status::unsupported, invalid, true};
                     }
@@ -114,7 +128,7 @@ namespace utils {
                     }
                     ::sockaddr_storage storage;
                     int len = sizeof(storage);
-                    auto err = ::recvfrom(t->target, topchar(d), l, 0, repaddr(&storage), &len);
+                    auto err = ext::sockdll.recvfrom_(t->target, topchar(d), l, 0, repaddr(&storage), &len);
                     if (err == -1) {
                         return with_code(GET_ERROR());
                     }
@@ -125,6 +139,9 @@ namespace utils {
                 }
 
                 io::Result write_to(Conn* c, const Target* t, const byte* d, tsize l) {
+                    if (!external::sockdll.loaded()) {
+                        return {io::Status::fatal, invalid, true};
+                    }
                     if (!t || t->key != UDP_IPv4 && t->key != UDP_IPv6) {
                         return {io::Status::unsupported, invalid, true};
                     }
@@ -132,7 +149,7 @@ namespace utils {
                         return {io::Status::invalid_arg, invalid, true};
                     }
                     return target_to_sockaddr(t, [&](::sockaddr* addr, tsize alen) -> io::Result {
-                        auto err = ::sendto(t->target, topchar(d), l, 0, addr, alen);
+                        auto err = ext::sockdll.sendto_(t->target, topchar(d), l, 0, addr, alen);
                         if (err == -1) {
                             return with_code(GET_ERROR());
                         }
@@ -144,7 +161,7 @@ namespace utils {
 
                 io::Result new_target(Conn* a, const Target* hint, Mode mode) {
                     if (!sys.ready()) {
-                        return {io::Status::failed, ErrorCode(sys.code())};
+                        return {io::Status::fatal, ErrorCode(sys.code())};
                     }
                     if (!hint || (hint->key != UDP_IPv4 && hint->key != UDP_IPv6)) {
                         return {io::Status::unsupported, invalid, true};
@@ -154,7 +171,7 @@ namespace utils {
                         af = AF_INET6;
                     }
 #ifdef _WIN32
-                    auto sock = ::WSASocketW(af, SOCK_DGRAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
+                    auto sock = ext::sockdll.WSASocketW_(af, SOCK_DGRAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #else
                     auto sock = ::socket(af, SOCK_DGRAM, 0);
 #endif
@@ -162,26 +179,26 @@ namespace utils {
                         return with_code(GET_ERROR());
                     }
                     u_long val = 1;
-                    auto err = ::ioctlsocket(sock, FIONBIO, &val);
+                    auto err = ext::sockdll.ioctlsocket_(sock, FIONBIO, &val);
                     if (err == -1) {
                         return with_code(GET_ERROR());
                     }
                     // for quic
                     // DO NOT fragment packet
                     val = IP_PMTUDISC_DO;
-                    err = ::setsockopt(sock, IPPROTO_IP, IP_MTU_DISCOVER, reinterpret_cast<const char*>(&val), sizeof(val));
+                    err = ext::sockdll.setsockopt_(sock, IPPROTO_IP, IP_MTU_DISCOVER, reinterpret_cast<const char*>(&val), sizeof(val));
                     if (err == -1) {
                         return with_code(GET_ERROR());
                     }
                     if (mode == server) {
                         if (!target_to_sockaddr(hint, [&](::sockaddr* s, tsize len) {
-                                auto err = ::bind(sock, s, len);
+                                auto err = ext::sockdll.bind_(sock, s, len);
                                 if (err == -1) {
                                     return false;
                                 }
                                 return true;
                             })) {
-                            ::closesocket(sock);
+                            ext::sockdll.closesocket_(sock);
                             return with_code(GET_ERROR());
                         }
                     }
@@ -189,7 +206,10 @@ namespace utils {
                 }
 
                 io::Result discard_target(Conn* c, TargetID id) {
-                    auto err = ::closesocket(id);
+                    if (!ext::sockdll.loaded()) {
+                        return {io::Status::fatal, invalid, true};
+                    }
+                    auto err = ext::sockdll.closesocket_(id);
                     if (err == -1) {
                         return {Status::failed, tsize(GET_ERROR())};
                     }
@@ -197,10 +217,13 @@ namespace utils {
                 }
 
                 io::Result option(Conn* c, Option* o) {
+                    if (!ext::sockdll.loaded()) {
+                        return {io::Status::fatal, invalid, true};
+                    }
                     if (o->key == MTU) {
                         int mtu = 0;
                         int len = sizeof(mtu);
-                        auto err = ::getsockopt(o->target, IPPROTO_IP, IP_MTU, reinterpret_cast<char*>(&mtu), &len);
+                        auto err = ext::sockdll.getsockopt_(o->target, IPPROTO_IP, IP_MTU, reinterpret_cast<char*>(&mtu), &len);
                         if (err == -1) {
                             return {io::Status::failed, tsize(GET_ERROR())};
                         }
@@ -215,7 +238,7 @@ namespace utils {
                             return {io::Status::unsupported, invalid, true};
                         }
                         return target_to_sockaddr(target, [&](::sockaddr* addr, tsize len) -> io::Result {
-                            auto err = ::connect(o->target, addr, len);
+                            auto err = ext::sockdll.connect_(o->target, addr, len);
                             if (err == -1) {
                                 return with_code(GET_ERROR());
                             }

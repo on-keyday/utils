@@ -14,12 +14,12 @@ namespace utils {
     namespace quic {
         namespace packet {
             // read_initial_packet reads initial packet fields subsequent the field Source Connection ID (0..160)
-            template <class Bytes, class Next>
-            Error read_initial_packet(Bytes&& b, tsize size, tsize* offset, FirstByte fb, Next&& next) {
+            template <class Next>
+            Error read_initial_packet(byte* head, tsize size, tsize* offset, InitialPacket& packet, Next&& next) {
                 tsize token_length = 0, redsize = 0;
-                auto vierr = varint::decode(b, &token_length, &redsize, size, *offset);
+                auto vierr = varint::decode(head, &token_length, &redsize, size, *offset);
                 auto varint_error = [&](const char* where) {
-                    next.varint_decode_error(b, size, offset, fb, vierr, where);
+                    next.varint_error(vierr, where, &packet);
                     if (vierr == varint::Error::need_more_length) {
                         return Error::not_enough_length;
                     }
@@ -29,37 +29,27 @@ namespace utils {
                     return varint_error("read_initial_packet/token_length");
                 }
                 *offset += redsize;
+                packet.token_len = token_length;
                 auto old = *offset;
                 auto discard = [&](Error e, const char* where) {
-                    next.packet_error(b, size, offset, fb, 1, e, where);
+                    next.packet_error(e, where, &packet);
                     return e;
                 };
-                Error err = next.save_initial_token(b, size, offset, token_length);
-                if (err != Error::none) {
-                    return discard(err, "read_initial_packet/save_initial_token");
-                }
-                if (old + token_length != *offset) {
-                    return discard(Error::consistency_error, "read_initial_packet/initial_token");
-                }
+                CHECK_OFFSET_CB(token_length, return discard(Error::not_enough_length, "read_initial_packet/token");)
+                packet.token = head + *offset;
+                *offset += token_length;
                 redsize = 0;
                 tsize payload_length = 0;
-                vierr = varint::decode(b, &payload_length, &redsize, size, *offset);
+                vierr = varint::decode(head, &payload_length, &redsize, size, *offset);
                 if (vierr != varint::Error::none) {
                     return varint_error("read_initial_packet/payload_length");
                 }
-                tsize packet_number = 0;
-                err = read_packet_number_long(b, size, offset, &fb, &packet_number, next, discard);
-                if (err != Error::none) {
-                    return err;
-                }
-                /* by here,
-                   SrcConnectionID,
-                   DstConnectionID,
-                   initial_token,
-                   packet_number
-                   were saved at next
-                */
-                return next.long_h(b, size, offset, fb, payload_length);
+                *offset += redsize;
+                packet.payload_length = payload_length;
+                packet.raw_payload = head + *offset;
+                packet.remain = size - *offset;
+                packet.end_offset = *offset;
+                return next.initial(&packet);
             }
         }  // namespace packet
     }      // namespace quic

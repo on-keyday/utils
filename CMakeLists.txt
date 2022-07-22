@@ -105,6 +105,8 @@ add_executable(quic_udp "src/test/quic/test_quic_udp.cpp")
 add_executable(quic_shared_ptr "src/test/quic/test_quic_shared_ptr.cpp")
 add_executable(quic_event "src/test/quic/test_quic_event.cpp")
 add_executable(quic_frame "src/test/quic/test_quic_frame.cpp")
+add_executable(quic_crypto "src/test/quic/test_quic_crypto.cpp")
+add_executable(quic_hash_map "src/test/quic/test_quic_hash_map.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -204,6 +206,9 @@ target_sources(quic
   "src/lib/quic/io/udp.cpp"
   "src/lib/quic/mem/stdalloc.cpp"
   "src/lib/quic/mem/stdbpool.cpp"
+  "src/lib/quic/core/external_func.cpp"
+  "src/lib/quic/crypto/hkdf.cpp"
+  "src/lib/quic/crypto/initial.cpp"
 )
 
 # endif()
@@ -262,6 +267,8 @@ target_link_libraries(quic_udp quic utils)
 target_link_libraries(quic_shared_ptr quic)
 target_link_libraries(quic_event quic)
 target_link_libraries(quic_frame quic)
+target_link_libraries(quic_hash_map quic)
+target_link_libraries(quic_crypto quic)
 
 if(WIN32)
   target_link_libraries(netcore libssl libcrypto ws2_32)

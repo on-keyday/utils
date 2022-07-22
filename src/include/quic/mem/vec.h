@@ -112,6 +112,19 @@ namespace utils {
                     return 1;
                 }
 
+                bool remove_index(tsize i) {
+                    if (i >= len) {
+                        return false;
+                    }
+                    auto _ = std::move(vec[i]);
+                    for (tsize l = i; l < len; l++) {
+                        vec[i] = std::move(vec[i + 1]);
+                    }
+                    vec[len - 1].~T();
+                    len--;
+                    return true;
+                }
+
                 ~Vec() {
                     free_vec();
                 }

@@ -166,6 +166,8 @@ namespace utils {
                 {t.varint_error(varint::Error{}, std::declval<const char*>())};
             };
 
+            using Buffer = bytes::Buffer;
+
         }  // namespace frame
     }      // namespace quic
 }  // namespace utils

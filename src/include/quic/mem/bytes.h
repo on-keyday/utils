@@ -121,11 +121,17 @@ namespace utils {
             // initial:i=offset
             // condition:i<len
             // operation:dst[i-offset]=src[i]
-            constexpr void copy(auto& dst, auto& src, tsize len, tsize offset = 0) {
+            constexpr void copy(auto& dst, auto&& src, tsize len, tsize offset = 0) {
                 for (tsize i = offset; i < len; i++) {
                     dst[i - offset] = src[i];
                 }
             }
+
+            struct Buffer {
+                Bytes b;
+                tsize len;
+                allocate::Alloc* a;
+            };
 
         }  // namespace bytes
     }      // namespace quic

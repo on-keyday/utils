@@ -12,6 +12,7 @@
 #include <quic/internal/context_internal.h>
 #include <quic/internal/sock_internal.h>
 #include <quic/mem/once.h>
+#include <quic/internal/external_func_internal.h>
 
 // timeout
 #include <chrono>
@@ -136,7 +137,7 @@ namespace utils {
                     ::OVERLAPPED* pol = nullptr;
                     ::ULONG_PTR _;
                     ::DWORD transferred;
-                    auto res = ::GetQueuedCompletionStatus(arg.ptr, &transferred, &_, &pol, 1);
+                    auto res = external::kernel32.GetQueuedCompletionStatus_(arg.ptr, &transferred, &_, &pol, 1);
                     if (pol) {
                         auto b = reinterpret_cast<AsyncBuf*>(pol);
                         if (res) {
@@ -157,6 +158,9 @@ namespace utils {
                 }
 
                 Result async_wait(core::QUIC* q, CommonIOWait& common, Timeout time) {
+                    if (!external::sockdll.loaded()) {
+                        return {io::Status::fatal, invalid, true};
+                    }
                     auto buf = q->g->alloc.allocate<AsyncBuf>();
                     if (!buf) {
                         return {io::Status::resource_exhausted};
@@ -171,7 +175,7 @@ namespace utils {
                     buf->wb.buf = topchar(buf->common.b.own());
                     buf->wb.len = buf->common.b.size();
                     buf->from_len = sizeof(buf->from);
-                    auto err = ::WSARecvFrom(
+                    auto err = external::sockdll.WSARecvFrom_(
                         buf->common.target.target, &buf->wb, 1, nullptr, &buf->flag,
                         repaddr(&buf->from), &buf->from_len, &buf->ol, nullptr);
                     if (err == -1) {
@@ -225,8 +229,11 @@ namespace utils {
             }  // namespace udp
 
             io::AsyncHandle get_async_handle(core::QUIC* q) {
+                if (!external::load_Kernel32()) {
+                    return nullptr;
+                }
                 q->io->iniasync.Do([&] {
-                    q->io->async_handle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+                    q->io->async_handle = external::kernel32.CreateIoCompletionPort_(INVALID_HANDLE_VALUE, nullptr, 0, 0);
                 });
                 return q->io->async_handle;
             }
@@ -236,7 +243,7 @@ namespace utils {
                 if (!iocp) {
                     return {io::Status::failed, io::invalid, true};
                 }
-                auto err = ::CreateIoCompletionPort(reinterpret_cast<void*>(id), iocp, 0, 0);
+                auto err = external::kernel32.CreateIoCompletionPort_(reinterpret_cast<void*>(id), iocp, 0, 0);
                 if (err == nullptr) {
                     return {io::Status::failed, (io::ErrorCode)GET_ERROR()};
                 }

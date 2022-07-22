@@ -83,6 +83,7 @@ namespace utils {
                 ok,
                 incomplete,
                 failed,
+                fatal,
                 canceled,
                 timeout,
                 unsupported,

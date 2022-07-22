@@ -8,6 +8,7 @@
 // cast - type cast helper
 #pragma once
 #include "types.h"
+#include <type_traits>
 
 namespace utils {
     namespace quic {
@@ -165,13 +166,19 @@ namespace utils {
                 if (!f || !include<T>(f->type)) {
                     using ret = decltype(then((T*)nullptr));
                     if constexpr (std::is_same_v<ret, void>) {
-                        return;
+                        return (void)0;
                     }
                     else {
                         return ret{};
                     }
                 }
                 return then(static_cast<T*>(f));
+            }
+
+            template <types type>
+            auto frame() {
+                using T = std::remove_pointer_t<typename type_select<type>::type>;
+                return T{type};
             }
         }  // namespace frame
     }      // namespace quic

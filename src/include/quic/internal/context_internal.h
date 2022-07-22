@@ -6,7 +6,7 @@
 */
 
 // context_internal - context internal structs and methods
-#include "../context.h"
+#pragma once
 #include "../doc.h"
 #include "../mem/alloc.h"
 #include "../mem/pool.h"
@@ -22,10 +22,17 @@
 namespace utils {
     namespace quic {
 
-        namespace core {
-            struct EventQue {
-                byte opaque[sizeof(mem::LinkQue<Event>) + sizeof(Event)];  // sizeof(mem::Que<Event>)+sizeof(Event)
+        namespace conn {
+            struct Connection;
+            using Conn = mem::shared_ptr<Connection>;
+            struct ConnPool {
+                mem::LinkQue<mem::shared_ptr<Connection>> conns;
+                Conn get();
             };
+
+        }  // namespace conn
+
+        namespace core {
 
             struct EQue;
 
@@ -63,29 +70,36 @@ namespace utils {
 
                 // io_handles holds io operation handles
                 io_handles io;
+
+                // self allocated
+                mem::shared_ptr<QUIC> self;
+
+                conn::ConnPool conns;
             };
 
         }  // namespace core
 
-        namespace context {
+        namespace conn {
 
             struct Connection {
                 // connection callback
                 callback::CommonCallbacks callback;
 
                 // parent QUIC object of this Connection
-                core::QUIC* q;
+                mem::shared_ptr<core::QUIC> q;
 
                 // connection mode
                 Mode mode;
 
                 // srcIDs holds connection IDs issued by this side
                 conn::ConnIDList srcIDs;
+
+                conn::Conn self;
             };
 
             struct Stream {
             };
 
-        }  // namespace context
+        }  // namespace conn
     }      // namespace quic
 }  // namespace utils

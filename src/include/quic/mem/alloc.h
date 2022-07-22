@@ -120,5 +120,31 @@ namespace utils {
             Dll(Alloc) stdalloc();
 
         }  // namespace allocate
+
+        namespace bytes {
+            inline int append(bytes::Buffer& b, const byte* data, tsize len) {
+                if (!b.b.own() && b.b.c_str()) {
+                    return 0;
+                }
+                if (!data) {
+                    return len == 0 ? 1 : 0;
+                }
+                if (b.b.size() < b.len + len) {
+                    if (!b.a->expand_buffer(b.b, b.len + len + 2)) {
+                        return -1;
+                    }
+                }
+                auto o = b.b.own();
+                if (!o) {
+                    return -1;
+                }
+                for (tsize i = 0; i < len; i++) {
+                    o[b.len + i] = data[i];
+                }
+                b.len += len;
+                return 1;
+            }
+
+        }  // namespace bytes
     }      // namespace quic
 }  // namespace utils

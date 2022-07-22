@@ -12,6 +12,7 @@
 #include <atomic>
 #include <mutex>
 #include <quic/mem/que.h>
+#include <quic/io/udp.h>
 
 namespace utils {
     namespace quic {
@@ -122,22 +123,12 @@ namespace utils {
                     return nullptr;
                 }
                 l->g = q->g;
-                l->q.que.a = &l->g->alloc;
+                l->q.que.stock.a = &l->g->alloc;
                 return l;
             }
 
             dll(allocate::Alloc*) get_alloc(QUIC* q) {
                 return &q->g->alloc;
-            }
-
-            dll(void) del_QUIC(QUIC* q) {
-                if (!q) {
-                    return;
-                }
-                q->ev->que.destruct([&](Event& e) {
-                    e.callback(nullptr, q, e.arg);
-                });
-                q->g->alloc.deallocate(q);
             }
 
             dll(bytes::Bytes) get_bytes(QUIC* q, tsize len) {
@@ -149,28 +140,53 @@ namespace utils {
             }
 
             dll(QUIC*) new_QUIC(allocate::Alloc a) {
-                auto q = a.allocate<QUIC>();
-                if (!q) {
-                    return nullptr;
-                }
-                q->g = mem::make_inner_alloc<Global>(a, [](Global& g, allocate::Alloc a) {
+                global g = mem::make_inner_alloc<Global>(a, [](Global& g, allocate::Alloc a) {
                     g.alloc = a;
                     return &g.alloc;
                 });
-                if (!q->g) {
-                    a.deallocate(q);
+                if (!g) {
                     return nullptr;
                 }
+                auto q = mem::make_shared<QUIC>(&g->alloc);
+                if (!q) {
+                    return nullptr;
+                }
+                q->g = g;
+                q->self = q;
                 q->ev = mem::make_shared<EQue>(&q->g->alloc);
                 if (!q->ev) {
-                    q->g->alloc.deallocate(q);
+                    auto _ = std::move(q->self);
                     return nullptr;
                 }
-                q->ev->que.a = &q->g->alloc;
-                q->g->bpool.a = &q->g->alloc;
                 q->io = mem::make_shared<IOHandles>(&q->g->alloc);
+                if (!q->io) {
+                    auto _ = std::move(q->self);
+                    return nullptr;
+                }
+                q->ev->que.stock.a = &q->g->alloc;
+                q->g->bpool.a = &q->g->alloc;
                 q->io->ioproc = {};
+                return q.get();
+            }
+
+            dll(QUIC*) default_QUIC() {
+                auto q = new_QUIC(allocate::stdalloc());
+                if (!q) {
+                    return nullptr;
+                }
+                register_io(q, io::udp::Protocol(&q->g->alloc));
+                set_bpool(q, bytes::stdbpool(q));
                 return q;
+            }
+
+            dll(void) del_QUIC(QUIC* q) {
+                if (!q) {
+                    return;
+                }
+                q->ev->que.destruct([&](Event& e) {
+                    e.callback(nullptr, q, e.arg);
+                });
+                auto _ = std::move(q->self);
             }
 
             dll(void) set_bpool(QUIC* q, pool::BytesHolder h) {

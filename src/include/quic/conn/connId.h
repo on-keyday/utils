@@ -19,6 +19,14 @@ namespace utils {
             struct ConnID {
                 bytes::Bytes id;
                 tsize len;
+
+                constexpr tsize size() const {
+                    return len;
+                }
+
+                constexpr const byte operator[](tsize i) const {
+                    return id[i];
+                }
             };
 
             constexpr tsize InvalidLength = ~0;
@@ -71,6 +79,20 @@ namespace utils {
                 bytes::Bytes token;
                 tsize len;
             };
+
+            struct RetryToken {
+                bytes::Bytes token;
+                tsize len;
+            };
         }  // namespace conn
     }      // namespace quic
 }  // namespace utils
+
+namespace std {
+    template <>
+    struct hash<utils::quic::conn::ConnID> {
+        size_t operator()(const utils::quic::conn::ConnID& c) {
+            return c.id.c_str() ? c.id[0] : 0;
+        }
+    };
+}  // namespace std

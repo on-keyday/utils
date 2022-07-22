@@ -14,7 +14,7 @@
 #ifdef _WIN32
 #include <WinSock2.h>
 #include <WS2tcpip.h>
-#define GET_ERROR() ::WSAGetLastError()
+#define GET_ERROR() external::sockdll.WSAGetLastError_()
 #define INCOMPLETE(code) (code == WSAEWOULDBLOCK)
 #define TOO_LARGE(code) (code == WSAEMSGSIZE)
 #define ASYNC(code) (code == WSA_IO_PENDING)

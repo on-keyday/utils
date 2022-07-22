@@ -14,36 +14,15 @@ namespace utils {
     namespace quic {
         namespace frame {
 
-            struct Buffer {
-                bytes::Bytes b;
-                tsize len;
-                allocate::Alloc* a;
-            };
-
-            inline Error append(Buffer& b, const byte* data, tsize len) {
-                if (!b.b.own() && b.b.c_str()) {
-                    return Error::invalid_arg;
-                }
-                if (!data) {
-                    return len == 0 ? Error::none : Error::invalid_arg;
-                }
-                if (b.b.size() < b.len + len) {
-                    if (!b.a->expand_buffer(b.b, b.len + len + 2)) {
-                        return Error::memory_exhausted;
-                    }
-                }
-                auto o = b.b.own();
-                if (!o) {
+            inline Error append_buf(Buffer& b, const byte* data, tsize len) {
+                auto err = append(b, data, len);
+                if (err < 0) {
                     return Error::memory_exhausted;
                 }
-                for (tsize i = 0; i < len; i++) {
-                    o[b.len + i] = data[i];
-                }
-                b.len += len;
-                return Error::none;
+                return err ? Error::none : Error::invalid_arg;
             }
 
-            Error write_varint(Buffer& b, tsize data, varint::Error* verr) {
+            inline Error write_varint(Buffer& b, tsize data, varint::Error* verr) {
                 tsize offset = b.len;
                 auto enclen = varint::least_enclen(data);
                 if (enclen == 0) {
@@ -53,7 +32,7 @@ namespace utils {
                     return Error::varint_error;
                 }
                 byte s[8];
-                if (auto err = append(b, s, enclen); err != Error::none) {
+                if (auto err = append_buf(b, s, enclen); err != Error::none) {
                     return Error::memory_exhausted;
                 }
                 auto ptr = b.b.own();
@@ -69,12 +48,12 @@ namespace utils {
                 return Error::none;
             }
 
-#define WRITE_FIXED(data, length, where)                              \
-    {                                                                 \
-        if (auto err = append(b, data, length); err != Error::none) { \
-            next.frame_error(err, where);                             \
-            return err;                                               \
-        }                                                             \
+#define WRITE_FIXED(data, length, where)                                  \
+    {                                                                     \
+        if (auto err = append_buf(b, data, length); err != Error::none) { \
+            next.frame_error(err, where);                                 \
+            return err;                                                   \
+        }                                                                 \
     }
 
 #define WRITE(data, length, where)                             \
