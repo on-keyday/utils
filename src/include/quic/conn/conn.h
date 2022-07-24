@@ -7,13 +7,16 @@
 
 // conn - quic connection context
 #pragma once
+#include "../common/dll_h.h"
 #include "../core/core.h"
+#include "../mem/shared_ptr.h"
 
 namespace utils {
     namespace quic {
         namespace conn {
             struct Connection;
-            Connection* new_connection(core::QUIC* q);
+            Dll(Connection*) new_connection(core::QUIC* q);
+            using Conn = mem::shared_ptr<Connection>;
         }  // namespace conn
     }      // namespace quic
 }  // namespace utils

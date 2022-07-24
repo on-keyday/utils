@@ -35,27 +35,22 @@ namespace utils {
                 }
             };
 
-            struct EQue {
-                mem::LinkQue<Event> que;
-                Event mem_exhausted;
+            bool EQue::en_q(Event&& e) {
+                return que.init(queinit) && que.en_q(std::move(e));
+            }
 
-                bool en_q(Event&& e) {
-                    return que.init(queinit) && que.en_q(std::move(e));
-                }
-
-                Event de_q() {
-                    Event ev{EventType::idle};
-                    que.lock_callback([&]() {
-                        if (mem_exhausted.arg.type != EventType::idle) {
-                            ev = mem_exhausted;
-                            mem_exhausted = {EventType::idle};
-                            return;
-                        }
-                        que.de_q_nlock(ev);
-                    });
-                    return ev;
-                }
-            };
+            Event EQue::de_q() {
+                Event ev{EventType::idle};
+                que.lock_callback([&]() {
+                    if (mem_exhausted.arg.type != EventType::idle) {
+                        ev = mem_exhausted;
+                        mem_exhausted = {EventType::idle};
+                        return;
+                    }
+                    que.de_q_nlock(ev);
+                });
+                return ev;
+            }
 
             struct EventLoop {
                 core::global g;

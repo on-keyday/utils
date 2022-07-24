@@ -209,7 +209,14 @@ target_sources(quic
   "src/lib/quic/core/external_func.cpp"
   "src/lib/quic/crypto/hkdf.cpp"
   "src/lib/quic/crypto/initial.cpp"
+  "src/lib/quic/crypto/crypto_frames.cpp"
+  "src/lib/quic/core/capi.cpp"
+  "src/lib/quic/conn/conn.cpp"
 )
+
+if(WIN32)
+  target_sources(quic PRIVATE "src/lib/quic/core/dll.rc")
+endif()
 
 # endif()
 target_link_libraries(fileview utils)

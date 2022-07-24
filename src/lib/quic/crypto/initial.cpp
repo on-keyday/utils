@@ -10,6 +10,7 @@
 #include <quic/packet/packet_head.h>
 #include <quic/internal/external_func_internal.h>
 #include <quic/internal/context_internal.h>
+#include <quic/mem/raii.h>
 #include <cassert>
 
 namespace utils {
@@ -19,19 +20,18 @@ namespace utils {
 
             Error generate_masks(const byte* hp_key, byte* sample, int samplelen, byte* masks) {
                 auto& c = ext::libcrypto;
-                auto ctx = c.EVP_CIPHER_CTX_new_();
-                if (!ctx) {
+                auto ctx_r = c.EVP_CIPHER_CTX_new_();
+                if (!ctx_r) {
                     return Error::memory_exhausted;
                 }
+                mem::RAII ctx{ctx_r, c.EVP_CIPHER_CTX_free_};
                 auto err = c.EVP_CipherInit_(ctx, c.EVP_aes_128_ecb_(), hp_key, nullptr, 1);
                 if (err != 1) {
-                    c.EVP_CIPHER_CTX_free_(ctx);
                     return Error::internal;
                 }
                 byte data[32]{};
                 int data_len = 32;
                 err = c.EVP_CipherUpdate_(ctx, data, &data_len, sample, samplelen);
-                c.EVP_CIPHER_CTX_free_(ctx);
                 if (err != 1) {
                     return Error::internal;
                 }
@@ -52,14 +52,14 @@ namespace utils {
                 auto header_length = ppacket->raw_payload - ppacket->raw_header;
                 assert(header_length > 0);
                 auto& c = ext::libcrypto;
-                auto ctx = c.EVP_CIPHER_CTX_new_();
-                if (!ctx) {
+                auto ctx_r = c.EVP_CIPHER_CTX_new_();
+                if (!ctx_r) {
                     return Error::memory_exhausted;
                 }
-#define ERR_CHECK()                  \
-    if (err != 1) {                  \
-        c.EVP_CIPHER_CTX_free_(ctx); \
-        return Error::internal;      \
+                mem::RAII ctx{ctx_r, c.EVP_CIPHER_CTX_free_};
+#define ERR_CHECK()             \
+    if (err != 1) {             \
+        return Error::internal; \
     }
                 // set cipher
                 auto err = c.EVP_CipherInit_ex_(ctx, c.EVP_aes_128_gcm_(), nullptr, nullptr, nullptr, 0);
@@ -74,17 +74,27 @@ namespace utils {
                 // set packet_header as AAD
                 err = c.EVP_CipherUpdate_(ctx, nullptr, &outlen, ppacket->raw_header, header_length);
                 ERR_CHECK()
-                auto out = bpool.get(ppacket->payload_length);
-                if (!out.own()) {
-                    c.EVP_CIPHER_CTX_free_(ctx);
+                mem::RAII out{bpool.get(ppacket->payload_length),
+                              [&](bytes::Bytes& b) { bpool.put(std::move(b)); }};
+
+                if (!out->own()) {
                     return Error::memory_exhausted;
                 }
+                EVP_CTRL_GCM_SET_TAG;
                 // decrypt plaintext
-                err = c.EVP_CipherUpdate_(ctx, out.own(), &outlen, ppacket->raw_payload, ppacket->payload_length);
+                err = c.EVP_CipherUpdate_(ctx, out->own(), &outlen, ppacket->raw_payload, ppacket->payload_length);
                 ERR_CHECK()
-                c.EVP_CIPHER_CTX_free_(ctx);
-                ppacket->decrypted_payload = std::move(out);
-                ppacket->decrypted_length = outlen;
+                // TODO(on-keyday):
+                // check MAC?
+                /*
+                auto tag_data = out->own() + outlen - 16;
+                err = c.EVP_CIPHER_CTX_ctrl_(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag_data);
+                ERR_CHECK()
+
+                err = c.EVP_CipherFinal_(ctx, out->own(), &outlen);
+                ERR_CHECK()*/
+                ppacket->decrypted_payload = std::move(out());
+                ppacket->decrypted_length = outlen - 16;  // remove mac tag length
                 return Error::none;
             }
 
@@ -101,10 +111,9 @@ namespace utils {
                 // get sample
                 // enough offset to avoid reading packet number is 4
                 auto sample_head = ppacket->raw_payload + 4;
-                byte sample[16], masks[5];
+                byte masks[5];
                 varint::Swap<uint> packet_number;
-                bytes::copy(sample, sample_head, 16);
-                auto err = generate_masks(inikey.hp.key, sample, 16, masks);
+                auto err = generate_masks(inikey.hp.key, sample_head, 16, masks);
                 if (err != Error::none) {
                     return err;
                 }

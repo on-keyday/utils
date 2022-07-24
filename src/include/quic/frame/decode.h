@@ -309,6 +309,15 @@ namespace utils {
 #undef DECODE
             }
 
+            template <class Bytes>
+            tsize read_paddings(Bytes&& b, tsize size, tsize* offset) {
+                tsize begin = *offset;
+                while (*offset < size && b[*offset] == 0) {
+                    ++*offset;
+                }
+                return *offset - begin;
+            }
+
             template <class Bytes, ReadCallback Callbacks>
             Error read_frame(Bytes&& b, tsize size, tsize* offset, Callbacks&& next) {
                 if (!offset || *offset >= size) {

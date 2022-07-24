@@ -5,8 +5,9 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-
-#include <context_internal.h>
+#include <quic/common/dll_cpp.h>
+#include <quic/internal/context_internal.h>
+#include <quic/conn/conn.h>
 
 namespace utils {
     namespace quic {
@@ -23,7 +24,7 @@ namespace utils {
                 return c;
             }
 
-            Connection* new_connection(core::QUIC* q) {
+            dll(Connection*) new_connection(core::QUIC* q) {
                 if (!q) {
                     return nullptr;
                 }

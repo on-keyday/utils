@@ -12,73 +12,15 @@
 #include "../internal/context_internal.h"
 #include "../conn/connId.h"
 #include "../mem/vec.h"
+#include "../mem/callback.h"
 
 namespace utils {
     namespace quic {
         namespace packet {
-            template <class T, class Req>
-            concept void_or_type = std::is_same_v<Req, void> || std::is_same_v<T, Req>;
 
-            template <class T, class Ret, class... Args>
-            concept callable = requires(T t) {
-                { t(std::declval<Args>()...) } -> void_or_type<Ret>;
-            };
-
-            template <class Ret>
-            auto select_call(Ret default_v, auto&& callback) {
-                if constexpr (callable<decltype(callback), Ret>) {
-                    return callback();
-                }
-                else {
-                    callback();
-                    return default_v;
-                }
-            }
-
-            template <class Packet, class Ctx = void>
-            struct PCB {
-                void* func_ctx = nullptr;
-                using callback_t = Error (*)(void*, Packet*, Ctx*);
-                callback_t cb = nullptr;
-                Error operator()(Packet* p, Ctx* ctx) {
-                    return cb ? cb(func_ctx, p, ctx) : Error::none;
-                }
-                constexpr PCB() = default;
-                constexpr PCB(std::nullptr_t)
-                    : PCB() {}
-                constexpr PCB(callback_t cb, void* ctx)
-                    : cb(cb), func_ctx(ctx) {}
-                constexpr PCB(auto&& v) {
-                    auto ptr = std::addressof(v);
-                    if constexpr (std::is_same_v<decltype(ptr), callback_t>) {
-                        cb = ptr;
-                        func_ctx = nullptr;
-                    }
-                    else {
-                        cb = [](void* c, Packet* p, Ctx* ctx) -> Error {
-                            using Ptr = decltype(ptr);
-                            auto& call = (*static_cast<Ptr>(c));
-                            using T = decltype(call);
-                            if constexpr (callable<T, void, Packet*, Ctx*>) {
-                                return select_call(Error::none, [&] {
-                                    return call(p, ctx);
-                                });
-                            }
-                            else if constexpr (callable<T, void, Packet*>) {
-                                return select_call(Error::none, [&] {
-                                    return call(p);
-                                });
-                            }
-                            else {
-                                return select_call(Error::none, [&] {
-                                    return call();
-                                });
-                            }
-                        };
-                        func_ctx = ptr;
-                    }
-                }
-            };
+            struct ReadContext;
+            template <class Packet, class Ctx>
+            using PCB = mem::CB<Ctx*, Error, Packet*>;
 
             template <class Ctx>
             struct ReadCallback {
@@ -120,22 +62,22 @@ namespace utils {
                 }
 
                 Error initial(InitialPacket* p) {
-                    return cb.initial(p, this);
+                    return cb.initial(this, p);
                 }
                 Error zero_rtt(ZeroRTTPacket* p) {
-                    return cb.zero_rtt(p, this);
+                    return cb.zero_rtt(this, p);
                 }
                 Error handshake(HandshakePacket* p) {
-                    return cb.handshake(p, this);
+                    return cb.handshake(this, p);
                 }
                 Error retry(RetryPacket* p) {
-                    return cb.retry(p, this);
+                    return cb.retry(this, p);
                 }
                 Error version(VersionNegotiationPacket* p) {
-                    return cb.version(p, this);
+                    return cb.version(this, p);
                 }
                 Error one_rtt(OneRTTPacket* p) {
-                    return cb.one_rtt(p, this);
+                    return cb.one_rtt(this, p);
                 }
             };
         }  // namespace packet

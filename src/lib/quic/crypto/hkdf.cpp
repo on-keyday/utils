@@ -11,6 +11,7 @@
 #include <quic/common/variable_int.h>
 #include <quic/crypto/crypto.h>
 #include <quic/internal/external_func_internal.h>
+#include <quic/mem/raii.h>
 
 namespace utils {
     namespace quic {
@@ -22,7 +23,7 @@ namespace utils {
                               const byte* clientConnID, tsize len) {
                 auto& c = ext::libcrypto;
                 auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
-                auto ctx = c.EVP_KDF_CTX_new_(kdf);
+                mem::RAII ctx{c.EVP_KDF_CTX_new_(kdf), c.EVP_KDF_CTX_free_};
                 c.EVP_KDF_free_(kdf);
                 OSSL_PARAM params[5];
                 auto salt = quic_v1_initial_salt;
@@ -32,7 +33,6 @@ namespace utils {
                 params[3] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
                 params[4] = c.OSSL_PARAM_construct_end_();
                 auto v = c.EVP_KDF_derive_(ctx, initial, inilen, params);
-                c.EVP_KDF_CTX_free_(ctx);
                 if (v <= 0) {
                     return false;
                 }
@@ -44,7 +44,7 @@ namespace utils {
                                    tsize secret_len, Key<lablen> labelk) {
                 auto& c = ext::libcrypto;
                 auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
-                auto ctx = c.EVP_KDF_CTX_new_(kdf);
+                mem::RAII ctx{c.EVP_KDF_CTX_new_(kdf), c.EVP_KDF_CTX_free_};
                 c.EVP_KDF_free_(kdf);
                 varint::Swap<ushort> swp{outlen};
                 varint::reverse_if(swp);

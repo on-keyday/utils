@@ -45,6 +45,42 @@ void EVP_CIPHER_CTX_free(void*);
 int EVP_CipherInit_ex(void*, const void*, void*, const unsigned char*, const unsigned char*, int);
 int EVP_CIPHER_CTX_ctrl(void*, int, int, void*);
 #define EVP_CTRL_GCM_SET_IVLEN 0x9
+#define EVP_CTRL_GCM_SET_TAG 0x11
+#endif
+#if __has_include(<openssl/quic.h>)
+#include <openssl/quic.h>
+#if OPENSSL_INFO_QUIC >= 2000
+#include <openssl/ssl.h>
+#define EXISTS_OPENSSL_QUIC
+#endif
+#endif
+#ifndef EXISTS_OPENSSL_QUIC
+typedef void SSL_CTX;
+typedef void SSL;
+void* SSL_CTX_new(const void*);
+void* SSL_new(void*);
+const void* TLS_method();
+int SSL_set_ex_data(void*, int, void*);
+void* SSL_get_ex_data(const void* s, int idx);
+enum OSSL_ENCRYPTION_LEVEL {
+    ssl_encryption_initial = 0,
+    ssl_encryption_early_data,
+    ssl_encryption_handshake,
+    ssl_encryption_application
+};
+int SSL_provide_quic_data(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, const uint8_t* data, size_t len);
+int SSL_do_handshake(void*);
+int SSL_get_error(const void*, int);
+struct SSL_QUIC_METHOD {
+    int (*set_encryption_secrets)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level,
+                                  const uint8_t* read_secret,
+                                  const uint8_t* write_secret, size_t secret_len);
+    int (*add_handshake_data)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level,
+                              const uint8_t* data, size_t len);
+    int (*flush_flight)(SSL* ssl);
+    int (*send_alert)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, uint8_t alert);
+};
+int SSL_set_quic_method(void*, const SSL_QUIC_METHOD*);
 #endif
 
 namespace utils {
@@ -52,8 +88,10 @@ namespace utils {
         namespace crypto {
 #ifdef _WIN32
             constexpr auto default_libcrypto = "libcrypto.dll";
+            constexpr auto default_libssl = "libssl.dll";
 #else
             constexpr auto default_libcrypto = "libcrypto.so";
+            constexpr auto default_libssl = "libssl.so";
 #endif
         }  // namespace crypto
     }      // namespace quic

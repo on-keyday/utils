@@ -66,8 +66,8 @@ namespace utils {
                 friend shared_ptr<V> make_shared(allocate::Alloc*, Arg&&...);
                 template <class V, class... Arg>
                 friend shared_ptr<V> make_inner_alloc(allocate::Alloc a, auto&& get_alloc, Arg&&...);
-
-                shared_ptr(storage* t)
+                // unsafe
+                constexpr shared_ptr(storage* t)
                     : st(t) {}
 
                 void copy_storage(storage* other) {
@@ -113,6 +113,17 @@ namespace utils {
                 shared_ptr& operator=(shared_ptr&& other) {
                     move_storage(other.st);
                     return *this;
+                }
+
+                storage* get_storage(bool incr_use) {
+                    if (incr_use) {
+                        st->incr_use();
+                    }
+                    return st;
+                }
+
+                static shared_ptr from_raw_storage(void* raw) {
+                    return shared_ptr<T, atomic>(static_cast<storage*>(raw));
                 }
 
                 T* get() const {

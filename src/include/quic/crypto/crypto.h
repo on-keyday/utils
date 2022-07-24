@@ -9,6 +9,9 @@
 #pragma once
 #include "../doc.h"
 #include "../mem/pool.h"
+#include "../mem/vec.h"
+#include "../frame/types.h"
+#include "../conn/conn.h"
 
 namespace utils {
     namespace quic {
@@ -57,7 +60,7 @@ namespace utils {
                 internal,
             };
 
-            enum class Level {
+            enum EncryptionLevel {
                 initial,
                 handshake,
                 zero_rtt,
@@ -65,11 +68,15 @@ namespace utils {
             };
 
             Dll(Error) decrypt_packet_protection(Mode mode, pool::BytesPool& conn, packet::Packet* ppacket);
-
+            Dll(Error) advance_handshake(frame::Crypto& cframe, conn::Conn& con, EncryptionLevel level);
+            Dll(Error) advance_handshake_vec(bytes::Buffer& buf, mem::Vec<frame::Crypto>& cframe, conn::Conn& con, EncryptionLevel level);
         }  // namespace crypto
 
         namespace external {
+            Dll(bool) load_LibCrypto();
+            Dll(bool) load_LibSSL();
             Dll(void) set_libcrypto_location(const char* location);
-        }
-    }  // namespace quic
+            Dll(void) set_libssl_location(const char* location);
+        }  // namespace external
+    }      // namespace quic
 }  // namespace utils

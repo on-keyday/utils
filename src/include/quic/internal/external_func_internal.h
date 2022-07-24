@@ -135,6 +135,31 @@ namespace utils {
                 }
             };
 
+            struct LibSSL {
+                void* libptr;
+                IMPORT(SSL_CTX_new)
+                IMPORT(SSL_new)
+                IMPORT(TLS_method)
+                IMPORT(SSL_set_quic_method)
+                IMPORT(SSL_set_ex_data)
+                IMPORT(SSL_get_ex_data)
+                IMPORT(SSL_provide_quic_data)
+                IMPORT(SSL_do_handshake)
+                IMPORT(SSL_get_error)
+                bool LoadAll(Loader load) {
+                    LOAD(SSL_CTX_new)
+                    LOAD(SSL_new)
+                    LOAD(TLS_method)
+                    LOAD(SSL_set_quic_method)
+                    LOAD(SSL_set_ex_data)
+                    LOAD(SSL_get_ex_data)
+                    LOAD(SSL_provide_quic_data)
+                    LOAD(SSL_do_handshake)
+                    LOAD(SSL_get_error)
+                    return true;
+                }
+            };
+
 #ifdef _WIN32
             struct Kernel32 {
                 void* libptr;
@@ -153,6 +178,7 @@ namespace utils {
             // not usable from application
             extern SockDll sockdll;
             extern LibCrypto libcrypto;
+            extern LibSSL libssl;
 
             template <class Dll>
             using DllLoadCallback = void (*)(Dll* dll, void* user);
@@ -160,8 +186,10 @@ namespace utils {
             bool load_SockDll(DllLoadCallback<SockDll> callback, void* user);
             void unload_SockDll(DllLoadCallback<SockDll> callback, void* user);
 
-            bool load_LibCrypto();
+            Dll(bool) load_LibCrypto();
+            Dll(bool) load_LibSSL();
             Dll(void) set_libcrypto_location(const char* location);
+            Dll(void) set_libssl_location(const char* location);
         }  // namespace external
     }      // namespace quic
 }  // namespace utils

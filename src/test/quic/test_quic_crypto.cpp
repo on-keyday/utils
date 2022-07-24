@@ -16,6 +16,9 @@
 #include <quic/packet/read_packet.h>
 #include <quic/internal/context_internal.h>
 #include <quic/core/core.h>
+#include <quic/frame/decode.h>
+#include <quic/frame/frame_callback.h>
+#include <quic/frame/cast.h>
 
 using namespace utils::quic;
 std::string make_packet_raw() {
@@ -81,13 +84,37 @@ e221af44860018ab0856972e194cd934)";
 
 int main() {
     external::set_libcrypto_location("D:/quictls/built/openssl/bin/libcrypto-81_3-x64.dll");
+    external::load_LibCrypto();
     auto d = make_packet_raw();
     tsize offset = 0;
     packet::ReadContext c;
-    c.cb.initial = [](packet::Packet* p, packet::ReadContext* c) {
+    c.cb.initial = [](packet::ReadContext* c, packet::Packet* p) {
         crypto::decrypt_packet_protection(client, c->q->g->bpool, p);
+        tsize offset = 0;
+        frame::ReadContext ctx;
+        ctx.b = &c->q->g->bpool;
+        frame::Crypto data;
+        ctx.frame_cb = [&](frame::Frame* f) {
+            frame::if_(f, [&](frame::Crypto* c) {
+                data = std::move(*c);
+            });
+        };
+        ctx.frame_error_cb = [] {
+            assert(false);
+        };
+        while (offset < p->decrypted_length) {
+            auto e = frame::read_frame(p->decrypted_payload.c_str(), p->decrypted_length, &offset, ctx);
+            if (e != frame::Error::none) {
+            }
+            if (ctx.prev_type == frame::types::PADDING) {
+                frame::read_paddings(p->decrypted_payload.c_str(), p->decrypted_length, &offset);
+            }
+        }
+
+        // crypto::advance_handshake(data, );
     };
     c.q = core::default_QUIC();
+    conn::new_connection(c.q);
     byte* data = (byte*)d.data();
     packet::read_packet(data, d.size(), &offset, c);
 }

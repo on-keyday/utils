@@ -88,27 +88,43 @@ namespace utils {
             static mem::Once cryptoonce;
             static const char* libcrypto_loc;
 
-            bool load_LibCrypto() {
-                auto loc = libcrypto_loc;
-                cryptoonce.Do([&] {
+            template <class Lib>
+            bool load_normal(mem::Once& once, Lib& lib, const char* loc, const char* defloc) {
+                once.Do([&] {
                     if (!loc) {
-                        loc = crypto::default_libcrypto;
+                        loc = defloc;
                     }
-                    libcrypto.libptr = load_normal_dll(loc);
-                    if (!libcrypto.libptr) {
+                    lib.libptr = load_normal_dll(loc);
+                    if (!lib.libptr) {
                         return;
                     }
-                    if (!libcrypto.LoadAll(loader)) {
-                        unload_dll(libcrypto.libptr);
-                        libcrypto.libptr = nullptr;
+                    if (!lib.LoadAll(loader)) {
+                        unload_dll(lib.libptr);
+                        lib.libptr = nullptr;
                         return;
                     }
                 });
-                return libcrypto.libptr != nullptr;
+                return lib.libptr != nullptr;
+            }
+
+            dll(bool) load_LibCrypto() {
+                return load_normal(cryptoonce, libcrypto, libcrypto_loc, crypto::default_libcrypto);
             }
 
             dll(void) set_libcrypto_location(const char* location) {
                 libcrypto_loc = location;
+            }
+
+            LibSSL libssl;
+            static mem::Once sslonce;
+            static const char* libssl_loc;
+
+            dll(bool) load_LibSSL() {
+                return load_normal(sslonce, libssl, libssl_loc, crypto::default_libssl);
+            }
+
+            dll(void) set_libssl_location(const char* location) {
+                libssl_loc = location;
             }
         }  // namespace external
     }      // namespace quic

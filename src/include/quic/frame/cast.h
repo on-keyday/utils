@@ -175,6 +175,31 @@ namespace utils {
                 return then(static_cast<T*>(f));
             }
 
+            namespace internal_template {
+
+                template <class T, class R, class F>
+                F get_(R (T::*)(F*));
+                template <class T, class R, class F>
+                F get_(R (T::*)(F*) const);
+
+                template <class T>
+                struct FuncTraits {
+                    using F = decltype(get_(&T::operator()));
+                };
+
+                template <class Ret, class Frame>
+                struct FuncTraits<Ret (*)(Frame*)> {
+                    using F = Frame;
+                };
+
+            }  // namespace internal_template
+
+            auto if_(frame::Frame* f, auto&& then) {
+                using then_t = std::remove_cvref_t<decltype(then)>;
+                using F = typename internal_template::FuncTraits<then_t>::F;
+                return if_<F>(f, then);
+            }
+
             template <types type>
             auto frame() {
                 using T = std::remove_pointer_t<typename type_select<type>::type>;

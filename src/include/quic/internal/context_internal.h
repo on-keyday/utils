@@ -10,7 +10,7 @@
 #include "../doc.h"
 #include "../mem/alloc.h"
 #include "../mem/pool.h"
-#include "../mem/callbacks.h"
+#include "../mem/event_callback.h"
 #include "../conn/connId.h"
 #include "../io/io.h"
 #include "../mem/que.h"
@@ -34,7 +34,12 @@ namespace utils {
 
         namespace core {
 
-            struct EQue;
+            struct EQue {
+                mem::LinkQue<Event> que;
+                Event mem_exhausted;
+                bool en_q(Event&& e);
+                Event de_q();
+            };
 
             using events = mem::shared_ptr<EQue>;
 
@@ -95,6 +100,10 @@ namespace utils {
                 conn::ConnIDList srcIDs;
 
                 conn::Conn self;
+
+                // openssl context
+                void* ssl;
+                void* sslctx;
             };
 
             struct Stream {
