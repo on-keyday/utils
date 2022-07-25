@@ -215,7 +215,7 @@ target_sources(quic
 )
 
 if(WIN32)
-  target_sources(quic PRIVATE "src/lib/quic/core/dll.rc")
+  # target_sources(quic PRIVATE "src/lib/quic/core/dll.rc")
 endif()
 
 # endif()

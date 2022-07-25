@@ -15,17 +15,16 @@
 namespace utils {
     namespace quic {
         namespace external {
-#define IMPORT(FUNCNAME)                                                       \
-    using FUNCNAME##_t = decltype(::FUNCNAME)*;                                \
-    FUNCNAME##_t FUNCNAME##_;                                                  \
-    FUNCNAME##_t Load##FUNCNAME(Loader load) {                                 \
-        FUNCNAME##_ = reinterpret_cast<FUNCNAME##_t>(load(libptr, #FUNCNAME)); \
-        return FUNCNAME##_;                                                    \
-    }
-#define LOAD(FUNCNAME)                          \
-    auto ptr_##FUNCNAME = Load##FUNCNAME(load); \
-    if (!ptr_##FUNCNAME) {                      \
-        return false;                           \
+#define IMPORT(FUNCNAME) \
+    decltype(::FUNCNAME)* FUNCNAME##_;
+
+#define LOAD_ONLY(FUNCNAME) \
+    FUNCNAME##_ = reinterpret_cast<decltype(FUNCNAME)*>(load(libptr, #FUNCNAME));
+
+#define LOAD(FUNCNAME)            \
+    LOAD_ONLY(FUNCNAME)           \
+    if (FUNCNAME##_ == nullptr) { \
+        return false;             \
     }
 
 #ifdef _WIN32
@@ -85,17 +84,29 @@ namespace utils {
 
             struct LibCrypto {
                 void* libptr;
+                bool is_boring_ssl;
 
                 // hkdf.cpp
+                // judge library by this function
                 IMPORT(EVP_KDF_fetch)
-                IMPORT(EVP_KDF_CTX_new)
-                IMPORT(EVP_KDF_free)
-                IMPORT(OSSL_PARAM_construct_utf8_string)
-                IMPORT(OSSL_PARAM_construct_octet_string)
-                IMPORT(OSSL_PARAM_construct_end)
-                IMPORT(EVP_KDF_derive)
-                IMPORT(EVP_KDF_CTX_free)
-                IMPORT(EVP_KDF_CTX_get_kdf_size)
+                union {
+                    // openssl
+                    struct {
+                        IMPORT(EVP_KDF_CTX_new)
+                        IMPORT(EVP_KDF_free)
+                        IMPORT(OSSL_PARAM_construct_utf8_string)
+                        IMPORT(OSSL_PARAM_construct_octet_string)
+                        IMPORT(OSSL_PARAM_construct_end)
+                        IMPORT(EVP_KDF_derive)
+                        IMPORT(EVP_KDF_CTX_free)
+                    };
+                    // boringssl
+                    struct {
+                        IMPORT(EVP_sha256)
+                        IMPORT(HKDF_extract)
+                        IMPORT(HKDF_expand)
+                    };
+                };
 
                 // initial.cpp
                 IMPORT(EVP_CIPHER_CTX_new)
@@ -108,17 +119,30 @@ namespace utils {
                 IMPORT(EVP_CipherFinal)
                 IMPORT(EVP_CIPHER_CTX_free)
 
+                // crypto_frames.cpp
+                IMPORT(ERR_print_errors_cb)
+
                 bool LoadAll(Loader load) {
                     // hkdf.cpp
-                    LOAD(EVP_KDF_fetch)
-                    LOAD(EVP_KDF_CTX_new)
-                    LOAD(EVP_KDF_free)
-                    LOAD(OSSL_PARAM_construct_utf8_string)
-                    LOAD(OSSL_PARAM_construct_octet_string)
-                    LOAD(OSSL_PARAM_construct_end)
-                    LOAD(EVP_KDF_derive)
-                    LOAD(EVP_KDF_CTX_free)
-                    LOAD(EVP_KDF_CTX_get_kdf_size)
+                    LOAD_ONLY(EVP_KDF_fetch)
+                    if (EVP_KDF_fetch_) {
+                        // normal openssl code
+                        LOAD(EVP_KDF_CTX_new)
+                        LOAD(EVP_KDF_free)
+                        LOAD(OSSL_PARAM_construct_utf8_string)
+                        LOAD(OSSL_PARAM_construct_octet_string)
+                        LOAD(OSSL_PARAM_construct_end)
+                        LOAD(EVP_KDF_derive)
+                        LOAD(EVP_KDF_CTX_free)
+                    }
+                    else {
+                        // try to load boringssl api
+                        LOAD(HKDF_expand)
+                        LOAD(HKDF_extract)
+                        LOAD(EVP_sha256)
+                        // now loading boring ssl!
+                        is_boring_ssl = true;
+                    }
 
                     // initial.cpp
                     LOAD(EVP_CIPHER_CTX_new)
@@ -130,6 +154,9 @@ namespace utils {
                     LOAD(EVP_CipherUpdate)
                     LOAD(EVP_CipherFinal)
                     LOAD(EVP_CIPHER_CTX_free)
+
+                    // crypto_frames.cpp
+                    LOAD(ERR_print_errors_cb)
 
                     return true;
                 }
@@ -146,6 +173,11 @@ namespace utils {
                 IMPORT(SSL_provide_quic_data)
                 IMPORT(SSL_do_handshake)
                 IMPORT(SSL_get_error)
+                IMPORT(SSL_set_connect_state)
+                IMPORT(SSL_set_accept_state)
+                IMPORT(SSL_set_alpn_protos)
+                IMPORT(SSL_ctrl)
+
                 bool LoadAll(Loader load) {
                     LOAD(SSL_CTX_new)
                     LOAD(SSL_new)
@@ -156,6 +188,10 @@ namespace utils {
                     LOAD(SSL_provide_quic_data)
                     LOAD(SSL_do_handshake)
                     LOAD(SSL_get_error)
+                    LOAD(SSL_set_connect_state)
+                    LOAD(SSL_set_accept_state)
+                    LOAD(SSL_set_alpn_protos)
+                    LOAD(SSL_ctrl)
                     return true;
                 }
             };

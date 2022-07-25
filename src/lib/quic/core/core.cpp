@@ -160,6 +160,7 @@ namespace utils {
                 }
                 q->ev->que.stock.a = &q->g->alloc;
                 q->g->bpool.a = &q->g->alloc;
+                q->conns.conns.stock.a = &q->g->alloc;
                 q->io->ioproc = {};
                 return q.get();
             }
@@ -180,6 +181,10 @@ namespace utils {
                 }
                 q->ev->que.destruct([&](Event& e) {
                     e.callback(nullptr, q, e.arg);
+                });
+                q->conns.conns.destruct([](conn::Conn& c) {
+                    auto _ = std::move(c->self);
+                    auto q_ = std::move(c->q);
                 });
                 auto _ = std::move(q->self);
             }

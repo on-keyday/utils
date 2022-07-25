@@ -101,9 +101,13 @@ namespace utils {
 
                 conn::Conn self;
 
-                // openssl context
+                // ssl library context
                 void* ssl;
                 void* sslctx;
+                byte alert;  // alert ssl
+
+                // temporary ssl send data callback holder
+                mem::CBDef<int, 1 /*succeeded*/, void* /*app data*/> tmp_callback;
             };
 
             struct Stream {

@@ -8,52 +8,18 @@
 #pragma once
 #include "types.h"
 #include "cast.h"
-#include "../common/variable_int.h"
+#include "../mem/buf_write.h"
 
 namespace utils {
     namespace quic {
         namespace frame {
 
-            inline Error append_buf(Buffer& b, const byte* data, tsize len) {
-                auto err = append(b, data, len);
-                if (err < 0) {
-                    return Error::memory_exhausted;
-                }
-                return err ? Error::none : Error::invalid_arg;
-            }
-
-            inline Error write_varint(Buffer& b, tsize data, varint::Error* verr) {
-                tsize offset = b.len;
-                auto enclen = varint::least_enclen(data);
-                if (enclen == 0) {
-                    if (verr) {
-                        *verr = varint::Error::too_large_number;
-                    }
-                    return Error::varint_error;
-                }
-                byte s[8];
-                if (auto err = append_buf(b, s, enclen); err != Error::none) {
-                    return Error::memory_exhausted;
-                }
-                auto ptr = b.b.own();
-                assert(ptr);
-                auto err = varint::encode(ptr, data, enclen, b.b.size(), &offset);
-                if (err != varint::Error::none) {
-                    if (verr) {
-                        *verr = err;
-                    }
-                    return Error::varint_error;
-                }
-                assert(offset == b.len);
-                return Error::none;
-            }
-
-#define WRITE_FIXED(data, length, where)                                  \
-    {                                                                     \
-        if (auto err = append_buf(b, data, length); err != Error::none) { \
-            next.frame_error(err, where);                                 \
-            return err;                                                   \
-        }                                                                 \
+#define WRITE_FIXED(data, length, where)                                              \
+    {                                                                                 \
+        if (auto err = mem::append_buf<Error>(b, data, length); err != Error::none) { \
+            next.frame_error(err, where);                                             \
+            return err;                                                               \
+        }                                                                             \
     }
 
 #define WRITE(data, length, where)                             \
@@ -65,19 +31,19 @@ namespace utils {
         WRITE_FIXED(data.c_str(), length, where)               \
     }
 
-#define ENCODE(data, where)                                          \
-    {                                                                \
-        varint::Error verr;                                          \
-        auto err = write_varint(b, static_cast<tsize>(data), &verr); \
-        if (err != Error::none) {                                    \
-            if (err == Error::varint_error) {                        \
-                next.varint_error(verr, where);                      \
-            }                                                        \
-            else {                                                   \
-                next.frame_error(err, where);                        \
-            }                                                        \
-            return err;                                              \
-        }                                                            \
+#define ENCODE(data, where)                                                      \
+    {                                                                            \
+        varint::Error verr;                                                      \
+        auto err = mem::write_varint<Error>(b, static_cast<tsize>(data), &verr); \
+        if (err != Error::none) {                                                \
+            if (err == Error::varint_error) {                                    \
+                next.varint_error(verr, where);                                  \
+            }                                                                    \
+            else {                                                               \
+                next.frame_error(err, where);                                    \
+            }                                                                    \
+            return err;                                                          \
+        }                                                                        \
     }
 
             template <class... Ty>

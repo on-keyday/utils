@@ -17,7 +17,7 @@ namespace utils {
 
             struct ReadContext {
                 template <class Ret, class... Args>
-                using CB = mem::CB<mem::nocontext_t, Ret, Args...>;
+                using CB = mem::CBN<Ret, Args...>;
                 types prev_type;
                 CB<Error, Frame*> frame_cb;
 

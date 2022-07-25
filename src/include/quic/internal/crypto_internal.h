@@ -13,6 +13,7 @@
 #include <openssl/obj_mac.h>
 #include <openssl/evp.h>
 #include <openssl/aes.h>
+#include <openssl/err.h>
 #else
 #include <cstddef>
 // define dummy symbols
@@ -46,6 +47,23 @@ int EVP_CipherInit_ex(void*, const void*, void*, const unsigned char*, const uns
 int EVP_CIPHER_CTX_ctrl(void*, int, int, void*);
 #define EVP_CTRL_GCM_SET_IVLEN 0x9
 #define EVP_CTRL_GCM_SET_TAG 0x11
+void ERR_print_errors_cb(int (*)(const char*, size_t, void*), void*);
+
+#endif
+#if __has_include(<openssl/is_boringssl.h>)
+#include <openssl/hkdf.h>
+#else
+// boringssl
+typedef void EVP_MD;
+int HKDF_extract(uint8_t* out_key, size_t out_len, const EVP_MD* digest,
+                 const uint8_t* secret, size_t secret_len,
+                 const uint8_t* salt, size_t salt_len,
+                 const uint8_t* info, size_t info_len);
+int HKDF_expand(uint8_t* out_key, size_t out_len,
+                const EVP_MD* digest, const uint8_t* prk,
+                size_t prk_len, const uint8_t* info,
+                size_t info_len);
+const EVP_MD* EVP_sha256(void);
 #endif
 #if __has_include(<openssl/quic.h>)
 #include <openssl/quic.h>
@@ -81,6 +99,12 @@ struct SSL_QUIC_METHOD {
     int (*send_alert)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, uint8_t alert);
 };
 int SSL_set_quic_method(void*, const SSL_QUIC_METHOD*);
+void SSL_set_connect_state(void*);
+void SSL_set_accept_state(void*);
+#define SSL_ERROR_WANT_READ 2
+int SSL_set_alpn_protos(void*, const unsigned char*, unsigned int);
+#define SSL_CTRL_SET_TLSEXT_HOSTNAME 55
+long SSL_ctrl(SSL*, int, long, void*);
 #endif
 
 namespace utils {

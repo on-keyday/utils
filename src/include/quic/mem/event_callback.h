@@ -16,7 +16,7 @@ namespace utils {
     namespace quic {
         namespace callback {
             template <class... Args>
-            using EventCB = mem::CB<mem::nocontext_t, void, Args...>;
+            using EventCB = mem::CBN<void, Args...>;
             struct GlobalCallbacks {
                 EventCB<tsize> on_enter_progress;
                 EventCB<core::EventArg> on_event;

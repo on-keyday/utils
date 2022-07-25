@@ -24,7 +24,7 @@ namespace utils {
                 return c;
             }
 
-            dll(Connection*) new_connection(core::QUIC* q) {
+            dll(Connection*) new_connection(core::QUIC* q, Mode mode) {
                 if (!q) {
                     return nullptr;
                 }
@@ -38,6 +38,7 @@ namespace utils {
                 }
                 c->q = self;
                 c->self = c;
+                c->mode = mode;
                 return c.get();
             }
         }  // namespace conn

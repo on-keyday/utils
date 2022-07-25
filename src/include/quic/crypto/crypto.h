@@ -55,9 +55,10 @@ namespace utils {
 
             enum class Error {
                 none,
-                libload_failed,
-                memory_exhausted,
-                internal,
+                libload_failed,    // failed to load external library
+                memory_exhausted,  // memory exhausted
+                internal,          // external library error
+                invalid_arg,       // invalid argument
             };
 
             enum EncryptionLevel {
@@ -66,6 +67,9 @@ namespace utils {
                 zero_rtt,
                 application,
             };
+            Dll(Error) set_alpn(conn::Connection* c, const char* alpn, uint len);
+            Dll(Error) set_hostname(conn::Connection* c, const char* host);
+            Dll(Error) start_handshake(conn::Connection* c, mem::CBN<void, const char*, tsize> send_data);
 
             Dll(Error) decrypt_packet_protection(Mode mode, pool::BytesPool& conn, packet::Packet* ppacket);
             Dll(Error) advance_handshake(frame::Crypto& cframe, conn::Conn& con, EncryptionLevel level);

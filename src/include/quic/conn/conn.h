@@ -15,7 +15,7 @@ namespace utils {
     namespace quic {
         namespace conn {
             struct Connection;
-            Dll(Connection*) new_connection(core::QUIC* q);
+            Dll(Connection*) new_connection(core::QUIC* q, Mode mode);
             using Conn = mem::shared_ptr<Connection>;
         }  // namespace conn
     }      // namespace quic

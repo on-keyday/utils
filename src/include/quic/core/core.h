@@ -31,6 +31,7 @@ namespace utils {
             Dll(void) enque_event(QUIC* q, Event e);
             Dll(QUIC*) new_QUIC(allocate::Alloc a);
             Dll(QUIC*) default_QUIC();
+            Dll(void) del_QUIC(QUIC* q);
             Dll(void) set_bpool(QUIC* q, pool::BytesHolder h);
             Dll(EventLoop*) new_Looper(QUIC* q);
             Dll(bool) add_loop(EventLoop* l, QUIC* q);

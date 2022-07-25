@@ -94,11 +94,45 @@ namespace utils {
                 return FirstByte{first_byte};
             }
 
+            constexpr FirstByte make_fb(types type, int packet_num_len, byte flags) {
+                byte result = 0;
+                auto invalid_pn = [&] {
+                    return packet_num_len < 1 || 4 < packet_num_len;
+                };
+                if (type == types::OneRTT) {
+                    result = 0x40;
+                    if (invalid_pn()) {
+                        return {0};
+                    }
+                    result |= byte(packet_num_len - 1);
+                    result |= (flags & 0x3C);
+                    return FirstByte{result};
+                }
+                else if (type == types::VersionNegotiation) {
+                    result = 0x80;
+                    result |= (flags & 0x7f);
+                    return FirstByte{flags};
+                }
+                result = 0xC0;
+                result |= ((byte(type) << 4) & 0x30);
+                if (type == types::Retry) {
+                    result |= byte(flags);
+                }
+                else {
+                    if (invalid_pn()) {
+                        return {0};
+                    }
+                    result |= byte(packet_num_len - 1);
+                    result |= (flags & 0x0C);
+                }
+                return FirstByte{result};
+            }
+
             // common parameter of almost all packet and help parse
             // for exception, RetryPacket has no payload and no packet_number
             struct Packet {
                 FirstByte flags;
-                tsize dstID_len;
+                byte dstID_len;
                 byte* dstID;
 
                 // protected
@@ -131,7 +165,7 @@ namespace utils {
             */
             struct LongPacket : Packet {
                 uint version;
-                tsize srcID_len;
+                byte srcID_len;
                 byte* srcID;
             };
 
@@ -291,7 +325,7 @@ namespace utils {
             }
 
             template <class Bytes, class Next>
-            Error read_connID(Bytes&& b, tsize size, tsize* offset, byte*& id, tsize& len, Next& next) {
+            Error read_connID(Bytes&& b, tsize size, tsize* offset, byte*& id, byte& len, Next& next) {
                 CHECK_OFFSET(1)
                 len = b[*offset];
                 ++*offset;

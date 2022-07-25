@@ -21,8 +21,7 @@
 #include <quic/frame/cast.h>
 
 using namespace utils::quic;
-std::string make_packet_raw() {
-    constexpr auto packet = R"(c000000001088394c8f03e5157080000 449e7b9aec34d1b1c98dd7689fb8ec11
+constexpr auto packet_by_client = R"(c000000001088394c8f03e5157080000 449e7b9aec34d1b1c98dd7689fb8ec11
 d242b123dc9bd8bab936b47d92ec356c 0bab7df5976d27cd449f63300099f399
 1c260ec4c60d17b31f8429157bb35a12 82a643a8d2262cad67500cadb8e7378c
 8eb7539ec4d4905fed1bee1fc8aafba1 7c750e2c7ace01e6005f80fcb7df6212
@@ -60,8 +59,8 @@ f96f3ca9ec1dde434da7d2d392b905dd f3d1f9af93d1af5950bd493f5aa731b4
 056df31bd267b6b90a079831aaf579be 0a39013137aac6d404f518cfd4684064
 7e78bfe706ca4cf5e9c5453e9f7cfd2b 8b4c8d169a44e55c88d4a9a7f9474241
 e221af44860018ab0856972e194cd934)";
+std::string make_packet_raw(const char* packet) {
     using namespace utils;
-
     std::string str, data;
     auto seq = make_ref_seq(packet);
     helper::append_if(str, helper::nop, seq, [](auto c) {
@@ -82,13 +81,13 @@ e221af44860018ab0856972e194cd934)";
     return data;
 }
 
-int main() {
-    external::set_libcrypto_location("D:/quictls/built/openssl/bin/libcrypto-81_3-x64.dll");
-    external::load_LibCrypto();
-    auto d = make_packet_raw();
+void test_read_packet() {
+    auto d = make_packet_raw(packet_by_client);
     tsize offset = 0;
     packet::ReadContext c;
-    c.cb.initial = [](packet::ReadContext* c, packet::Packet* p) {
+    c.q = core::default_QUIC();
+    auto nc = conn::new_connection(c.q, server);
+    c.cb.initial = [&](packet::ReadContext* c, packet::Packet* p) {
         crypto::decrypt_packet_protection(client, c->q->g->bpool, p);
         tsize offset = 0;
         frame::ReadContext ctx;
@@ -111,10 +110,44 @@ int main() {
             }
         }
 
-        // crypto::advance_handshake(data, );
+        crypto::advance_handshake(data, nc->self, crypto::EncryptionLevel::initial);
+        ctx.b->put(std::move(data.crypto_data));
     };
-    c.q = core::default_QUIC();
-    conn::new_connection(c.q);
+
     byte* data = (byte*)d.data();
     packet::read_packet(data, d.size(), &offset, c);
+    core::del_QUIC(c.q);
+}
+
+void test_write_packet() {
+    // initial packet
+    packet::InitialPacket ini{};
+    constexpr auto initial = packet::make_fb(packet::types::Initial, 1, 1);
+    ini.flags = initial;
+    ini.version = 1;
+    ini.dstID_len = 0;
+    byte nul = 0, src[] = "client hel", tok[] = "variable_token";
+    ini.dstID = &nul;
+    ini.srcID_len = 10;
+    ini.srcID = src;
+    ini.token_len = sizeof(tok) - 1;
+    ini.token = tok;
+    ini.packet_number = 0;
+    auto q = core::default_QUIC();
+    auto c = conn::new_connection(q, client);
+    crypto::set_alpn(c, "\2h3", 3);
+    crypto::set_hostname(c, "www.google.com");
+}
+
+int main() {
+    constexpr auto ossl_libssl = "D:/quictls/openssl+quic/debug/openssl/bin/libssl-81_3-x64.dll";
+    constexpr auto ossl_libcrypto = "D:/quictls/openssl+quic/debug/openssl/bin/libcrypto-81_3-x64.dll";
+    constexpr auto bssl_libssl = "D:/quictls/boringssl/built/lib/ssl.dll";
+    constexpr auto bssl_libcrypto = "D:/quictls/boringssl/built/lib/crypto.dll";
+    external::set_libcrypto_location(bssl_libcrypto);
+    external::set_libssl_location(bssl_libssl);
+    external::load_LibCrypto();
+    external::load_LibSSL();
+
+    test_read_packet();
 }
