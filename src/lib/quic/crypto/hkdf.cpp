@@ -18,9 +18,8 @@ namespace utils {
         namespace crypto {
             namespace ext = external;
             constexpr auto digest_SHA256 = "SHA256";
-
-            bool HKDF_Extract(byte* initial, tsize& inilen,
-                              const byte* clientConnID, tsize len) {
+            bool HKDF_Extract_openssl(byte* initial, tsize& inilen,
+                                      const byte* clientConnID, tsize len) {
                 auto& c = ext::libcrypto;
                 auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
                 mem::RAII ctx{c.EVP_KDF_CTX_new_(kdf), c.EVP_KDF_CTX_free_};
@@ -39,13 +38,37 @@ namespace utils {
                 return true;
             }
 
+            bool HKDF_Extract(byte* initial, tsize& inilen,
+                              const byte* clientConnID, tsize len) {
+                auto& c = ext::libcrypto;
+                if (!c.is_boring_ssl) {
+                    return HKDF_Extract_openssl(initial, inilen, clientConnID, len);
+                }
+                return (bool)c.HKDF_extract_(initial, &inilen, c.EVP_sha256_(), clientConnID, len, quic_v1_initial_salt.key, quic_v1_initial_salt.size());
+            }
             template <tsize outlen, tsize lablen>
-            bool HKDF_Expand_label(Key<outlen>& out, const byte* secret,
-                                   tsize secret_len, Key<lablen> labelk) {
+            bool HKDF_Expand_openssl(Key<outlen>& out, const byte* secret, tsize secret_len, byte (&label)[lablen]) {
                 auto& c = ext::libcrypto;
                 auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
                 mem::RAII ctx{c.EVP_KDF_CTX_new_(kdf), c.EVP_KDF_CTX_free_};
                 c.EVP_KDF_free_(kdf);
+                OSSL_PARAM params[5];
+                static_assert(sizeof(OSSL_PARAM) == 40);
+                params[0] = c.OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXPAND_ONLY"), 11);
+                params[1] = c.OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret), secret_len);
+                params[2] = c.OSSL_PARAM_construct_octet_string_("info", label, lablen);
+                params[3] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
+                params[4] = c.OSSL_PARAM_construct_end_();
+                auto err = c.EVP_KDF_derive_(ctx, out.key, outlen, params);
+                if (err <= 0) {
+                    return false;
+                }
+                return true;
+            }
+
+            template <tsize outlen, tsize lablen>
+            bool HKDF_Expand_label(Key<outlen>& out, const byte* secret,
+                                   tsize secret_len, Key<lablen> labelk) {
                 varint::Swap<ushort> swp{outlen};
                 varint::reverse_if(swp);
                 // refer RFC8446 section 3.4
@@ -64,18 +87,11 @@ namespace utils {
                     label[i] = labelk.key[i - offset];
                 }
                 label[sizeof(label) - 1] = 0;
-                OSSL_PARAM params[5];
-                static_assert(sizeof(OSSL_PARAM) == 40);
-                params[0] = c.OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXPAND_ONLY"), 11);
-                params[1] = c.OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret), secret_len);
-                params[2] = c.OSSL_PARAM_construct_octet_string_("info", label, sizeof(label));
-                params[3] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
-                params[4] = c.OSSL_PARAM_construct_end_();
-                auto err = c.EVP_KDF_derive_(ctx, out.key, outlen, params);
-                if (err <= 0) {
-                    return false;
+                auto& c = ext::libcrypto;
+                if (!c.is_boring_ssl) {
+                    return HKDF_Expand_openssl(out, secret, secret_len, label);
                 }
-                return true;
+                return (bool)c.HKDF_expand_(out.key, out.size(), c.EVP_sha256_(), secret, secret_len, label, sizeof(label));
             }
 
             bool make_initial_keys(InitialKeys& key,

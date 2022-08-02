@@ -124,7 +124,7 @@ namespace utils {
                         return {io::Status::unsupported, invalid, true};
                     }
                     if (t->target == invalid || t->target == global) {
-                        return {io::Status::invalid_arg, invalid, true};
+                        return {io::Status::invalid_argument, invalid, true};
                     }
                     ::sockaddr_storage storage;
                     int len = sizeof(storage);
@@ -146,7 +146,7 @@ namespace utils {
                         return {io::Status::unsupported, invalid, true};
                     }
                     if (t->target == invalid || t->target == global) {
-                        return {io::Status::invalid_arg, invalid, true};
+                        return {io::Status::invalid_argument, invalid, true};
                     }
                     return target_to_sockaddr(t, [&](::sockaddr* addr, tsize alen) -> io::Result {
                         auto err = ext::sockdll.sendto_(t->target, topchar(d), l, 0, addr, alen);

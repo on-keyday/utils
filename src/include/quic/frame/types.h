@@ -17,7 +17,7 @@ namespace utils {
         namespace frame {
             enum class Error {
                 none,
-                invalid_arg,
+                invalid_argument,
                 varint_error,
                 memory_exhausted,
                 not_enough_length,

@@ -321,7 +321,7 @@ namespace utils {
             template <class Bytes, ReadCallback Callbacks>
             Error read_frame(Bytes&& b, tsize size, tsize* offset, Callbacks&& next) {
                 if (!offset || *offset >= size) {
-                    return Error::invalid_arg;
+                    return Error::invalid_argument;
                 }
                 // rfc 9000 says:
                 // To ensure simple and efficient implementations of frame parsing,

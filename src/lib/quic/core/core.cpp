@@ -21,15 +21,15 @@ namespace utils {
             constexpr auto queinit = 10;
 
             struct QQue {
-                mem::LinkQue<QUIC*> que;
-                QUIC* mem_exhausted;
+                mem::LinkQue<mem::shared_ptr<QUIC>> que;
+                mem::shared_ptr<QUIC> exhausted;
 
-                bool en_q(QUIC* q) {
+                bool en_q(mem::shared_ptr<QUIC> q) {
                     return que.init(queinit) && que.en_q(std::move(q));
                 }
 
-                QUIC* de_q() {
-                    QUIC* q = nullptr;
+                mem::shared_ptr<QUIC> de_q() {
+                    mem::shared_ptr<QUIC> q = nullptr;
                     que.de_q(q);
                     return q;
                 }
@@ -78,12 +78,16 @@ namespace utils {
             }
 
             dll(bool) add_loop(EventLoop* l, QUIC* q) {
-                return l->q.en_q(q);
+                return l->q.en_q(q->self);
             }
 
             dll(tsize) rem_loop(EventLoop* l, QUIC* q) {
-                return l->q.que.rem_q([&](QUIC* cmp) {
-                    return cmp == q;
+                if (!q || !l) {
+                    return 0;
+                }
+                auto self = q->self;
+                return l->q.que.rem_q([&](mem::shared_ptr<QUIC>& cmp) {
+                    return cmp.get() == self.get();
                 });
             }
 
@@ -101,11 +105,12 @@ namespace utils {
                 }
                 auto qstat = que_remove;
                 if (event.callback) {
-                    qstat = event.callback(l, q, event.arg);
+                    qstat = event.callback(l);
                 }
                 if (qstat == que_enque) {
-                    l->q.en_q(q);
+                    q->ev->en_q(std::move(event));
                 }
+                l->q.en_q(std::move(q));
                 return true;
             }
 
@@ -160,7 +165,9 @@ namespace utils {
                 }
                 q->ev->que.stock.a = &q->g->alloc;
                 q->g->bpool.a = &q->g->alloc;
-                q->conns.conns.stock.a = &q->g->alloc;
+                q->conns.conns.stock.shared = &q->conns.stock;
+                q->conns.alive.stock.shared = &q->conns.stock;
+                q->conns.stock.a = &q->g->alloc;
                 q->io->ioproc = {};
                 return q.get();
             }
@@ -180,12 +187,15 @@ namespace utils {
                     return;
                 }
                 q->ev->que.destruct([&](Event& e) {
-                    e.callback(nullptr, q, e.arg);
+                    e.callback(nullptr);
                 });
-                q->conns.conns.destruct([](conn::Conn& c) {
+                auto del_conns = [](conn::Conn& c) {
                     auto _ = std::move(c->self);
                     auto q_ = std::move(c->q);
-                });
+                };
+                q->conns.conns.destruct(del_conns);
+                q->conns.alive.destruct(del_conns);
+                auto keep_alive_g = q->g;  // for destruction
                 auto _ = std::move(q->self);
             }
 

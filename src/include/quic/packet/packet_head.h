@@ -28,6 +28,7 @@ namespace utils {
                 memory_exhausted,
                 too_long_connection_id,
                 unknown_connection_id,
+                varint_error,
             };
 
             struct FirstByte {
@@ -133,7 +134,7 @@ namespace utils {
             struct Packet {
                 FirstByte flags;
                 byte dstID_len;
-                byte* dstID;
+                const byte* dstID;
 
                 // protected
                 tsize packet_number;
@@ -166,7 +167,7 @@ namespace utils {
             struct LongPacket : Packet {
                 uint version;
                 byte srcID_len;
-                byte* srcID;
+                const byte* srcID;
             };
 
             /*
@@ -197,7 +198,7 @@ namespace utils {
 
             struct InitialPacket : LongPacket {
                 tsize token_len;
-                byte* token;
+                const byte* token;
             };
 
             struct HandshakePacket : LongPacket {
@@ -325,7 +326,7 @@ namespace utils {
             }
 
             template <class Bytes, class Next>
-            Error read_connID(Bytes&& b, tsize size, tsize* offset, byte*& id, byte& len, Next& next) {
+            Error read_connID(Bytes&& b, tsize size, tsize* offset, const byte*& id, byte& len, Next& next) {
                 CHECK_OFFSET(1)
                 len = b[*offset];
                 ++*offset;

@@ -15,7 +15,7 @@ namespace utils {
     namespace quic {
         namespace frame {
 
-            struct ReadContext {
+            struct RWContext {
                 template <class Ret, class... Args>
                 using CB = mem::CBN<Ret, Args...>;
                 types prev_type;
@@ -33,7 +33,15 @@ namespace utils {
                     frame_error_cb(err, where, f);
                 }
 
+                void frame_error(Error err, const char* where) {
+                    frame_error_cb(err, where, nullptr);
+                }
+
                 CB<void, varint::Error, const char*, Frame*> varint_error_cb;
+
+                void varint_error(varint::Error err, const char* where) {
+                    varint_error_cb(err, where, nullptr);
+                }
 
                 void varint_error(varint::Error err, const char* where, Frame* f) {
                     prev_type = f->type;

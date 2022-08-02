@@ -29,6 +29,18 @@ namespace utils {
                 static constexpr auto get_address(auto&& a) noexcept {
                     return std::addressof(a);
                 }
+
+                static constexpr void move(auto& cb, auto from_cb, auto& func_ctx, auto from_ctx) noexcept {
+                    cb = from_cb;
+                    func_ctx = from_ctx;
+                }
+
+                static constexpr void copy(auto& cb, auto from_cb, auto& func_ctx, auto from_ctx) noexcept {
+                    cb = from_cb;
+                    func_ctx = from_ctx;
+                }
+
+                static constexpr void destruct(auto& cb, auto& func_ctx) noexcept {}
             };
 
             template <class T>
@@ -73,7 +85,7 @@ namespace utils {
             template <class Rettraits>
             auto select_call(auto&& callback) {
                 using Ret = typename Rettraits::Ret;
-                if constexpr (callable<decltype(callback), Ret>) {
+                if constexpr (!std::is_void_v<Ret> && callable<decltype(callback), Ret>) {
                     return callback();
                 }
                 else {
@@ -133,6 +145,36 @@ namespace utils {
                 constexpr CBCore(callback_t cb, void* ctx)
                     : cb(cb), func_ctx(ctx) {}
 
+                constexpr CBCore(const CBCore& c)
+                    : traits(c.traits) {
+                    traits.copy(cb, c.cb, func_ctx, c.func_ctx);
+                }
+
+                constexpr CBCore(CBCore&& c)
+                    : traits(std::move(c.traits)) {
+                    traits.move(cb, c.cb, func_ctx, c.func_ctx);
+                }
+
+                constexpr CBCore& operator=(const CBCore& c) {
+                    if (this == &c) {
+                        return *this;
+                    }
+                    this->~CBCore();
+                    traits = c.traits;
+                    traits.copy(cb, c.cb, func_ctx, c.func_ctx);
+                    return *this;
+                }
+
+                constexpr CBCore& operator=(CBCore&& c) {
+                    if (this == &c) {
+                        return *this;
+                    }
+                    this->~CBCore();
+                    traits = std::move(c.traits);
+                    traits.move(cb, c.cb, func_ctx, c.func_ctx);
+                    return *this;
+                }
+
                private:
                 template <class Ptr>
                 static Ret callback_core(void* c, Ctx ctx, Args... args) {
@@ -155,10 +197,9 @@ namespace utils {
                     }
                 }
 
-               public:
-                template <class F, reject_self<F, CBCore> = 0>
-                constexpr CBCore(F&& v) {
-                    auto ptr = traits.get_address(v);
+                template <class F>
+                void core_init(F&& f) {
+                    auto ptr = traits.get_address(f);
                     if constexpr (std::is_same_v<decltype(ptr), callback_t>) {
                         cb = ptr;
                         func_ctx = nullptr;
@@ -186,8 +227,24 @@ namespace utils {
                     }
                 }
 
+               public:
+                template <class F, reject_self<F, CBCore> = 0>
+                constexpr CBCore(RetTraits&& traits, F&& f)
+                    : traits(std::move(traits)) {
+                    core_init(std::forward<F>(f));
+                }
+
+                template <class F, reject_self<F, CBCore> = 0>
+                constexpr CBCore(F&& v) {
+                    core_init(std::forward<F>(v));
+                }
+
                 explicit operator bool() {
                     return cb != nullptr;
+                }
+
+                ~CBCore() {
+                    traits.destruct(cb, func_ctx);
                 }
             };
 

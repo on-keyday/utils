@@ -30,20 +30,26 @@ namespace utils {
                 PCB<HandshakePacket, Ctx> handshake;
                 PCB<VersionNegotiationPacket, Ctx> version;
                 PCB<OneRTTPacket, Ctx> one_rtt;
+                mem::CB<Ctx*, void, Error, const char*, Packet*> packet_error;
+                mem::CB<Ctx*, void, varint::Error, const char*, Packet*> varint_error;
             };
 
-            struct ReadContext {
+            struct RWContext {
                 // TODO(on-keyday): replace q to c
                 // conn::Connection* c;
                 core::QUIC* q;
-                ReadCallback<ReadContext> cb;
+                ReadCallback<RWContext> cb;
 
                 Error discard(byte* bytes, tsize size, tsize* offset, FirstByte fb, uint version, bool versuc) {
                     return Error::none;
                 }
 
-                void packet_error(Error err, const char* where, Packet* p) {}
-                void varint_error(varint::Error err, const char* where, Packet* p) {}
+                void packet_error(Error err, const char* where, Packet* p = nullptr) {
+                    cb.packet_error(this, err, where, p);
+                }
+                void varint_error(varint::Error err, const char* where, Packet* p = nullptr) {
+                    cb.varint_error(this, err, where, p);
+                }
 
                 bytes::Bytes get_bytes(tsize s) {
                     return q->g->bpool.get(s);

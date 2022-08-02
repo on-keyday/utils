@@ -26,7 +26,10 @@ namespace utils {
             struct Connection;
             using Conn = mem::shared_ptr<Connection>;
             struct ConnPool {
-                mem::LinkQue<mem::shared_ptr<Connection>> conns;
+                using QueT = mem::LinkQue<Conn, mem::SharedStock<Conn, std::recursive_mutex>>;
+                mem::StockNode<Conn, std::recursive_mutex> stock;
+                QueT conns;  // conns holds pooled connections
+                QueT alive;  // alive holds alive connections
                 Conn get();
             };
 

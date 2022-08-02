@@ -8,6 +8,7 @@
 // event - event
 #pragma once
 #include <ctime>
+#include "../mem/shared_ptr.h"
 
 namespace utils {
     namespace quic {
@@ -42,13 +43,21 @@ namespace utils {
                 }
             };
 
-            using EventCallback = QueState (*)(EventLoop*, QUIC* q, EventArg arg);
+            using EventCallback = mem::CBS<QueState, EventLoop*>;
 
             struct Event {
                 EventArg arg;
+                EventType type;
+                // event callback
+                // should contain context around callstack
                 EventCallback callback;
             };
 
+            template <class F>
+            EventCallback make_event_cb(allocate::Alloc* a, F&& f) {
+                return mem::make_cb<QueState, EventLoop*>(a, std::forward<F>(f));
+            }
+            /*
             Event event(EventType type, auto t, auto prev, std::time_t timer,
                         EventCallback callback) {
                 return Event{
@@ -60,7 +69,7 @@ namespace utils {
                     },
                     .callback = callback,
                 };
-            }
+            }*/
 
         }  // namespace core
     }      // namespace quic

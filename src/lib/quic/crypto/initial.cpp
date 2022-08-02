@@ -98,6 +98,23 @@ namespace utils {
                 return Error::none;
             }
 
+            dll(Error) encrypt_packet_protection(Mode mode, pool::BytesPool& co, packet::Packet* ppacket) {
+                if (!ext::load_LibCrypto()) {
+                    return Error::libload_failed;
+                }
+                auto& bpool = co;
+                InitialKeys inikey{};
+                if (!make_initial_keys(inikey, ppacket->dstID, ppacket->dstID_len, mode)) {
+                    return Error::internal;
+                }
+                auto pn_len = ppacket->flags.packet_number_length();
+                auto header_len = ppacket->raw_payload - ppacket->raw_header;
+                assert(header_len > 0);
+                auto packet_number = ppacket->raw_payload - pn_len;
+                auto enc_len = header_len + ppacket->payload_length + 16;
+                return Error::none;
+            }
+
             dll(Error) decrypt_packet_protection(Mode mode, pool::BytesPool& co, packet::Packet* ppacket) {
                 if (!ext::load_LibCrypto()) {
                     return Error::libload_failed;
@@ -105,7 +122,7 @@ namespace utils {
                 auto& bpool = co;
                 InitialKeys inikey{};
                 if (!make_initial_keys(inikey, ppacket->dstID, ppacket->dstID_len, mode)) {
-                    return Error::memory_exhausted;
+                    return Error::internal;
                 }
                 // TODO(on-keyday): size check and nullptr check
                 // get sample

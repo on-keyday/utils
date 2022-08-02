@@ -259,14 +259,14 @@ namespace utils {
             template <class Callbacks>
             Error write_path_challange(Buffer& b, PathChallange& challange, Callbacks&& next) {
                 TYPE(challange, "write_path_challange", types::PATH_CHALLAGE)
-                WRITE_FIXED(data, 8, "write_path_challange/data")
+                WRITE_FIXED(challange.data, 8, "write_path_challange/data")
                 return Error::none;
             }
 
             template <class Callbacks>
             Error write_path_response(Buffer& b, PathResponse& response, Callbacks&& next) {
                 TYPE(response, "write_path_response", types::PATH_RESPONSE)
-                WRITE_FIXED(data, 8, "write_path_response/data")
+                WRITE_FIXED(response.data, 8, "write_path_response/data")
                 return Error::none;
             }
 
@@ -307,7 +307,7 @@ namespace utils {
             template <WriteCallback Callbacks>
             Error write_frame(Buffer& b, Frame* frame, Callbacks&& next) {
                 if (!frame) {
-                    return Error::invalid_arg;
+                    return Error::invalid_argument;
                 }
                 auto t = [&](auto... arg) {
                     return is_types(frame->type, arg...);
@@ -318,13 +318,13 @@ namespace utils {
 #define CASE(TYPE, FUNC)                                               \
     if (t(TYPE)) {                                                     \
         using TYPE_t = std::remove_pointer_t<type_select<TYPE>::type>; \
-        return write_##FUNC(b, c<TYPE_t>(), next)                      \
+        return write_##FUNC(b, static_cast<TYPE_t&>(*frame), next);    \
     }
                 constexpr auto s0 = byte(types::STREAM);
                 constexpr auto s7 = s0 + 0x7;
-                auto ty = byte(f->type);
+                auto ty = byte(frame->type);
                 if (s0 <= ty && ty <= s7) {
-                    return write_stream(b, c<Stream>(), next);
+                    return write_stream(b, static_cast<Stream&>(*frame), next);
                 }
                 if (t(types::PADDING)) {
                     return write_padding(b, 1, next);
@@ -359,7 +359,11 @@ namespace utils {
                 CASE(types::DATAGRAM_LEN, datagram)
                 next.frame_error(Error::unsupported, "write_frame/type");
                 return Error::unsupported;
+#undef CASE
             }
         }  // namespace frame
-    }      // namespace quic
+#undef WRITE
+#undef ENCODE
+#undef WRITE_FIXED
+    }  // namespace quic
 }  // namespace utils

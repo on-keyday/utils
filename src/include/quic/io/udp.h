@@ -18,9 +18,16 @@ namespace utils {
             namespace udp {
                 Dll(io::IO) Protocol(allocate::Alloc* a);
 
+                using IOCallback = mem::CBS<void, io::Target*, const byte*, tsize, Result>;
+
                 Dll(Result) enque_io_wait(core::QUIC* q, io::Target t, io::IO* r,
                                           tsize bufsize,
-                                          Timeout timeout, core::Event next);
+                                          Timeout timeout, IOCallback cb);
+
+                template <class F>
+                IOCallback make_iocb(allocate::Alloc* a, F&& f) {
+                    return mem::make_cb<void, Target*, const byte*, tsize, Result>(a, std::forward<F>(f));
+                }
 
                 constexpr TargetKey UDP_IPv4 = 17;
                 constexpr TargetKey UDP_IPv6 = 18;

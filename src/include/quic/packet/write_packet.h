@@ -39,9 +39,9 @@ namespace utils {
                 varint::reverse_if(swp);
                 if (where_length) {
                     auto length = p->payload_length + pn;
-                    ENCODE(length, where)
+                    ENCODE(length, where_length)
                 }
-                WRITE(swp.swp + 4 - pn, pn, where);
+                WRITE(swp.swp + 4 - pn, pn, where_pn);
                 return Error::none;
             }
 
@@ -49,23 +49,23 @@ namespace utils {
             Error write_initial_packet(bytes::Buffer& b, InitialPacket* p, Next&& next) {
                 ENCODE(p->token_len, "write_initial_packet/token_len")
                 WRITE(p->token, p->token_len, "write_initial_packet/token")
-                return write_packet_number(b, p, next,
-                                           "write_initial_packet/packet_number",
-                                           "write_initial_packet/length");
+                return write_packet_number_and_length(b, p, next,
+                                                      "write_initial_packet/packet_number",
+                                                      "write_initial_packet/length");
             }
 
             template <class Next>
             Error write_handshake_packet(bytes::Buffer& b, HandshakePacket* p, Next&& next) {
-                return write_packet_number(b, p, next,
-                                           "write_handsahke_packet/packet_number",
-                                           "write_handshake_packet/length");
+                return write_packet_number_and_length(b, p, next,
+                                                      "write_handsahke_packet/packet_number",
+                                                      "write_handshake_packet/length");
             }
 
             template <class Next>
             Error write_0rtt_packet(bytes::Buffer& b, ZeroRTTPacket* p, Next&& next) {
-                return write_packet_number(b, p, next,
-                                           "write_0rtt_packet/packet_number",
-                                           "write_0rtt_packet/length");
+                return write_packet_number_and_length(b, p, next,
+                                                      "write_0rtt_packet/packet_number",
+                                                      "write_0rtt_packet/length");
             }
 
             template <class Next>
@@ -87,9 +87,9 @@ namespace utils {
                 varint::reverse_if(swp);
                 WRITE(swp.swp, 4, "write_long_packet/version")
                 WRITE(&p->dstID_len, 1, "write_long_packet/dstIDlen")
-                WRITE(p->dstID, len, "write_long_packet/dstID")
+                WRITE(p->dstID, p->dstID_len, "write_long_packet/dstID")
                 WRITE(&p->srcID_len, 1, "write_long_packet/srcIDlen")
-                WRITE(p->srcID, len, "write_long_packet/srcID")
+                WRITE(p->srcID, p->srcID_len, "write_long_packet/srcID")
                 switch (p->flags.type()) {
                     case types::Initial: {
                         return write_initial_packet(b, static_cast<InitialPacket*>(p), next);
@@ -112,7 +112,7 @@ namespace utils {
             }
 
             template <class Next>
-            Error write_short_packet(bytes::Buffer& b, packet::OneRTTPacket* p, Next&& next) {
+            Error write_short_packet(bytes::Buffer& b, OneRTTPacket* p, Next&& next) {
                 WRITE(p->dstID, p->dstID_len, "write_short_packet/dstID")
                 return write_packet_number_and_length(b, p, next, "write_short_header/packet_number", nullptr);
             }
@@ -120,16 +120,18 @@ namespace utils {
             // write_packet write packet
             // this method does't write packet payload
             template <class Next>
-            Error write_packet(bytes::Buffer& b, packet::Packet* p, Next&& next) {
+            Error write_packet(bytes::Buffer& b, Packet* p, Next&& next) {
                 if (!p) {
                     return Error::invalid_argument;
                 }
                 WRITE(&p->flags.raw, 1, "write_packet/type");
                 if (p->flags.is_short()) {
-                    return write_short_packet(b, static_cast<packet::OneRTTPacket*>(p), next);
+                    return write_short_packet(b, static_cast<OneRTTPacket*>(p), next);
                 }
-                return write_long_packet(b, p, next);
+                return write_long_packet(b, static_cast<LongPacket*>(p), next);
             }
+#undef WRITE
+#undef ENCODE
         }  // namespace packet
     }      // namespace quic
 }  // namespace utils

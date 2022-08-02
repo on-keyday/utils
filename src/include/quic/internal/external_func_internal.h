@@ -164,6 +164,8 @@ namespace utils {
 
             struct LibSSL {
                 void* libptr;
+                bool is_boring_ssl;
+
                 IMPORT(SSL_CTX_new)
                 IMPORT(SSL_new)
                 IMPORT(TLS_method)
@@ -176,7 +178,14 @@ namespace utils {
                 IMPORT(SSL_set_connect_state)
                 IMPORT(SSL_set_accept_state)
                 IMPORT(SSL_set_alpn_protos)
-                IMPORT(SSL_ctrl)
+                union {
+                    IMPORT(SSL_ctrl)
+                    IMPORT(SSL_set_tlsext_host_name)
+                };
+                IMPORT(SSL_set_quic_transport_params)
+                IMPORT(SSL_CTX_load_verify_locations)
+                IMPORT(SSL_load_client_CA_file)
+                IMPORT(SSL_CTX_set_client_CA_list)
 
                 bool LoadAll(Loader load) {
                     LOAD(SSL_CTX_new)
@@ -191,7 +200,15 @@ namespace utils {
                     LOAD(SSL_set_connect_state)
                     LOAD(SSL_set_accept_state)
                     LOAD(SSL_set_alpn_protos)
-                    LOAD(SSL_ctrl)
+                    LOAD_ONLY(SSL_ctrl)
+                    if (!SSL_ctrl_) {
+                        LOAD(SSL_set_tlsext_host_name)
+                        is_boring_ssl = true;
+                    }
+                    LOAD(SSL_set_quic_transport_params)
+                    LOAD(SSL_CTX_load_verify_locations)
+                    LOAD(SSL_load_client_CA_file)
+                    LOAD(SSL_CTX_set_client_CA_list)
                     return true;
                 }
             };

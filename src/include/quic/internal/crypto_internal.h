@@ -5,8 +5,9 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-// crypto_internal - OpenSSL includes
+// crypto_internal - OpenSSL/BoringSSL export functions
 #pragma once
+/*
 #if __has_include(<openssl/params.h>)
 #include <openssl/kdf.h>
 #include <openssl/params.h>
@@ -14,7 +15,7 @@
 #include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <openssl/err.h>
-#else
+#else*/
 #include <cstddef>
 // define dummy symbols
 // hkdf.cpp
@@ -48,22 +49,28 @@ int EVP_CIPHER_CTX_ctrl(void*, int, int, void*);
 #define EVP_CTRL_GCM_SET_IVLEN 0x9
 #define EVP_CTRL_GCM_SET_TAG 0x11
 void ERR_print_errors_cb(int (*)(const char*, size_t, void*), void*);
-
+/*
 #endif
 #if __has_include(<openssl/is_boringssl.h>)
 #include <openssl/hkdf.h>
 #else
+*/
 // boringssl
 typedef void EVP_MD;
-int HKDF_extract(uint8_t* out_key, size_t out_len, const EVP_MD* digest,
-                 const uint8_t* secret, size_t secret_len,
-                 const uint8_t* salt, size_t salt_len,
-                 const uint8_t* info, size_t info_len);
+int HKDF_extract(uint8_t* out_key, size_t* out_len,
+                 const EVP_MD* digest, const uint8_t* secret,
+                 size_t secret_len, const uint8_t* salt,
+                 size_t salt_len);
+
 int HKDF_expand(uint8_t* out_key, size_t out_len,
                 const EVP_MD* digest, const uint8_t* prk,
                 size_t prk_len, const uint8_t* info,
                 size_t info_len);
 const EVP_MD* EVP_sha256(void);
+typedef void SSL;
+int SSL_set_tlsext_host_name(SSL* ssl, const char* name);
+typedef void SSL_CIPHER;
+/*
 #endif
 #if __has_include(<openssl/quic.h>)
 #include <openssl/quic.h>
@@ -72,7 +79,9 @@ const EVP_MD* EVP_sha256(void);
 #define EXISTS_OPENSSL_QUIC
 #endif
 #endif
+
 #ifndef EXISTS_OPENSSL_QUIC
+*/
 typedef void SSL_CTX;
 typedef void SSL;
 void* SSL_CTX_new(const void*);
@@ -89,7 +98,22 @@ enum OSSL_ENCRYPTION_LEVEL {
 int SSL_provide_quic_data(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, const uint8_t* data, size_t len);
 int SSL_do_handshake(void*);
 int SSL_get_error(const void*, int);
-struct SSL_QUIC_METHOD {
+typedef void SSL_QUIC_METHOD;
+int SSL_set_quic_method(void*, const SSL_QUIC_METHOD*);
+void SSL_set_connect_state(void*);
+void SSL_set_accept_state(void*);
+#define SSL_ERROR_WANT_READ 2
+int SSL_set_alpn_protos(void*, const unsigned char*, unsigned int);
+#define SSL_CTRL_SET_TLSEXT_HOSTNAME 55
+long SSL_ctrl(SSL*, int, long, void*);
+int SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t params_len);
+int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath);
+#define STACK_OF(Type) void
+STACK_OF(X509_NAME) * SSL_load_client_CA_file(const char* file);
+void SSL_CTX_set_client_CA_list(SSL_CTX* ctx, STACK_OF(X509_NAME) * list);
+// #endif
+// openssl style SSL_QUIC_METHOD
+struct SSL_QUIC_METHOD_openssl {
     int (*set_encryption_secrets)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level,
                                   const uint8_t* read_secret,
                                   const uint8_t* write_secret, size_t secret_len);
@@ -98,14 +122,19 @@ struct SSL_QUIC_METHOD {
     int (*flush_flight)(SSL* ssl);
     int (*send_alert)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, uint8_t alert);
 };
-int SSL_set_quic_method(void*, const SSL_QUIC_METHOD*);
-void SSL_set_connect_state(void*);
-void SSL_set_accept_state(void*);
-#define SSL_ERROR_WANT_READ 2
-int SSL_set_alpn_protos(void*, const unsigned char*, unsigned int);
-#define SSL_CTRL_SET_TLSEXT_HOSTNAME 55
-long SSL_ctrl(SSL*, int, long, void*);
-#endif
+// boringssl style SSL_QUIC_METHOD
+struct SSL_QUIC_METHOD_boringssl {
+    int (*set_read_secret)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level,
+                           const SSL_CIPHER* cipher, const uint8_t* secret,
+                           size_t secret_len);
+    int (*set_write_secret)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level,
+                            const SSL_CIPHER* cipher, const uint8_t* secret,
+                            size_t secret_len);
+    int (*add_handshake_data)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level,
+                              const uint8_t* data, size_t len);
+    int (*flush_flight)(SSL* ssl);
+    int (*send_alert)(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, uint8_t alert);
+};
 
 namespace utils {
     namespace quic {

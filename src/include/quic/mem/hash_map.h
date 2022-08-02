@@ -27,7 +27,7 @@ namespace utils {
             struct HashNode {
                 using kv_t = KeyValue<Key, Value>;
                 tsize bugget;
-                LinkQue<kv_t, EmptyLock, SharedStock<kv_t>> v;
+                LinkQue<kv_t, SharedStock<kv_t, EmptyLock>> v;
             };
 
             struct equal_t {
@@ -45,7 +45,7 @@ namespace utils {
                 using node_t = HashNode<Key, Value>;
                 Vec<node_t> q;
                 using KV = KeyValue<Key, Value>;
-                StockNode<KV> stock;
+                StockNode<KV, EmptyLock> stock;
                 tsize total = 0;
                 Lock m;
 

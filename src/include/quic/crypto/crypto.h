@@ -12,6 +12,7 @@
 #include "../mem/vec.h"
 #include "../frame/types.h"
 #include "../conn/conn.h"
+#include "../transport_param/tpparam.h"
 
 namespace utils {
     namespace quic {
@@ -29,7 +30,7 @@ namespace utils {
             struct Key {
                 byte key[size_];
 
-                constexpr tsize size() {
+                constexpr tsize size() const {
                     return size_;
                 }
             };
@@ -58,7 +59,7 @@ namespace utils {
                 libload_failed,    // failed to load external library
                 memory_exhausted,  // memory exhausted
                 internal,          // external library error
-                invalid_arg,       // invalid argument
+                invalid_argument,  // invalid argument
             };
 
             enum EncryptionLevel {
@@ -69,8 +70,12 @@ namespace utils {
             };
             Dll(Error) set_alpn(conn::Connection* c, const char* alpn, uint len);
             Dll(Error) set_hostname(conn::Connection* c, const char* host);
-            Dll(Error) start_handshake(conn::Connection* c, mem::CBN<void, const char*, tsize> send_data);
+            Dll(Error) set_peer_cert(conn::Connection* c, const char* cert);
+            Dll(Error) set_self_cert(conn::Connection* c, const char* cert, const char* private_key);
+            Dll(Error) set_transport_parameter(conn::Connection* c, const tpparam::DefinedParams* param, bool force_all = false, const tpparam::TransportParam* custom = nullptr, tsize custom_len = 0);
+            Dll(Error) start_handshake(conn::Connection* c, mem::CBN<void, const byte*, tsize, bool /*err*/> send_data);
 
+            Dll(Error) encrypt_packet_protection(Mode mode, pool::BytesPool& conn, packet::Packet* packet);
             Dll(Error) decrypt_packet_protection(Mode mode, pool::BytesPool& conn, packet::Packet* ppacket);
             Dll(Error) advance_handshake(frame::Crypto& cframe, conn::Conn& con, EncryptionLevel level);
             Dll(Error) advance_handshake_vec(bytes::Buffer& buf, mem::Vec<frame::Crypto>& cframe, conn::Conn& con, EncryptionLevel level);

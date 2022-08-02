@@ -14,23 +14,21 @@
 
 using namespace utils::quic;
 
-core::QueState server_proc(core::EventLoop*, core::QUIC* q, core::EventArg arg) {
-    auto w = core::get_io(q);
-    auto iow = io::udp::get_common_iowait(arg.prev);
-    if (ok(iow->res)) {
-        w->write_to(&iow->target, (const byte*)"hello client", 12);
+void server_proc(io::IO* w, io::Target* t, io::Result res) {
+    if (ok(res)) {
+        w->write_to(t, (const byte*)"hello client", 12);
     }
-    auto t = iow->target;
-    io::udp::del_iowait(q, arg.prev);
-    auto ms = std::chrono::milliseconds(1);
+}
+
+void enque_job(core::QUIC* q, io::Target m, io::IO* w) {
+    auto ms = std::chrono::milliseconds(1000);
     auto dur = std::chrono::duration_cast<std::chrono::microseconds>(ms);
     io::udp::enque_io_wait(
-        q, t, w, 0, {dur.count()},
-        core::Event{
-            .arg = {.type = core::EventType::normal},
-            .callback = server_proc,
-        });
-    return core::que_enque;
+        q, m, w, 0, {dur.count()},
+        io::udp::make_iocb(core::get_alloc(q), [=](io::Target* t, const byte* d, tsize len, io::Result res) {
+            server_proc(w, t, res);
+            enque_job(q, m, w);
+        }));
 }
 
 void test_quic_event() {
@@ -47,14 +45,7 @@ void test_quic_event() {
     t.target = target_id(res);
     res = io::register_target(quic, t.target);
     assert(ok(res));
-    auto ms = std::chrono::milliseconds(1000);
-    auto dur = std::chrono::duration_cast<std::chrono::microseconds>(ms);
-    io::udp::enque_io_wait(
-        quic, t, proto, 0, {dur.count()},
-        core::Event{
-            .arg = {.type = core::EventType::normal},
-            .callback = server_proc,
-        });
+    enque_job(quic, t, proto);
     while (core::progress_loop(lc)) {
     }
     core::rem_loop(lc, quic);

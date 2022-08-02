@@ -31,6 +31,9 @@ namespace utils {
                 constexpr Bytes()
                     : buf(nullptr), len(0), copy(false) {}
 
+                constexpr Bytes(const byte* b, tsize l)
+                    : buf(const_cast<byte*>(b)), len(l), copy(true) {}
+
                 constexpr Bytes(const Bytes& b)
                     : buf(b.buf), len(b.len), copy(true) {}
 

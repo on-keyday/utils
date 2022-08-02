@@ -34,7 +34,9 @@ namespace utils {
             }
 
             enum class ArgType {
-                secret,
+                secret,   // openssl
+                wsecret,  // boring ssl
+                rsecret,  // boring ssl
                 handshake_data,
                 flush,
                 alert,
@@ -43,6 +45,7 @@ namespace utils {
             struct Args {
                 ArgType type;
                 EncryptionLevel level;
+                const void *cipher;
                 union {
                     const byte *read_secret;
                     const byte *data;
@@ -68,6 +71,35 @@ namespace utils {
                     return conn->tmp_callback(&arg);
                 });
             }
+
+            int set_write_secret(SSL *ssl, OSSL_ENCRYPTION_LEVEL level,
+                                 const SSL_CIPHER *cipher, const uint8_t *secret,
+                                 size_t secret_len) {
+                return get_conn_then(ssl, [&](conn::Conn &conn) {
+                    Args arg{};
+                    arg.type = ArgType::wsecret;
+                    arg.cipher = cipher;
+                    arg.write_secret = secret;
+                    arg.secret_len = secret_len;
+                    arg.level = EncryptionLevel(level);
+                    return conn->tmp_callback(&arg);
+                });
+            }
+
+            int set_read_secret(SSL *ssl, OSSL_ENCRYPTION_LEVEL level,
+                                const SSL_CIPHER *cipher, const uint8_t *secret,
+                                size_t secret_len) {
+                return get_conn_then(ssl, [&](conn::Conn &conn) {
+                    Args arg{};
+                    arg.type = ArgType::rsecret;
+                    arg.cipher = cipher;
+                    arg.read_secret = secret;
+                    arg.secret_len = secret_len;
+                    arg.level = EncryptionLevel(level);
+                    return conn->tmp_callback(&arg);
+                });
+            }
+
             int add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL level,
                                    const byte *data, tsize len) {
                 return get_conn_then(ssl, [&](conn::Conn &conn) {
@@ -94,12 +126,21 @@ namespace utils {
                     Args arg{};
                     arg.type = ArgType::alert;
                     arg.alert = alert;
+                    arg.level = EncryptionLevel(level);
                     return conn->tmp_callback(&arg);
                 });
             }
 
-            ::SSL_QUIC_METHOD quic_method{
+            ::SSL_QUIC_METHOD_openssl quic_method_ossl{
                 set_encryption_secrets,
+                add_handshake_data,
+                flush_flight,
+                send_alert,
+            };
+
+            ::SSL_QUIC_METHOD_boringssl quic_method_bssl{
+                set_read_secret,
+                set_write_secret,
                 add_handshake_data,
                 flush_flight,
                 send_alert,
@@ -129,7 +170,13 @@ namespace utils {
                     if (!con->ssl) {
                         return Error::memory_exhausted;
                     }
-                    auto err = s.SSL_set_quic_method_(ssl(con->ssl), &quic_method);
+                    int err = 0;
+                    if (s.is_boring_ssl) {
+                        err = s.SSL_set_quic_method_(ssl(con->ssl), reinterpret_cast<const SSL_QUIC_METHOD *>(&quic_method_bssl));
+                    }
+                    else {
+                        err = s.SSL_set_quic_method_(ssl(con->ssl), reinterpret_cast<const SSL_QUIC_METHOD *>(&quic_method_ossl));
+                    }
                     if (err != 1) {
                         return Error::internal;
                     }
@@ -153,13 +200,51 @@ namespace utils {
         return err;                                                 \
     }
 
+            dll(Error) set_transport_parameter(conn::Connection *c, const tpparam::DefinedParams *params, bool force_all,
+                                               const tpparam::TransportParam *custom, tsize custom_len) {
+                if (!c || !params) {
+                    return Error::invalid_argument;
+                }
+                auto self = c->self;
+                INIT_CTX(self)
+                auto &s = external::libssl;
+                bytes::Buffer b_r{};
+                b_r.a = &c->q->g->alloc;
+                auto err = tpparam::encode(b_r, *params, force_all);
+                mem::RAII b{std::move(b_r), [&](bytes::Buffer &b) {
+                                self->q->g->bpool.put(std::move(b.b));
+                            }};
+                if (err != varint::Error::none) {
+                    return Error::invalid_argument;
+                }
+                if (custom) {
+                    for (tsize i = 0; i < custom_len; i++) {
+                        err = tpparam::encode(b(), custom[i], force_all);
+                        if (err != varint::Error::none) {
+                            return Error::invalid_argument;
+                        }
+                    }
+                }
+                auto ierr = s.SSL_set_quic_transport_params_(ssl(c->ssl), b().b.c_str(), b().len);
+                if (!ierr) {
+                    return Error::internal;
+                }
+                return Error::none;
+            }
+
             dll(Error) set_hostname(conn::Connection *c, const char *host) {
                 if (!c || !host) {
-                    return Error::invalid_arg;
+                    return Error::invalid_argument;
                 }
                 INIT_CTX(c->self)
-                // SSL_set_tlsext_host_name(ssl(c->ssl), host);
-                auto err = external::libssl.SSL_ctrl_(ssl(c->ssl), SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)host);
+                auto &s = external::libssl;
+                int err;
+                if (s.is_boring_ssl) {
+                    err = s.SSL_set_tlsext_host_name_(ssl(c->ssl), host);
+                }
+                else {
+                    err = s.SSL_ctrl_(ssl(c->ssl), SSL_CTRL_SET_TLSEXT_HOSTNAME, 0, (void *)host);
+                }
                 if (!err) {
                     return Error::internal;
                 }
@@ -168,26 +253,65 @@ namespace utils {
 
             dll(Error) set_alpn(conn::Connection *c, const char *alpn, uint len) {
                 if (!c || !alpn || len == 0) {
-                    return Error::invalid_arg;
+                    return Error::invalid_argument;
                 }
                 INIT_CTX(c->self)
                 auto err = external::libssl.SSL_set_alpn_protos_(ssl(c->ssl), reinterpret_cast<const byte *>(alpn), len);
                 return err == 0 ? Error::none : Error::internal;
             }
 
-            Error start_handshake(conn::Connection *c, mem::CBN<void, const char *, tsize> send_data) {
+            dll(Error) set_peer_cert(conn::Connection *c, const char *cert) {
+                if (!c || !cert) {
+                    return Error::invalid_argument;
+                }
+                INIT_CTX(c->self)
+                int err = 0;
+                auto &s = external::libssl;
+                if (c->mode == client) {
+                    err = s.SSL_CTX_load_verify_locations_(sslctx(c->sslctx), cert, nullptr);
+                }
+                else {
+                    auto f = s.SSL_load_client_CA_file_(cert);
+                    err = f != nullptr;
+                    if (f) {
+                        s.SSL_CTX_set_client_CA_list_(sslctx(c->sslctx), f);
+                    }
+                }
+                return err ? Error::none : Error::internal;
+            }
+
+            dll(Error) set_self_cert(conn::Connection *c, const char *cert, const char *private_key) {
+                if (!c || !cert) {
+                    return Error::invalid_argument;
+                }
+                INIT_CTX(c->self)
+                // TODO(on-keyday): load cert file!
+                return Error::none;
+            }
+
+            dll(Error) start_handshake(conn::Connection *c, mem::CBN<void, const byte *, tsize, bool> send_data) {
                 if (!c) {
-                    return Error::invalid_arg;
+                    return Error::invalid_argument;
                 }
                 INIT_CTX(c->self);
-                c->tmp_callback = [&](void *arg) {
-
+                c->tmp_callback = [&](void *varg) {
+                    auto arg = static_cast<Args *>(varg);
+                    if (arg->type == ArgType::handshake_data) {
+                        send_data(arg->data, arg->len, false);
+                    }
                 };
                 auto &s = external::libssl;
                 auto err = s.SSL_do_handshake_(ssl(c->ssl));
                 auto code = s.SSL_get_error_(ssl(c->ssl), err);
                 if (err == 1 || code == SSL_ERROR_WANT_READ) {
                     return Error::none;
+                }
+                if (external::load_LibCrypto()) {
+                    mem::OSSLCB<int, const char *, tsize> cb = [&](const char *s, tsize len) {
+                        send_data(reinterpret_cast<const byte *>(s), len, true);
+                        return 1;
+                    };
+                    external::libcrypto.ERR_print_errors_cb_(cb.cb, cb.func_ctx);
                 }
                 return Error::internal;
             }

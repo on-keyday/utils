@@ -15,12 +15,16 @@ namespace utils {
             struct Streams {
             };
             Conn ConnPool::get() {
-                Conn c;
-                conns.de_q(c);
-                if (c) {
-                    return c;
+                auto node = conns.de_q_node();
+                if (node) {
+                    alive.en_q_node(node);
+                    return node->value;
                 }
-                c = mem::make_shared<Connection>(conns.stock.a);
+                auto c = mem::make_shared<Connection>(stock.a);
+                auto cp = c;
+                if (!alive.en_q(std::move(cp))) {
+                    return nullptr;
+                }
                 return c;
             }
 

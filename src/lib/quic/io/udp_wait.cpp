@@ -23,16 +23,17 @@ namespace utils {
             namespace udp {
                 using Reserved = uint;
                 constexpr Reserved reserved = 0x4F'E6'2A'69;
-
+                /*
                 struct IOWait {
                     CommonIOWait common;
                     Timeout timeout;
                     Reserved reserved;
                     io::IO* r;
-                };
+                };*/
 
-                Result async_wait(core::QUIC* q, CommonIOWait& common, Timeout time);
+                Result async_wait(core::QUIC* q, Target& target, IOCallback& cb);
 
+                /*
                 core::QueState io_wait_udp_except(core::EventLoop* l, core::QUIC* q, core::EventArg arg) {
                     if (!arg.ptr) {
                         return core::que_remove;
@@ -50,114 +51,96 @@ namespace utils {
                         return core::que_enque;
                     }
                     return core::que_remove;
-                }
+                }*/
 
-                core::QueState io_wait_udp(core::EventLoop* l, core::QUIC* q, core::EventArg arg) {
-                    if (!arg.ptr) {
+                struct TmpBuf {
+                    byte data[1500];
+                };
+
+                core::QueState io_wait_udp(core::EventLoop* l, core::QUIC* q, IO* r, io::Target& target, Timeout& to, const auto& from_time, TmpBuf& buf, IOCallback& cb) {
+                    if (!l) {
+                        cb(&target, nullptr, 0, Result{Status::fatal});
                         return core::que_remove;
                     }
-                    if (!l) {
-                        return io_wait_udp_except(l, q, arg);
-                    }
-                    auto iow = arg.to<IOWait>();
-                    auto datap = iow->common.b.own();
-                    if (!datap) {
-                        core::enque_event(q, core::event(core::EventType::memory_exhausted, iow, nullptr, arg.timer, io_wait_udp_except));
-                        return core::que_enque;
-                    }
-                    auto res = iow->r->read_from(&iow->common.target, datap, iow->common.b.size());
+                    auto res = r->read_from(&target, buf.data, sizeof(buf.data));
                     if (incomplete(res)) {
-                        if (iow->timeout.until_await > 0 || iow->timeout.full > 0) {
+                        if (to.until_await > 0 || to.full > 0) {
                             auto now = std::chrono::system_clock::now();
-                            auto from = std::chrono::system_clock::from_time_t(arg.timer);
-                            auto timeout = std::chrono::duration_cast<std::chrono::microseconds>(now - from);
-                            if (iow->timeout.until_await > 0 &&
-                                timeout.count() >= iow->timeout.until_await) {
-                                res = async_wait(q, iow->common, iow->timeout);
+                            auto timeout = std::chrono::duration_cast<std::chrono::microseconds>(now - from_time);
+                            if (to.until_await > 0 &&
+                                timeout.count() >= to.until_await) {
+                                res = async_wait(q, target, cb);
                                 if (ok(res)) {
-                                    q->g->alloc.deallocate(iow);
-                                    return core::que_enque;
+                                    return core::que_remove;
                                 }
                             }
-                            if (iow->timeout.full > 0 &&
-                                timeout.count() >= iow->timeout.full) {
-                                iow->common.res = {io::Status::timeout, io::invalid, true};
-                                iow->common.next.arg.prev = iow;
-                                core::enque_event(q, iow->common.next);
-                                return core::que_enque;
+                            if (to.full > 0 &&
+                                timeout.count() >= to.full) {
+                                cb(&target, nullptr, 0, Result{Status::timeout});
+                                return core::que_remove;
                             }
                         }
-                        core::enque_event(
-                            q,
-                            core::event(core::EventType::io_wait, iow, nullptr, arg.timer, io_wait_udp));
                         return core::que_enque;
                     }
-                    iow->common.res = res;
-                    iow->common.next.arg.prev = iow;
-                    core::enque_event(q, iow->common.next);
-                    return core::que_enque;
+                    cb(&target, buf.data, res.len, Result{Status::ok});
+                    return core::que_remove;
                 }
 
-                dll(Result) enque_io_wait(core::QUIC* q, io::Target t, io::IO* r, tsize mtu, Timeout timeout, core::Event next) {
-                    auto iow = q->g->alloc.allocate<IOWait>();
-                    if (!iow) {
+                dll(Result) enque_io_wait(core::QUIC* q, io::Target t, io::IO* r, tsize, Timeout timeout, IOCallback next) {
+                    core::Event ev;
+                    ev.type = core::EventType::io_wait;
+                    auto now = std::chrono::system_clock::now();
+                    ev.callback = core::make_event_cb(&q->g->alloc, [=, buf = TmpBuf{}, self = q->self, n = std::move(next)](core::EventLoop* l) mutable {
+                        return io_wait_udp(l, self.get(), r, t, timeout, now, buf, n);
+                    });
+                    if (!ev.callback) {
                         return {io::Status::resource_exhausted};
                     }
-                    iow->reserved = reserved;
-                    iow->r = r;
-                    iow->common.next = next;
-                    iow->common.target = t;
-                    iow->timeout = timeout;
-                    if (mtu) {
-                        iow->common.b = q->g->bpool.get(mtu);
-                    }
-                    else {
-                        iow->common.b = q->g->bpool.get(1500);
-                    }
-                    auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
                     core::enque_event(
                         q,
-                        core::event(core::EventType::io_wait, iow, nullptr, now, io_wait_udp));
+                        std::move(ev));
                     return {io::Status::ok};
                 }
 
 #ifdef _WIN32
                 struct AsyncBuf {
                     ::OVERLAPPED ol;
-                    CommonIOWait common;
-                    Reserved reserved;
+                    Target target;
                     ::WSABUF wb;
                     ::sockaddr_storage from;
                     int from_len;
                     ::DWORD flag;
-                    core::QUIC* q;
+                    mem::shared_ptr<core::QUIC> q;
+                    IOCallback cb;
+                    TmpBuf buf;
                 };
 
-                core::QueState io_completion_wait(core::EventLoop* l, core::QUIC* q, core::EventArg arg) {
+                core::QueState io_completion_wait(core::EventLoop* l, void* iocp) {
                     ::OVERLAPPED* pol = nullptr;
                     ::ULONG_PTR _;
                     ::DWORD transferred;
-                    auto res = external::kernel32.GetQueuedCompletionStatus_(arg.ptr, &transferred, &_, &pol, 1);
+                    auto res = external::kernel32.GetQueuedCompletionStatus_(iocp, &transferred, &_, &pol, 1);
                     if (pol) {
                         auto b = reinterpret_cast<AsyncBuf*>(pol);
+                        Result rres;
                         if (res) {
-                            b->common.res = {io::Status::ok, transferred};
-                            if (!sockaddr_to_target(&b->from, &b->common.target)) {
-                                b->common.res = {io::Status::failed, transferred, true};
+                            rres = {io::Status::ok, transferred};
+                            if (!sockaddr_to_target(&b->from, &b->target)) {
+                                rres = {io::Status::failed, transferred, true};
                             }
                         }
                         else {
-                            b->common.res = {io::Status::failed, (ErrorCode)GET_ERROR()};
+                            rres = {io::Status::failed, (ErrorCode)GET_ERROR()};
                         }
-                        b->common.next.arg.prev = b;
-                        core::enque_event(b->q, b->common.next);
-                        return core::que_enque;
+                        b->cb(&b->target, b->buf.data, transferred, rres);
+                        auto g = b->q->g;
+                        g->alloc.deallocate(b);
+                        return core::que_remove;
                     }
-                    core::enque_event(q, {arg, io_completion_wait});
                     return core::que_enque;
                 }
 
-                Result async_wait(core::QUIC* q, CommonIOWait& common, Timeout time) {
+                Result async_wait(core::QUIC* q, Target& target, IOCallback& cb) {
                     if (!external::sockdll.loaded()) {
                         return {io::Status::fatal, invalid, true};
                     }
@@ -169,31 +152,34 @@ namespace utils {
                     if (!iocp) {
                         return {io::Status::resource_exhausted};
                     }
-                    buf->q = q;
-                    buf->reserved = reserved;
-                    buf->common = std::move(common);
-                    buf->wb.buf = topchar(buf->common.b.own());
-                    buf->wb.len = buf->common.b.size();
+                    buf->q = q->self;
+                    buf->target = target;
+                    buf->wb.buf = topchar(buf->buf.data);
+                    buf->wb.len = sizeof(buf->buf);
                     buf->from_len = sizeof(buf->from);
+                    buf->cb = std::move(cb);
+                    // start recv
                     auto err = external::sockdll.WSARecvFrom_(
-                        buf->common.target.target, &buf->wb, 1, nullptr, &buf->flag,
+                        buf->target.target, &buf->wb, 1, nullptr, &buf->flag,
                         repaddr(&buf->from), &buf->from_len, &buf->ol, nullptr);
                     if (err == -1) {
                         auto code = GET_ERROR();
                         if (!ASYNC(code)) {
-                            common = std::move(buf->common);
+                            cb = std::move(buf->cb);
                             q->g->alloc.deallocate(buf);
                             return with_code(code);
                         }
                     }
-                    core::enque_event(
-                        q,
-                        core::event(core::EventType::io_wait, iocp, nullptr, 0, io_completion_wait));
+                    core::Event ev;
+                    ev.callback = core::make_event_cb(&q->g->alloc, [=, self = q](core::EventLoop* l) {
+                        return io_completion_wait(l, iocp);
+                    });
+                    core::enque_event(q, std::move(ev));
                     return {io::Status::ok};
                 }
 
 #endif
-
+                /*
                 dll(void) del_iowait(core::QUIC* q, void* v) {
                     if (!q || !v) {
                         return;
@@ -206,12 +192,11 @@ namespace utils {
                     }
                     auto async_io = static_cast<AsyncBuf*>(v);
                     if (async_io->reserved == reserved) {
-                        q->g->bpool.put(std::move(async_io->common.b));
                         q->g->alloc.deallocate(async_io);
                         return;
                     }
-                }
-
+                }*/
+                /*
                 dll(CommonIOWait*) get_common_iowait(void* v) {
                     if (!v) {
                         return nullptr;
@@ -225,7 +210,7 @@ namespace utils {
                         return &async_io->common;
                     }
                     return nullptr;
-                }
+                }*/
             }  // namespace udp
 
             io::AsyncHandle get_async_handle(core::QUIC* q) {

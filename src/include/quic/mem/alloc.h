@@ -35,8 +35,11 @@ namespace utils {
                 template <class T>
                 void deallocate(T* ptr) noexcept {
                     if (ptr) {
+                        // for self destruction
+                        auto put_f = put;
+                        auto C_ = C;
                         ptr->~T();
-                        put(C, ptr);
+                        put_f(C_, ptr);
                     }
                 }
 
@@ -122,27 +125,31 @@ namespace utils {
         }  // namespace allocate
 
         namespace bytes {
-            inline int append(bytes::Buffer& b, const byte* data, tsize len) {
-                if (!b.b.own() && b.b.c_str()) {
+            inline int append(bytes::Bytes& b, tsize* blen, allocate::Alloc* a, const byte* data, tsize len) {
+                if (!b.own() && b.c_str() || !blen || !a) {
                     return 0;
                 }
                 if (!data) {
                     return len == 0 ? 1 : 0;
                 }
-                if (b.b.size() < b.len + len) {
-                    if (!b.a->expand_buffer(b.b, b.len + len + 2)) {
+                if (b.size() < *blen + len) {
+                    if (!a->expand_buffer(b, *blen + len + 2)) {
                         return -1;
                     }
                 }
-                auto o = b.b.own();
+                auto o = b.own();
                 if (!o) {
                     return -1;
                 }
                 for (tsize i = 0; i < len; i++) {
-                    o[b.len + i] = data[i];
+                    o[*blen + i] = data[i];
                 }
-                b.len += len;
+                *blen += len;
                 return 1;
+            }
+
+            inline int append(bytes::Buffer& b, const byte* data, tsize len) {
+                return append(b.b, &b.len, b.a, data, len);
             }
 
         }  // namespace bytes

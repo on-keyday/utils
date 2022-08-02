@@ -19,6 +19,14 @@ void test_quic_shared_ptr() {
     auto ptr = mem::make_shared<Object>(&stdalloc);
     auto v = ptr;
     auto v2 = std::move(ptr);
+    mem::CBS<void, const char*, int> stocb;
+    stocb = {{&stdalloc}, [](const char* d, int i) {
+                 return 0;
+             }};
+    auto mv = std::move(stocb);
+    mv("data", 0);
+    auto cp = mv;
+    cp("cop", 1);
 }
 
 int main() {

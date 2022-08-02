@@ -20,7 +20,7 @@ namespace utils {
                 if (err < 0) {
                     return Error::memory_exhausted;
                 }
-                return err ? Error::none : Error::invalid_arg;
+                return err ? Error::none : Error::invalid_argument;
             }
 
             template <class Error>

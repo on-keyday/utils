@@ -19,6 +19,10 @@
 #include <quic/frame/decode.h>
 #include <quic/frame/frame_callback.h>
 #include <quic/frame/cast.h>
+#include <quic/frame/length.h>
+#include <quic/packet/length.h>
+#include <quic/packet/write_packet.h>
+#include <quic/frame/encode.h>
 
 using namespace utils::quic;
 constexpr auto packet_by_client = R"(c000000001088394c8f03e5157080000 449e7b9aec34d1b1c98dd7689fb8ec11
@@ -84,13 +88,13 @@ std::string make_packet_raw(const char* packet) {
 void test_read_packet() {
     auto d = make_packet_raw(packet_by_client);
     tsize offset = 0;
-    packet::ReadContext c;
+    packet::RWContext c;
     c.q = core::default_QUIC();
     auto nc = conn::new_connection(c.q, server);
-    c.cb.initial = [&](packet::ReadContext* c, packet::Packet* p) {
+    c.cb.initial = [&](packet::RWContext* c, packet::Packet* p) {
         crypto::decrypt_packet_protection(client, c->q->g->bpool, p);
         tsize offset = 0;
-        frame::ReadContext ctx;
+        frame::RWContext ctx;
         ctx.b = &c->q->g->bpool;
         frame::Crypto data;
         ctx.frame_cb = [&](frame::Frame* f) {
@@ -122,21 +126,45 @@ void test_read_packet() {
 void test_write_packet() {
     // initial packet
     packet::InitialPacket ini{};
-    constexpr auto initial = packet::make_fb(packet::types::Initial, 1, 1);
-    ini.flags = initial;
-    ini.version = 1;
-    ini.dstID_len = 0;
+    constexpr auto initial = packet::make_fb(packet::types::Initial, 1, 0);
     byte nul = 0, src[] = "client hel", tok[] = "variable_token";
-    ini.dstID = &nul;
-    ini.srcID_len = 10;
-    ini.srcID = src;
-    ini.token_len = sizeof(tok) - 1;
-    ini.token = tok;
-    ini.packet_number = 0;
+    //                                   need to encode
+    ini.flags = initial;              // 1
+    ini.version = 1;                  // 4
+    ini.dstID_len = 0;                // 1
+    ini.dstID = &nul;                 // 0
+    ini.srcID_len = 10;               // 1
+    ini.srcID = src;                  // 10
+    ini.token_len = sizeof(tok) - 1;  // 1
+    ini.token = tok;                  // 13
+    ini.payload_length = 1200 - 16;   // 2 (temporary)
+    ini.packet_number = 0;            // 1
+    //                                   total: 35
+
     auto q = core::default_QUIC();
     auto c = conn::new_connection(q, client);
+    tpparam::DefinedParams params = tpparam::defaults;
+    params.max_udp_payload_size = 1500;
     crypto::set_alpn(c, "\2h3", 3);
     crypto::set_hostname(c, "www.google.com");
+    crypto::set_transport_parameter(c, &params);
+    auto cframe = frame::frame<frame::types::CRYPTO>();
+    crypto::start_handshake(c, [&](const byte* data, tsize size, bool err) {
+        if (!err) {
+            bytes::append(cframe.crypto_data, &cframe.length, &q->g->alloc, data, size);
+        }
+    });
+    tsize header_len = packet::length(&ini);
+    tsize payload_len = frame::length(cframe, true);
+    ini.payload_length = payload_len + ini.flags.packet_number_length();
+    tsize padding_len = 1200 - 16 - header_len - payload_len;
+    bytes::Buffer b{};
+    b.a = &q->g->alloc;
+    packet::RWContext rp;
+    frame::RWContext rf;
+    packet::write_packet(b, &ini, rp);
+    frame::write_frame(b, &cframe, rf);
+    frame::write_padding(b, padding_len, rf);
 }
 
 int main() {
@@ -150,4 +178,5 @@ int main() {
     external::load_LibSSL();
 
     test_read_packet();
+    test_write_packet();
 }

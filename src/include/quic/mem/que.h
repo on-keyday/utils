@@ -151,11 +151,20 @@ namespace utils {
                 }
             }
 
-            template <class T>
+            template <class T, class Lock>
             struct StockNode {
                 LinkNode<T>* stock_begin = nullptr;
                 LinkNode<T>* stock_end = nullptr;
                 allocate::Alloc* a = nullptr;
+                Lock locker;
+
+                void lock() {
+                    locker.lock();
+                }
+
+                void unlock() {
+                    locker.unlock();
+                }
 
                 allocate::Alloc* get_alloc() {
                     return a;
@@ -196,9 +205,9 @@ namespace utils {
                 }
             };
 
-            template <class T>
+            template <class T, class Lock>
             struct SharedStock {
-                StockNode<T>* shared;
+                StockNode<T, Lock>* shared;
 
                 allocate::Alloc* get_alloc() {
                     return shared->get_alloc();
@@ -227,23 +236,28 @@ namespace utils {
                 bool empty() const {
                     return shared->empty();
                 }
+
+                void lock() {
+                    shared->lock();
+                }
+
+                void unlock() {
+                    shared->unlock();
+                }
             };
 
-            template <class T, class Lock = std::recursive_mutex, class Stock = StockNode<T>>
+            template <class T, class Stock = StockNode<T, std::recursive_mutex>>
             struct LinkQue {
-                // allocated stcok
+                // allocated stcok and lock
                 Stock stock;
 
                private:
-                // lock
-                Lock m;
-
                 LinkNode<T>* first = nullptr;
                 LinkNode<T>* last = nullptr;
 
                public:
                 auto lock_callback(auto&& callback) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     return callback();
                 }
 
@@ -253,6 +267,11 @@ namespace utils {
                     }
                     add_node_range(first, last, set, set);
                     return true;
+                }
+
+                bool en_q_node(LinkNode<T>* set) {
+                    std::scoped_lock l{stock};
+                    return en_q_node_nlock(set);
                 }
 
                 bool en_q_nlock(T&& q) {
@@ -274,7 +293,7 @@ namespace utils {
                 }
 
                 bool en_q(T&& q) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     return en_q_nlock(std::move(q));
                 }
 
@@ -292,6 +311,11 @@ namespace utils {
                     return get;
                 }
 
+                LinkNode<T>* de_q_node() {
+                    std::scoped_lock l{stock};
+                    return de_q_node_nlock();
+                }
+
                 bool de_q_nlock(T& q) {
                     LinkNode<T>* get = de_q_node_nlock();
                     if (!get) {
@@ -304,7 +328,7 @@ namespace utils {
                 }
 
                 bool de_q(T& q) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     return de_q_nlock(q);
                 }
 
@@ -328,7 +352,7 @@ namespace utils {
                 }
 
                 bool init(tsize reserve) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     return init_nlock(reserve);
                 }
 
@@ -341,7 +365,7 @@ namespace utils {
                 }
 
                 void for_each(auto&& callback) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     for_each_nlock(callback);
                 }
 
@@ -382,12 +406,13 @@ namespace utils {
                 }
 
                 tsize rem_q(auto&& should_remove) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     return rem_q_nlock(should_remove);
                 }
 
                private:
-                static tsize steal_(std::mutex* l, LinkNode<T>*& root, LinkNode<T>*& rootend, tsize max, auto&& callback) {
+                template <class L>
+                static tsize steal_(L* l, LinkNode<T>*& root, LinkNode<T>*& rootend, tsize max, auto&& callback) {
                     if (!root) {
                         return 0;
                     }
@@ -421,7 +446,7 @@ namespace utils {
                         return 0;
                     }
                     return steal_(
-                        do_lock ? &m : nullptr,
+                        do_lock ? &stock : nullptr,
                         first, last, max,
                         [&](LinkNode<T>* b, LinkNode<T>* e) {
                             std::scoped_lock l{by.m};
@@ -441,7 +466,7 @@ namespace utils {
                         return 0;
                     }
                     return steal_(
-                        do_lock ? &m : nullptr,
+                        do_lock ? &stock : nullptr,
                         *b, *e, max,
                         [&](LinkNode<T>* b, LinkNode<T>* e) {
                             std::scoped_lock l{by.m};
@@ -457,15 +482,15 @@ namespace utils {
                         return;
                     }
                     if (do_lock) {
-                        m.lock();
+                        stock.lock();
                     }
-                    auto stock = *b;
+                    auto stock_begin = *b;
                     *b = nullptr;
                     *e = nullptr;
                     if (do_lock) {
-                        m.unlock();
+                        stock.unlock();
                     }
-                    for (LinkNode<T>* s = stock; s;) {
+                    for (LinkNode<T>* s = stock_begin; s;) {
                         auto n = s->next;
                         s->next = nullptr;
                         al->deallocate(s);
@@ -474,7 +499,7 @@ namespace utils {
                 }
 
                 void destruct(auto&& callback) {
-                    std::scoped_lock l{m};
+                    std::scoped_lock l{stock};
                     allocate::Alloc* al = stock.get_alloc();
                     if (!al) {
                         return;

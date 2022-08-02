@@ -87,7 +87,7 @@ namespace utils {
                 canceled,
                 timeout,
                 unsupported,
-                invalid_arg,
+                invalid_argument,
                 too_large_data,
                 resource_exhausted,
             };

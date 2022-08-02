@@ -107,6 +107,7 @@ add_executable(quic_event "src/test/quic/test_quic_event.cpp")
 add_executable(quic_frame "src/test/quic/test_quic_frame.cpp")
 add_executable(quic_crypto "src/test/quic/test_quic_crypto.cpp")
 add_executable(quic_hash_map "src/test/quic/test_quic_hash_map.cpp")
+add_executable(quic_init_conn "src/test/quic/test_quic_init_conn.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -143,12 +144,8 @@ endif()
 
 option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
-if(UTILS_BUILD_SHARED_LIBS)
-  add_library(utils SHARED)
-  add_compile_options(-D UTILS_AS_DLL)
-else()
-  add_library(utils STATIC)
-endif()
+add_library(utils SHARED)
+add_library(utnet SHARED)
 
 target_sources(utils
   PRIVATE
@@ -157,6 +154,16 @@ target_sources(utils
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
   "src/lib/syntax/default_syntaxc.cpp"
+  "src/lib/json/json_object.cpp"
+  "src/lib/wrap/iocommon.cpp"
+  "src/lib/wrap/cin.cpp"
+  "src/lib/testutil/alloc_hook.cpp"
+  "src/lib/async/light/native_context.cpp"
+  "src/lib/async/light/native_stack.cpp"
+)
+
+target_sources(utnet
+  PRIVATE
   "src/lib/net/core/init_net.cpp"
   "src/lib/net/dns/dns.cpp"
   "src/lib/net/tcp/tcp.cpp"
@@ -165,9 +172,6 @@ target_sources(utils
   "src/lib/net/http/http1.cpp"
   "src/lib/platform/windows/io_completion_port.cpp"
   "src/lib/platform/linux/epoll.cpp"
-  "src/lib/json/json_object.cpp"
-  "src/lib/wrap/iocommon.cpp"
-  "src/lib/wrap/cin.cpp"
   "src/lib/net/async/async_dns.cpp"
   "src/lib/net/async/common_pool.cpp"
   "src/lib/net/async/async_tcp.cpp"
@@ -178,9 +182,6 @@ target_sources(utils
   "src/lib/net/http2/stream_context.cpp"
   "src/lib/net/http2/request.cpp"
   "src/lib/net/http2/request_methods.cpp"
-  "src/lib/testutil/alloc_hook.cpp"
-  "src/lib/async/light/native_context.cpp"
-  "src/lib/async/light/native_stack.cpp"
   "src/lib/cnet/cnet.cpp"
   "src/lib/cnet/tcp.cpp"
   "src/lib/cnet/ssl.cpp"
@@ -188,11 +189,7 @@ target_sources(utils
   "src/lib/cnet/http2.cpp"
   "src/lib/cnet/mem_buffer.cpp"
   "src/lib/cnet/mem_iface.cpp"
-)
 
-# if(WIN32)
-target_sources(utils
-  PRIVATE
   "src/lib/async/worker.cpp"
 )
 
@@ -212,6 +209,7 @@ target_sources(quic
   "src/lib/quic/crypto/crypto_frames.cpp"
   "src/lib/quic/core/capi.cpp"
   "src/lib/quic/conn/conn.cpp"
+  "src/lib/quic/flow/init.cpp"
 )
 
 if(WIN32)
@@ -225,15 +223,15 @@ target_link_libraries(channel utils Threads::Threads)
 target_link_libraries(tokenizer utils)
 target_link_libraries(make_parser utils)
 target_link_libraries(syntaxc utils)
-target_link_libraries(netcore utils)
-target_link_libraries(http1 utils Threads::Threads)
+target_link_libraries(netcore utils utnet)
+target_link_libraries(http1 utils utnet Threads::Threads)
 
 if(WIN32)
-  target_link_libraries(io_completion_port utils)
-  target_link_libraries(externaltask utils)
+  target_link_libraries(io_completion_port utils utnet)
+  target_link_libraries(externaltask utils utnet)
 endif()
 
-target_link_libraries(worker utils)
+target_link_libraries(worker utils utnet)
 target_link_libraries(dispatcher utils)
 target_link_libraries(tree utils)
 target_link_libraries(json utils)
@@ -242,30 +240,30 @@ target_link_libraries(to_json utils)
 target_link_libraries(jsonpath utils)
 target_link_libraries(parser utils)
 target_link_libraries(digitcount utils)
-target_link_libraries(asyncdns utils)
-target_link_libraries(asynctcp utils)
+target_link_libraries(asyncdns utils utnet)
+target_link_libraries(asynctcp utils utnet)
 target_link_libraries(optparse utils)
 target_link_libraries(optctx utils)
 target_link_libraries(subcmd utils)
-target_link_libraries(coroutine utils)
-target_link_libraries(asynctcp2 utils)
-target_link_libraries(http2base utils)
-target_link_libraries(http2protocol utils)
-target_link_libraries(run_on_single_thread utils)
-target_link_libraries(shared_context utils)
+target_link_libraries(coroutine utils utnet)
+target_link_libraries(asynctcp2 utils utnet)
+target_link_libraries(http2base utils utnet)
+target_link_libraries(http2protocol utils utnet)
+target_link_libraries(run_on_single_thread utils utnet)
+target_link_libraries(shared_context utils utnet)
 target_link_libraries(taskpool2 utils)
-target_link_libraries(cnettcp utils)
-target_link_libraries(cnetserver utils)
+target_link_libraries(cnettcp utils utnet)
+target_link_libraries(cnetserver utils utnet)
 target_link_libraries(expression utils)
-target_link_libraries(cnethttp2 utils)
-target_link_libraries(cnetmem utils)
-target_link_libraries(container_iface utils)
+target_link_libraries(cnethttp2 utils utnet)
+target_link_libraries(cnetmem utils utnet)
+target_link_libraries(container_iface utils utnet)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
-target_link_libraries(netutil utils)
+target_link_libraries(netutil utils utnet)
 target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
 
@@ -276,24 +274,14 @@ target_link_libraries(quic_event quic)
 target_link_libraries(quic_frame quic)
 target_link_libraries(quic_hash_map quic)
 target_link_libraries(quic_crypto quic)
+target_link_libraries(quic_init_conn quic)
 
 if(WIN32)
-  target_link_libraries(netcore libssl libcrypto ws2_32)
-  target_link_libraries(http1 libssl libcrypto ws2_32)
-  target_link_libraries(io_completion_port libssl libcrypto ws2_32)
-
-  if(UTILS_BUILD_SHARED_LIBS)
-    target_link_libraries(utils libssl libcrypto ws2_32)
-  endif()
-
+  target_link_libraries(io_completion_port ws2_32)
+  target_link_libraries(utnet libssl libcrypto ws2_32)
   target_link_libraries(quic ws2_32)
 else()
-  target_link_libraries(netcore libssl.so libcrypto.so Threads::Threads)
-  target_link_libraries(http1 libssl.so libcrypto.so Threads::Threads)
-
-  if(UTILS_BUILD_SHARED_LIBS)
-    target_link_libraries(utils libssl.so libcrypto.so)
-  endif()
+  target_link_libraries(utils libssl.so libcrypto.so)
 
   target_link_libraries(asynctcp2 Threads::Threads)
 endif()
@@ -308,12 +296,20 @@ if(WIN32)
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "test/libutils.dll"
     )
     add_custom_command(
+      TARGET utnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "test/libutnet.dll"
+    )
+    add_custom_command(
       TARGET quic POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libquic.dll" "test/libquic.dll"
     )
     add_custom_command(
       TARGET utils POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"
+    )
+    add_custom_command(
+      TARGET utnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "tool/libutnet.dll"
     )
     add_custom_command(
       TARGET utils POST_BUILD
