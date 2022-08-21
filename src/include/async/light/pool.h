@@ -13,6 +13,7 @@
 #include <cassert>
 #include "lock_free_list.h"
 #include "../../testutil/timer.h"
+#include <thread>
 
 namespace utils {
     namespace async {

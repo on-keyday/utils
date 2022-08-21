@@ -108,6 +108,9 @@ add_executable(quic_frame "src/test/quic/test_quic_frame.cpp")
 add_executable(quic_crypto "src/test/quic/test_quic_crypto.cpp")
 add_executable(quic_hash_map "src/test/quic/test_quic_hash_map.cpp")
 add_executable(quic_init_conn "src/test/quic/test_quic_init_conn.cpp")
+add_executable(dnet_socket "src/test/dnet/test_dnet_socket.cpp")
+add_executable(dnet_tls "src/test/dnet/test_dnet_tls.cpp")
+add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -146,6 +149,7 @@ option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
 add_library(utils SHARED)
 add_library(utnet SHARED)
+add_library(dnet SHARED)
 
 target_sources(utils
   PRIVATE
@@ -160,6 +164,7 @@ target_sources(utils
   "src/lib/testutil/alloc_hook.cpp"
   "src/lib/async/light/native_context.cpp"
   "src/lib/async/light/native_stack.cpp"
+  "src/lib/wrap/input.cpp"
 )
 
 target_sources(utnet
@@ -189,9 +194,28 @@ target_sources(utnet
   "src/lib/cnet/http2.cpp"
   "src/lib/cnet/mem_buffer.cpp"
   "src/lib/cnet/mem_iface.cpp"
-
   "src/lib/async/worker.cpp"
 )
+
+target_sources(dnet PRIVATE
+  "src/lib/dnet/sockdll.cpp"
+  "src/lib/dnet/socket.cpp"
+  "src/lib/dnet/addrinfo.cpp"
+  "src/lib/dnet/ssldll.cpp"
+  "src/lib/dnet/tls.cpp"
+  "src/lib/dnet/http.cpp"
+)
+
+if(WIN32)
+  target_sources(dnet PRIVATE
+    "src/lib/dnet/winsock.cpp"
+  )
+else()
+  target_sources(dnet PRIVATE
+    "src/lib/dnet/epoll.cpp"
+  )
+  target_compile_definitions(dnet PRIVATE _DEBUG=1)
+endif()
 
 # libquic
 add_library(quic SHARED)
@@ -276,6 +300,11 @@ target_link_libraries(quic_hash_map quic)
 target_link_libraries(quic_crypto quic)
 target_link_libraries(quic_init_conn quic)
 
+# libdnet
+target_link_libraries(dnet_socket dnet)
+target_link_libraries(dnet_tls dnet)
+target_link_libraries(dnet_http dnet utils)
+
 if(WIN32)
   target_link_libraries(io_completion_port ws2_32)
   target_link_libraries(utnet libssl libcrypto ws2_32)
@@ -298,6 +327,10 @@ if(WIN32)
     add_custom_command(
       TARGET utnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "test/libutnet.dll"
+    )
+    add_custom_command(
+      TARGET dnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnet.dll" "test/libdnet.dll"
     )
     add_custom_command(
       TARGET quic POST_BUILD

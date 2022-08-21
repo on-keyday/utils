@@ -49,5 +49,7 @@ namespace utils {
         };
 
         DLL UtfIn& STDCALL cin_wrap();
+        DLL bool STDCALL input(wrap::path_string& buf, bool non_block = false, bool no_echo = false);
+        DLL void STDCALL enable_ctrl_c(bool en, unsigned int& flag);
     }  // namespace wrap
 }  // namespace utils

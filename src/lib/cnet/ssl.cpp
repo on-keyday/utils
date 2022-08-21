@@ -23,6 +23,7 @@
 #include <openssl/opensslconf.h>
 #include <openssl/crypto.h>
 #endif
+#include <cstring>
 
 namespace utils {
     namespace cnet {
@@ -57,7 +58,7 @@ namespace utils {
                         auto add_ = size_ - cur_size;
                         buffer.resize(cur_size + add_);
                     }
-                    ::memmove_s(buffer.data() + buf_index, buffer.size(), data, size_);
+                    ::memmove(buffer.data() + buf_index, data, size_);
                     buf_index += size_;
                 }
             };
@@ -255,7 +256,7 @@ namespace utils {
                     auto result = ::SSL_get_verify_result(tls->ssl);
                     auto cert = ::SSL_get_peer_certificate(tls->ssl);
                     if (result != X509_V_OK || !cert) {
-                        return sslcodeerror{"verfication of certificate failed", result};
+                        return sslcodeerror{"verfication of certificate failed", int(result)};
                     }
                     ::X509_free(cert);
                 }

@@ -10,6 +10,7 @@
 #pragma once
 #include "stream.h"
 #include <helper/equal.h>
+#include <cstring>
 
 namespace utils {
     namespace parser {
@@ -315,7 +316,7 @@ namespace utils {
                 Expecter expecter;
 
                 Stream copy() {
-                    return CastStream<Expecter>{other.clone(), innercast.clone(), expecter};
+                    return CastStream<Expecter>{other.copy(), innercast.copy(), expecter};
                 }
 
                 Token parse(Input& input) {

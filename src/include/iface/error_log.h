@@ -7,6 +7,8 @@
 
 // error_log - error and log interface
 #pragma once
+#include <type_traits>
+#include <concepts>
 #include "storage.h"
 #include "base_iface.h"
 #include "macros.h"
@@ -24,9 +26,16 @@ namespace utils {
         };
 
         namespace internal {
+#ifdef _WIN32
+            template <class T>
+            concept integral = std::integral<T>;
+#else
+            template <class T>
+            concept integral = std::is_integral_v<T>;
+#endif
             template <class T>
             concept has_code = requires(T t) {
-                { t.code() } -> std::integral;
+                { t.code() } -> integral;
             };
 
             template <class T>

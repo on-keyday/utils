@@ -152,8 +152,8 @@ namespace utils {
 
         // reset protocol for typed function
         template <class T>
-        bool reset_protocol_context(CNet* ctx, T* user, ProtocolSuite<T> proto) {
-            return reset_protocol_context(ctx, static_cast<void*>(user), reinterpret_cast<const Protocol*>(&proto));
+        bool reset_protocol_context(CNet* ctx, CNetFlag flag, T* user, ProtocolSuite<T> proto) {
+            return reset_protocol_context(ctx, flag, static_cast<void*>(user), reinterpret_cast<const Protocol*>(&proto));
         }
 
         // set lowlevel protocol

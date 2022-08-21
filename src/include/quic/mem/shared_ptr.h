@@ -9,6 +9,7 @@
 #pragma once
 #include <atomic>
 #include <utility>
+#include <memory>
 #include "alloc.h"
 #include "callback.h"
 
@@ -191,8 +192,8 @@ namespace utils {
                 using Ret = typename RetTraits::Ret;
                 allocate::Alloc* a;
                 template <class Ptr>
-                static constexpr auto& get_callable(void* a) noexcept {
-                    return static_cast<Ptr>(a)->value.value;
+                static constexpr auto& get_callable(any_pointer a) noexcept {
+                    return static_cast<Ptr>(a.ctx)->value.value;
                 }
 
                 template <class T>
@@ -222,23 +223,23 @@ namespace utils {
 
                 static constexpr void move(auto& cb, auto& from_cb, auto& func_ctx, auto& from_ctx) {
                     cb = std::exchange(from_cb, nullptr);
-                    func_ctx = std::exchange(from_ctx, nullptr);
+                    func_ctx = std::exchange(from_ctx, any_pointer{});
                 }
 
-                static constexpr void copy(auto& cb, auto& from_cb, void*& func_ctx, void* from_ctx) {
-                    if (from_ctx) {
-                        auto dummy = static_cast<Storage<Copyable<std::max_align_t>, true>*>(from_ctx);
-                        dummy->value.copy(&func_ctx, from_ctx);
+                static constexpr void copy(auto& cb, auto& from_cb, any_pointer& func_ctx, any_pointer from_ctx) {
+                    if (from_ctx.ctx) {
+                        auto dummy = static_cast<Storage<Copyable<std::max_align_t>, true>*>(from_ctx.ctx);
+                        dummy->value.copy(&func_ctx.ctx, from_ctx.ctx);
                     }
                     cb = from_cb;
                 }
 
-                static void destruct(auto& cb, void*& data) {
-                    if (data) {
-                        auto dummy = static_cast<Storage<Copyable<std::max_align_t>, true>*>(data);
-                        dummy->value.destruct(data);
+                static void destruct(auto& cb, any_pointer& data) {
+                    if (data.ctx) {
+                        auto dummy = static_cast<Storage<Copyable<std::max_align_t>, true>*>(data.ctx);
+                        dummy->value.destruct(data.ctx);
                     }
-                    data = nullptr;
+                    data = {};
                     cb = nullptr;
                 }
 
@@ -254,7 +255,7 @@ namespace utils {
             CBS<Ret, Args...> make_cb(allocate::Alloc* a, F&& f) {
                 CBS<Ret, Args...> cb;
                 cb = {{a}, std::forward<F>(f)};
-                if (!cb.func_ctx) {
+                if (!cb.fctx.ctx) {
                     return nullptr;
                 }
                 return cb;

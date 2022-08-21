@@ -20,6 +20,7 @@ namespace utils {
         DLL extern bool out_virtual_terminal;
         DLL extern bool need_cr_for_return;
         DLL extern bool in_virtual_terminal;
+        DLL extern bool handle_input_self;
         DLL void STDCALL force_init_io();
     }  // namespace wrap
 }  // namespace utils

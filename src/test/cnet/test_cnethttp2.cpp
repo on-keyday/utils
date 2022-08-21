@@ -14,6 +14,7 @@
 #include <number/parse.h>
 #include <testutil/timer.h>
 #include <wrap/cout.h>
+#include <cstring>
 auto& cout = utils::wrap::cout_wrap();
 namespace h2 = utils::net::http2;
 
@@ -48,7 +49,7 @@ void test_cnet_http2() {
     assert(err);
     auto alpn = ssl::get_alpn_selected(tls);
     assert(strncmp(alpn, "h2", 2) == 0);
-    cout << start.delta() << "\n";
+    cout << start.delta().count() << "\n";
     auto client = http2::create_client();
     std::int32_t first_id = 0, second_id = 0;
     bool done_first = false;
@@ -113,7 +114,7 @@ void test_cnet_http2() {
     auto ok = http2::poll_frame(client);
     code = get_error(tcp);
     assert(ok);
-    cout << start.delta();
+    cout << start.delta().count();
     delete_cnet(client);
 }
 

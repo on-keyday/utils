@@ -129,6 +129,6 @@ namespace utils {
                 return err;
             }
 
-                }  // namespace option
+        }  // namespace option
     }      // namespace cmdline
 }  // namespace utils

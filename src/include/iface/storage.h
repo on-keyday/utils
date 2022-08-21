@@ -114,8 +114,8 @@ namespace utils {
                 return [](void* ptr, void* alloc) {
                     auto t = static_cast<T*>(ptr);
                     auto al = static_cast<allocator_t*>(alloc);
-                    traits_t::destory(*alloc, ptr);
-                    traits_t::deallocate(*alloc, ptr);
+                    traits_t::destory(*al, ptr);
+                    traits_t::deallocate(*al, ptr);
                 };
             }
 

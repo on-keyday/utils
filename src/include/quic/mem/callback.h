@@ -20,14 +20,31 @@ namespace utils {
                 { t(std::declval<Args>()...) } -> void_or_type<Ret>;
             };
 
+            union any_pointer {
+                void (*func)();
+                void* ctx;
+            };
+
             struct RettraitsBase {
+                template <class T>
+                static constexpr bool func_v = std::is_function_v<std::remove_pointer_t<std::remove_cvref_t<T>>>;
                 template <class Ptr>
-                static constexpr auto& get_callable(void* a) noexcept {
-                    return *static_cast<Ptr>(a);
+                static constexpr auto& get_callable(any_pointer a) noexcept {
+                    if constexpr (func_v<Ptr>) {
+                        return *reinterpret_cast<Ptr>(a.func);
+                    }
+                    else {
+                        return *static_cast<Ptr>(a.ctx);
+                    }
                 }
 
                 static constexpr auto get_address(auto&& a) noexcept {
-                    return std::addressof(a);
+                    if constexpr (func_v<decltype(a)>) {
+                        return a;
+                    }
+                    else {
+                        return std::addressof(a);
+                    }
                 }
 
                 static constexpr void move(auto& cb, auto from_cb, auto& func_ctx, auto from_ctx) noexcept {
@@ -108,10 +125,10 @@ namespace utils {
                                                    std::is_same_v<Pos, noctxlast_t>;
                 static constexpr bool last_context = std::is_same_v<Pos, lastcontext_t> ||
                                                      std::is_same_v<Pos, noctxlast_t>;
-                using Default = Ret (*)(void*, Ctx, Args...);
-                using NoContext = Ret (*)(void*, Args...);
-                using LastContext = Ret (*)(Ctx, Args..., void*);
-                using NocontextLast = Ret (*)(Args..., void*);
+                using Default = Ret (*)(any_pointer, Ctx, Args...);
+                using NoContext = Ret (*)(any_pointer, Args...);
+                using LastContext = Ret (*)(Ctx, Args..., any_pointer);
+                using NocontextLast = Ret (*)(Args..., any_pointer);
                 // INFO(on-keyday): too complex!
                 using callback_t = std::conditional_t<
                     no_context && last_context,
@@ -125,16 +142,16 @@ namespace utils {
                             Default>>>;
 
                 RetTraits traits{};
-                void* func_ctx = nullptr;
+                any_pointer fctx;
                 callback_t cb = nullptr;
 
                 template <class... CallArg>
                 Ret operator()(CallArg&&... args) {
                     if constexpr (last_context) {
-                        return cb ? cb(std::forward<CallArg>(args)..., func_ctx) : traits.default_v();
+                        return cb ? cb(std::forward<CallArg>(args)..., fctx) : traits.default_v();
                     }
                     else {
-                        return cb ? cb(func_ctx, std::forward<CallArg>(args)...) : traits.default_v();
+                        return cb ? cb(fctx, std::forward<CallArg>(args)...) : traits.default_v();
                     }
                 }
 
@@ -143,16 +160,18 @@ namespace utils {
                 constexpr CBCore(std::nullptr_t)
                     : CBCore() {}
                 constexpr CBCore(callback_t cb, void* ctx)
-                    : cb(cb), func_ctx(ctx) {}
+                    : cb(cb) {
+                    fctx.ctx = ctx;
+                }
 
                 constexpr CBCore(const CBCore& c)
                     : traits(c.traits) {
-                    traits.copy(cb, c.cb, func_ctx, c.func_ctx);
+                    traits.copy(cb, c.cb, fctx, c.fctx);
                 }
 
                 constexpr CBCore(CBCore&& c)
                     : traits(std::move(c.traits)) {
-                    traits.move(cb, c.cb, func_ctx, c.func_ctx);
+                    traits.move(cb, c.cb, fctx, c.fctx);
                 }
 
                 constexpr CBCore& operator=(const CBCore& c) {
@@ -161,7 +180,7 @@ namespace utils {
                     }
                     this->~CBCore();
                     traits = c.traits;
-                    traits.copy(cb, c.cb, func_ctx, c.func_ctx);
+                    traits.copy(cb, c.cb, fctx, c.fctx);
                     return *this;
                 }
 
@@ -171,13 +190,13 @@ namespace utils {
                     }
                     this->~CBCore();
                     traits = std::move(c.traits);
-                    traits.move(cb, c.cb, func_ctx, c.func_ctx);
+                    traits.move(cb, c.cb, fctx, c.fctx);
                     return *this;
                 }
 
                private:
                 template <class Ptr>
-                static Ret callback_core(void* c, Ctx ctx, Args... args) {
+                static Ret callback_core(any_pointer c, Ctx ctx, Args... args) {
                     auto& call = RetTraits::template get_callable<Ptr>(c);
                     using T = decltype(call);
                     if constexpr (!no_context && callable<T, void, Ctx, Args...>) {
@@ -202,28 +221,33 @@ namespace utils {
                     auto ptr = traits.get_address(f);
                     if constexpr (std::is_same_v<decltype(ptr), callback_t>) {
                         cb = ptr;
-                        func_ctx = nullptr;
+                        fctx.ctx = nullptr;
                     }
                     else {
                         if constexpr (no_context && last_context) {
-                            cb = [](Args... args, void* c) {
+                            cb = [](Args... args, any_pointer c) {
                                 return callback_core<decltype(ptr)>(c, {}, std::forward<Args>(args)...);
                             };
                         }
                         else if constexpr (last_context) {
-                            cb = [](Ctx ctx, Args... args, void* c) {
+                            cb = [](Ctx ctx, Args... args, any_pointer c) {
                                 return callback_core<decltype(ptr)>(c, std::forward<Ctx>(ctx), std::forward<Args>(args)...);
                             };
                         }
                         else if constexpr (no_context) {
-                            cb = [](void* c, Args... args) {
+                            cb = [](any_pointer c, Args... args) {
                                 return callback_core<decltype(ptr)>(c, {}, std::forward<Args>(args)...);
                             };
                         }
                         else {
                             cb = callback_core<decltype(ptr)>;
                         }
-                        func_ctx = ptr;
+                        if constexpr (std::is_function_v<std::remove_pointer_t<decltype(ptr)>>) {
+                            fctx.func = reinterpret_cast<void (*)()>(ptr);  // hack warning
+                        }
+                        else {
+                            fctx.ctx = ptr;
+                        }
                     }
                 }
 
@@ -244,7 +268,7 @@ namespace utils {
                 }
 
                 ~CBCore() {
-                    traits.destruct(cb, func_ctx);
+                    traits.destruct(cb, fctx);
                 }
             };
 

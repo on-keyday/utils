@@ -21,6 +21,7 @@ namespace utils {
                 appear_once = 0x1,
                 bind_once = 0x2,
                 required = 0x4,
+                hidden = 0x8,
             };
 
             DEFINE_ENUM_FLAGOP(CustomFlag)
@@ -39,6 +40,9 @@ namespace utils {
                 }
                 if (any(flag & CustomFlag::required)) {
                     mode |= OptMode::required;
+                }
+                if (any(flag & CustomFlag::hidden)) {
+                    mode |= OptMode::hidden;
                 }
                 return mode;
             }
@@ -198,7 +202,7 @@ namespace utils {
                         return false;
                     }
                     return (bool)Option(
-                        ptr, option, IntParser{.radix = radix},
+                        option, ptr, IntParser{.radix = radix},
                         help, argdesc, flag);
                 }
 
@@ -209,7 +213,7 @@ namespace utils {
                         return false;
                     }
                     return (bool)Option(
-                        ptr, option, FloatParser{.radix = radix},
+                        option, ptr, FloatParser{.radix = radix},
                         help, argdesc, flag);
                 }
 

@@ -4,7 +4,7 @@
 #    https://opensource.org/licenses/mit-license.php
 version: "3"
 services:
-  linux_test: 
+  linux_test:
     build: .
     ports:
       - "8092:8092"
@@ -15,10 +15,10 @@ services:
       - ./src:/usr/utilsdev/workspace/src:cached
       - ./build:/usr/utilsdev/workspace/build:cached
       - ./CMakeLists.txt:/usr/utilsdev/workspace/CMakeLists.txt:cached
-      - ./.clang-format:/usr/utilsdev/workspace/.clang-format:cached
       - ./.vscode/settings.json:/usr/utilsdev/workspace/.vscode/settings.json:cached
       - ./docker_vscode/tasks.json:/usr/utilsdev/workspace/.vscode/tasks.json:cached
       - ./docker_vscode/launch.json:/usr/utilsdev/workspace/.vscode/launch.json:cached
+      - ./shell:/usr/utilsdev/workspace/shell:cached
     cap_add:
       - SYS_PTRACE
     security_opt:

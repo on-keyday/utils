@@ -26,7 +26,7 @@ namespace utils {
         return nullptr;                      \
     }
 #define CAST(TYPE, CODE) \
-    case CODE {          \
+    case CODE: {         \
         CAST_CORE(TYPE)  \
     }
                 constexpr auto s0 = byte(types::STREAM);

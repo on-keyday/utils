@@ -15,10 +15,10 @@ namespace utils {
     namespace helper {
         namespace internal {
 
-            SFINAE_BLOCK_T_BEGIN(has_subscript, std::declval<T>()[0])
-            using char_type = std::remove_cvref_t<decltype(std::declval<T>()[0])>;
+            SFINAE_BLOCK_T_BEGIN(has_subscript, std::declval<T>()[1])
+            using char_type = std::remove_cvref_t<decltype(std::declval<T>()[1])>;
             constexpr static size_t size() {
-                return sizeof(std::declval<T>()[0]);
+                return sizeof(std::declval<T>()[1]);
             }
             SFINAE_BLOCK_T_ELSE(has_subscript)
             using char_type = void;

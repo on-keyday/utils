@@ -17,6 +17,7 @@ extern "C" {
 #define NOARG void
 #endif
 using byte = unsigned char;
+using tsize = uint64_t;
 
 // QUIC api context
 typedef struct QUIC QUIC;
@@ -56,7 +57,7 @@ enum QUICFrameType {
 
 Dll(QUICFrameType) get_frame_type(QUICFrame* frame);
 
-Dll(const byte*) get_frame_data(QUICFrame* frame, const char* param, size_t* len);
+Dll(const byte*) get_frame_data(QUICFrame* frame, const char* param, tsize* len);
 
 #ifdef __cplusplus
 }

@@ -78,6 +78,8 @@ namespace utils {
                 : obj(std::int64_t(i)) {}
             constexpr JSONBase(std::int64_t i)
                 : obj(i) {}
+            constexpr JSONBase(std::uint32_t i)
+                : obj(std::uint64_t(i)) {}
             constexpr JSONBase(std::uint64_t u)
                 : obj(u) {}
             constexpr JSONBase(double f)
@@ -283,6 +285,10 @@ namespace utils {
 
             void init_array() {
                 obj = new array_t{};
+            }
+
+            constexpr JSONKind kind() const {
+                return obj.kind();
             }
 
             bool is_undef() const {

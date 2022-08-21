@@ -177,7 +177,10 @@ namespace utils {
                     core::enque_event(q, std::move(ev));
                     return {io::Status::ok};
                 }
-
+#else
+                Result async_wait(core::QUIC* q, Target& target, IOCallback& cb) {
+                    return {io::Status::failed, invalid, true};
+                }
 #endif
                 /*
                 dll(void) del_iowait(core::QUIC* q, void* v) {
@@ -214,6 +217,7 @@ namespace utils {
             }  // namespace udp
 
             io::AsyncHandle get_async_handle(core::QUIC* q) {
+#ifdef _WIN32
                 if (!external::load_Kernel32()) {
                     return nullptr;
                 }
@@ -221,9 +225,13 @@ namespace utils {
                     q->io->async_handle = external::kernel32.CreateIoCompletionPort_(INVALID_HANDLE_VALUE, nullptr, 0, 0);
                 });
                 return q->io->async_handle;
+#else
+                return nullptr;
+#endif
             }
 
             dll(io::Result) register_target(core::QUIC* q, io::TargetID id) {
+#ifdef _WIN32
                 auto iocp = get_async_handle(q);
                 if (!iocp) {
                     return {io::Status::failed, io::invalid, true};
@@ -233,6 +241,9 @@ namespace utils {
                     return {io::Status::failed, (io::ErrorCode)GET_ERROR()};
                 }
                 return {io::Status::ok};
+#else
+                return {io::Status::failed, io::invalid, true};
+#endif
             }
         }  // namespace io
 

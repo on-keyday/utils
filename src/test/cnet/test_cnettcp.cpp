@@ -74,10 +74,10 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
             local_timer.reset();
         }
         else if (p == cnet::tcp::TCPStatus::resolve_name_done) {
-            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":dns resolving:", local_timer.delta(), "\n");
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":dns resolving:", local_timer.delta().count(), "\n");
         }
         else if (p == cnet::tcp::TCPStatus::connected) {
-            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":tcp connecting:", local_timer.delta(), "\n");
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":tcp connecting:", local_timer.delta().count(), "\n");
         }
         as.suspend();
         return true;
@@ -92,7 +92,7 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
         }
         auto cs = cnet::ssl::get_current_state(ctx);
         if (cs == cnet::ssl::TLSStatus::connected) {
-            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":ssl connecting:", local_timer.delta(), "\n");
+            cout << wrap::pack(index, ":", std::this_thread::get_id(), ":ssl connecting:", local_timer.delta().count(), "\n");
         }
         as.suspend();
         return true;
@@ -139,9 +139,9 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
     }
     auto d = local_timer.delta();
     // cout << body << "\n";
-    cout << wrap::pack(index, ":", std::this_thread::get_id(), ":http responding:", d, "\n");
+    cout << wrap::pack(index, ":", std::this_thread::get_id(), ":http responding:", d.count(), "\n");
     cnet::delete_cnet(conn);
-    cout << wrap::pack(index, ":", std::this_thread::get_id(), ":context deleted:", local_timer.delta(), "\n");
+    cout << wrap::pack(index, ":", std::this_thread::get_id(), ":context deleted:", local_timer.delta().count(), "\n");
 }
 
 void task_run(wrap::shared_ptr<async::light::TaskPool> pool) {
@@ -190,5 +190,5 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     cout << "total\n"
-         << timer.delta() << "\n";
+         << timer.delta().count() << "\n";
 }

@@ -81,6 +81,9 @@ namespace utils {
                 size_t maxlen = 0;
                 auto tmp = opts_write(push);
                 for (wrap::shared_ptr<Option>& opt : vec) {
+                    if (any(opt->mode & OptMode::hidden)) {
+                        continue;
+                    }
                     helper::append(push, indent);
                     tmp(flag, opt);
                     if (maxlen < push.count) {
@@ -91,6 +94,9 @@ namespace utils {
                 helper::CountPushBacker<Result&> cb{result};
                 auto actual = opts_write(cb);
                 for (wrap::shared_ptr<Option>& opt : vec) {
+                    if (any(opt->mode & OptMode::hidden)) {
+                        continue;
+                    }
                     helper::append(cb, indent);
                     actual(flag, opt);
                     while (maxlen > cb.count) {

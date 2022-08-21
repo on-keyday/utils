@@ -106,8 +106,8 @@ namespace utils {
                 bool reset;
                 size_t* ptr;
                 constexpr StartPos() {}
-                StartPos(StartPos&& p) {
-                    ::memcpy(this, &p, sizeof(StartPos));
+                StartPos(StartPos&& p)
+                    : start(p.start), pos(p.pos), reset(p.reset), ptr(p.ptr) {
                     p.reset = false;
                     p.ptr = nullptr;
                 }

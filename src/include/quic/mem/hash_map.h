@@ -9,10 +9,7 @@
 #pragma once
 #include "que.h"
 #include "vec.h"
-namespace std {
-    template <class T>
-    struct hash;
-}
+#include <functional>
 
 namespace utils {
     namespace quic {

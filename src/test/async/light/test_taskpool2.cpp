@@ -58,7 +58,7 @@ void test_taskpool2() {
                 }
                 cout << pack(
                     "final ", std::this_thread::get_id(), "\n",
-                    "wait time:", ctx.wait, "\n",
+                    "wait time:", ctx.wait.count(), "\n",
                     "hit count:", ctx.hit, "\n",
                     "not hit count:", ctx.not_hit, "\n\n");
                 reached++;
@@ -83,10 +83,10 @@ void test_taskpool2() {
     while (hc > reached) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    cout << "time:" << timer.delta<std::chrono::seconds>() << "\n";
+    cout << "time:" << timer.delta<std::chrono::seconds>().count() << "\n";
     pool->clear();
 
-    cout << "single time:" << single << "\n";
+    cout << "single time:" << single.count() << "\n";
     cout << "hit count:" << hit << "\n";
     cout << "not hit count:" << not_hit << "\n";
 }

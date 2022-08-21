@@ -11,6 +11,8 @@
 #include "../doc.h"
 #include "../common/macros.h"
 #include "bytes.h"
+#include <utility>
+#include <memory>
 
 namespace utils {
     namespace quic {

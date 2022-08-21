@@ -311,7 +311,11 @@ namespace utils {
                         send_data(reinterpret_cast<const byte *>(s), len, true);
                         return 1;
                     };
-                    external::libcrypto.ERR_print_errors_cb_(cb.cb, cb.func_ctx);
+                    static_assert(
+                        sizeof(mem::any_pointer) == sizeof(void *),
+                        "!(hack)!this program runs on platform sizeof(void(*)())==sizeof(void*)");
+                    auto ptr = reinterpret_cast<int (*)(const char *, size_t, void *)>(cb.cb);
+                    external::libcrypto.ERR_print_errors_cb_(ptr, cb.fctx.ctx);
                 }
                 return Error::internal;
             }

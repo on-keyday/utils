@@ -261,8 +261,8 @@ namespace utils {
 
             template <class Bytes>
             Error read_packet_number(Bytes&& b, tsize size, tsize* offset, FirstByte& fb, uint* packet_number, auto& discard) {
-                byte packet_number_len = (fb.bits & 0x03) + 1;
-                if (offset + packet_number_len > size) {
+                byte packet_number_len = fb.packet_number_length();
+                if (*offset + packet_number_len > size) {
                     return discard(Error::not_enough_length, "read_packet_number/packet_number_len");
                 }
                 varint::Swap<uint> v{0};

@@ -54,6 +54,21 @@ namespace utils {
                 });
                 return kernel32.libptr != nullptr;
             }
+#else
+            void* load_system_dll(const char* name) {
+                return nullptr;
+            }
+
+            void* load_normal_dll(const char* name) {
+                return nullptr;
+            }
+            auto loader(void* lib, const char* name) {
+                return (void (*)()) nullptr;
+            }
+
+            void unload_dll(void*) {}
+
+            constexpr auto socket_dll = "";
 #endif
 
             SockDll sockdll;

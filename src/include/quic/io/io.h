@@ -60,6 +60,8 @@ namespace utils {
                         tsize len;
                     } local;
                 };
+                constexpr Target()
+                    : ip({}) {}
             };
 
             constexpr Target IPv6(IPAddress addr, ushort port) {

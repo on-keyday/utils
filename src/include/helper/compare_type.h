@@ -50,5 +50,11 @@ namespace utils {
             };
         }
 
+        constexpr auto no_check2(bool ret = true) {
+            return [=](auto&&, auto&&) -> bool {
+                return ret;
+            };
+        }
+
     }  // namespace helper
 }  // namespace utils

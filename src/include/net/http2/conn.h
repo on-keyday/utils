@@ -13,6 +13,7 @@
 #include "frame.h"
 #include "../../async/worker.h"
 #include "../generate/iocloser.h"
+#include "../../wrap/light/string.h"
 
 namespace utils {
     namespace net {

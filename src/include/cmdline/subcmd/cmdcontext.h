@@ -100,9 +100,16 @@ namespace utils {
 
                public:
                 template <class Str>
-                void Usage(Str& str, option::ParseFlag flag) {
-                    helper::appends(str, mainname, " - ", desc, "\n");
-                    ctx.Usage(str, flag, mainname.c_str(), usage.c_str(), "    ");
+                void Usage(Str& str, option::ParseFlag flag, bool incl_parent = false) {
+                    wrap::string name;
+                    if (incl_parent) {
+                        name = cuc(" ");
+                    }
+                    else {
+                        name = mainname;
+                    }
+                    helper::appends(str, name, " - ", desc, "\n");
+                    ctx.Usage(str, flag, name.c_str(), usage.c_str(), "    ");
                     if (subcommand.size()) {
                         helper::append(str, "Command:\n");
                     }
@@ -112,9 +119,9 @@ namespace utils {
                 }
 
                 template <class Str = wrap::string>
-                Str Usage(option::ParseFlag flag) {
+                Str Usage(option::ParseFlag flag, bool incl_parent = false) {
                     Str v;
-                    Usage(v, flag);
+                    Usage(v, flag, incl_parent);
                     return v;
                 }
 
@@ -122,8 +129,8 @@ namespace utils {
                     return mainname;
                 }
 
-                wrap::string cuc() const {
-                    return parent_ ? parent_->cuc() + ": " + mainname : mainname;
+                wrap::string cuc(const char* sep = ": ") const {
+                    return parent_ ? parent_->cuc() + sep + mainname : mainname;
                 }
 
                 virtual wrap::vector<wrap::string>& arg() {

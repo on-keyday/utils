@@ -11,6 +11,7 @@
 #include <wrap/cout.h>
 #include <wrap/argv.h>
 #include <thread>
+#include <chrono>
 
 auto& cout = utils::wrap::cout_wrap();
 
@@ -51,7 +52,8 @@ void test_quic_udp_client(const char* data, size_t len) {
         cout << s << "\n";
         cout << "wait: " << wait << "\n";
         cout << std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now() - begin);
+                    std::chrono::system_clock::now() - begin)
+                    .count();
         break;
     }
     proto.discard_target(t.target);

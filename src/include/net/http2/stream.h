@@ -13,6 +13,7 @@
 #include "../http/http1.h"
 #include "../../endian/endian.h"
 #include "../async/pool.h"
+#include "../../wrap/light/string.h"
 
 namespace utils {
     namespace net {

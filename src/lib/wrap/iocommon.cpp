@@ -33,6 +33,7 @@ namespace utils {
         bool need_cr_for_return = false;
         bool in_virtual_terminal = false;
         bool no_change_mode = false;
+        bool handle_input_self = false;
 
         ::FILE* is_std(istream& in) {
             auto addr = std::addressof(in);
@@ -102,22 +103,24 @@ namespace utils {
         }
 
         static bool change_console_mode(bool out) {
-            auto outhandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
-            auto inhandle = ::GetStdHandle(STD_INPUT_HANDLE);
-            auto errhandle = ::GetStdHandle(STD_ERROR_HANDLE);
-            if (!outhandle || !inhandle || !errhandle ||
-                outhandle == INVALID_HANDLE_VALUE || inhandle == INVALID_HANDLE_VALUE ||
-                errhandle == INVALID_HANDLE_VALUE) {
-                return false;
-            }
-
             if (out && out_virtual_terminal) {
+                auto outhandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
+                auto errhandle = ::GetStdHandle(STD_ERROR_HANDLE);
+                if (!outhandle || !errhandle ||
+                    outhandle == INVALID_HANDLE_VALUE ||
+                    errhandle == INVALID_HANDLE_VALUE) {
+                    return false;
+                }
                 auto res = change_output_mode(outhandle) && change_output_mode(errhandle);
                 if (!res) {
                     return false;
                 }
             }
             if (!out && in_virtual_terminal) {
+                auto inhandle = ::GetStdHandle(STD_INPUT_HANDLE);
+                if (!inhandle || inhandle == INVALID_HANDLE_VALUE) {
+                    return false;
+                }
                 auto res = change_input_mode(inhandle);
                 if (!res) {
                     return false;
@@ -145,6 +148,9 @@ namespace utils {
 
         static bool in_init() {
 #ifdef _WIN32
+            if (handle_input_self) {
+                return true;
+            }
             change_console_mode(false);
             if (!no_change_mode) {
                 if (_setmode(_fileno(stdin), stdinmode) == -1) {

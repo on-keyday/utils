@@ -12,6 +12,7 @@
 #include "conn.h"
 #include "stream.h"
 #include "../http/http1.h"
+#include "../../wrap/light/string.h"
 
 namespace utils {
     namespace net {

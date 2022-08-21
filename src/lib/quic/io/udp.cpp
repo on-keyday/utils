@@ -127,7 +127,7 @@ namespace utils {
                         return {io::Status::invalid_argument, invalid, true};
                     }
                     ::sockaddr_storage storage;
-                    int len = sizeof(storage);
+                    socklen_t len = sizeof(storage);
                     auto err = ext::sockdll.recvfrom_(t->target, topchar(d), l, 0, repaddr(&storage), &len);
                     if (err == -1) {
                         return with_code(GET_ERROR());
@@ -179,7 +179,11 @@ namespace utils {
                         return with_code(GET_ERROR());
                     }
                     u_long val = 1;
+#ifdef _WIN32
                     auto err = ext::sockdll.ioctlsocket_(sock, FIONBIO, &val);
+#else
+                    auto err = ext::sockdll.ioctl_(sock, FIONBIO, &val);
+#endif
                     if (err == -1) {
                         return with_code(GET_ERROR());
                     }
@@ -198,18 +202,26 @@ namespace utils {
                                 }
                                 return true;
                             })) {
+#ifdef _WIN32
                             ext::sockdll.closesocket_(sock);
+#else
+                            ext::sockdll.close_(sock);
+#endif
                             return with_code(GET_ERROR());
                         }
                     }
-                    return {Status::ok, TargetID{sock}};
+                    return {Status::ok, TargetID(sock)};
                 }
 
                 io::Result discard_target(Conn* c, TargetID id) {
                     if (!ext::sockdll.loaded()) {
                         return {io::Status::fatal, invalid, true};
                     }
+#ifdef _WIN32
                     auto err = ext::sockdll.closesocket_(id);
+#else
+                    auto err = ext::sockdll.close_(id);
+#endif
                     if (err == -1) {
                         return {Status::failed, tsize(GET_ERROR())};
                     }
@@ -222,7 +234,7 @@ namespace utils {
                     }
                     if (o->key == MTU) {
                         int mtu = 0;
-                        int len = sizeof(mtu);
+                        socklen_t len = sizeof(mtu);
                         auto err = ext::sockdll.getsockopt_(o->target, IPPROTO_IP, IP_MTU, reinterpret_cast<char*>(&mtu), &len);
                         if (err == -1) {
                             return {io::Status::failed, tsize(GET_ERROR())};

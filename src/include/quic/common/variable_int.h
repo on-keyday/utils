@@ -191,7 +191,7 @@ namespace utils {
             }
 
             template <class T, class Bytes>
-            Error decode_bytes(Bytes&& bytes, tsize size, tsize offset, size_t* red, size_t* redsize) {
+            Error decode_bytes(Bytes&& bytes, tsize size, tsize offset, tsize* red, tsize* redsize) {
                 constexpr auto szT = sizeof(T);
                 *redsize = szT;
                 if (offset + szT - 1 >= size) {

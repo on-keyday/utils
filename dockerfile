@@ -29,6 +29,11 @@ RUN apt-get update && \
     g++-10\
     lld
 
+RUN apt-get install -y \
+    seq-gen\
+    net-tools\
+    iputils-ping
+
 
 RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-12/bin/clang /bin/clang

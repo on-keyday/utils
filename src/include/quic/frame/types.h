@@ -11,6 +11,7 @@
 #include "../mem/vec.h"
 #include "../mem/bytes.h"
 #include "../common/variable_int.h"
+#include <concepts>
 
 namespace utils {
     namespace quic {

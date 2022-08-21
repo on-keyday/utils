@@ -13,6 +13,7 @@
 #include "../../../include/helper/pushbacker.h"
 
 #include <WinSock2.h>
+#include <wrap/light/string.h>
 
 auto get_tcp() {
     auto query = utils::net::query_dns("localhost", "8080");

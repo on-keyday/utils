@@ -24,6 +24,11 @@ namespace utils {
                 content_length,
             };
 
+            // read_body reads http body with BodyType
+            // Retrun Value
+            // State::complete - full of body read
+            // State::failed - invalid body format or length
+            // State::running - reading http body is incomplete
             template <class String, class T>
             State read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
                 auto inipos = seq.rptr;

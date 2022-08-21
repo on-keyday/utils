@@ -63,14 +63,28 @@ namespace utils {
             };
 
             template <class T>
-            concept from_array_t = requires(T t) {
-                {t[0]};
+            concept indexable = requires(T t) {
+                {t[1]};
+            };
+
+            template <class T>
+            concept from_array_t = indexable<T> && requires(T t) {
                 {t.size()};
             };
 
             template <class T>
             concept from_map_t = requires(T t) {
                 {t["key"]};
+            };
+
+            template <class T>
+            concept pushbackable = requires(T t) {
+                {t.push_back('C')};
+            };
+
+            template <class T>
+            concept to_int_from_elm = requires(T t) {
+                {int(t[1])};
             };
 
             template <class JSON>
@@ -136,7 +150,7 @@ namespace utils {
                     return js.as_number(t);
                 }
                 else if constexpr (std::is_same_v<T_cv, typename json_t::string_t> ||
-                                   helper::is_utf_convertable<T>) {
+                                   (helper::is_utf_convertable<T> && pushbackable<T>)) {
                     if (any(flag & FromFlag::force_element)) {
                         return js.force_as_string(t);
                     }
@@ -198,7 +212,11 @@ namespace utils {
                                    std::is_same_v<T_cv, typename json_t::vec_t> ||
                                    std::is_same_v<T_cv, std::nullptr_t> ||
                                    primitive<T_>) {
-                    js = t;
+                    js = JSON(t);
+                    return true;
+                }
+                else if constexpr ((helper::is_utf_convertable<T_> && to_int_from_elm<T_>)) {
+                    js = utf::convert<typename json_t::string_t>(t);
                     return true;
                 }
                 else if constexpr (derefable<T_>) {
@@ -280,21 +298,29 @@ namespace utils {
             return false;                                  \
         }
 
-#define FROM_JSON_PARAM(param, name)                      \
-    {                                                     \
-        auto elm___ = json___.at(name);                   \
-        if (!elm___) {                                    \
-            return false;                                 \
-        }                                                 \
-        if (!convert_from_json(*elm___, ref____.param)) { \
-            return false;                                 \
-        }                                                 \
+#define FROM_JSON_PARAM(param, name, ...)                                            \
+    {                                                                                \
+        auto elm___ = json___.at(name);                                              \
+        if (!elm___) {                                                               \
+            return false;                                                            \
+        }                                                                            \
+        if (!convert_from_json(*elm___, ref____.param __VA_OPT__(, ) __VA_ARGS__)) { \
+            return false;                                                            \
+        }                                                                            \
     }
-#define FROM_JSON_OPT(param, name)                        \
-    if (auto elm___ = json___.at(name)) {                 \
-        if (!convert_from_json(*elm___, ref____.param)) { \
-            return false;                                 \
-        }                                                 \
+#define FROM_JSON_OPT(param, name, ...)                                              \
+    if (auto elm___ = json___.at(name)) {                                            \
+        if (!convert_from_json(*elm___, ref____.param __VA_OPT__(, ) __VA_ARGS__)) { \
+            return false;                                                            \
+        }                                                                            \
+    }
+
+#define FROM_JSON_OPT_SET(param, name, set_flag, ...)                                 \
+    if (auto elm___ = json___.at(name)) {                                             \
+        if (!convert_from_json(*elm___, ref____.param, __VA_OPT__(, ) __VA_ARGS__)) { \
+            return false;                                                             \
+        }                                                                             \
+        set_flag = true;                                                              \
     }
 
 #define TO_JSON_PARAM(param, name)                            \
@@ -313,6 +339,8 @@ namespace utils {
 
 #define JSON_PARAM_END() \
     return true;         \
+    }
+#define JSON_PARAM_END_NORET() \
     }
 
     }  // namespace json

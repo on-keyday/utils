@@ -67,6 +67,7 @@ namespace utils {
                 else if (sock->ipver == 6) {
                     info.ai_family = AF_INET6;
                 }
+#ifdef _WIN32
                 ::OVERLAPPED ol{0};
                 ol.hEvent = ::CreateEventA(nullptr, true, false, nullptr);
                 if (ol.hEvent == nullptr) {
@@ -96,6 +97,7 @@ namespace utils {
                 }
                 sock->status = TCPStatus::resolve_name_done;
                 SOCKLOG(ctx, stop, "dns resolved", TCPStatus::resolve_name_done);
+#endif
                 return result;
             }
 
@@ -159,7 +161,11 @@ namespace utils {
                         sock->selected = p;
                         break;
                     }
+#ifdef _WIN32
                     if (net::errcode() == WSAEWOULDBLOCK) {
+#else
+                    if (net::errcode() == EWOULDBLOCK) {
+#endif
                         sock->sock = proto;
                         auto sel = selecting_loop(stop, ctx, sock->sock, true, sock->status, sock->connect_timeout);
                         if (sel == 1) {
@@ -185,7 +191,9 @@ namespace utils {
                     delete sock->info;
                 }
                 else {
+#ifdef _WIN32
                     ::FreeAddrInfoExW(sock->info);
+#endif
                 }
                 sock->info = nullptr;
                 sock->selected = nullptr;
@@ -199,7 +207,11 @@ namespace utils {
                 while (true) {
                     auto err = ::send(sock->sock, buf->ptr, buf->size, 0);
                     if (err < 0) {
+#ifdef _WIN32
                         if (net::errcode() == WSAEWOULDBLOCK) {
+#else
+                        if (net::errcode() == EWOULDBLOCK) {
+#endif
                             if (stop.stop()) {
                                 return sockwraperror{"::send blocked and stop signaled", net::errcode(), stop.err()};
                             }
@@ -259,7 +271,11 @@ namespace utils {
                     while (true) {
                         auto err = ::recv(sock->sock, buf->ptr, buf->size, 0);
                         if (err < 0) {
+#ifdef _WIN32
                             if (net::errcode() == WSAEWOULDBLOCK) {
+#else
+                            if (net::errcode() == EWOULDBLOCK) {
+#endif
                                 if (any(sock->flag & Flag::poll_recv)) {
                                     auto sel = selecting_loop(stop, ctx, sock->sock, false, sock->status, sock->recieve_timeout);
                                     if (!sel) {

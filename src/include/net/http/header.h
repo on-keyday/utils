@@ -39,14 +39,20 @@ namespace utils {
                     return code;
                 }
             };
-
-            template <class String, class T, class Result, class Preview>
-            bool parse_common(Sequencer<T>& seq, Result& result, Preview&& preview) {
+            // parse_common parse common feilds of both http request and http response
+            // Argument
+            // seq - source of header
+            // result - header map. require result.emplace(key,value) method
+            // preview - preview header before emplace() call. preview(key,value)
+            // prepare - prepare key and value string before reading header. prepare(key,value)
+            template <class String, class T, class Result, class Preview, class Prepare>
+            bool parse_common(Sequencer<T>& seq, Result& result, Preview&& preview, Prepare&& prepare) {
                 while (true) {
                     if (helper::match_eol(seq)) {
                         break;
                     }
                     String key, value;
+                    prepare(key, value);
                     if (!helper::read_whilef<true>(key, seq, [](auto v) {
                             return v != ':';
                         })) {
@@ -72,8 +78,8 @@ namespace utils {
                 return true;
             }
 
-            template <class String, class T, class Result, class Method, class Path, class Version, class PreView = decltype(helper::no_check())>
-            bool parse_request(Sequencer<T>& seq, Method& method, Path& path, Version& ver, Result& result, PreView&& preview = helper::no_check()) {
+            template <class T, class Method, class Path, class Version>
+            bool parse_request_line(Sequencer<T>& seq, Method& method, Path& path, Version& ver) {
                 if (!helper::read_whilef<true>(method, seq, [](auto v) {
                         return v != ' ';
                     })) {
@@ -98,11 +104,19 @@ namespace utils {
                 if (!helper::match_eol(seq)) {
                     return false;
                 }
-                return parse_common<String>(seq, result, preview);
+                return true;
             }
 
-            template <class String, class T, class Result, class Version, class Status, class Phrase, class PreView = decltype(helper::no_check())>
-            bool parse_response(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase, Result& result, PreView&& preview = helper::no_check()) {
+            template <class String, class T, class Result, class Method, class Path, class Version, class PreView = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
+            bool parse_request(Sequencer<T>& seq, Method& method, Path& path, Version& ver, Result& result, PreView&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
+                if (!parse_request_line(seq, method, path, ver)) {
+                    return false;
+                }
+                return parse_common<String>(seq, result, preview, prepare);
+            }
+
+            template <class T, class Version, class Status, class Phrase>
+            bool parse_status_line(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase) {
                 if (!helper::read_whilef<true>(ver, seq, [](auto v) {
                         return v != ' ';
                     })) {
@@ -134,7 +148,15 @@ namespace utils {
                 if (!helper::match_eol(seq)) {
                     return false;
                 }
-                return parse_common<String>(seq, result, preview);
+                return true;
+            }
+
+            template <class String, class T, class Result, class Version, class Status, class Phrase, class PreView = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
+            bool parse_response(Sequencer<T>& seq, Version& ver, Status& status, Phrase& phrase, Result& result, PreView&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
+                if (!parse_status_line(seq, ver, status, phrase)) {
+                    return false;
+                }
+                return parse_common<String>(seq, result, preview, prepare);
             }
 
             constexpr bool is_valid_key_char(std::uint8_t c) {
@@ -198,10 +220,8 @@ namespace utils {
                 helper::append(str, "\r\n");
                 return true;
             }
-
-            template <class String, class Method, class Path, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
-            bool render_request(String& str, Method&& method, Path&& path, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
-                                Prerender&& prerender = helper::no_check()) {
+            template <class String, class Method, class Path>
+            bool render_request_line(String& str, Method&& method, Path&& path) {
                 if (helper::contains(method, " ") || helper::contains(path, " ")) {
                     return false;
                 }
@@ -209,13 +229,21 @@ namespace utils {
                 str.push_back(' ');
                 helper::append(str, path);
                 helper::append(str, " HTTP/1.1\r\n");
+                return true;
+            }
+
+            template <class String, class Method, class Path, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
+            bool render_request(String& str, Method&& method, Path&& path, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
+                                Prerender&& prerender = helper::no_check()) {
+                if (!render_request_line(str, method, path)) {
+                    return false;
+                }
                 prerender(str);
                 return render_header_common(str, header, validate, ignore_invalid);
             }
 
-            template <class String, class Status, class Phrase, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
-            bool render_response(String& str, Status&& status, Phrase&& phrase, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
-                                 Prerender&& prerender = helper::no_check(), int verstr = 1) {
+            template <class String, class Status, class Phrase>
+            bool render_status_line(String& str, Status&& status, Phrase&& phrase, int verstr = 1) {
                 if (status < 100 && status > 999) {
                     return false;
                 }
@@ -236,6 +264,15 @@ namespace utils {
                 helper::append(str, " ");
                 helper::append(str, phrase);
                 helper::append(str, "\r\n");
+                return true;
+            }
+
+            template <class String, class Status, class Phrase, class Header, class Validate = decltype(helper::no_check()), class Prerender = decltype(helper::no_check())>
+            bool render_response(String& str, Status&& status, Phrase&& phrase, Header& header, Validate&& validate = helper::no_check(), bool ignore_invalid = false,
+                                 Prerender&& prerender = helper::no_check(), int verstr = 1) {
+                if (!render_status_line(str, status, phrase, verstr)) {
+                    return false;
+                }
                 prerender(str);
                 return render_header_common(str, header, validate, ignore_invalid);
             }

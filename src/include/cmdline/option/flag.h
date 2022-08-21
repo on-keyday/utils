@@ -188,6 +188,7 @@ namespace utils {
                 none = 0,
                 bindonce = 0x1,
                 required = 0x2,
+                hidden = 0x4,
             };
 
             DEFINE_ENUM_FLAGOP(OptMode)

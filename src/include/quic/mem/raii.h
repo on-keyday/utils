@@ -8,6 +8,7 @@
 // raii - resource allocation is initialization
 #pragma once
 #include <utility>
+#include <memory>
 
 namespace utils {
     namespace quic {
