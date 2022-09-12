@@ -13,7 +13,8 @@
 #include "../core/iodef.h"
 #include "../../helper/readutil.h"
 #include "../../number/parse.h"
-#include <helper/equal.h>
+#include "../../helper/equal.h"
+#include "../../number/to_string.h"
 
 namespace utils {
     namespace net {
@@ -94,7 +95,14 @@ namespace utils {
                     }
                 };
             }
-        }  // namespace h1body
 
-    }  // namespace net
+            template <class Buf, class Data = const char*>
+            void render_chuncked_data(Buf& buf, Data&& data = "", size_t len = 0) {
+                number::to_string(buf, len, 16);
+                helper::append(buf, "\r\n");
+                helper::append(buf, helper::RefSizedView(data, len));
+                helper::append(buf, "\r\n");
+            }
+        }  // namespace h1body
+    }      // namespace net
 }  // namespace utils

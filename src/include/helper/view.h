@@ -48,6 +48,22 @@ namespace utils {
         };
 
         template <class T>
+        struct RefSizedView {
+            T& ref;
+            size_t size_;
+            constexpr RefSizedView(T& t, size_t sz)
+                : ref(t), size_(sz) {}
+
+            constexpr auto& operator[](size_t pos) const {
+                return ref[pos];
+            }
+
+            constexpr size_t size() const {
+                return size_;
+            }
+        };
+
+        template <class T>
         struct CharView {
             T c[2];
             size_t size_;

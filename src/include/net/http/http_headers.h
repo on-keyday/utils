@@ -15,14 +15,14 @@ namespace utils {
     namespace net {
         namespace h1header {
             template <class T, class Callback, class BeginCheck>
-            bool guess_and_read_raw_header(Sequencer<T>& seq, Callback&& callback, BeginCheck&& check) {
+            size_t guess_and_read_raw_header(Sequencer<T>& seq, Callback&& callback, BeginCheck&& check) {
                 while (seq.size() == 0) {
                     if (!callback(seq, 0, false)) {
-                        return false;
+                        return 0;
                     }
                 }
                 if (!check(seq)) {
-                    return false;
+                    return 0;
                 }
                 while (true) {
                     if (seq.seek_if("\r\n\r\n") ||
@@ -32,12 +32,13 @@ namespace utils {
                     seq.consume();
                     while (seq.eos()) {
                         if (!callback(seq, 0, false)) {
-                            return false;
+                            return 0;
                         }
                     }
                 }
+                auto res = seq.rptr;
                 seq.seek(0);
-                return true;
+                return res;
             }
 
             template <class T, class Body, class Callback>

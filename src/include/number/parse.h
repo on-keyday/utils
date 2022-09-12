@@ -107,6 +107,21 @@ namespace utils {
 
         }  // namespace internal
 
+        constexpr auto default_num_ignore() {
+            return [](auto&& a) {
+                return false;
+            };
+        }
+
+        template <class Ignore>
+        struct NumConfig {
+            Ignore ignore;
+            char dot = '.';
+            bool accept_exp = true;
+            size_t offset = 0;
+            bool expect_eof = true;
+        };
+
         struct OffsetConfig {
             static constexpr char dot = '.';
             static constexpr bool accept_exp = true;

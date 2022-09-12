@@ -9,9 +9,12 @@
 #include <cstdint>
 #include <utility>
 #include "dll/dllh.h"
+#include "../core/strlen.h"
 
 namespace utils {
     namespace dnet {
+
+        // SockAddr wraps native addrinfo representation
         struct SockAddr {
             union {
                 struct {
@@ -23,13 +26,34 @@ namespace utils {
                     int namelen;
                 };
             };
-            int af;
-            int type;
-            int proto;
-            int flag;
+            int af = 0;
+            int type = 0;
+            int proto = 0;
+            int flag = 0;
+        };
+#ifdef _WIN32
+        constexpr auto INET6_ADDRSTRLEN_ = 65;
+#else
+        constexpr auto INET6_ADDRSTRLEN_ = 46;
+#endif
+
+        struct IPText {
+            char text[INET6_ADDRSTRLEN_ + 1]{0};
+            constexpr const char* c_str() const {
+                return text;
+            }
+            constexpr size_t size() const {
+                return utils::strlen(text);
+            }
+
+            constexpr char operator[](size_t i) const {
+                return text[i];
+            }
         };
 
-        struct class_export AddrInfo {
+        // AddrInfo is wrapper class of getaddrinfo functions
+        // these operations are non blocking
+        struct dnet_class_export AddrInfo {
            private:
             void* root;
             void* select;
@@ -50,22 +74,52 @@ namespace utils {
                 return *this;
             }
             void* next();
+            constexpr const void* exists() const {
+                return root;
+            }
             constexpr const void* current() const {
                 return select;
             }
+            constexpr void reset_iterator() {
+                select = nullptr;
+            }
             const void* sockaddr(SockAddr& info) const;
+            bool string(void* text, size_t len, int* port = nullptr, int* err = nullptr) const;
+
+            IPText string(int* port = nullptr, int* err = nullptr) const {
+                if (err) {
+                    *err = 0;
+                }
+                IPText text;
+                string(text.text, sizeof(text.text), port, err);
+                return text;
+            }
+
             constexpr AddrInfo()
                 : AddrInfo(nullptr) {}
             ~AddrInfo();
         };
 
-        struct class_export WaitAddrInfo {
+        dnet_dll_export(bool) string_from_sockaddr(const void* addr, size_t addrlen, void* text, size_t len, int* port, int* err);
+
+        inline IPText string_from_sockaddr(const void* addr, size_t addrlen, int* port = nullptr, int* err = nullptr) {
+            if (err) {
+                *err = 0;
+            }
+            IPText text;
+            string_from_sockaddr(addr, addrlen, text.text, sizeof(text.text), port, err);
+            return text;
+        }
+
+        // WaitAddrInfo is waiter calss of dns resolevement
+        struct dnet_class_export WaitAddrInfo {
            private:
             void* opt;
             int err;
             constexpr WaitAddrInfo(void* o, int e)
                 : opt(o), err(e) {}
-            friend dll_export(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port);
+            friend dnet_dll_export(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port);
+            friend dnet_dll_export(WaitAddrInfo) get_self_host_address(const SockAddr& addr, const char* port);
 
            public:
             constexpr WaitAddrInfo(WaitAddrInfo&& info)
@@ -84,11 +138,18 @@ namespace utils {
                 return info;
             }
             bool wait(AddrInfo& info, std::uint32_t time);
+            bool cancel();
             constexpr WaitAddrInfo()
                 : opt(nullptr), err() {}
             ~WaitAddrInfo();
         };
 
-        [[nodiscard]] dll_export(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port);
+        [[nodiscard]] dnet_dll_export(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port);
+
+        // this invokes resolve_address with addr.flag|=AI_PASSIVE and addr.hostname=nullptr, addr.namelen=0
+        [[nodiscard]] dnet_dll_export(WaitAddrInfo) get_self_server_address(const SockAddr& addr, const char* port);
+
+        // this invokes resolve_address with addr.hostname=gethostname()
+        [[nodiscard]] dnet_dll_export(WaitAddrInfo) get_self_host_address(const SockAddr& addr, const char* port = nullptr);
     }  // namespace dnet
 }  // namespace utils

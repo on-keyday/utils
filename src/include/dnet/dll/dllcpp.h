@@ -7,11 +7,11 @@
 
 #pragma once
 #ifdef _WIN32
-#define dll_export(type) __declspec(dllexport) type __stdcall
-#define dll_internal(type) type __stdcall
-#define class_export __declspec(dllexport)
+#define dnet_dll_export(type) __declspec(dllexport) type __stdcall
+#define dnet_dll_internal(type) type __stdcall
+#define dnet_class_export __declspec(dllexport)
 #else
-#define dll_export(type) type
-#define dll_internal(type) type
-#define class_export
+#define dnet_dll_export(type) type
+#define dnet_dll_internal(type) type
+#define dnet_class_export
 #endif

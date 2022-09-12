@@ -183,7 +183,7 @@ namespace utils {
             template <class String>
             constexpr bool is_valid_value(String&& header) {
                 return helper::is_valid<true>(header, [](auto&& c) {
-                    return number::is_in_visible_range(c);
+                    return number::is_in_visible_range(c) || c == ' ' || c == '\t';
                 });
             }
 

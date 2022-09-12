@@ -111,6 +111,8 @@ add_executable(quic_init_conn "src/test/quic/test_quic_init_conn.cpp")
 add_executable(dnet_socket "src/test/dnet/test_dnet_socket.cpp")
 add_executable(dnet_tls "src/test/dnet/test_dnet_tls.cpp")
 add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
+add_executable(dnet_http2 "src/test/dnet/test_dnet_http2.cpp")
+add_executable(minrec_tree "src/test/minilang/test_minrec_tree.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -131,6 +133,10 @@ add_executable(minilang "src/tool/minilang/minilang.cpp"
   "src/tool/minilang/minilang_llvm.cpp"
   "src/tool/minilang/minilang_stream.cpp"
   "src/tool/minilang/main.cpp")
+add_executable(minlc "src/tool/minlc/minlc.cpp"
+  "src/tool/minlc/middle.cpp"
+  "src/tool/minlc/resolve.cpp"
+)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
 
@@ -150,6 +156,7 @@ option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 add_library(utils SHARED)
 add_library(utnet SHARED)
 add_library(dnet SHARED)
+add_library(dnetserv SHARED)
 
 target_sources(utils
   PRIVATE
@@ -203,7 +210,19 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/addrinfo.cpp"
   "src/lib/dnet/ssldll.cpp"
   "src/lib/dnet/tls.cpp"
-  "src/lib/dnet/http.cpp"
+  "src/lib/dnet/httproundtrip.cpp"
+  "src/lib/dnet/httpbuf.cpp"
+  "src/lib/dnet/h2frame.cpp"
+  "src/lib/dnet/http2.cpp"
+  "src/lib/dnet/h2frame_c.cpp"
+  "src/lib/dnet/string.cpp"
+  "src/lib/dnet/heaps.cpp"
+  "src/lib/dnet/conn.cpp"
+)
+
+target_sources(dnetserv PRIVATE
+  "src/lib/dnet/server/state.cpp"
+  "src/lib/dnet/server/httpserv.cpp"
 )
 
 if(WIN32)
@@ -290,6 +309,7 @@ target_link_libraries(binred utils)
 target_link_libraries(netutil utils utnet)
 target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
+target_link_libraries(minlc utils)
 
 # libquic
 target_link_libraries(quic_udp quic utils)
@@ -304,14 +324,18 @@ target_link_libraries(quic_init_conn quic)
 target_link_libraries(dnet_socket dnet)
 target_link_libraries(dnet_tls dnet)
 target_link_libraries(dnet_http dnet utils)
+target_link_libraries(dnet_http2 dnet)
+
+# libdnetserv
+target_link_libraries(dnetserv dnet)
 
 if(WIN32)
   target_link_libraries(io_completion_port ws2_32)
-  target_link_libraries(utnet libssl libcrypto ws2_32)
+  target_link_libraries(utnet libssl libcrypto ws2_32 dnet)
   target_link_libraries(quic ws2_32)
 else()
   target_link_libraries(utils libssl.so libcrypto.so)
-
+  target_link_libraries(utnet dnet)
   target_link_libraries(asynctcp2 Threads::Threads)
 endif()
 

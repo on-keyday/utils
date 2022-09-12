@@ -43,6 +43,19 @@ namespace utils {
             return 0;
         }
 
+        template <class T, class Result, class Config = internal::ReadConfig>
+        constexpr NumErr read_prefixed_number(Sequencer<T>& seq, Result& result, int* prefix = nullptr, bool* is_float = nullptr, Config config = {}) {
+            int radix = 10;
+            if (auto v = has_prefix(seq)) {
+                radix = v;
+                seq.consume(2);
+                if (seq.current() == '+' || seq.current() == '-') {
+                    return NumError::invalid;
+                }
+            }
+            return read_number(result, seq, radix, is_float, config);
+        }
+
         template <class T, class Int, class Config = internal::ReadConfig>
         constexpr NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr, Config config = Config{}) {
             int radix = 10;

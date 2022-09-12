@@ -7,18 +7,7 @@
 
 #pragma once
 #include "dynload.h"
-#ifdef _WIN32
-#include <WinSock2.h>
-#include <MSWSock.h>
-#include <WS2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <sys/ioctl.h>
-#include <sys/epoll.h>
-#include <netdb.h>
-#include <unistd.h>
-#endif
+#include "../plthead.h"
 namespace utils {
     namespace dnet {
 
@@ -53,9 +42,9 @@ namespace utils {
         struct SocketDll {
            private:
 #ifdef _WIN32
-            static constexpr auto libcount = 26;
+            static constexpr auto libcount = 28;
 #else
-            static constexpr auto libcount = 19;
+            static constexpr auto libcount = 21;
 #endif
             alib<libcount> lib;
 #define L(func) LOADER_BASE(func, func, lib, SocketDll, false)
@@ -72,6 +61,8 @@ namespace utils {
             L(listen)
             L(accept)
             L(select)
+            L(inet_ntop)
+            L(gethostname)
 #ifdef _WIN32
             L(closesocket)
             L(ioctlsocket)

@@ -6,7 +6,7 @@
 */
 
 
-// value - value meanings mapper
+// predefined - http predefined value
 #pragma once
 
 namespace utils {
@@ -156,6 +156,7 @@ namespace utils {
                 "TRACE",
                 "OPTIONS",
                 "CONNECT",
+                "PRI",  // http2 preface
             };
         }  // namespace h1value
     }      // namespace net

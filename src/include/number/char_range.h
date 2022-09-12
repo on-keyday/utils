@@ -76,6 +76,11 @@ namespace utils {
         }
 
         template <class C>
+        constexpr bool is_control_char(C&& c) {
+            return c >= 0 && c <= 0x20;
+        }
+
+        template <class C>
         constexpr bool is_symbol_char(C&& c) {
             return is_in_visible_range(c) && !is_alnum(c);
         }

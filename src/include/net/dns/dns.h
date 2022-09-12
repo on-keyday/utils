@@ -11,6 +11,8 @@
 #include "../../platform/windows/dllexport_header.h"
 #include "../../wrap/light/smart_ptr.h"
 #include "../generate/iocloser.h"
+// dnet library
+#include "../../dnet/addrinfo.h"
 
 namespace utils {
     namespace net {
@@ -35,8 +37,13 @@ namespace utils {
 
             void set_limit(size_t sock);
 
+            constexpr dnet::AddrInfo& get_dnaddrinfo() {
+                return addr;
+            }
+
            private:
-            internal::AddressImpl* impl = nullptr;
+            dnet::AddrInfo addr;
+            void* saddr = nullptr;
         };
 
         enum class IpAddrLimit {
@@ -50,16 +57,6 @@ namespace utils {
                                                    int address_family, int socket_type, int protocol, int flags);
             constexpr DnsResult() {}
 
-            DnsResult(const DnsResult&) = delete;
-
-            DnsResult(DnsResult&&) noexcept;
-
-            DnsResult& operator=(const DnsResult&) = delete;
-
-            DnsResult& operator=(DnsResult&&) noexcept;
-
-            ~DnsResult();
-
             wrap::shared_ptr<Address> get_address();
 
             bool failed();
@@ -67,7 +64,7 @@ namespace utils {
             void cancel();
 
            private:
-            internal::DnsResultImpl* impl = nullptr;
+            dnet::WaitAddrInfo wait;
         };
 
         DLL DnsResult STDCALL query_dns(const char* host, const char* port, time_t timeout_sec = 60,

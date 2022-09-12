@@ -21,94 +21,13 @@ namespace utils {
     namespace net {
         namespace internal {
 
-#ifdef _WIN32
-            void freeaddrinfo(addrinfo* info) {
-                FreeAddrInfoExW(info);
-            }
-#else
-            void freeaddrinfo(addrinfo* info) {
-                ::freeaddrinfo(info);
-            }
-#endif
-            struct AddressImpl {
-                addrinfo* result = nullptr;
-                bool from_sockaddr = false;
-                IpAddrLimit limit = IpAddrLimit::none;
-
-                ~AddressImpl() {
-                    if (from_sockaddr) {
-                        if (!result) {
-                            return;
-                        }
-                        delete reinterpret_cast<::sockaddr_storage*>(result->ai_addr);
-                        delete result;
-                    }
-                    else {
-                        internal::freeaddrinfo(result);
-                    }
-                }
-            };
-
-            struct DnsResultImpl {
-                addrinfo* result;
-                bool failed;
-#ifdef _WIN32
-                ::OVERLAPPED overlapped;
-                ::HANDLE cancel = nullptr;
-                bool running = true;
-
-#endif
-
-                bool complete_query() {
-#ifdef _WIN32
-                    auto done = ::WaitForSingleObject(overlapped.hEvent, 2);
-                    if (done == WAIT_OBJECT_0) {
-                        auto res = ::GetAddrInfoExOverlappedResult(&overlapped);
-                        if (res != WSAEINPROGRESS) {
-                            running = false;
-                            ::ResetEvent(overlapped.hEvent);
-                            if (res != NO_ERROR) {
-                                failed = true;
-                                return false;
-                            }
-                            return true;
-                        }
-                    }
-#endif
-                    return false;
-                }
-
-                void cancel_impl() {
-#ifdef _WIN32
-                    if (running) {
-                        ::GetAddrInfoExCancel(&cancel);
-                        running = false;
-                    }
-#endif
-                }
-
-                ~DnsResultImpl() {
-                    cancel_impl();
-#ifdef _WIN32
-                    if (overlapped.hEvent != nullptr) {
-                        ::ResetEvent(overlapped.hEvent);
-                        ::CloseHandle(overlapped.hEvent);
-                    }
-                    if (result) {
-                        freeaddrinfo(result);
-                    }
-#endif
-                }
-            };
-
             wrap::shared_ptr<Address> from_sockaddr_st(void* st, int len) {
-                auto storage = reinterpret_cast<::sockaddr_storage*>(st);
-                auto info = new addrinfo();
-                info->ai_addrlen = len;
-                info->ai_addr = reinterpret_cast<::sockaddr*>(new ::sockaddr_storage(std::move(*storage)));
+                auto cst = new (std::nothrow)::sockaddr_storage(*static_cast<sockaddr_storage*>(st));
+                if (!cst) {
+                    return nullptr;
+                }
                 auto addr = wrap::make_shared<Address>();
-                addr->impl->from_sockaddr = true;
-                addr->impl->result = info;
+                addr->saddr = cst;
                 return addr;
             }
         }  // namespace internal
@@ -125,17 +44,18 @@ namespace utils {
 #else
         static void format_error(wrap::string& errmsg, int err = 0) {}
 #endif
-        Address::Address() {
-            impl = new internal::AddressImpl();
-        }
+        Address::Address() {}
 
         Address::~Address() {
-            delete impl;
+            if (saddr) {
+                auto st = static_cast<sockaddr_storage*>(saddr);
+                delete st;
+            }
         }
 
         void Address::set_limit(size_t sock) {
-            if (!impl) return;
-            switch (impl->limit) {
+            // if (!impl) return;
+            /*switch (impl->limit) {
                 case IpAddrLimit::v4: {
                 }
                 case IpAddrLimit::v6: {
@@ -144,85 +64,56 @@ namespace utils {
                 }
                 default:
                     return;
-            }
+            }*/
+            // TODO(on-keyday): FIX place or function
         }
 
         bool Address::stringify(IBuffer buf, size_t index) {
-            if (!impl) {
-                return false;
+            if (!addr.exists()) {
+                if (saddr) {
+                    auto text = dnet::string_from_sockaddr(saddr, sizeof(sockaddr_storage));
+                    helper::append(buf, text);
+                    return true;
+                }
             }
-            auto sel = impl->result;
+            const auto curp = addr.current();
+            addr.reset_iterator();
+            auto reset_curp = [&] {
+                addr.reset_iterator();
+                while (addr.current() != curp) {
+                    addr.next();
+                }
+            };
             size_t count = 0;
-            while (sel && count < index) {
-                sel = sel->ai_next;
+            while (addr.next() && count < index) {
+                count++;
             }
-            if (!sel) {
+            if (!addr.current()) {
+                reset_curp();
                 return false;
             }
-            char tmp[75] = {0};
-            if (sel->ai_family == AF_INET) {
-                sockaddr_in* addr4 = (sockaddr_in*)sel->ai_addr;
-                inet_ntop(sel->ai_family, &addr4->sin_addr, tmp, 75);
-            }
-            else if (sel->ai_family == AF_INET6) {
-                sockaddr_in6* addr6 = (sockaddr_in6*)sel->ai_addr;
-                inet_ntop(sel->ai_family, &addr6->sin6_addr, tmp, 75);
-            }
-            size_t start_idx = 0;
-            if (helper::contains(tmp, ".") && helper::starts_with(tmp, "::ffff:")) {
-                start_idx = 7;
-            }
-            helper::append(buf, tmp + start_idx);
+            auto text = addr.string();
+            helper::append(buf, text);
             return true;
         }
 
         void* Address::get_rawaddr() {
-            if (!impl) {
-                return nullptr;
-            }
-            return reinterpret_cast<void*>(impl->result);
-        }
-
-        DnsResult::~DnsResult() {
-            delete impl;
-        }
-
-        DnsResult::DnsResult(DnsResult&& in) noexcept {
-            impl = in.impl;
-            in.impl = nullptr;
-        }
-
-        DnsResult& DnsResult::operator=(DnsResult&& in) noexcept {
-            delete impl;
-            impl = in.impl;
-            in.impl = nullptr;
-            return *this;
+            return const_cast<void*>(addr.exists());
         }
 
         bool DnsResult::failed() {
-            if (!impl) {
-                return true;
-            }
-            if (impl->failed) {
-                return true;
-            }
-            return false;
+            return wait.failed();
         }
 
         void DnsResult::cancel() {
-            if (impl) {
-                impl->cancel_impl();
-            }
+            wait.cancel();
         }
 
         wrap::shared_ptr<Address> DnsResult::get_address() {
-            if (!impl) {
-                return nullptr;
-            }
-            if (impl->complete_query()) {
+            dnet::AddrInfo info;
+            if (wait.wait(info, 1)) {
                 auto addr = wrap::make_shared<Address>();
-                addr->impl->result = impl->result;
-                impl->result = nullptr;
+                addr->addr = std::move(info);
                 return addr;
             }
             return nullptr;
@@ -237,25 +128,14 @@ namespace utils {
             hint.ai_protocol = protocol;
             hint.ai_flags = flags;
             DnsResult result;
-            result.impl = new internal::DnsResultImpl();
-            auto impl = result.impl;
-#ifdef _WIN32
-            impl->overlapped.hEvent = ::CreateEventA(NULL, true, false, nullptr);
-            if (impl->overlapped.hEvent == nullptr) {
-                return DnsResult();
-            }
-            auto host_ = utf::convert<wrap::path_string>(host);
-            auto port_ = utf::convert<wrap::path_string>(port);
-            ::timeval timeout{0};
-            timeout.tv_sec = timeout_sec;
-            auto v = ::GetAddrInfoExW(host_.c_str(), port_.c_str(), NS_DNS, nullptr,
-                                      &hint, &impl->result, &timeout, &impl->overlapped, nullptr, &impl->cancel);
-            if (v != NO_ERROR && v != WSA_IO_PENDING) {
-                return DnsResult();
-            }
-#else
-            assert(false && "unimplemented");
-#endif
+            dnet::SockAddr addr{};
+            addr.hostname = host;
+            addr.namelen = strlen(host);
+            addr.af = address_family;
+            addr.type = socket_type;
+            addr.proto = protocol;
+            addr.flag = flags;
+            result.wait = dnet::resolve_address(addr, port);
             return result;
         }
 

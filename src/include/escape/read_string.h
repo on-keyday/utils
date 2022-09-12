@@ -37,6 +37,8 @@ namespace utils {
             need_prefix = 0x2,
             allow_line = 0x4,
             raw_unescaped = 0x8,
+            parser_mode = escape | need_prefix | raw_unescaped,
+            rawstr_mode = need_prefix | allow_line,
         };
 
         DEFINE_ENUM_FLAGOP(ReadFlag)
@@ -46,7 +48,7 @@ namespace utils {
             if (!is_prefix(seq.current())) {
                 return false;
             }
-            auto s = seq.current();
+            const auto s = seq.current();
             auto needdpfx = any(flag & ReadFlag::need_prefix);
             if (needdpfx) {
                 key.push_back(s);
@@ -73,6 +75,70 @@ namespace utils {
                     return false;
                 }
                 key = std::move(tmp);
+            }
+            return true;
+        }
+
+        constexpr auto single_char_varprefix(auto c, auto& store_c, size_t& count) {
+            return [&, c](auto& seq, auto& str, bool on_prefix) {
+                if (on_prefix) {
+                    if (seq.current() != c) {
+                        return false;
+                    }
+                    str.push_back(c);
+                    seq.consume();
+                    count = 1;
+                    while (seq.current() == c) {
+                        str.push_back(c);
+                        seq.consume();
+                        count++;
+                    }
+                    if (seq.eos()) {
+                        return false;
+                    }
+                    store_c = seq.current();
+                    str.push_back(store_c);
+                    seq.consume();
+                    return true;
+                }
+                const auto start = seq.rptr;
+                if (seq.consume_if(store_c)) {
+                    const auto view = helper::CharView(store_c, count);
+                    if (seq.seek_if(view)) {
+                        str.push_back(store_c);
+                        helper::append(str, view);
+                        return true;
+                    }
+                    seq.rptr = start;
+                }
+                return false;
+            };
+        }
+
+        // varaible_prefix_string
+        // ```|object based sequence|```
+        // ->"object based sequence"
+        // ````'object based
+        // but not'````
+        // ->"object based\nbut not"
+        // ```
+        // object base encoding
+        // ```
+        // -> "object base encoding"
+        template <class String, class T, class Prefix>
+        constexpr bool varialbe_prefix_string(String& str, Sequencer<T>& seq, Prefix&& guess_prefix) {
+            if (!guess_prefix(seq, str, true)) {
+                return false;
+            }
+            while (true) {
+                if (seq.eos()) {
+                    return false;
+                }
+                if (guess_prefix(seq, str, false)) {
+                    break;
+                }
+                str.push_back(seq.current());
+                seq.consume();
             }
             return true;
         }

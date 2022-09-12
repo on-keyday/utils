@@ -18,6 +18,11 @@ namespace utils {
             struct KeyValue {
                 Key key;
                 Value value;
+                constexpr KeyValue() = default;
+                constexpr KeyValue(KeyValue&&) = default;
+                constexpr KeyValue& operator=(KeyValue&&) = default;
+                constexpr KeyValue(auto&& k, auto&& v)
+                    : key(std::forward<decltype(k)>(k)), value(std::forward<decltype(v)>(v)) {}
             };
 
             template <class Key, class Value>
@@ -124,12 +129,12 @@ namespace utils {
                         if (kv) {
                             return false;
                         }
-                        auto res = n.v.en_q_nlock(KV{std::move(key), std::move(value)});
+                        auto res = n.v.en_q_nlock(KV{std::forward<decltype(key)>(key), std::forward<decltype(value)>(value)});
                         if (res) {
                             n.bugget++;
                             total++;
                         }
-                        return false;
+                        return res;
                     });
                 }
 
@@ -174,6 +179,12 @@ namespace utils {
                 bool remove(auto&& key) {
                     return lock_callback([&] {
                         return remove_nlock(key);
+                    });
+                }
+
+                bool insert(auto&& key, auto&& value) {
+                    return lock_callback([&] {
+                        return insert_nlock(std::forward<decltype(key)>(key), std::forward<decltype(value)>(value));
                     });
                 }
 
@@ -237,6 +248,30 @@ namespace utils {
                         return -1;
                     }
                     return size() / q.size();
+                }
+
+                bool emplace(auto&& key, auto&& value) {
+                    return insert_nlock(std::forward<decltype(key)>(key),
+                                        std::forward<decltype(value)>(value));
+                }
+
+                void free_all() {
+                    auto b = stock.begin();
+                    auto e = stock.end();
+                    auto f = *b;
+                    auto l = *e;
+                    *b = nullptr;
+                    *e = nullptr;
+                    auto n = f;
+                    auto a = stock.get_alloc();
+                    while (n) {
+                        auto next = n->next;
+                        a->deallocate(n);
+                        n = next;
+                    }
+                    for (node_t& v : q) {
+                        v.v.destruct([](auto&&) {});
+                    }
                 }
             };
         }  // namespace mem

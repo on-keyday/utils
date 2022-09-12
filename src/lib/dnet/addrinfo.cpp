@@ -14,6 +14,9 @@
 #include <dnet/dll/glheap.h>
 #include <quic/mem/raii.h>
 #include <dnet/errcode.h>
+#include <helper/strutil.h>
+#include <endian/endian.h>
+#include <cstring>
 #ifndef _WIN32
 #include <signal.h>
 #include <thread>
@@ -28,6 +31,7 @@ namespace utils {
         }
         using Host = number::Array<255, wchar_t, true>;
         using Port = number::Array<20, wchar_t, true>;
+        constexpr auto cancel_ok = 0;
 #else
         using raw_paddrinfo = addrinfo*;
         void free_addr(void* p) {
@@ -35,6 +39,7 @@ namespace utils {
         }
         using Host = number::Array<255, char, true>;
         using Port = number::Array<20, char, true>;
+        constexpr auto cancel_ok = EAI_CANCELED;
 #endif
 
         AddrInfo::~AddrInfo() {
@@ -65,13 +70,89 @@ namespace utils {
             return ptr->ai_addr;
         }
 
+        bool string_from_sockaddr_impl(int af, const void* addr, size_t addrlen, void* text, size_t len, int* err, int* port) {
+            const char* ptr = nullptr;
+            char* dst = static_cast<char*>(text);
+            memset(text, 0, len);
+            if (af == AF_INET) {
+                if (addrlen < sizeof(sockaddr_in)) {
+                    set_error(invalid_argument);
+                }
+                else {
+                    auto p = static_cast<const sockaddr_in*>(addr);
+                    if (port) {
+                        *port = endian::from_network(&p->sin_port);
+                    }
+                    ptr = socdl.inet_ntop_(af, &p->sin_addr, dst, len);
+                }
+            }
+            else if (af == AF_INET6) {
+                if (addrlen < sizeof(sockaddr_in6)) {
+                    set_error(invalid_argument);
+                }
+                else {
+                    auto p = static_cast<const sockaddr_in6*>(addr);
+                    if (port) {
+                        *port = endian::from_network(&p->sin6_port);
+                    }
+                    ptr = socdl.inet_ntop_(af, &p->sin6_addr, dst, len);
+                }
+            }
+            else {
+                set_error(invalid_argument);
+            }
+            if (!ptr) {
+                if (err) {
+                    *err = get_error();
+                }
+                return false;
+            }
+            // NOTE: remove ipv6 prefix for ipv4 mapped addresss
+            if (helper::contains(ptr, ".") && helper::starts_with(ptr, "::ffff:")) {
+                constexpr auto start_offset = 7;
+                auto tlen = strlen(ptr);
+                // thought experiment
+                // ::ffff:127.0.0.1----
+                // tlen = 16 len = 20 (need to remain) = 9 from offset 7
+                // tlen - 7 = 9 = (need to remain)
+                // after memmove
+                // 127.0.0.17.0.0.1----
+                // (need to clear) = 7 from offset 9
+                // after memset
+                // 127.0.0.1-----------
+                memmove(dst, dst + start_offset, len - start_offset);
+                memset(dst + tlen - start_offset, 0, start_offset);
+            }
+            return true;
+        }
+
+        dnet_dll_internal(bool) string_from_sockaddr(const void* addr, size_t addrlen, void* text, size_t len, int* port, int* err) {
+            if (!addr) {
+                return false;
+            }
+            auto sa = static_cast<const sockaddr*>(addr);
+            return string_from_sockaddr_impl(sa->sa_family, addr, addrlen, text, len, err, port);
+        }
+
+        bool AddrInfo::string(void* text, size_t len, int* port, int* err) const {
+            if (!select) {
+                return false;
+            }
+            auto info = static_cast<raw_paddrinfo>(select);
+            return string_from_sockaddr_impl(info->ai_family, info->ai_addr, info->ai_addrlen, text, len, err, port);
+        }
+
         struct WaitObject {
             raw_paddrinfo info;
 #ifdef _WIN32
             OVERLAPPED ol;
             HANDLE cancel;
+            bool done_immdedeate = false;
             void plt_clean() {
                 socdl.GetAddrInfoExCancel_(&cancel);
+            }
+            int plt_cancel() {
+                return socdl.GetAddrInfoExCancel_(&cancel);
             }
 #else
             addrinfo hint;
@@ -94,6 +175,10 @@ namespace utils {
                     }
                     break;
                 }
+            }
+
+            int plt_cancel() {
+                return kerlib.gai_cancel_(&cb);
             }
 #endif
             ~WaitObject() {
@@ -123,11 +208,10 @@ namespace utils {
                 auto res = socdl.GetAddrInfoExOverlappedResult_(&obj->ol);
                 ResetEvent(obj->ol.hEvent);
                 CloseHandle(obj->ol.hEvent);
-                if (res != 0) {
+                if (!obj->done_immdedeate && res != 0) {
                     err = res;
                     return false;
                 }
-
                 return true;
             }
             if (sig == WAIT_TIMEOUT) {
@@ -137,7 +221,7 @@ namespace utils {
             return false;
         }
 
-        static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host& host, Port& port) {
+        static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host* host, Port* port) {
             ADDRINFOEXW hint{};
             hint.ai_family = addr.af;
             hint.ai_socktype = addr.type;
@@ -160,11 +244,14 @@ namespace utils {
                 return nullptr;
             }
             obj->ol.hEvent = event;
-            auto res = socdl.GetAddrInfoExW_(host.c_str(), port.c_str(), 0, nullptr, &hint, &obj->info, &timeout, &obj->ol, nullptr, &obj->cancel);
+            auto host_str = host ? host->c_str() : nullptr;
+            auto port_str = port ? port->c_str() : nullptr;
+            auto res = socdl.GetAddrInfoExW_(host_str, port_str, 0, nullptr, &hint, &obj->info, &timeout, &obj->ol, nullptr, &obj->cancel);
             if (res != 0 && res != WSA_IO_PENDING) {
                 err = get_error();
                 return nullptr;
             }
+            obj->done_immdedeate = res == 0;
             r.t = nullptr;  // release
             return obj;
         }
@@ -188,7 +275,7 @@ namespace utils {
             return false;
         }
 
-        static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host& host, Port& port) {
+        static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host* host, Port* port) {
             auto obj = new_from_global_heap<WaitObject>();
             if (!obj) {
                 err = no_resource;
@@ -202,10 +289,20 @@ namespace utils {
             obj->hint.ai_protocol = addr.proto;
             obj->hint.ai_flags = addr.flag;
             obj->cb.ar_request = &obj->hint;
-            obj->host = std::move(host);
-            obj->port = std::move(port);
-            obj->cb.ar_name = obj->host.c_str();
-            obj->cb.ar_service = obj->port.c_str();
+            if (host) {
+                obj->host = std::move(*host);
+                obj->cb.ar_name = obj->host.c_str();
+            }
+            else {
+                obj->cb.ar_name = nullptr;
+            }
+            if (port) {
+                obj->port = std::move(*port);
+                obj->cb.ar_service = obj->port.c_str();
+            }
+            else {
+                obj->cb.ar_service = nullptr;
+            }
             obj->cb.ar_result = nullptr;
             obj->sig.sigev_notify = SIGEV_NONE;
             gaicb* list[1] = {&obj->cb};
@@ -232,6 +329,19 @@ namespace utils {
             return false;
         }
 
+        bool WaitAddrInfo::cancel() {
+            if (!opt) {
+                err = no_resource;
+                return false;
+            }
+            auto res = static_cast<WaitObject*>(opt)->plt_cancel();
+            if (res != cancel_ok) {
+                err = res;
+                return false;
+            }
+            return true;
+        }
+
         WaitAddrInfo::~WaitAddrInfo() {
             if (opt) {
                 auto obj = static_cast<WaitObject*>(opt);
@@ -239,7 +349,7 @@ namespace utils {
             }
         }
 
-        dll_internal(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port) {
+        dnet_dll_internal(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port) {
             if (!init_sockdl()) {
                 return {
                     nullptr,
@@ -248,14 +358,41 @@ namespace utils {
             }
             Host host{};
             Port port_{};
-            utf::convert(helper::SizedView(addr.hostname, addr.namelen), host);
-            utf::convert(port, port_);
+            if (addr.hostname) {
+                utf::convert(helper::SizedView(addr.hostname, addr.namelen), host);
+            }
+            if (port) {
+                utf::convert(port, port_);
+            }
             int err = 0;
-            auto obj = platform_resolve_address(addr, err, host, port_);
+            auto obj = platform_resolve_address(addr, err, addr.hostname ? &host : nullptr, port ? &port_ : nullptr);
             if (!obj) {
                 return {nullptr, err};
             }
             return {obj, 0};
+        }
+
+        dnet_dll_internal(WaitAddrInfo) get_self_server_address(const SockAddr& addr, const char* port) {
+            auto hint = addr;
+            hint.hostname = nullptr;
+            hint.namelen = 0;
+            hint.flag |= AI_PASSIVE;
+            return resolve_address(hint, port);
+        }
+
+        dnet_dll_export(WaitAddrInfo) get_self_host_address(const SockAddr& addr, const char* port) {
+            if (!init_sockdl()) {
+                return {nullptr, libload_failed};
+            }
+            char host[256]{0};
+            auto err = socdl.gethostname_(host, sizeof(host));
+            if (err != 0) {
+                return {nullptr, (int)get_error()};
+            }
+            auto hint = addr;
+            hint.hostname = host;
+            hint.namelen = utils::strlen(host);
+            return resolve_address(hint, port);
         }
     }  // namespace dnet
 }  // namespace utils

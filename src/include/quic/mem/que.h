@@ -246,6 +246,37 @@ namespace utils {
                 }
             };
 
+            template <class T>
+            struct linkq_iterator {
+               private:
+                LinkNode<T>* node = nullptr;
+                template <class T_, class Stock>
+                friend struct LinkQue;
+                constexpr linkq_iterator(LinkNode<T>* q)
+                    : node(q) {}
+
+               public:
+                constexpr linkq_iterator() = default;
+                T& operator*() {
+                    return node->value;
+                }
+
+                linkq_iterator& operator++() {
+                    node = node->next;
+                    return *this;
+                }
+
+                linkq_iterator operator++(int) {
+                    auto n = node;
+                    node = node->next;
+                    return linkq_iterator(n);
+                }
+
+                constexpr bool operator==(const linkq_iterator& it) const {
+                    return node == it.node;
+                }
+            };
+
             template <class T, class Stock = StockNode<T, std::recursive_mutex>>
             struct LinkQue {
                 // allocated stcok and lock
@@ -369,11 +400,11 @@ namespace utils {
                     for_each_nlock(callback);
                 }
 
-                tsize rem_q_nlock(auto&& should_remove) {
+                tsize rem_q_node_nlock(auto&& should_remove) {
                     LinkNode<T>* prev = nullptr;
                     tsize count = 0;
                     for (LinkNode<T>* s = first; s;) {
-                        if (should_remove(s->value)) {
+                        if (should_remove(s)) {
                             LinkNode<T>* next = s->next;
                             s->next = nullptr;
                             if (prev) {
@@ -403,6 +434,12 @@ namespace utils {
                         }
                     }
                     return count;
+                }
+
+                tsize rem_q_nlock(auto&& should_remove) {
+                    return rem_q_node_nlock([&](LinkNode<T>* node) {
+                        return should_remove(node->value);
+                    });
                 }
 
                 tsize rem_q(auto&& should_remove) {
@@ -512,6 +549,39 @@ namespace utils {
                         al->deallocate(s);
                         s = n;
                     }
+                }
+
+                linkq_iterator<T> begin() {
+                    return linkq_iterator(first);
+                }
+
+                linkq_iterator<T> end() const {
+                    return linkq_iterator<T>(nullptr);
+                }
+
+                bool push_back(T&& k) {
+                    return en_q(std::forward<decltype(k)>(k));
+                }
+
+                bool pop_front() {
+                    T t;
+                    return de_q(t);
+                }
+
+                T& front() {
+                    return first->value;
+                }
+
+                T& back() {
+                    return last->value;
+                }
+
+                size_t size() const {
+                    size_t v = 0;
+                    for (auto n = first; n; n = n->next) {
+                        v++;
+                    }
+                    return v;
                 }
             };
         }  // namespace mem

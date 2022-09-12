@@ -87,4 +87,6 @@ int main() {
     assert(res);
     while (!dnet::wait_event(~0)) {
     }
+    return 0;
+    holder.sock.read_async([](auto&&) {}, std::move(holder), [](auto& c) -> dnet::Socket& { return c.sock; }, [](auto&&...) {});
 }

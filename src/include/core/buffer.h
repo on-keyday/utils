@@ -14,17 +14,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include "strlen.h"
 
 namespace utils {
-
-    template <class C>
-    constexpr size_t strlen(C* ptr) {
-        assert(ptr != nullptr);
-        size_t length = 0;
-        for (; ptr[length]; length++)
-            ;
-        return length;
-    }
 
     template <class Seq, bool is_ptr = std::is_pointer_v<std::decay_t<Seq>>>
     struct Buffer {

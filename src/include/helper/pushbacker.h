@@ -77,10 +77,43 @@ namespace utils {
             IPushBacker(T& pb)
                 : ptr(std::addressof(pb)), push_back_(push_back_fn<T>) {}
 
-            void push_back(std::uint8_t c) {
+            constexpr void push_back(std::uint8_t c) {
                 push_back_(ptr, c);
             }
         };
 
+        template <class Char>
+        struct CharVecPushbacker {
+            Char* text = nullptr;
+            size_t size_ = 0;
+            size_t cap = 0;
+            bool overflow = false;
+
+            constexpr bool full() const {
+                return size_ >= cap;
+            }
+            constexpr void push_back(Char c) {
+                if (full()) {
+                    overflow = true;
+                    return;
+                }
+                text[size_] = c;
+                size_++;
+            }
+
+            constexpr size_t size() const {
+                return size_;
+            }
+
+            constexpr const Char& operator[](size_t i) const {
+                return text[i];
+            }
+
+            constexpr CharVecPushbacker(Char* t, size_t cap)
+                : text(t), size_(0), cap(cap) {}
+
+            constexpr CharVecPushbacker(Char* t, size_t size, size_t cap)
+                : text(t), size_(size), cap(cap) {}
+        };
     }  // namespace helper
 }  // namespace utils

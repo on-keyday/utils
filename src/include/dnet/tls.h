@@ -51,41 +51,35 @@ namespace utils {
         };
 
         // TLS is wrapper class of OpenSSL/BoringSSL library
-        struct class_export TLS {
+        struct dnet_class_export TLS {
            private:
             int err;
             size_t prevred;
             void* opt;
-            void (*gc_)(void*);
-            constexpr TLS(void* o, void (*gc)(void*))
-                : opt(o), gc_(gc), err(0), prevred(0) {}
-            friend dll_export(TLS) create_tls();
-            friend dll_export(TLS) create_tls_from(const TLS& tls);
+            // void (*gc_)(void*);
+            constexpr TLS(void* o)
+                : opt(o), err(0), prevred(0) {}
+            friend dnet_dll_export(TLS) create_tls();
+            friend dnet_dll_export(TLS) create_tls_from(const TLS& tls);
             constexpr TLS(int err)
-                : opt(nullptr), gc_(nullptr), err(err), prevred(0) {}
+                : opt(nullptr), err(err), prevred(0) {}
 
            public:
             constexpr TLS()
-                : TLS(nullptr, nullptr) {}
+                : TLS(nullptr) {}
             constexpr TLS(TLS&& tls)
                 : opt(std::exchange(tls.opt, nullptr)),
-                  gc_(std::exchange(tls.gc_, nullptr)),
                   err(std::exchange(tls.err, 0)) {}
-            constexpr TLS& operator=(TLS&& tls) {
+            TLS& operator=(TLS&& tls) {
                 if (this == &tls) {
                     return *this;
                 }
                 this->~TLS();
                 opt = std::exchange(tls.opt, nullptr);
-                gc_ = std::exchange(tls.gc_, nullptr);
                 err = std::exchange(tls.err, 0);
                 return *this;
             }
-            constexpr ~TLS() {
-                if (gc_) {
-                    gc_(opt);
-                }
-            }
+            ~TLS();
             constexpr operator bool() const {
                 return opt != nullptr;
             }
@@ -152,11 +146,11 @@ namespace utils {
             }
         };
 
-        dll_export(void) set_libssl(const char* path);
-        dll_export(void) set_libcrypto(const char* path);
-        dll_export(TLS) create_tls();
-        dll_export(TLS) create_tls_from(const TLS& tls);
-        dll_export(bool) load_crypto();
-        dll_export(bool) load_ssl();
+        dnet_dll_export(void) set_libssl(const char* path);
+        dnet_dll_export(void) set_libcrypto(const char* path);
+        dnet_dll_export(TLS) create_tls();
+        dnet_dll_export(TLS) create_tls_from(const TLS& tls);
+        dnet_dll_export(bool) load_crypto();
+        dnet_dll_export(bool) load_ssl();
     }  // namespace dnet
 }  // namespace utils

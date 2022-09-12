@@ -6,6 +6,8 @@
 */
 
 #pragma once
+#include "dllh.h"
+#include "../heap.h"
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -42,21 +44,31 @@ namespace utils {
         }
 #endif
 
+        Allocs* get_alloc();
+
         template <class T>
         T* new_from_global_heap() {
-            auto ptr = simple_heap_alloc(sizeof(T));
+            auto ptr = get_alloc()->alloc_ptr(sizeof(T));
             if (!ptr) {
                 return nullptr;
             }
             return new (ptr) T{};
         }
 
+        inline void* get_rawbuf(size_t sz) {
+            return get_alloc()->alloc_ptr(sz);
+        }
+
+        inline void free_rawbuf(void* p) {
+            get_alloc()->free_ptr(p);
+        }
+
         inline char* get_cvec(size_t sz) {
-            return static_cast<char*>(simple_heap_alloc(sz));
+            return static_cast<char*>(get_rawbuf(sz));
         }
 
         inline bool resize_cvec(char*& p, size_t size) {
-            auto c = simple_heap_realloc(p, size);
+            auto c = get_alloc()->realloc_ptr(p, size);
             if (c != nullptr) {
                 p = static_cast<char*>(c);
             }
@@ -64,7 +76,7 @@ namespace utils {
         }
 
         inline void free_cvec(char* p) {
-            simple_heap_free(p);
+            free_rawbuf(p);
         }
 
         template <class T>
@@ -73,7 +85,7 @@ namespace utils {
                 return;
             }
             p->~T();
-            simple_heap_free(p);
+            get_alloc()->free_ptr(p);
         }
 
         inline auto get_error() {

@@ -15,12 +15,12 @@
 
 namespace utils {
     namespace dnet {
-        dll_internal(bool) load_crypto() {
+        dnet_dll_internal(bool) load_crypto() {
             static bool res = ssldl.load_crypto_common();
             return res;
         }
 
-        dll_internal(bool) load_ssl() {
+        dnet_dll_internal(bool) load_ssl() {
             static bool res = load_crypto() && ssldl.load_ssl_common();
             return res;
         }
@@ -61,13 +61,13 @@ namespace utils {
                     ssldl.BIO_free_all_(wbio);
                 }
             }
-
-            static void delete_context(void* p) {
-                delete_with_global_heap(static_cast<SSLContexts*>(p));
-            }
         };
 
-        dll_internal(TLS) create_tls() {
+        TLS::~TLS() {
+            delete_with_global_heap(static_cast<SSLContexts*>(opt));
+        }
+
+        dnet_dll_internal(TLS) create_tls() {
             if (!load_ssl()) {
                 return {libload_failed};
             }
@@ -89,13 +89,10 @@ namespace utils {
             }
             tls->sslctx = ctx;
             rctx.t = nullptr;
-            return {
-                tls,
-                SSLContexts::delete_context,
-            };
+            return {tls};
         }
 
-        dll_export(TLS) create_tls_from(const TLS& tls) {
+        dnet_dll_export(TLS) create_tls_from(const TLS& tls) {
             if (!load_ssl()) {
                 return {no_resource};
             }
@@ -115,10 +112,7 @@ namespace utils {
                 return {no_resource};
             }
             new_tls->sslctx = ctx->sslctx;
-            return {
-                new_tls,
-                SSLContexts::delete_context,
-            };
+            return {new_tls};
         }
 
         bool check_opt(void* opt, int& err, auto&& callback) {
@@ -467,11 +461,11 @@ namespace utils {
             ssldl.ERR_print_errors_cb_(cb, user);
         }
 
-        dll_internal(void) set_libssl(const char* path) {
+        dnet_dll_internal(void) set_libssl(const char* path) {
             ssldl.set_libssl(path);
         }
 
-        dll_internal(void) set_libcrypto(const char* path) {
+        dnet_dll_internal(void) set_libcrypto(const char* path) {
             ssldl.set_libcrypto(path);
         }
     }  // namespace dnet

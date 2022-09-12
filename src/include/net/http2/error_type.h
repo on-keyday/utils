@@ -81,6 +81,7 @@ namespace utils {
                 goaway = 0x7,
                 window_update = 0x8,
                 continuous = 0x9,
+                invalid = 0xff,
             };
 
             BEGIN_ENUM_STRING_MSG(FrameType, frame_name)

@@ -65,13 +65,13 @@ namespace utils {
                         return nullptr;
                     }
                     auto vec = static_cast<T*>(ptr);
+                    for (tsize i = 0; i < newlen; i++) {
+                        new (std::addressof(vec[i])) T();
+                    }
                     auto mi = curlen < newlen ? curlen : newlen;
                     auto ma = newlen < curlen ? curlen : newlen;
                     for (tsize i = 0; i < mi; i++) {
                         vec[i] = std::move(current[i]);
-                    }
-                    for (tsize i = mi; i < newlen; i++) {
-                        new (std::addressof(vec[i])) T();
                     }
                     for (tsize i = 0; i < curlen; i++) {
                         current[i].~T();

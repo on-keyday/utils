@@ -172,6 +172,16 @@ namespace utils {
             return res == 0;
         }
 
+        bool Socket::set_reuse_addr(bool resue) {
+            int yes = resue ? 1 : 0;
+            return set_option(SOL_SOCKET, SO_REUSEADDR, yes);
+        }
+
+        bool Socket::set_ipv6only(bool only) {
+            int yes = only ? 1 : 0;
+            return set_option(IPPROTO_IPV6, IPV6_V6ONLY, yes);
+        }
+
         bool Socket::bind(const void* addr, size_t len) {
             auto res = socdl.bind_(sock, static_cast<const sockaddr*>(addr), len);
             if (res < 0) {
@@ -188,6 +198,10 @@ namespace utils {
             return res == 0;
         }
 
+        Socket make_socket(std::uintptr_t uptr) {
+            return Socket(uptr);
+        }
+
         bool Socket::accept(Socket& to, void* addr, int* addrlen) {
             if (to.sock != ~0) {
                 err = non_invalid_socket;
@@ -198,13 +212,14 @@ namespace utils {
                 return false;
             }
             socklen_t len = *addrlen;
-            auto scok = socdl.accept_(sock, static_cast<sockaddr*>(addr), &len);
-            if (sock == -1) {
+            auto new_sock = socdl.accept_(sock, static_cast<sockaddr*>(addr), &len);
+            if (new_sock == -1) {
                 err = get_error();
                 return false;
             }
             *addrlen = len;
-            to = Socket(sock);
+            set_nonblock(new_sock);
+            to = make_socket(std::uintptr_t(new_sock));
             return true;
         }
 
@@ -226,11 +241,7 @@ namespace utils {
             return result;
         }
 
-        Socket make_socket(std::uintptr_t uptr) {
-            return Socket(uptr);
-        }
-
-        dll_internal(Socket) make_socket(int address_family, int socket_mode, int protocol) {
+        dnet_dll_internal(Socket) make_socket(int address_family, int socket_mode, int protocol) {
             if (!init_sockdl()) {
                 return make_socket(~0);
             }
@@ -327,8 +338,16 @@ namespace utils {
             return true;
         }
 
-        dll_internal(int) wait_event(std::uint32_t time) {
+        dnet_dll_internal(int) wait_event(std::uint32_t time) {
             return wait_event_plt(time);
+        }
+
+        void* Socket::internal_alloc(size_t s) {
+            return get_rawbuf(s);
+        }
+
+        void Socket::internal_free(void* p) {
+            free_rawbuf(p);
         }
 
     }  // namespace dnet

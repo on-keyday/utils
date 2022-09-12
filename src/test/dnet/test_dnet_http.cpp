@@ -5,56 +5,77 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <dnet/http.h>
+#include <dnet/httproundtrip.h>
 #include <map>
 #include <string>
 #include <testutil/timer.h>
 #include <wrap/cout.h>
 #include <vector>
+#include <net_util/uri_parse.h>
 using namespace utils;
 
-void test_host(const char* host) {
+template <size_t len>
+void test_host(uri::URIFixed<char, len> uri) {
     auto& cout = wrap::cout_wrap();
-    dnet::HTTP http;
+    dnet::HTTPRoundTrip http;
     test::Timer timer;
     std::vector<std::pair<const char*, std::chrono::milliseconds>> deltas;
     auto write_delta = [&](auto desc) {
         deltas.push_back({desc, timer.delta()});
     };
     auto flush_delta = [&] {
-        cout << host << "\n";
+        cout << uri.hostname << "\n";
+        cout << http.conn.addr.string() << "\n";
         for (auto& delta : deltas) {
             cout << delta.first << ": " << delta.second.count() << "\n";
         }
     };
-
-    http.start_resolve(host, "443");
-    while (!http.wait_for_resolve(10)) {
+    const char* scheme = nullptr;
+    if (helper::equal(uri.scheme, "http:")) {
+        scheme = "http";
+    }
+    else if (helper::equal(uri.scheme, "https:")) {
+        scheme = "https";
+    }
+    assert(scheme);
+    const char* port = nullptr;
+    if (uri.port.size()) {
+        port = uri.port.c_str();
+    }
+    else {
+        if (helper::equal(scheme, "http")) {
+            port = "80";
+        }
+        else {
+            port = "443";
+        }
+    }
+    http.conn.start_resolve(uri.hostname.c_str(), port);
+    while (!http.conn.wait_for_resolve(10)) {
         assert(!http.failed());
     }
     write_delta("resolve");
-    http.start_connect();
-    while (!http.wait_for_connect(1, 1)) {
+    http.conn.start_connect();
+    while (!http.conn.wait_for_connect(1, 1)) {
         assert(!http.failed());
     }
     write_delta("connect");
-    http.set_cert("src/test/net/cacert.pem");
-    http.start_tls(host);
+    http.conn.set_cert("src/test/net/cacert.pem");
+    http.start_tls(uri.hostname.c_str());
     write_delta("tls_start");
-    while (!http.wait_for_tls()) {
+    while (!http.conn.wait_for_tls()) {
         assert(!http.failed());
     }
     write_delta("tls");
     std::map<std::string, std::string> h;
-    h["Host"] = host;
-    auto res = http.set_header(h);
-    assert(res);
-    http.request("GET", "/", nullptr, 0);
-    while (!http.wait_for_request_done()) {
+    h["Host"] = uri.hostname.c_str();
+    http.request("GET", "/", h);
+    http.start_sending();
+    while (!http.wait_for_sending_done()) {
         assert(!http.failed());
     }
     write_delta("request");
-    while (!http.wait_for_response()) {
+    while (!http.wait_for_receiving()) {
         if (http.failed()) {
             assert(!http.failed());
         }
@@ -70,13 +91,36 @@ void test_dnet_http() {
 #endif
     auto res = dnet::load_ssl();
     assert(res);
-    test_host("docs.microsoft.com");
-    test_host("www.google.com");
-    test_host("www.kantei.go.jp");
-    test_host("syosetu.com");
-    test_host("stackoverflow.com");
+    test_host(uri::fixed("https://docs.microsoft.com/"));
+    test_host(uri::fixed("https://www.google.com/"));
+    test_host(uri::fixed("https://kantei.go.jp/"));
+    test_host(uri::fixed("https://syosetu.com/"));
+    test_host(uri::fixed("https://stackoverflow.com/"));
+}
+
+void test_uri_parse() {
+    constexpr auto test_parse1 = utils::uri::fixed("file:///C:/user/pc/workspace/yes.json");
+    constexpr auto test_ok1 =
+        utils::helper::equal(test_parse1.scheme, "file:") &&
+        utils::helper::equal(test_parse1.authority, "") &&
+        utils::helper::equal(test_parse1.path, "/C:/user/pc/workspace/yes.json");
+    constexpr auto test_parse2 = utils::uri::fixed(u8"https://Go言語.com:443/man?q=fmt.Printf#");
+    constexpr auto test_ok2 =
+        utils::helper::equal(test_parse2.scheme, "https:") &&
+        utils::helper::equal(test_parse2.authority, u8"Go言語.com:443") &&
+        utils::helper::equal(test_parse2.hostname, u8"Go言語.com") &&
+        utils::helper::equal(test_parse2.port, ":443") &&
+        utils::helper::equal(test_parse2.path, "/man") &&
+        utils::helper::equal(test_parse2.query, "?q=fmt.Printf") &&
+        utils::helper::equal(test_parse2.fragment, "#");
+    constexpr auto test_parse3 = utils::uri::fixed(R"a(javascript:alert("function"))a");
+    constexpr auto test_ok3 =
+        utils::helper::equal(test_parse3.scheme, "javascript:") &&
+        utils::helper::equal(test_parse3.path, R"(alert("function"))");
+    static_assert(test_ok1 && test_ok2 && test_ok3);
 }
 
 int main() {
     test_dnet_http();
+    test_uri_parse();
 }
