@@ -111,7 +111,7 @@ namespace utils {
             else {
                 prevred = res;
             }
-            return res >= 0;
+            return res > 0;
         }
 
         bool Socket::writeto(const void* addr, int addrlen, const void* data, size_t len, int flag) {

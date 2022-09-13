@@ -153,14 +153,14 @@ namespace utils {
             }
             head->method = mode;
             if (head->start) {
-                head->start(head,sock);
+                head->start(head, sock);
             }
             auto cancel = [&] {
                 if (head->canceled) {
                     head->canceled(head);
                 }
             };
-            constexpr auto edge_trigger = EPOLLONESHOT | EPOLLET;
+            constexpr auto edge_trigger = EPOLLONESHOT | EPOLLET | EPOLLEXCLUSIVE;
             if (mode == AsyncMethod::am_recv || mode == AsyncMethod::am_recvfrom ||
                 mode == AsyncMethod::am_accept) {
                 if (!watch_event(sock, EPOLLIN | edge_trigger, ptr)) {

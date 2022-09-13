@@ -377,9 +377,12 @@ namespace utils {
             // if not valid header begining or not vaild byte appears
             // this function returns 0
             // otherwise this function returns header length current available
-            size_t strict_check_header(bool request_header = true) {
+            size_t strict_check_header(bool request_header = true, bool* complete_header = nullptr) {
                 bool beg = false;
                 size_t len = 0;
+                if (complete_header) {
+                    *complete_header = false;
+                }
                 if (request_header) {
                     len = check_request(&beg);
                 }
@@ -393,6 +396,11 @@ namespace utils {
                 BorrowString _{input, in};
                 if (len == 0) {
                     len = in.size();
+                }
+                else {
+                    if (complete_header) {
+                        *complete_header = true;
+                    }
                 }
                 for (size_t i = 0; i < len; i++) {
                     if (in[i] == '\r' || in[i] == '\n' || in[i] == '\t') {

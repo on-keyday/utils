@@ -34,16 +34,16 @@ namespace utils {
             }
 
             void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as) {
-                bool beg = false;
-                if (!req.http.check_request(&beg)) {
-                    if (!beg) {
-                        req.client.sock.shutdown();
-                        const char* data;
-                        size_t len;
-                        req.http.borrow_input(data, len);
-                        as.log(debug, "invalid request received", req.client, data, len);
-                        return;  // discard
-                    }
+                bool complete = false;
+                if (!req.http.strict_check_header(true, &complete)) {
+                    req.client.sock.shutdown();
+                    const char* data;
+                    size_t len;
+                    req.http.borrow_input(data, len);
+                    as.log(debug, "invalid request received", req.client, data, len);
+                    return;  // discard
+                }
+                else if (!complete) {
                     call_read_async(serv, req, as);
                     return;
                 }
