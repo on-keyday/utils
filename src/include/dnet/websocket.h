@@ -57,8 +57,8 @@ namespace utils {
                 const byte first_byte = opcode | finmask;
                 int len = 0;
                 byte lens[9]{};
-                auto part = [&](int i) {
-                    return byte(std::uint64_t(frame.len >> (8 * (7 - i))) & 0xff);
+                auto part = [&](int i, int b = 8) {
+                    return byte(std::uint64_t(frame.len >> (8 * (b - 1 - i))) & 0xff);
                 };
                 if (frame.len <= 125) {
                     lens[0] = byte(frame.len);
@@ -66,8 +66,8 @@ namespace utils {
                 }
                 else if (frame.len <= 0xffff) {
                     lens[0] = 126;
-                    lens[1] = part(0);
-                    lens[2] = part(1);
+                    lens[1] = part(0, 2);
+                    lens[2] = part(1, 2);
                     len = 3;
                 }
                 else {
@@ -285,6 +285,9 @@ namespace utils {
                 if (!server) {
                     frame.masked = true;
                     frame.maskkey = genmask();
+                }
+                else {
+                    frame.masked = false;
                 }
                 frame.data = data;
                 frame.len = len;
