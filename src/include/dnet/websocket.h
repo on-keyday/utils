@@ -133,7 +133,7 @@ namespace utils {
                     if (size < red + 2 + 2) {
                         return false;
                     }
-                    frame.len = std::uint64_t(byte(view[0])) << 8 | byte(view[1]);
+                    frame.len = std::uint64_t(byte(view[red + 2 + 0])) << 8 | byte(view[red + 2 + 1]);
                     offset = 4;
                 }
                 else {
