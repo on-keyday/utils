@@ -46,7 +46,7 @@ namespace utils {
                         res = 0;
                     }
                     if (do_completion) {
-                        cmp.user_completion(user, ebuf.buf, res, ebuf.size);
+                        cmp.user_completion(user, ebuf.buf, res, ebuf.size, get_error());
                     }
                 }
                 else if (h->method == am_recvfrom) {
@@ -56,7 +56,7 @@ namespace utils {
                         res = 0;  // ignore error
                     }
                     if (do_completion) {
-                        cmp.user_completion_from(user, ebuf.buf, res, ebuf.size, &buf->storage, len);
+                        cmp.user_completion_from(user, ebuf.buf, res, ebuf.size, &buf->storage, len, get_error());
                     }
                 }
                 else if (h->method == am_accept) {
@@ -64,12 +64,12 @@ namespace utils {
                     res = socdl.accept_(buf->sock, storage, &len);
                     set_nonblock(res);
                     if (do_completion) {
-                        cmp.user_completion_accept(user, make_socket(std::uintptr_t(res)));
+                        cmp.user_completion_accept(user, make_socket(std::uintptr_t(res)), get_error());
                     }
                 }
                 else if (h->method == am_connect) {
                     if (do_completion) {
-                        cmp.user_completion_connect(user);
+                        cmp.user_completion_connect(user, get_error());
                     }
                 }
                 buf->decref();

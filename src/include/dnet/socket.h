@@ -53,6 +53,9 @@ namespace utils {
             // if you use object as shared_ptr
             // you should decrement count here
             void (*canceled)(AsyncHead* head);
+            // handling is current handling socket
+            // you shouldn't use this; this is internal parameter
+            std::uintptr_t handling;
         };
 
         // wait_event waits io completion until time passed
@@ -92,17 +95,17 @@ namespace utils {
             bool writeto(const void* addr, int addrlen, const void* data, size_t len, int flag = 0);
             bool readfrom(void* addr, int* addrlen, void* data, size_t len, int flag = 0);
             [[nodiscard]] bool accept(Socket& to, void* addr, int* addrlen);
-            using completion_accept_t = void (*)(void* user, Socket&& sock);
+            using completion_accept_t = void (*)(void* user, Socket&& sock, int err);
             bool accept_async(completion_accept_t completion, void* user, void* data = nullptr, size_t len = 0);
-            using completion_connect_t = void (*)(void* user);
+            using completion_connect_t = void (*)(void* user, int err);
             bool connect_async(completion_connect_t completion, void* user, const void* addr, size_t len);
             bool bind(const void* addr /* = sockaddr*/, size_t len);
             bool listen(int back = 10);
             bool wait_readable(std::uint32_t sec, std::uint32_t usec);
             bool wait_writable(std::uint32_t sec, std::uint32_t usec);
 
-            using completion_t = void (*)(void* user, void* data, size_t len, size_t bufmax);
-            using completion_from_t = void (*)(void* user, void* data, size_t len, size_t bufmax, void* addr, size_t addrlen);
+            using completion_t = void (*)(void* user, void* data, size_t len, size_t bufmax, int err);
+            using completion_from_t = void (*)(void* user, void* data, size_t len, size_t bufmax, void* addr, size_t addrlen, int err);
             // read_async reads socket async
             // if custom opt value is set
             // argument will be ignored
@@ -163,6 +166,9 @@ namespace utils {
             bool get_option(int layer, int opt, void* buf, size_t size);
             bool set_option(int layer, int opt, const void* buf, size_t size);
             friend Socket make_socket(std::uintptr_t uptr);
+            constexpr void set_err(int e) {
+                err = e;
+            }
 
            public:
             constexpr Socket()
@@ -214,7 +220,7 @@ namespace utils {
                     std::move(add_data),
                     std::move(object),
                 };
-                auto cb = [](void* pobj, void* data, size_t size, size_t buf) {
+                auto cb = [](void* pobj, void* data, size_t size, size_t buf, int err) {
                     ObjectHolder* obj = static_cast<ObjectHolder*>(pobj);
                     auto pass = std::move(obj->obj);
                     struct R {
@@ -224,6 +230,7 @@ namespace utils {
                             internal_free(h);
                         };
                     } releaser{obj};
+                    obj->get(pass).set_err(err);
                     obj->add(pass, static_cast<const char*>(data), size);
                     if (size == buf) {
                         Socket& sock = obj->get(pass);
@@ -259,7 +266,7 @@ namespace utils {
                     std::move(get_sock),
                     std::move(object),
                 };
-                auto cb = [](void* pobj) {
+                auto cb = [](void* pobj, int err) {
                     ObjectHolder* obj = static_cast<ObjectHolder*>(pobj);
                     auto pass = std::move(obj->obj);
                     struct R {
@@ -269,6 +276,7 @@ namespace utils {
                             internal_free(h);
                         };
                     } releaser{obj};
+                    obj->get(pass).set_err(err);
                     obj->fn(std::move(pass));
                 };
                 if (!obj->get(obj->obj).connect_async(cb, obj, addr, addrlen)) {

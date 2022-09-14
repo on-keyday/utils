@@ -279,9 +279,13 @@ namespace utils {
                         buf->ebuf.~EasyBuffer();
                         buf->ebuf.buf = (char*)data;
                         buf->ebuf.size = datalen;
+                        buf->ebuf.should_del = false;
                     }
                     else {
-                        buf->ebuf = {2048};
+                        if (!buf->ebuf.should_del || !buf->ebuf.buf) {
+                            buf->ebuf.~EasyBuffer();
+                            buf->ebuf = {2048};
+                        }
                         if (!buf->ebuf.buf) {
                             err = no_resource;
                             return false;

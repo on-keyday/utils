@@ -63,7 +63,7 @@ int main() {
         return -1;
     }
     SockHolder holder{std::move(sock)};
-    auto completion = [](void* user, void* data, size_t len, size_t bufmax) {
+    auto completion = [](void* user, void* data, size_t len, size_t bufmax, int err) {
         auto h = static_cast<SockHolder*>(user);
         h->str.append((const char*)data, len);
         auto read = [&] {

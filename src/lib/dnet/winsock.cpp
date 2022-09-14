@@ -61,18 +61,23 @@ namespace utils {
                     auto mode = buf->common.head.method;
                     auto user = buf->common.user;
                     auto& ebuf = buf->common.ebuf;
+                    DWORD tmp;
+                    int err = 0;
+                    if (!GetOverlappedResult((HANDLE)buf->common.head.handling, &buf->common.ol, &tmp, false)) {
+                        err = get_error();
+                    }
                     if (mode == am_recvfrom) {
                         comp.user_completion_from(user, ebuf.buf, len,
-                                                  ebuf.size, &buf->storage, buf->stlen);
+                                                  ebuf.size, &buf->storage, buf->stlen, err);
                     }
                     else if (mode == am_recv) {
-                        comp.user_completion(user, ebuf.buf, len, ebuf.size);
+                        comp.user_completion(user, ebuf.buf, len, ebuf.size, err);
                     }
                     else if (mode == am_accept) {
-                        comp.user_completion_accept(user, make_socket(buf->tmpsock));
+                        comp.user_completion_accept(user, make_socket(buf->tmpsock), err);
                     }
                     else if (mode == am_connect) {
-                        comp.user_completion_connect(user);
+                        comp.user_completion_connect(user, err);
                     }
                 }
                 buf->decref();
@@ -201,6 +206,7 @@ namespace utils {
             }
             int res = -1;
             DWORD trsf = 0;
+            head->handling = sock;
             if (mode == am_recvfrom) {
                 res = socdl.WSARecvFrom_(sock, needs.buf, needs.bufcount, &trsf, needs.flags,
                                          reinterpret_cast<sockaddr*>(needs.storage), needs.stlen, needs.ol, nullptr);
@@ -243,6 +249,7 @@ namespace utils {
             if (res != 0) {
                 res = get_error();
                 if (res != WSA_IO_PENDING) {
+                    head->handling = ~0;
                     if (head->canceled) {
                         head->canceled(head);
                     }
