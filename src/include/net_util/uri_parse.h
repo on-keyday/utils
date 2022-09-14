@@ -337,10 +337,10 @@ namespace utils {
         constexpr void tidy(URI& uri, bool pass_mode = true) {
             if (pass_mode) {
                 if (helper::ends_with(uri.scheme, ":")) {
-                    uri.pop_back();
+                    uri.scheme.pop_back();
                 }
                 if (helper::starts_with(uri.port, ":")) {
-                    uri.erase(0, 1);
+                    uri.scheme.erase(0, 1);
                 }
             }
             else {
@@ -348,7 +348,7 @@ namespace utils {
                     uri.scheme.push_back(colon);
                 }
                 if (!helper::equal(uri.port, "") && !helper::starts_with(uri.port, ":")) {
-                    uri.port.insert(0, colon);
+                    uri.port.insert(uri.port.begin(), colon);
                 }
             }
         }

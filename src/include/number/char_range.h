@@ -75,6 +75,10 @@ namespace utils {
             return is_radix_char(c, 37);
         }
 
+        constexpr bool is_alpha(std::uint8_t c) {
+            return is_alnum(c) && !is_digit(c);
+        }
+
         template <class C>
         constexpr bool is_control_char(C&& c) {
             return c >= 0 && c <= 0x20;

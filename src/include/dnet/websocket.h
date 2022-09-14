@@ -156,7 +156,7 @@ namespace utils {
                         return false;
                     }
                     auto shift = [&](auto i) -> std::uint32_t {
-                        return std::uint32_t(byte(view[red + offset + 0])) << (8 * (3 - i));
+                        return std::uint32_t(byte(view[red + offset + i])) << (8 * (3 - i));
                     };
                     frame.maskkey = shift(0) | shift(1) | shift(2) | shift(3);
                     offset += 4;
@@ -257,7 +257,7 @@ namespace utils {
                 if (frame.masked) {
                     websocket::tmp_decode_payload(
                         in.text() + red - frame.len,
-                        frame.len, frame.maskkey, [&] {
+                        frame.len, frame.maskkey, [&](auto dec, auto len) {
                             callback(frame);
                         });
                 }
@@ -268,6 +268,15 @@ namespace utils {
                     in.shift(red);
                 }
                 return true;
+            }
+
+            // read_frames call read_frame until blocked and consumes
+            size_t read_frames(auto&& callback) {
+                size_t red = 0;
+                while (read_frame(callback)) {
+                    red++;
+                }
+                return red;
             }
 
             bool write_data(websocket::FrameType type, const char* data, size_t len, bool fin = true) {
@@ -289,6 +298,10 @@ namespace utils {
 
             bool write_text(const char* data, size_t len, bool fin = true) {
                 return write_data(websocket::text, data, len, fin);
+            }
+
+            bool write_text(const char* data, bool fin = true) {
+                return write_text(data, data ? utils::strlen(data) : 0, fin);
             }
 
             bool write_ping(const char* data, size_t len) {
@@ -317,6 +330,10 @@ namespace utils {
                 str.push_back((code)&0xff);
                 helper::append(str, helper::SizedView(phrase, len));
                 return write_close(str.begin(), str.size());
+            }
+
+            void set_server(bool is_server = true) {
+                server = is_server;
             }
         };
     }  // namespace dnet

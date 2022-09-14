@@ -30,6 +30,8 @@ namespace utils {
                 std::atomic_uint32_t current_acceptor_thread;
                 // current waiting IOCP/epoll call count
                 std::atomic_uint32_t waiting_async_read;
+                // current enqueued count
+                std::atomic_uint32_t current_enqued;
                 // total IOCP/epoll call count
                 std::atomic_uint64_t total_async_invocation;
                 // total accept called
@@ -38,6 +40,8 @@ namespace utils {
                 std::atomic_uint64_t total_failed_accept;
                 // total IOCP/epoll call failure
                 std::atomic_uint64_t total_failed_async;
+                // total queued user defined operation
+                std::atomic_uint64_t total_queued;
 
                 // limit maximum thread launchable
                 std::atomic_uint32_t max_handler_thread;
@@ -79,6 +83,11 @@ namespace utils {
                 normal,
             };
 
+            struct Queued {
+                void (*fn)(std::shared_ptr<void>&& ptr, StateContext&&);
+                std::shared_ptr<void> ptr;
+            };
+
             struct dnetserv_class_export State : std::enable_shared_from_this<State> {
                 using log_t = void (*)(log_level, const char* msg, Client&,
                                        const char* data, size_t len);
@@ -87,6 +96,8 @@ namespace utils {
                 Counter count;
                 thread::SendChan<Client> send;
                 thread::RecvChan<Client> recv;
+                thread::SendChan<Queued> enque;
+                thread::RecvChan<Queued> deque;
                 void (*handler)(void*, Client&&, StateContext);
                 void* ctx;
                 log_t log_evt = nullptr;
@@ -102,6 +113,9 @@ namespace utils {
                     auto [w, r] = thread::make_chan<Client>();
                     send = w;
                     recv = r;
+                    auto [eq, dq] = thread::make_chan<Queued>();
+                    enque = eq;
+                    deque = dq;
                     count.waiting_recommend = 3;
                     count.max_handler_thread = 12;
                 }
@@ -172,6 +186,12 @@ namespace utils {
                     }
                     return true;
                 }
+
+                void enque_object(auto fn, auto&& obj) {
+                    count.total_queued++;
+                    count.current_enqued++;
+                    enque << Queued{fn, obj};
+                }
             };
 
             struct StateContext {
@@ -194,6 +214,21 @@ namespace utils {
                     if (l) {
                         l(level, msg, cl, data, len);
                     }
+                }
+
+                void enque_object(auto fn, auto&& obj) {
+                    struct Internal {
+                        std::decay_t<decltype(fn)> fn;
+                        std::remove_cvref_t<decltype(obj)> obj;
+                    };
+                    auto inobj = std::make_shared<Internal>();
+                    inobj->fn = std::forward<decltype(fn)>(fn);
+                    inobj->obj = std::forward<decltype(obj)>(obj);
+                    auto f = [](std::shared_ptr<void>&& obj, StateContext&& st) {
+                        auto in = std::static_pointer_cast<Internal>(obj);
+                        in->fn(std::move(in->obj), std::move(st));
+                    };
+                    s->enque_object(f, std::move(inobj));
                 }
             };
 

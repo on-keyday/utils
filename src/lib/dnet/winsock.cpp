@@ -171,7 +171,15 @@ namespace utils {
             /*for connectex*/
             const void* addr = nullptr, size_t addrlen = 0) {
             if (!register_handle(sock)) {
-                return false;
+                if (sock == ~0) {
+                    return false;  // yes completely wrong
+                }
+                // TODO(on-keyday):
+                // multiple registration is failed with ERROR_INVALID_PARAMETER
+                // should we hold flag of registration?
+                if (get_error() != ERROR_INVALID_PARAMETER) {
+                    return false;
+                }
             }
             AsyncHead* head = static_cast<AsyncHead*>(ptr);
             if (head->reserved != async_reserved || !head->get_ptrs || !head->completion) {

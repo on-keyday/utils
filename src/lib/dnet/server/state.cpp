@@ -18,6 +18,8 @@ namespace utils {
             void State::handler_thread(std::shared_ptr<State> state) {
                 auto recv = state->recv;
                 recv.set_blocking(false);
+                auto deq = state->deque;
+                deq.set_blocking(false);
                 Enter start(state->count.current_handler_thread);
                 std::uint32_t curcount = state->count.current_handler_thread;
                 auto to = curcount;
@@ -28,6 +30,12 @@ namespace utils {
                 while (!state->count.end_flag.test()) {
                     Client cl;
                     wait_event(1);
+                    Queued q;
+                    if (deq >> q) {
+                        state->count.current_enqued--;
+                        Enter active(state->count.current_handling_handler_thread);
+                        q.fn(std::move(q.ptr), StateContext{state});
+                    }
                     auto res = recv >> cl;
                     if (!res) {
                         if (state->count.should_reduce()) {
@@ -65,8 +73,16 @@ namespace utils {
                 if (!listener) {
                     return false;
                 }
+                auto deq = deque;
+                deq.set_blocking(false);
                 while (true) {
                     wait_event(1);
+                    Queued q;
+                    if (deq >> q) {
+                        count.current_enqued--;
+                        Enter active(count.current_handling_handler_thread);
+                        q.fn(std::move(q.ptr), StateContext{shared_from_this()});
+                    }
                     auto handle = [&](Socket& sock, IPText addr, int port) {
                         count.total_accepted++;
                         Enter active(count.current_handling_handler_thread);

@@ -56,6 +56,16 @@ namespace utils {
                 {t.from_json(j)};
             };
 
+            template <class T, class JSON>
+            concept from_json_adl_flag = requires(T t, JSON j) {
+                {from_json(t, j, FromFlag::none)};
+            };
+
+            template <class T, class JSON>
+            concept from_json_method_flag = requires(T t, JSON j) {
+                {t.from_json(j, FromFlag::none)};
+            };
+
             template <class T>
             concept derefable = requires(T t) {
                 {*t};
@@ -113,7 +123,13 @@ namespace utils {
                 using T_ = std::remove_reference_t<T>;
                 using T_cv = std::remove_cvref_t<T>;
                 using json_t = is_json_t<JSON>;
-                if constexpr (from_json_method<T, JSON>) {
+                if constexpr (from_json_method_flag<T, JSON>) {
+                    return t.from_json(js, flag);
+                }
+                else if constexpr (from_json_adl_flag<T, JSON>) {
+                    return from_json(t, js, flag);
+                }
+                else if constexpr (from_json_method<T, JSON>) {
                     return t.from_json(js);
                 }
                 else if constexpr (from_json_adl<T, JSON>) {

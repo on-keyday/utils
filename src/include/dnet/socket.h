@@ -241,6 +241,43 @@ namespace utils {
                 }
                 return true;
             }
+
+            // connect_async wraps origina connect_async
+            bool connect_async(auto&& fn, auto&& object, auto get_sock, void* addr, int addrlen) {
+                struct ObjectHolder {
+                    std::decay_t<decltype(fn)> fn;
+                    std::decay_t<decltype(get_sock)> get;
+                    std::remove_cvref_t<decltype(object)> obj;
+                };
+                auto pobj = internal_alloc(sizeof(ObjectHolder));
+                if (!pobj) {
+                    err = no_resource;
+                    return false;
+                }
+                ObjectHolder* obj = new (pobj) ObjectHolder{
+                    std::move(fn),
+                    std::move(get_sock),
+                    std::move(object),
+                };
+                auto cb = [](void* pobj) {
+                    ObjectHolder* obj = static_cast<ObjectHolder*>(pobj);
+                    auto pass = std::move(obj->obj);
+                    struct R {
+                        ObjectHolder* h;
+                        ~R() {
+                            h->~ObjectHolder();
+                            internal_free(h);
+                        };
+                    } releaser{obj};
+                    obj->fn(std::move(pass));
+                };
+                if (!obj->get(obj->obj).connect_async(cb, obj, addr, addrlen)) {
+                    object = std::move(obj->obj);  // return pass
+                    internal_free(obj);
+                    return false;
+                }
+                return true;
+            }
         };
 
         // make_socket creates socket object
