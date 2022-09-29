@@ -11,6 +11,7 @@
 #include "servh.h"
 #include "client.h"
 #include "../http.h"
+#include "../http2.h"
 #include "state.h"
 
 namespace utils {
@@ -18,6 +19,7 @@ namespace utils {
         namespace server {
             constexpr auto start_timing = "[hs]";
             struct Requester {
+                void* internal__;
                 Client client;
                 HTTP http;
                 std::uintptr_t user_id;
@@ -52,6 +54,59 @@ namespace utils {
                 void* c;
             };
             dnetserv_dll_export(void) http_handler(void* ctx, Client&& cl, StateContext s);
+            dnetserv_dll_export(void) handle_keep_alive(Requester&& cl, StateContext s);
+
+            template <class String>
+            bool has_keep_alive(HTTP& http, auto&& header) {
+                number::Array<20, char, true> version;
+                bool keep_alive = false;
+                bool close = false;
+                if (!http.read_request<String>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {
+                        if (helper::equal(key, "Connection", helper::ignore_case())) {
+                            if (helper::contains(value, "close")) {
+                                close = true;
+                            }
+                            if (helper::contains(value, "keep-alive") ||
+                                helper::contains(value, "Keep-Alive")) {
+                                keep_alive = true;
+                            }
+                        }
+                    })) {
+                    return false;  // no keep alive
+                }
+                if (close) {
+                    return false;
+                }
+                if (keep_alive) {
+                    return true;
+                }
+                if (helper::equal(version, "HTTP/1.0")) {
+                    return false;  // connection close
+                }
+                return true;  // HTTP/1.1 implicitly keep-alive
+            }
+
+            constexpr auto http_add(HTTP& http) {
+                return [&](auto&&, const char* data, size_t len) {
+                    http.add_input(data, len);
+                };
+            }
+
+            constexpr auto http2_add(HTTP2& http2) {
+                return [&](auto&&, const char* data, size_t len) {
+                    http2.provide_http2_data(data, len);
+                };
+            }
+
+            constexpr auto tls_add(TLS& tls, auto&& inner) {
+                return [&, inner](auto&&, const char* data, size_t len) {
+                    tls.provide_tls_data(data, len);
+                    char tmp[1024];
+                    while (tls.read(tmp, sizeof(tmp))) {
+                        inner(tmp, tls.readsize());
+                    }
+                };
+            }
         }  // namespace server
     }      // namespace dnet
 }  // namespace utils

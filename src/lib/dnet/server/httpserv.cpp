@@ -40,7 +40,12 @@ namespace utils {
                     const char* data;
                     size_t len;
                     req.http.borrow_input(data, len);
-                    as.log(debug, "invalid request received", req.client, data, len);
+                    if (len == 0) {
+                        as.log(debug, "connection closed", req.client);
+                    }
+                    else {
+                        as.log(debug, "invalid request received", req.client, data, len);
+                    }
                     return;  // discard
                 }
                 else if (!complete) {
@@ -48,17 +53,14 @@ namespace utils {
                     return;
                 }
                 if (serv && serv->next) {
+                    req.internal__ = serv;
                     serv->next(serv->c, std::move(req), std::move(as));
                 }
             }
 
-            dnetserv_dll_internal(void) http_handler(void* v, Client&& cl, StateContext s) {
-                s.log(perf, start_timing, cl);
-                auto serv = static_cast<HTTPServ*>(v);
+            void start_handling(HTTPServ* serv, Requester&& req, StateContext&& s) {
                 char buf[1024];
                 bool red = false;
-                Requester req;
-                req.client = std::move(cl);
                 if (!req.client.sock.read_until_block(red, buf, sizeof(buf), [&] {
                         req.http.add_input(buf, req.client.sock.readsize());
                     })) {
@@ -70,6 +72,22 @@ namespace utils {
                     return;
                 }
                 http_handler_impl(serv, std::move(req), std::move(s));
+            }
+
+            dnetserv_dll_internal(void) http_handler(void* v, Client&& cl, StateContext s) {
+                s.log(perf, start_timing, cl);
+                auto serv = static_cast<HTTPServ*>(v);
+                Requester req;
+                req.client = std::move(cl);
+                start_handling(serv, std::move(req), std::move(s));
+            }
+
+            dnetserv_dll_export(void) handle_keep_alive(Requester&& req, StateContext s) {
+                s.log(debug, "start keep-alive waiting", req.client);
+                req.http.clear_input();
+                req.http.clear_output();
+                auto serv = static_cast<HTTPServ*>(req.internal__);
+                start_handling(serv, std::move(req), std::move(s));
             }
         }  // namespace server
     }      // namespace dnet

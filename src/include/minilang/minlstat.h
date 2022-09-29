@@ -7,7 +7,7 @@
 
 // minlstat - minilang statement
 #pragma once
-#include "minlstruct.h"
+#include "minltype.h"
 #include "minlfunc.h"
 #include "minlctrl.h"
 #include "minlprog.h"
@@ -18,7 +18,7 @@ namespace utils {
             one_word_symbol(";", nilstat_str_),
             block_stat(), typedef_default,
             wrap_with_type(let_stat(), typesig_default), if_statement(), for_statement(),
-            wrap_with_type(func_expr(fe_def), typesig_default),
+            switch_statement(), wrap_with_type(func_expr(fe_def), typesig_default),
             one_word("break", break_str_), one_word("continue", continue_str_),
             one_word_plus_expr("return", return_str_, true),
             one_word_plus_and_block("linkage", linkage_str_, simple_primitive(), true),

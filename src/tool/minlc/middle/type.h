@@ -7,7 +7,6 @@
 
 #pragma once
 #include <minilang/minlsymbols.h>
-#include "type.h"
 
 namespace minlc {
     namespace mi = utils::minilang;
@@ -26,6 +25,8 @@ namespace minlc {
             uint16_,
             uint32_,
             uint64_,
+            intptr_,
+            uintptr_,
             pointer_,
             vector_,
             array_,
@@ -46,8 +47,18 @@ namespace minlc {
             constexpr Type(Kind k)
                 : kind(k) {}
             std::shared_ptr<mi::TypeNode> node;
-            std::shared_ptr<Type> base;
             unsigned int attr = 0;
+        };
+
+        struct BuiltinType : Type {
+            constexpr BuiltinType(Kind k)
+                : Type(k) {}
+        };
+
+        struct DefinedType : Type {
+            constexpr DefinedType(Kind k)
+                : Type(k) {}
+            std::shared_ptr<Type> base;
         };
 
         struct StructField {
@@ -68,23 +79,29 @@ namespace minlc {
             std::shared_ptr<mi::FuncParamNode> node;
         };
 
-        struct FunctionType : Type {
+        struct FunctionType : DefinedType {
             MINL_Constexpr FunctionType(Kind kind)
-                : Type(kind) {}
+                : DefinedType(kind) {}
             std::vector<FuncParam> params, return_;
         };
 
-        struct ArrayType : Type {
+        struct ArrayType : DefinedType {
             MINL_Constexpr ArrayType(Kind kind)
-                : Type(kind) {}
+                : DefinedType(kind) {}
             std::shared_ptr<middle::Expr> expr;
         };
 
         struct IdentType : Type {
+            std::vector<mi::LookUpResult> lookedup;
             std::vector<std::string> types;
+            MINL_Constexpr IdentType(Kind kind)
+                : Type(kind) {}
         };
 
         struct Types {
+            std::map<std::string, std::shared_ptr<Type>> builtins;
+            std::shared_ptr<Type> get_builtin(middle::M& m, std::string_view view);
+            std::shared_ptr<Type> get_integer_builtin(middle::M& m, size_t num);
         };
 
         std::shared_ptr<Type> to_type(middle::M& types, const std::shared_ptr<mi::TypeNode>& node, bool no_va_arg);

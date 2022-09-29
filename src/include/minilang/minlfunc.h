@@ -8,7 +8,7 @@
 // minlfunc - minilang function declaeration/definition
 #pragma once
 #include "minl.h"
-#include "minlstruct.h"
+#include "minltype.h"
 
 namespace utils {
     namespace minilang {
@@ -100,6 +100,7 @@ namespace utils {
                         }
                     }
                     par = tmp;
+                    helper::space::consume_space(seq, true);
                     if (!seq.seek_if(",")) {
                         if (seq.seek_if(")")) {
                             break;
@@ -135,7 +136,7 @@ namespace utils {
                 return true;
             }
             helper::space::consume_space(seq, false);
-            if (!(seq.eos() || helper::match_eol<false>(seq) || seq.match("{"))) {
+            if (!(seq.eos() || helper::match_eol<false>(seq) || seq.match("{") || seq.match("}"))) {
                 std::shared_ptr<MinNode> tmp;
                 if (seq.seek_if("(")) {
                     std::shared_ptr<FuncParamNode> ret, root;
@@ -278,6 +279,7 @@ namespace utils {
                 const auto group_start = seq.rptr;
                 root = std::make_shared<LetNode>();
                 root->str = grp_str;
+                letnode = root;
                 if (seq.seek_if("(")) {
                     while (true) {
                         helper::space::consume_space(seq, true);
@@ -347,7 +349,77 @@ namespace utils {
             return make_exprs_with_statement(prim, stat);
         }
 
-        constexpr auto typesig_default = type_signatures(struct_signature(), func_expr(fe_tydec));
+        constexpr auto interface_str_ = "(interface)";
+        constexpr auto interface_method_str_ = "(interface_method)";
+
+        struct InterfaceNode : TypeNode {
+            MINL_Constexpr InterfaceNode()
+                : TypeNode(nt_interface) {}
+            std::shared_ptr<InterfaceNode> next;
+            std::shared_ptr<FuncNode> method;
+        };
+
+        constexpr auto interface_signature() {
+            return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<utils::minilang::MinNode>& node, bool& err, auto& errc) {
+                MINL_FUNC_LOG("interface_signature")
+                const auto begin = seq.rptr;
+                helper::space::consume_space(seq, true);
+                const auto start = seq.rptr;
+                if (!expect_ident(seq, "interface")) {
+                    seq.rptr = begin;
+                    return false;
+                }
+                helper::space::consume_space(seq, true);
+                if (!seq.seek_if("{")) {
+                    errc.say("expect interface begin { but not");
+                    errc.trace(start, seq);
+                    err = true;
+                    return true;
+                }
+                auto ret = std::make_shared<InterfaceNode>();
+                ret->str = interface_str_;
+                auto cur = ret;
+                while (true) {
+                    helper::space::consume_space(seq, true);
+                    if (seq.eos()) {
+                        errc.say("unexpected EOF at interface declaration");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    if (seq.seek_if("}")) {
+                        break;
+                    }
+                    std::shared_ptr<MinNode> tmp;
+                    err = false;
+                    if (!func_parse_impl(fe_iface, start, type_, stat_, expr, seq, tmp, err, errc) || err) {
+                        errc.say("expect interface method declaration but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    auto meth = std::make_shared<InterfaceNode>();
+                    meth->str = interface_method_str_;
+                    meth->method = std::static_pointer_cast<FuncNode>(tmp);
+                    cur->next = meth;
+                    cur = meth;
+                }
+                ret->pos = {start, seq.rptr};
+                node = std::move(ret);
+                return true;
+            };
+        }
+
+        constexpr auto typesig_elements(auto... fn) {
+            return [=](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<utils::minilang::MinNode>& node, bool& err, auto& errc) {
+                auto fold = [&](auto& f) {
+                    return f(type_, stat_, expr, seq, node, err, errc);
+                };
+                return (... || fold(fn));
+            };
+        }
+
+        constexpr auto typesig_default = type_signatures(typesig_elements(struct_signature(), interface_signature()), func_expr(fe_tydec));
         constexpr auto typedef_default = type_define(typesig_default);
 
     }  // namespace minilang

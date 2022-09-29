@@ -277,7 +277,23 @@ namespace utils {
                 return render_header_common(str, header, validate, ignore_invalid);
             }
 
+            void canonical_header(auto&& input, auto&& output) {
+                auto seq = make_ref_seq(input);
+                bool first = true;
+                while (!seq.eos()) {
+                    if (first) {
+                        output.push_back(helper::to_upper(seq.current()));
+                        first = false;
+                    }
+                    else {
+                        output.push_back(helper::to_lower(seq.current()));
+                        if (seq.current() == '-') {
+                            first = true;
+                        }
+                    }
+                    seq.consume();
+                }
+            }
         }  // namespace h1header
-
-    }  // namespace net
+    }      // namespace net
 }  // namespace utils

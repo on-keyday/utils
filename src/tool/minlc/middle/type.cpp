@@ -71,6 +71,56 @@ namespace minlc {
             return fn;
         }
 
+        Kind get_kind_by_str(std::string_view view) {
+            Kind kind = Kind::ident_;
+            if (view == "bool") {
+                kind = bool_;
+            }
+            else if (view == "int8" || view == "char") {
+                kind = int8_;
+            }
+            else if (view == "uint8" || view == "uchar" || view == "byte" || view == "char8") {
+                kind = uint8_;
+            }
+            else if (view == "int16" || view == "short") {
+                kind = int16_;
+            }
+            else if (view == "uint16" || view == "char16" || view == "ushort") {
+                kind = uint16_;
+            }
+            else if (view == "int" || view == "int32" || view == "rune") {
+                kind = int32_;
+            }
+            else if (view == "uint" || view == "uint32" || view == "char32") {
+                kind = uint32_;
+            }
+            else if (view == "int64") {
+                kind = int64_;
+            }
+            else if (view == "uint64") {
+                kind = uint64_;
+            }
+            else if (view == "intptr") {
+                kind = intptr_;
+            }
+            else if (view == "uintptr") {
+                kind = uintptr_;
+            }
+            return kind;
+        }
+
+        std::shared_ptr<Type> to_builtin(middle::M& m, const std::shared_ptr<mi::TypeNode>& node) {
+            std::string_view view(node->str);
+            view = view.substr(8);
+            auto kind = get_kind_by_str(view);
+            if (kind == ident_) {
+                m.errc.say("unknown builtin type.");
+                m.errc.node(node);
+                return nullptr;
+            }
+            return make_type<BuiltinType>(m.types, kind, node);
+        }
+
         std::shared_ptr<Type> to_type(middle::M& m, const std::shared_ptr<mi::TypeNode>& node, bool no_va_arg) {
             if (!node) {
                 return nullptr;
@@ -119,7 +169,7 @@ namespace minlc {
                 if (!typ) {
                     return nullptr;
                 }
-                auto ptr = make_type<Type>(m.types, pointer_, node);
+                auto ptr = make_type<DefinedType>(m.types, pointer_, node);
                 ptr->base = typ;
                 return ptr;
             }
@@ -128,7 +178,7 @@ namespace minlc {
                 if (!typ) {
                     return nullptr;
                 }
-                auto vec = make_type<Type>(m.types, vector_, node);
+                auto vec = make_type<DefinedType>(m.types, vector_, node);
                 vec->base = typ;
                 return vec;
             }
@@ -143,7 +193,7 @@ namespace minlc {
                     if (!typ) {
                         return nullptr;
                     }
-                    auto typed = make_type<Type>(m.types, typed_va_arg_, node);
+                    auto typed = make_type<DefinedType>(m.types, typed_va_arg_, node);
                     typed->base = typ;
                     return typed;
                 }
@@ -155,10 +205,57 @@ namespace minlc {
                 m.errc.node(node);
                 return nullptr;
             }
+            if (utils::helper::starts_with(node->str, "builtin.")) {
+                return to_builtin(m, node);  // completely builtin
+            }
             auto splt = utils::helper::split(node->str, ".");
+            auto lookedup = m.lookup_type(splt[0]);
+            if (Kind kind;
+                lookedup.size() == 0 && splt.size() == 1 &&
+                (kind = get_kind_by_str(splt[0])) != ident_) {
+                return make_type<BuiltinType>(m.types, kind, node);
+            }
             auto ident = make_type<IdentType>(m.types, ident_, node);
             ident->types = std::move(splt);
+            ident->lookedup = std::move(lookedup);
             return ident;
+        }
+
+        std::shared_ptr<Type> Types::get_builtin(middle::M& m, std::string_view view) {
+            auto& hit = builtins[view.data()];
+            if (hit) {
+                return hit;
+            }
+            auto gen = util::gen_type(view);
+            hit = to_type(m, gen, true);
+            return hit;
+        }
+
+        std::shared_ptr<Type> Types::get_integer_builtin(middle::M& m, size_t integer) {
+            if (integer <= 0x7f) {
+                return get_builtin(m, "builtin.int8");
+            }
+            else if (integer <= 0xff) {
+                return get_builtin(m, "builtin.uint8");
+            }
+            else if (integer <= 0x7fff) {
+                return get_builtin(m, "builtin.int16");
+            }
+            else if (integer <= 0xffff) {
+                return get_builtin(m, "builtin.uint16");
+            }
+            else if (integer <= 0x7fffffff) {
+                return get_builtin(m, "builtin.int32");
+            }
+            else if (integer <= 0xffffffff) {
+                return get_builtin(m, "builtin.uint32");
+            }
+            else if (integer <= 0x7fffffffffffffff) {
+                return get_builtin(m, "builtin.int64");
+            }
+            else {
+                return get_builtin(m, "builtin.uint64");
+            }
         }
     }  // namespace types
 }  // namespace minlc

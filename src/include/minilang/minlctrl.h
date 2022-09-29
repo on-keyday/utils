@@ -19,6 +19,11 @@ namespace utils {
             std::shared_ptr<MinNode> element;
             MINL_Constexpr BlockNode()
                 : MinNode(nt_block) {}
+
+           protected:
+            MINL_Constexpr BlockNode(int id)
+                : MinNode(id) {
+            }
         };
 
         constexpr auto block_stat() {
@@ -95,11 +100,29 @@ namespace utils {
                 : BinaryNode(id) {}
         };
 
-        // Derive ForStatNode
+        // Derive CondStatNode
+        struct IfStatNode : CondStatNode {
+            std::shared_ptr<MinNode> els;
+            MINL_Constexpr IfStatNode()
+                : CondStatNode(nt_if) {}
+        };
+
+        // Derive CondStatNode
         struct ForStatNode : CondStatNode {
             std::shared_ptr<MinNode> center;
             MINL_Constexpr ForStatNode()
                 : CondStatNode(nt_for) {}
+        };
+
+        constexpr auto switch_str_ = "(switch)";
+        constexpr auto case_str_ = "(case)";
+        constexpr auto default_str_ = "(default)";
+
+        struct SwitchStatNode : BlockNode {
+            std::shared_ptr<MinNode> expr;
+            std::shared_ptr<SwitchStatNode> next_case;
+            MINL_Constexpr SwitchStatNode()
+                : BlockNode(nt_switch) {}
         };
 
         constexpr auto for_if_stat_base(auto stat_name, bool none_expr_ok, int max_index, auto make_obj) {
@@ -193,15 +216,157 @@ namespace utils {
         }
 
         constexpr auto if_statement() {
-            return for_if_stat_base("if", false, 2, [](int index, auto&& first, auto&& second, auto&& third, auto&& block, Pos pos) {
-                auto root = std::make_shared<CondStatNode>();
-                root->str = if_stat_str_[index];
-                root->left = std::move(first);
-                root->right = std::move(second);
-                root->block = std::move(block);
-                root->pos = pos;
-                return root;
-            });
+            return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
+                constexpr auto a_stat = for_if_stat_base("if", false, 2, [](int index, auto&& first, auto&& second, auto&& third, auto&& block, Pos pos) {
+                    auto root = std::make_shared<IfStatNode>();
+                    root->str = if_stat_str_[index];
+                    root->left = std::move(first);
+                    root->right = std::move(second);
+                    root->block = std::move(block);
+                    root->pos = pos;
+                    return root;
+                });
+                err = false;
+                if (!a_stat(stat, expr, seq, node, err, errc) || err) {
+                    return err;
+                }
+                auto if_ = std::static_pointer_cast<IfStatNode>(node);
+                while (true) {
+                    const auto start = seq.rptr;
+                    helper::space::consume_space(seq, false);
+                    if (!expect_ident(seq, "else")) {
+                        seq.rptr = start;
+                        return true;
+                    }
+                    helper::space::consume_space(seq, true);
+                    if (seq.match("{")) {
+                        std::shared_ptr<MinNode> tmp;
+                        if (!stat(stat, expr, seq, tmp, err, errc)) {
+                            errc.say("expect else block but not");
+                            errc.trace(start, seq);
+                            err = true;
+                            return true;
+                        }
+                        if_->els = std::move(tmp);
+                        return true;
+                    }
+                    std::shared_ptr<MinNode> tmp;
+                    err = false;
+                    if (!a_stat(stat, expr, seq, tmp, err, errc)) {
+                        errc.say("expect else if statement but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    auto elif_ = std::static_pointer_cast<IfStatNode>(tmp);
+                    if_->els = elif_;
+                    if_ = elif_;
+                }
+            };
+        }
+
+        constexpr auto switch_statement() {
+            return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
+                const auto start = seq.rptr;
+                helper::space::consume_space(seq, true);
+                if (!expect_ident(seq, "switch")) {
+                    seq.rptr = start;
+                    return false;
+                }
+                helper::space::consume_space(seq, true);
+                std::shared_ptr<MinNode> swcond;
+                if (!seq.match("{")) {
+                    swcond = expr(seq, brc_cond);
+                    if (!swcond) {
+                        errc.say("expect switch statement condition expr but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                }
+                helper::space::consume_space(seq, true);
+                if (!seq.seek_if("{")) {
+                    errc.say("expect switch statement begin { but not");
+                    errc.trace(start, seq);
+                    err = true;
+                    return true;
+                }
+                auto root_switch = std::make_shared<SwitchStatNode>();
+                auto swnode = root_switch;
+                root_switch->str = switch_str_;
+                root_switch->expr = std::move(swcond);
+                std::shared_ptr<BlockNode> block = swnode;
+                while (true) {
+                    helper::space::consume_space(seq, true);
+                    if (seq.eos()) {
+                        errc.say("unexpected eof at switch statement");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    if (seq.seek_if("}")) {
+                        break;
+                    }
+                    const auto stat_start = seq.rptr;
+                    if (expect_ident(seq, "case")) {
+                        auto cas = expr(seq);
+                        if (!cas) {
+                            errc.say("expect switch case condtion expr but not");
+                            errc.trace(start, seq);
+                            err = true;
+                            return true;
+                        }
+                        helper::space::consume_space(seq, true);
+                        if (!seq.seek_if(":")) {
+                            errc.say("expect switch case : but not");
+                            errc.trace(start, seq);
+                            err = true;
+                            return true;
+                        }
+                        auto cnode = std::make_shared<SwitchStatNode>();
+                        cnode->str = case_str_;
+                        cnode->pos = {stat_start, seq.rptr};
+                        cnode->expr = cas;
+                        swnode->next_case = cnode;
+                        swnode = cnode;
+                        block = cnode;
+                        continue;
+                    }
+                    if (expect_ident(seq, "default")) {
+                        helper::space::consume_space(seq, true);
+                        if (!seq.seek_if(":")) {
+                            errc.say("expect switch default : but not");
+                            errc.trace(start, seq);
+                            err = true;
+                            return true;
+                        }
+                        auto cnode = std::make_shared<SwitchStatNode>();
+                        cnode->str = default_str_;
+                        cnode->pos = {stat_start, seq.rptr};
+                        swnode->next_case = cnode;
+                        swnode = cnode;
+                        block = cnode;
+                        continue;
+                    }
+                    std::shared_ptr<MinNode> tmp;
+                    err = false;
+                    if (!stat(stat, expr, seq, tmp, err, errc) || err) {
+                        errc.say("expect switch element statement but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    auto elm = std::make_shared<BlockNode>();
+                    elm->str = block_element_str_;
+                    elm->pos = {start, seq.rptr};
+                    elm->element = std::move(tmp);
+                    block->next = elm;
+                    block = elm;
+                }
+                root_switch->pos = {start, seq.rptr};
+                node = std::move(root_switch);
+                return true;
+            };
         }
 
         constexpr auto an_expr() {

@@ -82,9 +82,19 @@ namespace minlc {
                             return nullptr;
                         }
                         if (bin->right) {
-                            call->argument = minl_to_expr(m, bin->right);
-                            if (!call->argument) {
+                            std::vector<sptr<mi::MinNode>> nodes;
+                            if (!mi::BinaryToVec(nodes, bin->right, ",")) {
+                                m.errc.say("unexpected node. library bug!!");
+                                m.errc.node(bin->right);
                                 return nullptr;
+                            }
+                            for (auto& c : nodes) {
+                                auto expr = minl_to_expr(m, c);
+                                if (!expr) {
+                                    return nullptr;
+                                }
+                                call->const_eval = call->const_eval && expr->const_eval;
+                                call->arguments.push_back(std::move(expr));
                             }
                         }
                         return call;
@@ -95,22 +105,27 @@ namespace minlc {
                         if (!par->target) {
                             return nullptr;
                         }
+                        par->const_eval = par->target->const_eval;
                         return par;
                     }
                 }
                 auto expr = make_middle<BinaryExpr>(m, bin);
+                bool const_eval = true;
                 if (bin->left) {
                     expr->left = minl_to_expr(m, bin->left);
                     if (!expr->left) {
                         return nullptr;
                     }
+                    const_eval = expr->left->const_eval;
                 }
                 if (bin->right) {
                     expr->right = minl_to_expr(m, bin->right);
                     if (!expr->right) {
                         return nullptr;
                     }
+                    const_eval = const_eval && expr->right->const_eval;
                 }
+                expr->const_eval = const_eval;
                 return expr;
             }
             if (auto fn = mi::is_Func(node)) {
@@ -129,12 +144,31 @@ namespace minlc {
                 ident->callee = callee;
                 return ident;
             }
-            return make_middle<Expr>(m, node);
+            auto expr = make_middle<Expr>(m, node);
+            expr->const_eval = true;
+            if (auto num = mi::is_Number(node); num) {
+                if (num->is_float) {
+                    m.errc.say("floating number is now not available");
+                    m.errc.node(num);
+                    return nullptr;
+                }
+                if (!num->parsable) {
+                    m.errc.say("number is too large to parse as 64 bit integer. wait for support of big integer");
+                    m.errc.node(num);
+                    return nullptr;
+                }
+                expr->type = m.types.get_integer_builtin(m, num->integer);
+            }
+            return expr;
         }
 
         sptr<Func> minl_to_func(M& m, const sptr<mi::FuncNode>& node) {
             auto fn = make_middle<Func>(m, node);
             mi::FuncParamToVec(fn->args, node);
+            fn->type = std::static_pointer_cast<types::FunctionType>(types::to_type(m, node, true));
+            if (!fn->type) {
+                return nullptr;
+            }
             {
                 auto func_scope = m.enter_scope(node);
                 m.add_function(node);  // for recursive call
@@ -188,7 +222,90 @@ namespace minlc {
             return expr;
         }
 
-        bool minl_to_object(M& m, const sptr<mi::MinNode> elm, std::vector<sptr<Object>>& vec) {
+        bool minl_to_expr_or_define(M& m, const sptr<mi::MinNode>& elm, sptr<Expr>& expr, sptr<DefineExpr>& def) {
+            if (elm->str == ":=") {
+                def = minl_to_define_expr(m, elm);
+                if (!def) {
+                    return false;
+                }
+            }
+            else {
+                expr = minl_to_expr(m, elm);
+                if (!expr) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        sptr<If> minl_to_if(M& m, const sptr<mi::IfStatNode>& elm) {
+            auto if_ = make_middle<If>(m, elm);
+            auto err = [&] {
+                m.errc.say("at if statement");
+                m.errc.node(elm);
+                return nullptr;
+            };
+            if (mi::if_stat_str_[1] == elm->str) {
+                if_->expr = minl_to_expr(m, elm->left);
+                if (!if_->expr) {
+                    return err();
+                }
+            }
+            else if (mi::if_stat_str_[2] == elm->str) {
+                if (!minl_to_expr_or_define(m, elm->left, if_->iniexpr, if_->inidef)) {
+                    return err();
+                }
+                if_->expr = minl_to_expr(m, elm->right);
+                if (!if_->expr) {
+                    return err();
+                }
+            }
+            else {
+                m.errc.say("unexpected node");
+                m.errc.node(elm);
+                return nullptr;
+            }
+            auto block = mi::is_Block(elm->block);
+            if_->block = minl_to_block(m, block);
+            if (!if_->block) {
+                return err();
+            }
+            if (elm->els) {
+                if (auto els = mi::is_IfStat(elm->els)) {
+                    if_->else_if = minl_to_if(m, els);
+                    if (!if_->else_if) {
+                        return err();
+                    }
+                }
+                else {
+                    auto block = mi::is_Block(elm->els, true);
+                    if_->els = minl_to_block(m, block);
+                    if (!if_->els) {
+                        return err();
+                    }
+                }
+            }
+            return if_;
+        }
+
+        sptr<For> minl_to_for(M& m, const sptr<mi::ForStatNode>& elm) {
+            auto for_ = make_middle<For>(m, elm);
+            if (mi::for_stat_str_[0] == elm->str) {
+                // nothing to do
+            }
+            else if (mi::for_stat_str_[1] == elm->str) {
+                if (!elm->left) {
+                    m.errc.say("expect expression but not found.library bug!!");
+                    m.errc.node(elm);
+                    return nullptr;
+                }
+            }
+            m.errc.say("not implemented now");
+            m.errc.node(elm);
+            return nullptr;
+        }
+
+        bool minl_to_object(M& m, const sptr<mi::MinNode>& elm, std::vector<sptr<Object>>& vec) {
             if (elm->str == ":=") {
                 auto def = minl_to_define_expr(m, elm);
                 if (!def) {
@@ -210,7 +327,7 @@ namespace minlc {
                 }
                 vec.push_back(std::move(func));
             }
-            else if (auto block = mi::is_Block(elm)) {
+            else if (auto block = mi::is_Block(elm, true)) {
                 auto elm = minl_to_block(m, block);
                 if (!elm) {
                     return false;
@@ -229,6 +346,7 @@ namespace minlc {
                     // nothing to do
                 }
                 else if (wb->str == mi::linkage_str_) {
+                    // nothing to do
                 }
                 else {
                     m.errc.say("unexpected node. library bug!!");
@@ -238,6 +356,13 @@ namespace minlc {
             }
             else if (auto com = mi::is_Comment(elm)) {
                 vec.push_back(make_middle<Comment>(m, com));
+            }
+            else if (auto if_ = mi::is_IfStat(elm)) {
+                auto expr = minl_to_if(m, if_);
+                if (!expr) {
+                    return false;
+                }
+                vec.push_back(std::move(expr));
             }
             else {
                 m.errc.say("unexpected node. library bug!!");
@@ -282,23 +407,15 @@ namespace minlc {
             if (!mi::collect_toplevel_symbol(m.global, node, m.errc)) {
                 return nullptr;
             }
-            auto& main_ = m.global->merged.func_defs["main"];
-            if (main_.size() == 0) {
-                m.errc.say("no `main` function found");
-                return nullptr;
-            }
-            else if (main_.size() > 1) {
-                m.errc.say("duplicate `main` function found");
-                for (auto& fn : main_) {
-                    m.errc.say("defined at here");
-                    m.errc.node(fn.node);
-                }
-                return nullptr;
-            }
             auto prog = make_middle<Program>(m, block);
-            prog->main = minl_to_func(m, main_[0].node);
-            if (!prog->main) {
-                return nullptr;
+            for (auto& def : m.global->merged.func_defs) {
+                for (auto& fn : def.second) {
+                    auto f = minl_to_func(m, fn.node);
+                    if (!f) {
+                        return nullptr;
+                    }
+                    prog->global_funcs.push_back(f);
+                }
             }
             if (!resolver::resolve(m)) {
                 return nullptr;

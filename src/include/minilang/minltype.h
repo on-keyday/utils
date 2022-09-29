@@ -80,7 +80,8 @@ namespace utils {
             return seq.match("*") || seq.match("[") || seq.match("&") ||
                    match_ident(seq, "struct") || match_ident(seq, "union") || match_ident(seq, "fn") ||
                    match_ident(seq, "mut") || match_ident(seq, "const") || match_ident(seq, "genr") ||
-                   match_ident(seq, "typeof") || seq.match(")") || seq.match("...");
+                   match_ident(seq, "interface") || match_ident(seq, "typeof") || seq.match(")") ||
+                   seq.match("...");
         }
 
         constexpr auto idents(auto& str) {
@@ -99,6 +100,9 @@ namespace utils {
                 // (type Arg,Arg,Arg) -> ok (type,type,type)
                 // (Arg,Arg,Arg type Arg) -> ok (name,name,name type)
                 // (ident,type ident Arg) -> bad (name,type? type?)
+                // (ident.Type) -> ok (type)
+                // (ident user.Type,user.Type) -> ok (ident type,type)
+                // (Type,Type,user.Type) -> ok (type,type,type)
                 if (match_typeprefix(seq)) {
                     seq.rptr = param_start;
                     no_param_name = true;
@@ -125,7 +129,15 @@ namespace utils {
                 if (seq.match(")")) {
                     seq.rptr = param_start;
                     no_param_name = true;
+                    break;
                 }
+                auto tmp = seq.rptr;
+                if (seq.seek_if(".") && (helper::space::consume_space(seq, true), ident_default()(seq))) {
+                    seq.rptr = param_start;
+                    no_param_name = true;
+                    break;
+                }
+                seq.rptr = tmp;
                 break;
             }
             if (expect_ident(seq, "type")) {
@@ -137,6 +149,7 @@ namespace utils {
         constexpr auto struct_signature() {
             return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
                 MINL_FUNC_LOG("struct_signature")
+                const auto begin = seq.rptr;
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 const char* str_ = nullptr;
@@ -153,6 +166,7 @@ namespace utils {
                     word = "union";
                 }
                 else {
+                    seq.rptr = begin;
                     return false;
                 }
                 helper::space::consume_space(seq, true);
@@ -401,7 +415,7 @@ namespace utils {
                 }
                 else if (struct_parse(self_call, stat_, expr, seq, node, err, errc)) {
                     if (err) {
-                        errc.say("expected type struct but not");
+                        errc.say("expected type struct/union/interface but not");
                         errc.trace(start, seq);
                     }
                     return true;
@@ -425,6 +439,7 @@ namespace utils {
                         const auto end = seq.rptr;
                         helper::space::consume_space(seq, false);
                         if (seq.consume_if('.')) {
+                            str.push_back('.');
                             helper::space::consume_space(seq, true);
                             continue;
                         }
@@ -529,34 +544,48 @@ namespace utils {
         constexpr auto type_primitive(auto&& stats, auto&& type_parse) {
             return [=](auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG("type_primitive")
+                const auto begin = seq.rptr;
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
-                if (!expect_ident(seq, "type")) {
-                    return false;
-                }
-                helper::space::consume_space(seq, true);
-                if (!seq.seek_if("<")) {
-                    // TODO(on-keyday): error?
-                    errc.say("expect type primitive begin < but not");
-                    errc.trace(start, seq);
-                    err = true;
-                    return true;
-                }
-                err = false;
                 std::shared_ptr<MinNode> tmp;
-                if (!type_parse(stats, expr, seq, tmp, err, errc) || err) {
-                    errc.say("expect type primitive type signature but not");
-                    errc.trace(start, seq);
-                    err = true;
-                    return true;
+                if (expect_ident(seq, "type")) {
+                    helper::space::consume_space(seq, true);
+                    if (!seq.seek_if("<")) {
+                        // TODO(on-keyday): error?
+                        errc.say("expect type primitive begin < but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    err = false;
+                    if (!type_parse(stats, expr, seq, tmp, err, errc) || err) {
+                        errc.say("expect type primitive type signature but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                    helper::space::consume_space(seq, true);
+                    if (!seq.seek_if(">")) {
+                        // TODO(on-keyday): error?
+                        errc.say("expect type primitive end > but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
                 }
-                helper::space::consume_space(seq, true);
-                if (!seq.seek_if(">")) {
-                    // TODO(on-keyday): error?
-                    errc.say("expect type primitive end > but not");
-                    errc.trace(start, seq);
-                    err = true;
-                    return true;
+                else if (match_ident(seq, "struct") || match_ident(seq, "union") ||
+                         match_ident(seq, "interface")) {
+                    err = false;
+                    if (!type_parse(stats, expr, seq, tmp, err, errc) || err) {
+                        errc.say("expect type primitive type signature but not");
+                        errc.trace(start, seq);
+                        err = true;
+                        return true;
+                    }
+                }
+                else {
+                    seq.rptr = begin;
+                    return false;
                 }
                 auto res = std::make_shared<TypeNode>();
                 res->str = typeprim_str_;

@@ -10,9 +10,6 @@
 #include <dnet/dll/sockdll.h>
 #include <dnet/dll/glheap.h>
 #include <dnet/errcode.h>
-#ifdef _WIN32
-#include <WS2tcpip.h>
-#endif
 #include <cstring>
 #include <atomic>
 #include <dnet/dll/sockasync.h>
@@ -23,8 +20,8 @@ namespace utils {
             socdl.closesocket_(sock);
         }
 
-        void set_nonblock(std::uintptr_t sock) {
-            u_long nb = 1;
+        void set_nonblock(std::uintptr_t sock, bool yes = true) {
+            u_long nb = yes ? 1 : 0;
             socdl.ioctlsocket_(sock, FIONBIO, &nb);
         }
 #else
@@ -32,8 +29,8 @@ namespace utils {
             socdl.close_(sock);
         }
 
-        void set_nonblock(std::uintptr_t sock) {
-            u_long nb = 1;
+        void set_nonblock(std::uintptr_t sock, bool yes = true) {
+            u_long nb = yes ? 1 : 0;
             socdl.ioctl_(sock, FIONBIO, &nb);
         }
 #endif
@@ -180,6 +177,61 @@ namespace utils {
         bool Socket::set_ipv6only(bool only) {
             int yes = only ? 1 : 0;
             return set_option(IPPROTO_IPV6, IPV6_V6ONLY, yes);
+        }
+
+        bool Socket::set_nodelay(bool no_delay) {
+            int yes = no_delay ? 1 : 0;
+            return set_option(IPPROTO_TCP, TCP_NODELAY, yes);
+        }
+
+        bool Socket::set_ttl(unsigned char ttl) {
+            int ttl_buf = ttl;
+            return set_option(IPPROTO_IP, IP_TTL, ttl_buf);
+        }
+
+        bool Socket::set_exclusive_use(bool exclusive) {
+#ifdef _WIN32
+            int yes = exclusive ? 1 : 0;
+            return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
+#else
+            return false;
+#endif
+        }
+
+        bool Socket::set_mtu_discover(MTUConfig conf) {
+            int val = 0;
+            if (conf == mtu_default) {
+#ifdef _WIN32
+                val = IP_PMTUDISC_NOT_SET;
+#else
+                val = IP_PMTUDISC_WANT;
+#endif
+            }
+            else if (conf == mtu_enable) {
+                val = IP_PMTUDISC_DO;
+            }
+            else if (conf == mtu_disable) {
+                val = IP_PMTUDISC_DONT;
+            }
+            else if (conf == mtu_ignore) {
+                val = IP_PMTUDISC_PROBE;
+            }
+            else {
+                return false;
+            }
+            return set_option(IPPROTO_IP, IP_MTU_DISCOVER, val);
+        }
+
+        std::int32_t Socket::get_mtu() {
+            std::int32_t val = 0;
+            if (!get_option(IPPROTO_IP, IP_MTU, val)) {
+                return -1;
+            }
+            return val;
+        }
+
+        void Socket::set_blocking(bool blocking) {
+            set_nonblock(sock, !blocking);
         }
 
         bool Socket::bind(const void* addr, size_t len) {
@@ -346,12 +398,12 @@ namespace utils {
             return wait_event_plt(time);
         }
 
-        void* Socket::internal_alloc(size_t s) {
-            return get_rawbuf(s);
+        void* Socket::internal_alloc(size_t s, DebugInfo info) {
+            return get_rawbuf(s, info);
         }
 
-        void Socket::internal_free(void* p) {
-            free_rawbuf(p);
+        void Socket::internal_free(void* p, DebugInfo info) {
+            free_rawbuf(p, info);
         }
 
     }  // namespace dnet

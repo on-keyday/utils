@@ -24,7 +24,7 @@ namespace utils {
             }
             void decref() {
                 if (ref.fetch_sub(1) == 1) {
-                    delete_with_global_heap(this);
+                    delete_with_global_heap(this, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncBuffer)));
                 }
             }
             static void start(AsyncHead* h, std::uintptr_t sock) {
@@ -62,7 +62,7 @@ namespace utils {
                 else if (h->method == am_accept) {
                     socklen_t len = sizeof(buf->storage);
                     res = socdl.accept_(buf->sock, storage, &len);
-                    set_nonblock(res);
+                    set_nonblock(res, true);
                     if (do_completion) {
                         cmp.user_completion_accept(user, make_socket(std::uintptr_t(res)), get_error());
                     }
@@ -85,7 +85,7 @@ namespace utils {
             }
         };
         AsyncBuffer* AsyncBuffer_new() {
-            return new_from_global_heap<AsyncBuffer>();
+            return new_from_global_heap<AsyncBuffer>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncBuffer)));
         }
 
         void remove_fd(int fd);

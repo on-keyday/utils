@@ -10,6 +10,34 @@
 
 namespace utils {
     namespace dnet {
+#ifdef _WIN32
+        void* simple_heap_alloc(size_t size, DebugInfo*) {
+            return HeapAlloc(GetProcessHeap(), 0, size);
+        }
+
+        void* simple_heap_realloc(void* p, size_t size, DebugInfo*) {
+            return HeapReAlloc(GetProcessHeap(), 0, p, size);
+        }
+        void simple_heap_free(void* p, DebugInfo*) {
+            HeapFree(GetProcessHeap(), 0, p);
+        }
+#else
+        void* simple_heap_alloc(size_t size, DebugInfo*) {
+            return malloc(size);
+        }
+
+        void* simple_heap_realloc(void* p, size_t size, DebugInfo*) {
+            if (size == 0) {
+                return nullptr;
+            }
+            return realloc(p, size);
+        }
+
+        void simple_heap_free(void* p, DebugInfo*) {
+            free(p);
+        }
+#endif
+
         static Allocs tmphold;
         void set_allocs(Allocs set) {
             tmphold = set;
@@ -28,6 +56,21 @@ namespace utils {
         Allocs* get_alloc() {
             static Allocs alloc = get_();
             return &alloc;
+        }
+
+        dnet_dll_internal(void*) get_rawbuf(size_t sz, DebugInfo info) {
+            auto a = get_alloc();
+            return a->alloc_ptr(sz, &info);
+        }
+
+        dnet_dll_internal(void*) resize_rawbuf(void* p, size_t sz, DebugInfo info) {
+            auto a = get_alloc();
+            return a->realloc_ptr(p, sz, &info);
+        }
+
+        dnet_dll_internal(void) free_rawbuf(void* p, DebugInfo info) {
+            auto a = get_alloc();
+            a->free_ptr(p, &info);
         }
     }  // namespace dnet
 }  // namespace utils

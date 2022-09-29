@@ -9,7 +9,7 @@
 // (refactor)
 #pragma once
 #include <minilang/minlsymbols.h>
-#include "errc.h"
+#include "../errc.h"
 #include <vector>
 #include <string_view>
 #include <unordered_map>
@@ -41,12 +41,17 @@ namespace minlc {
             mk_type_expr,
             mk_func_expr,
             mk_dot_expr,
+            mk_if,
+            mk_for,
+            mk_address,
+            mk_deref,
         };
 
         struct Object {
-            const int obj_type;
+            const kind obj_type;
+            bool const_eval = false;
             constexpr Object(int id)
-                : obj_type(id) {}
+                : obj_type(kind(id)) {}
         };
 
         struct Block : Object {
@@ -69,6 +74,7 @@ namespace minlc {
             std::shared_ptr<mi::FuncNode> node;
             std::vector<FuncParam> args;
             sptr<Block> block;
+            std::shared_ptr<types::FunctionType> type;
         };
 
         using LookUpResults = std::vector<mi::LookUpResult>;
@@ -112,7 +118,7 @@ namespace minlc {
             MINL_Constexpr CallExpr()
                 : Expr(mk_call) {}
             sptr<Expr> callee;
-            sptr<Expr> argument;
+            std::vector<sptr<Expr>> arguments;
         };
 
         struct ParExpr : Expr {
@@ -158,11 +164,34 @@ namespace minlc {
             DefinePair define;
         };
 
+        struct If : Object {
+            MINL_Constexpr If()
+                : Object(mk_if) {}
+            std::shared_ptr<mi::IfStatNode> node;
+            std::shared_ptr<DefineExpr> inidef;
+            std::shared_ptr<Expr> iniexpr;
+            std::shared_ptr<Expr> expr;
+            std::shared_ptr<Block> block;
+            std::shared_ptr<If> else_if;
+            std::shared_ptr<Block> els;
+        };
+
+        struct For : Object {
+            MINL_Constexpr For()
+                : Object(mk_for) {}
+            std::shared_ptr<mi::ForStatNode> node;
+            std::shared_ptr<DefineExpr> inidef;
+            std::shared_ptr<Expr> iniexpr;
+            std::shared_ptr<Expr> condexpr;
+            std::shared_ptr<Expr> eachloopexpr;
+            std::shared_ptr<Block> block;
+        };
+
         struct Program : Object {
             constexpr Program()
                 : Object(mk_program) {}
             sptr<mi::BlockNode> node;
-            sptr<Func> main;
+            std::vector<sptr<Func>> global_funcs;
         };
 
         struct M {
@@ -171,7 +200,7 @@ namespace minlc {
             sptr<mi::LocalSymbols> current;
             std::map<std::string, LookUpResults> ident_lookup_cache;
             std::map<std::string, LookUpResults> type_lookup_cache;
-            std::unordered_map<sptr<mi::MinNode>, sptr<Object>> object_mapping;
+            std::unordered_multimap<sptr<mi::MinNode>, sptr<Object>> object_mapping;
             types::Types types;
 
             struct leave_scope {
@@ -260,7 +289,7 @@ namespace minlc {
             if (!node) {
                 (void)*node.get();
             }
-            m.object_mapping[node] = d;
+            m.object_mapping.emplace(node, d);
             return d;
         }
     }  // namespace middle

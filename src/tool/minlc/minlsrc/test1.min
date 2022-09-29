@@ -1,0 +1,13 @@
+mod test1
+
+fn mul_add(x builtin.int,y builtin.int, z builtin.int) builtin.int {
+    return x * y + z
+}
+
+fn main() builtin.int {
+    return mul_add(1,2,3)
+}
+
+fn test(builtin.int,builtin.int) {
+
+}

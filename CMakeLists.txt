@@ -134,8 +134,10 @@ add_executable(minilang "src/tool/minilang/minilang.cpp"
   "src/tool/minilang/minilang_stream.cpp"
   "src/tool/minilang/main.cpp")
 add_executable(minlc "src/tool/minlc/minlc.cpp"
-  "src/tool/minlc/middle.cpp"
-  "src/tool/minlc/resolve.cpp"
+  "src/tool/minlc/middle/middle.cpp"
+  "src/tool/minlc/middle/resolve.cpp"
+  "src/tool/minlc/middle/type.cpp"
+  "src/tool/minlc/backend/llvm/module.cpp"
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")

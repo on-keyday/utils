@@ -22,13 +22,13 @@ namespace utils {
             constexpr EasyBuffer() {}
 
             [[nodiscard]] EasyBuffer(size_t sz) {
-                buf = get_cvec(sz);
+                buf = get_cvec(sz, DNET_DEBUG_MEMORY_LOCINFO(true, sz));
                 size = sz;
             }
 
             ~EasyBuffer() {
                 if (should_del) {
-                    free_cvec(buf);
+                    free_cvec(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size));
                 }
                 buf = nullptr;
             }
@@ -91,7 +91,7 @@ namespace utils {
 
         int wait_event_plt(std::uint32_t time);
 
-        void set_nonblock(std::uintptr_t sock);
+        void set_nonblock(std::uintptr_t sock, bool);
         void sockclose(std::uintptr_t sock);
 
     }  // namespace dnet

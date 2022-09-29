@@ -5,79 +5,89 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "parser.h"
-#include "middle.h"
+#include "middle/parser.h"
+#include "middle/middle.h"
 #include <helper/line_pos.h>
-utils::Sequencer<const char*>* srcptr;
+#include <file/file_view.h>
+#include <cmdline/option/optcontext.h>
+#include <wrap/argv.h>
+#include "backend/llvm/llvm.h"
+#include <filesystem>
+utils::Sequencer<utils::file::View&>* srcptr;
 namespace minlc {
     void print_node(const std::shared_ptr<utils::minilang::MinNode>& node) {
         std::string w;
         srcptr->rptr = node->pos.begin;
         const auto len = node->pos.end - node->pos.begin;
+        utils::helper::write_src_loc(w, *srcptr, len);
+        printe(w);
+    }
+
+    void print_pos(size_t pos) {
+        std::string w;
+        srcptr->rptr = pos;
         utils::helper::write_src_loc(w, *srcptr, 1);
         printe(w);
     }
 }  // namespace minlc
 
 namespace mc = minlc;
+namespace opt = utils::cmdline::option;
+namespace fs = std::filesystem;
 
-bool test_ok() {
-    constexpr auto test = R"(
-        mod test
-        import (
-            "std/fmt"
-        )
+struct Option {
+    std::string input;
+    bool help;
+    void bind(opt::Context& ctx) {
+        ctx.VarString(&input, "i,input", "input file", "FILE");
+        ctx.VarBool(&help, "h,help", "show this help");
+    }
+} option;
 
-        type Test struct {
-            A string
-            B int
-        }
+int assemble() {
+    utils::file::View view;
+    if (!view.open(option.input)) {
+        mc::printe("invalid path ", option.input);
+        return -1;
+    }
 
-        fn voidfn(arg int,type Arg,arg2 char) () {
-
-        }
-
-        linkage "C" {
-
-        fn printf(format *const char,...) int
-
-        fn main(argc mut int,argv mut **char) int {
-            /*argc,argv = argc,argv
-            arg1 := argv[1]
-            if arg1 != "" {
-                fmt.Printf("%s",arg1)
-            }
-            */
-            fnval := fn() int {
-                return type<int> + type<int>
-            }
-            fnval()
-            C.stdio.printf("%s","Hello World")
-            return 0
-        }
-
-        }
-    )";
-    auto seq = utils::make_cpy_seq(test);
+    auto seq = utils::make_ref_seq(view);
     srcptr = &seq;
     minlc::ErrC errc{};
     auto ok = mc::parse(seq, errc);
     if (!ok.first || !ok.second) {
         mc::printe("parse failed");
-        return false;
+        return -1;
     }
     mc::middle::M m;
     auto prog = mc::middle::minl_to_program(m, ok.second);
-    for (auto& object : m.object_mapping) {
-        minlc::printe(object.first->str);
-        minlc::print_node(object.first);
+    if (!prog) {
+        mc::printe("mapping failed");
+        return -1;
     }
-    return true;
+    mc::llvm::L l{m};
+    auto path = fs::path(option.input);
+    auto genr = path.filename().generic_u8string();
+    if (!mc::llvm::write_program(l, (const char*)genr.c_str(), prog)) {
+        mc::printe("llvm output failed");
+        return -1;
+    }
+    mc::printo(l.output);
+    return 0;
 }
 
 int main(int argc, char** argv) {
-    if (!test_ok()) {
-        mc::printe("test code failed. library has bugs");
-        return -1;
+    utils::wrap::U8Arg _(argc, argv);
+    opt::Context ctx;
+    option.bind(ctx);
+    auto err = opt::parse_required(argc, argv, ctx, utils::helper::nop, opt::ParseFlag::assignable_mode);
+    if (opt::perfect_parsed(err) && option.help) {
+        mc::printo(ctx.Usage<std::string>(opt::ParseFlag::assignable_mode, argv[0]));
+        return 1;
     }
+    if (auto msg = opt::error_msg(err)) {
+        mc::printe("error: ", ctx.erropt(), ": ", msg);
+        return 1;
+    }
+    return assemble();
 }

@@ -32,6 +32,7 @@ namespace utils {
             http2_invalid_preface,
             http2_library_bug,
             http2_hpack_error,
+            http2_user_error,
         };
     }
 }  // namespace utils

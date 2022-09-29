@@ -5,14 +5,12 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#include <dnet/dll/dllcpp.h>
 #include <dnet/dll/ssldll.h>
 #include <number/array.h>
 #include <utf/convert.h>
 #include <memory>
-#if defined(_WIN32) && defined(_DEBUG)
-#include <crtdbg.h>
-#define WIN32_DEBUG 1
-#endif
+#include <dnet/dll/glheap.h>
 
 namespace utils {
     namespace dnet {
@@ -33,7 +31,38 @@ namespace utils {
         }
 
         void init_mem_alloc() {
-            // TODO(on-keyday):hook allocation
+            // hook allocation for openssl
+            // boringssl has no way to hook allocation dynamic
+            if (ssldl.CRYPTO_set_mem_functions_) {
+                ssldl.CRYPTO_set_mem_functions_(
+                    [](size_t s, const char* file, int line) {
+                        return get_rawbuf(s, DebugInfo{
+                                                 .size_known = true,
+                                                 .size = s,
+                                                 .file = file,
+                                                 .line = line,
+                                                 .func = "OPENSSL_malloc",
+                                             });
+                    },
+                    [](void* p, size_t s, const char* file, int line) {
+                        return resize_rawbuf(p, s, DebugInfo{
+                                                       .size_known = false,
+                                                       .size = 0,
+                                                       .file = file,
+                                                       .line = line,
+                                                       .func = "OPENSSL_realloc",
+                                                   });
+                    },
+                    [](void* p, const char* file, int line) {
+                        return free_rawbuf(p, DebugInfo{
+                                                  .size_known = false,
+                                                  .size = 0,
+                                                  .file = file,
+                                                  .line = line,
+                                                  .func = "OPENSSL_free",
+                                              });
+                    });
+            }
         }
 
         bool SSLDll::load_ssl_common() {

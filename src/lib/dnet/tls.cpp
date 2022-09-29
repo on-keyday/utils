@@ -64,7 +64,7 @@ namespace utils {
         };
 
         TLS::~TLS() {
-            delete_with_global_heap(static_cast<SSLContexts*>(opt));
+            delete_with_global_heap(static_cast<SSLContexts*>(opt), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
         }
 
         dnet_dll_internal(TLS) create_tls() {
@@ -83,7 +83,7 @@ namespace utils {
                     }
                 },
             };
-            auto tls = new_from_global_heap<SSLContexts>();
+            auto tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
             if (!tls) {
                 return {no_resource};
             }
@@ -103,12 +103,12 @@ namespace utils {
             if (!ctx->sslctx) {
                 return {invalid_tls};
             }
-            auto new_tls = new_from_global_heap<SSLContexts>();
+            auto new_tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
             if (!new_tls) {
                 return {no_resource};
             }
             if (!ssldl.SSL_CTX_up_ref_(ctx->sslctx)) {
-                delete_with_global_heap(new_tls);
+                delete_with_global_heap(new_tls, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
                 return {no_resource};
             }
             new_tls->sslctx = ctx->sslctx;

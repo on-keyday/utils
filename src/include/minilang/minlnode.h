@@ -7,7 +7,7 @@
 
 #pragma once
 #include "minl.h"
-#include "minlstruct.h"
+#include "minltype.h"
 #include "minlfunc.h"
 #include "minlctrl.h"
 #include "minlprog.h"
@@ -90,6 +90,16 @@ namespace utils {
             return nullptr;
         }
 
+        inline std::shared_ptr<InterfaceNode> is_Interface(const std::shared_ptr<MinNode>& root) {
+            if (!root) {
+                return nullptr;
+            }
+            if (root->node_type == nt_interface) {
+                return std::static_pointer_cast<InterfaceNode>(root);
+            }
+            return nullptr;
+        }
+
         inline std::shared_ptr<GenericTypeNode> is_GenericType(const std::shared_ptr<GenericTypeNode>& root) {
             if (!root) {
                 return nullptr;
@@ -138,12 +148,29 @@ namespace utils {
             return nullptr;
         }
 
-        inline std::shared_ptr<BlockNode> is_Block(const std::shared_ptr<MinNode>& root) {
+        inline std::shared_ptr<BlockNode> is_Block(const std::shared_ptr<MinNode>& root, bool strict = false) {
             if (!root) {
                 return nullptr;
             }
-            if (root->node_type == nt_block) {
+            bool res = false;
+            if (strict) {
+                res = root->node_type == nt_block;
+            }
+            else {
+                res = (root->node_type & nt_min_derive_mask) == nt_block;
+            }
+            if (res) {
                 return std::static_pointer_cast<BlockNode>(root);
+            }
+            return nullptr;
+        }
+
+        inline std::shared_ptr<SwitchStatNode> is_SwitchStat(const std::shared_ptr<MinNode>& root) {
+            if (!root) {
+                return nullptr;
+            }
+            if (root->node_type == nt_switch) {
+                return std::static_pointer_cast<SwitchStatNode>(root);
             }
             return nullptr;
         }
@@ -158,7 +185,7 @@ namespace utils {
             return nullptr;
         }
 
-        // also detect ForStat
+        // also detect ForStat,IfStat
         inline std::shared_ptr<CondStatNode> is_CondStat(const std::shared_ptr<MinNode>& root, bool strict = false) {
             if (!root) {
                 return nullptr;
@@ -172,6 +199,16 @@ namespace utils {
             }
             if (res) {
                 return std::static_pointer_cast<CondStatNode>(root);
+            }
+            return nullptr;
+        }
+
+        inline std::shared_ptr<IfStatNode> is_IfStat(const std::shared_ptr<MinNode>& root) {
+            if (!root) {
+                return nullptr;
+            }
+            if (root->node_type == nt_if) {
+                return std::static_pointer_cast<IfStatNode>(root);
             }
             return nullptr;
         }
@@ -196,6 +233,28 @@ namespace utils {
             return nullptr;
         }
 
+        // detect StringNode. str starting with " or ' or `
+        inline std::shared_ptr<StringNode> is_String(const std::shared_ptr<MinNode>& node) {
+            if (!node) {
+                return nullptr;
+            }
+            if (node->node_type == nt_string) {
+                return std::static_pointer_cast<StringNode>(node);
+            }
+            return nullptr;
+        }
+
+        // detect NumberNode .str starting with digit
+        inline std::shared_ptr<NumberNode> is_Number(const std::shared_ptr<MinNode>& node) {
+            if (!node) {
+                return nullptr;
+            }
+            if (node->node_type == nt_number) {
+                return std::static_pointer_cast<NumberNode>(node);
+            }
+            return nullptr;
+        }
+
         // detect strict MinNode
         inline bool is_MinNode(const std::shared_ptr<MinNode>& node) {
             return node && node->node_type == nt_min;
@@ -207,7 +266,7 @@ namespace utils {
             if (auto fn = is_Func(node)) {
                 return fn->mode == fe_expr;
             }
-            else if (is_MinNode(node) || is_Binary(node, true)) {
+            else if (is_MinNode(node) || is_Number(node) || is_String(node) || is_Binary(node, true)) {
                 return true;
             }
             else if (auto ty = is_Type(node); ty && ty->str == typeprim_str_) {
@@ -216,30 +275,8 @@ namespace utils {
             return false;
         }
 
-        // detect MinNode with str starting with " or ' or `
-        inline bool is_String(const std::shared_ptr<MinNode>& node) {
-            if (is_MinNode(node)) {
-                if (node->str.size()) {
-                    auto c = node->str[0];
-                    return c == '"' || c == '\'' || c == '`';
-                }
-            }
-            return false;
-        }
-
-        // detect MinNode with str starting with digit
-        inline bool is_Number(const std::shared_ptr<MinNode>& node) {
-            if (is_MinNode(node)) {
-                if (node->str.size()) {
-                    auto c = node->str[0];
-                    return number::is_digit(c);
-                }
-            }
-            return false;
-        }
-
         inline bool is_Ident(const std::shared_ptr<MinNode>& node) {
-            return is_MinNode(node) && !is_Number(node) && !is_String(node);
+            return is_MinNode(node);
         }
     }  // namespace minilang
 }  // namespace utils

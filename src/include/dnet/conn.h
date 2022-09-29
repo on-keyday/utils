@@ -120,16 +120,40 @@ namespace utils {
                 }
                 return false;
             }
+
+            bool write(const char* data, size_t len) {
+                if (!sock) {
+                    return false;
+                }
+                if (tls) {
+                    return tls.write(data, len) && tls_io();
+                }
+                return sock.write(data, len);
+            }
+
+            bool read(char* data, size_t len, size_t& red) {
+                if (!sock) {
+                    return false;
+                }
+                if (tls) {
+                    auto res = tls_io() && tls.read(data, len);
+                    red = tls.readsize();
+                    return res;
+                }
+                auto res = sock.read(data, len);
+                red = sock.readsize();
+                return res;
+            }
         };
         dnet_dll_export(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap);
 
-        inline Socket make_server_socket(const SockAddr& resolved, bool reuse = true, bool v6only = false) {
+        inline Socket make_server_socket(const SockAddr& resolved, int backlog = 10, bool reuse = true, bool v6only = false) {
             auto sock = dnet::make_socket(resolved.af, resolved.type, resolved.proto);
             if (!sock ||
                 !sock.set_reuse_addr(reuse) ||
                 !sock.set_ipv6only(v6only) ||
                 !sock.bind(resolved.addr, resolved.addrlen) ||
-                !sock.listen()) {
+                !sock.listen(backlog)) {
                 return {};
             }
             return sock;

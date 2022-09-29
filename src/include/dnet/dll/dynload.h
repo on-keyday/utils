@@ -74,7 +74,9 @@ namespace utils {
                         *o = 0;
                     }
                     if (!bo.load(instance, libp, loader)) {
-                        return false;
+                        if (!bo.not_must) {
+                            return false;
+                        }
                     }
                 }
                 return true;

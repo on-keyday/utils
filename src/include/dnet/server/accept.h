@@ -15,8 +15,8 @@ namespace utils {
     namespace dnet {
         namespace server {
 
-            bool prepare_listeners(const char* port, auto&& prepared, size_t count, int* err = nullptr,
-                                   bool reuse = true, bool* ipv6only = nullptr) {
+            bool prepare_listeners(const char* port, auto&& prepared, size_t count, int backlog = 10, int* err = nullptr,
+                                   bool reuse = true, bool ipv6only = false) {
                 if (count == 0) {
                     return false;
                 }
@@ -31,13 +31,13 @@ namespace utils {
                 while (addr.next()) {
                     SockAddr resolved;
                     addr.sockaddr(resolved);
-                    auto sock = make_server_socket(resolved, reuse, ipv6only);
+                    auto sock = make_server_socket(resolved, backlog, reuse, ipv6only);
                     if (!sock) {
                         continue;
                     }
                     prepared(std::as_const(addr), sock);
                     for (size_t i = 1; i < count; i++) {
-                        sock = make_server_socket(resolved, reuse, ipv6only);
+                        sock = make_server_socket(resolved, backlog, reuse, ipv6only);
                         if (!sock) {
                             return false;
                         }

@@ -8,7 +8,7 @@
 // minlutil - minilang utility
 #pragma once
 #include "minl.h"
-#include "minlstruct.h"
+#include "minltype.h"
 #include "minlfunc.h"
 #include "minlctrl.h"
 #include "minlprog.h"
@@ -59,54 +59,6 @@ namespace utils {
             return right && left;
         }
 
-        constexpr auto get_next_default_cb() {
-            return [](auto& cb) {};
-        }
-
-        template <class F = decltype(get_next_default_cb())>
-        std::shared_ptr<MinNode> get_next(const std::shared_ptr<MinNode>& root, F&& callback = get_next_default_cb()) {
-            if (auto node = is_FuncParam(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            if (auto node = is_TypeDef(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            if (auto node = is_Let(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            if (auto node = is_StructField(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            if (auto node = is_Block(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            if (auto node = is_Comment(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            if (auto node = is_Import(root)) {
-                callback(node->next);
-                return node->next;
-            }
-            return nullptr;
-        }
-
-        template <class Node>
-        std::shared_ptr<Node> get_next(const std::shared_ptr<MinNode>& node) {
-            std::shared_ptr<Node> n;
-            get_next(node, [&](auto& c) {
-                if constexpr (std::is_same_v<decltype(c), std::shared_ptr<Node>&>) {
-                    n = c;
-                }
-            });
-            return n;
-        }
-
         // walk walks among each node
         // callback is called twice per node
         // bool callback(const std::shared_ptr<Node>& node,bool after)
@@ -142,6 +94,9 @@ namespace utils {
             if (auto node = is_ForStat(root)) {
                 return select(node, node->right, node->center, node->left, node->block);
             }
+            if (auto node = is_IfStat(root)) {
+                return select(node, node->right, node->left, node->block, node->els);
+            }
             if (auto node = is_CondStat(root)) {
                 return select(node, node->right, node->left, node->block);
             }
@@ -157,6 +112,9 @@ namespace utils {
             if (auto node = is_StructField(root)) {
                 return select(node, node->ident, node->type, node->init, node->next);
             }
+            if (auto node = is_Interface(root)) {
+                return select(node, node->method, node->type, node->next);
+            }
             if (auto node = is_Func(root)) {
                 return select(node, node->ident, node->type, node->return_, node->next, node->block);
             }
@@ -166,8 +124,14 @@ namespace utils {
             if (auto node = is_ArrayType(root)) {
                 return select(node, node->expr, node->type);
             }
+            if (auto node = is_GenericType(root)) {
+                return select(node, node->type);
+            }
             if (auto node = is_Type(root)) {
                 return select(node, node->type);
+            }
+            if (auto node = is_SwitchStat(root)) {
+                return select(node, node->expr, node->element, node->next, node->next_case);
             }
             if (auto node = is_Block(root)) {
                 return select(node, node->element, node->next);
@@ -180,6 +144,12 @@ namespace utils {
             }
             if (auto node = is_WordStat(root)) {
                 return select(node, node->expr, node->block);
+            }
+            if (auto node = is_String(root)) {
+                return select(node);
+            }
+            if (auto node = is_Number(root)) {
+                return select(node);
             }
             return select(root);
         }

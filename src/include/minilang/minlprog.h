@@ -149,6 +149,7 @@ namespace utils {
 
         struct ImportNode : MinNode {
             std::shared_ptr<ImportNode> next;
+            std::shared_ptr<MinNode> as;
             std::shared_ptr<MinNode> from;
             MINL_Constexpr ImportNode()
                 : MinNode(nt_import) {}
@@ -156,6 +157,21 @@ namespace utils {
 
         constexpr auto import_field(auto& parse_after, auto& start, auto& seq, auto& curnode, bool& err, auto& errc) {
             return [&] {
+                const auto begin = seq.rptr;
+                helper::space::consume_space(seq, true);
+                const auto start_as = seq.rptr;
+                auto end_as = seq.rptr;
+                std::string as;
+                if (ident_default_read(as, seq)) {
+                    end_as = seq.rptr;
+                    helper::space::consume_space(seq, false);
+                }
+                if (auto c = seq.current(); c != '"' && c != '\'' && c != '`') {
+                    errc.say("expect import statement string but not");
+                    errc.trace(start, seq);
+                    err = true;
+                    return;
+                }
                 auto r = parse_after(seq, errc);
                 if (!r) {
                     errc.say("expect import statement but not");
@@ -166,6 +182,13 @@ namespace utils {
                 auto tmp = std::make_shared<ImportNode>();
                 tmp->str = imports_str_;
                 tmp->from = std::move(r);
+                tmp->pos = {start, seq.rptr};
+                if (as.size()) {
+                    auto asnode = std::make_shared<MinNode>();
+                    asnode->pos = {start, end_as};
+                    asnode->str = std::move(as);
+                    tmp->as = std::move(asnode);
+                }
                 curnode->next = tmp;
                 curnode = tmp;
             };

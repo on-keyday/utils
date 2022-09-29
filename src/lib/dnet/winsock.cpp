@@ -28,7 +28,7 @@ namespace utils {
 
             void decref() {
                 if (ref.fetch_sub(1) == 1) {
-                    delete_with_global_heap(this);
+                    delete_with_global_heap(this, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncBuffer)));
                 }
             }
 
@@ -98,7 +98,7 @@ namespace utils {
         };
 
         AsyncBuffer* AsyncBuffer_new() {
-            return new_from_global_heap<AsyncBuffer>();
+            return new_from_global_heap<AsyncBuffer>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncBuffer)));
         }
 
         void AsyncBuffer_gc(void* ptr, std::uintptr_t sock) {
@@ -222,7 +222,7 @@ namespace utils {
                 if (tmp != -1) {
                     goto ENDACCEPT;
                 }
-                set_nonblock(tmp);
+                set_nonblock(tmp, true);
                 if (len < reqlen * 2) {
                     set_error(invalid_get_ptrs_result);
                     sockclose(tmp);

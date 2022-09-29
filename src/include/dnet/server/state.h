@@ -11,6 +11,7 @@
 #include "servh.h"
 #include "accept.h"
 #include "client.h"
+#include "../dll/allocator.h"
 #include <atomic>
 #include <cstdint>
 #include "../../thread/channel.h"
@@ -181,7 +182,7 @@ namespace utils {
                             std::forward<decltype(object)>(object), get_sock, add_data)) {
                         count.total_async_invocation--;
                         count.waiting_async_read--;
-                        count.total_failed_async--;
+                        count.total_failed_async++;
                         return false;
                     }
                     return true;
@@ -221,7 +222,8 @@ namespace utils {
                         std::decay_t<decltype(fn)> fn;
                         std::remove_cvref_t<decltype(obj)> obj;
                     };
-                    auto inobj = std::make_shared<Internal>();
+                    glheap_allocator<Internal> gl;
+                    auto inobj = std::allocate_shared<Internal>(gl);
                     inobj->fn = std::forward<decltype(fn)>(fn);
                     inobj->obj = std::forward<decltype(obj)>(obj);
                     auto f = [](std::shared_ptr<void>&& obj, StateContext&& st) {

@@ -14,6 +14,7 @@ this is a toy language and would not support for practical purpose
 ## Development status
 
 - [x] minilang parser
+- [ ] parse result to minilang object
 - [ ] minilang object to c lang object
 - [ ] c lang object to c lang source code
 - [ ] compiler toolchain invocation

@@ -124,13 +124,13 @@ namespace utils {
         bool String::recap(size_t i) {
             HTTPBufProxy p{buf};
             if (!p.text()) {
-                p.text() = get_cvec(i);
+                p.text() = get_cvec(i, DNET_DEBUG_MEMORY_LOCINFO(true, i));
                 if (!p.text()) {
                     return false;
                 }
             }
             else {
-                if (!resize_cvec(p.text(), i)) {
+                if (!resize_cvec(p.text(), i, DNET_DEBUG_MEMORY_LOCINFO(true, p.cap()))) {
                     return false;
                 }
             }

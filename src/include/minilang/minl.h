@@ -34,18 +34,23 @@ namespace utils {
             nt_binary = 0x0001,
             nt_cond = 0x0101,
             nt_for = 0x1101,
+            nt_if = 0x2101,
             nt_type = 0x0002,
             nt_arrtype = 0x0102,
             nt_gentype = 0x0202,
-            nt_struct_field = 0x0202,
-            nt_funcparam = 0x0302,
-            nt_func = 0x1302,
+            nt_struct_field = 0x0302,
+            nt_funcparam = 0x0402,
+            nt_func = 0x1402,
+            nt_interface = 0x0502,
             nt_typedef = 0x0003,
             nt_let = 0x0004,
             nt_block = 0x0005,
+            nt_switch = 0x0105,
             nt_comment = 0x0006,
             nt_import = 0x0007,
             nt_wordstat = 0x0008,
+            nt_number = 0x0009,
+            nt_string = 0x000a,
             nt_min_derive_mask = 0x00ff,
             nt_second_derive_mask = 0x0fff,
             nt_max = 0xffff,
@@ -59,8 +64,12 @@ namespace utils {
                     return "binary";
                 case nt_cond:
                     return "cond";
+                case nt_if:
+                    return "if";
                 case nt_for:
                     return "for";
+                case nt_switch:
+                    return "switch";
                 case nt_type:
                     return "type";
                 case nt_arrtype:
@@ -83,6 +92,10 @@ namespace utils {
                     return "import";
                 case nt_wordstat:
                     return "wordstat";
+                case nt_number:
+                    return "number";
+                case nt_string:
+                    return "string";
                 default:
                     return "(unknown)";
             }
@@ -121,6 +134,23 @@ namespace utils {
                 : MinNode(id) {}
         };
 
+        struct NumberNode : MinNode {
+            bool is_float;
+            int radix;
+            number::NumErr parsable = false;
+            size_t integer = 0;
+            double floating = 0;
+            MINL_Constexpr NumberNode()
+                : MinNode(nt_number) {}
+        };
+
+        struct StringNode : MinNode {
+            char prefix;
+            char store_c;
+            MINL_Constexpr StringNode()
+                : MinNode(nt_string) {}
+        };
+
         template <class ErrC, class Str>
         struct log_raii {
             ErrC& errc;
@@ -142,8 +172,9 @@ namespace utils {
         constexpr auto ident_default() {
             return [](auto& seq) -> bool {
                 return !seq.eos() &&
-                       !number::is_control_char(seq.current()) &&
-                       !number::is_symbol_char(seq.current());
+                       (!number::is_control_char(seq.current()) &&
+                            !number::is_symbol_char(seq.current()) ||
+                        seq.current() == '_');
             };
         }
 
@@ -169,10 +200,9 @@ namespace utils {
             return [](auto&& pass, auto& seq, auto& errc) -> std::shared_ptr<MinNode> {
                 MINL_FUNC_LOG("primitive")
                 std::string str;
-                helper::space::consume_space(seq);
-                const size_t start = seq.rptr;
-                Pos pos{start, start};
-                auto num_read = [&]() {
+                helper::space::consume_space(seq, true);
+                const auto start = seq.rptr;
+                auto num_read = [&](std::shared_ptr<NumberNode>& node) {
                     if (!number::is_digit(seq.current())) {
                         return false;
                     }
@@ -181,17 +211,37 @@ namespace utils {
                     if (!number::read_prefixed_number(seq, str, &prefix, &is_float)) {
                         errc.say("expect number but not");
                         errc.trace(start, seq);
-                        str = {};
+                        return true;
+                    }
+                    node = std::make_shared<NumberNode>();
+                    node->is_float = is_float;
+                    node->radix = prefix;
+                    node->pos = {start, seq.rptr};
+                    node->str = std::move(str);
+                    number::NumConfig conf{number::default_num_ignore()};
+                    conf.offset = prefix == 10 ? 0 : 2;
+                    if (is_float) {
+                        node->parsable = number::parse_float(node->str, node->floating, node->radix, conf);
+                    }
+                    else {
+                        node->parsable = number::parse_integer(node->str, node->integer, node->radix, conf);
                     }
                     return true;
                 };
                 if (seq.current() == '"' || seq.current() == '\'') {
+                    auto pf = seq.current();
                     if (!escape::read_string(str, seq, escape::ReadFlag::parser_mode,
                                              escape::c_prefix())) {
                         errc.say("expect string but not");
                         errc.trace(start, seq);
                         return nullptr;
                     }
+                    auto node = std::make_shared<StringNode>();
+                    node->pos = {start, seq.rptr};
+                    node->prefix = pf;
+                    node->store_c = 0;
+                    node->str = std::move(str);
+                    return node;
                 }
                 else if (seq.current() == '`') {
                     auto c = 0;
@@ -201,24 +251,24 @@ namespace utils {
                         errc.trace(start, seq);
                         return nullptr;
                     }
+                    auto node = std::make_shared<StringNode>();
+                    node->pos = {start, seq.rptr};
+                    node->prefix = '`';
+                    node->store_c = c;
+                    node->str = std::move(str);
+                    return node;
                 }
-                else if (num_read()) {
-                    if (str == decltype(str){}) {
-                        return nullptr;
-                    }
+                else if (std::shared_ptr<NumberNode> node; num_read(node)) {
+                    return node;
                 }
-                else {
-                    if (!ident_default_read(str, seq)) {
-                        errc.say("expect identifier but not");
-                        errc.trace(start, seq);
-                        return nullptr;
-                    }
+                if (!ident_default_read(str, seq)) {
+                    errc.say("expect identifier but not");
+                    errc.trace(start, seq);
+                    return nullptr;
                 }
-                pos.end = seq.rptr;
-                helper::space::consume_space(seq);
                 auto node = std::make_shared<MinNode>();
                 node->str = std::move(str);
-                node->pos = pos;
+                node->pos = {start, seq.rptr};
                 return node;
             };
         }
@@ -245,8 +295,10 @@ namespace utils {
 
         constexpr auto expecter(auto... op) {
             return [=](auto& seq, auto& expected, Pos& pos) {
-                const auto start = seq.rptr;
                 auto fold = [&](auto op) {
+                    const auto tmp = seq.rptr;
+                    helper::space::consume_space(seq, false);
+                    const auto start = seq.rptr;
                     if (seq.seek_if(op.op)) {
                         for (auto c : op.errs) {
                             if (c == 0) {
@@ -261,6 +313,7 @@ namespace utils {
                         pos = {start, seq.rptr};
                         return true;
                     }
+                    seq.rptr = tmp;
                     return false;
                 };
                 return (... || fold(op));
@@ -273,7 +326,7 @@ namespace utils {
                 std::string str;
                 Pos pos{};
                 if (expect(seq, str, pos)) {
-                    helper::space::consume_space(seq);
+                    helper::space::consume_space(seq, true);
                     auto node = f(f, pass, seq, errc);
                     if (!node) {
                         return node;
@@ -402,8 +455,8 @@ namespace utils {
                             err = true;
                             return false;
                         }
+                        helper::space::consume_space(seq, true);
                         if (op.rem_comma) {
-                            helper::space::consume_space(seq, true);
                             seq.seek_if(op.rem_comma);
                             helper::space::consume_space(seq, true);
                         }
@@ -413,7 +466,6 @@ namespace utils {
                             return false;
                         }
                         const auto end = seq.rptr;
-                        helper::space::consume_space(seq, true);
                         auto tmp = std::make_shared<BinaryNode>();
                         tmp->left = node;
                         tmp->str = op.op;
@@ -440,7 +492,6 @@ namespace utils {
                         err = true;
                         return false;
                     }
-                    helper::space::consume_space(seq, true);
                     auto tmp = std::make_shared<BinaryNode>();
                     tmp->left = node;
                     tmp->str = op.op;

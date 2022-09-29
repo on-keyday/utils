@@ -122,6 +122,9 @@ namespace utils {
             bool expect_eof = true;
         };
 
+        template <class Ignore>
+        NumConfig(Ignore) -> NumConfig<Ignore>;
+
         struct OffsetConfig {
             static constexpr char dot = '.';
             static constexpr bool accept_exp = true;

@@ -230,13 +230,13 @@ namespace utils {
             timeval timeout;
             timeout.tv_sec = 60;
             timeout.tv_usec = 0;
-            auto obj = new_from_global_heap<WaitObject>();
+            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
             if (!obj) {
                 err = no_resource;
                 return nullptr;
             }
             quic::mem::RAII r{obj, [](auto obj) {
-                                  delete_with_global_heap(obj);
+                                  delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
                               }};
             auto event = CreateEventW(nullptr, true, false, nullptr);
             if (!event) {
@@ -276,13 +276,13 @@ namespace utils {
         }
 
         static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host* host, Port* port) {
-            auto obj = new_from_global_heap<WaitObject>();
+            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
             if (!obj) {
                 err = no_resource;
                 return nullptr;
             }
             quic::mem::RAII r{obj, [](auto obj) {
-                                  delete_with_global_heap(obj);
+                                  delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
                               }};
             obj->hint.ai_family = addr.af;
             obj->hint.ai_socktype = addr.type;
@@ -345,7 +345,7 @@ namespace utils {
         WaitAddrInfo::~WaitAddrInfo() {
             if (opt) {
                 auto obj = static_cast<WaitObject*>(opt);
-                delete_with_global_heap(obj);
+                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
             }
         }
 

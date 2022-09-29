@@ -92,7 +92,10 @@ namespace ssl_import {
         int BIO_test_flags(const BIO* b, int flags);
         int BIO_read_ex(BIO* b, void* data, size_t dlen, size_t* readbytes);
         int BIO_write_ex(BIO* b, const void* data, size_t dlen, size_t* written);
-
+        int CRYPTO_set_mem_functions(
+            void* (*m)(size_t, const char*, int),
+            void* (*r)(void*, size_t, const char*, int),
+            void (*f)(void*, const char*, int));
     }  // namespace open_ext
 
     namespace boring_ext {
@@ -217,7 +220,7 @@ namespace utils {
             L(SSL_set_quic_transport_params)
 #undef L
            private:
-            alib<12> libcryptocommon;
+            alib<13> libcryptocommon;
 #define L(func) LOADER_BASE(ssl_import::crypto::func, func, libcryptocommon, SSLDll, false)
             // libcrypto functions
             L(ERR_print_errors_cb)
@@ -232,6 +235,8 @@ namespace utils {
             L(EVP_CIPHER_CTX_ctrl)
             L(BIO_new_bio_pair)
             L(BIO_free_all)
+            // for memory hook
+            LOADER_BASE(ssl_import::open_ext::CRYPTO_set_mem_functions, CRYPTO_set_mem_functions, libcryptocommon, SSLDll, true)
 #undef L
            private:
             alib_nptr<1> osslext_ssl;

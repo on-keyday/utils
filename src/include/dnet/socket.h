@@ -13,6 +13,7 @@
 #include <memory>
 #include "dll/dllh.h"
 #include "errcode.h"
+#include "heap.h"
 
 namespace utils {
     namespace dnet {
@@ -62,6 +63,13 @@ namespace utils {
         // if event is processed function returns number of event
         // otherwise returns 0
         dnet_dll_export(int) wait_event(std::uint32_t time);
+
+        enum MTUConfig {
+            mtu_default,  // same as IP_PMTUDISC_WANT
+            mtu_enable,   // same as IP_PMTUDISC_DO
+            mtu_disable,  // same as IP_PMTUDISC_DONT
+            mtu_ignore,   // same as IP_PMTUDISC_PROBE
+        };
 
         // Socket is wrappper class of native socket
         struct dnet_class_export Socket {
@@ -141,18 +149,43 @@ namespace utils {
                 return prevred;
             }
 
+            // get_option invokes getsockopt with getsockopt(layer,opt,std::addressof(t),sizeof(t))
             template <class T>
-            bool get_option(int layer, int opt, T& t) const {
+            bool get_option(int layer, int opt, T& t) {
                 return get_option(layer, opt, std::addressof(t), sizeof(t));
             }
 
+            // get_option invokes getsockopt with setsockopt(layer,opt,std::addressof(t),sizeof(t))
             template <class T>
             bool set_option(int layer, int opt, T&& t) {
                 return set_option(layer, opt, std::addressof(t), sizeof(t));
             }
 
+            // set_reuse_addr sets SO_REUSEADDR
+            // if this is true,
+            // on linux,   you can bind address in TIME_WAIT,CLOSE_WAIT,FIN_WAIT2 (this is windows default behaviour)
+            // on windows, you can bind some sockets on same address, but
+            // this behaviour has some security risks
+            // see also https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
+            // Japanese Docs: https://www.ymnet.org/diary/d/%E6%97%A5%E8%A8%98%E3%81%BE%E3%81%A8%E3%82%81/SO_EXCLUSIVEADDRUSE
             bool set_reuse_addr(bool resue);
+
+            // set_exclusive_use sets SO_EXCLUSIVEUSE
+            // this function works on windows.
+            // on linux, this function always return false
+            bool set_exclusive_use(bool exclusive);
+
+            // set_ipv6only sets IPV6_V6ONLY
+            // if this is false,you can accept both ipv6 and ipv4
+            // default value is different between linux(false) and windows(true)
             bool set_ipv6only(bool only);
+            bool set_nodelay(bool no_delay);
+            bool set_ttl(unsigned char ttl);
+            bool set_mtu_discover(MTUConfig conf);
+            std::int32_t get_mtu();
+
+            // set_blocking calls ioctl(FIONBIO)
+            [[deprecated]] void set_blocking(bool blocking);
 
            private:
             std::uintptr_t sock;
@@ -189,8 +222,8 @@ namespace utils {
             }
 
            private:
-            static void* internal_alloc(size_t s);  // wrappper of get_rawbuf
-            static void internal_free(void*);       // wrapper of free_rawbuf
+            static void* internal_alloc(size_t s, DebugInfo info);  // wrappper of get_rawbuf
+            static void internal_free(void*, DebugInfo info);       // wrapper of free_rawbuf
 
            public:
             // this function is wrapper of raw read_async function
@@ -209,7 +242,7 @@ namespace utils {
                     std::decay_t<decltype(add_data)> add;
                     std::remove_cvref_t<decltype(object)> obj;
                 };
-                auto pobj = internal_alloc(sizeof(ObjectHolder));
+                auto pobj = internal_alloc(sizeof(ObjectHolder), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
                 if (!pobj) {
                     err = no_resource;
                     return false;
@@ -227,7 +260,7 @@ namespace utils {
                         ObjectHolder* h;
                         ~R() {
                             h->~ObjectHolder();
-                            internal_free(h);
+                            internal_free(h, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*h)));
                         };
                     } releaser{obj};
                     obj->get(pass).set_err(err);
@@ -243,7 +276,7 @@ namespace utils {
                 };
                 if (!obj->get(obj->obj).read_async(cb, obj)) {
                     object = std::move(obj->obj);  // return pass
-                    internal_free(obj);
+                    internal_free(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
                     return false;
                 }
                 return true;
@@ -256,7 +289,7 @@ namespace utils {
                     std::decay_t<decltype(get_sock)> get;
                     std::remove_cvref_t<decltype(object)> obj;
                 };
-                auto pobj = internal_alloc(sizeof(ObjectHolder));
+                auto pobj = internal_alloc(sizeof(ObjectHolder), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
                 if (!pobj) {
                     err = no_resource;
                     return false;
@@ -273,7 +306,7 @@ namespace utils {
                         ObjectHolder* h;
                         ~R() {
                             h->~ObjectHolder();
-                            internal_free(h);
+                            internal_free(h, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*h)));
                         };
                     } releaser{obj};
                     obj->get(pass).set_err(err);
@@ -281,7 +314,7 @@ namespace utils {
                 };
                 if (!obj->get(obj->obj).connect_async(cb, obj, addr, addrlen)) {
                     object = std::move(obj->obj);  // return pass
-                    internal_free(obj);
+                    internal_free(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
                     return false;
                 }
                 return true;
@@ -293,6 +326,8 @@ namespace utils {
         // you mustn't call any other functions
         // if you call any function
         // that is undefined behaviour
+        // socket is always non-blocking
+        // if you want blocking socket, call Socket::set_blocking explicit
         dnet_dll_export(Socket) make_socket(int address_family, int socket_type, int protocol);
     }  // namespace dnet
 }  // namespace utils

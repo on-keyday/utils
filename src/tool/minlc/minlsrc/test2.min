@@ -1,0 +1,11 @@
+mod test2
+
+import (
+    log "logging"
+    rt "runtime"
+)
+
+
+fn main(argc int,argv **char) int {
+    return argc
+}

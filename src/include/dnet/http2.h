@@ -13,6 +13,7 @@
 #include "h2err.h"
 #include "h2frame.h"
 #include "h2state.h"
+#include "../net/http/header.h"
 
 namespace utils {
     namespace dnet {
@@ -44,15 +45,59 @@ namespace utils {
             };
         }  // namespace internal
 
+        bool validate_h2header(auto&& h) {
+            constexpr auto h2key = net::h1header::http2_key_validator();
+            constexpr auto valid = net::h1header::default_validator();
+            for (auto&& kv : h) {
+                if (h2key(kv)) {
+                    if (!net::h1header::is_valid_value(get<1>(kv))) {
+                        return false;
+                    }
+                }
+                else if (!valid(kv)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        void make_header_lower(auto&& h) {
+            for (auto&& field : h) {
+                for (auto&& c : get<0>(field)) {
+                    c = helper::to_lower(c);
+                }
+            }
+        }
+
+        template <class Scheme>
+        void add_h2_request(auto&& h, auto&& authority, auto&& method, auto&& path, Scheme&& scheme = "https") {
+            h.emplace(":authority", authority);
+            h.emplace(":method", method);
+            h.emplace(":path", path);
+            h.emplace(":scheme", scheme);
+        }
+
+        template <class Scheme>
+        bool add_h2_response(auto&& h, auto&& status) {
+            if (status < 100 || status > 999) {
+                return false;
+            }
+            char codebuf[4] = "000";
+            codebuf[0] += (status / 100);
+            codebuf[1] += (status % 100 / 10);
+            codebuf[2] += (status % 100 % 10);
+            h.emplace(":status", codebuf);
+        }
+
         struct dnet_class_export HTTP2Stream {
            private:
             friend struct HTTP2;
             void* opt = nullptr;
-            int id = -1;
+            int id_ = -1;
             constexpr HTTP2Stream(void* o, int i)
-                : opt(o), id(i) {}
+                : opt(o), id_(i) {}
 
-            bool write_hpack_header(int id, void* opt, internal::data_set data,
+            bool write_hpack_header(internal::data_set data,
                                     std::uint8_t* padding, h2frame::Priority* prio, bool end_stream,
                                     ErrCode& errc);
 
@@ -60,6 +105,10 @@ namespace utils {
             constexpr HTTP2Stream() {}
             constexpr explicit operator bool() const {
                 return opt != nullptr;
+            }
+
+            constexpr int id() const {
+                return id_;
             }
 
             // write_header writes HEADER frames
@@ -126,13 +175,32 @@ namespace utils {
                     }
                 };
                 ErrCode errcs;
-                auto res = write_hpack_header(id, opt, set, padding, prio, end_stream, errcs);
+                auto res = write_hpack_header(set, padding, prio, end_stream, errcs);
                 if (!res) {
                     if (errc) {
                         *errc = errcs;
                     }
                 }
                 return res;
+            }
+
+            bool write_data(const char* data, size_t len, size_t* sent, bool end_stream = true, unsigned char* padding = nullptr, ErrCode* err = nullptr);
+
+           private:
+            bool get_header_impl(void (*add)(void* user, const char* key, size_t keysize, const char* value, size_t valuesize), void* user);
+
+           public:
+            template <class String, class Header>
+            bool get_header(Header&& h) {
+                auto ptr = std::addressof(h);
+                auto fn = [](void* user, const char* key, size_t ksize, const char* value, size_t vsize) {
+                    auto h = decltype(ptr)(user);
+                    String k, v;
+                    helper::append(k, helper::SizedView(key, ksize));
+                    helper::append(v, helper::SizedView(value, vsize));
+                    h->emplace(std::move(k), std::move(v));
+                };
+                return get_header_impl(fn, ptr);
             }
         };
 
@@ -204,6 +272,8 @@ namespace utils {
 
             // flush_preface flushs connection prefaces
             bool flush_preface();
+
+            bool write_goaway(int code, const char* debug = nullptr);
         };
 
         dnet_dll_export(HTTP2) create_http2(bool server, h2set::PredefinedSettings settings = {});

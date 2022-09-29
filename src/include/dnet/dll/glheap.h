@@ -11,81 +11,51 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <cstdlib>
 #include <cerrno>
 #endif
 namespace utils {
     namespace dnet {
-#ifdef _WIN32
-        inline void* simple_heap_alloc(size_t size) {
-            return HeapAlloc(GetProcessHeap(), 0, size);
-        }
 
-        inline void* simple_heap_realloc(void* p, size_t size) {
-            return HeapReAlloc(GetProcessHeap(), 0, p, size);
-        }
-        inline void simple_heap_free(void* p) {
-            HeapFree(GetProcessHeap(), 0, p);
-        }
-#else
-        inline void* simple_heap_alloc(size_t size) {
-            return malloc(size);
-        }
+        dnet_dll_export(void*) get_rawbuf(size_t sz, DebugInfo info);
 
-        inline void* simple_heap_realloc(void* p, size_t size) {
-            if (size == 0) {
-                return nullptr;
-            }
-            return realloc(p, size);
-        }
+        dnet_dll_export(void*) resize_rawbuf(void* p, size_t sz, DebugInfo info);
 
-        inline void simple_heap_free(void* p) {
-            free(p);
-        }
-#endif
-
-        Allocs* get_alloc();
+        dnet_dll_export(void) free_rawbuf(void* p, DebugInfo info);
 
         template <class T>
-        T* new_from_global_heap() {
-            auto ptr = get_alloc()->alloc_ptr(sizeof(T));
+        T* new_from_global_heap(DebugInfo info) {
+            auto ptr = get_rawbuf(sizeof(T), info);
             if (!ptr) {
                 return nullptr;
             }
             return new (ptr) T{};
         }
 
-        inline void* get_rawbuf(size_t sz) {
-            return get_alloc()->alloc_ptr(sz);
+        template <class T>
+        void delete_with_global_heap(T* p, DebugInfo info) {
+            if (!p) {
+                return;
+            }
+            p->~T();
+            info.size = sizeof(T);
+            info.size_known = true;
+            free_rawbuf(p, info);
         }
 
-        inline void free_rawbuf(void* p) {
-            get_alloc()->free_ptr(p);
+        inline char* get_cvec(size_t sz, DebugInfo info) {
+            return static_cast<char*>(get_rawbuf(sz, info));
         }
 
-        inline char* get_cvec(size_t sz) {
-            return static_cast<char*>(get_rawbuf(sz));
-        }
-
-        inline bool resize_cvec(char*& p, size_t size) {
-            auto c = get_alloc()->realloc_ptr(p, size);
+        inline bool resize_cvec(char*& p, size_t size, DebugInfo info) {
+            auto c = resize_rawbuf(p, size, info);
             if (c != nullptr) {
                 p = static_cast<char*>(c);
             }
             return c != nullptr;
         }
 
-        inline void free_cvec(char* p) {
-            free_rawbuf(p);
-        }
-
-        template <class T>
-        void delete_with_global_heap(T* p) {
-            if (!p) {
-                return;
-            }
-            p->~T();
-            get_alloc()->free_ptr(p);
+        inline void free_cvec(char* p, DebugInfo info) {
+            free_rawbuf(p, info);
         }
 
         inline auto get_error() {
