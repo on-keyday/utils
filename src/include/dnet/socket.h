@@ -172,6 +172,7 @@ namespace utils {
 
             // set_exclusive_use sets SO_EXCLUSIVEUSE
             // this function works on windows.
+            // see also set_reuse_addr behaviour description link
             // on linux, this function always return false
             bool set_exclusive_use(bool exclusive);
 
