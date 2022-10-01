@@ -121,11 +121,6 @@ add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
 add_executable(binred "src/tool/binred/binred.cpp"
   "src/tool/binred/read_fmt.cpp"
   "src/tool/binred/generate_cpp.cpp")
-add_executable(netutil "src/tool/netutil/netmain.cpp"
-  "src/tool/netutil/httpreq.cpp"
-  "src/tool/netutil/http_do.cpp"
-  "src/tool/netutil/debug_log.cpp"
-  "src/tool/netutil/tagcmd.cpp")
 add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp"
   "src/tool/pscmpl/compile.cpp")
 add_executable(minilang "src/tool/minilang/minilang.cpp"
@@ -139,6 +134,7 @@ add_executable(minlc "src/tool/minlc/minlc.cpp"
   "src/tool/minlc/middle/type.cpp"
   "src/tool/minlc/backend/llvm/module.cpp"
 )
+add_executable(durl "src/tool/durl/main.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
 
@@ -174,6 +170,7 @@ target_sources(utils
   "src/lib/async/light/native_context.cpp"
   "src/lib/async/light/native_stack.cpp"
   "src/lib/wrap/input.cpp"
+  "src/lib/wrap/exepath.cpp"
 )
 
 target_sources(utnet
@@ -308,10 +305,10 @@ target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
-target_link_libraries(netutil utils utnet)
 target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
 target_link_libraries(minlc utils)
+target_link_libraries(durl utils)
 
 # libquic
 target_link_libraries(quic_udp quic utils)

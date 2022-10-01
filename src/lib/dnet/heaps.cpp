@@ -7,6 +7,9 @@
 
 #include <dnet/dll/dllcpp.h>
 #include <dnet/dll/glheap.h>
+#ifndef _WIN32
+#include <cstdlib>
+#endif
 
 namespace utils {
     namespace dnet {

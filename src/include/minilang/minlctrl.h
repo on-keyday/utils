@@ -11,20 +11,6 @@
 
 namespace utils {
     namespace minilang {
-        constexpr auto block_statement_str_ = "{(block)}";
-        constexpr auto block_element_str_ = "(block_element)";
-
-        struct BlockNode : MinNode {
-            std::shared_ptr<BlockNode> next;
-            std::shared_ptr<MinNode> element;
-            MINL_Constexpr BlockNode()
-                : MinNode(nt_block) {}
-
-           protected:
-            MINL_Constexpr BlockNode(int id)
-                : MinNode(id) {
-            }
-        };
 
         constexpr auto block_stat() {
             return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
@@ -63,67 +49,6 @@ namespace utils {
                 return true;
             };
         }
-
-        constexpr const char* for_stat_str_[] = {
-            "{(for_inf_loop)}",
-            "{(for_cond)}",
-            "{(for_init_cond)}",
-            "{(for_init_cond_do)}",
-        };
-
-        constexpr const char* if_stat_str_[] = {
-            nullptr,
-            "{(if_cond)}",
-            "{(if_init_cond)}",
-            nullptr,
-        };
-
-        constexpr bool one_of(auto&& one, auto&& from) {
-            for (auto&& v : from) {
-                if (!v) {
-                    continue;
-                }
-                if (one == v) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        struct CondStatNode : BinaryNode {
-            std::shared_ptr<MinNode> block;
-            MINL_Constexpr CondStatNode()
-                : BinaryNode(nt_cond) {}
-
-           protected:
-            MINL_Constexpr CondStatNode(int id)
-                : BinaryNode(id) {}
-        };
-
-        // Derive CondStatNode
-        struct IfStatNode : CondStatNode {
-            std::shared_ptr<MinNode> els;
-            MINL_Constexpr IfStatNode()
-                : CondStatNode(nt_if) {}
-        };
-
-        // Derive CondStatNode
-        struct ForStatNode : CondStatNode {
-            std::shared_ptr<MinNode> center;
-            MINL_Constexpr ForStatNode()
-                : CondStatNode(nt_for) {}
-        };
-
-        constexpr auto switch_str_ = "(switch)";
-        constexpr auto case_str_ = "(case)";
-        constexpr auto default_str_ = "(default)";
-
-        struct SwitchStatNode : BlockNode {
-            std::shared_ptr<MinNode> expr;
-            std::shared_ptr<SwitchStatNode> next_case;
-            MINL_Constexpr SwitchStatNode()
-                : BlockNode(nt_switch) {}
-        };
 
         constexpr auto for_if_stat_base(auto stat_name, bool none_expr_ok, int max_index, auto make_obj) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
@@ -383,16 +308,6 @@ namespace utils {
             };
         }
 
-        constexpr auto break_str_ = "(break)";
-        constexpr auto continue_str_ = "(continue)";
-
-        struct WordStatNode : MinNode {
-            std::shared_ptr<MinNode> expr;
-            std::shared_ptr<MinNode> block;
-            MINL_Constexpr WordStatNode()
-                : MinNode(nt_wordstat) {}
-        };
-
         constexpr auto one_word(auto word, auto ident) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG(word)
@@ -408,8 +323,6 @@ namespace utils {
             };
         }
 
-        constexpr auto nilstat_str_ = "(nil_statement)";
-
         constexpr auto one_word_symbol(auto word, auto ident) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG(word)
@@ -424,8 +337,6 @@ namespace utils {
                 return true;
             };
         }
-
-        constexpr auto linkage_str_ = "(linkage)";
 
         constexpr auto one_word_plus_and_block(auto word, auto ident, auto&& parse_after, bool not_must) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
@@ -471,8 +382,6 @@ namespace utils {
                 return true;
             };
         }
-
-        constexpr auto return_str_ = "(return)";
 
         constexpr auto one_word_plus_expr(auto word, auto ident, bool not_must) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {

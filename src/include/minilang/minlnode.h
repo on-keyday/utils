@@ -6,11 +6,7 @@
 */
 
 #pragma once
-#include "minl.h"
-#include "minltype.h"
-#include "minlfunc.h"
-#include "minlctrl.h"
-#include "minlprog.h"
+#include "minnode.h"
 
 namespace utils {
     namespace minilang {
@@ -100,7 +96,7 @@ namespace utils {
             return nullptr;
         }
 
-        inline std::shared_ptr<GenericTypeNode> is_GenericType(const std::shared_ptr<GenericTypeNode>& root) {
+        inline std::shared_ptr<GenericTypeNode> is_GenericType(const std::shared_ptr<MinNode>& root) {
             if (!root) {
                 return nullptr;
             }

@@ -188,7 +188,7 @@ namespace minlc {
         };
 
         struct Program : Object {
-            constexpr Program()
+            MINL_Constexpr Program()
                 : Object(mk_program) {}
             sptr<mi::BlockNode> node;
             std::vector<sptr<Func>> global_funcs;

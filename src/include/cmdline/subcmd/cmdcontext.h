@@ -36,6 +36,7 @@ namespace utils {
                 wrap::map<wrap::string, wrap::shared_ptr<Derived>> subcommand;
                 wrap::vector<wrap::shared_ptr<Derived>> list;
                 wrap::vector<wrap::string> alias;
+                void* user = nullptr;
 
                 void update_reached(Derived* p = nullptr) {
                     if (p) {
@@ -164,6 +165,14 @@ namespace utils {
                         return nullptr;
                     }
                     return get<1>(*found);
+                }
+
+                void SetUserContext(void* ctx) {
+                    user = ctx;
+                }
+
+                void* GetUserContext() {
+                    return user;
                 }
             };
 

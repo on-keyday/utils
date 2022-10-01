@@ -54,6 +54,8 @@ namespace utils {
             constexpr HTTPBuf& get() {
                 return buf;
             }
+
+            bool append(const char* data, size_t size);
         };
 
         struct BorrowString {

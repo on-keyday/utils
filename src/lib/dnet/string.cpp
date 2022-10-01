@@ -151,5 +151,20 @@ namespace utils {
             return true;
         }
 
+        bool String::append(const char* data, size_t size) {
+            if (!data || !size) {
+                return false;
+            }
+            auto cursize = buf.getsize();
+            if (cursize + size < cursize) {
+                return false;
+            }
+            if (!resize(cursize + size)) {
+                return false;
+            }
+            memmove(text() + cursize, data, size);
+            return true;
+        }
+
     }  // namespace dnet
 }  // namespace utils

@@ -320,6 +320,10 @@ namespace utils {
                 }
                 return true;
             }
+
+            constexpr void clear_err() {
+                err = 0;
+            }
         };
 
         // make_socket creates socket object

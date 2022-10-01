@@ -12,40 +12,6 @@
 
 namespace utils {
     namespace minilang {
-        constexpr auto func_def_str_ = "(function_define)";
-        constexpr auto func_dec_str_ = "(function_declaere)";
-
-        constexpr auto func_param_str_ = "(function_param)";
-
-        constexpr auto func_return_param_str_ = "(function_named_return)";
-
-        enum func_expr_mode {
-            fe_def,
-            fe_tydec,
-            fe_expr,
-            fe_iface,
-        };
-
-        // Derive TypeNode
-        struct FuncParamNode : TypeNode {
-            std::shared_ptr<FuncParamNode> next;
-            std::shared_ptr<MinNode> ident;
-            MINL_Constexpr FuncParamNode()
-                : TypeNode(nt_funcparam) {}
-
-           protected:
-            MINL_Constexpr FuncParamNode(int id)
-                : TypeNode(id) {}
-        };
-
-        // Derive FuncParamNode -> TypeNode
-        struct FuncNode : FuncParamNode {
-            std::shared_ptr<MinNode> return_;
-            std::shared_ptr<MinNode> block;
-            func_expr_mode mode{};
-            MINL_Constexpr FuncNode()
-                : FuncParamNode(nt_func) {}
-        };
 
         bool func_parse_impl(func_expr_mode mode, const auto start,
                              auto&& type_, auto&& stat_, auto&& expr, auto& seq,
@@ -191,20 +157,6 @@ namespace utils {
             };
         }
 
-        constexpr auto let_def_str_ = "(let_def)";
-        constexpr auto let_def_group_str_ = "(let_def_group)";
-        constexpr auto const_def_str_ = "(const_def)";
-        constexpr auto const_def_group_str_ = "(const_def_group)";
-
-        struct LetNode : MinNode {
-            std::shared_ptr<MinNode> ident;
-            std::shared_ptr<TypeNode> type;
-            std::shared_ptr<MinNode> init;
-            std::shared_ptr<LetNode> next;
-            MINL_Constexpr LetNode()
-                : MinNode(nt_let) {}
-        };
-
         constexpr auto let_stat() {
             return [](auto&& type_, auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
                 MINL_FUNC_LOG("let_stat")
@@ -348,16 +300,6 @@ namespace utils {
         constexpr auto make_stats(auto&& prim, auto&& stat) {
             return make_exprs_with_statement(prim, stat);
         }
-
-        constexpr auto interface_str_ = "(interface)";
-        constexpr auto interface_method_str_ = "(interface_method)";
-
-        struct InterfaceNode : TypeNode {
-            MINL_Constexpr InterfaceNode()
-                : TypeNode(nt_interface) {}
-            std::shared_ptr<InterfaceNode> next;
-            std::shared_ptr<FuncNode> method;
-        };
 
         constexpr auto interface_signature() {
             return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<utils::minilang::MinNode>& node, bool& err, auto& errc) {

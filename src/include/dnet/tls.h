@@ -11,6 +11,7 @@
 #include <utility>
 #include <cstddef>
 #include <memory>
+#include "httpstring.h"
 
 namespace utils {
     namespace dnet {
@@ -144,6 +145,14 @@ namespace utils {
                     },
                     ptr);
             }
+
+            constexpr void clear_err() {
+                err = 0;
+            }
+
+            constexpr void clear_readsize() {
+                prevred = 0;
+            }
         };
 
         dnet_dll_export(void) set_libssl(const char* path);
@@ -152,5 +161,8 @@ namespace utils {
         dnet_dll_export(TLS) create_tls_from(const TLS& tls);
         dnet_dll_export(bool) load_crypto();
         dnet_dll_export(bool) load_ssl();
+
+        dnet_dll_export(size_t) tls_input(TLS& tls, String& buf, size_t* next_expect);
+        dnet_dll_export(size_t) tls_output(TLS& tls, String& buf, String& tmpbuf);
     }  // namespace dnet
 }  // namespace utils

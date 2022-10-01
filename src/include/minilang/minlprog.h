@@ -11,13 +11,6 @@
 
 namespace utils {
     namespace minilang {
-        constexpr auto comment_str_ = "(comment)";
-        struct CommentNode : MinNode {
-            std::string comment;
-            std::shared_ptr<CommentNode> next;
-            MINL_Constexpr CommentNode()
-                : MinNode(nt_comment) {}
-        };
 
         struct ComBr {
             const char* begin = nullptr;
@@ -110,8 +103,6 @@ namespace utils {
             };
         }
 
-        constexpr auto program_str_ = "(program)";
-
         constexpr auto until_eof_or_not_matched(auto&& f) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG("until_eof_or_not_matched")
@@ -143,17 +134,6 @@ namespace utils {
                 return node != nullptr;
             };
         }
-
-        constexpr auto import_group_str_ = "(import_group)";
-        constexpr auto imports_str_ = "(import)";
-
-        struct ImportNode : MinNode {
-            std::shared_ptr<ImportNode> next;
-            std::shared_ptr<MinNode> as;
-            std::shared_ptr<MinNode> from;
-            MINL_Constexpr ImportNode()
-                : MinNode(nt_import) {}
-        };
 
         constexpr auto import_field(auto& parse_after, auto& start, auto& seq, auto& curnode, bool& err, auto& errc) {
             return [&] {

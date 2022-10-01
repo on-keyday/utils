@@ -11,140 +11,6 @@
 
 namespace utils {
     namespace minilang {
-        /*
-         struct {
-            *[Name Type ["=" Expr]]
-         }
-
-         type Name "="? Type
-
-         *["*"|"["Expr?"]"] Name
-
-        */
-
-        constexpr auto type_group_str_ = "(type_group)";
-        constexpr auto new_type_str_ = "(new_type)";
-        constexpr auto type_alias_str_ = "(type_alias)";
-
-        constexpr auto type_siganture = "(type_signature)";
-        constexpr auto pointer_str_ = "(pointer)";
-        constexpr auto reference_str_ = "(reference)";
-        constexpr auto array_str_ = "[(fixed)]";
-        constexpr auto vector_str_ = "[(dynamic)]";
-        constexpr auto mut_str_ = "(mutable)";
-        constexpr auto const_str_ = "(const)";
-        constexpr auto va_arg_str_ = "(variable_argument)";
-        constexpr auto typeof_str_ = "(typeof)";
-        constexpr auto genr_str_ = "(generic)";
-
-        constexpr auto struct_str_ = "{(struct)}";
-        constexpr auto struct_field_str_ = "(struct_field)";
-        constexpr auto union_str_ = "{(union)}";
-        constexpr auto union_field_str_ = "(union_field)";
-
-        struct TypeNode : MinNode {
-            std::shared_ptr<TypeNode> type;
-            MINL_Constexpr TypeNode()
-                : MinNode(nt_type) {}
-
-           protected:
-            MINL_Constexpr TypeNode(int id)
-                : MinNode(id) {}
-        };
-
-        // Derive TypeNode
-        struct ArrayTypeNode : TypeNode {
-            std::shared_ptr<MinNode> expr;
-            MINL_Constexpr ArrayTypeNode()
-                : TypeNode(nt_arrtype) {
-            }
-        };
-
-        // Derive TypeNode
-        struct GenericTypeNode : TypeNode {
-            MINL_Constexpr GenericTypeNode()
-                : TypeNode(nt_gentype) {}
-            std::string type_param;
-        };
-
-        // Derive TypeNode
-        struct StructFieldNode : TypeNode {
-            std::shared_ptr<StructFieldNode> next;
-            std::shared_ptr<MinNode> ident;
-            std::shared_ptr<MinNode> init;
-            MINL_Constexpr StructFieldNode()
-                : TypeNode(nt_struct_field) {}
-        };
-
-        constexpr bool match_typeprefix(auto& seq) {
-            return seq.match("*") || seq.match("[") || seq.match("&") ||
-                   match_ident(seq, "struct") || match_ident(seq, "union") || match_ident(seq, "fn") ||
-                   match_ident(seq, "mut") || match_ident(seq, "const") || match_ident(seq, "genr") ||
-                   match_ident(seq, "interface") || match_ident(seq, "typeof") || seq.match(")") ||
-                   seq.match("...");
-        }
-
-        constexpr auto idents(auto& str) {
-            return helper::make_ref_splitview(str, ",");
-        }
-
-        constexpr auto read_parameter(auto& seq, auto& param_end, auto& param_name, bool& no_param_name) {
-            const auto param_start = seq.rptr;
-            while (true) {
-                // (*Arg,ident Arg) -> ok (type,name type)
-                // (Arg1,Arg2,Arg3) -> ok (type,type,type)
-                // (ident1,ident2,ident3 Arg) -> ok (name,name,name type)
-                // (Arg,ident Arg) -> ok but... (name,name type)
-                // (type Arg,ident Arg) -> ok (type,ident type)
-                // (Arg,type Arg,Arg) -> ok (type,type,type)
-                // (type Arg,Arg,Arg) -> ok (type,type,type)
-                // (Arg,Arg,Arg type Arg) -> ok (name,name,name type)
-                // (ident,type ident Arg) -> bad (name,type? type?)
-                // (ident.Type) -> ok (type)
-                // (ident user.Type,user.Type) -> ok (ident type,type)
-                // (Type,Type,user.Type) -> ok (type,type,type)
-                if (match_typeprefix(seq)) {
-                    seq.rptr = param_start;
-                    no_param_name = true;
-                    break;
-                }
-                if (expect_ident(seq, "type")) {
-                    if (param_name.size()) {
-                        seq.rptr = param_start;
-                    }
-                    no_param_name = true;
-                    break;
-                }
-                if (!ident_default_read(param_name, seq)) {
-                    return false;
-                }
-                param_end = seq.rptr;
-                helper::space::consume_space(seq, true);
-                if (seq.seek_if(",")) {
-                    // expect multiple param_name in same type
-                    param_name.push_back(',');
-                    helper::space::consume_space(seq, true);
-                    continue;
-                }
-                if (seq.match(")")) {
-                    seq.rptr = param_start;
-                    no_param_name = true;
-                    break;
-                }
-                auto tmp = seq.rptr;
-                if (seq.seek_if(".") && (helper::space::consume_space(seq, true), ident_default()(seq))) {
-                    seq.rptr = param_start;
-                    no_param_name = true;
-                    break;
-                }
-                seq.rptr = tmp;
-                break;
-            }
-            if (expect_ident(seq, "type")) {
-                helper::space::consume_space(seq, true);
-            }
-            return true;
-        }
 
         constexpr auto struct_signature() {
             return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
@@ -458,14 +324,6 @@ namespace utils {
             };
         }
 
-        struct TypeDefNode : MinNode {
-            std::shared_ptr<TypeDefNode> next;
-            std::shared_ptr<MinNode> ident;
-            std::shared_ptr<TypeNode> type;
-            MINL_Constexpr TypeDefNode()
-                : MinNode(nt_typedef) {}
-        };
-
         constexpr auto type_define(auto&& type_parse) {
             return [=](auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG("type_define")
@@ -538,8 +396,6 @@ namespace utils {
                 return true;
             };
         }
-
-        constexpr auto typeprim_str_ = "(type_primitive)";
 
         constexpr auto type_primitive(auto&& stats, auto&& type_parse) {
             return [=](auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {

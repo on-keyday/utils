@@ -16,179 +16,13 @@
 #include "../escape/read_string.h"
 #include "../number/prefix.h"
 #include "../helper/space.h"
+#include "minnode.h"
 
 namespace utils {
     namespace minilang {
         using CView = helper::SizedView<const char>;
         using Seq = Sequencer<CView>;
 
-        struct Pos {
-            size_t begin = 0;
-            size_t end = 0;
-        };
-
-        constexpr auto invalid_pos = Pos{size_t(~0), size_t(~0)};
-
-        enum NodeType {
-            nt_min = 0x0000,
-            nt_binary = 0x0001,
-            nt_cond = 0x0101,
-            nt_for = 0x1101,
-            nt_if = 0x2101,
-            nt_type = 0x0002,
-            nt_arrtype = 0x0102,
-            nt_gentype = 0x0202,
-            nt_struct_field = 0x0302,
-            nt_funcparam = 0x0402,
-            nt_func = 0x1402,
-            nt_interface = 0x0502,
-            nt_typedef = 0x0003,
-            nt_let = 0x0004,
-            nt_block = 0x0005,
-            nt_switch = 0x0105,
-            nt_comment = 0x0006,
-            nt_import = 0x0007,
-            nt_wordstat = 0x0008,
-            nt_number = 0x0009,
-            nt_string = 0x000a,
-            nt_min_derive_mask = 0x00ff,
-            nt_second_derive_mask = 0x0fff,
-            nt_max = 0xffff,
-        };
-
-        constexpr const char* node_type_to_string(unsigned int type) {
-            switch (type) {
-                case nt_min:
-                    return "min";
-                case nt_binary:
-                    return "binary";
-                case nt_cond:
-                    return "cond";
-                case nt_if:
-                    return "if";
-                case nt_for:
-                    return "for";
-                case nt_switch:
-                    return "switch";
-                case nt_type:
-                    return "type";
-                case nt_arrtype:
-                    return "arrtype";
-                case nt_struct_field:
-                    return "struct_field";
-                case nt_funcparam:
-                    return "funcparam";
-                case nt_func:
-                    return "func";
-                case nt_typedef:
-                    return "typedef";
-                case nt_let:
-                    return "let";
-                case nt_block:
-                    return "block";
-                case nt_comment:
-                    return "comment";
-                case nt_import:
-                    return "import";
-                case nt_wordstat:
-                    return "wordstat";
-                case nt_number:
-                    return "number";
-                case nt_string:
-                    return "string";
-                default:
-                    return "(unknown)";
-            }
-        }
-
-#ifndef MINL_Constexpr
-#undef MINL_Constexpr
-#endif
-#ifdef __cpp_lib_constexpr_string
-#define MINL_Constexpr constexpr
-#else
-#define MINL_Constexpr inline
-#endif
-
-        struct MinNode {
-            const unsigned int node_type = 0;
-            std::string str;
-            // std::shared_ptr<MinNode> left;
-            // std::shared_ptr<MinNode> right;
-            Pos pos;
-            MINL_Constexpr MinNode() = default;
-
-           protected:
-            MINL_Constexpr MinNode(int id)
-                : node_type(id) {}
-        };
-
-        struct BinaryNode : MinNode {
-            std::shared_ptr<MinNode> left;
-            std::shared_ptr<MinNode> right;
-            MINL_Constexpr BinaryNode()
-                : MinNode(nt_binary) {}
-
-           protected:
-            MINL_Constexpr BinaryNode(int id)
-                : MinNode(id) {}
-        };
-
-        struct NumberNode : MinNode {
-            bool is_float;
-            int radix;
-            number::NumErr parsable = false;
-            size_t integer = 0;
-            double floating = 0;
-            MINL_Constexpr NumberNode()
-                : MinNode(nt_number) {}
-        };
-
-        struct StringNode : MinNode {
-            char prefix;
-            char store_c;
-            MINL_Constexpr StringNode()
-                : MinNode(nt_string) {}
-        };
-
-        template <class ErrC, class Str>
-        struct log_raii {
-            ErrC& errc;
-            Str str;
-            const char* file;
-            int line;
-            constexpr log_raii(ErrC& c, Str s, const char* file, int line)
-                : errc(c), str(s), file(file), line(line) {
-                errc.log_enter(s, file, line);
-            }
-
-            constexpr ~log_raii() {
-                errc.log_leave(str, file, line);
-            }
-        };
-
-#define MINL_FUNC_LOG(FUNC) auto log_object____ = log_raii(errc, FUNC, __FILE__, __LINE__);
-
-        constexpr auto ident_default() {
-            return [](auto& seq) -> bool {
-                return !seq.eos() &&
-                       (!number::is_control_char(seq.current()) &&
-                            !number::is_symbol_char(seq.current()) ||
-                        seq.current() == '_');
-            };
-        }
-
-        constexpr auto cond_read(auto&& cond) {
-            return [=](auto& str, auto& seq) {
-                while (cond(seq)) {
-                    str.push_back(seq.current());
-                    seq.consume();
-                }
-                return str.size() != 0;
-            };
-        }
-
-        constexpr auto ident_default_read = cond_read(ident_default());
         template <class T>
         concept PassCtx = requires(T t) {
             {t.user_defined};
@@ -279,13 +113,6 @@ namespace utils {
                 constexpr auto prim_ = primitive();
                 return prim_(nullptr, seq, errc);
             };
-        }
-
-        inline auto make_ident_node(auto&& name, Pos pos) {
-            auto res = std::make_shared<MinNode>();
-            res->str = std::move(name);
-            res->pos = pos;
-            return res;
         }
 
         struct Op {
@@ -669,23 +496,5 @@ namespace utils {
 
         constexpr auto null_errc = NullErrC{};
 
-        constexpr bool expect_ident(auto& seq, auto ident) {
-            const auto start = seq.rptr;
-            if (!seq.seek_if(ident)) {
-                return false;
-            }
-            if (ident_default()(seq)) {
-                seq.rptr = start;
-                return false;
-            }
-            return true;
-        }
-
-        constexpr bool match_ident(auto& seq, auto ident) {
-            const auto start = seq.rptr;
-            auto res = expect_ident(seq, ident);
-            seq.rptr = start;
-            return res;
-        }
     }  // namespace minilang
 }  // namespace utils
