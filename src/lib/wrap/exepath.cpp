@@ -8,6 +8,7 @@
 #include <platform/windows/dllexport_source.h>
 #include <wrap/exepath.h>
 #include <helper/appender.h>
+#include <utf/convert.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -24,7 +25,7 @@ namespace utils {
                 wchar_t buf[1024]{};
                 auto len = GetModuleFileNameW(nullptr, buf, sizeof(buf));
                 if (len < 1024) {
-                    helper::append(pb, buf);
+                    utf::convert(buf, pb);
                     return;
                 }
             }
@@ -38,7 +39,7 @@ namespace utils {
                 }
                 break;
             }
-            helper::append(pb, path.c_str());
+            utf::convert(path.c_str(), pb);
         }
 #else
         void get_exepath(helper::IPushBacker pb) {

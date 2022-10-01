@@ -7,10 +7,15 @@
 
 #include "durl.h"
 #include <wrap/argv.h>
+#include <wrap/exepath.h>
+#include <file/file_view.h>
+#include <filesystem>
 
 namespace durl {
+    namespace fs = std::filesystem;
 
     void loadConfig() {
+        auto path = utils::wrap::get_exepath();
     }
 
     auto& cout = utils::wrap::cout_wrap();
