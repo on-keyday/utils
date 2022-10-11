@@ -6,9 +6,9 @@
 */
 
 
-#include "../../include/syntax/make_parser/parse.h"
-#include "../../include/syntax/make_parser/tokenizer.h"
-#include "../../include/tokenize/fmt/show_current.h"
+#include <deprecated/syntax/make_parser/parse.h>
+#include <deprecated/syntax/make_parser/tokenizer.h>
+#include <deprecated/tokenize/fmt/show_current.h>
 
 #include "../../include/wrap/light/string.h"
 #include "../../include/wrap/light/map.h"

@@ -6,15 +6,15 @@
 */
 
 #include "minilang.h"
-#include <stream/token_stream.h>
-#include <stream/tree_stream.h>
+#include <deprecated/stream/token_stream.h>
+#include <deprecated/stream/tree_stream.h>
 #include <number/char_range.h>
 #include <wrap/cout.h>
 #include <helper/line_pos.h>
 #include <utf/convert.h>
-#include <stream/utf_stream.h>
-#include <stream/semantics_stream.h>
-#include <stream/string_stream.h>
+#include <deprecated/stream/utf_stream.h>
+#include <deprecated/stream/semantics_stream.h>
+#include <deprecated/stream/string_stream.h>
 
 namespace minilang {
     namespace st = utils::parser::stream;

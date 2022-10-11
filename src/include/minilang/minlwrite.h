@@ -7,7 +7,7 @@
 
 // minlwrite - minilang reverse source
 #pragma once
-#include "minlnode.h"
+#include "minnode.h"
 #include "../helper/appender.h"
 #include "../helper/equal.h"
 #include "../helper/indent.h"

@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/tokenize/predefined.h"
+#include <deprecated/tokenize/predefined.h>
 
 #include "../../include/wrap/light/vector.h"
 #include "../../include/wrap/light/string.h"

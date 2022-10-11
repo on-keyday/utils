@@ -8,7 +8,7 @@
 
 #include "type_list.h"
 
-#include "../../include/syntax/syntaxc/make_syntaxc.h"
+#include <deprecated/syntax/syntaxc/make_syntaxc.h>
 
 #include "../../include/wrap/cout.h"
 

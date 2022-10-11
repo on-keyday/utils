@@ -24,6 +24,28 @@ namespace utils {
             unexpected_colon,
             invalid_ipv6_hostname,
         };
+
+        constexpr const char* err_msg(ParseError err) {
+            switch (err) {
+                case ParseError::none:
+                    return "no error";
+                case ParseError::scheme_not_found:
+                    return "scheme not found";
+                case ParseError::invalid_scheme:
+                    return "invalid scheme";
+                case ParseError::invalid_path:
+                    return "invalid path";
+                case ParseError::unexpected_double_slash:
+                    return "unexpected double slash";
+                case ParseError::unexpected_colon:
+                    return "unexpected colon";
+                case ParseError::invalid_ipv6_hostname:
+                    return "invalid ipv6 hostname";
+                default:
+                    return "unknown";
+            }
+        }
+
         constexpr auto colon = ':';
         constexpr auto slash = '/';
         constexpr auto query = '?';
@@ -363,6 +385,66 @@ namespace utils {
             String query;
             String fragment;
         };
+
+        template <class Out, class String>
+        void composition_uri(Out& str, const URI<String>& uri, bool use_splited = true) {
+            if (uri.scheme.size()) {
+                helper::append(str, uri.scheme);
+                if (uri.scheme[uri.scheme.size() - 1] != ':') {
+                    str.push_back(':');
+                }
+            }
+            if (use_splited) {
+                if (uri.hostname.size()) {
+                    helper::append(str, "//");
+                    if (uri.userinfo.size()) {
+                        helper::append(str, uri.userinfo);
+                        if (uri.userinfo[uri.userinfo.size() - 1] != '@') {
+                            str.push_back('@');
+                        }
+                    }
+                    helper::append(str, uri.hostname);
+                    if (uri.port.size()) {
+                        if (uri.port[0] != ':') {
+                            str.push_back(':');
+                        }
+                        helper::append(str, uri.port);
+                    }
+                }
+            }
+            else {
+                if (uri.authority.size()) {
+                    helper::appends(str, "//", uri.authority);
+                }
+            }
+            if (uri.path.size()) {
+                helper::append(str, uri.path);
+            }
+            if (uri.query.size()) {
+                if (uri.query[0] != '?') {
+                    str.push_back('?');
+                }
+                helper::append(str, uri.query);
+            }
+            if (uri.fragment.size()) {
+                if (uri.query[0] != '#') {
+                    str.push_back('#');
+                }
+                helper::append(str, uri.query);
+            }
+        }
+
+        template <class Out, class String>
+        Out composition_uri(const URI<String>& uri, bool use_splited = true) {
+            Out out;
+            composition_uri(out, uri, use_splited);
+            return out;
+        }
+
+        template <class String>
+        String composition_uri(const URI<String>& uri, bool use_splited = true) {
+            return composition_uri<String, String>(uri, use_splited);
+        }
 
     }  // namespace uri
 }  // namespace utils

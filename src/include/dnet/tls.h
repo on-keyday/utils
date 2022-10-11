@@ -87,6 +87,7 @@ namespace utils {
             // make_ssl set up SSL structure
             bool make_ssl();
             bool set_cacert_file(const char* cacert, const char* dir = nullptr);
+            bool set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
             bool set_alpn(const void* p, size_t len);
             bool set_hostname(const char* hostname);
             bool set_client_cert_file(const char* cert);
@@ -159,8 +160,14 @@ namespace utils {
         dnet_dll_export(void) set_libcrypto(const char* path);
         dnet_dll_export(TLS) create_tls();
         dnet_dll_export(TLS) create_tls_from(const TLS& tls);
+
+        // load libraries
         dnet_dll_export(bool) load_crypto();
         dnet_dll_export(bool) load_ssl();
+        dnet_dll_export(bool) is_boringssl_ssl();
+        dnet_dll_export(bool) is_openssl_ssl();
+        dnet_dll_export(bool) is_boringssl_crypto();
+        dnet_dll_export(bool) is_openssl_crypto();
 
         dnet_dll_export(size_t) tls_input(TLS& tls, String& buf, size_t* next_expect);
         dnet_dll_export(size_t) tls_output(TLS& tls, String& buf, String& tmpbuf);

@@ -17,7 +17,7 @@
 using namespace utils;
 struct SockHolder {
     dnet::Socket sock;
-    dnet::Socket::completion_t comp;
+    dnet::Socket::completion_recv_t comp;
     bool end;
     std::string str;
     utils::net::h1header::StatusCode code;

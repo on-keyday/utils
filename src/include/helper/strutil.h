@@ -110,9 +110,9 @@ namespace utils {
         struct SplitView {
             Buffer<buffer_t<T>> buf;
             Sep sep;
-
-            constexpr SplitView(T&& t)
-                : buf(std::forward<T>(t)) {}
+            template <class V>
+            constexpr SplitView(V&& t)
+                : buf(std::forward<V>(t)) {}
 
             constexpr auto operator[](size_t index) const {
                 constexpr auto eq = default_compare();

@@ -6,10 +6,10 @@
 */
 
 #include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/cnet/tcp.h"
+#include <deprecated/cnet/tcp.h>
 #include "sock_inc.h"
-#include "../../include/number/array.h"
-#include "../../include/helper/appender.h"
+#include <number/array.h>
+#include <helper/appender.h>
 
 namespace utils {
     namespace cnet {

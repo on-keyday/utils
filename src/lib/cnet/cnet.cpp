@@ -6,7 +6,7 @@
 */
 
 #include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/cnet/cnet.h"
+#include <deprecated/cnet/cnet.h>
 
 namespace utils {
     namespace cnet {

@@ -13,7 +13,7 @@
 #include <wrap/pair_iter.h>
 #include <helper/appender.h>
 #include <number/to_string.h>
-#include <cnet/cnet.h>
+#include <deprecated/cnet/cnet.h>
 
 struct Empty {
     size_t empty;

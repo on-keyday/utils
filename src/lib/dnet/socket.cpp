@@ -326,7 +326,17 @@ namespace utils {
                     return false;
                 }
                 buf->user = user;
-                if (mode != am_connect) {
+                if (mode == am_send || mode == am_sendto) {
+                    buf->ebuf.~EasyBuffer();
+                    buf->ebuf = {datalen};
+                    if (!buf->ebuf.buf) {
+                        err = no_resource;
+                        return false;
+                    }
+                    memmove(buf->ebuf.buf, data, datalen);
+                    buf->ebuf.should_del = true;
+                }
+                else if (mode != am_connect) {
                     if (data && datalen) {
                         buf->ebuf.~EasyBuffer();
                         buf->ebuf.buf = (char*)data;
@@ -350,7 +360,7 @@ namespace utils {
             return true;
         }
 
-        bool Socket::read_async(completion_t completion, void* user, void* data, size_t datalen) {
+        bool Socket::read_async(completion_recv_t completion, void* user, void* data, size_t datalen) {
             if (!initopt(opt, gc_, err, user, data, datalen, completions_t(completion), am_recv)) {
                 return false;
             }
@@ -388,6 +398,28 @@ namespace utils {
                 return false;
             }
             if (!start_async_operation(opt, sock, am_connect, addr, len)) {
+                err = get_error();
+                return false;
+            }
+            return true;
+        }
+
+        bool Socket::write_async(completion_send_t completion, void* user, const void* data, size_t datalen) {
+            if (!initopt(opt, gc_, err, user, (void*)data, datalen, completions_t(completion), am_send)) {
+                return false;
+            }
+            if (!start_async_operation(opt, sock, am_send, nullptr, 0)) {
+                err = get_error();
+                return false;
+            }
+            return true;
+        }
+
+        bool Socket::writeto_async(completion_send_t completion, void* user, const void* addr, size_t addrlen, const void* data, size_t datalen) {
+            if (!initopt(opt, gc_, err, user, (void*)data, datalen, completions_t(completion), am_sendto)) {
+                return false;
+            }
+            if (!start_async_operation(opt, sock, am_sendto, addr, addrlen)) {
                 err = get_error();
                 return false;
             }

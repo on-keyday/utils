@@ -25,22 +25,22 @@ namespace utils {
             return res;
         }
 
-        bool is_boringssl_ssl() {
+        dnet_dll_internal(bool) is_boringssl_ssl() {
             static bool res = load_ssl() && ssldl.load_boringssl_ssl_ext();
             return res;
         }
 
-        bool is_openssl_ssl() {
+        dnet_dll_internal(bool) is_openssl_ssl() {
             static bool res = load_ssl() && ssldl.load_openssl_ssl_ext();
             return res;
         }
 
-        bool is_boringssl_crypto() {
+        dnet_dll_internal(bool) is_boringssl_crypto() {
             static bool res = load_crypto() && ssldl.load_boringssl_crypto_ext();
             return res;
         }
 
-        bool is_openssl_crypto() {
+        dnet_dll_internal(bool) is_openssl_crypto() {
             static bool res = load_crypto() && ssldl.load_openssl_crypto_ext();
             return res;
         }
@@ -164,6 +164,14 @@ namespace utils {
                     err = set_ssl_value_failed;
                     return false;
                 }
+                return true;
+            });
+        }
+
+        bool TLS::set_verify(int mode, int (*verify_callback)(int, void*)) {
+            return check_opt(opt, err, [&](SSLContexts* c) {
+                ssldl.SSL_CTX_set_verify_(c->sslctx, mode,
+                                          (int (*)(int, ssl_import::X509_STORE_CTX*))(verify_callback));
                 return true;
             });
         }

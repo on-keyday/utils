@@ -501,7 +501,7 @@ namespace utils {
             }
         };
 
-#define MINL_FUNC_LOG(FUNC) auto log_object____ = log_raii(errc, FUNC, __FILE__, __LINE__);
+#define MINL_FUNC_LOG(FUNC)  // auto log_object____ = log_raii(errc, FUNC, __FILE__, __LINE__);
 
     }  // namespace minilang
 }  // namespace utils

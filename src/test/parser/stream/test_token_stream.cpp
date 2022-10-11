@@ -6,7 +6,7 @@
 */
 
 
-#include <stream/stream.h>
+#include <deprecated/stream/stream.h>
 #include <vector>
 #include <number/char_range.h>
 namespace st = utils::parser::stream;

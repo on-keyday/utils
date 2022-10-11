@@ -7,7 +7,7 @@
 
 
 #include "type_list.h"
-#include "../../include/syntax/dispatcher/filter.h"
+#include <deprecated/syntax/dispatcher/filter.h>
 
 namespace binred {
     namespace us = utils::syntax;

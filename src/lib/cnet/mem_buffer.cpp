@@ -5,8 +5,8 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/cnet/mem.h"
+#include <platform/windows/dllexport_source.h>
+#include <deprecated/cnet/mem.h>
 #include <cassert>
 #include "../../include/wrap/light/enum.h"
 

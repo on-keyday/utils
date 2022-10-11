@@ -42,7 +42,7 @@ namespace utils {
         struct SocketDll {
            private:
 #ifdef _WIN32
-            static constexpr auto libcount = 28;
+            static constexpr auto libcount = 30;
 #else
             static constexpr auto libcount = 21;
 #endif
@@ -70,6 +70,8 @@ namespace utils {
             L(WSASocketW)
             L(WSARecv)
             L(WSARecvFrom)
+            L(WSASend)
+            L(WSASendTo)
             L(WSACleanup)
             L(WSAIoctl)
             LPFN_ACCEPTEX AcceptEx_;

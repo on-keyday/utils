@@ -112,7 +112,7 @@ add_executable(dnet_socket "src/test/dnet/test_dnet_socket.cpp")
 add_executable(dnet_tls "src/test/dnet/test_dnet_tls.cpp")
 add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
 add_executable(dnet_http2 "src/test/dnet/test_dnet_http2.cpp")
-add_executable(minrec_tree "src/test/minilang/test_minrec_tree.cpp")
+add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -134,7 +134,10 @@ add_executable(minlc "src/tool/minlc/minlc.cpp"
   "src/tool/minlc/middle/type.cpp"
   "src/tool/minlc/backend/llvm/module.cpp"
 )
-add_executable(durl "src/tool/durl/main.cpp")
+add_executable(durl "src/tool/durl/main.cpp"
+  "src/tool/durl/uri.cpp"
+  "src/tool/durl/http.cpp"
+)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
 
@@ -308,7 +311,7 @@ target_link_libraries(binred utils)
 target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
 target_link_libraries(minlc utils)
-target_link_libraries(durl utils)
+target_link_libraries(durl utils dnet)
 
 # libquic
 target_link_libraries(quic_udp quic utils)

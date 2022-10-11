@@ -6,15 +6,15 @@
 */
 
 
-#include <parser/logical_parser.h>
-#include <parser/space_parser.h>
-#include <parser/token_parser.h>
+#include <deprecated/parser/logical_parser.h>
+#include <deprecated/parser/space_parser.h>
+#include <deprecated/parser/token_parser.h>
 #include <wrap/light/lite.h>
 #include <json/json_export.h>
 #include <json/convert_json.h>
 #include <wrap/cout.h>
-#include <parser/complex_parser.h>
-#include <parser/parser_compiler.h>
+#include <deprecated/parser/complex_parser.h>
+#include <deprecated/parser/parser_compiler.h>
 #include <helper/line_pos.h>
 #include <regex>
 enum class TokKind {

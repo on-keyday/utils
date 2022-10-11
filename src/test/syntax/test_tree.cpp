@@ -6,9 +6,9 @@
 */
 
 
-#include "../../include/syntax/tree/parse_tree.h"
-#include "../../include/syntax/syntaxc/make_syntaxc.h"
-#include "../../include/syntax/dispatcher/default_dispatcher.h"
+#include <deprecated/syntax/tree/parse_tree.h>
+#include <deprecated/syntax/syntaxc/make_syntaxc.h>
+#include <deprecated/syntax/dispatcher/default_dispatcher.h>
 
 void test_tree() {
     using namespace utils;

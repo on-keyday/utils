@@ -6,7 +6,135 @@
 */
 
 #include "durl.h"
+#include <dnet/conn.h>
+#include <dnet/plthead.h>
+#include <thread>
 
 namespace durl {
+    namespace dnet = utils::dnet;
+    struct AddrWait {
+        URIToJSON uri;
+        dnet::WaitAddrInfo wait;
+    };
 
-}
+    std::atomic_uint32_t reqcounter;
+
+    struct Context {
+        std::atomic_uint32_t reqcounter;
+    };
+
+    void request_message(URI& uri, auto&&... msg) {}
+
+    struct Request {
+        URI uri;
+    };
+
+    void wait_connect(Request req, dnet::AddrInfo& info, dnet::Socket& conn) {
+        conn.clear_err();
+        while (true) {
+            if (!conn.wait_writable(0, 1000)) {
+                if (conn.geterr() != 0) {
+                    request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", conn.geterr());
+                    return;
+                }
+                continue;
+            }
+            break;
+        }
+    }
+
+    // on thread
+    void resolved(Request& req, dnet::AddrInfo& info) {
+        int lasterr = 0;
+        while (info.next()) {
+            dnet::SockAddr addr;
+            info.sockaddr(addr);
+            auto sock = dnet::make_socket(addr.af, addr.type, addr.proto);
+            if (!sock) {
+                lasterr = sock.geterr();
+                continue;
+            }
+            sock.connect(addr.addr, addr.addrlen);
+            if (!sock.block()) {
+                lasterr = sock.geterr();
+                continue;
+            }
+        }
+        info.next();  // seek to top
+        request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", lasterr);
+        reqcounter--;
+    }
+
+    void request(Request req) {
+        auto& uri = req.uri;
+        uri::tidy(uri);
+        if (uri.scheme == "") {
+            uri.scheme = httpopt.uri.https_parse_prefix ? "https" : "http";
+        }
+        if (uri.scheme != "http" && uri.scheme != "https") {
+            request_message(uri, "unexpected scheme ", uri.scheme, ". expect https or http");
+            reqcounter--;
+            return;
+        }
+        if (uri.port == "") {
+            if (uri.scheme == "http") {
+                uri.port = "80";
+            }
+            else if (uri.scheme == "https") {
+                uri.port = "443";
+            }
+        }
+        dnet::SockAddr addr{};
+        addr.hostname = uri.hostname.c_str();
+        addr.namelen = uri.hostname.size();
+        addr.type = SOCK_STREAM;
+        auto wait = dnet::resolve_address(addr, uri.port.c_str());
+        int err = 0;
+        if (wait.failed(&err)) {
+            request_message(uri, "resolve address failed at code ", err);
+            reqcounter--;
+            return;
+        }
+        dnet::AddrInfo info;
+        if (wait.wait(info, 1)) {
+            std::thread(
+                [](dnet::AddrInfo info, Request req) {
+                    resolved(req, info);
+                },
+                std::move(info), std::move(req))
+                .detach();
+            return;
+        }
+        if (wait.failed(&err)) {
+            request_message(uri, "resolve address failed at code ", err);
+            reqcounter--;
+            return;
+        }
+        std::thread(
+            [=](dnet::WaitAddrInfo wait, Request req) {
+                dnet::AddrInfo info;
+                while (true) {
+                    if (wait.wait(info, 1)) {
+                        resolved(req, info);
+                        return;
+                    }
+                    int err = 0;
+                    if (wait.failed(&err)) {
+                        request_message(req.uri, "resolve address failed at code ", err);
+                        reqcounter--;
+                        return;
+                    }
+                }
+            },
+            std::move(wait), std::move(req))
+            .detach();
+    }
+
+    int do_request(URIVec& uris) {
+        for (auto& uri : uris) {
+            reqcounter++;
+            request(Request{std::move(uri.uri)});
+        }
+        return 0;
+    }
+}  // namespace durl

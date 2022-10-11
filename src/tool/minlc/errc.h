@@ -7,7 +7,7 @@
 
 #pragma once
 #include <wrap/cout.h>
-#include <minilang/minl.h>
+#include <minilang/old/minl.h>
 namespace minlc {
     void printe(auto&&... msg) {
         (utils::wrap::cerr_wrap() << ... << msg) << "\n";

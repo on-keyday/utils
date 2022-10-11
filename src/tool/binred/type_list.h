@@ -10,9 +10,9 @@
 #pragma once
 
 #include "../../include/wrap/light/lite.h"
-#include "../../include/syntax/make_parser/keyword.h"
-#include "../../include/syntax/matching/matching.h"
-#include "../../include/syntax/tree/parse_tree.h"
+#include <deprecated/syntax/make_parser/keyword.h>
+#include <deprecated/syntax/matching/matching.h>
+#include <deprecated/syntax/tree/parse_tree.h>
 
 namespace binred {
     namespace utw = utils::wrap;

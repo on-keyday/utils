@@ -6,9 +6,9 @@
 */
 
 
-#include <cnet/http2.h>
-#include <cnet/tcp.h>
-#include <cnet/ssl.h>
+#include <deprecated/cnet/http2.h>
+#include <deprecated/cnet/tcp.h>
+#include <deprecated/cnet/ssl.h>
 #include <map>
 #include <string>
 #include <number/parse.h>

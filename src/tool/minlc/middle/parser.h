@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include <minilang/minlstat.h>
+#include <minilang/old/minlstat.h>
 
 namespace minlc {
     namespace mi = utils::minilang;

@@ -35,13 +35,14 @@ namespace utils {
         };
 
         union completions_t {
-            Socket::completion_t user_completion;
+            Socket::completion_recv_t user_completion;
             Socket::completion_from_t user_completion_from;
             Socket::completion_accept_t user_completion_accept;
             Socket::completion_connect_t user_completion_connect;
+            Socket::completion_send_t user_completion_send;
             constexpr completions_t()
                 : user_completion(nullptr) {}
-            constexpr completions_t(Socket::completion_t c)
+            constexpr completions_t(Socket::completion_recv_t c)
                 : user_completion(c) {}
             constexpr completions_t(Socket::completion_from_t c)
                 : user_completion_from(c) {}

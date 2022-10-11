@@ -5,15 +5,15 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/cnet/tcp.h"
+#include <platform/windows/dllexport_source.h>
+#include <deprecated/cnet/tcp.h>
 
 #include <cstdint>
 #include <atomic>
-#include "../../include/number/array.h"
-#include "../../include/wrap/light/char.h"
-#include "../../include/helper/appender.h"
-#include "../../include/testutil/timer.h"
+#include <number/array.h>
+#include <wrap/light/char.h>
+#include <helper/appender.h>
+#include <testutil/timer.h>
 #include "sock_inc.h"
 
 #define SOCKLOG(ctx, record, msg, code) record.log(logobj{__FILE__, __LINE__, "tcp", msg, ctx, (std::int64_t)code})

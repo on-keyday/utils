@@ -18,6 +18,7 @@ namespace utils {
         enum class FromFlag {
             none = 0x0,
             force_element = 0x1,
+            allow_null_obj_array = 0x2,
         };
 
         DEFINE_ENUM_FLAGOP(FromFlag)
@@ -175,7 +176,8 @@ namespace utils {
 
                 else if constexpr (from_map_t<T>) {
                     if (!js.is_object()) {
-                        return false;
+                        return any(flag & FromFlag::allow_null_obj_array) &&
+                               js.is_null();
                     }
                     for (auto&& o : as_object(js)) {
                         if (!dispatch_from_json(t[get<0>(o)], get<1>(o), flag)) {
@@ -186,7 +188,8 @@ namespace utils {
                 }
                 else if constexpr (from_array_t<T>) {
                     if (!js.is_array()) {
-                        return false;
+                        return any(flag & FromFlag::allow_null_obj_array) &&
+                               js.is_null();
                     }
                     for (auto&& a : as_array(js)) {
                         using elm_t = helper::append_size_t<T>;

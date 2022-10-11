@@ -6,8 +6,8 @@
 */
 
 #pragma once
-#include <parser/expr/command_expr.h>
-#include <parser/expr/jsoncvt.h>
+#include <deprecated/parser/expr/command_expr.h>
+#include <deprecated/parser/expr/jsoncvt.h>
 #include <wrap/light/string.h>
 #include <wrap/light/vector.h>
 #include <wrap/light/hash_map.h>

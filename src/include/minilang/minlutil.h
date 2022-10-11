@@ -7,12 +7,8 @@
 
 // minlutil - minilang utility
 #pragma once
-#include "minl.h"
-#include "minltype.h"
-#include "minlfunc.h"
-#include "minlctrl.h"
-#include "minlprog.h"
-#include "minlnode.h"
+#include "minnode.h"
+#include "cast.h"
 #include "../helper/equal.h"
 
 namespace utils {
@@ -31,32 +27,6 @@ namespace utils {
             }
             vec.push_back(node);
             return true;
-        }
-
-        inline int is_define_expr_and_ok(const std::shared_ptr<MinNode>& node, bool first = true) {
-            if (!node) {
-                return first ? 0 : 1;
-            }
-            if (first) {
-                if (node->str != ":=") {
-                    return 0;
-                }
-            }
-            else {
-                if (node->str == ":=") {
-                    return -1;
-                }
-            }
-            auto bin = is_Binary(node, true);
-            if (!bin) {
-                return first ? -1 : 1;
-            }
-            auto right = is_define_expr_and_ok(bin->right, false);
-            auto left = is_define_expr_and_ok(bin->left, false);
-            if (right == -1 || left == -1) {
-                return -1;
-            }
-            return right && left;
         }
 
         // walk walks among each node

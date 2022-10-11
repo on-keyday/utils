@@ -76,7 +76,7 @@ namespace utils {
                     else if (mode == am_accept) {
                         comp.user_completion_accept(user, make_socket(buf->tmpsock), err);
                     }
-                    else if (mode == am_connect) {
+                    else if (mode == am_connect || mode == am_send || mode == am_sendto) {
                         comp.user_completion_connect(user, err);
                     }
                 }
@@ -171,7 +171,7 @@ namespace utils {
             return kerlib.CreateIoCompletionPort_((HANDLE)handle, iocp, 0, 0) != nullptr;
         }
 
-        static bool start_async_operation(
+        bool start_async_operation(
             void* ptr, std::uintptr_t sock, AsyncMethod mode,
             /*for connectex*/
             const void* addr = nullptr, size_t addrlen = 0) {
@@ -242,6 +242,12 @@ namespace utils {
                     head->completion(head, 0);
                     res = 0;
                 }
+            }
+            else if (mode == am_send) {
+                res = socdl.WSASend_(sock, needs.buf, needs.bufcount, &trsf, *needs.flags, needs.ol, nullptr);
+            }
+            else if (mode == am_sendto) {
+                res = socdl.WSASendTo_(sock, needs.buf, needs.bufcount, &trsf, *needs.flags, reinterpret_cast<const sockaddr*>(addr), addrlen, needs.ol, nullptr);
             }
             else {
                 set_error(not_supported);

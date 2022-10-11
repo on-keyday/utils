@@ -5,11 +5,11 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/syntax/dispatcher/default_dispatcher.h"
-#include "../../include/syntax/dispatcher/filter.h"
-#include "../../include/syntax/syntaxc/make_syntaxc.h"
-#include "../../include/tokenize/merger.h"
-#include "../../include/tokenize/fmt/show_current.h"
+#include <deprecated/syntax/dispatcher/default_dispatcher.h>
+#include <deprecated/syntax/dispatcher/filter.h>
+#include <deprecated/syntax/syntaxc/make_syntaxc.h>
+#include <deprecated/tokenize/merger.h>
+#include <deprecated/tokenize/fmt/show_current.h>
 
 #include "../../include/wrap/cout.h"
 

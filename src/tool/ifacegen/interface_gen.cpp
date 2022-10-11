@@ -8,7 +8,7 @@
 
 // interface_gen - generate golang like interface
 
-#include "../../include/syntax/syntaxc/make_syntaxc.h"
+#include <deprecated/syntax/syntaxc/make_syntaxc.h>
 
 #include "../../include/wrap/cout.h"
 

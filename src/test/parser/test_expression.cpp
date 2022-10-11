@@ -6,13 +6,13 @@
 */
 
 
-#include <parser/expr/expression.h>
+#include <deprecated/parser/expr/expression.h>
 #include <wrap/light/string.h>
 #include <helper/space.h>
-#include <parser/expr/jsoncvt.h>
+#include <deprecated/parser/expr/jsoncvt.h>
 #include <json/json_export.h>
 #include <wrap/cout.h>
-#include <parser/expr/command_expr.h>
+#include <deprecated/parser/expr/command_expr.h>
 
 using namespace utils::parser;
 using namespace utils::json;

@@ -24,6 +24,8 @@ namespace utils {
             am_recvfrom,
             am_accept,
             am_connect,
+            am_send,
+            am_sendto,
         };
 
         struct AsyncHead {
@@ -34,10 +36,14 @@ namespace utils {
             using get_ptrs_t =
                 void (*)(AsyncHead* head, void** overlapped, void** wsbuf, int* bufcount,
                          void** sockfrom, int** fromlen, void** flags, std::uintptr_t** tmpsock);
-            // get_ptrs gets object pointers
-            // this function is windows spec
-            get_ptrs_t get_ptrs;
+
+#else
+            using get_ptrs_t =
+                void (*)(AsyncHead* head, void*** sockaddr_store, int** addrlen_store);
 #endif
+            // get_ptrs gets object pointers
+            // this function is platform spec
+            get_ptrs_t get_ptrs;
             // start notifys operation start
             // if you use object as shared_ptr
             // you should increment count here
@@ -112,20 +118,26 @@ namespace utils {
             bool wait_readable(std::uint32_t sec, std::uint32_t usec);
             bool wait_writable(std::uint32_t sec, std::uint32_t usec);
 
-            using completion_t = void (*)(void* user, void* data, size_t len, size_t bufmax, int err);
+            using completion_recv_t = void (*)(void* user, void* data, size_t len, size_t bufmax, int err);
             using completion_from_t = void (*)(void* user, void* data, size_t len, size_t bufmax, void* addr, size_t addrlen, int err);
             // read_async reads socket async
             // if custom opt value is set
             // argument will be ignored
             // if this function returns true async operation started and completion will be called
             // otherwise operation failed
-            bool read_async(completion_t completion, void* user, void* data = nullptr, size_t datalen = 0);
+            bool read_async(completion_recv_t completion, void* user, void* data = nullptr, size_t datalen = 0);
             // read_from_async reads socket async
             // if custom opt value is set
             // argument will be ignored
             // if this function returns true async operation started and completion will be called
             // otherwise operation failed
             bool readfrom_async(completion_from_t completion, void* user, void* data = nullptr, size_t datalen = 0);
+
+            using completion_send_t = void (*)(void* user, int err);
+
+            bool write_async(completion_send_t completion, void* user, const void* data, size_t datalen);
+            bool writeto_async(completion_send_t completion, void* user, const void* addr, size_t addrlen, const void* data, size_t datalen);
+
             constexpr void set_custom_opt(void* optv, void (*gc)(void*, std::uintptr_t)) {
                 if (gc_) {
                     gc_(opt, sock);
@@ -133,6 +145,7 @@ namespace utils {
                 opt = optv;
                 gc_ = gc;
             }
+
             constexpr void* get_opt() const {
                 return opt;
             }

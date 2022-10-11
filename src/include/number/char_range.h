@@ -97,6 +97,11 @@ namespace utils {
             return c >= 'a' && c <= 'z';
         }
 
+        template <class C>
+        constexpr bool is_ascii_non_control(C c) {
+            return c >= 0x20 && c <= 0x7e;
+        }
+
         constexpr std::uint8_t to_num_char(std::uint8_t n, bool upper = false) {
             if (n <= 9) {
                 return '0' + n;

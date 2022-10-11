@@ -6,9 +6,9 @@
 */
 
 
-#include "../../include/syntax/syntaxc/syntaxc.h"
+#include <deprecated/syntax/syntaxc/syntaxc.h>
 
-#include "../../include/syntax/syntaxc/make_syntaxc.h"
+#include <deprecated/syntax/syntaxc/make_syntaxc.h>
 #include "../../include/wrap/cout.h"
 
 void test_syntaxc() {

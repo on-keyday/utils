@@ -6,7 +6,7 @@
 */
 
 
-#include <cnet/tcp.h>
+#include <deprecated/cnet/tcp.h>
 #include <thread>
 #include <wrap/cout.h>
 using namespace utils;

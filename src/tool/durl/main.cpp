@@ -13,13 +13,55 @@
 
 namespace durl {
     namespace fs = std::filesystem;
+    GlobalOption global;
+
+    bool loadjson(fs::path& path) {
+        path.append("durl_config.json");
+        utils::file::View view;
+        if (view.open(path.c_str())) {
+            auto js = utils::json::parse<utils::json::JSON>(view);
+            if (!js) {
+                return false;
+            }
+            auto glob = js.at("global");
+            if (glob) {
+                if (!utils::json::convert_from_json(*glob, global, utils::json::FromFlag::force_element)) {
+                    global = {};
+                    return false;
+                }
+            }
+            auto uri = js.at("uri");
+            if (uri) {
+                if (!utils::json::convert_from_json(*uri, uriopt, utils::json::FromFlag::force_element)) {
+                    global = {};
+                    uriopt = {};
+                    return false;
+                }
+            }
+            cout << "config loaded from " << path.u8string();
+            return true;
+        }
+        return false;
+    }
 
     void loadConfig() {
-        auto path = utils::wrap::get_exepath();
+        if (auto path = utils::wrap::get_exepath(); path != "") {
+            auto dir = fs::path((const char8_t*)path.c_str()).parent_path();
+            if (loadjson(dir)) {
+                return;
+            }
+        }
+        std::error_code ec;
+        auto cd = fs::current_path(ec);
+        if (ec) {
+            return;
+        }
+        loadjson(cd);
     }
 
     auto& cout = utils::wrap::cout_wrap();
-    GlobalOption global;
+    auto& cerr = utils::wrap::cerr_wrap();
+
     int durl_main(int argc, char** argv) {
         subcmd::RunContext ctx;
         ctx.Set(
@@ -33,7 +75,7 @@ namespace durl {
             return ctx.run();
         }
         if (auto msg = opt::error_msg(err)) {
-            cout << "error :" << ctx.erropt() << ": " << msg << "\n";
+            cerr << "error :" << ctx.erropt() << ": " << msg << "\n";
         }
         return ctx.run();
     }

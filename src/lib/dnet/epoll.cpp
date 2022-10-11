@@ -72,6 +72,12 @@ namespace utils {
                         cmp.user_completion_connect(user, get_error());
                     }
                 }
+                else if (h->method == am_send) {
+                    socdl.send_(buf->sock, ebuf.buf, ebuf.size, 0);
+                    if (do_completion) {
+                        cmp.user_completion_connect(user, get_error());
+                    }
+                }
                 buf->decref();
             }
             static void canceled(AsyncHead* h) {
@@ -175,6 +181,12 @@ namespace utils {
                 }
                 auto res = socdl.connect_(sock, static_cast<const sockaddr*>(addr), addrlen);
                 if (res != 0 || (get_error() != EWOULDBLOCK && get_error() != EINPROGRESS)) {
+                    cancel();
+                    return false;
+                }
+            }
+            else if (mode == AsyncMethod::am_send || mode == AsyncMethod::am_sendto) {
+                if (!watch_event(sock, EPOLLOUT | edge_trigger, ptr)) {
                     cancel();
                     return false;
                 }

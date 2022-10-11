@@ -70,6 +70,8 @@ namespace utils {
             }
 
            public:
+            using char_type = std::uint8_t;
+
             IPushBacker(const IPushBacker& b)
                 : ptr(b.ptr), push_back_(b.push_back_) {}
 

@@ -21,6 +21,7 @@ namespace ssl_import {
     using EVP_KDF_CTX = struct EVP_KDF_CTX;
     using BIO = struct BIO;
     using X509_VERIFY_PARAM = struct X509_VERIFY_PARAM;
+    using X509_STORE_CTX = struct X509_STORE_CTX;
     constexpr auto SSL_CTRL_SET_TLSEXT_HOSTNAME_ = 55;
     constexpr auto BIO_FLAGS_SHOULD_RETRY_ = 0x8;
     constexpr auto SSL_ERROR_WANT_READ_ = 0x2;
@@ -65,6 +66,9 @@ namespace ssl_import {
         long SSL_get_verify_result(const SSL* ssl);
         void SSL_get0_alpn_selected(const SSL* ssl, const unsigned char** data,
                                     unsigned int* len);
+
+        void SSL_CTX_set_verify(SSL_CTX* ctx, int mode,
+                                int (*verify_callback)(int, X509_STORE_CTX*));
     }  // namespace common
 
     namespace crypto {
@@ -179,7 +183,7 @@ namespace utils {
     namespace dnet {
         struct SSLDll {
            private:
-            alib<28> libsslcommon;
+            alib<29> libsslcommon;
 #define L(func) LOADER_BASE(ssl_import::common::func, func, libsslcommon, SSLDll, false)
             // common
             L(TLS_method)
@@ -210,6 +214,7 @@ namespace utils {
             L(SSL_CTX_check_private_key)
             L(SSL_get_verify_result)
             L(SSL_get0_alpn_selected)
+            L(SSL_CTX_set_verify)
 #undef L
            private:
             alib_nptr<3> libquic;

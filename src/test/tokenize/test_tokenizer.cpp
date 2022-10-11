@@ -6,9 +6,9 @@
 */
 
 
-#include "../../include/tokenize/tokenizer.h"
-#include "../../include/tokenize/cast.h"
-#include "../../include/tokenize/merge.h"
+#include <deprecated/tokenize/tokenizer.h>
+#include <deprecated/tokenize/cast.h>
+#include <deprecated/tokenize/merge.h>
 
 #include "../../include/wrap/light/string.h"
 #include "../../include/wrap/light/vector.h"

@@ -7,11 +7,11 @@
 
 
 #include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/cnet/ssl.h"
-#include "../../include/wrap/light/string.h"
-#include "../../include/number/array.h"
-#include "../../include/helper/appender.h"
-#include "../../include/testutil/timer.h"
+#include <deprecated/cnet/ssl.h>
+#include <wrap/light/string.h>
+#include <number/array.h>
+#include <helper/appender.h>
+#include <testutil/timer.h>
 #ifndef USE_OPENSSL
 #define USE_OPENSSL 1
 #endif

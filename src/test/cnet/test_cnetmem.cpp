@@ -6,7 +6,7 @@
 */
 
 
-#include <cnet/mem.h>
+#include <deprecated/cnet/mem.h>
 #include <cstdlib>
 #include <number/array.h>
 #include <helper/appender.h>

@@ -17,7 +17,8 @@ namespace utils {
         template <class Out = wrap::string>
         Out get_exepath() {
             Out out;
-            return get_exepath(out);
+            get_exepath(out);
+            return out;
         }
     }  // namespace wrap
 }  // namespace utils

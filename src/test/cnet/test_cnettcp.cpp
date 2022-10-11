@@ -6,8 +6,8 @@
 */
 
 
-#include <cnet/tcp.h>
-#include <cnet/ssl.h>
+#include <deprecated/cnet/tcp.h>
+#include <deprecated/cnet/ssl.h>
 #include <cassert>
 #include <cstring>
 #include <thread>

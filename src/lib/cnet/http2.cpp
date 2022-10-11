@@ -7,7 +7,7 @@
 
 
 #include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/cnet/http2.h"
+#include <deprecated/cnet/http2.h>
 #include "../../include/net/http2/frame.h"
 #include "../../include/net/http2/request_methods.h"
 #include "../net/http2/frame_reader.h"

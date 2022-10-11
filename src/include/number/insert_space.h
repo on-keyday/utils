@@ -27,9 +27,10 @@ namespace utils {
             else {
                 calc = input;
             }
-            auto& v = digit_bound<T>[radix];
+            auto& bound = digit_bound<T>;
+            auto& v = bound[radix];
             size_t digit = 0;
-            while (calc >= v[digit]) {
+            while (calc >= v[digit] && digit < v.size()) {
                 digit++;
             }
             digit++;
