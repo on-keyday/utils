@@ -5,10 +5,10 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/capi/capi.h>
-#include <quic/core/core.h>
-#include <quic/frame/cast.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/capi/capi.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/frame/cast.h>
 using namespace utils::quic;
 
 dll(QUIC*) default_QUIC(NOARG) {

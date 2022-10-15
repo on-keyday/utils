@@ -5,8 +5,8 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/mem/alloc.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/mem/alloc.h>
 #include <cstdlib>
 
 namespace utils {

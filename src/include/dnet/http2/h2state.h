@@ -9,11 +9,12 @@
 #pragma once
 #include "h2frame.h"
 #include <net/http2/stream_state.h>
-#include <quic/mem/bidique.h>
 #include "../httpstring.h"
 #include "h2frame.h"
 #include "h2err.h"
 #include "h2settings.h"
+#include <deque>
+#include "../dll/allocator.h"
 
 namespace utils {
     namespace dnet {
@@ -425,7 +426,7 @@ namespace utils {
 
             struct ConnDirState {
                 using strpair = std::pair<String, String>;
-                using Table = utils::quic::mem::BidiQue<strpair>;
+                using Table = std::deque<strpair, glheap_allocator<strpair>>;
                 String settings;
                 Table table;
             };

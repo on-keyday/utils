@@ -6,16 +6,16 @@
 */
 
 // udp - io udp wrapper
-#include <quic/common/dll_cpp.h>
-#include <quic/io/io.h>
-#include <quic/io/udp.h>
-#include <quic/mem/alloc.h>
-#include <quic/common/variable_int.h>
-#include <quic/internal/sock_internal.h>
-#include <quic/internal/external_func_internal.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/io/io.h>
+#include <deprecated/quic/io/udp.h>
+#include <deprecated/quic/mem/alloc.h>
+#include <deprecated/quic/common/variable_int.h>
+#include <deprecated/quic/internal/sock_internal.h>
+#include <deprecated/quic/internal/external_func_internal.h>
 
 // for initialization
-#include <quic/mem/once.h>
+#include <deprecated/quic/mem/once.h>
 
 namespace utils {
     namespace quic {

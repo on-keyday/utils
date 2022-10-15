@@ -6,9 +6,9 @@
 */
 
 
-#include <quic/frame/encode.h>
-#include <quic/frame/decode.h>
-#include <quic/core/core.h>
+#include <deprecated/quic/frame/encode.h>
+#include <deprecated/quic/frame/decode.h>
+#include <deprecated/quic/core/core.h>
 
 using namespace utils::quic;
 

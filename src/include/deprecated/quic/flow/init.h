@@ -7,7 +7,7 @@
 
 // init - initialize connections
 #pragma once
-#include <quic/common/dll_h.h>
+#include <deprecated/quic/common/dll_h.h>
 #include "../doc.h"
 #include "../transport_param/tpparam.h"
 #include "../core/core.h"

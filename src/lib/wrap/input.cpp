@@ -13,7 +13,7 @@
 #include <Windows.h>
 #endif
 #include <utf/convert.h>
-#include <quic/mem/raii.h>
+#include <helper/defer.h>
 using namespace utils;
 #ifdef _WIN32
 static bool read_record(wrap::path_string& buf, INPUT_RECORD& rec, bool& zero_input, bool no_echo) {
@@ -80,11 +80,9 @@ static bool input_platform(wrap::path_string& buf, bool non_block, bool no_echo)
     auto handle = GetStdHandle(STD_INPUT_HANDLE);
     DWORD flag = 0;
     GetConsoleMode(handle, &flag);
-    quic::mem::RAII raii{
-        flag,
-        [&](DWORD flag) {
-            SetConsoleMode(handle, flag);
-        }};
+    auto raii = helper::defer([&] {
+        SetConsoleMode(handle, flag);
+    });
     flag &= ~ENABLE_PROCESSED_INPUT;
     SetConsoleMode(handle, flag);
     bool zero_input = false;

@@ -5,20 +5,20 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/core/core.h>
-#include <quic/internal/context_internal.h>
-#include <quic/conn/conn.h>
-#include <quic/frame/encode.h>
-#include <quic/packet/write_packet.h>
-#include <quic/packet/length.h>
-#include <quic/frame/length.h>
-#include <quic/transport_param/tpparam.h>
-#include <quic/crypto/crypto.h>
-#include <quic/packet/packet_context.h>
-#include <quic/frame/frame_callback.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/internal/context_internal.h>
+#include <deprecated/quic/conn/conn.h>
+#include <deprecated/quic/frame/encode.h>
+#include <deprecated/quic/packet/write_packet.h>
+#include <deprecated/quic/packet/length.h>
+#include <deprecated/quic/frame/length.h>
+#include <deprecated/quic/transport_param/tpparam.h>
+#include <deprecated/quic/crypto/crypto.h>
+#include <deprecated/quic/packet/packet_context.h>
+#include <deprecated/quic/frame/frame_callback.h>
 #include <cassert>
-#include <quic/flow/init.h>
+#include <deprecated/quic/flow/init.h>
 
 namespace utils {
     namespace quic {

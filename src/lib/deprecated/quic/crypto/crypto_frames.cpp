@@ -5,14 +5,14 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/frame/decode.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/frame/decode.h>
 #include <algorithm>
-#include <quic/internal/external_func_internal.h>
-#include <quic/internal/context_internal.h>
-#include <quic/crypto/crypto.h>
-#include <quic/mem/raii.h>
-#include <quic/mem/callback.h>
+#include <deprecated/quic/internal/external_func_internal.h>
+#include <deprecated/quic/internal/context_internal.h>
+#include <deprecated/quic/crypto/crypto.h>
+#include <deprecated/quic/mem/raii.h>
+#include <deprecated/quic/mem/callback.h>
 
 namespace utils {
     namespace quic {

@@ -13,7 +13,7 @@
 #include <helper/view.h>
 #include <helper/pushbacker.h>
 #include <helper/strutil.h>
-#include <quic/mem/hash_map.h>
+#include <unordered_map>
 #include <dnet/dll/glheap.h>
 #include <dnet/http2/h2frame.h>
 #include <dnet/http2/h2state.h>
@@ -21,6 +21,8 @@
 #include <functional>
 #include <string_view>
 #include <optional>
+#include <vector>
+
 namespace std {
     template <>
     struct hash<utils::dnet::String> {
@@ -33,22 +35,20 @@ namespace std {
 
 namespace utils {
     namespace dnet {
+        /*
         quic::allocate::Alloc alloc_init{
             .alloc = [](void*, size_t s, size_t) { return static_cast<void*>(get_cvec(s, DNET_DEBUG_MEMORY_LOCINFO(true, s))); },
-            .resize = [](void*, void* p, size_t s, size_t) { 
+            .resize = [](void*, void* p, size_t s, size_t) {
                 auto c=static_cast<char*>(p);
-                resize_cvec(c , s, DNET_DEBUG_MEMORY_LOCINFO(false,0)); 
+                resize_cvec(c , s, DNET_DEBUG_MEMORY_LOCINFO(false,0));
                 return static_cast<void*>(c); },
             .put = [](void*, void* c) { free_cvec(static_cast<char*>(c), DNET_DEBUG_MEMORY_LOCINFO(false, 0)); },
-        };
+        };*/
         struct WrapedHeader {
             using strpair = std::pair<String, String>;
-            quic::mem::Vec<strpair> buf;
+            std::vector<strpair, glheap_allocator<strpair>> buf;
             void emplace(auto&& key, auto&& value) {
-                if (buf.size() == 0) {
-                    buf = {&alloc_init};
-                }
-                buf.append({std::forward<decltype(key)>(key), std::forward<decltype(value)>(value)});
+                buf.push_back({std::forward<decltype(key)>(key), std::forward<decltype(value)>(value)});
             }
         };
 
@@ -64,7 +64,8 @@ namespace utils {
         struct HTTP2Connection {
             String input;
             String output;
-            quic::mem::HashMap<int, Stream, quic::mem::EmptyLock> streams;
+            using HashMap = std::unordered_map<int, Stream, std::hash<int>, std::equal_to<int>, glheap_allocator<std::pair<const int, Stream>>>;
+            HashMap streams;
             h2stream::ConnState conn;
             String debug;
             hpack::HpackError hpkerr{};
@@ -108,8 +109,7 @@ namespace utils {
         HTTP2::~HTTP2() {
             auto c = check_opt(opt, err);
             if (c) {
-                c->streams.free_all();
-                alloc_init.deallocate(c);
+                delete_with_global_heap(c, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*c)));
             }
         }
 
@@ -288,10 +288,9 @@ namespace utils {
                     if (key == k(sk::initial_windows_size)) {
                         auto old = settings.initial_window_size;
                         h2stream::set_new_window(s->conn.state.s0.send.window, old, value);
-                        s->streams.for_each([&](int id, Stream& strm) {
-                            h2stream::set_new_window(strm.state.send.window, old, value);
-                            return true;
-                        });
+                        for (auto& v : s->streams) {
+                            h2stream::set_new_window(v.second.state.send.window, old, value);
+                        }
                         settings.initial_window_size = value;
                     }
                     if (key == k(sk::max_frame_size)) {
@@ -361,16 +360,17 @@ namespace utils {
             auto recv_window = s->conn.state.send.settings.initial_window_size;
             // sending data/receiving window_update/remote settings
             auto send_window = s->conn.state.recv.settings.initial_window_size;
-            return s->streams.insert(
+            auto res = s->streams.emplace(
                 new_id,
-                std::move(Stream{.state = {
-                                     .com = {.id = new_id},
-                                     .recv = {
-                                         .window = recv_window,
-                                     },
-                                     .send{
-                                         .window = send_window,
-                                     }}}));
+                Stream{.state = {
+                           .com = {.id = new_id},
+                           .recv = {
+                               .window = recv_window,
+                           },
+                           .send{
+                               .window = send_window,
+                           }}});
+            return res.first != s->streams.end();
         }
 
         bool progress_callback(void* c, h2frame::Frame* f, ErrCode err) {
@@ -379,8 +379,8 @@ namespace utils {
             Stream* object = nullptr;
             if (f->id != 0) {
                 insert_stream(s, f->id);  // for receivieng state
-                auto ps = s->streams.get(f->id);
-                if (!ps) {
+                auto ps = s->streams.find(f->id);
+                if (ps == s->streams.end()) {
                     enque_conn_error(s, {
                                             .err = http2_resource,
                                             .h2err = h2frame::H2Error::internal,
@@ -388,8 +388,8 @@ namespace utils {
                                         });
                     return false;
                 }
-                strm = &ps->value.state;
-                object = &ps->value;
+                strm = &ps->second.state;
+                object = &ps->second;
             }
             else {
                 strm = &s->conn.state.s0;
@@ -473,8 +473,8 @@ namespace utils {
             if (!s) {
                 return {};
             }
-            auto obj = s->streams.get(id);
-            if (!obj) {
+            auto obj = s->streams.find(id);
+            if (obj == s->streams.end()) {
                 return HTTP2Stream{};
             }
             return HTTP2Stream(opt, id);
@@ -542,8 +542,8 @@ namespace utils {
                     return false;
                 }
                 insert_stream(c, frame.id);
-                auto kv = c->streams.get(frame.id);
-                if (!kv) {
+                auto kv = c->streams.find(frame.id);
+                if (kv == c->streams.end()) {
                     enque_conn_error(c, {
                                             .err = http2_resource,
                                             .h2err = h2frame::H2Error::internal,
@@ -551,7 +551,7 @@ namespace utils {
                                         });
                     return false;
                 }
-                return enque_frame(c, kv->value.state, frame, errs);
+                return enque_frame(c, kv->second.state, frame, errs);
             });
         }
 
@@ -633,8 +633,8 @@ namespace utils {
             if (!c) {
                 return false;
             }
-            auto kv = c->streams.get(id_);
-            if (!kv) {
+            auto kv = c->streams.find(id_);
+            if (kv == c->streams.end()) {
                 return false;
             }
             String buf;
@@ -678,7 +678,7 @@ namespace utils {
             if (progress == buf.size()) {
                 head.flag |= h2frame::Flag::end_headers;
             }
-            if (!enque_frame(c, kv->value.state, head, errc)) {
+            if (!enque_frame(c, kv->second.state, head, errc)) {
                 return false;
             }
             while (progress != buf.size()) {
@@ -691,7 +691,7 @@ namespace utils {
                 if (progress == buf.size()) {
                     fr.flag |= h2frame::Flag::end_headers;
                 }
-                if (!enque_frame(c, kv->value.state, fr, errc)) {
+                if (!enque_frame(c, kv->second.state, fr, errc)) {
                     enque_conn_error(c, errc);
                     return false;
                 }
@@ -708,12 +708,12 @@ namespace utils {
                 }
                 return false;
             }
-            auto kv = c->streams.get(id_);
-            if (!kv) {
+            auto kv = c->streams.find(id_);
+            if (kv == c->streams.end()) {
                 return false;
             }
             h2frame::DataFrame f{};
-            auto send_size = h2stream::get_sendable_size(c->conn.state.s0.send, kv->value.state.send);
+            auto send_size = h2stream::get_sendable_size(c->conn.state.s0.send, kv->second.state.send);
             if (send_size < len) {
                 if (!sent) {
                     return false;
@@ -729,7 +729,7 @@ namespace utils {
             }
             f.data = data;
             f.datalen = len;
-            if (!enque_frame(c, kv->value.state, f, code)) {
+            if (!enque_frame(c, kv->second.state, f, code)) {
                 if (err) {
                     *err = code;
                 }
@@ -741,14 +741,14 @@ namespace utils {
         bool HTTP2Stream::get_header_impl(void (*add)(void* user, const char* key, size_t keysize, const char* value, size_t valuesize), void* user) {
             ErrCode code;
             auto c = check_opt(opt, code.err);
-            auto kv = c->streams.get(id_);
-            if (!kv) {
+            auto kv = c->streams.find(id_);
+            if (kv == c->streams.end()) {
                 return false;
             }
-            if (kv->value.header.buf.size()) {
+            if (kv->second.header.buf.size()) {
                 return false;
             }
-            for (auto& field : kv->value.header.buf) {
+            for (auto& field : kv->second.header.buf) {
                 add(user, field.first.c_str(), field.first.size(),
                     field.second.c_str(), field.second.size());
             }
@@ -756,12 +756,10 @@ namespace utils {
         }
 
         dnet_dll_export(HTTP2) create_http2(bool server, h2set::PredefinedSettings settings) {
-            auto c = alloc_init.allocate<HTTP2Connection>();
+            auto c = new_from_global_heap<HTTP2Connection>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HTTP2Connection)));
             if (!c) {
                 return HTTP2(nullptr);
             }
-            c->streams.set_alloc(&alloc_init);
-            c->streams.rehash(10);
             c->conn.state.is_server = server;
             c->conn.state.send.settings = settings;
             c->preface_ok = !server;

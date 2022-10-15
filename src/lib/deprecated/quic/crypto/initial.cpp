@@ -5,12 +5,12 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/crypto/crypto.h>
-#include <quic/packet/packet_head.h>
-#include <quic/internal/external_func_internal.h>
-#include <quic/internal/context_internal.h>
-#include <quic/mem/raii.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/crypto/crypto.h>
+#include <deprecated/quic/packet/packet_head.h>
+#include <deprecated/quic/internal/external_func_internal.h>
+#include <deprecated/quic/internal/context_internal.h>
+#include <deprecated/quic/mem/raii.h>
 #include <cassert>
 
 namespace utils {

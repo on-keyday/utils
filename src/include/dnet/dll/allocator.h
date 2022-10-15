@@ -15,12 +15,14 @@ namespace utils {
         struct glheap_allocator {
             using value_type = T;
             static T* allocate(size_t n) {
-                return get_rawbuf(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T)));
+                return static_cast<T*>(get_rawbuf(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T))));
             }
 
-            static void dealocate(T* t, size_t n) {
+            static void deallocate(T* t, size_t n) {
                 return free_rawbuf(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T)));
             }
+            template <class... Arg>
+            constexpr glheap_allocator(Arg&&...) {}
         };
     }  // namespace dnet
 }  // namespace utils

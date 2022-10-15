@@ -6,23 +6,23 @@
 */
 
 
-#include <quic/crypto/crypto.h>
+#include <deprecated/quic/crypto/crypto.h>
 #include <helper/readutil.h>
 #include <helper/pushbacker.h>
 #include <number/parse.h>
 #include <number/array.h>
 #include <string>
-#include <quic/packet/packet_context.h>
-#include <quic/packet/read_packet.h>
-#include <quic/internal/context_internal.h>
-#include <quic/core/core.h>
-#include <quic/frame/decode.h>
-#include <quic/frame/frame_callback.h>
-#include <quic/frame/cast.h>
-#include <quic/frame/length.h>
-#include <quic/packet/length.h>
-#include <quic/packet/write_packet.h>
-#include <quic/frame/encode.h>
+#include <deprecated/quic/packet/packet_context.h>
+#include <deprecated/quic/packet/read_packet.h>
+#include <deprecated/quic/internal/context_internal.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/frame/decode.h>
+#include <deprecated/quic/frame/frame_callback.h>
+#include <deprecated/quic/frame/cast.h>
+#include <deprecated/quic/frame/length.h>
+#include <deprecated/quic/packet/length.h>
+#include <deprecated/quic/packet/write_packet.h>
+#include <deprecated/quic/frame/encode.h>
 
 using namespace utils::quic;
 constexpr auto packet_by_client = R"(c000000001088394c8f03e5157080000 449e7b9aec34d1b1c98dd7689fb8ec11

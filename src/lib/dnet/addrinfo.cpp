@@ -12,7 +12,7 @@
 #include <number/array.h>
 #include <helper/view.h>
 #include <dnet/dll/glheap.h>
-#include <quic/mem/raii.h>
+#include <helper/defer.h>
 #include <dnet/errcode.h>
 #include <helper/strutil.h>
 #include <endian/endian.h>
@@ -147,7 +147,7 @@ namespace utils {
 #ifdef _WIN32
             OVERLAPPED ol;
             HANDLE cancel;
-            bool done_immdedeate = false;
+            bool done_immediate = false;
             void plt_clean() {
                 socdl.GetAddrInfoExCancel_(&cancel);
             }
@@ -208,7 +208,7 @@ namespace utils {
                 auto res = socdl.GetAddrInfoExOverlappedResult_(&obj->ol);
                 ResetEvent(obj->ol.hEvent);
                 CloseHandle(obj->ol.hEvent);
-                if (!obj->done_immdedeate && res != 0) {
+                if (!obj->done_immediate && res != 0) {
                     err = res;
                     return false;
                 }
@@ -235,9 +235,9 @@ namespace utils {
                 err = no_resource;
                 return nullptr;
             }
-            quic::mem::RAII r{obj, [](auto obj) {
-                                  delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
-                              }};
+            auto r = helper::defer([&] {
+                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
+            });
             auto event = CreateEventW(nullptr, true, false, nullptr);
             if (!event) {
                 err = no_resource;
@@ -251,8 +251,8 @@ namespace utils {
                 err = get_error();
                 return nullptr;
             }
-            obj->done_immdedeate = res == 0;
-            r.t = nullptr;  // release
+            obj->done_immediate = res == 0;
+            r.cancel();
             return obj;
         }
 #else

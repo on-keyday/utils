@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/io/udp.h>
+#include <deprecated/quic/io/udp.h>
 #include <cstdlib>
 #include <cmdline/option/optcontext.h>
 #include <wrap/cout.h>

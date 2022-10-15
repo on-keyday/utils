@@ -6,9 +6,9 @@
 */
 
 
-#include <quic/core/core.h>
-#include <quic/io/udp.h>
-#include <quic/io/async.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/io/udp.h>
+#include <deprecated/quic/io/async.h>
 #include <cassert>
 #include <chrono>
 

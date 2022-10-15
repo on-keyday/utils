@@ -6,9 +6,9 @@
 */
 
 
-#include <quic/mem/hash_map.h>
-#include <quic/conn/connId.h>
-#include <quic/internal/context_internal.h>
+#include <deprecated/quic/mem/hash_map.h>
+#include <deprecated/quic/conn/connId.h>
+#include <deprecated/quic/internal/context_internal.h>
 #include <string>
 
 void test_quic_hash_map() {

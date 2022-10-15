@@ -31,6 +31,13 @@ namespace utils {
                 own = false;
             }
 
+            constexpr void execute() {
+                if (own) {
+                    fn();
+                }
+                own = false;
+            }
+
             constexpr ~Defer() {
                 if (own) {
                     fn();
@@ -38,7 +45,9 @@ namespace utils {
             }
         };
 
-        [[nodiscard]] auto defer(auto&& fn) {
+        // like golang defer statement
+        // you shouldn't discard return value
+        [[nodiscard]] constexpr auto defer(auto&& fn) {
             return Defer<std::decay_t<decltype(fn)>>(std::forward<decltype(fn)>(fn));
         }
     }  // namespace helper

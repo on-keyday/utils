@@ -247,18 +247,18 @@ add_library(quic SHARED)
 
 target_sources(quic
   PRIVATE
-  "src/lib/quic/core/core.cpp"
-  "src/lib/quic/io/udp_wait.cpp"
-  "src/lib/quic/io/udp.cpp"
-  "src/lib/quic/mem/stdalloc.cpp"
-  "src/lib/quic/mem/stdbpool.cpp"
-  "src/lib/quic/core/external_func.cpp"
-  "src/lib/quic/crypto/hkdf.cpp"
-  "src/lib/quic/crypto/initial.cpp"
-  "src/lib/quic/crypto/crypto_frames.cpp"
-  "src/lib/quic/core/capi.cpp"
-  "src/lib/quic/conn/conn.cpp"
-  "src/lib/quic/flow/init.cpp"
+  "src/lib/deprecated/quic/core/core.cpp"
+  "src/lib/deprecated/quic/io/udp_wait.cpp"
+  "src/lib/deprecated/quic/io/udp.cpp"
+  "src/lib/deprecated/quic/mem/stdalloc.cpp"
+  "src/lib/deprecated/quic/mem/stdbpool.cpp"
+  "src/lib/deprecated/quic/core/external_func.cpp"
+  "src/lib/deprecated/quic/crypto/hkdf.cpp"
+  "src/lib/deprecated/quic/crypto/initial.cpp"
+  "src/lib/deprecated/quic/crypto/crypto_frames.cpp"
+  "src/lib/deprecated/quic/core/capi.cpp"
+  "src/lib/deprecated/quic/conn/conn.cpp"
+  "src/lib/deprecated/quic/flow/init.cpp"
 )
 
 if(WIN32)

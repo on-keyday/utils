@@ -6,10 +6,10 @@
 */
 
 
-#include <quic/flow/init.h>
-#include <quic/crypto/crypto.h>
-#include <quic/io/udp.h>
-#include <quic/io/async.h>
+#include <deprecated/quic/flow/init.h>
+#include <deprecated/quic/crypto/crypto.h>
+#include <deprecated/quic/io/udp.h>
+#include <deprecated/quic/io/async.h>
 using namespace utils::quic;
 
 void test_quic_init_conn() {

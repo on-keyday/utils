@@ -5,8 +5,8 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/internal/external_func_internal.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/internal/external_func_internal.h>
 
 #ifdef _WIN32
 extern "C" IMAGE_DOS_HEADER __ImageBase;

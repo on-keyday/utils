@@ -6,7 +6,7 @@
 */
 
 
-#include <quic/mem/shared_ptr.h>
+#include <deprecated/quic/mem/shared_ptr.h>
 
 struct Object {
     int a;

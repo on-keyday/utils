@@ -5,14 +5,14 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/core/core.h>
-#include <quic/io/io.h>
-#include <quic/io/udp.h>
-#include <quic/internal/context_internal.h>
-#include <quic/internal/sock_internal.h>
-#include <quic/mem/once.h>
-#include <quic/internal/external_func_internal.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/io/io.h>
+#include <deprecated/quic/io/udp.h>
+#include <deprecated/quic/internal/context_internal.h>
+#include <deprecated/quic/internal/sock_internal.h>
+#include <deprecated/quic/mem/once.h>
+#include <deprecated/quic/internal/external_func_internal.h>
 
 // timeout
 #include <chrono>

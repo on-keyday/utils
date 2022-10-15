@@ -5,12 +5,12 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <quic/common/dll_cpp.h>
-#include <quic/core/core.h>
-#include <quic/mem/pool.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/mem/pool.h>
 #include <mutex>
 #include <unordered_map>
-#include <quic/internal/context_internal.h>
+#include <deprecated/quic/internal/context_internal.h>
 
 namespace utils {
     namespace quic {

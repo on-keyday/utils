@@ -6,13 +6,13 @@
 */
 
 
-#include <quic/common/dll_cpp.h>
-#include <quic/core/core.h>
-#include <quic/internal/context_internal.h>
+#include <deprecated/quic/common/dll_cpp.h>
+#include <deprecated/quic/core/core.h>
+#include <deprecated/quic/internal/context_internal.h>
 #include <atomic>
 #include <mutex>
-#include <quic/mem/que.h>
-#include <quic/io/udp.h>
+#include <deprecated/quic/mem/que.h>
+#include <deprecated/quic/io/udp.h>
 
 namespace utils {
     namespace quic {

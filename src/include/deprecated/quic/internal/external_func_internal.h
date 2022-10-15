@@ -10,7 +10,7 @@
 #include "../common/dll_h.h"
 #include "sock_internal.h"
 #include "crypto_internal.h"
-#include <quic/mem/once.h>
+#include <deprecated/quic/mem/once.h>
 
 namespace utils {
     namespace quic {
