@@ -6,11 +6,11 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/h2frame.h>
-#include <dnet/h2frame_c.h>
+#include <dnet/http2/h2frame.h>
+#include <dnet/http2/h2frame_c.h>
 
 #define INIT(Struct)                                                    \
-    dnet_dll_internal(void) init_##Struct(H2##Struct* ptr) {            \
+    dnet_dll_implement(void) init_##Struct(H2##Struct* ptr) {           \
         static_assert(                                                  \
             sizeof(utils::dnet::h2frame::Struct) == sizeof(H2##Struct), \
             "sizeof(H2" #Struct ") not equal to sizeof(" #Struct ")");  \
@@ -42,8 +42,8 @@ dnet_dll_export(int) pass_h2frame(const char* text, size_t size, size_t* red) {
     return utils::dnet::pass_frame(text, size, *red) ? 1 : 0;
 }
 
-dnet_dll_internal(int) parse_h2frame(const char* text, size_t size, size_t* red, H2ErrCode* err,
-                                     H2ReadCallback cb, void* c) {
+dnet_dll_implement(int) parse_h2frame(const char* text, size_t size, size_t* red, H2ErrCode* err,
+                                      H2ReadCallback cb, void* c) {
     if (!red || !err || !cb) {
         return false;
     }
@@ -69,7 +69,7 @@ dnet_dll_internal(int) parse_h2frame(const char* text, size_t size, size_t* red,
     return res;
 }
 
-dnet_dll_internal(int) render_h2frame(char* text, size_t* size, size_t cap, H2ErrCode* err, H2Frame* frame, bool auto_correct) {
+dnet_dll_implement(int) render_h2frame(char* text, size_t* size, size_t cap, H2ErrCode* err, H2Frame* frame, bool auto_correct) {
     if (!size || !err) {
         return false;
     }

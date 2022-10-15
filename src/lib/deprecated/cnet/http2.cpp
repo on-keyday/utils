@@ -6,17 +6,17 @@
 */
 
 
-#include "../../include/platform/windows/dllexport_source.h"
+#include <platform/windows/dllexport_source.h>
 #include <deprecated/cnet/http2.h>
-#include "../../include/net/http2/frame.h"
-#include "../../include/net/http2/request_methods.h"
-#include "../net/http2/frame_reader.h"
-#include "../../include/wrap/light/vector.h"
-#include "../../include/number/array.h"
-#include "../../include/net_util/hpack.h"
-#include "../net/http2/stream_impl.h"
-#include "../../include/wrap/pair_iter.h"
-#include "../../include/net/http/http_headers.h"
+#include <net/http2/frame.h>
+#include <net/http2/request_methods.h>
+#include "../../net/http2/frame_reader.h"
+#include <wrap/light/vector.h>
+#include <number/array.h>
+#include <net_util/hpack.h>
+#include "../../net/http2/stream_impl.h"
+#include <wrap/pair_iter.h>
+#include <net/http/http_headers.h>
 
 #define LOGHTTP2(ctx, record, msg) record.log(logobj{ \
     __FILE__,                                         \

@@ -7,7 +7,7 @@
 
 // h2frame_c - http2 frame in c language
 #pragma once
-#include "dll/dllh.h"
+#include "../dll/dllh.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {

@@ -6,10 +6,10 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/h2state.h>
+#include <dnet/http2/h2state.h>
 #include <dnet/dll/httpbufproxy.h>
 #include <dnet/dll/glheap.h>
-#include <dnet/http2.h>
+#include <dnet/http2/http2.h>
 #include <helper/equal.h>
 #include <helper/view.h>
 #include <cstring>

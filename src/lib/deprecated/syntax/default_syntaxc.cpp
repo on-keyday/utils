@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/platform/windows/dllexport_source.h"
+#include <platform/windows/dllexport_source.h>
 #define UTILS_SYNTAX_NO_EXTERN_SYNTAXC
 #include <deprecated/syntax/syntaxc/make_syntaxc.h>
 #include <deprecated/syntax/dispatcher/default_dispatcher.h>

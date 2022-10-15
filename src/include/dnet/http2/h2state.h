@@ -8,9 +8,9 @@
 // h2state - http2 state machines
 #pragma once
 #include "h2frame.h"
-#include "../net/http2/stream_state.h"
-#include "../quic/mem/bidique.h"
-#include "httpstring.h"
+#include <net/http2/stream_state.h>
+#include <quic/mem/bidique.h>
+#include "../httpstring.h"
 #include "h2frame.h"
 #include "h2err.h"
 #include "h2settings.h"
@@ -425,7 +425,7 @@ namespace utils {
 
             struct ConnDirState {
                 using strpair = std::pair<String, String>;
-                using Table = quic::mem::BidiQue<strpair>;
+                using Table = utils::quic::mem::BidiQue<strpair>;
                 String settings;
                 Table table;
             };

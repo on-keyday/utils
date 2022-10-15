@@ -126,7 +126,7 @@ namespace utils {
             return true;
         }
 
-        dnet_dll_internal(bool) string_from_sockaddr(const void* addr, size_t addrlen, void* text, size_t len, int* port, int* err) {
+        dnet_dll_implement(bool) string_from_sockaddr(const void* addr, size_t addrlen, void* text, size_t len, int* port, int* err) {
             if (!addr) {
                 return false;
             }
@@ -349,7 +349,7 @@ namespace utils {
             }
         }
 
-        dnet_dll_internal(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port) {
+        dnet_dll_implement(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port) {
             if (!init_sockdl()) {
                 return {
                     nullptr,
@@ -372,7 +372,7 @@ namespace utils {
             return {obj, 0};
         }
 
-        dnet_dll_internal(WaitAddrInfo) get_self_server_address(const SockAddr& addr, const char* port) {
+        dnet_dll_implement(WaitAddrInfo) get_self_server_address(const SockAddr& addr, const char* port) {
             auto hint = addr;
             hint.hostname = nullptr;
             hint.namelen = 0;

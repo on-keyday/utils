@@ -6,9 +6,9 @@
 */
 
 
-#include "../../include/platform/windows/dllexport_source.h"
+#include <platform/windows/dllexport_source.h>
 #include <deprecated/cnet/mem.h>
-#include "../../include/wrap/light/smart_ptr.h"
+#include <wrap/light/smart_ptr.h>
 #include <mutex>
 
 namespace utils {

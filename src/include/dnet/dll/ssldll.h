@@ -28,6 +28,9 @@ namespace ssl_import {
     constexpr auto SSL_ERROR_ZERO_RETURNED_ = 0x6;
     constexpr auto SSL_FILETYPE_PEM_ = 1;
     constexpr auto X509_V_OK_ = 0;
+    constexpr auto EVP_CTRL_GCM_SET_IVLEN_ = 0x9;
+    constexpr auto EVP_CTRL_GCM_GET_TAG_ = 0x10;
+    constexpr auto EVP_CTRL_GCM_SET_TAG_ = 0x11;
     namespace common {
         const SSL_METHOD* TLS_method();
         SSL_CTX* SSL_CTX_new(const SSL_METHOD* meth);
@@ -83,7 +86,7 @@ namespace ssl_import {
                               ENGINE* impl, const unsigned char* key, const unsigned char* iv, int enc);
         int EVP_CipherUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out,
                              int* outl, const unsigned char* in, int inl);
-        int EVP_CipherFinal(EVP_CIPHER_CTX* ctx, unsigned char* outm, int* outl);
+        int EVP_CipherFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* outm, int* outl);
         void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX* ctx);
         int EVP_CIPHER_CTX_ctrl(EVP_CIPHER_CTX* ctx, int cmd, int p1, void* p2);
 
@@ -175,7 +178,7 @@ namespace ssl_import {
         int SSL_provide_quic_data(SSL* ssl, OSSL_ENCRYPTION_LEVEL level, const uint8_t* data, size_t len);
         int SSL_set_quic_method(SSL* ssl, const SSL_QUIC_METHOD* meth);
         int SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t params_len);
-
+        int SSL_process_quic_post_handshake(SSL* ssl);
     }  // namespace quic_ext
 }  // namespace ssl_import
 
@@ -217,12 +220,13 @@ namespace utils {
             L(SSL_CTX_set_verify)
 #undef L
            private:
-            alib_nptr<3> libquic;
+            alib_nptr<4> libquic;
 #define L(func) LOADER_BASE(ssl_import::quic_ext::func, func, libquic, SSLDll, false)
             // quic externsions
             L(SSL_provide_quic_data)
             L(SSL_set_quic_method)
             L(SSL_set_quic_transport_params)
+            L(SSL_process_quic_post_handshake)
 #undef L
            private:
             alib<13> libcryptocommon;
@@ -235,7 +239,7 @@ namespace utils {
             L(EVP_CipherInit)
             L(EVP_CipherInit_ex)
             L(EVP_CipherUpdate)
-            L(EVP_CipherFinal)
+            L(EVP_CipherFinal_ex)
             L(EVP_CIPHER_CTX_free)
             L(EVP_CIPHER_CTX_ctrl)
             L(BIO_new_bio_pair)
@@ -324,6 +328,8 @@ namespace utils {
         };
 
         extern SSLDll& ssldl;
+
+        constexpr auto ssl_appdata_index = 0;
     }  // namespace dnet
 }  // namespace utils
 #undef LOADER_BASE

@@ -61,17 +61,17 @@ namespace utils {
             return &alloc;
         }
 
-        dnet_dll_internal(void*) get_rawbuf(size_t sz, DebugInfo info) {
+        dnet_dll_implement(void*) get_rawbuf(size_t sz, DebugInfo info) {
             auto a = get_alloc();
             return a->alloc_ptr(sz, &info);
         }
 
-        dnet_dll_internal(void*) resize_rawbuf(void* p, size_t sz, DebugInfo info) {
+        dnet_dll_implement(void*) resize_rawbuf(void* p, size_t sz, DebugInfo info) {
             auto a = get_alloc();
             return a->realloc_ptr(p, sz, &info);
         }
 
-        dnet_dll_internal(void) free_rawbuf(void* p, DebugInfo info) {
+        dnet_dll_implement(void) free_rawbuf(void* p, DebugInfo info) {
             auto a = get_alloc();
             a->free_ptr(p, &info);
         }

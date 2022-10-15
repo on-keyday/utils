@@ -25,5 +25,6 @@ namespace utils {
         constexpr auto ssl_blocking = apperr + 13;
         constexpr auto bio_operation_failed = apperr + 14;
         constexpr auto invalid_argument = apperr + 15;
+        constexpr auto should_setup_quic = apperr + 16;
     }  // namespace dnet
 }  // namespace utils

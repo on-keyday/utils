@@ -72,7 +72,7 @@ namespace utils {
 
         enum MTUConfig {
             mtu_default,  // same as IP_PMTUDISC_WANT
-            mtu_enable,   // same as IP_PMTUDISC_DO
+            mtu_enable,   // same as IP_PMTUDISC_DO, DF flag set on ip layer
             mtu_disable,  // same as IP_PMTUDISC_DONT
             mtu_ignore,   // same as IP_PMTUDISC_PROBE
         };
@@ -154,6 +154,8 @@ namespace utils {
             }
 
             bool block() const;
+            bool msgsize() const;
+
             constexpr int geterr() const {
                 return err;
             }
@@ -196,7 +198,14 @@ namespace utils {
             bool set_nodelay(bool no_delay);
             bool set_ttl(unsigned char ttl);
             bool set_mtu_discover(MTUConfig conf);
+            bool set_mtu_discover_v6(MTUConfig conf);
             std::int32_t get_mtu();
+
+            // these function sets DF flag on IP layer
+            // these function is enable on windows
+            // user on linux platform has to use set_mtu_discover(MTUConfig::enable_mtu) instead
+            bool set_dontfragment(bool df);
+            bool set_dontfragment_v6(bool df);
 
             // set_blocking calls ioctl(FIONBIO)
             [[deprecated]] void set_blocking(bool blocking);

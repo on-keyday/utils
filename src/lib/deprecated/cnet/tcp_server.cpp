@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/platform/windows/dllexport_source.h"
+#include <platform/windows/dllexport_source.h>
 #include <deprecated/cnet/tcp.h>
 #include "sock_inc.h"
 #include <number/array.h>

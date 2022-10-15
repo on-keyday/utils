@@ -5,12 +5,20 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#include <dnet/dll/dllcpp.h>
 #include <dnet/dll/ssldll.h>
+#include <dnet/tls.h>
 #include <dnet/quic/crypto.h>
+#include <helper/defer.h>
 
 namespace utils {
     namespace dnet {
-        namespace crypto {
+        namespace quic {
+
+            bool load_openssl_quic() {
+                static auto res = load_crypto() && ssldl.load_openssl_quic_ext();
+                return res;
+            }
 
             constexpr auto digest_SHA256 = "SHA256";
             bool HKDF_Extract_openssl(byte* initial, size_t& inilen,
@@ -18,6 +26,9 @@ namespace utils {
                 auto& c = ssldl;
                 auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
                 auto ctx = c.EVP_KDF_CTX_new_(kdf);
+                auto _ = helper::defer([&] {
+                    c.EVP_KDF_CTX_free_(ctx);
+                });
                 c.EVP_KDF_free_(kdf);
                 ssl_import::open_quic_ext::OSSL_PARAM params[5];
                 auto salt = quic_v1_initial_salt;
@@ -27,7 +38,7 @@ namespace utils {
                 params[3] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
                 params[4] = c.OSSL_PARAM_construct_end_();
                 auto v = c.EVP_KDF_derive_(ctx, initial, inilen, params);
-                c.EVP_KDF_CTX_free_(ctx);
+
                 if (v <= 0) {
                     return false;
                 }
@@ -47,16 +58,18 @@ namespace utils {
                 auto& c = ssldl;
                 auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
                 auto ctx = c.EVP_KDF_CTX_new_(kdf);
+                auto _ = helper::defer([&] {
+                    c.EVP_KDF_CTX_free_(ctx);
+                });
                 c.EVP_KDF_free_(kdf);
                 ssl_import::open_quic_ext::OSSL_PARAM params[5];
-                static_assert(sizeof(OSSL_PARAM) == 40);
+                static_assert(sizeof(params[0]) == 40);
                 params[0] = c.OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXPAND_ONLY"), 11);
                 params[1] = c.OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret), secret_len);
                 params[2] = c.OSSL_PARAM_construct_octet_string_("info", label, lablen);
                 params[3] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
                 params[4] = c.OSSL_PARAM_construct_end_();
                 auto err = c.EVP_KDF_derive_(ctx, out.key, outlen, params);
-                c.EVP_KDF_CTX_free_(ctx);
                 if (err <= 0) {
                     return false;
                 }
@@ -86,24 +99,27 @@ namespace utils {
                 }
                 label[sizeof(label) - 1] = 0;
                 auto& c = ssldl;
-                if (!c.is_boring_ssl) {
+                if (!c.HKDF_expand_) {
                     return HKDF_Expand_openssl(out, secret, secret_len, label);
                 }
                 return (bool)c.HKDF_expand_(out.key, out.size(), c.EVP_sha256_(), secret, secret_len, label, sizeof(label));
             }
 
-            bool make_initial_keys(InitialKeys& key,
-                                   const byte* client_conn_id, size len, Mode mode) {
-                if (!ext::load_LibCrypto()) {
+            dnet_dll_implement(bool) make_initial_keys(InitialKeys& key,
+                                                       const byte* client_conn_id, size_t len, bool enc_client) {
+                if (!load_crypto()) {
                     return false;
                 }
+                // loading
+                load_openssl_quic();
+                is_boringssl_crypto();
                 byte initial[33]{};
-                tsize initial_len = 32;
+                size_t initial_len = 32;
                 auto ok = HKDF_Extract(initial, initial_len, client_conn_id, len);
                 if (!ok) {
                     return false;
                 }
-                if (mode == client) {
+                if (enc_client) {
                     ok = HKDF_Expand_label(key.initial, initial, initial_len, client_in);
                 }
                 else {
@@ -115,6 +131,6 @@ namespace utils {
                      HKDF_Expand_label(key.hp, key.initial.key, key.initial.size(), quic_hp);
                 return ok;
             }
-        }  // namespace crypto
+        }  // namespace quic
     }      // namespace dnet
 }  // namespace utils

@@ -6,7 +6,7 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/http2.h>
+#include <dnet/http2/http2.h>
 #include <dnet/dll/httpbufproxy.h>
 #include <dnet/errcode.h>
 #include <helper/appender.h>
@@ -15,8 +15,8 @@
 #include <helper/strutil.h>
 #include <quic/mem/hash_map.h>
 #include <dnet/dll/glheap.h>
-#include <dnet/h2frame.h>
-#include <dnet/h2state.h>
+#include <dnet/http2/h2frame.h>
+#include <dnet/http2/h2state.h>
 #include <net_util/hpack.h>
 #include <functional>
 #include <string_view>

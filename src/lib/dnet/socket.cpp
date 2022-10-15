@@ -97,7 +97,7 @@ namespace utils {
             if (res < 0) {
                 err = get_error();
             }
-            return res >= 0;
+            return res > 0;
         }
 
         bool Socket::read(void* data, size_t len, int flag) {
@@ -141,6 +141,14 @@ namespace utils {
             return err == WSAEWOULDBLOCK;
 #else
             return err == EINPROGRESS || err == EWOULDBLOCK;
+#endif
+        }
+
+        bool Socket::msgsize() const {
+#ifdef _WIN32
+            return err == WSAEMSGSIZE;
+#else
+            return err == EMSGSIZE;
 #endif
         }
 
@@ -222,6 +230,30 @@ namespace utils {
             return set_option(IPPROTO_IP, IP_MTU_DISCOVER, val);
         }
 
+        bool Socket::set_mtu_discover_v6(MTUConfig conf) {
+            int val = 0;
+            if (conf == mtu_default) {
+#ifdef _WIN32
+                val = IP_PMTUDISC_NOT_SET;
+#else
+                val = IP_PMTUDISC_WANT;
+#endif
+            }
+            else if (conf == mtu_enable) {
+                val = IP_PMTUDISC_DO;
+            }
+            else if (conf == mtu_disable) {
+                val = IP_PMTUDISC_DONT;
+            }
+            else if (conf == mtu_ignore) {
+                val = IP_PMTUDISC_PROBE;
+            }
+            else {
+                return false;
+            }
+            return set_option(IPPROTO_IPV6, IPV6_MTU_DISCOVER, val);
+        }
+
         std::int32_t Socket::get_mtu() {
             std::int32_t val = 0;
             if (!get_option(IPPROTO_IP, IP_MTU, val)) {
@@ -232,6 +264,14 @@ namespace utils {
 
         void Socket::set_blocking(bool blocking) {
             set_nonblock(sock, !blocking);
+        }
+
+        bool Socket::set_dontfragment(bool df) {
+            return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
+        }
+
+        bool Socket::set_dontfragment_v6(bool df) {
+            return set_option(IPPROTO_IP, IPV6_DONTFRAG, std::uint32_t(df ? 1 : 0));
         }
 
         bool Socket::bind(const void* addr, size_t len) {
@@ -293,7 +333,7 @@ namespace utils {
             return result;
         }
 
-        dnet_dll_internal(Socket) make_socket(int address_family, int socket_mode, int protocol) {
+        dnet_dll_implement(Socket) make_socket(int address_family, int socket_mode, int protocol) {
             if (!init_sockdl()) {
                 return make_socket(~0);
             }
@@ -426,7 +466,7 @@ namespace utils {
             return true;
         }
 
-        dnet_dll_internal(int) wait_event(std::uint32_t time) {
+        dnet_dll_implement(int) wait_event(std::uint32_t time) {
             return wait_event_plt(time);
         }
 

@@ -164,7 +164,7 @@ namespace utils {
             return true;
         }
 
-        dnet_dll_internal(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap) {
+        dnet_dll_implement(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap) {
             auto do_write = [&] {
                 if (!sock.write(text, size)) {
                     if (sock.block()) {

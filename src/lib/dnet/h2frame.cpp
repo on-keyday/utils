@@ -6,8 +6,8 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/h2frame.h>
-#include <dnet/http2.h>
+#include <dnet/http2/h2frame.h>
+#include <dnet/http2/http2.h>
 #include <dnet/dll/httpbuf.h>
 #include <helper/view.h>
 #include <helper/pushbacker.h>
@@ -270,7 +270,7 @@ namespace utils {
                 : h2frame::Frame(type) {}
         };
 
-        dnet_dll_internal(bool) pass_frame(const char* text, size_t size, size_t& red) {
+        dnet_dll_implement(bool) pass_frame(const char* text, size_t size, size_t& red) {
             if (!text) {
                 return false;
             }
@@ -289,7 +289,7 @@ namespace utils {
             return true;
         }
 
-        dnet_dll_internal(bool) parse_frame(const char* text, size_t size, size_t& red, ErrCode& err, H2Callback cb, void* c) {
+        dnet_dll_implement(bool) parse_frame(const char* text, size_t size, size_t& red, ErrCode& err, H2Callback cb, void* c) {
             if (!cb || !text) {
                 err.err = http2_invalid_argument;
                 return false;

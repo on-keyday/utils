@@ -12,7 +12,7 @@
 
 namespace utils {
     namespace dnet {
-        dnet_dll_internal(size_t) tls_input(TLS& tls, String& buf, size_t* next_expect) {
+        dnet_dll_implement(size_t) tls_input(TLS& tls, String& buf, size_t* next_expect) {
             tls.clear_err();
             size_t record_count = 0;
             while (true) {
@@ -32,7 +32,7 @@ namespace utils {
             }
         }
 
-        dnet_dll_internal(size_t) tls_output(TLS& tls, String& buf, String& tmpbuf) {
+        dnet_dll_implement(size_t) tls_output(TLS& tls, String& buf, String& tmpbuf) {
             tls.clear_err();
             size_t record_count = 0;
             while (true) {

@@ -8,7 +8,7 @@
 #include <platform/windows/dllexport_source.h>
 #include <deprecated/cnet/mem.h>
 #include <cassert>
-#include "../../include/wrap/light/enum.h"
+#include <wrap/light/enum.h>
 
 namespace utils {
     namespace cnet {

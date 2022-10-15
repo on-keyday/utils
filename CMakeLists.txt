@@ -113,6 +113,7 @@ add_executable(dnet_tls "src/test/dnet/test_dnet_tls.cpp")
 add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
 add_executable(dnet_http2 "src/test/dnet/test_dnet_http2.cpp")
 add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
+add_executable(dnetquic_initial "src/test/dnet/test_dnetquic_initial.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -165,7 +166,7 @@ target_sources(utils
   "src/lib/file/file_view.cpp"
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
-  "src/lib/syntax/default_syntaxc.cpp"
+  "src/lib/deprecated/syntax/default_syntaxc.cpp"
   "src/lib/json/json_object.cpp"
   "src/lib/wrap/iocommon.cpp"
   "src/lib/wrap/cin.cpp"
@@ -196,13 +197,13 @@ target_sources(utnet
   "src/lib/net/http2/stream_context.cpp"
   "src/lib/net/http2/request.cpp"
   "src/lib/net/http2/request_methods.cpp"
-  "src/lib/cnet/cnet.cpp"
-  "src/lib/cnet/tcp.cpp"
-  "src/lib/cnet/ssl.cpp"
-  "src/lib/cnet/tcp_server.cpp"
-  "src/lib/cnet/http2.cpp"
-  "src/lib/cnet/mem_buffer.cpp"
-  "src/lib/cnet/mem_iface.cpp"
+  "src/lib/deprecated/cnet/cnet.cpp"
+  "src/lib/deprecated/cnet/tcp.cpp"
+  "src/lib/deprecated/cnet/ssl.cpp"
+  "src/lib/deprecated/cnet/tcp_server.cpp"
+  "src/lib/deprecated/cnet/http2.cpp"
+  "src/lib/deprecated/cnet/mem_buffer.cpp"
+  "src/lib/deprecated/cnet/mem_iface.cpp"
   "src/lib/async/worker.cpp"
 )
 
@@ -220,6 +221,9 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/string.cpp"
   "src/lib/dnet/heaps.cpp"
   "src/lib/dnet/conn.cpp"
+  "src/lib/dnet/quic/quic_tls.cpp"
+  "src/lib/dnet/quic/initial_keys.cpp"
+  "src/lib/dnet/quic/packet.cpp"
 )
 
 target_sources(dnetserv PRIVATE
@@ -327,6 +331,7 @@ target_link_libraries(dnet_socket dnet)
 target_link_libraries(dnet_tls dnet)
 target_link_libraries(dnet_http dnet utils)
 target_link_libraries(dnet_http2 dnet)
+target_link_libraries(dnetquic_initial dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)

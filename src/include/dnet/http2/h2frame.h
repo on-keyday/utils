@@ -7,9 +7,9 @@
 
 // h2frame - http2 frame
 #pragma once
-#include "dll/dllh.h"
-#include "../net/http2/error_type.h"
-#include "../net/http2/stream_state.h"
+#include "../dll/dllh.h"
+#include <net/http2/error_type.h>
+#include <net/http2/stream_state.h>
 
 namespace utils {
     namespace dnet {

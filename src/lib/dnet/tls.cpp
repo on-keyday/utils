@@ -9,38 +9,38 @@
 #include <dnet/tls.h>
 #include <dnet/dll/ssldll.h>
 #include <dnet/errcode.h>
-#include <quic/mem/raii.h>
+#include <helper/defer.h>
 #include <dnet/dll/glheap.h>
 #include <cstring>
 
 namespace utils {
     namespace dnet {
-        dnet_dll_internal(bool) load_crypto() {
+        dnet_dll_implement(bool) load_crypto() {
             static bool res = ssldl.load_crypto_common();
             return res;
         }
 
-        dnet_dll_internal(bool) load_ssl() {
+        dnet_dll_implement(bool) load_ssl() {
             static bool res = load_crypto() && ssldl.load_ssl_common();
             return res;
         }
 
-        dnet_dll_internal(bool) is_boringssl_ssl() {
+        dnet_dll_implement(bool) is_boringssl_ssl() {
             static bool res = load_ssl() && ssldl.load_boringssl_ssl_ext();
             return res;
         }
 
-        dnet_dll_internal(bool) is_openssl_ssl() {
+        dnet_dll_implement(bool) is_openssl_ssl() {
             static bool res = load_ssl() && ssldl.load_openssl_ssl_ext();
             return res;
         }
 
-        dnet_dll_internal(bool) is_boringssl_crypto() {
+        dnet_dll_implement(bool) is_boringssl_crypto() {
             static bool res = load_crypto() && ssldl.load_boringssl_crypto_ext();
             return res;
         }
 
-        dnet_dll_internal(bool) is_openssl_crypto() {
+        dnet_dll_implement(bool) is_openssl_crypto() {
             static bool res = load_crypto() && ssldl.load_openssl_crypto_ext();
             return res;
         }
@@ -49,6 +49,8 @@ namespace utils {
             ssl_import::SSL* ssl = nullptr;
             ssl_import::SSL_CTX* sslctx = nullptr;
             ssl_import::BIO* wbio = nullptr;
+            void* user = nullptr;
+            int (*cb)(void* user, quic::MethodArgs) = nullptr;
 
             ~SSLContexts() {
                 if (ssl) {
@@ -67,7 +69,7 @@ namespace utils {
             delete_with_global_heap(static_cast<SSLContexts*>(opt), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
         }
 
-        dnet_dll_internal(TLS) create_tls() {
+        dnet_dll_implement(TLS) create_tls() {
             if (!load_ssl()) {
                 return {libload_failed};
             }
@@ -75,20 +77,15 @@ namespace utils {
             if (!ctx) {
                 return {no_resource};
             }
-            quic::mem::RAII rctx{
-                ctx,
-                [](auto ctx) {
-                    if (ctx) {
-                        ssldl.SSL_CTX_free_(ctx);
-                    }
-                },
-            };
+            auto d = helper::defer([&] {
+                ssldl.SSL_CTX_free_(ctx);
+            });
             auto tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
             if (!tls) {
                 return {no_resource};
             }
             tls->sslctx = ctx;
-            rctx.t = nullptr;
+            d.cancel();
             return {tls};
         }
 
@@ -148,6 +145,16 @@ namespace utils {
             });
         }
 
+        bool check_opt_quic(void* opt, int& err, auto&& callback) {
+            return check_opt(opt, err, [&](SSLContexts* c) {
+                if (!c->ssl || c->wbio) {
+                    err = should_setup_quic;
+                    return false;
+                }
+                return callback(c);
+            });
+        }
+
         bool TLS::set_alpn(const void* p, size_t len) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_set_alpn_protos_(c->ssl, static_cast<const unsigned char*>(p), len);
@@ -179,17 +186,16 @@ namespace utils {
         bool TLS::make_ssl() {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (c->ssl) {
-                    return true;
+                    return c->wbio != nullptr;
                 }
                 auto ssl = ssldl.SSL_new_(c->sslctx);
                 if (!ssl) {
                     err = no_resource;
                     return false;
                 }
-                quic::mem::RAII r{
-                    ssl, [](auto ssl) {
-                        ssldl.SSL_free_(ssl);
-                    }};
+                auto r = helper::defer([&]() {
+                    ssldl.SSL_free_(ssl);
+                });
                 if (!load_crypto()) {
                     err = libload_failed;
                     return false;
@@ -202,8 +208,52 @@ namespace utils {
                 }
                 ssldl.SSL_set_bio_(ssl, pass, pass);
                 c->ssl = ssl;
-                r.t = nullptr;
                 c->wbio = hold;
+                r.cancel();
+                return true;
+            });
+        }
+
+        int quic_callback(TLS& tls, const quic::MethodArgs& args) {
+            int res = 0;
+            check_opt_quic(tls.opt, tls.err, [&](SSLContexts* c) {
+                if (c->cb) {
+                    res = c->cb(c->user, args);
+                }
+                return true;
+            });
+            return res;
+        }
+
+        namespace quic {
+            bool set_quic_method(void* ptr);
+        }
+
+        bool TLS::make_quic(int (*cb)(void*, quic::MethodArgs), void* user) {
+            return check_opt(opt, err, [&](SSLContexts* c) {
+                if (c->ssl) {
+                    return c->wbio == nullptr;
+                }
+                auto ssl = ssldl.SSL_new_(c->sslctx);
+                if (!ssl) {
+                    err = no_resource;
+                    return false;
+                }
+                auto r = helper::defer([&]() {
+                    ssldl.SSL_free_(ssl);
+                });
+                if (!ssldl.SSL_set_ex_data_(ssl, ssl_appdata_index, this)) {
+                    err = set_ssl_value_failed;
+                    return false;
+                }
+                if (!quic::set_quic_method(ssl)) {
+                    err = libload_failed;
+                    return false;
+                }
+                c->ssl = ssl;
+                c->cb = cb;
+                c->user = user;
+                r.cancel();
                 return true;
             });
         }
@@ -337,6 +387,38 @@ namespace utils {
             });
         }
 
+        bool TLS::provide_quic_data(quic::EncryptionLevel level, const void* data, size_t size) {
+            return check_opt_quic(opt, err, [&](SSLContexts* c) {
+                auto res = ssldl.SSL_provide_quic_data_(c->ssl,
+                                                        ssl_import::quic_ext::OSSL_ENCRYPTION_LEVEL(level),
+                                                        reinterpret_cast<const uint8_t*>(data), size);
+                if (!res) {
+                    err = ssldl.SSL_get_error_(c->ssl, 0);
+                }
+                return (bool)res;
+            });
+        }
+
+        bool TLS::progress_quic() {
+            return check_opt_quic(opt, err, [&](SSLContexts* c) {
+                auto res = ssldl.SSL_process_quic_post_handshake_(c->ssl);
+                if (!res) {
+                    err = ssldl.SSL_get_error_(c->ssl, 0);
+                }
+                return (bool)res;
+            });
+        }
+
+        bool TLS::set_quic_transport_params(const void* params, size_t len) {
+            return check_opt_quic(opt, err, [&](SSLContexts* c) {
+                auto res = ssldl.SSL_set_quic_transport_params_(c->ssl, static_cast<const uint8_t*>(params), len);
+                if (!res) {
+                    err = ssldl.SSL_get_error_(c->ssl, 0);
+                }
+                return (bool)res;
+            });
+        }
+
         bool TLS::write(const void* data, size_t len, size_t* written) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_write_(c->ssl, data, int(len));
@@ -381,6 +463,7 @@ namespace utils {
                 return res >= 0;
             });
         }
+
         bool TLS::accept() {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_accept_(c->ssl);
@@ -415,35 +498,6 @@ namespace utils {
             return static_cast<SSLContexts*>(opt)->sslctx != nullptr;
         }
 
-        bool TLS::progress_state(TLSIO& state, void* iobuf, size_t len) {
-            if (!iobuf || !len) {
-                err = invalid_argument;
-                return false;
-            }
-            if (state.state == TLSIOState::from_ssl) {
-                memset(iobuf, 0, len);
-                if (!receive_tls_data(iobuf, len)) {
-                    if (!block()) {
-                        state.state = TLSIOState::fatal;
-                    }
-                    return false;
-                }
-                state.state = TLSIOState::to_ssl;
-                return true;
-            }
-            if (state.state == TLSIOState::to_ssl) {
-                if (!provide_tls_data(iobuf, len)) {
-                    if (!block()) {
-                        state.state = TLSIOState::fatal;
-                    }
-                    return false;
-                }
-                state.state = TLSIOState::from_ssl;
-                return true;
-            }
-            return state.state != TLSIOState::fatal;
-        }
-
         bool TLS::verify_ok() {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_get_verify_result_(c->ssl);
@@ -469,11 +523,11 @@ namespace utils {
             ssldl.ERR_print_errors_cb_(cb, user);
         }
 
-        dnet_dll_internal(void) set_libssl(const char* path) {
+        dnet_dll_implement(void) set_libssl(const char* path) {
             ssldl.set_libssl(path);
         }
 
-        dnet_dll_internal(void) set_libcrypto(const char* path) {
+        dnet_dll_implement(void) set_libcrypto(const char* path) {
             ssldl.set_libcrypto(path);
         }
     }  // namespace dnet

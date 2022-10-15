@@ -7,13 +7,13 @@
 
 // http2 - hyper text transfer protcol version 2
 #pragma once
-#include "dll/dllh.h"
+#include "../dll/dllh.h"
 #include <utility>
 #include <memory>
 #include "h2err.h"
 #include "h2frame.h"
 #include "h2state.h"
-#include "../net/http/header.h"
+#include <net/http/header.h>
 
 namespace utils {
     namespace dnet {

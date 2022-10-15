@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <memory>
 #include "httpstring.h"
+#include "quic/crypto.h"
 
 namespace utils {
     namespace dnet {
@@ -51,13 +52,60 @@ namespace utils {
             }
         };
 
+        namespace quic {
+
+            enum class ArgType {
+                // openssl
+                // read_secret,write_secret,secret_len,level is enabled
+                secret,
+                // boring ssl
+                // cipher,write_secret,secret_len,level is enabled
+                wsecret,
+                // boring ssl
+                // cipher,read_secret,secret_len,level is enabled
+                rsecret,
+                // data,len,level is enabled
+                handshake_data,
+                // nonthing enabled
+                flush,
+                // alert is enabled
+                alert,
+            };
+
+            enum class EncryptionLevel {
+                initial = 0,
+                early_data,
+                handshake,
+                application,
+            };
+
+            struct MethodArgs {
+                ArgType type;
+                EncryptionLevel level;
+                const void* cipher;
+                union {
+                    const byte* read_secret;
+                    const byte* data;
+                };
+                const byte* write_secret;
+                union {
+                    size_t len;
+                    size_t secret_len;
+                    byte alert;
+                };
+            };
+        }  // namespace quic
+
         // TLS is wrapper class of OpenSSL/BoringSSL library
         struct dnet_class_export TLS {
            private:
             int err;
             size_t prevred;
             void* opt;
-            // void (*gc_)(void*);
+
+            // for quic callback invocation
+            friend int quic_callback(TLS& tls, const quic::MethodArgs& args);
+
             constexpr TLS(void* o)
                 : opt(o), err(0), prevred(0) {}
             friend dnet_dll_export(TLS) create_tls();
@@ -84,8 +132,9 @@ namespace utils {
             constexpr operator bool() const {
                 return opt != nullptr;
             }
-            // make_ssl set up SSL structure
+            // make_ssl set up SSL structure for TLS
             bool make_ssl();
+
             bool set_cacert_file(const char* cacert, const char* dir = nullptr);
             bool set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
             bool set_alpn(const void* p, size_t len);
@@ -93,12 +142,27 @@ namespace utils {
             bool set_client_cert_file(const char* cert);
             bool set_cert_chain(const char* pubkey, const char* prvkey);
 
+            // make_quic set up SSL structure for QUIC
+            bool make_quic(int (*cb)(void*, quic::MethodArgs), void* user);
+
+            template <class T>
+            bool make_quic(int (*cb)(T*, quic::MethodArgs), std::type_identity_t<T>* user) {
+                auto cb_void = reinterpret_cast<int (*)(void*, quic::MethodArgs)>(cb);
+                void* user_void = user;
+                return make_quic(cb_void, user_void);
+            }
+
+            bool set_quic_transport_params(const void* params, size_t len);
+
             constexpr size_t readsize() const {
                 return prevred;
             }
 
             bool provide_tls_data(const void* data, size_t len, size_t* written = nullptr);
             bool receive_tls_data(void* data, size_t len);
+
+            bool provide_quic_data(quic::EncryptionLevel level, const void* data, size_t len);
+            bool progress_quic();
 
             bool write(const void* data, size_t len, size_t* written = nullptr);
             bool read(void* data, size_t len);
@@ -115,8 +179,6 @@ namespace utils {
             constexpr int geterr() const {
                 return err;
             }
-
-            bool progress_state(TLSIO& state, void* iobuf, size_t len);
 
             bool verify_ok();
 

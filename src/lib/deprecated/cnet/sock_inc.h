@@ -8,8 +8,8 @@
 
 // sock_inc - socket common include
 #pragma once
-#include "../../include/platform/windows/dllexport_header.h"
-#include "../../include/net/core/init_net.h"
+#include <platform/windows/dllexport_header.h>
+#include <net/core/init_net.h>
 #ifdef _WIN32
 #ifdef __MINGW32__
 #define _WIN32_WINNT 0x0501
@@ -39,7 +39,7 @@ namespace utils {
         namespace tcp {
             CNet* create_server_conn(::SOCKET sock, ::sockaddr_storage* info, size_t len);
 
-            int selecting_loop(Stopper stop,CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, std::int64_t timeout);
+            int selecting_loop(Stopper stop, CNet* ctx, ::SOCKET proto, bool send, TCPStatus& status, std::int64_t timeout);
         }  // namespace tcp
     }      // namespace cnet
 }  // namespace utils
