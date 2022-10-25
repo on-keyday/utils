@@ -8,11 +8,12 @@
 // socks - socks5 protocol
 #pragma once
 #include <cstdint>
+#include "byte.h"
 
 namespace utils {
     namespace dnet {
         namespace socks {
-            using byte = unsigned char;
+
             struct TCPMethodList {
                 byte version;
                 byte nmethod;

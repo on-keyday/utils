@@ -36,25 +36,25 @@ namespace utils {
             if (ssldl.CRYPTO_set_mem_functions_) {
                 ssldl.CRYPTO_set_mem_functions_(
                     [](size_t s, const char* file, int line) {
-                        return get_rawbuf(s, DebugInfo{
-                                                 .size_known = true,
-                                                 .size = s,
-                                                 .file = file,
-                                                 .line = line,
-                                                 .func = "OPENSSL_malloc",
-                                             });
+                        return alloc_normal(s, DebugInfo{
+                                                   .size_known = true,
+                                                   .size = s,
+                                                   .file = file,
+                                                   .line = line,
+                                                   .func = "OPENSSL_malloc",
+                                               });
                     },
                     [](void* p, size_t s, const char* file, int line) {
-                        return resize_rawbuf(p, s, DebugInfo{
-                                                       .size_known = false,
-                                                       .size = 0,
-                                                       .file = file,
-                                                       .line = line,
-                                                       .func = "OPENSSL_realloc",
-                                                   });
+                        return realloc_normal(p, s, DebugInfo{
+                                                        .size_known = false,
+                                                        .size = 0,
+                                                        .file = file,
+                                                        .line = line,
+                                                        .func = "OPENSSL_realloc",
+                                                    });
                     },
                     [](void* p, const char* file, int line) {
-                        return free_rawbuf(p, DebugInfo{
+                        return free_normal(p, DebugInfo{
                                                   .size_known = false,
                                                   .size = 0,
                                                   .file = file,

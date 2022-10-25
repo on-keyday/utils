@@ -13,15 +13,15 @@
 namespace utils {
     namespace dnet {
         namespace quic::flow {
-            constexpr InitialPacket make_first_flight(
-                WPacket& src, std::uint32_t packet_number, byte pn_len, ByteLen crypto_data,
+            constexpr InitialPacketPlain make_first_flight(
+                WPacket& src, std::uint32_t version, std::uint32_t packet_number, byte pn_len, ByteLen crypto_data,
                 ByteLen dstID, ByteLen srcID, ByteLen token) {
-                InitialPacket packet;
-                packet.flags = src.packet_flags(PacketType::Initial, pn_len);
+                InitialPacketPlain packet;
+                packet.flags = src.packet_flags(version, PacketType::Initial, pn_len);
                 if (!packet.flags.value) {
                     return {};
                 }
-                packet.version = src.as<std::uint32_t>(1);
+                packet.version = src.as<std::uint32_t>(version);
                 packet.dstIDLen = src.as_byte(dstID.len);
                 packet.dstID = dstID;
                 packet.srcIDLen = src.as_byte(srcID.len);
@@ -48,8 +48,8 @@ namespace utils {
                 return packet;
             }
 
-            constexpr PacketInfo makePacketInfo(WPacket& dstw, InitialPacket& packet, bool enc) {
-                PacketInfo info;
+            constexpr CryptoPacketInfo makePacketInfo(WPacket& dstw, InitialPacketPlain& packet, bool enc) {
+                CryptoPacketInfo info;
                 dstw.offset = 0;
                 if (!packet.render(dstw)) {
                     return {};
@@ -57,12 +57,12 @@ namespace utils {
                 if (dstw.offset != packet.packet_len()) {
                     return {};
                 }
-                auto before_packet_number = static_cast<InitialPacketPartial&>(packet).packet_len();
+                auto before_packet_number = packet.as_partial().packet_len();
                 auto whole_len = packet.packet_len();
                 info.head = dstw.b.resized(before_packet_number);
                 info.payload = dstw.b.forward(before_packet_number)
                                    .resized(packet.flags.packet_number_length() + packet.payload.len);
-                info.dstID = packet.dstID;
+                info.clientDstID = packet.dstID;
                 auto pn_len = packet.flags.packet_number_length();
                 info.processed_payload = dstw.b.forward(before_packet_number + pn_len)
                                              .resized(packet.payload.len + (enc ? 16 : 0));
@@ -75,24 +75,26 @@ namespace utils {
             // parseInitialPartial parses initial packet from remote undecyrpted.
             // if clientDstID is valid, it will set to packetinfo.dstID
             // otherwise packet.dstID will set to packetinfo.dstID
-            constexpr PacketInfo parseInitialPartial(ByteLen b, ByteLen clientDstID, auto&& version_validate) {
+            constexpr CryptoPacketInfo parseInitialPartial(ByteLen b, ByteLen clientDstID, auto&& validate) {
                 InitialPacketPartial partial;
                 auto copy = b;
                 if (!partial.parse(copy)) {
                     return {};
                 }
-                if (!version_validate(partial.version.as<std::uint32_t>())) {
+                if (!validate(partial.version.as<std::uint32_t>(),
+                              std::as_const(partial.srcID), std::as_const(partial.dstID))) {
                     return {};
                 }
-                dnet::quic::PacketInfo info;
-                info.head = b.resized(partial.packet_len());
-                auto plength = partial.length.varint();
-                info.payload = b.forward(partial.packet_len()).resized(plength);
+                dnet::quic::CryptoPacketInfo info;
+                auto packlen = partial.packet_len();
+                info.head = b.resized(packlen);
+                auto plength = partial.length.qvarint();
+                info.payload = b.forward(packlen).resized(plength);
                 if (clientDstID.valid()) {
-                    info.dstID = clientDstID;
+                    info.clientDstID = clientDstID;
                 }
                 else {
-                    info.dstID = partial.dstID;
+                    info.clientDstID = partial.dstID;
                 }
                 return info;
             }

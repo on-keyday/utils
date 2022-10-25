@@ -7,12 +7,63 @@
 
 // packet - QUIC packet format
 #pragma once
-#include "bytelen.h"
+#include "../bytelen.h"
 #include <utility>
 
 namespace utils {
     namespace dnet {
         namespace quic {
+
+            constexpr bool valid_longpacket_tail_len(size_t& payload_len, size_t length, size_t pn_len, size_t payload_tag_len) {
+                payload_len = length;
+                if (payload_len < pn_len) {
+                    return false;
+                }
+                payload_len -= pn_len;
+                if (payload_tag_len) {
+                    if (payload_len < payload_tag_len) {
+                        return false;
+                    }
+                    payload_len -= payload_tag_len;
+                }
+                return true;
+            }
+            constexpr bool parse_packet_number_and_payload(ByteLen& b, size_t pn_len, size_t length, size_t payload_tag_len,
+                                                           ByteLen& packet_number, ByteLen& payload) {
+                if (!b.fwdresize(packet_number, 0, pn_len)) {
+                    return false;
+                }
+                size_t payload_len;
+                if (!valid_longpacket_tail_len(payload_len, length, pn_len, payload_tag_len)) {
+                    return false;
+                }
+                if (!b.fwdresize(payload, pn_len, payload_len)) {
+                    return false;
+                }
+                b = b.forward(payload_len + payload_tag_len);
+                return true;
+            }
+
+            // payload_tag_len is MAC or other hash tag length for encrypted payload
+            // if payload_tag_len is set, payload will contains only frames but tag
+            // and ignoring payload_tag for b
+            constexpr bool render_packet_number_and_payload(WPacket& w, size_t pn_len, size_t length, size_t payload_tag_len,
+                                                            ByteLen packet_number, ByteLen payload) {
+                size_t payload_len;
+                if (!valid_longpacket_tail_len(payload_len, length, pn_len, payload_tag_len)) {
+                    return false;
+                }
+                if (!packet_number.enough(pn_len) ||
+                    !payload.enough(payload_len)) {
+                    return false;
+                }
+                w.append(packet_number.data, pn_len);
+                w.append(payload.data, payload_len);
+                if (payload_tag_len) {
+                    w.add(0, payload_tag_len);
+                }
+                return true;
+            }
 
             struct Packet {
                 PacketFlags flags;
@@ -96,6 +147,10 @@ namespace utils {
                     w.append(srcID.data, *srcIDLen);
                     return true;
                 }
+
+                constexpr LongPacketBase& as_lpacket_base() {
+                    return *this;
+                }
             };
 
             struct LongPacket : LongPacketBase {
@@ -131,10 +186,11 @@ namespace utils {
                     if (!LongPacketBase::parse(b)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::VersionNegotiation) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::VersionNegotiation) {
                         return false;
                     }
                     supported_versions = b;
+                    b = b.forward(b.len);
                     return true;
                 }
 
@@ -146,7 +202,7 @@ namespace utils {
                     if (!LongPacketBase::render(w)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::VersionNegotiation) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::VersionNegotiation) {
                         return false;
                     }
                     if (!supported_versions.valid()) {
@@ -166,20 +222,20 @@ namespace utils {
                     if (!LongPacketBase::parse(b)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::Initial) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::Initial) {
                         return false;
                     }
-                    auto len = b.varintlen();
+                    auto len = b.qvarintlen();
                     if (len == 0 || !b.enough(len)) {
                         return false;
                     }
                     token_length = b.resized(len);
-                    auto toklen = token_length.varint();
+                    auto toklen = token_length.qvarint();
                     if (!b.fwdresize(token, len, toklen)) {
                         return false;
                     }
                     b = b.forward(toklen);
-                    len = b.varintlen();
+                    len = b.qvarintlen();
                     if (len == 0 || !b.enough(len)) {
                         return false;
                     }
@@ -199,34 +255,36 @@ namespace utils {
                     if (!LongPacketBase::render(w)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::Initial) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::Initial) {
                         return false;
                     }
-                    if (!token_length.is_varint_valid() ||
-                        !token.enough(token_length.varint()) ||
-                        !length.is_varint_valid()) {
+                    if (!token_length.is_qvarint_valid() ||
+                        !token.enough(token_length.qvarint()) ||
+                        !length.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(token_length.data, token_length.varintlen());
-                    w.append(token.data, token_length.varint());
-                    w.append(length.data, length.varintlen());
+                    w.append(token_length.data, token_length.qvarintlen());
+                    w.append(token.data, token_length.qvarint());
+                    w.append(length.data, length.qvarintlen());
                     return true;
+                }
+
+                constexpr InitialPacketPartial& as_partial() {
+                    return *this;
                 }
             };
 
-            struct InitialPacket : InitialPacketPartial {
+            struct InitialPacketPlain : InitialPacketPartial {
                 ByteLen packet_number;
                 ByteLen payload;
 
-                constexpr bool parse(ByteLen& b) {
+                constexpr bool parse(ByteLen& b, size_t payload_tag_len = 0) {
                     if (!InitialPacketPartial::parse(b)) {
                         return false;
                     }
-                    auto len = flags.packet_number_length();
-                    packet_number = b.resized(len);
-                    b = b.forward(len);
-                    payload = b;
-                    return true;
+                    return parse_packet_number_and_payload(
+                        b, flags.packet_number_length(), length.qvarint(), payload_tag_len,
+                        packet_number, payload);
                 }
 
                 constexpr size_t packet_len() const {
@@ -235,17 +293,13 @@ namespace utils {
                            payload.len;
                 }
 
-                constexpr bool render(WPacket& w) const {
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
                     if (!InitialPacketPartial::render(w)) {
                         return false;
                     }
-                    if (packet_number.len < flags.packet_number_length() ||
-                        !payload.valid()) {
-                        return false;
-                    }
-                    w.append(packet_number.data, flags.packet_number_length());
-                    w.append(payload.data, payload.len);
-                    return true;
+                    return render_packet_number_and_payload(
+                        w, flags.packet_number_length(), length.qvarint(), payload_tag_len,
+                        packet_number, payload);
                 }
             };
 
@@ -256,10 +310,10 @@ namespace utils {
                     if (!LongPacketBase::parse(b)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::ZeroRTT) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::ZeroRTT) {
                         return false;
                     }
-                    auto len = b.varintlen();
+                    auto len = b.qvarintlen();
                     if (len == 0 || !b.enough(len)) {
                         return false;
                     }
@@ -277,30 +331,32 @@ namespace utils {
                     if (!LongPacketBase::render(w)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::ZeroRTT) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::ZeroRTT) {
                         return false;
                     }
-                    if (!length.is_varint_valid()) {
+                    if (!length.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(length.data, length.varintlen());
+                    w.append(length.data, length.qvarintlen());
                     return true;
+                }
+
+                constexpr ZeroRTTPacketPartial& as_parital() {
+                    return *this;
                 }
             };
 
-            struct ZeroRTTPacket : ZeroRTTPacketPartial {
+            struct ZeroRTTPacketPlain : ZeroRTTPacketPartial {
                 ByteLen packet_number;
                 ByteLen payload;
 
-                constexpr bool parse(ByteLen& b) {
+                constexpr bool parse(ByteLen& b, size_t payload_tag_len = 0) {
                     if (!ZeroRTTPacketPartial::parse(b)) {
                         return false;
                     }
-                    auto len = flags.packet_number_length();
-                    packet_number = b.resized(len);
-                    b = b.forward(len);
-                    payload = b;
-                    return true;
+                    return parse_packet_number_and_payload(
+                        b, flags.packet_number_length(), length.qvarint(), payload_tag_len,
+                        packet_number, payload);
                 }
 
                 constexpr size_t packet_len() const {
@@ -309,17 +365,13 @@ namespace utils {
                            payload.len;
                 }
 
-                constexpr bool render(WPacket& w) const {
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
                     if (!ZeroRTTPacketPartial::render(w)) {
                         return false;
                     }
-                    if (packet_number.len < flags.packet_number_length() ||
-                        !payload.valid()) {
-                        return false;
-                    }
-                    w.append(packet_number.data, flags.packet_number_length());
-                    w.append(payload.data, payload.len);
-                    return true;
+                    return render_packet_number_and_payload(
+                        w, flags.packet_number_length(), length.qvarint(), payload_tag_len,
+                        packet_number, payload);
                 }
             };
 
@@ -330,10 +382,10 @@ namespace utils {
                     if (!LongPacketBase::parse(b)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::HandShake) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::HandShake) {
                         return false;
                     }
-                    auto len = b.varintlen();
+                    auto len = b.qvarintlen();
                     if (len == 0 || !b.enough(len)) {
                         return false;
                     }
@@ -351,30 +403,32 @@ namespace utils {
                     if (!LongPacketBase::render(w)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::HandShake) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::HandShake) {
                         return false;
                     }
-                    if (!length.is_varint_valid()) {
+                    if (!length.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(length.data, length.varintlen());
+                    w.append(length.data, length.qvarintlen());
                     return true;
+                }
+
+                HandshakePacketPartial& as_partial() {
+                    return *this;
                 }
             };
 
-            struct HandshakePacket : HandshakePacketPartial {
+            struct HandshakePacketPlain : HandshakePacketPartial {
                 ByteLen packet_number;
                 ByteLen payload;
 
-                constexpr bool parse(ByteLen& b) {
+                constexpr bool parse(ByteLen& b, size_t payload_tag_len = 0) {
                     if (!HandshakePacketPartial::parse(b)) {
                         return false;
                     }
-                    auto len = flags.packet_number_length();
-                    packet_number = b.resized(len);
-                    b.forward(len);
-                    payload = b;
-                    return true;
+                    return parse_packet_number_and_payload(
+                        b, flags.packet_number_length(), length.qvarint(), payload_tag_len,
+                        packet_number, payload);
                 }
 
                 constexpr size_t packet_len() const {
@@ -382,17 +436,13 @@ namespace utils {
                            length.len;
                 }
 
-                constexpr bool render(WPacket& w) const {
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
                     if (!HandshakePacketPartial::render(w)) {
                         return false;
                     }
-                    if (packet_number.len < flags.packet_number_length() ||
-                        !payload.valid()) {
-                        return false;
-                    }
-                    w.append(packet_number.data, flags.packet_number_length());
-                    w.append(payload.data, payload.len);
-                    return true;
+                    return render_packet_number_and_payload(
+                        w, flags.packet_number_length(), length.qvarint(), payload_tag_len,
+                        packet_number, payload);
                 }
             };
 
@@ -404,7 +454,7 @@ namespace utils {
                     if (!LongPacketBase::parse(b)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::Retry) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::Retry) {
                         return false;
                     }
                     if (!b.enough(16)) {
@@ -427,7 +477,7 @@ namespace utils {
                     if (!LongPacketBase::render(w)) {
                         return false;
                     }
-                    if (flags.type() != PacketType::Retry) {
+                    if (flags.type(version.as<std::uint32_t>()) != PacketType::Retry) {
                         return false;
                     }
                     if (!retry_token.valid() || !integrity_tag.enough(16)) {
@@ -442,6 +492,7 @@ namespace utils {
             struct OneRTTPacketPartial : Packet {
                 ByteLen dstID;
 
+                // get_dstID_len is bool(const ByteLen& b,size_t* len)
                 constexpr bool parse(ByteLen& b, auto&& get_dstID_len) {
                     if (!Packet::parse(b)) {
                         return false;
@@ -450,7 +501,10 @@ namespace utils {
                         return false;
                     }
                     b.forward(1);
-                    size_t len = get_dstID_len(std::as_const(b));
+                    size_t len = 0;
+                    if (!get_dstID_len(std::as_const(b), &len)) {
+                        return false;
+                    }
                     if (!b.enough(len)) {
                         return false;
                     }
@@ -476,21 +530,23 @@ namespace utils {
                     w.append(dstID.data, dstID.len);
                     return true;
                 }
+
+                OneRTTPacketPartial& as_partial() {
+                    return *this;
+                }
             };
 
-            struct OneRTTPacket : OneRTTPacketPartial {
+            struct OneRTTPacketPlain : OneRTTPacketPartial {
                 ByteLen packet_number;
                 ByteLen payload;
 
-                constexpr bool parse(ByteLen& b, auto&& get_dstID_len) {
+                constexpr bool parse(ByteLen& b, auto&& get_dstID_len, size_t payload_tag_len = 0) {
                     if (!OneRTTPacketPartial::parse(b, get_dstID_len)) {
                         return false;
                     }
-                    auto len = flags.packet_number_length();
-                    packet_number = b.resized(len);
-                    b.forward(len);
-                    payload = b;
-                    return true;
+                    return parse_packet_number_and_payload(
+                        b, flags.packet_number_length(), b.len, payload_tag_len,
+                        packet_number, payload);
                 }
 
                 constexpr size_t packet_len() {
@@ -499,17 +555,14 @@ namespace utils {
                            payload.len;
                 }
 
-                constexpr bool render(WPacket& w) const {
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
                     if (!OneRTTPacketPartial::render(w)) {
                         return false;
                     }
-                    if (packet_number.len < flags.packet_number_length() ||
-                        !payload.valid()) {
-                        return false;
-                    }
-                    w.append(packet_number.data, flags.packet_number_length());
-                    w.append(payload.data, payload.len);
-                    return true;
+                    auto pn_len = flags.packet_number_length();
+                    return render_packet_number_and_payload(
+                        w, pn_len, pn_len + payload.len + payload_tag_len, payload_tag_len,
+                        packet_number, payload);
                 }
             };
 

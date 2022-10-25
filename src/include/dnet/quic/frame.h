@@ -7,7 +7,7 @@
 
 // frame - QUIC frame format
 #pragma once
-#include "bytelen.h"
+#include "../bytelen.h"
 
 namespace utils {
     namespace dnet {
@@ -78,19 +78,28 @@ namespace utils {
                 ByteLen ack_ranges;
                 ByteLen ecn_counts;
 
+                // cb is cb(gap,len)
                 static constexpr size_t parse_ack_range(ByteLen b, size_t count, auto&& cb) {
                     size_t range_len = 0;
                     for (auto i = 0; i < count; i++) {
                         size_t gap = 0, len = 0;
-                        auto first = b.varintfwd(gap);
+                        auto first = b.qvarintfwd(gap);
                         if (!first) {
                             return 0;
                         }
-                        auto second = b.varintfwd(len);
+                        auto second = b.qvarintfwd(len);
                         if (!second) {
                             return 0;
                         }
-                        cb(gap, len);
+                        if constexpr (internal::has_logical_not<decltype(cb(gap, len))>) {
+                            if (!cb(gap, len)) {
+                                return 0;
+                            }
+                        }
+                        else {
+                            cb(gap, len);
+                        }
+
                         range_len += first + second;
                     }
                     return range_len;
@@ -99,15 +108,15 @@ namespace utils {
                 static constexpr size_t parse_ecn_counts(ByteLen b, auto&& cb) {
                     size_t counts_len = 0;
                     size_t ect0 = 0, ect1 = 0, ecn_ce = 0;
-                    auto first = b.varintfwd(ect0);
+                    auto first = b.qvarintfwd(ect0);
                     if (!first) {
                         return 0;
                     }
-                    auto second = b.varintfwd(ect1);
+                    auto second = b.qvarintfwd(ect1);
                     if (!second) {
                         return 0;
                     }
-                    auto third = b.varintfwd(ecn_ce);
+                    auto third = b.qvarintfwd(ecn_ce);
                     if (!third) {
                         return 0;
                     }
@@ -123,19 +132,19 @@ namespace utils {
                     if (type.type() != FrameType::ACK) {
                         return false;
                     }
-                    if (!b.varintfwd(largest_ack)) {
+                    if (!b.qvarintfwd(largest_ack)) {
                         return false;
                     }
-                    if (!b.varintfwd(ack_delay)) {
+                    if (!b.qvarintfwd(ack_delay)) {
                         return false;
                     }
-                    if (!b.varintfwd(ack_range_count)) {
+                    if (!b.qvarintfwd(ack_range_count)) {
                         return false;
                     }
-                    if (!b.varintfwd(first_ack_range)) {
+                    if (!b.qvarintfwd(first_ack_range)) {
                         return false;
                     }
-                    auto count = ack_range_count.varint();
+                    auto count = ack_range_count.qvarint();
                     auto len = parse_ack_range(b, count, [](auto...) {});
                     if (count != 0 && !len) {
                         return false;
@@ -173,21 +182,21 @@ namespace utils {
                     if (type.type() != FrameType::ACK) {
                         return false;
                     }
-                    if (!largest_ack.is_varint_valid() ||
-                        !ack_delay.is_varint_valid() ||
-                        !ack_ranges.is_varint_valid() ||
-                        !first_ack_range.is_varint_valid()) {
+                    if (!largest_ack.is_qvarint_valid() ||
+                        !ack_delay.is_qvarint_valid() ||
+                        !ack_ranges.is_qvarint_valid() ||
+                        !first_ack_range.is_qvarint_valid()) {
                         return false;
                     }
-                    auto count = ack_range_count.varint();
+                    auto count = ack_range_count.qvarint();
                     auto range_len = parse_ack_range(ack_ranges, count, [](auto...) {});
                     if (count != 0 && !range_len) {
                         return false;
                     }
-                    w.append(largest_ack.data, largest_ack.varintlen());
-                    w.append(ack_delay.data, ack_delay.varintlen());
-                    w.append(ack_range_count.data, ack_range_count.varintlen());
-                    w.append(first_ack_range.data, first_ack_range.varintlen());
+                    w.append(largest_ack.data, largest_ack.qvarintlen());
+                    w.append(ack_delay.data, ack_delay.qvarintlen());
+                    w.append(ack_range_count.data, ack_range_count.qvarintlen());
+                    w.append(first_ack_range.data, first_ack_range.qvarintlen());
                     w.append(ack_ranges.data, range_len);
                     if (type.type_detail() == FrameType::ACK_ECN) {
                         auto ecn_len = parse_ecn_counts(ecn_counts, [](auto...) {});
@@ -200,6 +209,59 @@ namespace utils {
                 }
             };
 
+            namespace ack {
+
+                struct ACKRange {
+                    size_t smallest = 0;
+                    size_t largest = 0;
+                };
+
+                constexpr bool validate_ack_ranges(auto& vec) {
+                    for (ACKRange r : vec) {
+                        if (r.smallest > r.largest) {
+                            return false;
+                        }
+                    }
+                    for (size_t i = 0; i < vec.size(); i++) {
+                        if (i == 0) {
+                            continue;
+                        }
+                        ACKRange r = vec[i];
+                        ACKRange last = vec[i - 1];
+                        if (last.smallest <= r.smallest || last.largest <= r.largest) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+
+                constexpr bool get_ackranges(auto& ranges, const ACKFrame& ack) {
+                    auto largest_ack = ack.largest_ack.qvarint();
+                    auto ackBlock = ack.first_ack_range.qvarint();
+                    auto smallest = largest_ack - ackBlock;
+                    ranges.push_back(ACKRange{smallest, largest_ack});
+                    auto res = ACKFrame::parse_ack_range(ack.ack_ranges, ack.ack_range_count.qvarint(), [&](auto gap, auto ackBlock) {
+                        if (smallest < gap + 2) {
+                            return false;
+                        }
+                        auto largest = smallest - gap - 2;
+                        if (ackBlock > largest) {
+                            return false;
+                        }
+                        smallest = largest - ackBlock;
+                        ranges.push_back(ACKRange{smallest, largest});
+                        return true;
+                    });
+                    if (!res) {
+                        return false;
+                    }
+                    if (!validate_ack_ranges(ranges)) {
+                        return false;
+                    }
+                    return true;
+                }
+            }  // namespace ack
+
             struct ResetStreamFrame : Frame {
                 ByteLen streamID;
                 ByteLen application_protocol_error_code;
@@ -211,13 +273,13 @@ namespace utils {
                     if (type.type() != FrameType::RESET_STREAM) {
                         return false;
                     }
-                    if (!b.varintfwd(streamID)) {
+                    if (!b.qvarintfwd(streamID)) {
                         return false;
                     }
-                    if (!b.varintfwd(application_protocol_error_code)) {
+                    if (!b.qvarintfwd(application_protocol_error_code)) {
                         return false;
                     }
-                    if (!b.varintfwd(fianl_size)) {
+                    if (!b.qvarintfwd(fianl_size)) {
                         return false;
                     }
                     return true;
@@ -237,14 +299,14 @@ namespace utils {
                     if (type.type() != FrameType::RESET_STREAM) {
                         return false;
                     }
-                    if (!streamID.is_varint_valid() ||
-                        !application_protocol_error_code.is_varint_valid() ||
-                        !fianl_size.is_varint_valid()) {
+                    if (!streamID.is_qvarint_valid() ||
+                        !application_protocol_error_code.is_qvarint_valid() ||
+                        !fianl_size.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(streamID.data, streamID.varintlen());
-                    w.append(application_protocol_error_code.data, application_protocol_error_code.varintlen());
-                    w.append(fianl_size.data, fianl_size.varintlen());
+                    w.append(streamID.data, streamID.qvarintlen());
+                    w.append(application_protocol_error_code.data, application_protocol_error_code.qvarintlen());
+                    w.append(fianl_size.data, fianl_size.qvarintlen());
                     return true;
                 }
             };
@@ -259,10 +321,10 @@ namespace utils {
                     if (type.type() != FrameType::STOP_SENDING) {
                         return false;
                     }
-                    if (!b.varintfwd(streamID)) {
+                    if (!b.qvarintfwd(streamID)) {
                         return false;
                     }
-                    if (!b.varintfwd(application_protocol_error_code)) {
+                    if (!b.qvarintfwd(application_protocol_error_code)) {
                         return false;
                     }
                     return true;
@@ -281,12 +343,12 @@ namespace utils {
                     if (type.type() != FrameType::STOP_SENDING) {
                         return false;
                     }
-                    if (!streamID.is_varint_valid() ||
-                        !application_protocol_error_code.is_varint_valid()) {
+                    if (!streamID.is_qvarint_valid() ||
+                        !application_protocol_error_code.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(streamID.data, streamID.varintlen());
-                    w.append(application_protocol_error_code.data, application_protocol_error_code.varintlen());
+                    w.append(streamID.data, streamID.qvarintlen());
+                    w.append(application_protocol_error_code.data, application_protocol_error_code.qvarintlen());
                     return true;
                 }
             };
@@ -302,13 +364,13 @@ namespace utils {
                     if (type.type() != FrameType::CRYPTO) {
                         return false;
                     }
-                    if (!b.varintfwd(offset)) {
+                    if (!b.qvarintfwd(offset)) {
                         return false;
                     }
-                    if (!b.varintfwd(length)) {
+                    if (!b.qvarintfwd(length)) {
                         return false;
                     }
-                    auto clen = length.varint();
+                    auto clen = length.qvarint();
                     if (!b.enough(clen)) {
                         return false;
                     }
@@ -331,16 +393,16 @@ namespace utils {
                     if (type.type() != FrameType::CRYPTO) {
                         return false;
                     }
-                    if (!offset.is_varint_valid() ||
-                        !length.is_varint_valid()) {
+                    if (!offset.is_qvarint_valid() ||
+                        !length.is_qvarint_valid()) {
                         return false;
                     }
-                    auto clen = length.varint();
+                    auto clen = length.qvarint();
                     if (!crypto_data.enough(clen)) {
                         return false;
                     }
-                    w.append(offset.data, offset.varintlen());
-                    w.append(length.data, length.varintlen());
+                    w.append(offset.data, offset.qvarintlen());
+                    w.append(length.data, length.qvarintlen());
                     w.append(crypto_data.data, clen);
                     return true;
                 }
@@ -356,10 +418,10 @@ namespace utils {
                     if (type.type() != FrameType::NEW_TOKEN) {
                         return false;
                     }
-                    if (!b.varintfwd(token_length)) {
+                    if (!b.qvarintfwd(token_length)) {
                         return false;
                     }
-                    auto tlen = token_length.varint();
+                    auto tlen = token_length.qvarint();
                     if (!b.enough(tlen)) {
                         return false;
                     }
@@ -381,14 +443,14 @@ namespace utils {
                     if (type.type() != FrameType::NEW_TOKEN) {
                         return false;
                     }
-                    if (!token_length.is_varint_valid()) {
+                    if (!token_length.is_qvarint_valid()) {
                         return false;
                     }
-                    auto tlen = token_length.varint();
+                    auto tlen = token_length.qvarint();
                     if (!token.enough(tlen)) {
                         return false;
                     }
-                    w.append(token_length.data, token_length.varint());
+                    w.append(token_length.data, token_length.qvarint());
                     w.append(token.data, tlen);
                     return true;
                 }
@@ -406,19 +468,19 @@ namespace utils {
                     if (type.type() != FrameType::STREAM) {
                         return false;
                     }
-                    if (!b.varintfwd(streamID)) {
+                    if (!b.qvarintfwd(streamID)) {
                         return false;
                     }
                     if (type.STREAM_off()) {
-                        if (!b.varintfwd(offset)) {
+                        if (!b.qvarintfwd(offset)) {
                             return false;
                         }
                     }
                     if (type.STREAM_len()) {
-                        if (!b.varintfwd(length)) {
+                        if (!b.qvarintfwd(length)) {
                             return false;
                         }
-                        auto len = length.varint();
+                        auto len = length.qvarint();
                         if (!b.enough(len)) {
                             return false;
                         }
@@ -452,22 +514,22 @@ namespace utils {
                     if (type.type() != FrameType::STREAM) {
                         return false;
                     }
-                    if (!streamID.is_varint_valid()) {
+                    if (!streamID.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(streamID.data, streamID.varintlen());
+                    w.append(streamID.data, streamID.qvarintlen());
                     if (type.STREAM_off()) {
-                        if (!offset.is_varint_valid()) {
+                        if (!offset.is_qvarint_valid()) {
                             return false;
                         }
-                        w.append(offset.data, offset.varintlen());
+                        w.append(offset.data, offset.qvarintlen());
                     }
                     if (type.STREAM_len()) {
-                        if (!length.is_varint_valid()) {
+                        if (!length.is_qvarint_valid()) {
                             return false;
                         }
-                        w.append(length.data, length.varintlen());
-                        auto len = length.varint();
+                        w.append(length.data, length.qvarintlen());
+                        auto len = length.qvarint();
                         if (!stream_data.enough(len)) {
                             return false;
                         }
@@ -493,7 +555,7 @@ namespace utils {
                     if (type.type() != FrameType::MAX_DATA) {
                         return false;
                     }
-                    if (!b.varintfwd(max_data)) {
+                    if (!b.qvarintfwd(max_data)) {
                         return false;
                     }
                     return true;
@@ -510,10 +572,10 @@ namespace utils {
                     if (type.type() != FrameType::MAX_DATA) {
                         return false;
                     }
-                    if (!max_data.is_varint_valid()) {
+                    if (!max_data.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(max_data.data, max_data.varintlen());
+                    w.append(max_data.data, max_data.qvarintlen());
                     return true;
                 }
             };
@@ -529,10 +591,10 @@ namespace utils {
                     if (type.type() != FrameType::MAX_STREAM_DATA) {
                         return false;
                     }
-                    if (!b.varintfwd(streamID)) {
+                    if (!b.qvarintfwd(streamID)) {
                         return false;
                     }
-                    if (!b.varintfwd(max_stream_data)) {
+                    if (!b.qvarintfwd(max_stream_data)) {
                         return false;
                     }
                     return true;
@@ -551,12 +613,12 @@ namespace utils {
                     if (type.type() != FrameType::MAX_STREAM_DATA) {
                         return false;
                     }
-                    if (!streamID.is_varint_valid() ||
-                        !max_stream_data.is_varint_valid()) {
+                    if (!streamID.is_qvarint_valid() ||
+                        !max_stream_data.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(streamID.data, streamID.varintlen());
-                    w.append(max_stream_data.data, max_stream_data.varintlen());
+                    w.append(streamID.data, streamID.qvarintlen());
+                    w.append(max_stream_data.data, max_stream_data.qvarintlen());
                     return true;
                 }
             };
@@ -571,7 +633,7 @@ namespace utils {
                     if (type.type() != FrameType::MAX_STREAMS) {
                         return false;
                     }
-                    if (!b.varintfwd(max_streams)) {
+                    if (!b.qvarintfwd(max_streams)) {
                         return false;
                     }
                     return true;
@@ -588,10 +650,10 @@ namespace utils {
                     if (type.type() != FrameType::MAX_STREAMS) {
                         return false;
                     }
-                    if (!max_streams.is_varint_valid()) {
+                    if (!max_streams.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(max_streams.data, max_streams.varintlen());
+                    w.append(max_streams.data, max_streams.qvarintlen());
                     return true;
                 }
             };
@@ -606,7 +668,7 @@ namespace utils {
                     if (type.type() != FrameType::DATA_BLOCKED) {
                         return false;
                     }
-                    if (!b.varintfwd(max_data)) {
+                    if (!b.qvarintfwd(max_data)) {
                         return false;
                     }
                     return true;
@@ -623,10 +685,10 @@ namespace utils {
                     if (type.type() != FrameType::DATA_BLOCKED) {
                         return false;
                     }
-                    if (!max_data.is_varint_valid()) {
+                    if (!max_data.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(max_data.data, max_data.varintlen());
+                    w.append(max_data.data, max_data.qvarintlen());
                     return true;
                 }
             };
@@ -642,10 +704,10 @@ namespace utils {
                     if (type.type() != FrameType::STREAM_DATA_BLOCKED) {
                         return false;
                     }
-                    if (!b.varintfwd(streamID)) {
+                    if (!b.qvarintfwd(streamID)) {
                         return false;
                     }
-                    if (!b.varintfwd(max_stream_data)) {
+                    if (!b.qvarintfwd(max_stream_data)) {
                         return false;
                     }
                     return true;
@@ -664,12 +726,12 @@ namespace utils {
                     if (type.type() != FrameType::STREAM_DATA_BLOCKED) {
                         return false;
                     }
-                    if (!streamID.is_varint_valid() ||
-                        !max_stream_data.is_varint_valid()) {
+                    if (!streamID.is_qvarint_valid() ||
+                        !max_stream_data.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(streamID.data, streamID.varintlen());
-                    w.append(max_stream_data.data, max_stream_data.varintlen());
+                    w.append(streamID.data, streamID.qvarintlen());
+                    w.append(max_stream_data.data, max_stream_data.qvarintlen());
                     return true;
                 }
             };
@@ -684,7 +746,7 @@ namespace utils {
                     if (type.type() != FrameType::STREAMS_BLOCKED) {
                         return false;
                     }
-                    if (!b.varintfwd(max_streams)) {
+                    if (!b.qvarintfwd(max_streams)) {
                         return false;
                     }
                     return true;
@@ -701,10 +763,10 @@ namespace utils {
                     if (type.type() != FrameType::STREAMS_BLOCKED) {
                         return false;
                     }
-                    if (!max_streams.is_varint_valid()) {
+                    if (!max_streams.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(max_streams.data, max_streams.varintlen());
+                    w.append(max_streams.data, max_streams.qvarintlen());
                     return true;
                 }
             };
@@ -722,10 +784,10 @@ namespace utils {
                     if (type.type() != FrameType::NEW_CONNECTION_ID) {
                         return false;
                     }
-                    if (!b.varintfwd(squecne_number)) {
+                    if (!b.qvarintfwd(squecne_number)) {
                         return false;
                     }
-                    if (!b.varintfwd(retire_proior_to)) {
+                    if (!b.qvarintfwd(retire_proior_to)) {
                         return false;
                     }
                     if (!b.enough(1)) {
@@ -758,15 +820,15 @@ namespace utils {
                     if (type.type() != FrameType::NEW_CONNECTION_ID) {
                         return false;
                     }
-                    if (!squecne_number.is_varint_valid() ||
-                        !retire_proior_to.is_varint_valid() ||
+                    if (!squecne_number.is_qvarint_valid() ||
+                        !retire_proior_to.is_qvarint_valid() ||
                         !length ||
                         !connectionID.enough(*length) ||
                         !stateless_reset_token.enough(16)) {
                         return false;
                     }
-                    w.append(squecne_number.data, squecne_number.varintlen());
-                    w.append(retire_proior_to.data, retire_proior_to.varintlen());
+                    w.append(squecne_number.data, squecne_number.qvarintlen());
+                    w.append(retire_proior_to.data, retire_proior_to.qvarintlen());
                     w.append(length, 1);
                     w.append(connectionID.data, *length);
                     w.append(stateless_reset_token.data, 16);
@@ -784,7 +846,7 @@ namespace utils {
                     if (type.type() != FrameType::RETIRE_CONNECTION_ID) {
                         return false;
                     }
-                    if (!b.varintfwd(sequence_number)) {
+                    if (!b.qvarintfwd(sequence_number)) {
                         return false;
                     }
                     return true;
@@ -801,10 +863,10 @@ namespace utils {
                     if (type.type() != FrameType::RETIRE_CONNECTION_ID) {
                         return false;
                     }
-                    if (!sequence_number.is_varint_valid()) {
+                    if (!sequence_number.is_qvarint_valid()) {
                         return false;
                     }
-                    w.append(sequence_number.data, sequence_number.varintlen());
+                    w.append(sequence_number.data, sequence_number.qvarintlen());
                     return true;
                 }
             };
@@ -896,18 +958,18 @@ namespace utils {
                     if (type.type() != FrameType::CONNECTION_CLOSE) {
                         return false;
                     }
-                    if (!b.varintfwd(error_code)) {
+                    if (!b.qvarintfwd(error_code)) {
                         return false;
                     }
                     if (type.type_detail() != FrameType::CONNECTION_CLOSE_APP) {
-                        if (!b.varintfwd(frame_type)) {
+                        if (!b.qvarintfwd(frame_type)) {
                             return false;
                         }
                     }
-                    if (b.varintfwd(reason_phrase_length)) {
+                    if (b.qvarintfwd(reason_phrase_length)) {
                         return false;
                     }
-                    auto len = reason_phrase_length.varint();
+                    auto len = reason_phrase_length.qvarint();
                     if (!b.enough(len)) {
                         return false;
                     }
@@ -931,22 +993,22 @@ namespace utils {
                     if (!Frame::render(w)) {
                         return false;
                     }
-                    if (!error_code.is_varint_valid() ||
-                        !reason_phrase_length.is_varint_valid()) {
+                    if (!error_code.is_qvarint_valid() ||
+                        !reason_phrase_length.is_qvarint_valid()) {
                         return false;
                     }
-                    auto rlen = reason_phrase_length.varint();
+                    auto rlen = reason_phrase_length.qvarint();
                     if (!reason_phrase.enough(rlen)) {
                         return false;
                     }
-                    w.append(error_code.data, error_code.varintlen());
+                    w.append(error_code.data, error_code.qvarintlen());
                     if (type.type_detail() != FrameType::CONNECTION_CLOSE_APP) {
-                        if (!frame_type.is_varint_valid()) {
+                        if (!frame_type.is_qvarint_valid()) {
                             return false;
                         }
-                        w.append(frame_type.data, frame_type.varintlen());
+                        w.append(frame_type.data, frame_type.qvarintlen());
                     }
-                    w.append(reason_phrase_length.data, reason_phrase_length.varintlen());
+                    w.append(reason_phrase_length.data, reason_phrase_length.qvarintlen());
                     w.append(reason_phrase.data, rlen);
                     return true;
                 }
@@ -980,10 +1042,10 @@ namespace utils {
                         return false;
                     }
                     if (type.DATAGRAM_len()) {
-                        if (!b.varintfwd(length)) {
+                        if (!b.qvarintfwd(length)) {
                             return false;
                         }
-                        auto len = length.varint();
+                        auto len = length.qvarint();
                         if (!b.enough(len)) {
                             return false;
                         }
@@ -1014,11 +1076,11 @@ namespace utils {
                         return false;
                     }
                     if (type.DATAGRAM_len()) {
-                        if (!length.is_varint_valid()) {
+                        if (!length.is_qvarint_valid()) {
                             return false;
                         }
-                        w.append(length.data, length.varintlen());
-                        auto len = length.varint();
+                        w.append(length.data, length.qvarintlen());
+                        auto len = length.qvarint();
                         if (!datagram_data.enough(len)) {
                             return false;
                         }

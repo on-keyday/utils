@@ -9,6 +9,7 @@
 #include <dnet/dll/sockdll.h>
 #include <dnet/dll/sockasync.h>
 #include <dnet/errcode.h>
+#include <dnet/dll/errno.h>
 
 namespace utils {
     namespace dnet {

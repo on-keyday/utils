@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-// allocator - allocator for
+// allocator - allocator for dnet
 #pragma once
 #include "glheap.h"
 
@@ -15,14 +15,32 @@ namespace utils {
         struct glheap_allocator {
             using value_type = T;
             static T* allocate(size_t n) {
-                return static_cast<T*>(get_rawbuf(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T))));
+                return static_cast<T*>(alloc_normal(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T))));
             }
 
             static void deallocate(T* t, size_t n) {
-                return free_rawbuf(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T)));
+                return free_normal(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T)));
             }
             template <class... Arg>
             constexpr glheap_allocator(Arg&&...) {}
+
+            constexpr glheap_allocator() = default;
+        };
+
+        template <class T>
+        struct glheap_objpool_allocator {
+            using value_type = T;
+            static T* allocate(size_t n) {
+                return static_cast<T*>(alloc_objpool(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T))));
+            }
+
+            static void deallocate(T* t, size_t n) {
+                return free_objpool(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T)));
+            }
+            template <class... Arg>
+            constexpr glheap_objpool_allocator(Arg&&...) {}
+
+            constexpr glheap_objpool_allocator() = default;
         };
     }  // namespace dnet
 }  // namespace utils

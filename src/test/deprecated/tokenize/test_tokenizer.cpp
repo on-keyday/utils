@@ -10,9 +10,9 @@
 #include <deprecated/tokenize/cast.h>
 #include <deprecated/tokenize/merge.h>
 
-#include "../../include/wrap/light/string.h"
-#include "../../include/wrap/light/vector.h"
-#include "../../include/wrap/cout.h"
+#include <wrap/light/string.h>
+#include <wrap/light/vector.h>
+#include <wrap/cout.h>
 using namespace utils;
 
 void test_tokenizer() {

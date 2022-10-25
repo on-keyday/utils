@@ -7,49 +7,75 @@
 
 #pragma once
 #include "../dll/dllh.h"
-#include <cstddef>
-#include <type_traits>
-#include "bytelen.h"
+#include "crypto_keys.h"
 
 namespace utils {
     namespace dnet {
+        // forward cipher
+        struct TLSCipher;
+
         namespace quic {
 
-            template <size_t size_>
-            struct Key {
-                byte key[size_];
-
-                constexpr size_t size() const {
-                    return size_;
-                }
+            struct CryptoPacketInfo {
+                // head is header of QUIC packet without packet number
+                ByteLen head;
+                // payload is payload of QUIC packet including packet number
+                // payload.data must be adjacent to head.data
+                ByteLen payload;
+                // clientDstID is client destination connection ID of QUIC
+                ByteLen clientDstID;
+                // processed_payload is encrypted/decrypted payload without packet number
+                ByteLen processed_payload;
             };
 
-            struct InitialKeys {
-                Key<32> initial;
-                Key<16> key;
-                Key<12> iv;
-                Key<16> hp;
-            };
-
-            constexpr Key<8> quic_key{'q', 'u', 'i', 'c', ' ', 'k', 'e', 'y'};
-            constexpr Key<7> quic_iv{'q', 'u', 'i', 'c', ' ', 'i', 'v'};
-            constexpr Key<7> quic_hp{'q', 'u', 'i', 'c', ' ', 'h', 'p'};
-            constexpr Key<9> server_in{'s', 'e', 'r', 'v', 'e', 'r', ' ', 'i', 'n'};
-            constexpr Key<9> client_in{'c', 'l', 'i', 'e', 'n', 't', ' ', 'i', 'n'};
-
-            constexpr Key<20> quic_v1_initial_salt = {0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34,
-                                                      0xb3, 0x4d, 0x17, 0x9a, 0xe6, 0xa4, 0xc8,
-                                                      0x0c, 0xad, 0xcc, 0xbb, 0x7f, 0x0a};
-            dnet_dll_export(bool) make_initial_keys(InitialKeys& key,
-                                                    const byte* client_conn_id, size_t len, bool enc_client);
             dnet_dll_export(bool) has_quic_ext();
 
-            struct CipherInfo {
-                void* cipher_methods;
-            };
+            dnet_dll_export(bool) HKDF_Extract(ByteLen& initial,
+                                               ByteLen secret, ByteLen salt);
+            dnet_dll_export(bool) HKDF_Expand_label(WPacket& src, ByteLen output, ByteLen secret, ByteLen quic_label);
 
-            dnet_dll_export(bool) encrypt_initial_packet(PacketInfo& info, bool enc_client);
-            dnet_dll_export(bool) decrypt_initial_packet(PacketInfo& info, bool enc_client);
+            dnet_dll_export(bool) make_initial_keys(InitialKeys& key, WPacket& src, ByteLen clientConnID, bool enc_client);
+
+            // encrypt_initial_packet encrypts InitialPacket inPacketInfo
+            // enc_client represents whether encryption perspective is client
+            // info.head and info.payload must be adjacent in binary
+            // encrypted results would store into info.processed_payload
+            // info.dstID is client destination connection ID
+            // that is, if client, use self-generated dstID, else if server, use dstID from remote
+            dnet_dll_export(bool) encrypt_initial_packet(CryptoPacketInfo& info, bool enc_client);
+
+            // decrypt_initial_packet decrypts InitialPacket inPacketInfo
+            // enc_client represents whether encryption perspective is client
+            // info.head and info.payload must be adjucent in binary
+            // encrypted results would store into info.processed_payload
+            // if info.processed_payload is invalid,
+            // this function make info.processed_payload from info.payload with exact offset provided
+            // by packet protection decryption and will overwrite info.payload area with decrypted data
+            dnet_dll_export(bool) decrypt_initial_packet(CryptoPacketInfo& info, bool enc_client);
+
+            // make_keys_from_secret makes
+            // key,initial vector,header protection key,and key update secret for QUIC
+            // hash_len is byte length of hash
+            dnet_dll_export(bool) make_keys_from_secret(Keys& keys, WPacket& src, ByteLen secret, int hash_len);
+
+            // cipher_payload encrypts/decrypts payload with specific cipher
+            dnet_dll_export(bool) cipher_payload(
+                const TLSCipher& cipher, ByteLen output, ByteLen payload,
+                ByteLen head, ByteLen key, ByteLen iv_nonce, bool enc);
+
+            dnet_dll_export(bool) encrypt_packet(const TLSCipher& cipher, Keys& keys, CryptoPacketInfo& info, ByteLen secret);
+
+            dnet_dll_export(bool) decrypt_packet(const TLSCipher& cipher, Keys& keys, CryptoPacketInfo& info, ByteLen secret);
+
+            // internal functions
+            bool cipher_initial_payload(ByteLen output,
+                                        ByteLen payload,
+                                        ByteLen head,
+                                        ByteLen key,
+                                        ByteLen iv_nonce,
+                                        bool enc);
+            bool generate_masks_aes_based(const byte* hp_key, byte* sample, byte* masks, bool is_aes256);
+            bool generate_masks_chacha20_based(const byte* hp_key, byte* sample, byte* masks);
         }  // namespace quic
     }      // namespace dnet
 }  // namespace utils

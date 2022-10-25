@@ -9,7 +9,7 @@
 #include <deprecated/syntax/syntaxc/syntaxc.h>
 
 #include <deprecated/syntax/syntaxc/make_syntaxc.h>
-#include "../../include/wrap/cout.h"
+#include <wrap/cout.h>
 
 void test_syntaxc() {
     auto& cout = utils::wrap::cout_wrap();

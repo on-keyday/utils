@@ -10,10 +10,10 @@
 #include <deprecated/syntax/make_parser/tokenizer.h>
 #include <deprecated/tokenize/fmt/show_current.h>
 
-#include "../../include/wrap/light/string.h"
-#include "../../include/wrap/light/map.h"
-#include "../../include/wrap/cout.h"
-#include "../../include/wrap/iocommon.h"
+#include <wrap/light/string.h>
+#include <wrap/light/map.h>
+#include <wrap/cout.h>
+#include <wrap/iocommon.h>
 using namespace utils;
 
 void test_make_parser() {

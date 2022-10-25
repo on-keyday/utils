@@ -17,6 +17,7 @@
 #include <helper/strutil.h>
 #include <endian/endian.h>
 #include <cstring>
+#include <dnet/dll/errno.h>
 #ifndef _WIN32
 #include <signal.h>
 #include <thread>

@@ -419,6 +419,19 @@ namespace utils {
             });
         }
 
+        const byte* TLS::get_peer_quic_transport_params(size_t* len) {
+            const byte* data = nullptr;
+            size_t l = 0;
+            check_opt_quic(opt, err, [&](SSLContexts* c) {
+                ssldl.SSL_get_peer_quic_transport_params_(c->ssl, &data, &l);
+                return true;
+            });
+            if (len) {
+                *len = l;
+            }
+            return data;
+        }
+
         bool TLS::write(const void* data, size_t len, size_t* written) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_write_(c->ssl, data, int(len));
@@ -529,6 +542,35 @@ namespace utils {
 
         dnet_dll_implement(void) set_libcrypto(const char* path) {
             ssldl.set_libcrypto(path);
+        }
+
+        const char* TLSCipher::name() const {
+            return ssldl.SSL_CIPHER_get_name_(static_cast<const ssl_import::SSL_CIPHER*>(cipher));
+        }
+
+        const char* TLSCipher::rfcname() const {
+            return ssldl.SSL_CIPHER_standard_name_(static_cast<const ssl_import::SSL_CIPHER*>(cipher));
+        }
+
+        int TLSCipher::bits(int* bit) const {
+            return ssldl.SSL_CIPHER_get_bits_(static_cast<const ssl_import::SSL_CIPHER*>(cipher), bit);
+        }
+
+        int TLSCipher::nid() const {
+            return ssldl.SSL_CIPHER_get_cipher_nid_(static_cast<const ssl_import::SSL_CIPHER*>(cipher));
+        }
+
+        TLSCipher make_cipher(const void* c) {
+            return TLSCipher{c};
+        }
+
+        TLSCipher TLS::get_cipher() {
+            TLSCipher ciph;
+            check_opt_ssl(opt, err, [&](SSLContexts* c) {
+                ciph = make_cipher(ssldl.SSL_get_current_cipher_(c->ssl));
+                return true;
+            });
+            return ciph;
         }
     }  // namespace dnet
 }  // namespace utils

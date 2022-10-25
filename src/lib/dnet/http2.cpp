@@ -64,7 +64,7 @@ namespace utils {
         struct HTTP2Connection {
             String input;
             String output;
-            using HashMap = std::unordered_map<int, Stream, std::hash<int>, std::equal_to<int>, glheap_allocator<std::pair<const int, Stream>>>;
+            using HashMap = std::unordered_map<int, Stream, std::hash<int>, std::equal_to<int>, glheap_objpool_allocator<std::pair<const int, Stream>>>;
             HashMap streams;
             h2stream::ConnState conn;
             String debug;

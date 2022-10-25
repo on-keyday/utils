@@ -22,15 +22,19 @@ namespace ssl_import {
     using BIO = struct BIO;
     using X509_VERIFY_PARAM = struct X509_VERIFY_PARAM;
     using X509_STORE_CTX = struct X509_STORE_CTX;
+    // boringssl
+    using EVP_AEAD = struct EVP_AEAD;
+    using EVP_AEAD_CTX = struct EVP_AEAD_CTX;
+
     constexpr auto SSL_CTRL_SET_TLSEXT_HOSTNAME_ = 55;
     constexpr auto BIO_FLAGS_SHOULD_RETRY_ = 0x8;
     constexpr auto SSL_ERROR_WANT_READ_ = 0x2;
     constexpr auto SSL_ERROR_ZERO_RETURNED_ = 0x6;
     constexpr auto SSL_FILETYPE_PEM_ = 1;
     constexpr auto X509_V_OK_ = 0;
-    constexpr auto EVP_CTRL_GCM_SET_IVLEN_ = 0x9;
-    constexpr auto EVP_CTRL_GCM_GET_TAG_ = 0x10;
-    constexpr auto EVP_CTRL_GCM_SET_TAG_ = 0x11;
+    constexpr auto EVP_CTRL_AEAD_SET_IVLEN_ = 0x9;
+    constexpr auto EVP_CTRL_AEAD_GET_TAG_ = 0x10;
+    constexpr auto EVP_CTRL_AEAD_SET_TAG_ = 0x11;
     namespace common {
         const SSL_METHOD* TLS_method();
         SSL_CTX* SSL_CTX_new(const SSL_METHOD* meth);
@@ -72,6 +76,12 @@ namespace ssl_import {
 
         void SSL_CTX_set_verify(SSL_CTX* ctx, int mode,
                                 int (*verify_callback)(int, X509_STORE_CTX*));
+
+        const SSL_CIPHER* SSL_get_current_cipher(const SSL* ssl);
+        const char* SSL_CIPHER_get_name(const SSL_CIPHER* cipher);
+        const char* SSL_CIPHER_standard_name(const SSL_CIPHER* cipher);
+        int SSL_CIPHER_get_bits(const SSL_CIPHER* cipher, int* alg_bits);
+        int SSL_CIPHER_get_cipher_nid(const SSL_CIPHER* c);
     }  // namespace common
 
     namespace crypto {
@@ -79,7 +89,9 @@ namespace ssl_import {
 
         EVP_CIPHER_CTX* EVP_CIPHER_CTX_new();
         const EVP_CIPHER* EVP_aes_128_ecb();
+        const EVP_CIPHER* EVP_aes_256_ecb();
         const EVP_CIPHER* EVP_aes_128_gcm();
+
         int EVP_CipherInit(EVP_CIPHER_CTX* ctx, const EVP_CIPHER* type,
                            const unsigned char* key, const unsigned char* iv, int enc);
         int EVP_CipherInit_ex(EVP_CIPHER_CTX* ctx, const EVP_CIPHER* type,
@@ -92,6 +104,9 @@ namespace ssl_import {
 
         int BIO_new_bio_pair(BIO** bio1, size_t writebuf1, BIO** bio2, size_t writebuf2);
         void BIO_free_all(BIO* a);
+
+        const EVP_CIPHER* EVP_get_cipherbynid(int nid);
+
     }  // namespace crypto
 
     namespace open_ext {
@@ -99,6 +114,7 @@ namespace ssl_import {
         int BIO_test_flags(const BIO* b, int flags);
         int BIO_read_ex(BIO* b, void* data, size_t dlen, size_t* readbytes);
         int BIO_write_ex(BIO* b, const void* data, size_t dlen, size_t* written);
+
         int CRYPTO_set_mem_functions(
             void* (*m)(size_t, const char*, int),
             void* (*r)(void*, size_t, const char*, int),
@@ -121,6 +137,31 @@ namespace ssl_import {
         const EVP_MD* EVP_sha256(void);
         int BIO_read(BIO* bio, void* buf, int len);
         int BIO_write(BIO* bio, const void* data, size_t len);
+
+        void CRYPTO_chacha_20(uint8_t* out, const uint8_t* in,
+                              size_t in_len, const uint8_t key[32],
+                              const uint8_t nonce[12], uint32_t counter);
+
+        // AEAD
+        const EVP_AEAD* EVP_aead_chacha20_poly1305(void);
+        EVP_AEAD_CTX* EVP_AEAD_CTX_new(const EVP_AEAD* aead,
+                                       const uint8_t* key,
+                                       size_t key_len, size_t tag_len);
+        void EVP_AEAD_CTX_free(EVP_AEAD_CTX* ctx);
+
+        int EVP_AEAD_CTX_seal_scatter(
+            const EVP_AEAD_CTX* ctx, uint8_t* out,
+            uint8_t* out_tag, size_t* out_tag_len, size_t max_out_tag_len,
+            const uint8_t* nonce, size_t nonce_len,
+            const uint8_t* in, size_t in_len,
+            const uint8_t* extra_in, size_t extra_in_len,
+            const uint8_t* ad, size_t ad_len);
+
+        int EVP_AEAD_CTX_open_gather(
+            const EVP_AEAD_CTX* ctx, uint8_t* out, const uint8_t* nonce,
+            size_t nonce_len, const uint8_t* in, size_t in_len, const uint8_t* in_tag,
+            size_t in_tag_len, const uint8_t* ad, size_t ad_len);
+
     }  // namespace boring_ext
 
     namespace open_quic_ext {
@@ -142,6 +183,9 @@ namespace ssl_import {
         int EVP_KDF_derive(EVP_KDF_CTX* ctx, unsigned char* key, size_t keylen, const OSSL_PARAM* params);
         void EVP_KDF_free(EVP_KDF* kdf);
         size_t EVP_KDF_CTX_get_kdf_size(EVP_KDF_CTX* ctx);
+        const EVP_CIPHER* EVP_chacha20();
+        const EVP_CIPHER* EVP_chacha20_poly1305();
+
     }  // namespace open_quic_ext
 
     namespace quic_ext {
@@ -179,6 +223,7 @@ namespace ssl_import {
         int SSL_set_quic_method(SSL* ssl, const SSL_QUIC_METHOD* meth);
         int SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t params_len);
         int SSL_process_quic_post_handshake(SSL* ssl);
+        void SSL_get_peer_quic_transport_params(const SSL* ssl, const uint8_t** out_params, size_t* out_params_len);
     }  // namespace quic_ext
 }  // namespace ssl_import
 
@@ -186,7 +231,7 @@ namespace utils {
     namespace dnet {
         struct SSLDll {
            private:
-            alib<29> libsslcommon;
+            alib<34> libsslcommon;
 #define L(func) LOADER_BASE(ssl_import::common::func, func, libsslcommon, SSLDll, false)
             // common
             L(TLS_method)
@@ -218,24 +263,32 @@ namespace utils {
             L(SSL_get_verify_result)
             L(SSL_get0_alpn_selected)
             L(SSL_CTX_set_verify)
+            L(SSL_get_current_cipher)
+            L(SSL_CIPHER_get_name)
+            L(SSL_CIPHER_standard_name)
+            L(SSL_CIPHER_get_bits)
+            L(SSL_CIPHER_get_cipher_nid)
 #undef L
            private:
-            alib_nptr<4> libquic;
+            alib_nptr<5> libquic;
 #define L(func) LOADER_BASE(ssl_import::quic_ext::func, func, libquic, SSLDll, false)
             // quic externsions
             L(SSL_provide_quic_data)
             L(SSL_set_quic_method)
             L(SSL_set_quic_transport_params)
             L(SSL_process_quic_post_handshake)
+            L(SSL_get_peer_quic_transport_params)
 #undef L
            private:
-            alib<13> libcryptocommon;
+            alib<15> libcryptocommon;
 #define L(func) LOADER_BASE(ssl_import::crypto::func, func, libcryptocommon, SSLDll, false)
             // libcrypto functions
             L(ERR_print_errors_cb)
             L(EVP_CIPHER_CTX_new)
             L(EVP_aes_128_ecb)
+            L(EVP_aes_256_ecb)
             L(EVP_aes_128_gcm)
+            L(EVP_get_cipherbynid)
             L(EVP_CipherInit)
             L(EVP_CipherInit_ex)
             L(EVP_CipherUpdate)
@@ -261,7 +314,7 @@ namespace utils {
             L(BIO_write_ex)
 #undef L
            private:
-            alib_nptr<9> osslquicext_crypto;
+            alib_nptr<11> osslquicext_crypto;
 #define L(func) LOADER_BASE(ssl_import::open_quic_ext::func, func, osslquicext_crypto, SSLDll, false)
             L(EVP_KDF_fetch)
             L(EVP_KDF_CTX_new)
@@ -272,6 +325,8 @@ namespace utils {
             L(EVP_KDF_derive)
             L(EVP_KDF_free)
             L(EVP_KDF_CTX_get_kdf_size)
+            L(EVP_chacha20)
+            L(EVP_chacha20_poly1305)
 #undef L
            private:
             alib_nptr<1> bsslext_ssl;
@@ -279,7 +334,7 @@ namespace utils {
             L(SSL_set_tlsext_host_name)
 #undef L
            private:
-            alib_nptr<6> bsslext_crypto;
+            alib_nptr<12> bsslext_crypto;
 #define L(func) LOADER_BASE(ssl_import::boring_ext::func, func, bsslext_crypto, SSLDll, false)
             L(BIO_should_retry)
             L(BIO_read)
@@ -287,6 +342,12 @@ namespace utils {
             L(HKDF_extract)
             L(HKDF_expand)
             L(EVP_sha256)
+            L(CRYPTO_chacha_20)
+            L(EVP_aead_chacha20_poly1305)
+            L(EVP_AEAD_CTX_new)
+            L(EVP_AEAD_CTX_free)
+            L(EVP_AEAD_CTX_seal_scatter)
+            L(EVP_AEAD_CTX_open_gather)
 #undef L
            private:
 #ifdef _WIN32

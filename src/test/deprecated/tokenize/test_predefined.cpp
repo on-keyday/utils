@@ -8,8 +8,8 @@
 
 #include <deprecated/tokenize/predefined.h>
 
-#include "../../include/wrap/light/vector.h"
-#include "../../include/wrap/light/string.h"
+#include <wrap/light/vector.h>
+#include <wrap/light/string.h>
 
 using namespace utils;
 

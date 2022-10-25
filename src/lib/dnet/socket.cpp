@@ -13,6 +13,7 @@
 #include <cstring>
 #include <atomic>
 #include <dnet/dll/sockasync.h>
+#include <dnet/dll/errno.h>
 namespace utils {
     namespace dnet {
 #ifdef _WIN32
@@ -471,11 +472,11 @@ namespace utils {
         }
 
         void* Socket::internal_alloc(size_t s, DebugInfo info) {
-            return get_rawbuf(s, info);
+            return alloc_normal(s, info);
         }
 
         void Socket::internal_free(void* p, DebugInfo info) {
-            free_rawbuf(p, info);
+            free_normal(p, info);
         }
 
     }  // namespace dnet

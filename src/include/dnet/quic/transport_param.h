@@ -19,13 +19,13 @@ namespace utils {
                 ByteLen data;
 
                 constexpr bool parse(ByteLen& b) {
-                    if (!b.varintfwd(id)) {
+                    if (!b.qvarintfwd(id)) {
                         return false;
                     }
-                    if (!b.varintfwd(len)) {
+                    if (!b.qvarintfwd(len)) {
                         return false;
                     }
-                    auto l = len.varint();
+                    auto l = len.qvarint();
                     if (!b.enough(l)) {
                         return false;
                     }
@@ -39,24 +39,24 @@ namespace utils {
                 }
 
                 constexpr bool render(WPacket& w) const {
-                    if (!id.is_varint_valid() || !len.is_varint_valid()) {
+                    if (!id.is_qvarint_valid() || !len.is_qvarint_valid()) {
                         return false;
                     }
-                    auto l = len.varint();
+                    auto l = len.qvarint();
                     if (!data.enough(l)) {
                         return false;
                     }
-                    w.append(id.data, id.varintlen());
-                    w.append(len.data, len.varintlen());
+                    w.append(id.data, id.qvarintlen());
+                    w.append(len.data, len.qvarintlen());
                     w.append(data.data, l);
                     return true;
                 }
 
                 bool valid() const {
-                    if (!id.is_varint_valid() || !len.is_varint_valid() || !data.valid()) {
+                    if (!id.is_qvarint_valid() || !len.is_qvarint_valid() || !data.valid()) {
                         return false;
                     }
-                    return data.len >= len.varint();
+                    return data.len >= len.qvarint();
                 }
             };
 
@@ -146,11 +146,11 @@ namespace utils {
 
             constexpr TransportParameter make_transport_param(DefinedTransportParamID id, ByteLen data, WPacket& src) {
                 auto idv = src.varint(size_t(id));
-                if (!idv.is_varint_valid()) {
+                if (!idv.is_qvarint_valid()) {
                     return {};
                 }
                 auto lenv = src.varint(data.len);
-                if (!lenv.is_varint_valid()) {
+                if (!lenv.is_qvarint_valid()) {
                     return {};
                 }
                 return {idv, lenv, data};
@@ -158,7 +158,7 @@ namespace utils {
 
             constexpr TransportParameter make_transport_param(DefinedTransportParamID id, size_t data, WPacket& src) {
                 auto datav = src.varint(data);
-                if (!datav.is_varint_valid()) {
+                if (!datav.is_qvarint_valid()) {
                     return {};
                 }
                 return make_transport_param(id, datav, src);
@@ -185,16 +185,16 @@ namespace utils {
                 size_t max_datagram_frame_size = 0;
 
                 bool from_transport_param(TransportParameter param) {
-                    if (!param.id.is_varint_valid()) {
+                    if (!param.id.is_qvarint_valid()) {
                         return 0;
                     }
-                    auto id = param.id.varint();
+                    auto id = param.id.qvarint();
 #define VLINT(ID)                                                     \
     if (DefinedTransportParamID(id) == DefinedTransportParamID::ID) { \
-        if (!param.data.is_varint_valid()) {                          \
+        if (!param.data.is_qvarint_valid()) {                         \
             return false;                                             \
         }                                                             \
-        ID = param.data.varint();                                     \
+        ID = param.data.qvarint();                                    \
         return true;                                                  \
     }
 #define RDATA(ID)                                                     \

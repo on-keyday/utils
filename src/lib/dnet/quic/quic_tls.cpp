@@ -12,6 +12,8 @@
 
 namespace utils {
     namespace dnet {
+        // defined at tls.cpp
+        TLSCipher make_cipher(const void *c);
         int quic_callback(TLS &tls, const quic::MethodArgs &args);
         namespace quic {
 
@@ -45,7 +47,7 @@ namespace utils {
                 return get_tls_then(ssl, [&](TLS &tls) {
                     MethodArgs arg{};
                     arg.type = ArgType::wsecret;
-                    arg.cipher = cipher;
+                    arg.cipher = make_cipher(cipher);
                     arg.write_secret = secret;
                     arg.secret_len = secret_len;
                     arg.level = EncryptionLevel(level);
@@ -59,7 +61,7 @@ namespace utils {
                 return get_tls_then(ssl, [&](TLS &tls) {
                     MethodArgs arg{};
                     arg.type = ArgType::rsecret;
-                    arg.cipher = cipher;
+                    arg.cipher = make_cipher(cipher);
                     arg.read_secret = secret;
                     arg.secret_len = secret_len;
                     arg.level = EncryptionLevel(level);

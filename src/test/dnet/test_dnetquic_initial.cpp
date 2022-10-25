@@ -18,17 +18,37 @@
 #include <dnet/plthead.h>
 #include <dnet/addrinfo.h>
 #include <dnet/quic/flow/initial.h>
+#include <dnet/quic/flow/handshake.h>
+#include <dnet/quic/vframe.h>
 
 using namespace utils;
+using ubytes = std::basic_string<dnet::byte>;
+
 struct Test {
-    dnet::String data;
+    ubytes handshake_data;
     bool flush;
-    dnet::quic::byte alert;
+    dnet::byte alert;
+    dnet::quic::EncryptionLevel wlevel = {};
+    dnet::quic::EncryptionLevel rlevel = {};
+    ubytes wsecret;
+    dnet::TLSCipher wcipher;
+    ubytes rsecret;
+    dnet::TLSCipher rcipher;
 };
 
 int quic_method(Test* t, dnet::quic::MethodArgs args) {
     if (args.type == dnet::quic::ArgType::handshake_data) {
-        t->data.append((const char*)args.data, args.len);
+        t->handshake_data.append(args.data, args.len);
+    }
+    if (args.type == dnet::quic::ArgType::wsecret) {
+        t->wsecret.append(args.write_secret, args.secret_len);
+        t->wlevel = args.level;
+        t->wcipher = args.cipher;
+    }
+    if (args.type == dnet::quic::ArgType::rsecret) {
+        t->rsecret.append(args.read_secret, args.secret_len);
+        t->rlevel = args.level;
+        t->rcipher = args.cipher;
     }
     if (args.type == dnet::quic::ArgType::flush) {
         t->flush = true;
@@ -39,30 +59,34 @@ int quic_method(Test* t, dnet::quic::MethodArgs args) {
     return 1;
 }
 
-using ubytes = std::basic_string<dnet::quic::byte>;
-
 ubytes genrandom(size_t len) {
     ubytes val;
     auto dev = std::random_device();
     std::uniform_int_distribution<> uni(0, 0xff);
     for (size_t i = 0; i < len; i++) {
-        val.push_back(dnet::quic::byte(uni(dev)));
+        val.push_back(dnet::byte(uni(dev)));
     }
     return val;
 }
 
-using ByteLen = dnet::quic::ByteLen;
+using ByteLen = dnet::ByteLen;
+
+int errors(const char* msg, size_t len, void*) {
+    return 1;
+}
 
 void test_dnetquic_initial() {
     dnet::TLS tls = dnet::create_tls();
     assert(tls);
+    tls.set_cacert_file(nullptr, "D:/MiniTools/QUIC_mock/goserver/keys/");
+    tls.set_verify(dnet::SSL_VERIFY_PEER_);
     Test test;
     auto res = tls.make_quic(quic_method, &test);
     assert(res);
     tls.set_alpn("\x02h3", 3);
     dnet::quic::DefinedTransportParams params{};
-    dnet::quic::WPacket srcw, dstw;
-    dnet::quic::byte src[3000]{}, data[3000]{};
+    dnet::WPacket srcw, dstw;
+    dnet::byte src[3000]{}, data[5000]{};
     srcw.b.data = src;
     srcw.b.len = sizeof(src);
     auto srcID = genrandom(20);
@@ -71,7 +95,7 @@ void test_dnetquic_initial() {
     dstw.b.data = data;
     dstw.b.len = sizeof(data);
     for (auto& param : list) {
-        auto pid = dnet::quic::DefinedTransportParamID(param.id.varint());
+        auto pid = dnet::quic::DefinedTransportParamID(param.id.qvarint());
         if (!dnet::quic::is_defined_both_set_allowed(int(pid)) ||
             !param.data.valid()) {
             continue;
@@ -89,9 +113,10 @@ void test_dnetquic_initial() {
     auto dstID = genrandom(20);
 
     auto packet = dnet::quic::flow::make_first_flight(
-        srcw,
+        srcw, 1,
         0, 1,
-        {(dnet::quic::byte*)test.data.text(), test.data.size()},
+        {test.handshake_data.data(),
+         test.handshake_data.size()},
         {dstID.data(), 20},
         {srcID.data(), 20},
         srcw.acquire(0));
@@ -127,26 +152,64 @@ void test_dnetquic_initial() {
         }
     }
     auto from_server = dstw.b.resized(dstw.offset);
-    auto copy = from_server;
-    auto pack = dnet::quic::PacketFlags{from_server.data};
-    if (pack.type() == dnet::quic::PacketType::Initial) {
-        auto pinfo = dnet::quic::flow::parseInitialPartial(copy, {dstID.data(), dstID.size()},
-                                                           [](std::uint32_t version) {
-                                                               return version == 1;
-                                                           });
-        assert(pinfo.payload.valid());
-        dnet::String str;
-        str.resize(pinfo.payload.len - 16);
-        pinfo.processed_payload = {(unsigned char*)str.text(), str.size()};
-        res = dnet::quic::decrypt_initial_packet(pinfo, false);
-        assert(res);
-        auto payload = pinfo.processed_payload;
-        dnet::quic::parse_frames(payload, [&](dnet::quic::Frame& frame) {
-            if (frame.type.type() == dnet::quic::FrameType::ACK) {
+    auto cur = tls.get_cipher();
+    auto valid_v1 = [](std::uint32_t version, ByteLen, ByteLen) {
+        return version == 1;
+    };
+    while (from_server.len) {
+        auto copy = from_server;
+        auto pack = dnet::quic::PacketFlags{from_server.data};
+        if (pack.type() == dnet::quic::PacketType::Initial) {
+            auto pinfo = dnet::quic::flow::parseInitialPartial(copy, {dstID.data(), dstID.size()}, valid_v1);
+            assert(pinfo.payload.valid());
+            res = dnet::quic::decrypt_initial_packet(pinfo, false);
+            assert(res);
+            auto payload = pinfo.processed_payload;
+            res = dnet::quic::parse_frames(payload, [&](dnet::quic::Frame& frame, bool err) {
+                assert(!err);
+                if (frame.type.type() == dnet::quic::FrameType::ACK) {
+                    ;
+                }
+                if (auto c = dnet::quic::frame_cast<dnet::quic::CryptoFrame>(&frame)) {
+                    auto& crypto = *c;
+                    res = tls.provide_quic_data(
+                        dnet::quic::EncryptionLevel::initial,
+                        crypto.crypto_data.data, crypto.crypto_data.len);
+                    assert(res);
+                    test.handshake_data = {};
+                    res = tls.connect();
+                    assert(tls.block());
+                }
+            });
+            assert(res);
+            from_server = from_server.forward(pinfo.head.len + pinfo.payload.len);
+        }
+        if (pack.type() == dnet::quic::PacketType::HandShake) {
+            auto cipher = tls.get_cipher();
+            auto info = dnet::quic::flow::parseHandshakePartial(copy, valid_v1);
+            dnet::quic::Keys keys;
+            res = dnet::quic::decrypt_packet(cipher, keys, info, {test.rsecret.data(), test.rsecret.size()});
+            assert(res);
+            auto payload = info.processed_payload;
+            std::vector<dnet::quic::Frame*> vec;
+            dnet::quic::FrameType fty{};
+            srcw.offset = 0;
+            res = dnet::quic::parse_frames(payload, dnet::quic::wpacket_frame_vec(srcw, vec, &fty));
+            assert(res);
+            for (auto& fr : vec) {
+                if (auto c = dnet::quic::frame_cast<dnet::quic::CryptoFrame>(fr)) {
+                    tls.provide_quic_data(dnet::quic::EncryptionLevel::handshake, c->crypto_data.data, c->crypto_data.len);
+                    tls.clear_err();
+                    res = tls.connect();
+                    tls.get_errors(errors, nullptr);
+                    assert(res || tls.block());
+                }
             }
-            if (frame.type.type() == dnet::quic::FrameType::CRYPTO) {
-            }
-        });
+            from_server = from_server.forward(info.head.len + info.payload.len);
+        }
+        if (pack.type() == dnet::quic::PacketType::OneRTT) {
+            break;
+        }
     }
 }
 

@@ -12,7 +12,9 @@
 #include <cstddef>
 #include <memory>
 #include "httpstring.h"
-#include "quic/crypto.h"
+#include "quic/crypto_keys.h"
+#include "../helper/strutil.h"
+#include "../helper/equal.h"
 
 namespace utils {
     namespace dnet {
@@ -52,37 +54,61 @@ namespace utils {
             }
         };
 
+        // encryption algorithm RFC name for QUIC
+        constexpr auto TLS_AES_PREFIX = "TLS_AES_";
+        constexpr auto TLS_CHACHA20_PREFIX = "TLS_CHACHA20_";
+        constexpr auto TLS_AES_128_GCM = "TLS_AES_128_GCM";
+        constexpr auto TLS_AES_128_CCM = "TLS_AES_128_CCM";
+        constexpr auto TLS_AES_256_GCM = "TLS_AES_256_GCM";
+        constexpr auto TLS_CHACHA20_POLY1305 = "TLS_CHACHA20_POLY1305";
+
+        // OPENSSL verify mode. used by TLS.set_verify
+        constexpr auto SSL_VERIFY_NONE_ = 0x00;
+        constexpr auto SSL_VERIFY_PEER_ = 0x01;
+        constexpr auto SSL_VERIFY_FAIL_IF_NO_PEER_CERT_ = 0x02;
+        constexpr auto SSL_VERIFY_CLIENT_ONCE_ = 0x04;
+        constexpr auto SSL_VERIFY_POST_HANDSHAKE_ = 0x08;
+
+        // TLSCipher is tls cipher information wrapper
+        // wrapper of SSL_CIPHER object
+        struct dnet_class_export TLSCipher {
+           private:
+            const void* cipher = nullptr;
+            friend TLSCipher make_cipher(const void*);
+            constexpr TLSCipher(const void* c)
+                : cipher(c) {}
+
+           public:
+            constexpr TLSCipher() = default;
+            constexpr TLSCipher(const TLSCipher&) = default;
+            const char* name() const;
+            const char* rfcname() const;
+            int bits(int* bit = nullptr) const;
+            int nid() const;
+
+            constexpr explicit operator bool() const {
+                return cipher != nullptr;
+            }
+
+            bool is_AES_based() const {
+                return helper::starts_with(rfcname(), TLS_AES_PREFIX);
+            }
+
+            bool is_CHACHA20_based() const {
+                return helper::starts_with(rfcname(), TLS_CHACHA20_PREFIX);
+            }
+
+            bool is_algorithm(const char* alg_rfc_name) const {
+                return helper::equal(rfcname(), alg_rfc_name);
+            }
+        };
+
         namespace quic {
-
-            enum class ArgType {
-                // openssl
-                // read_secret,write_secret,secret_len,level is enabled
-                secret,
-                // boring ssl
-                // cipher,write_secret,secret_len,level is enabled
-                wsecret,
-                // boring ssl
-                // cipher,read_secret,secret_len,level is enabled
-                rsecret,
-                // data,len,level is enabled
-                handshake_data,
-                // nonthing enabled
-                flush,
-                // alert is enabled
-                alert,
-            };
-
-            enum class EncryptionLevel {
-                initial = 0,
-                early_data,
-                handshake,
-                application,
-            };
 
             struct MethodArgs {
                 ArgType type;
                 EncryptionLevel level;
-                const void* cipher;
+                TLSCipher cipher;
                 union {
                     const byte* read_secret;
                     const byte* data;
@@ -154,6 +180,8 @@ namespace utils {
 
             bool set_quic_transport_params(const void* params, size_t len);
 
+            const byte* get_peer_quic_transport_params(size_t* len);
+
             constexpr size_t readsize() const {
                 return prevred;
             }
@@ -216,6 +244,8 @@ namespace utils {
             constexpr void clear_readsize() {
                 prevred = 0;
             }
+
+            TLSCipher get_cipher();
         };
 
         dnet_dll_export(void) set_libssl(const char* path);

@@ -16,11 +16,11 @@
 #include "../helper/readutil.h"
 #include <cstdint>
 #include <random>
+#include "byte.h"
 
 namespace utils {
     namespace dnet {
 
-        using byte = std::uint8_t;
         namespace websocket {
 
             enum FrameType {

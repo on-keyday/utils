@@ -11,7 +11,7 @@
 #include <deprecated/tokenize/merger.h>
 #include <deprecated/tokenize/fmt/show_current.h>
 
-#include "../../include/wrap/cout.h"
+#include <wrap/cout.h>
 
 void test_dispatcher() {
     using namespace utils::syntax;

@@ -13,38 +13,10 @@ namespace utils {
     namespace dnet {
         namespace quic {
 
-            template <class From, class To>
-            concept convertible = std::is_convertible_v<From, To>;
-
-            template <class T>
-            concept has_logical_not = requires(T t) {
-                { !t } -> convertible<bool>;
-            };
-
-            bool parse_frame(ByteLen& b, auto&& cb) {
-                if (!b.enough(1)) {
-                    return false;
-                }
-                auto typ = FrameFlags{b.data}.type();
-                auto invoke_cb = [&](auto& frame) {
-                    using Result = std::invoke_result_t<decltype(cb), decltype(frame)>;
-                    if constexpr (has_logical_not<Result>) {
-                        if (!cb(frame)) {
-                            return false;
-                        }
-                    }
-                    else {
-                        cb(frame);
-                    }
-                    return true;
-                };
-#define PARSE(frame_type, TYPE)  \
-    if (typ == frame_type) {     \
-        TYPE frame;              \
-        if (!frame.parse(b)) {   \
-            return false;        \
-        }                        \
-        return invoke_cb(frame); \
+            constexpr auto frame_type_to_Type(FrameType f, auto&& cb) {
+#define PARSE(frame_type, TYPE) \
+    if (f == frame_type) {      \
+        return cb(TYPE{});      \
     }
                 PARSE(FrameType::PADDING, PaddingFrame)
                 PARSE(FrameType::PING, PingFrame)
@@ -68,24 +40,104 @@ namespace utils {
                 PARSE(FrameType::HANDSHAKE_DONE, HandshakeDoneFrame)
                 PARSE(FrameType::DATAGRAM, DatagramFrame)
 #undef PARSE
-                Frame fr;
-                fr.parse(b);
-                cb(fr);
-                return false;
+                return cb(Frame{});
             }
 
-            bool parse_frames(ByteLen& b, auto&& cb) {
-                while (b.enough(1)) {
-                    if (*b.data == 0) {
+                     // parse_frame parses b as a frame and invoke cb with parsed frame
+            // cb is void(Frame& frame,bool err) or bool(Frame& frame,bool err)
+            // if callback err parameter is true frame parse is incomplete or failed
+            // unknown type frame is passed to cb with packed as Frame with err==true
+            // if suceeded parse_frame returns true otherwise false
+            constexpr bool parse_frame(ByteLen& b, auto&& cb) {
+                if (!b.enough(1)) {
+                    return false;
+                }
+                auto invoke_cb = [&](auto& frame, bool err) {
+                    using Result = std::invoke_result_t<decltype(cb), decltype(frame), bool>;
+                    if constexpr (internal::has_logical_not<Result>) {
+                        if (!cb(frame, err)) {
+                            return false;
+                        }
+                    }
+                    else {
+                        cb(frame, err);
+                    }
+                    return true;
+                };
+                return frame_type_to_Type(FrameFlags{b.data}.type(), [&](auto frame) {
+                    auto res = frame.parse(b);
+                    if constexpr (std::is_same_v<decltype(frame), Frame>) {
+                        cb(frame, true);
+                        return false;
+                    }
+                    if (!res) {
+                        invoke_cb(frame, true);
+                        return false;
+                    }
+                    return invoke_cb(frame, false);
+                });
+            }
+
+            // parse_frames parses b as frames
+            // cb is same as parse_frame function parameter
+            // PADDING frame is ignored and doesn't elicit cb invocation if ignore_padding is true
+            // limit is reading frame count limit
+            constexpr bool parse_frames(ByteLen& b, auto&& cb, size_t limit = ~0, bool ignore_padding = true) {
+                size_t i = 0;
+                while (b.enough(1) && i < limit) {
+                    if (ignore_padding && *b.data == 0) {
                         b = b.forward(1);
                         continue;  // PADDING frame, ignore
                     }
                     if (!parse_frame(b, cb)) {
                         return false;
                     }
+                    i++;
                 }
                 return true;
             }
+
+            template <class F>
+            constexpr F* frame_cast(Frame* f) {
+                if (!f || !f->type.value) {
+                    return nullptr;
+                }
+                return frame_type_to_Type(f->type.type(), [&](auto frame) -> F* {
+                    if constexpr (std::is_same_v<decltype(frame), F>) {
+                        return static_cast<F*>(f);
+                    }
+                    return nullptr;
+                });
+            }
+
+            constexpr auto wpacket_frame_vec(WPacket& src, auto& vec, FrameType* errtype) {
+                return [&, errtype](auto& fr, bool err) {
+                    if (err) {
+                        if (errtype) {
+                            *errtype = fr.type.type();
+                        }
+                        return false;
+                    }
+                    auto aq = src.aligned_aquire(sizeof(fr), alignof(decltype(fr)));
+                    if (!aq.enough(sizeof(fr))) {
+                        return false;
+                    }
+                    void* vtyp = aq.data;
+                    auto frame = static_cast<std::remove_cvref_t<decltype(fr)>*>(vtyp);
+                    *frame = fr;
+                    vec.push_back(frame);
+                    return true;
+                };
+            }
+
+            constexpr size_t sizeof_frame(FrameType type) {
+                byte b = byte(type);
+                auto ct = FrameFlags{&b}.type();
+                return frame_type_to_Type(ct, [&](auto f) -> size_t {
+                    return sizeof(f);
+                });
+            }
+
         }  // namespace quic
     }      // namespace dnet
 }  // namespace utils

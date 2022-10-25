@@ -8,11 +8,11 @@
 // tls_head - tls header
 #pragma once
 #include <cstdint>
+#include "byte.h"
 
 namespace utils {
     namespace dnet {
         namespace tls {
-            using byte = unsigned char;
 
             using ProtocolVersion = std::uint16_t;
             template <class Len, class T, size_t minlen, size_t maxlen>
