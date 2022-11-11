@@ -101,13 +101,17 @@ namespace utils {
             bool is_algorithm(const char* alg_rfc_name) const {
                 return helper::equal(rfcname(), alg_rfc_name);
             }
+
+            constexpr bool operator==(const TLSCipher& c) const {
+                return cipher == c.cipher;
+            }
         };
 
         namespace quic {
 
             struct MethodArgs {
-                ArgType type;
-                EncryptionLevel level;
+                crypto::ArgType type;
+                crypto::EncryptionLevel level;
                 TLSCipher cipher;
                 union {
                     const byte* read_secret;
@@ -120,6 +124,8 @@ namespace utils {
                     byte alert;
                 };
             };
+
+            struct QUIC;
         }  // namespace quic
 
         // TLS is wrapper class of OpenSSL/BoringSSL library
@@ -164,7 +170,7 @@ namespace utils {
             bool set_cacert_file(const char* cacert, const char* dir = nullptr);
             bool set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
             bool set_alpn(const void* p, size_t len);
-            bool set_hostname(const char* hostname);
+            bool set_hostname(const char* hostname, bool verify = true);
             bool set_client_cert_file(const char* cert);
             bool set_cert_chain(const char* pubkey, const char* prvkey);
 
@@ -189,7 +195,7 @@ namespace utils {
             bool provide_tls_data(const void* data, size_t len, size_t* written = nullptr);
             bool receive_tls_data(void* data, size_t len);
 
-            bool provide_quic_data(quic::EncryptionLevel level, const void* data, size_t len);
+            bool provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t len);
             bool progress_quic();
 
             bool write(const void* data, size_t len, size_t* written = nullptr);
@@ -261,7 +267,5 @@ namespace utils {
         dnet_dll_export(bool) is_boringssl_crypto();
         dnet_dll_export(bool) is_openssl_crypto();
 
-        dnet_dll_export(size_t) tls_input(TLS& tls, String& buf, size_t* next_expect);
-        dnet_dll_export(size_t) tls_output(TLS& tls, String& buf, String& tmpbuf);
-    }  // namespace dnet
+       }  // namespace dnet
 }  // namespace utils

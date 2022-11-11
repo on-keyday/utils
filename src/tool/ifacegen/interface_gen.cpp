@@ -91,6 +91,9 @@ int main(int argc, char** argv) {
         cout << R"(Syntax:
     #COMMENT
     
+    # PACKAGE will be namespace
+    packege PACKAGE
+    
     interface NAME{
         const noexcept FUNC(ARG &*const TYPE,ARG2 TYPE) TYPE = DEFAULT_RETURN_VALUE
         FUNC2(ARG TYPE) TYPE

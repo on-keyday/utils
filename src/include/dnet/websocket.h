@@ -211,8 +211,8 @@ namespace utils {
 
         struct WebSocket {
            private:
-            HTTPBuf input;
-            HTTPBuf output;
+            String input;
+            String output;
             bool server = false;
 
             std::uint32_t genmask() {
@@ -221,15 +221,11 @@ namespace utils {
 
            public:
             void add_input(auto&& data, size_t len) {
-                String in;
-                BorrowString _{input, in};
-                helper::append(in, helper::RefSizedView(data, len));
+                helper::append(input, helper::RefSizedView(data, len));
             }
 
             size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
-                String out;
-                BorrowString _{output, out};
-                auto seq = make_ref_seq(out);
+                auto seq = make_ref_seq(output);
                 if (out.size() < limit) {
                     limit = out.size();
                 }
@@ -241,22 +237,18 @@ namespace utils {
             }
 
             bool write_frame(const websocket::Frame& frame, bool no_mask = false) {
-                String out;
-                BorrowString _{output, out};
-                return websocket::write_frame(out, frame, false);
+                return websocket::write_frame(output, frame, false);
             }
 
             bool read_frame(auto&& callback, bool peek = false) {
-                String in;
-                BorrowString _{input, in};
                 size_t red = 0;
                 websocket::Frame frame;
-                if (!websocket::read_frame(frame, in.text(), in.size(), red)) {
+                if (!websocket::read_frame(frame, input.text(), input.size(), red)) {
                     return false;
                 }
                 if (frame.masked) {
                     websocket::tmp_decode_payload(
-                        in.text() + red - frame.len,
+                        input.text() + red - frame.len,
                         frame.len, frame.maskkey, [&](auto dec, auto len) {
                             callback(frame);
                         });

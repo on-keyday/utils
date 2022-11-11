@@ -7,6 +7,7 @@
 
 // error - QUIC error code
 #pragma once
+#include "../byte.h"
 
 namespace utils {
     namespace dnet {
@@ -32,6 +33,10 @@ namespace utils {
                 NO_VIABLE_PATH = 0x10,
                 CRYPTO_ERROR = 0x100,
             };
+
+            constexpr TransportError to_CRYPTO_ERROR(byte b) {
+                return TransportError(int(TransportError::CRYPTO_ERROR) + b);
+            }
         }  // namespace quic
     }      // namespace dnet
 }  // namespace utils

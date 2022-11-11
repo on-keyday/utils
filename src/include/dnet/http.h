@@ -94,19 +94,17 @@ namespace utils {
         // local user data <- output
         struct HTTP {
            private:
-            HTTPBuf input;
-            HTTPBuf output;
+            String input;
+            String output;
 
            public:
             template <class Body = const char*>
             bool write_request(auto&& method, auto&& path, auto&& header, Body&& body = "", size_t blen = 0) {
                 namespace h = net::h1header;
-                String out;
-                BorrowString _{output, out};
-                if (!h::render_request(out, method, path, header, h::default_validator())) {
+                if (!h::render_request(output, method, path, header, h::default_validator())) {
                     return false;
                 }
-                helper::append(out, helper::SizedView(body, blen));
+                helper::append(output, helper::SizedView(body, blen));
                 return true;
             }
 
@@ -116,26 +114,20 @@ namespace utils {
                 if (!reason) {
                     reason = net::h1value::reason_phrase(status, true);
                 }
-                String out;
-                BorrowString _{output, out};
-                if (!h::render_response(out, status, reason, header, h::default_validator(), false, helper::no_check(), http_1_0 ? 0 : 1)) {
+                if (!h::render_response(output, status, reason, header, h::default_validator(), false, helper::no_check(), http_1_0 ? 0 : 1)) {
                     return false;
                 }
-                helper::append(out, helper::RefSizedView(body, blen));
+                helper::append(output, helper::RefSizedView(body, blen));
                 return true;
             }
 
             void write_data(auto&& data, size_t len) {
-                String out;
-                BorrowString _{output, out};
-                helper::append(out, helper::RefSizedView(data, len));
+                helper::append(output, helper::RefSizedView(data, len));
             }
 
             void write_chunked_data(auto&& data, size_t len) {
                 namespace h = net::h1body;
-                String out;
-                BorrowString _{output, out};
-                h::render_chuncked_data(out, helper::RefSizedView(data, len));
+                h::render_chuncked_data(output, helper::RefSizedView(data, len));
             }
 
             void write_end_of_chunck() {
@@ -143,63 +135,49 @@ namespace utils {
             }
 
             void borrow_output(const char*& data, size_t& size) {
-                String out;
-                BorrowString _{output, out};
-                data = out.begin();
-                size = out.size();
+                data = output.begin();
+                size = output.size();
             }
 
             void borrow_input(const char*& data, size_t& size) {
-                String in;
-                BorrowString _{input, in};
-                data = in.begin();
-                size = in.size();
+                data = input.begin();
+                size = input.size();
             }
 
             size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
-                String out;
-                BorrowString _{output, out};
-                auto check = make_cpy_seq(helper::SizedView(out.begin(), out.size()));
-                if (limit > out.size()) {
-                    limit = out.size();
+                auto check = make_cpy_seq(helper::SizedView(output.begin(), output.size()));
+                if (limit > output.size()) {
+                    limit = output.size();
                 }
                 helper::read_n(buf, check, limit);
                 if (!peek) {
-                    out.shift(limit);
+                    output.shift(limit);
                 }
                 return limit;
             }
 
             size_t get_input(auto& buf, size_t limit = ~0, bool peek = false) {
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
-                if (limit > in.size()) {
-                    limit = in.size();
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                if (limit > input.size()) {
+                    limit = input.size();
                 }
                 helper::read_n(buf, check, limit);
                 if (!peek) {
-                    in.shift(limit);
+                    input.shift(limit);
                 }
                 return limit;
             }
 
             void clear_input() {
-                String in;
-                BorrowString _{input, in};
-                in.resize(0);
+                input.resize(0);
             }
 
             void clear_output() {
-                String out;
-                BorrowString _{output, out};
-                out.resize(0);
+                output.resize(0);
             }
 
             void add_input(auto&& data, size_t size) {
-                String in;
-                BorrowString _{input, in};
-                helper::append(in, helper::RefSizedView(data, size));
+                helper::append(input, helper::RefSizedView(data, size));
             }
 
             // check_response make sure input contains full of response header
@@ -208,9 +186,7 @@ namespace utils {
             // begin_ok represents header is begin with HTTP/1.1 or HTTP/1.0 or not
             size_t check_response(bool* begin_ok = nullptr) {
                 namespace h = net::h1header;
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 auto begcheck = [&](auto& seq) {
                     auto begin_check = seq.seek_if("HTTP/1.1") || seq.seek_if("HTTP/1.0");
                     if (begin_ok) {
@@ -228,9 +204,7 @@ namespace utils {
             // if validate_method is true this function checks header begin with known http method
             size_t check_request(bool* begin_ok = nullptr, bool validate_method = true) {
                 namespace h = net::h1header;
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 auto begcheck = [&](auto& seq) {
                     if (validate_method) {
                         for (auto meth : net::h1value::methods) {
@@ -260,9 +234,7 @@ namespace utils {
                                  Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
                 namespace h = net::h1header;
                 HTTPBodyInfo body{};
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 auto body_check = net::h1body::bodyinfo_preview(body.type, body.expect);
                 if (!h::parse_response<TmpString>(
                         check, version, status, reason, header, [&](auto&& key, auto&& value) {
@@ -276,7 +248,7 @@ namespace utils {
                     *info = body;
                 }
                 if (!peek) {
-                    in.shift(check.rptr);
+                    input.shift(check.rptr);
                 }
                 return check.rptr;
             }
@@ -287,9 +259,7 @@ namespace utils {
                                 Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
                 namespace h = net::h1header;
                 HTTPBodyInfo body{};
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 auto body_check = net::h1body::bodyinfo_preview(body.type, body.expect);
                 if (!h::parse_request<TmpString>(
                         check, method, path, version, header, [&](auto&& key, auto&& value) {
@@ -303,25 +273,21 @@ namespace utils {
                     *info = body;
                 }
                 if (!peek) {
-                    in.shift(check.rptr);
+                    input.shift(check.rptr);
                 }
                 return check.rptr;
             }
 
             template <class Version = decltype(helper::nop)&>
             bool peek_request_line(auto&& method, auto&& path, Version&& version = helper::nop) {
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 namespace h = net::h1header;
                 return h::parse_request_line(check, method, path, version);
             }
 
             template <class Reason = decltype(helper::nop)&, class Version = decltype(helper::nop)&>
             bool peek_status_line(auto&& status, Reason&& reason = helper::nop, Version&& version = helper::nop) {
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 namespace h = net::h1header;
                 return h::parse_status_line(check, version, status, reason);
             }
@@ -336,12 +302,10 @@ namespace utils {
                     return false;  // TODO(on-keyday): read only body?
                 }
                 namespace h = net::h1body;
-                String in;
-                BorrowString _{input, in};
-                auto check = make_cpy_seq(helper::SizedView(in.begin(), in.size()));
+                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
                 check.rptr = read_from;
                 auto res = h::read_body(buf, check, info.expect, info.type);
-                if (res == net::State::failed) {
+                if (res == -1) {
                     if (invalid) {
                         *invalid = true;
                     }
@@ -350,25 +314,25 @@ namespace utils {
                 if (invalid) {
                     *invalid = false;
                 }
-                if (res == net::State::running) {
+                if (res == 0) {
                     if (peek < 0) {
-                        in.shift(check.rptr);
+                        input.shift(check.rptr);
                         return check.rptr != 0;
                     }
                     return false;
                 }
                 if (peek <= 0) {
-                    in.shift(check.rptr);
+                    input.shift(check.rptr);
                 }
                 return true;
             }
 
             constexpr size_t input_len() const {
-                return input.getsize();
+                return input.size();
             }
 
             constexpr size_t output_len() const {
-                return output.getsize();
+                return output.size();
             }
 
             // strict_check_header is strict header checker
@@ -393,9 +357,8 @@ namespace utils {
                     return 0;
                 }
                 String in;
-                BorrowString _{input, in};
                 if (len == 0) {
-                    len = in.size();
+                    len = input.size();
                 }
                 else {
                     if (complete_header) {

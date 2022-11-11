@@ -27,57 +27,57 @@ namespace utils {
 
             // read_body reads http body with BodyType
             // Retrun Value
-            // State::complete - full of body read
-            // State::failed - invalid body format or length
-            // State::running - reading http body is incomplete
+            // 1 - full of body read
+            // -1 - invalid body format or length
+            // 0 - reading http body is incomplete
             template <class String, class T>
-            State read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
+            int read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
                 auto inipos = seq.rptr;
                 if (type == BodyType::chuncked) {
                     while (true) {
                         helper::match_eol(seq);
                         if (seq.eos()) {
-                            return State::running;
+                            return 0;
                         }
                         size_t num = 0;
                         auto e = number::parse_integer(seq, num, 16);
                         if (e != number::NumError::none) {
-                            return State::failed;
+                            return -1;
                         }
                         if (!helper::match_eol(seq)) {
-                            return State::failed;
+                            return -1;
                         }
                         if (num != 0) {
                             if (seq.remain() < num) {
                                 seq.rptr = inipos;
                                 expect = num;
-                                return State::running;
+                                return 0;
                             }
                             if (!helper::read_n(result, seq, num)) {
-                                return State::failed;
+                                return -1;
                             }
                             continue;
                         }
                         helper::match_eol(seq);
                         if (num == 0) {
-                            return State::complete;
+                            return 1;
                         }
                     }
                 }
                 else if (type == BodyType::content_length) {
                     if (seq.remain() < expect) {
-                        return State::running;
+                        return 0;
                     }
                     if (!helper::read_n(result, seq, expect)) {
-                        return State::failed;
+                        return -1;
                     }
-                    return State::complete;
+                    return 1;
                 }
                 else {
                     if (!helper::read_all(result, seq)) {
-                        return State::failed;
+                        return -1;
                     }
-                    return State::complete;
+                    return 1;
                 }
             }
 

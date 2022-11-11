@@ -15,9 +15,11 @@
 #include <helper/defer.h>
 #include <dnet/errcode.h>
 #include <helper/strutil.h>
-#include <endian/endian.h>
+#include <dnet/bytelen.h>
+#include <bit>
 #include <cstring>
 #include <dnet/dll/errno.h>
+#include <net_util/ipaddr.h>
 #ifndef _WIN32
 #include <signal.h>
 #include <thread>
@@ -66,7 +68,7 @@ namespace utils {
             info.type = ptr->ai_socktype;
             info.proto = ptr->ai_protocol;
             info.flag = ptr->ai_flags;
-            info.addr = ptr->ai_addr;
+            info.addr = reinterpret_cast<const raw_address*>(ptr->ai_addr);
             info.addrlen = ptr->ai_addrlen;
             return ptr->ai_addr;
         }
@@ -75,39 +77,49 @@ namespace utils {
             const char* ptr = nullptr;
             char* dst = static_cast<char*>(text);
             memset(text, 0, len);
+            auto set_err = [&](auto code) {
+                if (err) {
+                    *err = code;
+                }
+            };
+            auto pb = helper::CharVecPushbacker((byte*)text, len);
             if (af == AF_INET) {
                 if (addrlen < sizeof(sockaddr_in)) {
-                    set_error(invalid_argument);
+                    set_err(invalid_argument);
+                    return false;
                 }
-                else {
-                    auto p = static_cast<const sockaddr_in*>(addr);
-                    if (port) {
-                        *port = endian::from_network(&p->sin_port);
-                    }
-                    ptr = socdl.inet_ntop_(af, &p->sin_addr, dst, len);
+                auto p = static_cast<const sockaddr_in*>(addr);
+                if (port) {
+                    *port = netorder(p->sin_port);
                 }
+                ipaddr::ipv4_to_string(pb, (byte*)p);
             }
             else if (af == AF_INET6) {
                 if (addrlen < sizeof(sockaddr_in6)) {
-                    set_error(invalid_argument);
+                    set_err(invalid_argument);
+                    return false;
+                }
+                auto p = static_cast<const sockaddr_in6*>(addr);
+                if (port) {
+                    *port = netorder(p->sin6_port);
+                }
+                auto ipv6 = (byte*)&p->sin6_addr;
+                if (ipaddr::is_ipv4_mapped(ipv6)) {
+                    ipaddr::ipv4_to_string(pb, ipv6 + 12);
                 }
                 else {
-                    auto p = static_cast<const sockaddr_in6*>(addr);
-                    if (port) {
-                        *port = endian::from_network(&p->sin6_port);
-                    }
-                    ptr = socdl.inet_ntop_(af, &p->sin6_addr, dst, len);
+                    ipaddr::ipv6_to_string(pb, ipv6);
                 }
             }
             else {
-                set_error(invalid_argument);
-            }
-            if (!ptr) {
-                if (err) {
-                    *err = get_error();
-                }
+                set_err(invalid_argument);
                 return false;
             }
+            if (pb.overflow) {
+                set_err(invalid_addr);
+                return false;
+            }
+            /*
             // NOTE: remove ipv6 prefix for ipv4 mapped addresss
             if (helper::contains(ptr, ".") && helper::starts_with(ptr, "::ffff:")) {
                 constexpr auto start_offset = 7;
@@ -123,7 +135,7 @@ namespace utils {
                 // 127.0.0.1-----------
                 memmove(dst, dst + start_offset, len - start_offset);
                 memset(dst + tlen - start_offset, 0, start_offset);
-            }
+            }*/
             return true;
         }
 
@@ -231,13 +243,13 @@ namespace utils {
             timeval timeout;
             timeout.tv_sec = 60;
             timeout.tv_usec = 0;
-            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
+            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
             if (!obj) {
                 err = no_resource;
                 return nullptr;
             }
             auto r = helper::defer([&] {
-                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
+                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
             });
             auto event = CreateEventW(nullptr, true, false, nullptr);
             if (!event) {
@@ -277,14 +289,14 @@ namespace utils {
         }
 
         static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host* host, Port* port) {
-            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
+            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
             if (!obj) {
                 err = no_resource;
                 return nullptr;
             }
-            quic::mem::RAII r{obj, [](auto obj) {
-                                  delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
-                              }};
+            auto r = helper::defer([&] {
+                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+            });
             obj->hint.ai_family = addr.af;
             obj->hint.ai_socktype = addr.type;
             obj->hint.ai_protocol = addr.proto;
@@ -312,7 +324,7 @@ namespace utils {
                 err = res;
                 return nullptr;
             }
-            r.t = nullptr;
+            r.cancel();
             return obj;
         }
 #endif
@@ -346,7 +358,7 @@ namespace utils {
         WaitAddrInfo::~WaitAddrInfo() {
             if (opt) {
                 auto obj = static_cast<WaitObject*>(opt);
-                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject)));
+                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
             }
         }
 

@@ -12,6 +12,9 @@
 #include "../number/char_range.h"
 #include "../helper/pushbacker.h"
 #include "../number/array.h"
+#include "../helper/strutil.h"
+#include "../helper/equal.h"
+#include "../helper/appender.h"
 
 namespace utils {
     namespace uri {

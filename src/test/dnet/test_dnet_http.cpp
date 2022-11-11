@@ -5,15 +5,15 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <dnet/httproundtrip.h>
 #include <map>
 #include <string>
 #include <testutil/timer.h>
 #include <wrap/cout.h>
 #include <vector>
 #include <net_util/uri_parse.h>
+#include <helper/equal.h>
 using namespace utils;
-
+/*
 template <size_t len>
 void test_host(uri::URIFixed<char, len> uri) {
     auto& cout = wrap::cout_wrap();
@@ -97,7 +97,7 @@ void test_dnet_http() {
     test_host(uri::fixed("https://syosetu.com/"));
     test_host(uri::fixed("https://stackoverflow.com/"));
 }
-
+*/
 void test_uri_parse() {
     constexpr auto test_parse1 = utils::uri::fixed("file:///C:/user/pc/workspace/yes.json");
     constexpr auto test_ok1 =
@@ -121,6 +121,6 @@ void test_uri_parse() {
 }
 
 int main() {
-    test_dnet_http();
+    // test_dnet_http();
     test_uri_parse();
 }

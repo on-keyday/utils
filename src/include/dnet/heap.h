@@ -16,21 +16,22 @@ namespace utils {
         struct DebugInfo {
             bool size_known = false;
             size_t size = 0;
+            size_t align = 0;
             const char* file = nullptr;
             int line = 0;
             const char* func = nullptr;
         };
-#define DNET_DEBUG_MEMORY_LOCINFO(known, size_) \
-    { .size_known = known, .size = size_, .file = __FILE__, .line = __LINE__, .func = __PRETTY_FUNCTION__ }
+#define DNET_DEBUG_MEMORY_LOCINFO(known, size_, align_) \
+    { .size_known = known, .size = size_, .align = align_, .file = __FILE__, .line = __LINE__, .func = __PRETTY_FUNCTION__ }
 
         struct Allocs {
             void* ctx;
-            void* (*alloc_ptr)(void* ctx, size_t, DebugInfo*);
-            void* (*realloc_ptr)(void* ctx, void*, size_t, DebugInfo*);
+            void* (*alloc_ptr)(void* ctx, size_t, size_t, DebugInfo*);
+            void* (*realloc_ptr)(void* ctx, void*, size_t, size_t, DebugInfo*);
             void (*free_ptr)(void* ctx, void*, DebugInfo*);
         };
 
-        dnet_dll_export(void) set_normal_alloc(Allocs alloc);
-        dnet_dll_export(void) set_objpool_alloc(Allocs alloc);
+        dnet_dll_export(void) set_normal_allocs(Allocs alloc);
+        dnet_dll_export(void) set_objpool_allocs(Allocs alloc);
     }  // namespace dnet
 }  // namespace utils

@@ -19,26 +19,6 @@ namespace utils {
                 };
             }
 
-            constexpr auto or_(auto... op) {
-                return [=](auto&& p) -> std::shared_ptr<MinNode> {
-                    MINL_FUNC_LOG("or_op");
-                    std::shared_ptr<MinNode> node;
-                    auto fold = [&](auto& op) {
-                        p.err = false;
-                        node = op(p);
-                        if (!node) {
-                            if (p.err) {
-                                return true;
-                            }
-                            return false;
-                        }
-                        return true;
-                    };
-                    (... || fold(op));
-                    return node;
-                };
-            }
-
             auto block(auto inner) {
                 return [=](auto&& p) -> std::shared_ptr<BlockNode> {
                     MINL_FUNC_LOG("block");
@@ -74,7 +54,60 @@ namespace utils {
                         new_cur->str = block_element_str_;
                         new_cur->pos = {tmp_start, p.seq.rptr};
                         new_cur->element = std::move(node);
+                        cur->next = new_cur;
                         cur = std::move(new_cur);
+                    }
+                    block->pos = {start, p.seq.rptr};
+                    return block;
+                };
+            }
+
+            auto eol_factor(auto inner) {
+                return [=](auto&& p) -> decltype(inner(p)) {
+                    const auto start = p.seq.rptr;
+                    helper::space::consume_space(p.seq, false);
+                    if (helper::match_eol<true>(p.seq)) {
+                        return nullptr;
+                    }
+                    return inner(p);
+                };
+            }
+
+            auto repeat(bool least_one, bool consume_line, auto inner) {
+                return [=](auto&& p) -> std::shared_ptr<BlockNode> {
+                    MINL_FUNC_LOG("repeat");
+                    const auto start = p.seq.rptr;
+                    auto block = std::make_shared<BlockNode>();
+                    block->str = repeat_str_;
+                    auto cur = block;
+                    bool one = false;
+                    while (true) {
+                        const auto tmp_begin = p.seq.rptr;
+                        helper::space::consume_space(p.seq, consume_line);
+                        const auto tmp_start = p.seq.rptr;
+                        if (p.seq.eos()) {
+                            break;
+                        }
+                        auto node = inner(p);
+                        if (!node) {
+                            if (p.err) {
+                                return nullptr;
+                            }
+                            break;
+                        }
+                        one = true;
+                        auto new_cur = std::make_shared<BlockNode>();
+                        new_cur->str = repeat_element_str_;
+                        new_cur->pos = {tmp_start, p.seq.rptr};
+                        new_cur->element = std::move(node);
+                        cur->next = new_cur;
+                        cur = std::move(new_cur);
+                    }
+                    if (least_one && !one) {
+                        p.errc.say("least one repeat element required but not");
+                        p.errc.trace(start, p.seq);
+                        p.err = true;
+                        return nullptr;
                     }
                     block->pos = {start, p.seq.rptr};
                     return block;
@@ -86,7 +119,7 @@ namespace utils {
                     MINL_FUNC_LOG("program");
                     const auto start = p.seq.rptr;
                     auto block = std::make_shared<BlockNode>();
-                    block->str = block_statement_str_;
+                    block->str = program_str_;
                     auto cur = block;
                     while (true) {
                         const auto tmp_begin = p.seq.rptr;
@@ -103,9 +136,10 @@ namespace utils {
                             return nullptr;
                         }
                         auto new_cur = std::make_shared<BlockNode>();
-                        new_cur->str = block_element_str_;
+                        new_cur->str = program_element_str_;
                         new_cur->pos = {tmp_start, p.seq.rptr};
                         new_cur->element = std::move(node);
+                        cur->next = new_cur;
                         cur = std::move(new_cur);
                     }
                     block->pos = {start, p.seq.rptr};

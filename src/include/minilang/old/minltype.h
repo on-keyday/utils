@@ -14,7 +14,7 @@ namespace utils {
 
         constexpr auto struct_signature() {
             return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("struct_signature")
+                MINL_FUNC_LOG_OLD("struct_signature")
                 const auto begin = seq.rptr;
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
@@ -117,7 +117,7 @@ namespace utils {
 
         constexpr auto type_signatures(auto&& struct_parse, auto&& func_parse) {
             auto f = [=](auto&& f, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("type_signature")
+                MINL_FUNC_LOG_OLD("type_signature")
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 auto self_call = [&](auto&& stat_, auto&& expr, auto& seq, auto& node, bool& err, auto& errc) {
@@ -326,7 +326,7 @@ namespace utils {
 
         constexpr auto type_define(auto&& type_parse) {
             return [=](auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("type_define")
+                MINL_FUNC_LOG_OLD("type_define")
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, "type")) {
@@ -399,7 +399,7 @@ namespace utils {
 
         constexpr auto type_primitive(auto&& stats, auto&& type_parse) {
             return [=](auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("type_primitive")
+                MINL_FUNC_LOG_OLD("type_primitive")
                 const auto begin = seq.rptr;
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;

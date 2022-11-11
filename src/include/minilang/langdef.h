@@ -23,10 +23,11 @@ namespace utils {
                 ps::func_(fe_expr),
                 ps::string(true),
                 ps::number(true),
-                ps::ident());
+                ps::ident(),
+                ps::always_error("expect identifier but not"));
 
             constexpr auto after = ps::or_(
-                ps::dot(ps::expecter(ps::Op{"."}, ps::Op{"->"})),
+                ps::dot(ps::expecter(false, ps::Op{"."}, ps::Op{"->"})),
                 ps::parenthesis(ps::Br{"()", "(", ")"}),
                 ps::slices(ps::Br{"[]", "[", "]", ":"}));
 

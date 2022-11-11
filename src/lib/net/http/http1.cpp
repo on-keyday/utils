@@ -193,7 +193,9 @@ namespace utils {
                         }
                     }
                 BEGIN:
-                    e = h1body::read_body(impl->response.impl->body, seq, impl->expect, impl->bodytype);
+                    auto tmp = h1body::read_body(impl->response.impl->body, seq, impl->expect, impl->bodytype);
+                    e = tmp == 0 ? State::running : tmp == 1 ? State::complete
+                                                             : State::failed;
                     if (is_failed(e)) {
                         failed_clean();
                         return nullptr;
@@ -375,10 +377,10 @@ namespace utils {
                 }
                 while (true) {
                     auto res = h1body::read_body(resp->body, seq, impl->expect, impl->bodytype);
-                    if (res == State::failed) {
+                    if (res == -1) {
                         return {.err = HttpError::invalid_body};
                     }
-                    if (res == State::complete) {
+                    if (res == 1) {
                         break;
                     }
                     if (seq.eos() && req_is_head) {

@@ -50,10 +50,10 @@ namespace utils {
                 }
                 while (true) {
                     auto s = h1body::read_body(body, seq, expect, btype);
-                    if (s == State::failed) {
+                    if (s == -1) {
                         return false;
                     }
-                    else if (s == State::complete) {
+                    else if (s == 1) {
                         break;
                     }
                     if (!callback(seq, expect, false)) {

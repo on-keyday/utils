@@ -46,18 +46,34 @@ namespace utils {
             return 0;
         }
 
-        constexpr bool is_valid_mask(std::uint8_t len, std::uint8_t one, std::uint8_t two) {
+        constexpr bool is_valid_range(std::uint8_t len, std::uint8_t one, std::uint8_t two) {
+            auto normal_two_range = [&] {
+                return 0x80 <= two && two <= 0xBF;
+            };
             switch (len) {
                 case 1:
                     return true;
                 case 2:
-                    return (internal::utf8bits(internal::two_first) & one) != 0;
+                    return 0xC2 <= one && one <= 0xDF &&
+                           normal_two_range();
                 case 3:
-                    return (internal::utf8bits(internal::three_first) & one) != 0 ||
-                           (internal::utf8bits(internal::three_second) & two) != 0;
+                    if (one == 0xE0) {
+                        return 0xA0 <= two && two <= 0xBF;
+                    }
+                    else if (one == 0xED) {
+                        return 0x80 <= two && two <= 0x9F;
+                    }
+                    return 0xE0 <= one && one <= 0xEF &&
+                           normal_two_range();
                 case 4:
-                    return (internal::utf8bits(internal::four_first) & one) != 0 ||
-                           (internal::utf8bits(internal::four_second) & two) != 0;
+                    if (one == 0xF0) {
+                        return 0x90 <= two && two <= 0xBF;
+                    }
+                    else if (one == 0xF4) {
+                        return 0x80 <= two && two <= 0x8F;
+                    }
+                    return 0xF0 <= one && one <= 0xF4 &&
+                           normal_two_range();
                 default:
                     return false;
             }
@@ -85,7 +101,7 @@ namespace utils {
             if (input.remain() < len) {
                 return false;
             }
-            if (!is_valid_mask(len, ofs(0), ofs(1))) {
+            if (!is_valid_range(len, ofs(0), ofs(1))) {
                 return false;
             }
             internal::make_utf32_from_utf8(len, input.buf.buffer, output, input.rptr);

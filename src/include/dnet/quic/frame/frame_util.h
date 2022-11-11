@@ -11,7 +11,7 @@
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::frame {
 
             constexpr auto frame_type_to_Type(FrameType f, auto&& cb) {
 #define PARSE(frame_type, TYPE) \
@@ -43,7 +43,7 @@ namespace utils {
                 return cb(Frame{});
             }
 
-                     // parse_frame parses b as a frame and invoke cb with parsed frame
+            // parse_frame parses b as a frame and invoke cb with parsed frame
             // cb is void(Frame& frame,bool err) or bool(Frame& frame,bool err)
             // if callback err parameter is true frame parse is incomplete or failed
             // unknown type frame is passed to cb with packed as Frame with err==true
@@ -99,7 +99,7 @@ namespace utils {
 
             template <class F>
             constexpr F* frame_cast(Frame* f) {
-                if (!f || !f->type.value) {
+                if (!f || !f->type.valid()) {
                     return nullptr;
                 }
                 return frame_type_to_Type(f->type.type(), [&](auto frame) -> F* {
@@ -138,6 +138,6 @@ namespace utils {
                 });
             }
 
-        }  // namespace quic
+        }  // namespace quic::frame
     }      // namespace dnet
 }  // namespace utils

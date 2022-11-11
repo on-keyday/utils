@@ -31,11 +31,12 @@ int main() {
     while (list.next()) {
         list.sockaddr(addr);
         auto tmp = dnet::make_socket(addr.af, addr.type, addr.proto);
-        if (tmp.connect(addr.addr, addr.addrlen)) {
+        auto err = tmp.connect(addr.addr, addr.addrlen);
+        if (!err) {
             sock = std::move(tmp);
             break;
         }
-        if (!tmp.block() || !tmp.wait_writable(10, 0)) {
+        if (!dnet::isBlock(err) || tmp.wait_writable(10, 0).is_error()) {
             continue;
         }
         sock = std::move(tmp);
@@ -57,11 +58,17 @@ int main() {
         if (tls.receive_tls_data(buf, sizeof(buf))) {
             sock.write(buf, tls.readsize());
         }
-        while (!sock.read(buf, sizeof(buf))) {
-            assert(sock.block());
+        size_t readsize = 0;
+        dnet::error::Error err;
+        while (true) {
+            std::tie(readsize, err) = sock.read(buf, sizeof(buf));
+            if (!err) {
+                break;
+            }
+            assert(dnet::isBlock(err));
             std::this_thread::yield();
         }
-        tls.provide_tls_data(buf, sock.readsize());
+        tls.provide_tls_data(buf, readsize);
     };
     while (!tls.connect()) {
         assert(tls.block());

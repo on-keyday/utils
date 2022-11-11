@@ -31,7 +31,7 @@ namespace utils {
 
         constexpr auto primitive() {
             return [](auto&& pass, auto& seq, auto& errc) -> std::shared_ptr<MinNode> {
-                MINL_FUNC_LOG("primitive")
+                MINL_FUNC_LOG_OLD("primitive")
                 std::string str;
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
@@ -108,7 +108,7 @@ namespace utils {
 
         constexpr auto simple_primitive() {
             return [&](auto& seq, auto& errc) {
-                MINL_FUNC_LOG("simple_primitive")
+                MINL_FUNC_LOG_OLD("simple_primitive")
                 constexpr auto prim_ = primitive();
                 return prim_(nullptr, seq, errc);
             };
@@ -148,7 +148,7 @@ namespace utils {
 
         constexpr auto unary(auto expect, auto inner) {
             auto f = [=](auto&& f, auto&& pass, auto& seq, auto& errc) -> std::shared_ptr<MinNode> {
-                MINL_FUNC_LOG("unary")
+                MINL_FUNC_LOG_OLD("unary")
                 std::string str;
                 Pos pos{};
                 if (expect(seq, str, pos)) {
@@ -172,7 +172,7 @@ namespace utils {
 
         constexpr auto binary(auto expect, auto inner) {
             return [=](auto&& pass, auto& seq, auto& errc) -> std::shared_ptr<MinNode> {
-                MINL_FUNC_LOG("binary")
+                MINL_FUNC_LOG_OLD("binary")
                 auto node = inner(pass, seq, errc);
                 if (!node) {
                     return node;
@@ -198,7 +198,7 @@ namespace utils {
 
         constexpr auto assign(auto expect, auto inner) {
             auto f = [=](auto&& f, auto&& pass, auto& seq, auto& errc) -> std::shared_ptr<MinNode> {
-                MINL_FUNC_LOG("assign")
+                MINL_FUNC_LOG_OLD("assign")
                 auto node = inner(pass, seq, errc);
                 if (!node) {
                     return node;
@@ -259,7 +259,7 @@ namespace utils {
         // bool(auto&& user_defined,auto&& more_inner,bool& err,std::shared_ptr<MinNode>& node,Sequencer& seq)
         constexpr auto brackets(auto... op) {
             return [=](auto&& expr, auto&& prim, auto&& pass, bool& err, std::shared_ptr<MinNode>& node, auto& seq, auto& errc) {
-                MINL_FUNC_LOG("brackets")
+                MINL_FUNC_LOG_OLD("brackets")
                 err = false;
                 auto surrounded = [&](auto op) -> bool {
                     if (op.suppression_on_cond && pass.parse_on == brc_cond) {
@@ -373,7 +373,7 @@ namespace utils {
                                  Br{"{}", "{", "}", ",", true}, Br{"."}, Br{"->"});
             auto prim = [=](auto&& pass, auto& seq, auto& errc)
                 -> std::shared_ptr<MinNode> {
-                MINL_FUNC_LOG("prim")
+                MINL_FUNC_LOG_OLD("prim")
                 std::shared_ptr<MinNode> node;
                 bool err = false;
                 auto uscall = [&](auto& seq, BrCondition cond = brc_expr) {
@@ -444,7 +444,7 @@ namespace utils {
             auto bins = make_binaries();
             auto prim = make_prim();
             return [=]<class T>(Sequencer<T>& seq, auto&& errc, BrCondition cond = brc_expr) -> std::shared_ptr<MinNode> {
-                MINL_FUNC_LOG("statements")
+                MINL_FUNC_LOG_OLD("statements")
                 struct {
                     const std::remove_reference_t<decltype(primitive)>& user_defined;
                     const std::remove_reference_t<decltype(prim)>& more_inner;

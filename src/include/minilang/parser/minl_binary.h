@@ -16,11 +16,11 @@ namespace utils {
                 char errs[2]{};
             };
 
-            constexpr auto expecter(auto... op) {
+            constexpr auto expecter(bool consume_line, auto... op) {
                 return [=](auto& seq, auto& expected, Pos& pos) {
                     auto fold = [&](auto op) {
                         const size_t begin = seq.rptr;
-                        helper::space::consume_space(seq, false);
+                        helper::space::consume_space(seq, consume_line);
                         const size_t start = seq.rptr;
                         if (seq.seek_if(op.op)) {
                             for (auto c : op.errs) {
@@ -43,13 +43,74 @@ namespace utils {
                 };
             }
 
-            auto call_prim() {
+            constexpr auto call_prim() {
                 return [](auto&& p) {
                     return p.prim(p);
                 };
             }
 
-            auto binary(auto next, auto expect) {
+            constexpr auto call_expr() {
+                return [](auto&& p) {
+                    return p.expr(p);
+                };
+            }
+
+            constexpr auto unary(bool self_repeat, auto next, auto expect) {
+                auto f = [=](auto&& f, auto&& p) -> std::shared_ptr<MinNode> {
+                    const char* expected = 0;
+                    Pos pos{};
+                    if (expect(p.seq, expected, pos)) {
+                        std::shared_ptr<MinNode> node;
+                        if (self_repeat) {
+                            node = f(f, p);
+                        }
+                        else {
+                            node = next(p);
+                        }
+                        if (!node) {
+                            return nullptr;
+                        }
+                        auto bin = std::make_shared<BinaryNode>();
+                        bin->pos = pos;
+                        bin->str = expected;
+                        bin->right = std::move(node);
+                        return bin;
+                    }
+                    return next(p);
+                };
+                return [f](auto&& p) {
+                    return f(f, p);
+                };
+            }
+
+            constexpr auto asymmetric(auto log, auto left, auto right, auto expect) {
+                return [=](auto&& p) -> std::shared_ptr<MinNode> {
+                    MINL_FUNC_LOG(log)
+                    auto node = left(p);
+                    if (!node) {
+                        return nullptr;
+                    }
+                    Pos pos{};
+                    const char* expected = nullptr;
+                    while (expect(p.seq, expected, pos)) {
+                        std::shared_ptr<MinNode> rhs = right(p);
+                        if (!rhs) {
+                            p.errc.say("expect right hand of operator ", expected, " but not");
+                            p.errc.trace(pos.begin, p.seq);
+                            return nullptr;
+                        }
+                        auto bin = std::make_shared<BinaryNode>();
+                        bin->left = std::move(node);
+                        bin->right = std::move(rhs);
+                        bin->str = expected;
+                        bin->pos = pos;
+                        node = std::move(bin);
+                    }
+                    return node;
+                };
+            }
+
+            constexpr auto binary(auto next, auto expect) {
                 return [=](auto&& p) -> std::shared_ptr<MinNode> {
                     MINL_FUNC_LOG("binary")
                     std::shared_ptr<MinNode> node = next(p);
@@ -113,7 +174,7 @@ namespace utils {
                 const char* sep = nullptr;
             };
 
-            constexpr auto parenthesis(auto... br) {
+            constexpr auto parenthesis(auto inner, auto... br) {
                 return [=](auto&& p) -> std::shared_ptr<BinaryNode> {
                     MINL_FUNC_LOG("parentesis");
                     std::shared_ptr<BinaryNode> node;
@@ -123,8 +184,8 @@ namespace utils {
                             p.seq.rptr = begin;
                             return false;
                         }
-                        auto inner = p.expr(p);
-                        if (!inner) {
+                        auto in = inner(p);
+                        if (!in) {
                             p.errc.say("expect ", br.op, " inner element but not");
                             p.errc.trace(start, p.seq);
                             p.err = true;
@@ -138,16 +199,35 @@ namespace utils {
                             return true;
                         }
                         auto brac = std::make_shared<BinaryNode>();
-                        brac->left = std::move(inner);
+                        brac->right = std::move(in);
                         if (p.tmppass) {
-                            brac->right = std::move(p.tmppass);
+                            brac->left = std::move(p.tmppass);
                         }
                         brac->pos = {start, p.seq.rptr};
+                        brac->str = br.op;
                         node = std::move(brac);
                         return true;
                     };
-                    (... || fold(br));
+                    (void)(... || fold(br));
                     return node;
+                };
+            }
+
+            constexpr auto unary_after(auto expecter) {
+                return [=](auto&& p) -> std::shared_ptr<BinaryNode> {
+                    MINL_FUNC_LOG("after_unary")
+                    MINL_BEGIN_AND_START(p.seq);
+                    const char* expected = nullptr;
+                    Pos pos;
+                    if (!expecter(p.seq, expected, pos)) {
+                        p.seq.rptr = begin;
+                        return nullptr;
+                    }
+                    auto bin = std::make_shared<BinaryNode>();
+                    bin->str = expected;
+                    bin->pos = pos;
+                    bin->right = std::move(p.tmppass);
+                    return bin;
                 };
             }
 

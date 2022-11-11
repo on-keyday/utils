@@ -42,7 +42,9 @@ namespace utils {
             nt_import = 0x0007,
             nt_wordstat = 0x0008,
             nt_number = 0x0009,
+            nt_char = 0x0109,
             nt_string = 0x000a,
+            nt_range = 0x000b,
             nt_min_derive_mask = 0x00ff,
             nt_second_derive_mask = 0x0fff,
             nt_max = 0xffff,
@@ -93,14 +95,10 @@ namespace utils {
             }
         }
 
-#ifndef MINL_Constexpr
+#ifdef MINL_Constexpr
 #undef MINL_Constexpr
 #endif
-#ifdef __cpp_lib_constexpr_string
-#define MINL_Constexpr constexpr
-#else
 #define MINL_Constexpr inline
-#endif
 
         struct MinNode {
             const unsigned int node_type = 0;
@@ -132,6 +130,16 @@ namespace utils {
             double floating = 0;
             MINL_Constexpr NumberNode()
                 : MinNode(nt_number) {}
+
+           protected:
+            MINL_Constexpr NumberNode(int nt)
+                : MinNode(nt) {}
+        };
+
+        struct CharNode : NumberNode {
+            bool is_utf = false;
+            MINL_Constexpr CharNode()
+                : NumberNode(nt_char) {}
         };
 
         struct StringNode : MinNode {
@@ -293,9 +301,14 @@ namespace utils {
                 : MinNode(nt_typedef) {}
         };
 
+        struct RangeNode : MinNode {
+            std::shared_ptr<NumberNode> min_;
+            std::shared_ptr<NumberNode> max_;
+            MINL_Constexpr RangeNode()
+                : MinNode(nt_range) {}
+        };
         // node strs
 
-        constexpr auto program_str_ = "(program)";
         constexpr auto comment_str_ = "(comment)";
 
         constexpr auto type_group_str_ = "(type_group)";
@@ -347,6 +360,12 @@ namespace utils {
 
         constexpr auto block_statement_str_ = "{(block)}";
         constexpr auto block_element_str_ = "(block_element)";
+
+        constexpr auto repeat_str_ = "{(repeat)}";
+        constexpr auto repeat_element_str_ = "(repeat_element)";
+
+        constexpr auto program_str_ = "{(program)}";
+        constexpr auto program_element_str_ = "(program_element)";
 
         constexpr auto interface_str_ = "(interface)";
         constexpr auto interface_method_str_ = "(interface_method)";
@@ -501,7 +520,7 @@ namespace utils {
             }
         };
 
-#define MINL_FUNC_LOG(FUNC)  // auto log_object____ = log_raii(errc, FUNC, __FILE__, __LINE__);
-
+#define MINL_FUNC_LOG(FUNC) auto log_object____ = log_raii(p.errc, FUNC, __FILE__, __LINE__);
+#define MINL_FUNC_LOG_OLD(FUNC) auto log_object____ = log_raii(errc, FUNC, __FILE__, __LINE__);
     }  // namespace minilang
 }  // namespace utils

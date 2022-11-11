@@ -34,14 +34,14 @@ namespace utils {
             };
 
             template <class Expr, class Stat, class Type, class Prim, class Errc, class Seq>
-            auto make_ctx(Expr& expr, Stat& stat, Type& type, Prim& prim, Errc& errc, Seq& seq) {
+            auto make_ctx_ref(Expr& expr, Stat& stat, Type& type, Prim& prim, Errc& errc, Seq& seq) {
                 return ParserContext<Expr&, Stat&, Type&, Prim&, Errc&, Seq&>{
                     expr,
                     stat,
                     type,
                     prim,
-                    errc,
                     seq,
+                    errc,
                     false,
                     pass_loc::normal,
                 };
@@ -60,8 +60,28 @@ namespace utils {
                     std::forward<Stat>(stat),
                     std::forward<Type>(type),
                     std::forward<Prim>(prim),
-                    std::forward<Errc>(errc),
                     std::forward<Seq>(seq),
+                    std::forward<Errc>(errc),
+                    false,
+                    pass_loc::normal,
+                };
+            }
+
+            template <class Expr, class Stat, class Type, class Prim, class Errc, class Seq>
+            auto make_ctx(Expr&& expr, Stat&& stat, Type&& type, Prim&& prim, Errc& errc, Seq& seq) {
+                using ExprT = std::decay_t<Expr>;
+                using StatT = std::decay_t<Stat>;
+                using TypeT = std::decay_t<Type>;
+                using PrimT = std::decay_t<Prim>;
+                using ErrcT = Errc&;
+                using SeqT = Seq&;
+                return ParserContext<ExprT, StatT, TypeT, PrimT, ErrcT, SeqT>{
+                    std::forward<Expr>(expr),
+                    std::forward<Stat>(stat),
+                    std::forward<Type>(type),
+                    std::forward<Prim>(prim),
+                    seq,
+                    errc,
                     false,
                     pass_loc::normal,
                 };
@@ -86,6 +106,23 @@ namespace utils {
     helper::space::consume_space(seq, true); \
     const size_t start = seq.rptr
 
+            struct NullErrC {
+                void say(auto&&...) {
+                    ;
+                }
+                void trace(auto start, auto&& seq) {
+                    ;
+                }
+                void node(auto&& node) {
+                    ;
+                }
+                void log_enter(auto&& func, auto file, auto line) {
+                    ;
+                }
+                void log_leave(auto&& func, auto file, auto line) {
+                    ;
+                }
+            };
         }  // namespace parser
     }      // namespace minilang
 }  // namespace utils

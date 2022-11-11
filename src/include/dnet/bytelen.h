@@ -9,6 +9,7 @@
 #pragma once
 #include <cstdint>
 #include <type_traits>
+#include <bit>
 #include "quic/types.h"
 #include "byte.h"
 
@@ -25,7 +26,7 @@ namespace utils {
 
             template <class T>
             concept has_logical_not = requires(T t) {
-                { !t } -> internal::convertible<bool>;
+                { !t } -> convertible<bool>;
             };
 
             constexpr auto equal_fn() {
@@ -33,8 +34,9 @@ namespace utils {
             };
         }  // namespace internal
 
-        struct ByteLen {
-            byte* data = nullptr;
+        template <class Byte>
+        struct ByteLenBase {
+            Byte* data = nullptr;
             size_t len = 0;
 
             constexpr bool enough(size_t l) const {
@@ -44,7 +46,7 @@ namespace utils {
                 return enough(0);
             }
 
-            constexpr bool adjacent(const ByteLen& v) const {
+            constexpr bool adjacent(const ByteLenBase& v) const {
                 if (!valid() || !v.valid()) {
                     return false;
                 }
@@ -100,6 +102,28 @@ namespace utils {
             constexpr T as(size_t offset = 0, bool big_endian = true) const {
                 T val{};
                 as(val, offset, big_endian);
+                return val;
+            }
+
+            // as_netorder packs byte into t as same as byte representation in b.data
+            // in big endian platform
+            // byte[0, 0, 0, 1] -> int32(0x00000001)
+            // in little endian platform
+            // byte[0, 0, 0, 1] -> int32(0x01000000)
+            template <class T>
+            constexpr bool as_netorder(T& t, size_t offset = 0) const {
+                if constexpr (std::endian::native == std::endian::big) {
+                    return as(t, offset, true);
+                }
+                else {
+                    return as(t, offset, false);
+                }
+            }
+
+            template <class T>
+            constexpr T as_netorder(size_t offset = 0) const {
+                T val;
+                as_netorder(val, offset);
                 return val;
             }
 
@@ -171,30 +195,30 @@ namespace utils {
                 return value;
             }
 
-            constexpr bool forward(ByteLen& blen, size_t offset) const {
+            constexpr bool forward(ByteLenBase& blen, size_t offset) const {
                 if (!enough(offset)) {
                     return false;
                 }
-                blen = ByteLen{data + offset, len - offset};
+                blen = ByteLenBase{data + offset, len - offset};
                 return true;
             }
 
-            constexpr ByteLen forward(size_t offset) const {
-                ByteLen blen{};
+            constexpr ByteLenBase forward(size_t offset) const {
+                ByteLenBase blen{};
                 forward(blen, offset);
                 return blen;
             }
 
-            constexpr bool resized(ByteLen& blen, size_t resize) const {
+            constexpr bool resized(ByteLenBase& blen, size_t resize) const {
                 if (!enough(resize)) {
                     return false;
                 }
-                blen = ByteLen{data, resize};
+                blen = ByteLenBase{data, resize};
                 return true;
             }
 
-            constexpr ByteLen resized(size_t resize) const {
-                ByteLen blen{};
+            constexpr ByteLenBase resized(size_t resize) const {
+                ByteLenBase blen{};
                 resized(blen, resize);
                 return blen;
             }
@@ -204,7 +228,7 @@ namespace utils {
                 return enough(expect);
             }
 
-            constexpr bool fwdresize(ByteLen& to, size_t offset, size_t expect) {
+            constexpr bool fwdresize(ByteLenBase& to, size_t offset, size_t expect) {
                 if (!fwdenough(offset, expect)) {
                     return false;
                 }
@@ -221,7 +245,7 @@ namespace utils {
                 return len;
             }
 
-            constexpr bool qvarintfwd(ByteLen& to) {
+            constexpr bool qvarintfwd(ByteLenBase& to) {
                 auto len = qvarintlen();
                 if (!enough(len)) {
                     return 0;
@@ -239,7 +263,7 @@ namespace utils {
                 return true;
             }
 
-            template <class Eq = decltype(internal::equal_fn)>
+            template <class Eq = decltype(internal::equal_fn())>
             constexpr size_t match_len(auto&& in, size_t size, Eq&& is_equal = internal::equal_fn()) const {
                 size_t i = 0;
                 for (; i < size; i++) {
@@ -275,22 +299,23 @@ namespace utils {
                 return match_len(in, get_size(in), is_equal);
             }
 
-            template <bool non_zero = true>
-            constexpr bool expect(auto&& in, auto&&... args) const {
-                auto l = match_len(in, args...);
-                if (non_zero && l == 0) {
+            template <bool non_zero = true, class Eq = decltype(internal::equal_fn())>
+            constexpr bool expect(auto&& in, Eq&& eq = internal::equal_fn()) const {
+                auto size = get_size(in);
+                if (non_zero && size == 0) {
                     return false;
                 }
-                return l == get_size(in);
+                auto l = match_len(in, size, eq);
+                return l == size;
             }
 
-            template <bool non_zero = true>
-            constexpr bool expectfwd(auto&& in, auto&&... args) const {
-                auto l = match_len(in, args...);
-                if (non_zero && l == 0) {
+            template <bool non_zero = true, class Eq = decltype(internal::equal_fn())>
+            constexpr bool expectfwd(auto&& in, Eq&& eq = internal::equal_fn()) const {
+                auto size = get_size(in);
+                if (non_zero && size == 0) {
                     return false;
                 }
-                auto size = get_size(in);
+                auto l = match_len(in, size, eq);
                 if (l == size) {
                     *this = forward(l);
                 }
@@ -329,14 +354,46 @@ namespace utils {
                 msbvarint(val, len_max);
                 return val;
             }
+
+            constexpr bool equal_to(const ByteLenBase& cmp) const {
+                if (len != cmp.len) {
+                    return false;
+                }
+                if (!std::is_constant_evaluated()) {
+                    if (data == cmp.data) {
+                        return true;
+                    }
+                }
+                if (!data || !cmp.data) {
+                    return false;
+                }
+                for (size_t i = 0; i < len; i++) {
+                    if (data[i] != cmp.data[i]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
         };
+
+        using ByteLen = ByteLenBase<byte>;
+        using ConstByteLen = ByteLenBase<const byte>;
 
         struct WPacket {
             ByteLen b;
             size_t offset = 0;
             bool overflow = false;
+            size_t counter = 0;
+
+            constexpr void reset_offset() {
+                offset = 0;
+                overflow = false;
+                counter = 0;
+            }
+
             template <class Byte>
             constexpr void append(const Byte* src, size_t len) {
+                counter += len;
                 static_assert(sizeof(src[0]) == 1, "must be 1 byte sequence");
                 for (auto i = 0; i < len; i++) {
                     if (b.len <= offset) {
@@ -349,6 +406,7 @@ namespace utils {
             }
 
             constexpr void add(byte src, size_t len) {
+                counter += len;
                 for (auto i = 0; i < len; i++) {
                     if (b.len <= offset) {
                         overflow = true;
@@ -389,6 +447,18 @@ namespace utils {
                 return buf;
             }
 
+            template <class B>
+            constexpr ByteLen copy_from(ByteLenBase<B> from) {
+                auto to = acquire(from.len);
+                if (!to.enough(from.len)) {
+                    return {};
+                }
+                for (auto i = 0; i < from.len; i++) {
+                    to.data[i] = from.data[i];
+                }
+                return to;
+            }
+
             template <class T>
             constexpr ByteLen as(T val, bool big_endian = true) {
                 auto buf = acquire(sizeof(T));
@@ -416,10 +486,10 @@ namespace utils {
                 return as<byte>(val).data;
             }
 
-            constexpr ByteLen varint(size_t val) {
+            constexpr size_t qvarintlen(size_t val, byte* maskres = nullptr) {
                 constexpr auto masks = 0xC000000000000000;
                 if (val & masks) {
-                    return {};
+                    return 0;
                 }
                 val &= ~masks;
                 size_t len = 0;
@@ -439,6 +509,18 @@ namespace utils {
                 else {
                     len = 8;
                     mask = 0xC0;
+                }
+                if (maskres) {
+                    *maskres = mask;
+                }
+                return len;
+            }
+
+            constexpr ByteLen qvarint(size_t val) {
+                byte mask;
+                size_t len = qvarintlen(val, &mask);
+                if (len == 0) {
+                    return {};
                 }
                 auto buf = acquire(len);
                 if (!buf.enough(len)) {
@@ -538,6 +620,19 @@ namespace utils {
                 return num;
             }
         };
+
+        template <class T>
+        constexpr T byteswap(T t) {
+            byte d[sizeof(T)];
+            WPacket w{{d, sizeof(T)}};
+            w.as(t);
+            return w.b.as<T>(0, false);
+        }
+
+        template <class T>
+        constexpr T netorder(T t) {
+            return std::endian::native == std::endian::big ? t : byteswap(t);
+        }
 
     }  // namespace dnet
 }  // namespace utils

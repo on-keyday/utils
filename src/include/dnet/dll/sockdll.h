@@ -15,10 +15,14 @@ namespace utils {
            private:
 #define L(func) LOADER_BASE(func, func, lib, Kernel, false)
 #ifdef _WIN32
-            alib<3> lib;
+            alib<4> lib;
             L(CreateIoCompletionPort)
             L(CancelIoEx)
             L(GetQueuedCompletionStatusEx)
+            LOADER_BASE(
+                SetFileCompletionNotificationModes,
+                SetFileCompletionNotificationModes,
+                lib, Kernel, true)
 #else
             alib<3> lib;
             L(getaddrinfo_a)  // libanl
@@ -44,7 +48,7 @@ namespace utils {
 #ifdef _WIN32
             static constexpr auto libcount = 30;
 #else
-            static constexpr auto libcount = 21;
+            static constexpr auto libcount = 20;
 #endif
             alib<libcount> lib;
 #define L(func) LOADER_BASE(func, func, lib, SocketDll, false)
@@ -61,7 +65,6 @@ namespace utils {
             L(listen)
             L(accept)
             L(select)
-            L(inet_ntop)
             L(gethostname)
 #ifdef _WIN32
             L(closesocket)
@@ -81,6 +84,7 @@ namespace utils {
             L(GetAddrInfoExCancel)
             L(GetAddrInfoExOverlappedResult)
             L(__WSAFDIsSet)
+            L(WSAEnumProtocolsW)
 #else
             L(freeaddrinfo)
             L(close)

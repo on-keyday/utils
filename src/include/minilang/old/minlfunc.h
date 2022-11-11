@@ -147,7 +147,7 @@ namespace utils {
 
         constexpr auto func_expr(func_expr_mode mode) {
             return [=](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("func_expr")
+                MINL_FUNC_LOG_OLD("func_expr")
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, "fn")) {
@@ -159,7 +159,7 @@ namespace utils {
 
         constexpr auto let_stat() {
             return [](auto&& type_, auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("let_stat")
+                MINL_FUNC_LOG_OLD("let_stat")
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 const char* typ_str;
@@ -264,14 +264,14 @@ namespace utils {
                 return (... || fold(stats));
             };
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("statement")
+                MINL_FUNC_LOG_OLD("statement")
                 return f(stat, expr, seq, node, err, errc);
             };
         }
 
         constexpr auto wrap_with_type(auto&& with_type, auto&& type_sig) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("wrap_with_type")
+                MINL_FUNC_LOG_OLD("wrap_with_type")
                 return with_type(type_sig, stat, expr, seq, node, err, errc);
             };
         }
@@ -283,7 +283,7 @@ namespace utils {
         constexpr auto make_funcexpr_primitive(auto&& stats, auto&& sig) {
             auto fexpr = make_func(fe_expr, sig);
             return [=](auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("funcexpr_primitive")
+                MINL_FUNC_LOG_OLD("funcexpr_primitive")
                 return fexpr(stats, expr, seq, node, err, errc);
             };
         }
@@ -303,7 +303,7 @@ namespace utils {
 
         constexpr auto interface_signature() {
             return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<utils::minilang::MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("interface_signature")
+                MINL_FUNC_LOG_OLD("interface_signature")
                 const auto begin = seq.rptr;
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;

@@ -8,6 +8,7 @@
 #include <dnet/dll/dllcpp.h>
 #include <dnet/http2/h2frame.h>
 #include <dnet/http2/h2frame_c.h>
+#include <new>
 
 #define INIT(Struct)                                                    \
     dnet_dll_implement(void) init_##Struct(H2##Struct* ptr) {           \

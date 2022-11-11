@@ -20,7 +20,7 @@ namespace utils {
 
         constexpr auto comment(auto... com) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("comment")
+                MINL_FUNC_LOG_OLD("comment")
                 auto line_comment = [&](auto& comment) {
                     while (!seq.eos() && !helper::match_eol<true>(seq)) {
                         comment.push_back(seq.current());
@@ -105,7 +105,7 @@ namespace utils {
 
         constexpr auto until_eof_or_not_matched(auto&& f) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("until_eof_or_not_matched")
+                MINL_FUNC_LOG_OLD("until_eof_or_not_matched")
                 std::shared_ptr<BlockNode> root, bnode;
                 err = false;
                 helper::space::consume_space(seq, true);
@@ -176,7 +176,7 @@ namespace utils {
 
         constexpr auto imports(auto&& parse_after) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
-                MINL_FUNC_LOG("imports")
+                MINL_FUNC_LOG_OLD("imports")
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, "import")) {
                     return false;

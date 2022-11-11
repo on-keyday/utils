@@ -7,11 +7,11 @@
 
 // frame - QUIC frame format
 #pragma once
-#include "../bytelen.h"
+#include "../../bytelen.h"
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::frame {
 
             struct Frame {
                 FrameFlags type;
@@ -30,7 +30,7 @@ namespace utils {
                 }
 
                 constexpr bool render(WPacket& w) const {
-                    if (!type.value) {
+                    if (!type.valid()) {
                         return false;
                     }
                     w.append(type.value, 1);
@@ -209,58 +209,66 @@ namespace utils {
                 }
             };
 
-            namespace ack {
+            struct ACKRange {
+                size_t smallest = 0;
+                size_t largest = 0;
+            };
 
-                struct ACKRange {
-                    size_t smallest = 0;
-                    size_t largest = 0;
-                };
+            struct ECNCounts {
+                size_t ect0 = 0;
+                size_t ect1 = 0;
+                size_t ecn_ce = 0;
+            };
 
-                constexpr bool validate_ack_ranges(auto& vec) {
-                    for (ACKRange r : vec) {
-                        if (r.smallest > r.largest) {
-                            return false;
-                        }
-                    }
-                    for (size_t i = 0; i < vec.size(); i++) {
-                        if (i == 0) {
-                            continue;
-                        }
-                        ACKRange r = vec[i];
-                        ACKRange last = vec[i - 1];
-                        if (last.smallest <= r.smallest || last.largest <= r.largest) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-
-                constexpr bool get_ackranges(auto& ranges, const ACKFrame& ack) {
-                    auto largest_ack = ack.largest_ack.qvarint();
-                    auto ackBlock = ack.first_ack_range.qvarint();
-                    auto smallest = largest_ack - ackBlock;
-                    ranges.push_back(ACKRange{smallest, largest_ack});
-                    auto res = ACKFrame::parse_ack_range(ack.ack_ranges, ack.ack_range_count.qvarint(), [&](auto gap, auto ackBlock) {
-                        if (smallest < gap + 2) {
-                            return false;
-                        }
-                        auto largest = smallest - gap - 2;
-                        if (ackBlock > largest) {
-                            return false;
-                        }
-                        smallest = largest - ackBlock;
-                        ranges.push_back(ACKRange{smallest, largest});
-                        return true;
-                    });
-                    if (!res) {
+            constexpr bool validate_ack_ranges(auto& vec) {
+                bool least_one = false;
+                for (ACKRange r : vec) {
+                    least_one = true;
+                    if (r.smallest > r.largest) {
                         return false;
                     }
-                    if (!validate_ack_ranges(ranges)) {
+                }
+                if (!least_one) {
+                    return false;
+                }
+                for (size_t i = 0; i < vec.size(); i++) {
+                    if (i == 0) {
+                        continue;
+                    }
+                    ACKRange r = vec[i];
+                    ACKRange last = vec[i - 1];
+                    if (last.smallest <= r.smallest || last.largest <= r.largest) {
                         return false;
                     }
-                    return true;
                 }
-            }  // namespace ack
+                return true;
+            }
+
+            constexpr bool get_ackranges(auto& ranges, const ACKFrame& ack) {
+                auto largest_ack = ack.largest_ack.qvarint();
+                auto ackBlock = ack.first_ack_range.qvarint();
+                auto smallest = largest_ack - ackBlock;
+                ranges.push_back(ACKRange{smallest, largest_ack});
+                auto res = ACKFrame::parse_ack_range(ack.ack_ranges, ack.ack_range_count.qvarint(), [&](auto gap, auto ackBlock) {
+                    if (smallest < gap + 2) {
+                        return false;
+                    }
+                    auto largest = smallest - gap - 2;
+                    if (ackBlock > largest) {
+                        return false;
+                    }
+                    smallest = largest - ackBlock;
+                    ranges.push_back(ACKRange{smallest, largest});
+                    return true;
+                });
+                if (!res) {
+                    return false;
+                }
+                if (!validate_ack_ranges(ranges)) {
+                    return false;
+                }
+                return true;
+            }
 
             struct ResetStreamFrame : Frame {
                 ByteLen streamID;
@@ -1096,6 +1104,6 @@ namespace utils {
                 }
             };
 
-        }  // namespace quic
+        }  // namespace quic::frame
     }      // namespace dnet
 }  // namespace utils

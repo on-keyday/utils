@@ -15,32 +15,48 @@ namespace utils {
         struct glheap_allocator {
             using value_type = T;
             static T* allocate(size_t n) {
-                return static_cast<T*>(alloc_normal(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T))));
+                auto a = static_cast<T*>(alloc_normal(n * sizeof(T), alignof(T), DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T), alignof(T))));
+                if (!a) {
+                    return static_cast<T*>(memory_exhausted_traits(DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T), alignof(T))));
+                }
+                return a;
             }
 
             static void deallocate(T* t, size_t n) {
-                return free_normal(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T)));
+                free_normal(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T), alignof(T)));
             }
             template <class... Arg>
             constexpr glheap_allocator(Arg&&...) {}
 
             constexpr glheap_allocator() = default;
+
+            constexpr bool operator==(const glheap_allocator&) {
+                return true;
+            }
         };
 
         template <class T>
         struct glheap_objpool_allocator {
             using value_type = T;
             static T* allocate(size_t n) {
-                return static_cast<T*>(alloc_objpool(n * sizeof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T))));
+                auto a = static_cast<T*>(alloc_objpool(n * sizeof(T), alignof(T), DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T), alignof(T))));
+                if (!a) {
+                    return static_cast<T*>(memory_exhausted_traits(DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T), alignof(T))));
+                }
+                return a;
             }
 
             static void deallocate(T* t, size_t n) {
-                return free_objpool(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T)));
+                return free_objpool(t, DNET_DEBUG_MEMORY_LOCINFO(true, n * sizeof(T), alignof(T)));
             }
             template <class... Arg>
             constexpr glheap_objpool_allocator(Arg&&...) {}
 
             constexpr glheap_objpool_allocator() = default;
+
+            constexpr bool operator==(const glheap_objpool_allocator&) {
+                return true;
+            }
         };
     }  // namespace dnet
 }  // namespace utils

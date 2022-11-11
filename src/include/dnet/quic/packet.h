@@ -12,7 +12,7 @@
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::packet {
 
             constexpr bool valid_longpacket_tail_len(size_t& payload_len, size_t length, size_t pn_len, size_t payload_tag_len) {
                 payload_len = length;
@@ -28,6 +28,10 @@ namespace utils {
                 }
                 return true;
             }
+
+            // payload_tag_len is MAC or other hash tag length for encrypted payload
+            // if payload_tag_len is not zero, payload will contains only frames
+            // and parser ignores payload_tag in b
             constexpr bool parse_packet_number_and_payload(ByteLen& b, size_t pn_len, size_t length, size_t payload_tag_len,
                                                            ByteLen& packet_number, ByteLen& payload) {
                 if (!b.fwdresize(packet_number, 0, pn_len)) {
@@ -40,13 +44,30 @@ namespace utils {
                 if (!b.fwdresize(payload, pn_len, payload_len)) {
                     return false;
                 }
-                b = b.forward(payload_len + payload_tag_len);
+                b = b.forward(payload_len);
+                if (b.enough(payload_tag_len)) {
+                    b = b.forward(payload_tag_len);
+                }
                 return true;
             }
 
-            // payload_tag_len is MAC or other hash tag length for encrypted payload
-            // if payload_tag_len is set, payload will contains only frames but tag
-            // and ignoring payload_tag for b
+            constexpr bool parse_cipher_payload(ByteLen& b, size_t len, size_t payload_tag_len, ByteLen& payload) {
+                if (payload_tag_len) {
+                    if (len < payload_tag_len) {
+                        return false;
+                    }
+                    len -= payload_tag_len;
+                }
+                if (!b.fwdresize(payload, 0, len)) {
+                    return false;
+                }
+                b = b.forward(len);
+                if (b.enough(payload_tag_len)) {
+                    b = b.forward(payload_tag_len);
+                }
+                return true;
+            }
+
             constexpr bool render_packet_number_and_payload(WPacket& w, size_t pn_len, size_t length, size_t payload_tag_len,
                                                             ByteLen packet_number, ByteLen payload) {
                 size_t payload_len;
@@ -59,6 +80,23 @@ namespace utils {
                 }
                 w.append(packet_number.data, pn_len);
                 w.append(payload.data, payload_len);
+                if (payload_tag_len) {
+                    w.add(0, payload_tag_len);
+                }
+                return true;
+            }
+
+            constexpr size_t render_cipher_payload(WPacket& w, size_t len, size_t payload_tag_len, ByteLen payload) {
+                if (payload_tag_len) {
+                    if (len < payload_tag_len) {
+                        return false;
+                    }
+                    len -= payload_tag_len;
+                }
+                if (!payload.enough(len)) {
+                    return false;
+                }
+                w.append(payload.data, payload.len);
                 if (payload_tag_len) {
                     w.add(0, payload_tag_len);
                 }
@@ -272,6 +310,10 @@ namespace utils {
                 constexpr InitialPacketPartial& as_partial() {
                     return *this;
                 }
+
+                constexpr const InitialPacketPartial& as_partial() const {
+                    return *this;
+                }
             };
 
             struct InitialPacketPlain : InitialPacketPartial {
@@ -300,6 +342,28 @@ namespace utils {
                     return render_packet_number_and_payload(
                         w, flags.packet_number_length(), length.qvarint(), payload_tag_len,
                         packet_number, payload);
+                }
+            };
+
+            struct InitialPacketCipher : InitialPacketPartial {
+                ByteLen payload;
+
+                constexpr bool parse(ByteLen& b, size_t payload_tag_len = 0) {
+                    if (!InitialPacketPartial::parse(b)) {
+                        return false;
+                    }
+                    return parse_cipher_payload(b, length.qvarint(), payload_tag_len, payload);
+                }
+
+                constexpr size_t packet_len() const {
+                    return InitialPacketPartial::packet_len() + payload.len;
+                }
+
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
+                    if (!InitialPacketPartial::render(w)) {
+                        return false;
+                    }
+                    return render_cipher_payload(w, length.qvarint(), payload_tag_len, payload);
                 }
             };
 
@@ -344,6 +408,10 @@ namespace utils {
                 constexpr ZeroRTTPacketPartial& as_parital() {
                     return *this;
                 }
+
+                constexpr const ZeroRTTPacketPartial& as_partial() const {
+                    return *this;
+                }
             };
 
             struct ZeroRTTPacketPlain : ZeroRTTPacketPartial {
@@ -372,6 +440,28 @@ namespace utils {
                     return render_packet_number_and_payload(
                         w, flags.packet_number_length(), length.qvarint(), payload_tag_len,
                         packet_number, payload);
+                }
+            };
+
+            struct ZeroRTTPacketCipher : ZeroRTTPacketPartial {
+                ByteLen payload;
+
+                constexpr bool parse(ByteLen& b, size_t payload_tag_len = 0) {
+                    if (!ZeroRTTPacketPartial::parse(b)) {
+                        return false;
+                    }
+                    return parse_cipher_payload(b, length.qvarint(), payload_tag_len, payload);
+                }
+
+                constexpr size_t packet_len() const {
+                    return ZeroRTTPacketPartial::packet_len() + payload.len;
+                }
+
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
+                    if (!ZeroRTTPacketPartial::render(w)) {
+                        return false;
+                    }
+                    return render_cipher_payload(w, length.qvarint(), payload_tag_len, payload);
                 }
             };
 
@@ -416,6 +506,10 @@ namespace utils {
                 HandshakePacketPartial& as_partial() {
                     return *this;
                 }
+
+                constexpr const HandshakePacketPartial& as_partial() const {
+                    return *this;
+                }
             };
 
             struct HandshakePacketPlain : HandshakePacketPartial {
@@ -443,6 +537,28 @@ namespace utils {
                     return render_packet_number_and_payload(
                         w, flags.packet_number_length(), length.qvarint(), payload_tag_len,
                         packet_number, payload);
+                }
+            };
+
+            struct HandshakePacketCipher : HandshakePacketPartial {
+                ByteLen payload;
+
+                constexpr bool parse(ByteLen& b, size_t payload_tag_len = 0) {
+                    if (!HandshakePacketPartial::parse(b)) {
+                        return false;
+                    }
+                    return parse_cipher_payload(b, length.qvarint(), payload_tag_len, payload);
+                }
+
+                constexpr size_t packet_len() const {
+                    return HandshakePacketPartial::packet_len() + payload.len;
+                }
+
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
+                    if (!HandshakePacketPartial::render(w)) {
+                        return false;
+                    }
+                    return render_cipher_payload(w, length.qvarint(), payload_tag_len, payload);
                 }
             };
 
@@ -513,7 +629,7 @@ namespace utils {
                     return true;
                 }
 
-                constexpr size_t packet_len() {
+                constexpr size_t packet_len() const {
                     return Packet::packet_len() + dstID.len;
                 }
 
@@ -534,6 +650,10 @@ namespace utils {
                 OneRTTPacketPartial& as_partial() {
                     return *this;
                 }
+
+                constexpr const OneRTTPacketPartial& as_partial() const {
+                    return *this;
+                }
             };
 
             struct OneRTTPacketPlain : OneRTTPacketPartial {
@@ -549,7 +669,7 @@ namespace utils {
                         packet_number, payload);
                 }
 
-                constexpr size_t packet_len() {
+                constexpr size_t packet_len() const {
                     return OneRTTPacketPartial::packet_len() +
                            packet_number.len +
                            payload.len;
@@ -563,6 +683,28 @@ namespace utils {
                     return render_packet_number_and_payload(
                         w, pn_len, pn_len + payload.len + payload_tag_len, payload_tag_len,
                         packet_number, payload);
+                }
+            };
+
+            struct OneRTTPacketCipher : OneRTTPacketPartial {
+                ByteLen payload;
+
+                constexpr bool parse(ByteLen& b, auto&& get_dstID_len, size_t payload_tag_len = 0) {
+                    if (!OneRTTPacketPartial::parse(b, get_dstID_len)) {
+                        return false;
+                    }
+                    return parse_cipher_payload(b, b.len, payload_tag_len, payload);
+                }
+
+                constexpr size_t packet_len() const {
+                    return OneRTTPacketPartial::packet_len() + payload.len;
+                }
+
+                constexpr bool render(WPacket& w, size_t payload_tag_len = 0) const {
+                    if (!OneRTTPacketPartial::render(w)) {
+                        return false;
+                    }
+                    return render_cipher_payload(w, payload.len + payload_tag_len, payload_tag_len, payload);
                 }
             };
 
@@ -604,6 +746,6 @@ namespace utils {
                 }
             };
 
-        }  // namespace quic
+        }  // namespace quic::packet
     }      // namespace dnet
 }  // namespace utils

@@ -59,7 +59,7 @@ namespace utils {
                         state->check_and_start();
                         state->send << Client{std::move(sock), addr, port};
                     };
-                    do_accept(listener, handle, [&](bool waiting) {
+                    do_accept(listener, handle, [&](error::Error&, bool waiting) {
                         if (!waiting) {
                             state->count.total_failed_accept++;
                         }
@@ -90,7 +90,7 @@ namespace utils {
                             handler(ctx, Client{std::move(sock), addr, port}, StateContext{shared_from_this()});
                         }
                     };
-                    do_accept(listener, handle, [&](bool waiting) {
+                    do_accept(listener, handle, [&](error::Error& err, bool waiting) {
                         if (!waiting) {
                             count.total_failed_accept++;
                         }

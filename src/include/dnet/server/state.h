@@ -173,8 +173,8 @@ namespace utils {
                 bool read_async(Socket& sock, auto fn, auto&& object, auto get_sock, auto add_data) {
                     count.total_async_invocation++;
                     count.waiting_async_read++;
-                    if (!sock.read_async(
-                            [th = shared_from_this(), fn](auto&& obj) {
+                    if (auto err = sock.read_async(
+                            [th = shared_from_this(), fn](auto&& obj, error::Error err) {
                                 th->count.waiting_async_read--;
                                 Enter ent{th->count.current_handling_handler_thread};
                                 fn(std::move(obj), {th});

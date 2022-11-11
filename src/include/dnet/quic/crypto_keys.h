@@ -11,7 +11,7 @@
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::crypto {
             template <size_t size_>
             struct Key {
                 byte key[size_];
@@ -70,6 +70,6 @@ namespace utils {
                 handshake,
                 application,
             };
-        }  // namespace quic
+        }  // namespace quic::crypto
     }      // namespace dnet
 }  // namespace utils

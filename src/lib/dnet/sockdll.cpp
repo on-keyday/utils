@@ -11,7 +11,7 @@
 #ifndef _WIN32
 #include <dlfcn.h>
 #include <sys/stat.h>
-#include <quic/mem/raii.h>
+#include <helper/defer.h>
 #endif
 namespace utils {
     namespace dnet {
@@ -154,7 +154,25 @@ namespace utils {
         }
 
         bool Kernel::load() {
-            return load_system_lib(this, lib, L"kernel32.dll");
+            if (!load_system_lib(this, lib, L"kernel32.dll")) {
+                return false;
+            }
+            if (SetFileCompletionNotificationModes_) {
+                INT ptr[]{IPPROTO_TCP, 0};
+                WSAPROTOCOL_INFOW info[32];
+                DWORD len = sizeof(info);
+                if (socdl.WSAEnumProtocolsW_(ptr, info, &len) == SOCKET_ERROR) {
+                    SetFileCompletionNotificationModes_ = nullptr;
+                    return true;
+                }
+                for (auto i = 0; i < len; i++) {
+                    if ((info[i].dwServiceFlags1 & XP1_IFS_HANDLES) == 0) {
+                        SetFileCompletionNotificationModes_ = nullptr;
+                        return true;
+                    }
+                }
+            }
+            return true;
         }
 #else
         void* load_sys_mod(const void* libname) {
@@ -189,15 +207,13 @@ namespace utils {
         }
 
         bool Kernel::load() {
-            quic::mem::RAII r{
-                realpath(libanl, nullptr),
-                [](auto c) {
-                    free(c);
-                },
-            };
+            auto r = realpath(libanl, nullptr);
+            const auto p = helper::defer([&] {
+                free(r);
+            });
             auto libname = libanl;
-            if (r()) {
-                libname = r();
+            if (r) {
+                libname = r;
             }
             return load_system_lib(this, lib, libname, false);
         }

@@ -145,11 +145,11 @@ namespace utils {
             };
 
             constexpr TransportParameter make_transport_param(DefinedTransportParamID id, ByteLen data, WPacket& src) {
-                auto idv = src.varint(size_t(id));
+                auto idv = src.qvarint(size_t(id));
                 if (!idv.is_qvarint_valid()) {
                     return {};
                 }
-                auto lenv = src.varint(data.len);
+                auto lenv = src.qvarint(data.len);
                 if (!lenv.is_qvarint_valid()) {
                     return {};
                 }
@@ -157,7 +157,7 @@ namespace utils {
             }
 
             constexpr TransportParameter make_transport_param(DefinedTransportParamID id, size_t data, WPacket& src) {
-                auto datav = src.varint(data);
+                auto datav = src.qvarint(data);
                 if (!datav.is_qvarint_valid()) {
                     return {};
                 }

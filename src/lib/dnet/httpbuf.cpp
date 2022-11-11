@@ -13,12 +13,12 @@
 namespace utils {
     namespace dnet {
         HTTPBuf::~HTTPBuf() {
-            free_cvec(text, DNET_DEBUG_MEMORY_LOCINFO(true, cap));
+            free_cvec(text, DNET_DEBUG_MEMORY_LOCINFO(true, cap, alignof(char)));
             text = nullptr;
         }
 
         HTTPBuf::HTTPBuf(size_t c) {
-            text = get_cvec(c, DNET_DEBUG_MEMORY_LOCINFO(true, c));
+            text = get_cvec(c, DNET_DEBUG_MEMORY_LOCINFO(true, c, alignof(char)));
             if (text) {
                 cap = c;
             }
@@ -30,7 +30,7 @@ namespace utils {
             }
             HTTPBufProxy p{*buf};
             if (p.size() + 1 >= p.cap()) {
-                if (!resize_cvec(p.text(), p.cap() * 2, DNET_DEBUG_MEMORY_LOCINFO(true, p.cap()))) {
+                if (!resize_cvec(p.text(), p.cap() * 2, DNET_DEBUG_MEMORY_LOCINFO(true, p.cap(), alignof(char)))) {
                     return;
                 }
                 p.cap() <<= 1;

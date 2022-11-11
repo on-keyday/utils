@@ -49,14 +49,14 @@ namespace utils {
             }
 
             bool do_accept(Socket& sock, auto&& accepted, auto&& failed) {
-                if (!sock.wait_readable(0, 1000)) {
-                    return failed(true /*at wait*/);
+                if (auto err = sock.wait_readable(0, 1000)) {
+                    return failed(err, true /*at wait*/);
                 }
                 ::sockaddr_storage st;
                 int len = sizeof(st);
                 dnet::Socket new_sock;
-                if (!sock.accept(new_sock, &st, &len)) {
-                    return failed(false /*at accept*/);
+                if (auto err = sock.accept(new_sock, (dnet::raw_address*)&st, &len)) {
+                    return failed(err, false /*at accept*/);
                 }
                 int port = 0;
                 auto ipaddr = string_from_sockaddr(&st, len, &port);

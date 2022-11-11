@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(utils)
 include_directories("src/include")
 
+set(CMAKE_CXX_STANDARD 20)
+
 if(WIN32)
   include_directories("$ENV{OPENSSL_INCLUDE}")
   link_directories("$ENV{OPENSSL_LINK}")
@@ -30,8 +32,6 @@ else()
     set(CMAKE_EXE_LINKER_FLAGS "-lc++ -lc++abi -lm -lc -lgcc_s -lgcc -lpthread -fcoroutines")
   endif()
 endif()
-
-set(CMAKE_CXX_STANDARD 20)
 
 find_package(Threads REQUIRED)
 
@@ -114,6 +114,9 @@ add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
 add_executable(dnet_http2 "src/test/dnet/test_dnet_http2.cpp")
 add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
 add_executable(dnetquic_initial "src/test/dnet/test_dnetquic_initial.cpp")
+add_executable(dnetquic_context "src/test/dnet/test_dnetquic_context.cpp")
+add_executable(dnet_error "src/test/dnet/test_dnet_error.cpp")
+add_executable(ipparse "src/test/net/test_ipparse.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -139,10 +142,7 @@ add_executable(durl "src/tool/durl/main.cpp"
   "src/tool/durl/uri.cpp"
   "src/tool/durl/http.cpp"
 )
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "gentest")
-
-add_executable(pscmplgen "src/gentest/pscmpl.cpp")
+add_executable(igen2 "src/tool/igen2/main.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -213,7 +213,6 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/addrinfo.cpp"
   "src/lib/dnet/ssldll.cpp"
   "src/lib/dnet/tls.cpp"
-  "src/lib/dnet/httproundtrip.cpp"
   "src/lib/dnet/httpbuf.cpp"
   "src/lib/dnet/h2frame.cpp"
   "src/lib/dnet/http2.cpp"
@@ -226,6 +225,12 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/quic/masks.cpp"
   "src/lib/dnet/quic/enc_packet.cpp"
   "src/lib/dnet/quic/cipher_payload.cpp"
+  "src/lib/dnet/quic/context/quic.cpp"
+  "src/lib/dnet/quic/context/handshake.cpp"
+  "src/lib/dnet/quic/context/packet_handler.cpp"
+  "src/lib/dnet/quic/context/frame_handler.cpp"
+  "src/lib/dnet/address.cpp"
+  "src/lib/dnet/sockopt.cpp"
 )
 
 target_sources(dnetserv PRIVATE
@@ -318,6 +323,7 @@ target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
 target_link_libraries(minlc utils)
 target_link_libraries(durl utils dnet)
+target_link_libraries(igen2 utils)
 
 # libquic
 target_link_libraries(quic_udp quic utils)
@@ -334,6 +340,8 @@ target_link_libraries(dnet_tls dnet)
 target_link_libraries(dnet_http dnet utils)
 target_link_libraries(dnet_http2 dnet)
 target_link_libraries(dnetquic_initial dnet)
+target_link_libraries(dnetquic_context dnet)
+target_link_libraries(dnet_error dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)
@@ -347,9 +355,6 @@ else()
   target_link_libraries(utnet dnet)
   target_link_libraries(asynctcp2 Threads::Threads)
 endif()
-
-# gentest code
-target_link_libraries(pscmplgen utils)
 
 if(WIN32)
   if(UTILS_BUILD_SHARED_LIBS)
@@ -376,10 +381,6 @@ if(WIN32)
     add_custom_command(
       TARGET utnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "tool/libutnet.dll"
-    )
-    add_custom_command(
-      TARGET utils POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "gentest/libutils.dll"
     )
   endif()
 endif()

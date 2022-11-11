@@ -19,7 +19,10 @@ namespace utils {
                 Retry,
                 VersionNegotiation,  // section 17.2.1
                 OneRTT,              // 1-RTT
+
                 Unknown,
+                LongPacket,
+                StateLessReset,
             };
 
             // packe_type_to_mask returns packet number byte mask for type and version
@@ -41,6 +44,8 @@ namespace utils {
                             return 0xE0;
                         case PacketType::Retry:
                             return 0xF0;
+                        default:
+                            break;
                     }
                 }
                 return 0xff;
@@ -61,7 +66,7 @@ namespace utils {
                         case 3:
                             return PacketType::Retry;
                         default:
-                            return PacketType::Unknown;
+                            break;
                     }
                 }
                 return PacketType::Unknown;
@@ -192,15 +197,62 @@ namespace utils {
                        type == FrameType::DATAGRAM_LEN;
             }
 
+            // rfc 9000 12.4. Frames and Frame Types
+            // Table 3. Frame Types
+
             constexpr bool is_ACKEliciting(FrameType type) {
-                return type != FrameType::ACK &&
+                return type != FrameType::PADDING &&
+                       type != FrameType::ACK &&
                        type != FrameType::ACK_ECN &&
                        type != FrameType::CONNECTION_CLOSE &&
                        type != FrameType::CONNECTION_CLOSE_APP;
             }
 
+            constexpr bool is_MTUProbe(FrameType type) {
+                return type == FrameType::PADDING ||
+                       type == FrameType::NEW_CONNECTION_ID ||
+                       type == FrameType::PATH_CHALLENGE ||
+                       type == FrameType::PATH_RESPONSE;
+            }
+
+            constexpr bool is_FlowControled(FrameType type) {
+                return is_STREAM(type);
+            }
+
+            constexpr bool is_ByteCounted(FrameType type) {
+                return type != FrameType::ACK;
+            }
+
+            constexpr bool is_InitialPacketOK(FrameType type) {
+                return type == FrameType::PADDING ||
+                       type == FrameType::PING ||
+                       type == FrameType::ACK ||
+                       type == FrameType::CRYPTO ||
+                       type == FrameType::CONNECTION_CLOSE;
+            }
+
+            constexpr bool is_HandshakePacketOK(FrameType type) {
+                return is_InitialPacketOK(type);
+            }
+
+            constexpr bool is_ZeroRTTPacketOK(FrameType type) {
+                return type != FrameType::ACK &&
+                       type != FrameType::CRYPTO &&
+                       type != FrameType::NEW_TOKEN &&
+                       type != FrameType::PATH_RESPONSE &&
+                       type != FrameType::HANDSHAKE_DONE;
+            }
+
+            constexpr bool is_OneRTTPacketOK(FrameType type) {
+                return true;  // all types are allowed
+            }
+
             struct FrameFlags {
                 byte* value = nullptr;
+
+                constexpr bool valid() const {
+                    return value != nullptr;
+                }
 
                 constexpr byte raw() const {
                     return value ? *value : 0;
@@ -242,14 +294,14 @@ namespace utils {
 
                 constexpr bool STREAM_len() const {
                     if (type() == FrameType::STREAM) {
-                        return raw() & 0x2;
+                        return raw() & 0x02;
                     }
                     return false;
                 }
 
                 constexpr bool STREAM_off() const {
                     if (type() == FrameType::STREAM) {
-                        return raw() & 0x4;
+                        return raw() & 0x04;
                     }
                     return false;
                 }

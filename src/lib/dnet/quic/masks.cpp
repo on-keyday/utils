@@ -8,10 +8,11 @@
 #include <dnet/quic/crypto.h>
 #include <dnet/dll/ssldll.h>
 #include <helper/defer.h>
+#include <cstring>
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::crypto {
 
             bool generate_masks_aes_based(const byte* hp_key, byte* sample, byte* masks, bool is_aes256) {
                 auto& c = ssldl;
@@ -62,6 +63,6 @@ namespace utils {
                 memcpy(masks, data, 5);
                 return true;
             }
-        }  // namespace quic
+        }  // namespace quic::crypto
     }      // namespace dnet
 }  // namespace utils

@@ -13,6 +13,7 @@
 #endif
 namespace utils {
     namespace dnet {
+        /*
         constexpr auto defbuf_reserved = 0x994827f3;
 
         struct EasyBuffer {
@@ -22,13 +23,13 @@ namespace utils {
             constexpr EasyBuffer() {}
 
             [[nodiscard]] EasyBuffer(size_t sz) {
-                buf = get_cvec(sz, DNET_DEBUG_MEMORY_LOCINFO(true, sz));
+                buf = get_cvec(sz, DNET_DEBUG_MEMORY_LOCINFO(true, sz, alignof(char)));
                 size = sz;
             }
 
             ~EasyBuffer() {
                 if (should_del) {
-                    free_cvec(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size));
+                    free_cvec(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size, alignof(char)));
                 }
                 buf = nullptr;
             }
@@ -54,46 +55,46 @@ namespace utils {
 
         bool start_async_operation(
             void* ptr, std::uintptr_t sock, AsyncMethod mode,
-            /*for connectex*/
+            *for connectex*
             const void* addr, size_t addrlen);
 
-        struct AsyncBufferCommon {
-            AsyncHead head;
+            struct AsyncBufferCommon {
+                AsyncHead head;
 #ifdef _WIN32
-            OVERLAPPED ol{};
+                OVERLAPPED ol{};
 #endif
-            const std::uint32_t reserved = defbuf_reserved;
-            EasyBuffer ebuf;
-            completions_t comp{};
-            bool incomplete = false;
-            void* user = nullptr;
-        };
+                const std::uint32_t reserved = defbuf_reserved;
+                EasyBuffer ebuf;
+                completions_t comp{};
+                bool incomplete = false;
+                void* user = nullptr;
+            };
 
-        inline AsyncHead* async_head_from_context(void* ol) {
-            if (!ol) {
+            inline AsyncHead* async_head_from_context(void* ol) {
+                if (!ol) {
+                    return nullptr;
+                }
+                void* h = static_cast<char*>(ol)
+#ifdef _WIN32
+                          - sizeof(AsyncHead)
+#endif
+                    ;
+                auto t = static_cast<AsyncHead*>(h);
+                if (t->reserved == async_reserved) {
+                    return t;
+                }
                 return nullptr;
             }
-            void* h = static_cast<char*>(ol)
-#ifdef _WIN32
-                      - sizeof(AsyncHead)
-#endif
-                ;
-            auto t = static_cast<AsyncHead*>(h);
-            if (t->reserved == async_reserved) {
-                return t;
-            }
-            return nullptr;
-        }
 
-        struct AsyncBuffer;
-        AsyncBuffer* AsyncBuffer_new();
+            struct AsyncBuffer;
+            AsyncBuffer* AsyncBuffer_new();
 
-        void AsyncBuffer_gc(void*, std::uintptr_t);
+            void AsyncBuffer_gc(void*, std::uintptr_t);
 
-        int wait_event_plt(std::uint32_t time);
+            int wait_event_plt(std::uint32_t time);
 
-        void set_nonblock(std::uintptr_t sock, bool);
-        void sockclose(std::uintptr_t sock);
-
+            void set_nonblock(std::uintptr_t sock, bool);
+            void sockclose(std::uintptr_t sock);
+            */
     }  // namespace dnet
 }  // namespace utils

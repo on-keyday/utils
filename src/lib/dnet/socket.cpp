@@ -12,8 +12,9 @@
 #include <dnet/errcode.h>
 #include <cstring>
 #include <atomic>
-#include <dnet/dll/sockasync.h>
 #include <dnet/dll/errno.h>
+#include <dnet/dll/asyncbase.h>
+
 namespace utils {
     namespace dnet {
 #ifdef _WIN32
@@ -36,15 +37,50 @@ namespace utils {
         }
 #endif
 
-        bool Socket::connect(const void* addr, size_t len) {
-            auto res = socdl.connect_(sock, static_cast<const ::sockaddr*>(addr), len);
-            if (res < 0) {
-                err = get_error();
+        dnet_dll_implement(bool) isMsgSize(const error::Error& err) {
+            if (err.category() != error::ErrorCategory::syserr) {
+                return false;
             }
-            return res >= 0;
+            if (err.type() != error::ErrorType::number) {
+                return false;
+            }
+#ifdef _WIN32
+            return err.errnum() == WSAEMSGSIZE;
+#else
+            return err.errnum() == EMSGSIZE;
+#endif
         }
 
-        bool sock_wait(int& err, std::uintptr_t sock, std::uint32_t sec, std::uint32_t usec, bool read) {
+        dnet_dll_implement(bool) isBlock(const error::Error& err) {
+            if (err.category() != error::ErrorCategory::syserr) {
+                return false;
+            }
+            if (err == error::block) {
+                return true;
+            }
+            if (err.type() != error::ErrorType::number) {
+                return false;
+            }
+#ifdef _WIN32
+            return err.errnum() == WSAEWOULDBLOCK;
+#else
+            return err.errnum() == EINPROGRESS || err.errnum() == EWOULDBLOCK;
+#endif
+        }
+
+        error::Error Errno() {
+            return error::Error(get_error(), error::ErrorCategory::syserr);
+        }
+
+        error::Error Socket::connect(const void* addr, size_t len) {
+            auto res = socdl.connect_(sock, static_cast<const ::sockaddr*>(addr), len);
+            if (res < 0) {
+                return Errno();
+            }
+            return error::none;
+        }
+
+        error::Error sock_wait(std::uintptr_t sock, std::uint32_t sec, std::uint32_t usec, bool read) {
             timeval val{};
             val.tv_sec = sec;
             val.tv_usec = usec;
@@ -61,264 +97,162 @@ namespace utils {
                 res = socdl.select_(sock + 1, nullptr, &xset, &excset, &val);
             }
             if (res == -1) {
-                err = get_error();
-                return false;
+                return Errno();
             }
-
 #ifdef _WIN32
             if (socdl.__WSAFDIsSet_(sock, &excset)) {
-                err = get_error();
-                return false;
+                return Errno();
             }
             if (socdl.__WSAFDIsSet_(sock, &xset)) {
-                return true;
+                return error::none;
             }
 #else
             if (FD_ISSET(sock, &excset)) {
-                err = get_error();
-                return false;
+                return Errno();
             }
             if (FD_ISSET(sock, &xset)) {
-                return true;
+                return error::none;
             }
 #endif
-            return false;
+            return error::block;
         }
 
-        bool Socket::wait_readable(std::uint32_t sec, std::uint32_t usec) {
-            return sock_wait(err, sock, sec, usec, true);
+        error::Error Socket::wait_readable(std::uint32_t sec, std::uint32_t usec) {
+            return sock_wait(sock, sec, usec, true);
         }
 
-        bool Socket::wait_writable(std::uint32_t sec, std::uint32_t usec) {
-            return sock_wait(err, sock, sec, usec, false);
+        error::Error Socket::wait_writable(std::uint32_t sec, std::uint32_t usec) {
+            return sock_wait(sock, sec, usec, false);
         }
 
-        bool Socket::write(const void* data, size_t len, int flag) {
+        std::pair<size_t, error::Error> Socket::write(const void* data, size_t len, int flag) {
             auto res = socdl.send_(sock, static_cast<const char*>(data), len, flag);
             if (res < 0) {
-                err = get_error();
+                return {0, Errno()};
             }
-            return res > 0;
+            return {res, error::none};
         }
 
-        bool Socket::read(void* data, size_t len, int flag) {
+        std::pair<size_t, error::Error> Socket::read(void* data, size_t len, int flag) {
             auto res = socdl.recv_(sock, static_cast<char*>(data), len, flag);
             if (res < 0) {
-                err = get_error();
+                return {0, Errno()};
             }
-            else {
-                prevred = res;
-            }
-            return res > 0;
+            return {res, res == 0 ? error::eof : error::none};
         }
 
-        bool Socket::writeto(const void* addr, int addrlen, const void* data, size_t len, int flag) {
-            auto res = socdl.sendto_(sock, static_cast<const char*>(data), int(len), flag, static_cast<const sockaddr*>(addr), int(addrlen));
+        std::pair<size_t, error::Error> Socket::writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag) {
+            auto res = socdl.sendto_(sock, static_cast<const char*>(data), int(len), flag, reinterpret_cast<const sockaddr*>(addr), int(addrlen));
             if (res < 0) {
-                err = get_error();
+                return {0, Errno()};
             }
-            return res >= 0;
+            return {res, error::none};
         }
 
-        bool Socket::readfrom(void* addr, int* addrlen, void* data, size_t len, int flag) {
+        std::pair<size_t, error::Error> Socket::writeto(const NetAddrPort& addr, const void* data, size_t len, int flag) {
+            sockaddr_storage st;
+            auto [addrptr, addrlen] = NetAddrPort_to_sockaddr(&st, addr);
+            if (!addrptr) {
+                return {0, error::Error(not_supported, error::ErrorCategory::validationerr)};
+            }
+            auto res = socdl.sendto_(sock, static_cast<const char*>(data), len, flag, addrptr, addrlen);
+            if (res < 0) {
+                return {0, Errno()};
+            }
+            return {res, error::none};
+        }
+
+        std::pair<size_t, error::Error> Socket::readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag) {
             if (!addrlen) {
-                err = invalid_addr;
-                return false;
+                return {0, error::Error(invalid_addr, error::ErrorCategory::validationerr)};
             }
             socklen_t fromlen = *addrlen;
-            auto res = socdl.recvfrom_(sock, static_cast<char*>(data), len, flag, static_cast<sockaddr*>(addr), &fromlen);
+            auto res = socdl.recvfrom_(sock, static_cast<char*>(data), len, flag, reinterpret_cast<sockaddr*>(addr), &fromlen);
             if (res < 0) {
-                err = get_error();
+                return {0, error::Error(get_error(), error::ErrorCategory::syserr)};
             }
-            else {
-                *addrlen = fromlen;
-                prevred = res;
+            *addrlen = fromlen;
+            return {res, error::none};
+        }
+
+        std::tuple<size_t, NetAddrPort, error::Error> Socket::readfrom(void* data, size_t len, int flag) {
+            sockaddr_storage soct{};
+            socklen_t fromlen = sizeof(soct);
+            auto addr = reinterpret_cast<sockaddr*>(&soct);
+            auto res = socdl.recvfrom_(sock, static_cast<char*>(data), len, flag, addr, &fromlen);
+            if (res < 0) {
+                return {0, NetAddrPort{}, Errno()};
             }
-            return res >= 0;
+            return {res, sockaddr_to_NetAddrPort(addr, fromlen), error::none};
         }
 
-        bool Socket::block() const {
-#ifdef _WIN32
-            return err == WSAEWOULDBLOCK;
-#else
-            return err == EINPROGRESS || err == EWOULDBLOCK;
-#endif
-        }
-
-        bool Socket::msgsize() const {
-#ifdef _WIN32
-            return err == WSAEMSGSIZE;
-#else
-            return err == EMSGSIZE;
-#endif
-        }
-
-        bool Socket::shutdown(int mode) {
+        error::Error Socket::shutdown(int mode) {
             auto res = socdl.shutdown_(sock, mode);
-            if (res < 0) {
-                err = get_error();
+            if (res != 0) {
+                return Errno();
             }
-            return res == 0;
-        }
-
-        bool Socket::get_option(int layer, int opt, void* buf, size_t size) {
-            socklen_t len = int(size);
-            auto res = socdl.getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
-            if (res < 0) {
-                err = get_error();
-            }
-            return res == 0;
-        }
-
-        bool Socket::set_option(int layer, int opt, const void* buf, size_t size) {
-            auto res = socdl.setsockopt_(sock, layer, opt, static_cast<const char*>(buf), int(size));
-            if (res < 0) {
-                err = get_error();
-            }
-            return res == 0;
-        }
-
-        bool Socket::set_reuse_addr(bool resue) {
-            int yes = resue ? 1 : 0;
-            return set_option(SOL_SOCKET, SO_REUSEADDR, yes);
-        }
-
-        bool Socket::set_ipv6only(bool only) {
-            int yes = only ? 1 : 0;
-            return set_option(IPPROTO_IPV6, IPV6_V6ONLY, yes);
-        }
-
-        bool Socket::set_nodelay(bool no_delay) {
-            int yes = no_delay ? 1 : 0;
-            return set_option(IPPROTO_TCP, TCP_NODELAY, yes);
-        }
-
-        bool Socket::set_ttl(unsigned char ttl) {
-            int ttl_buf = ttl;
-            return set_option(IPPROTO_IP, IP_TTL, ttl_buf);
-        }
-
-        bool Socket::set_exclusive_use(bool exclusive) {
-#ifdef _WIN32
-            int yes = exclusive ? 1 : 0;
-            return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
-#else
-            return false;
-#endif
-        }
-
-        bool Socket::set_mtu_discover(MTUConfig conf) {
-            int val = 0;
-            if (conf == mtu_default) {
-#ifdef _WIN32
-                val = IP_PMTUDISC_NOT_SET;
-#else
-                val = IP_PMTUDISC_WANT;
-#endif
-            }
-            else if (conf == mtu_enable) {
-                val = IP_PMTUDISC_DO;
-            }
-            else if (conf == mtu_disable) {
-                val = IP_PMTUDISC_DONT;
-            }
-            else if (conf == mtu_ignore) {
-                val = IP_PMTUDISC_PROBE;
-            }
-            else {
-                return false;
-            }
-            return set_option(IPPROTO_IP, IP_MTU_DISCOVER, val);
-        }
-
-        bool Socket::set_mtu_discover_v6(MTUConfig conf) {
-            int val = 0;
-            if (conf == mtu_default) {
-#ifdef _WIN32
-                val = IP_PMTUDISC_NOT_SET;
-#else
-                val = IP_PMTUDISC_WANT;
-#endif
-            }
-            else if (conf == mtu_enable) {
-                val = IP_PMTUDISC_DO;
-            }
-            else if (conf == mtu_disable) {
-                val = IP_PMTUDISC_DONT;
-            }
-            else if (conf == mtu_ignore) {
-                val = IP_PMTUDISC_PROBE;
-            }
-            else {
-                return false;
-            }
-            return set_option(IPPROTO_IPV6, IPV6_MTU_DISCOVER, val);
-        }
-
-        std::int32_t Socket::get_mtu() {
-            std::int32_t val = 0;
-            if (!get_option(IPPROTO_IP, IP_MTU, val)) {
-                return -1;
-            }
-            return val;
-        }
-
-        void Socket::set_blocking(bool blocking) {
-            set_nonblock(sock, !blocking);
-        }
-
-        bool Socket::set_dontfragment(bool df) {
-            return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
-        }
-
-        bool Socket::set_dontfragment_v6(bool df) {
-            return set_option(IPPROTO_IP, IPV6_DONTFRAG, std::uint32_t(df ? 1 : 0));
-        }
-
-        bool Socket::bind(const void* addr, size_t len) {
-            auto res = socdl.bind_(sock, static_cast<const sockaddr*>(addr), len);
-            if (res < 0) {
-                err = get_error();
-            }
-            return res == 0;
-        }
-
-        bool Socket::listen(int back) {
-            auto res = socdl.listen_(sock, back);
-            if (res < 0) {
-                err = get_error();
-            }
-            return res == 0;
+            return error::none;
         }
 
         Socket make_socket(std::uintptr_t uptr) {
             return Socket(uptr);
         }
 
-        bool Socket::accept(Socket& to, void* addr, int* addrlen) {
+        error::Error Socket::bind(const raw_address* addr, size_t len) {
+            auto res = socdl.bind_(sock, reinterpret_cast<const sockaddr*>(addr), len);
+            if (res != 0) {
+                return Errno();
+            }
+            return error::none;
+        }
+
+        error::Error Socket::listen(int back) {
+            auto res = socdl.listen_(sock, back);
+            if (res != 0) {
+                return Errno();
+            }
+            return error::none;
+        }
+
+        error::Error Socket::accept(Socket& to, raw_address* addr, int* addrlen) {
             if (to.sock != ~0) {
-                err = non_invalid_socket;
-                return false;
+                return error::Error(non_invalid_socket, error::ErrorCategory::validationerr);
             }
             if (!addrlen) {
-                err = invalid_addr;
-                return false;
+                return error::Error(invalid_addr, error::ErrorCategory::validationerr);
             }
             socklen_t len = *addrlen;
-            auto new_sock = socdl.accept_(sock, static_cast<sockaddr*>(addr), &len);
+            auto new_sock = socdl.accept_(sock, reinterpret_cast<sockaddr*>(addr), &len);
             if (new_sock == -1) {
-                err = get_error();
-                return false;
+                return Errno();
             }
             *addrlen = len;
             set_nonblock(new_sock);
             to = make_socket(std::uintptr_t(new_sock));
-            return true;
+            return error::none;
+        }
+
+        std::tuple<Socket, NetAddrPort, error::Error> Socket::accept() {
+            sockaddr_storage st{};
+            socklen_t addrlen = sizeof(st);
+            auto ptr = reinterpret_cast<sockaddr*>(&st);
+            auto new_sock = socdl.accept_(sock, ptr, &addrlen);
+            if (new_sock == -1) {
+                return {Socket(), NetAddrPort(), Errno()};
+            }
+            set_nonblock(new_sock);
+            return {
+                make_socket(std::uintptr_t(new_sock)),
+                sockaddr_to_NetAddrPort(ptr, addrlen),
+                error::none,
+            };
         }
 
         Socket::~Socket() {
-            if (opt && gc_) {
-                gc_(opt, sock);
+            if (async_ctx) {
+                remove_fd(sock);
+                auto p = static_cast<RWAsyncSuite*>(async_ctx);
+                p->decr();
             }
             if (sock != ~0) {
                 sockclose(sock);
@@ -326,11 +260,7 @@ namespace utils {
         }
 
         bool init_sockdl() {
-#ifdef _WIN32
-            static auto result = socdl.load();
-#else
             static auto result = socdl.load() && kerlib.load();
-#endif
             return result;
         }
 
@@ -350,134 +280,8 @@ namespace utils {
             return make_socket(sock);
         }
 
-        bool initopt(void*& opt, void (*&gc)(void*, std::uintptr_t), int& err, void* user,
-                     void* data, size_t datalen, completions_t comp, AsyncMethod mode) {
-            if (!opt) {
-                opt = AsyncBuffer_new();
-                if (!opt) {
-                    err = no_resource;
-                    return false;
-                }
-                gc = AsyncBuffer_gc;
-            }
-            auto buf = static_cast<AsyncBufferCommon*>(opt);
-            if (buf->reserved == defbuf_reserved) {
-                if (buf->incomplete) {
-                    err = operation_imcomplete;
-                    return false;
-                }
-                buf->user = user;
-                if (mode == am_send || mode == am_sendto) {
-                    buf->ebuf.~EasyBuffer();
-                    buf->ebuf = {datalen};
-                    if (!buf->ebuf.buf) {
-                        err = no_resource;
-                        return false;
-                    }
-                    memmove(buf->ebuf.buf, data, datalen);
-                    buf->ebuf.should_del = true;
-                }
-                else if (mode != am_connect) {
-                    if (data && datalen) {
-                        buf->ebuf.~EasyBuffer();
-                        buf->ebuf.buf = (char*)data;
-                        buf->ebuf.size = datalen;
-                        buf->ebuf.should_del = false;
-                    }
-                    else {
-                        if (!buf->ebuf.should_del || !buf->ebuf.buf) {
-                            buf->ebuf.~EasyBuffer();
-                            buf->ebuf = {2048};
-                        }
-                        if (!buf->ebuf.buf) {
-                            err = no_resource;
-                            return false;
-                        }
-                        buf->ebuf.should_del = true;
-                    }
-                }
-                buf->comp = comp;
-            }
-            return true;
-        }
-
-        bool Socket::read_async(completion_recv_t completion, void* user, void* data, size_t datalen) {
-            if (!initopt(opt, gc_, err, user, data, datalen, completions_t(completion), am_recv)) {
-                return false;
-            }
-            if (!start_async_operation(opt, sock, am_recv, nullptr, 0)) {
-                err = get_error();
-                return false;
-            }
-            return true;
-        }
-
-        bool Socket::readfrom_async(completion_from_t completion, void* user, void* data, size_t datalen) {
-            if (!initopt(opt, gc_, err, user, data, datalen, completions_t(completion), am_recvfrom)) {
-                return false;
-            }
-            if (!start_async_operation(opt, sock, am_recvfrom, nullptr, 0)) {
-                err = get_error();
-                return false;
-            }
-            return true;
-        }
-
-        bool Socket::accept_async(completion_accept_t completion, void* user, void* data, size_t datalen) {
-            if (!initopt(opt, gc_, err, user, data, datalen, completions_t{completion}, am_accept)) {
-                return false;
-            }
-            if (!start_async_operation(opt, sock, am_accept, nullptr, 0)) {
-                err = get_error();
-                return false;
-            }
-            return true;
-        }
-
-        bool Socket::connect_async(completion_connect_t completion, void* user, const void* addr, size_t len) {
-            if (!initopt(opt, gc_, err, user, nullptr, 0, completions_t(completion), am_connect)) {
-                return false;
-            }
-            if (!start_async_operation(opt, sock, am_connect, addr, len)) {
-                err = get_error();
-                return false;
-            }
-            return true;
-        }
-
-        bool Socket::write_async(completion_send_t completion, void* user, const void* data, size_t datalen) {
-            if (!initopt(opt, gc_, err, user, (void*)data, datalen, completions_t(completion), am_send)) {
-                return false;
-            }
-            if (!start_async_operation(opt, sock, am_send, nullptr, 0)) {
-                err = get_error();
-                return false;
-            }
-            return true;
-        }
-
-        bool Socket::writeto_async(completion_send_t completion, void* user, const void* addr, size_t addrlen, const void* data, size_t datalen) {
-            if (!initopt(opt, gc_, err, user, (void*)data, datalen, completions_t(completion), am_sendto)) {
-                return false;
-            }
-            if (!start_async_operation(opt, sock, am_sendto, addr, addrlen)) {
-                err = get_error();
-                return false;
-            }
-            return true;
-        }
-
         dnet_dll_implement(int) wait_event(std::uint32_t time) {
             return wait_event_plt(time);
         }
-
-        void* Socket::internal_alloc(size_t s, DebugInfo info) {
-            return alloc_normal(s, info);
-        }
-
-        void Socket::internal_free(void* p, DebugInfo info) {
-            free_normal(p, info);
-        }
-
     }  // namespace dnet
 }  // namespace utils

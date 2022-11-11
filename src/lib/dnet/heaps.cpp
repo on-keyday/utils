@@ -6,6 +6,7 @@
 */
 
 #include <dnet/dll/dllcpp.h>
+#include <dnet/heap.h>
 #include <dnet/dll/glheap.h>
 #ifdef _WIN32
 #include <Windows.h>
@@ -16,22 +17,22 @@
 namespace utils {
     namespace dnet {
 #ifdef _WIN32
-        void* simple_heap_alloc(void*, size_t size, DebugInfo*) {
+        void* simple_heap_alloc(void*, size_t size, size_t, DebugInfo*) {
             return HeapAlloc(GetProcessHeap(), 0, size);
         }
 
-        void* simple_heap_realloc(void*, void* p, size_t size, DebugInfo*) {
+        void* simple_heap_realloc(void*, void* p, size_t size, size_t, DebugInfo*) {
             return HeapReAlloc(GetProcessHeap(), 0, p, size);
         }
         void simple_heap_free(void*, void* p, DebugInfo*) {
             HeapFree(GetProcessHeap(), 0, p);
         }
 #else
-        void* simple_heap_alloc(void*, size_t size, DebugInfo*) {
+        void* simple_heap_alloc(void*, size_t size, size_t, DebugInfo*) {
             return malloc(size);
         }
 
-        void* simple_heap_realloc(void*, void* p, size_t size, DebugInfo*) {
+        void* simple_heap_realloc(void*, void* p, size_t size, size_t, DebugInfo*) {
             if (size == 0) {
                 return nullptr;
             }
@@ -53,6 +54,12 @@ namespace utils {
             objpool_hold = set;
         }
 
+        void* (*mem_exhausted_fn)(DebugInfo);
+
+        dnet_dll_implement(void) set_memory_exhausted_traits(void* (*fn)(DebugInfo)) {
+            mem_exhausted_fn = fn;
+        }
+
         Allocs get_(Allocs s) {
             if (!s.alloc_ptr || !s.realloc_ptr || !s.free_ptr) {
                 s.alloc_ptr = simple_heap_alloc;
@@ -72,40 +79,48 @@ namespace utils {
             return &alloc;
         }
 
-        inline void* do_alloc(Allocs* a, size_t sz, DebugInfo info) {
-            return a->alloc_ptr(a->ctx, sz, &info);
+        inline void* do_alloc(Allocs* a, size_t sz, size_t align, DebugInfo info) {
+            return a->alloc_ptr(a->ctx, sz, align, &info);
         }
 
-        inline void* do_realloc(Allocs* a, void* p, size_t sz, DebugInfo info) {
-            return a->realloc_ptr(a->ctx, p, sz, &info);
+        inline void* do_realloc(Allocs* a, void* p, size_t sz, size_t align, DebugInfo info) {
+            return a->realloc_ptr(a->ctx, p, sz, align, &info);
         }
 
         inline void do_free(Allocs* a, void* p, DebugInfo info) {
             a->free_ptr(a->ctx, p, &info);
         }
 
-        dnet_dll_implement(void*) alloc_normal(size_t sz, DebugInfo info) {
-            return do_alloc(get_normal_alloc(), sz, info);
+        dnet_dll_implement(void*) alloc_normal(size_t sz, size_t align, DebugInfo info) {
+            return do_alloc(get_normal_alloc(), sz, align, info);
         }
 
-        dnet_dll_implement(void*) realloc_normal(void* p, size_t sz, DebugInfo info) {
-            return do_realloc(get_normal_alloc(), p, sz, info);
+        dnet_dll_implement(void*) realloc_normal(void* p, size_t sz, size_t align, DebugInfo info) {
+            return do_realloc(get_normal_alloc(), p, sz, align, info);
         }
 
         dnet_dll_implement(void) free_normal(void* p, DebugInfo info) {
             return do_free(get_normal_alloc(), p, info);
         }
 
-        dnet_dll_implement(void*) alloc_objpool(size_t sz, DebugInfo info) {
-            return do_alloc(get_objpool_alloc(), sz, info);
+        dnet_dll_implement(void*) alloc_objpool(size_t sz, size_t align, DebugInfo info) {
+            return do_alloc(get_objpool_alloc(), sz, align, info);
         }
 
-        dnet_dll_export(void*) realloc_objpool(void* p, size_t sz, DebugInfo info) {
-            return do_realloc(get_objpool_alloc(), p, sz, info);
+        dnet_dll_implement(void*) realloc_objpool(void* p, size_t sz, size_t align, DebugInfo info) {
+            return do_realloc(get_objpool_alloc(), p, sz, align, info);
         }
 
-        dnet_dll_export(void) free_objpool(void* p, DebugInfo info) {
+        dnet_dll_implement(void) free_objpool(void* p, DebugInfo info) {
             return do_free(get_objpool_alloc(), p, info);
+        }
+
+        dnet_dll_implement(void*) memory_exhausted_traits(DebugInfo info) {
+            auto fn = mem_exhausted_fn;
+            if (fn) {
+                return fn(info);
+            }
+            return nullptr;
         }
     }  // namespace dnet
 }  // namespace utils

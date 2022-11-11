@@ -109,7 +109,7 @@ namespace utils {
         HTTP2::~HTTP2() {
             auto c = check_opt(opt, err);
             if (c) {
-                delete_with_global_heap(c, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*c)));
+                delete_with_global_heap(c, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*c), alignof(HTTP2Connection)));
             }
         }
 
@@ -756,7 +756,7 @@ namespace utils {
         }
 
         dnet_dll_export(HTTP2) create_http2(bool server, h2set::PredefinedSettings settings) {
-            auto c = new_from_global_heap<HTTP2Connection>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HTTP2Connection)));
+            auto c = new_from_global_heap<HTTP2Connection>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HTTP2Connection), alignof(HTTP2Connection)));
             if (!c) {
                 return HTTP2(nullptr);
             }

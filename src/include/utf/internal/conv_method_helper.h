@@ -23,11 +23,11 @@ namespace utils {
                     0b11100000,
                     0b11110000,
                     0b11111000,
-
+                    /*
                     // i>=5,second byte later mask (safety)
                     0b00011110,              // two byte must
                     0b00001111, 0b00100000,  // three byte must
-                    0b00000111, 0b00110000,  // four byte must
+                    0b00000111, 0b00110000,  // four byte must*/
                 };
                 return i < sizeof(maskbits) ? maskbits[i] : 0;
             }

@@ -30,11 +30,10 @@ namespace durl {
     };
 
     void wait_connect(Request req, dnet::AddrInfo& info, dnet::Socket& conn) {
-        conn.clear_err();
         while (true) {
-            if (!conn.wait_writable(0, 1000)) {
-                if (conn.geterr() != 0) {
-                    request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", conn.geterr());
+            if (auto err = conn.wait_writable(0, 1000)) {
+                if (!dnet::isBlock(err)) {
+                    request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", err.error<std::string>());
                     return;
                 }
                 continue;
@@ -45,23 +44,23 @@ namespace durl {
 
     // on thread
     void resolved(Request& req, dnet::AddrInfo& info) {
-        int lasterr = 0;
+        dnet::error::Error lasterr;
         while (info.next()) {
             dnet::SockAddr addr;
             info.sockaddr(addr);
             auto sock = dnet::make_socket(addr.af, addr.type, addr.proto);
             if (!sock) {
-                lasterr = sock.geterr();
+                lasterr = dnet::error::Error("make_socket failed");
                 continue;
             }
-            sock.connect(addr.addr, addr.addrlen);
-            if (!sock.block()) {
-                lasterr = sock.geterr();
+            auto err = sock.connect(addr.addr, addr.addrlen);
+            if (err && !dnet::isBlock(err)) {
+                lasterr = std::move(err);
                 continue;
             }
         }
         info.next();  // seek to top
-        request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", lasterr);
+        request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", lasterr.error<std::string>());
         reqcounter--;
     }
 

@@ -9,6 +9,8 @@
 // task - task object with cpp coroutine
 #pragma once
 #include "detect.h"
+#include <exception>
+#include <utility>
 
 namespace utils {
     namespace async {

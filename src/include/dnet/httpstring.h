@@ -58,17 +58,5 @@ namespace utils {
             bool append(const char* data, size_t size);
         };
 
-        struct BorrowString {
-            HTTPBuf& from;
-            String& to;
-            constexpr BorrowString(HTTPBuf& from, String& to)
-                : from(from), to(to) {
-                to = std::move(from);
-            }
-
-            constexpr ~BorrowString() {
-                from = std::move(to.get());
-            }
-        };
     }  // namespace dnet
 }  // namespace utils

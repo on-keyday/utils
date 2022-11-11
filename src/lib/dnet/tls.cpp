@@ -66,7 +66,7 @@ namespace utils {
         };
 
         TLS::~TLS() {
-            delete_with_global_heap(static_cast<SSLContexts*>(opt), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
+            delete_with_global_heap(static_cast<SSLContexts*>(opt), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
         }
 
         dnet_dll_implement(TLS) create_tls() {
@@ -80,7 +80,7 @@ namespace utils {
             auto d = helper::defer([&] {
                 ssldl.SSL_CTX_free_(ctx);
             });
-            auto tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
+            auto tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
             if (!tls) {
                 return {no_resource};
             }
@@ -100,12 +100,12 @@ namespace utils {
             if (!ctx->sslctx) {
                 return {invalid_tls};
             }
-            auto new_tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
+            auto new_tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
             if (!new_tls) {
                 return {no_resource};
             }
             if (!ssldl.SSL_CTX_up_ref_(ctx->sslctx)) {
-                delete_with_global_heap(new_tls, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts)));
+                delete_with_global_heap(new_tls, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
                 return {no_resource};
             }
             new_tls->sslctx = ctx->sslctx;
@@ -186,7 +186,7 @@ namespace utils {
         bool TLS::make_ssl() {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (c->ssl) {
-                    return c->wbio != nullptr;
+                    return false;
                 }
                 auto ssl = ssldl.SSL_new_(c->sslctx);
                 if (!ssl) {
@@ -225,14 +225,14 @@ namespace utils {
             return res;
         }
 
-        namespace quic {
+        namespace quic::crypto {
             bool set_quic_method(void* ptr);
         }
 
         bool TLS::make_quic(int (*cb)(void*, quic::MethodArgs), void* user) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (c->ssl) {
-                    return c->wbio == nullptr;
+                    return false;
                 }
                 auto ssl = ssldl.SSL_new_(c->sslctx);
                 if (!ssl) {
@@ -246,7 +246,7 @@ namespace utils {
                     err = set_ssl_value_failed;
                     return false;
                 }
-                if (!quic::set_quic_method(ssl)) {
+                if (!quic::crypto::set_quic_method(ssl)) {
                     err = libload_failed;
                     return false;
                 }
@@ -258,9 +258,13 @@ namespace utils {
             });
         }
 
-        bool TLS::set_hostname(const char* hostname) {
+        bool TLS::set_hostname(const char* hostname, bool verify) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto common = [&]() -> bool {
+                    if (!verify) {
+                        return true;
+                    }
+                    ssldl.SSL_set_hostflags_(c->ssl, ssl_import::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS_);
                     if (!ssldl.SSL_set1_host_(c->ssl, hostname)) {
                         err = set_ssl_value_failed;
                         return false;
@@ -387,7 +391,7 @@ namespace utils {
             });
         }
 
-        bool TLS::provide_quic_data(quic::EncryptionLevel level, const void* data, size_t size) {
+        bool TLS::provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t size) {
             return check_opt_quic(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_provide_quic_data_(c->ssl,
                                                         ssl_import::quic_ext::OSSL_ENCRYPTION_LEVEL(level),
@@ -549,7 +553,7 @@ namespace utils {
         }
 
         const char* TLSCipher::rfcname() const {
-            return ssldl.SSL_CIPHER_standard_name_(static_cast<const ssl_import::SSL_CIPHER*>(cipher));
+            return cipher ? ssldl.SSL_CIPHER_standard_name_(static_cast<const ssl_import::SSL_CIPHER*>(cipher)) : "(NONE)";
         }
 
         int TLSCipher::bits(int* bit) const {

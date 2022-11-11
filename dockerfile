@@ -2,7 +2,7 @@
 #    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
-FROM ubuntu:20.04
+FROM ubuntu:latest
 
 RUN mkdir -p /usr/utilsdev/workspace
 
@@ -13,34 +13,41 @@ RUN sed -i 's@archive.ubuntu.com@ftp.jaist.ac.jp/pub/Linux@g' /etc/apt/sources.l
 
 RUN apt-get update && \
     apt-get install -y \
-    cmake\
+    libunwind-dev\
+    python3-lldb-14
+
+RUN apt-get update && \
+    apt-get  install -y\
+    clang-14\
+    libc++-14-dev\
+    lldb-14\
+    liblldb-14-dev\
+    lld\
+    g++-11
+
+RUN apt-get update && \
+    apt-get install -y\
     ninja-build\
-    clang-12\
-    libc++-12-dev\
-    libstdc++-10-dev\
-    libpthread-stubs0-dev\
-    libssl-dev\
+    cmake\
     vim\
-    lldb-12\
-    liblldb-12-dev\
-    curl\
     unzip\
-    llvm-12\
-    g++-10\
-    lld
+    curl\
+    libpthread-stubs0-dev\
+    libssl-dev
 
 RUN apt-get install -y \
     seq-gen\
     net-tools\
     iputils-ping
 
-
-RUN ln -s /lib/llvm-12/bin/clang++ /bin/clang++
-RUN ln -s /lib/llvm-12/bin/clang /bin/clang
-RUN ln -s /bin/lldb-12 /bin/lldb
-RUN ln -s /lib/llvm-12/lib/libc++abi.so.1.0 /lib/llvm-12/lib/libc++abi.so
-RUN ln -s /usr/bin/lldb-server-12 /usr/bin/lldb-server-12.0.0
-RUN ln -s /bin/g++-10 /bin/g++
+RUN ln -s /lib/llvm-14/bin/clang++ /bin/clang++
+RUN ln -s /lib/llvm-14/bin/clang /bin/clang
+RUN ln -s /bin/lldb-14 /bin/lldb
+RUN ln -s /lib/llvm-14/lib/libc++abi.so.1.0 /lib/llvm-14/lib/libc++abi.so
+RUN ln -s /usr/bin/lldb-server-14 /usr/bin/lldb-server-14.0.0
+RUN ln -s /bin/g++-11 /bin/g++
+RUN unlink /usr/bin/ld
+RUN ln -s /lib/llvm-14/bin/lld /usr/bin/ld
 
 RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
     -o /usr/utilsdev/lldb-mi.zip -L
@@ -51,6 +58,7 @@ RUN rm /usr/utilsdev/lldb-mi.zip
 RUN (cd /usr/utilsdev/lldb-mi-main;cmake -G Ninja .)
 RUN (cd /usr/utilsdev/lldb-mi-main;cmake --build .)
 RUN cp /usr/utilsdev/lldb-mi-main/src/lldb-mi /bin/lldb-mi
+
 
 
 #COPY ./src/ /usr/utilsdev/workspace/src/

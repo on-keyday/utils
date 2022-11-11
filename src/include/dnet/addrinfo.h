@@ -13,12 +13,14 @@
 
 namespace utils {
     namespace dnet {
-
+        // raw_address is maker of sockaddr
+        // cast sockaddr to raw_address
+        struct raw_address;
         // SockAddr wraps native addrinfo representation
         struct SockAddr {
             union {
                 struct {
-                    const void* addr;
+                    const raw_address* addr;
                     int addrlen;
                 };
                 struct {

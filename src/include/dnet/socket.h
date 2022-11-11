@@ -14,56 +14,18 @@
 #include "dll/dllh.h"
 #include "errcode.h"
 #include "heap.h"
+#include "../helper/defer.h"
+#include "dll/glheap.h"
+#include "bytelen.h"
+#include "address.h"
+#include "error.h"
 
 namespace utils {
     namespace dnet {
-
-        constexpr auto async_reserved = 0xf93f4928;
-        enum AsyncMethod {
-            am_recv,
-            am_recvfrom,
-            am_accept,
-            am_connect,
-            am_send,
-            am_sendto,
-        };
-
-        struct AsyncHead {
-            const std::uint32_t reserved = async_reserved;
-            // mode represents async operation method which is processing now
-            AsyncMethod method;
-#ifdef _WIN32
-            using get_ptrs_t =
-                void (*)(AsyncHead* head, void** overlapped, void** wsbuf, int* bufcount,
-                         void** sockfrom, int** fromlen, void** flags, std::uintptr_t** tmpsock);
-
-#else
-            using get_ptrs_t =
-                void (*)(AsyncHead* head, void*** sockaddr_store, int** addrlen_store);
-#endif
-            // get_ptrs gets object pointers
-            // this function is platform spec
-            get_ptrs_t get_ptrs;
-            // start notifys operation start
-            // if you use object as shared_ptr
-            // you should increment count here
-            void (*start)(AsyncHead* head, std::uintptr_t sock);
-            // completion handle io completion
-            // on windows, len contains bytes received
-            // on linux, len is events bits
-            // you should do operation in short time
-            // to prevent blocking at wait_event
-            // if you use object as shared_ptr
-            // you should decrement count here
-            void (*completion)(AsyncHead* head, size_t len);
-            // canceled is called when get_ptrs is called and io does not start
-            // if you use object as shared_ptr
-            // you should decrement count here
-            void (*canceled)(AsyncHead* head);
-            // handling is current handling socket
-            // you shouldn't use this; this is internal parameter
-            std::uintptr_t handling;
-        };
+        // raw_address is maker of sockaddr
+        // cast sockaddr to raw_address
+        struct raw_address;
+        struct AsyncSuite;
 
         // wait_event waits io completion until time passed
         // if event is processed function returns number of event
@@ -77,102 +39,79 @@ namespace utils {
             mtu_ignore,   // same as IP_PMTUDISC_PROBE
         };
 
+        dnet_dll_export(bool) isBlock(const error::Error&);
+        dnet_dll_export(bool) isMsgSize(const error::Error& err);
+
         // Socket is wrappper class of native socket
         struct dnet_class_export Socket {
+           private:
+            std::uintptr_t sock = ~0;
+            void* async_ctx = nullptr;
+
+            constexpr Socket(std::uintptr_t s)
+                : sock(s) {}
+            error::Error get_option(int layer, int opt, void* buf, size_t size);
+            error::Error set_option(int layer, int opt, const void* buf, size_t size);
+            friend Socket make_socket(std::uintptr_t uptr);
+
+            auto wrap_tuple(auto&&... args) {
+                return helper::wrapfn_ptr(
+                    std::make_tuple(std::forward<decltype(args)>(args)...), [](size_t size, size_t align) { return alloc_normal(size, align, DNET_DEBUG_MEMORY_LOCINFO(true, size, align)); },
+                    [](void* p) {
+                        free_normal(p, DNET_DEBUG_MEMORY_LOCINFO(false, 0, 0));
+                    });
+            }
+
+           public:
+            constexpr Socket() = default;
             ~Socket();
             constexpr Socket(Socket&& sock)
-                : sock(std::exchange(sock.sock, ~0)),
-                  err(std::exchange(sock.err, 0)),
-                  opt(std::exchange(sock.opt, nullptr)),
-                  gc_(std::exchange(sock.gc_, nullptr)),
-                  prevred(std::exchange(sock.prevred, 0)) {}
+                : sock(std::exchange(sock.sock, ~std::uintptr_t(0))),
+                  async_ctx(std::exchange(sock.async_ctx, nullptr)) {}
             Socket& operator=(Socket&& sock) {
                 if (this == &sock) {
                     return *this;
                 }
                 this->~Socket();
                 this->sock = std::exchange(sock.sock, ~0);
-                err = std::exchange(sock.err, 0);
-                opt = std::exchange(sock.opt, nullptr);
-                gc_ = std::exchange(sock.gc_, nullptr);
-                prevred = std::exchange(sock.prevred, 0);
+                async_ctx = std::exchange(sock.async_ctx, nullptr);
                 return *this;
             }
 
-            bool connect(const void* addr /* = sockaddr*/, size_t len);
-            bool write(const void* data, size_t len, int flag = 0);
+            error::Error connect(const void* addr /* = sockaddr*/, size_t len);
 
-            // read reads data from socket
-            // if native read functions returns 0
-            // readsize would be 0 and this function returns false
-            bool read(void* data, size_t len, int flag = 0);
-            bool writeto(const void* addr, int addrlen, const void* data, size_t len, int flag = 0);
-            bool readfrom(void* addr, int* addrlen, void* data, size_t len, int flag = 0);
-            [[nodiscard]] bool accept(Socket& to, void* addr, int* addrlen);
-            using completion_accept_t = void (*)(void* user, Socket&& sock, int err);
-            bool accept_async(completion_accept_t completion, void* user, void* data = nullptr, size_t len = 0);
-            using completion_connect_t = void (*)(void* user, int err);
-            bool connect_async(completion_connect_t completion, void* user, const void* addr, size_t len);
-            bool bind(const void* addr /* = sockaddr*/, size_t len);
-            bool listen(int back = 10);
-            bool wait_readable(std::uint32_t sec, std::uint32_t usec);
-            bool wait_writable(std::uint32_t sec, std::uint32_t usec);
+            std::pair<size_t, error::Error> write(const void* data, size_t len, int flag = 0);
+            std::pair<size_t, error::Error> read(void* data, size_t len, int flag = 0);
+            std::pair<size_t, error::Error> writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag = 0);
+            std::pair<size_t, error::Error> writeto(const NetAddrPort& addr, const void* data, size_t len, int flag = 0);
+            std::pair<size_t, error::Error> readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag = 0);
+            std::tuple<size_t, NetAddrPort, error::Error> readfrom(void* data, size_t len, int flag = 0);
 
-            using completion_recv_t = void (*)(void* user, void* data, size_t len, size_t bufmax, int err);
-            using completion_from_t = void (*)(void* user, void* data, size_t len, size_t bufmax, void* addr, size_t addrlen, int err);
-            // read_async reads socket async
-            // if custom opt value is set
-            // argument will be ignored
-            // if this function returns true async operation started and completion will be called
-            // otherwise operation failed
-            bool read_async(completion_recv_t completion, void* user, void* data = nullptr, size_t datalen = 0);
-            // read_from_async reads socket async
-            // if custom opt value is set
-            // argument will be ignored
-            // if this function returns true async operation started and completion will be called
-            // otherwise operation failed
-            bool readfrom_async(completion_from_t completion, void* user, void* data = nullptr, size_t datalen = 0);
+            [[nodiscard]] error::Error accept(Socket& to, raw_address* addr, int* addrlen);
+            [[nodiscard]] std::tuple<Socket, NetAddrPort, error::Error> accept();
+            error::Error bind(const raw_address* addr /* = sockaddr*/, size_t len);
+            error::Error listen(int back = 10);
 
-            using completion_send_t = void (*)(void* user, int err);
+            // wait_readable waits socket until to be readable using select function or until timeout
+            error::Error wait_readable(std::uint32_t sec, std::uint32_t usec);
+            // wait_readable waits socket until to be writable using select function or until timeout
+            error::Error wait_writable(std::uint32_t sec, std::uint32_t usec);
 
-            bool write_async(completion_send_t completion, void* user, const void* data, size_t datalen);
-            bool writeto_async(completion_send_t completion, void* user, const void* addr, size_t addrlen, const void* data, size_t datalen);
-
-            constexpr void set_custom_opt(void* optv, void (*gc)(void*, std::uintptr_t)) {
-                if (gc_) {
-                    gc_(opt, sock);
-                }
-                opt = optv;
-                gc_ = gc;
-            }
-
-            constexpr void* get_opt() const {
-                return opt;
-            }
             constexpr explicit operator bool() const {
                 return sock != ~0;
             }
 
-            bool block() const;
-            bool msgsize() const;
-
-            constexpr int geterr() const {
-                return err;
-            }
-            bool shutdown(int mode = 2 /*= both*/);
-            constexpr int readsize() const {
-                return prevred;
-            }
+            error::Error shutdown(int mode = 2 /*= both*/);
 
             // get_option invokes getsockopt with getsockopt(layer,opt,std::addressof(t),sizeof(t))
             template <class T>
-            bool get_option(int layer, int opt, T& t) {
+            error::Error get_option(int layer, int opt, T& t) {
                 return get_option(layer, opt, std::addressof(t), sizeof(t));
             }
 
             // get_option invokes getsockopt with setsockopt(layer,opt,std::addressof(t),sizeof(t))
             template <class T>
-            bool set_option(int layer, int opt, T&& t) {
+            error::Error set_option(int layer, int opt, T&& t) {
                 return set_option(layer, opt, std::addressof(t), sizeof(t));
             }
 
@@ -183,168 +122,131 @@ namespace utils {
             // this behaviour has some security risks
             // see also https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
             // Japanese Docs: https://www.ymnet.org/diary/d/%E6%97%A5%E8%A8%98%E3%81%BE%E3%81%A8%E3%82%81/SO_EXCLUSIVEADDRUSE
-            bool set_reuse_addr(bool resue);
+            error::Error set_reuse_addr(bool resue);
 
             // set_exclusive_use sets SO_EXCLUSIVEUSE
             // this function works on windows.
             // see also set_reuse_addr behaviour description link
             // on linux, this function always return false
-            bool set_exclusive_use(bool exclusive);
+            error::Error set_exclusive_use(bool exclusive);
 
             // set_ipv6only sets IPV6_V6ONLY
             // if this is false,you can accept both ipv6 and ipv4
             // default value is different between linux(false) and windows(true)
-            bool set_ipv6only(bool only);
-            bool set_nodelay(bool no_delay);
-            bool set_ttl(unsigned char ttl);
-            bool set_mtu_discover(MTUConfig conf);
-            bool set_mtu_discover_v6(MTUConfig conf);
+            error::Error set_ipv6only(bool only);
+            error::Error set_nodelay(bool no_delay);
+            error::Error set_ttl(unsigned char ttl);
+            error::Error set_mtu_discover(MTUConfig conf);
+            error::Error set_mtu_discover_v6(MTUConfig conf);
             std::int32_t get_mtu();
 
             // these function sets DF flag on IP layer
             // these function is enable on windows
             // user on linux platform has to use set_mtu_discover(MTUConfig::enable_mtu) instead
-            bool set_dontfragment(bool df);
-            bool set_dontfragment_v6(bool df);
+            error::Error set_dontfragment(bool df);
+            error::Error set_dontfragment_v6(bool df);
 
             // set_blocking calls ioctl(FIONBIO)
             [[deprecated]] void set_blocking(bool blocking);
 
-           private:
-            std::uintptr_t sock;
-            int err;
-            int prevred;
-            void* opt;
-            void (*gc_)(void* opt, std::uintptr_t sock);
+            error::Error set_connreset(bool enable);
 
-            constexpr Socket(std::uintptr_t s)
-                : sock(s), err(0), prevred(0), opt(nullptr), gc_(nullptr) {}
-            bool get_option(int layer, int opt, void* buf, size_t size);
-            bool set_option(int layer, int opt, const void* buf, size_t size);
-            friend Socket make_socket(std::uintptr_t uptr);
-            constexpr void set_err(int e) {
-                err = e;
-            }
-
-           public:
-            constexpr Socket()
-                : Socket(std::uintptr_t(~0)){};
+            // set_skipnotif sets SetFileCompletionNotificationModes()
+            // this works on windows
+            // this is usable for TCP iocp but UDP is unsafe
+            // see also comment of https://docs.microsoft.com/en-us/archive/blogs/winserverperformance/designing-applications-for-high-performance-part-iii
+            // if buffer is always over 1500, this may work on UDP
+            error::Error set_skipnotify(bool skip_notif, bool skip_event = true);
 
             // read_until_block calls read function until read returns false
-            // callback is void(void)
+            // callback is void(size_t)
             // if something is read, red would be true
             // otherwise false
             // read_until_block returns block() function result
-            bool read_until_block(bool& red, void* data, size_t size, auto&& callback) {
+            error::Error read_until_block(bool& red, void* data, size_t size, auto&& callback) {
                 red = false;
-                while (read(data, size)) {
-                    callback();
+                error::Error err;
+                while (true) {
+                    size_t redsize = 0;
+                    std::tie(redsize, err) = read(data, size);
+                    if (err) {
+                        break;
+                    }
+                    callback(redsize);
                     red = true;
                 }
-                return block();
+                if (isBlock(err)) {
+                    return error::none;
+                }
+                return err;
             }
 
-           private:
-            static void* internal_alloc(size_t s, DebugInfo info);  // wrappper of get_rawbuf
-            static void internal_free(void*, DebugInfo info);       // wrapper of free_rawbuf
+            error::Error read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err));
+            error::Error readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport));
+            error::Error write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err));
+            error::Error writeto_async(ConstByteLen src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err));
+            error::Error connect_async(void* fnctx, void (*cb)(void*, error::Error));
+            error::Error accept_async(void* fnctx, void (*cb)(void*, error::Error));
 
-           public:
-            // this function is wrapper of raw read_async function
-            // when completion event occured, this function recieve data
-            // and try reading more data as it can
-            // fn is called when data recieved with fn(std::move(object))
-            // object is continuation context should contains Socket instance. this must be move assignable
-            // get_sock is called with get_sock(object) and should returns Socket&
-            // add_data is called with add_data(object,(const char*)data,(size_t)len)
-            // if read_async started this function returns true
-            // otherwise returns false and err would be set
-            bool read_async(auto fn, auto&& object, auto get_sock, auto add_data) {
-                struct ObjectHolder {
-                    std::decay_t<decltype(fn)> fn;
-                    std::decay_t<decltype(get_sock)> get;
-                    std::decay_t<decltype(add_data)> add;
-                    std::remove_cvref_t<decltype(object)> obj;
-                };
-                auto pobj = internal_alloc(sizeof(ObjectHolder), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
-                if (!pobj) {
-                    err = no_resource;
-                    return false;
+            error::Error read_async(auto&& fn, auto&& obj, auto&& get_sock, auto&& add_data) {
+                auto fctx = wrap_tuple(std::forward<decltype(fn)>(fn),
+                                       std::forward<decltype(obj)>(obj),
+                                       std::forward<decltype(get_sock)>(get_sock),
+                                       std::forward<decltype(add_data)>(add_data));
+                if (!fctx) {
+                    return error::memory_exhausted;
                 }
-                ObjectHolder* obj = new (pobj) ObjectHolder{
-                    std::move(fn),
-                    std::move(get_sock),
-                    std::move(add_data),
-                    std::move(object),
-                };
-                auto cb = [](void* pobj, void* data, size_t size, size_t buf, int err) {
-                    ObjectHolder* obj = static_cast<ObjectHolder*>(pobj);
-                    auto pass = std::move(obj->obj);
-                    struct R {
-                        ObjectHolder* h;
-                        ~R() {
-                            h->~ObjectHolder();
-                            internal_free(h, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*h)));
-                        };
-                    } releaser{obj};
-                    obj->get(pass).set_err(err);
-                    obj->add(pass, static_cast<const char*>(data), size);
-                    if (size == buf) {
-                        Socket& sock = obj->get(pass);
+                auto r = helper::defer([&] {
+                    delete_with_global_heap(fctx, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*fctx)), alignof(decltype(*fctx))));
+                });
+                Socket& s = std::get<2>(fctx->fn)(std::get<1>(fctx->fn));
+                error::Error res = s.read_async(2000, fctx, [](void* p, ByteLen b, bool full, error::Error err) {
+                    auto f = decltype(fctx)(p);
+                    const auto r = helper::defer([&] {
+                        delete_with_global_heap(f, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*f)), alignof(decltype(*f))));
+                    });
+                    auto& obj = std::get<1>(f->fn);
+                    auto& get = std::get<2>(f->fn);
+                    auto& add = std::get<3>(f->fn);
+                    Socket& s = get(obj);
+                    add(obj, (const char*)b.data, b.len);
+                    if (!err && full) {
                         bool red = false;
-                        sock.read_until_block(red, data, buf, [&] {
-                            obj->add(pass, (char*)data, sock.readsize());
+                        s.read_until_block(red, b.data, b.len, [&](size_t redsize) {
+                            add(obj, (const char*)b.data, redsize);
                         });
                     }
-                    obj->fn(std::move(pass));
-                };
-                if (!obj->get(obj->obj).read_async(cb, obj)) {
-                    object = std::move(obj->obj);  // return pass
-                    internal_free(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
-                    return false;
+                    (void)std::get<0>(f->fn)(obj, std::move(err));
+                });
+                if (!res.is_error()) {
+                    r.cancel();
                 }
-                return true;
+                return res;
             }
 
-            // connect_async wraps origina connect_async
-            bool connect_async(auto&& fn, auto&& object, auto get_sock, void* addr, int addrlen) {
-                struct ObjectHolder {
-                    std::decay_t<decltype(fn)> fn;
-                    std::decay_t<decltype(get_sock)> get;
-                    std::remove_cvref_t<decltype(object)> obj;
-                };
-                auto pobj = internal_alloc(sizeof(ObjectHolder), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
-                if (!pobj) {
-                    err = no_resource;
-                    return false;
+            bool readfrom_async(auto&& fn, auto&& obj, size_t bufsize, auto&& get_sock) {
+                auto fctx = wrap_tuple(std::forward<decltype(fn)>(fn),
+                                       std::forward<decltype(obj)>(obj),
+                                       std::forward<decltype(get_sock)>(get_sock));
+                auto r = helper::defer([&] {
+                    delete_with_global_heap(fctx, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*fctx)), alignof(decltype(*fctx))));
+                });
+                Socket& s = std::get<2>(fctx->fn)(std::get<1>(fctx->fn));
+                auto res = s.readfrom_async(bufsize, fctx, [](void* p, ByteLen d, bool truncate, int err, NetAddrPort&& addr) {
+                    auto f = decltype(fctx)(p);
+                    const auto r = helper::defer([&] {
+                        delete_with_global_heap(f, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*f)), alignof(decltype(*f))));
+                    });
+                    auto& obj = std::get<1>(f->fn);
+                    auto& get = std::get<2>(f->fn);
+                    Socket& sock = get(obj);
+                    // sock.set_err(err);
+                    (void)std::get<0>(f->fn)(obj, d, std::move(addr), truncate, std::move(err));
+                });
+                if (res) {
+                    r.cancel();
                 }
-                ObjectHolder* obj = new (pobj) ObjectHolder{
-                    std::move(fn),
-                    std::move(get_sock),
-                    std::move(object),
-                };
-                auto cb = [](void* pobj, int err) {
-                    ObjectHolder* obj = static_cast<ObjectHolder*>(pobj);
-                    auto pass = std::move(obj->obj);
-                    struct R {
-                        ObjectHolder* h;
-                        ~R() {
-                            h->~ObjectHolder();
-                            internal_free(h, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*h)));
-                        };
-                    } releaser{obj};
-                    obj->get(pass).set_err(err);
-                    obj->fn(std::move(pass));
-                };
-                if (!obj->get(obj->obj).connect_async(cb, obj, addr, addrlen)) {
-                    object = std::move(obj->obj);  // return pass
-                    internal_free(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ObjectHolder)));
-                    return false;
-                }
-                return true;
-            }
-
-            constexpr void clear_err() {
-                err = 0;
+                return res;
             }
         };
 
@@ -356,5 +258,6 @@ namespace utils {
         // socket is always non-blocking
         // if you want blocking socket, call Socket::set_blocking explicit
         dnet_dll_export(Socket) make_socket(int address_family, int socket_type, int protocol);
+
     }  // namespace dnet
 }  // namespace utils

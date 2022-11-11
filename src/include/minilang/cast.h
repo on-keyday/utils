@@ -241,11 +241,18 @@ namespace utils {
         }
 
         // detect NumberNode .str starting with digit
-        inline std::shared_ptr<NumberNode> is_Number(const std::shared_ptr<MinNode>& node) {
+        inline std::shared_ptr<NumberNode> is_Number(const std::shared_ptr<MinNode>& node, bool strict = false) {
             if (!node) {
                 return nullptr;
             }
-            if (node->node_type == nt_number) {
+            bool res;
+            if (strict) {
+                res = node->node_type == nt_number;
+            }
+            else {
+                res = (node->node_type & nt_min_derive_mask) == nt_number;
+            }
+            if (res) {
                 return std::static_pointer_cast<NumberNode>(node);
             }
             return nullptr;
@@ -273,6 +280,26 @@ namespace utils {
 
         inline bool is_Ident(const std::shared_ptr<MinNode>& node) {
             return is_MinNode(node);
+        }
+
+        inline std::shared_ptr<RangeNode> is_Range(const std::shared_ptr<MinNode>& node) {
+            if (!node) {
+                return nullptr;
+            }
+            if (node->node_type == nt_range) {
+                return std::static_pointer_cast<RangeNode>(node);
+            }
+            return nullptr;
+        }
+
+        inline std::shared_ptr<CharNode> is_Char(const std::shared_ptr<MinNode>& node) {
+            if (!node) {
+                return nullptr;
+            }
+            if (node->node_type == nt_char) {
+                return std::static_pointer_cast<CharNode>(node);
+            }
+            return nullptr;
         }
     }  // namespace minilang
 }  // namespace utils

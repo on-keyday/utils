@@ -43,22 +43,22 @@ namespace utils {
                         }
                     }
                     static std::uintptr_t ctrl_(void* p, ClCtrl c) {
+                        auto ptr = static_cast<ClfnImpl*>(p);
                         if (c == del_) {
-                            free_normal(p, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ClfnImpl)));
+                            delete_with_global_heap(ptr, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ClfnImpl), alignof(ClfnImpl)));
                             return 0;
                         }
                         if (c == clone_) {
                             if constexpr (std::is_copy_constructible_v<T>) {
-                                auto ptr = alloc_normal(sizeof(ClfnImpl), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ClfnImpl)));
+                                auto ptr = alloc_normal(sizeof(ClfnImpl), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ClfnImpl), alignof(ClfnImpl)));
                                 if (!ptr) {
                                     return 0;
                                 }
-                                auto f = new (ptr) ClfnImpl(std::as_const(real_fn));
+                                auto f = new (ptr) ClfnImpl(std::as_const(ptr->real_fn));
                                 return std::uintptr_t(f);
                             }
                             return 0;
                         }
-                        auto ptr = static_cast<ClfnImpl*>(p);
                         if (c == size_) {
                             return sizeof(ptr->real_fn);
                         }
@@ -83,7 +83,8 @@ namespace utils {
             template <class Ret, class... Args>
             struct Closure {
                private:
-                internal::Clfn<Ret, Args...>* fn = nullptr;
+                using Fnc = internal::Clfn<Ret, Args...>;
+                Fnc* fn = nullptr;
 
                public:
                 constexpr Closure() = default;
@@ -91,7 +92,7 @@ namespace utils {
                 Closure(Fn&& f) {
                     using Fn_t = std::decay_t<Fn>;
                     using Impl_t = internal::ClfnImpl<Fn_t, Ret, Args...>;
-                    auto ptr = alloc_normal(sizeof(Impl_t), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(Impl_t)));
+                    auto ptr = alloc_normal(sizeof(Impl_t), alignof(Impl_t), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(Impl_t), alignof(Impl_t)));
                     if (!ptr) {
                         return;
                     }
@@ -111,7 +112,7 @@ namespace utils {
 
                 constexpr Closure(const Closure& in) {
                     if (in.fn && in.fn->ctrl(in.fn, internal::cloneable_)) {
-                        fn = static_cast<internal::Clfn*>(reinterpret_cast<void*>(in.fn->ctrl(in.fn, internal::clone_)));
+                        fn = static_cast<Fnc*>(reinterpret_cast<void*>(in.fn->ctrl(in.fn, internal::clone_)));
                     }
                 }
 
@@ -131,7 +132,7 @@ namespace utils {
                     this->~Closure();
                     fn = nullptr;
                     if (in.fn && in.fn->ctrl(in.fn, internal::cloneable_)) {
-                        fn = static_cast<internal::Clfn*>(reinterpret_cast<void*>(in.fn->ctrl(in.fn, internal::clone_)));
+                        fn = static_cast<Fnc*>(reinterpret_cast<void*>(in.fn->ctrl(in.fn, internal::clone_)));
                     }
                     return *this;
                 }

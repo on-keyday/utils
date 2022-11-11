@@ -17,7 +17,7 @@
 using namespace utils;
 struct SockHolder {
     dnet::Socket sock;
-    dnet::Socket::completion_recv_t comp;
+    // dnet::Socket::completion_recv_t comp;
     bool end;
     std::string str;
     utils::net::h1header::StatusCode code;
@@ -41,12 +41,12 @@ int main() {
             continue;
         }
 
-        auto c = tmp.connect(addr.addr, addr.addrlen);
-        if (c) {
+        auto err = tmp.connect(addr.addr, addr.addrlen);
+        if (!err) {
             goto END;
         }
-        if (tmp.block()) {
-            if (tmp.wait_writable(10, 0)) {
+        if (dnet::isBlock(err)) {
+            if (!tmp.wait_writable(10, 0).is_error()) {
                 goto END;
             }
         }
@@ -59,7 +59,7 @@ int main() {
     }
     assert(sock);
     constexpr auto data = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
-    if (!sock.write(data, strlen(data))) {
+    if (auto [_, err] = sock.write(data, strlen(data)); err) {
         return -1;
     }
     SockHolder holder{std::move(sock)};
@@ -69,9 +69,13 @@ int main() {
         auto read = [&] {
             size_t size = len;
             char buf[2048]{};
-            while (h->sock.read(buf, 2048)) {
-                h->str.append(buf, h->sock.readsize());
-                len += h->sock.readsize();
+            while (true) {
+                auto [readsize, err] = h->sock.read(buf, 2048);
+                if (err) {
+                    break;
+                }
+                h->str.append(buf, readsize);
+                len += readsize;
             }
         };
         if (len == bufmax) {
@@ -82,11 +86,13 @@ int main() {
             return true;
         });
     };
+    /*
     holder.comp = completion;
     auto res = holder.sock.read_async(completion, &holder);
     assert(res);
     while (!dnet::wait_event(~0)) {
     }
     return 0;
-    holder.sock.read_async([](auto&&) {}, std::move(holder), [](auto& c) -> dnet::Socket& { return c.sock; }, [](auto&&...) {});
+    */
+    holder.sock.read_async([](auto&&...) {}, std::move(holder), [](auto& c) -> dnet::Socket& { return c.sock; }, [](auto&&...) {});
 }

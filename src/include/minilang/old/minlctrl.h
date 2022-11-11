@@ -14,7 +14,7 @@ namespace utils {
 
         constexpr auto block_stat() {
             return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("block_stat")
+                MINL_FUNC_LOG_OLD("block_stat")
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!seq.seek_if("{")) {
@@ -52,7 +52,7 @@ namespace utils {
 
         constexpr auto for_if_stat_base(auto stat_name, bool none_expr_ok, int max_index, auto make_obj) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG(stat_name)
+                MINL_FUNC_LOG_OLD(stat_name)
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, stat_name)) {
@@ -296,7 +296,7 @@ namespace utils {
 
         constexpr auto an_expr() {
             return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG("an_expr")
+                MINL_FUNC_LOG_OLD("an_expr")
                 const auto start = seq.rptr;
                 node = expr(seq);
                 if (!node) {
@@ -310,7 +310,7 @@ namespace utils {
 
         constexpr auto one_word(auto word, auto ident) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG(word)
+                MINL_FUNC_LOG_OLD(word)
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
@@ -325,7 +325,7 @@ namespace utils {
 
         constexpr auto one_word_symbol(auto word, auto ident) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG(word)
+                MINL_FUNC_LOG_OLD(word)
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!seq.seek_if(word)) {
@@ -340,7 +340,7 @@ namespace utils {
 
         constexpr auto one_word_plus_and_block(auto word, auto ident, auto&& parse_after, bool not_must) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG(word)
+                MINL_FUNC_LOG_OLD(word)
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
@@ -385,7 +385,7 @@ namespace utils {
 
         constexpr auto one_word_plus_expr(auto word, auto ident, bool not_must) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG(word)
+                MINL_FUNC_LOG_OLD(word)
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
@@ -417,7 +417,7 @@ namespace utils {
 
         constexpr auto one_word_plus(auto word, auto ident, auto&& parse_after) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
-                MINL_FUNC_LOG(word)
+                MINL_FUNC_LOG_OLD(word)
                 helper::space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {

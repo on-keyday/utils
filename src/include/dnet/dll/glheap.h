@@ -12,21 +12,25 @@
 namespace utils {
     namespace dnet {
 
-        dnet_dll_export(void*) alloc_normal(size_t sz, DebugInfo info);
+        dnet_dll_export(void*) alloc_normal(size_t size, size_t align, DebugInfo info);
 
-        dnet_dll_export(void*) realloc_normal(void* p, size_t sz, DebugInfo info);
+        dnet_dll_export(void*) realloc_normal(void* p, size_t size, size_t align, DebugInfo info);
 
         dnet_dll_export(void) free_normal(void* p, DebugInfo info);
 
-        dnet_dll_export(void*) alloc_objpool(size_t sz, DebugInfo info);
+        dnet_dll_export(void*) alloc_objpool(size_t size, size_t align, DebugInfo info);
 
-        dnet_dll_export(void*) realloc_objpool(void* p, size_t sz, DebugInfo info);
+        dnet_dll_export(void*) realloc_objpool(void* p, size_t size, size_t align, DebugInfo info);
 
         dnet_dll_export(void) free_objpool(void* p, DebugInfo info);
 
+        dnet_dll_export(void*) memory_exhausted_traits(DebugInfo info);
+
+        dnet_dll_export(void) set_memory_exhausted_traits(void* (*fn)(DebugInfo));
+
         template <class T>
         T* new_from_global_heap(DebugInfo info) {
-            auto ptr = alloc_normal(sizeof(T), info);
+            auto ptr = alloc_normal(sizeof(T), alignof(T), info);
             if (!ptr) {
                 return nullptr;
             }
@@ -45,11 +49,11 @@ namespace utils {
         }
 
         inline char* get_cvec(size_t sz, DebugInfo info) {
-            return static_cast<char*>(alloc_normal(sz, info));
+            return static_cast<char*>(alloc_normal(sz, alignof(char), info));
         }
 
         inline bool resize_cvec(char*& p, size_t size, DebugInfo info) {
-            auto c = realloc_normal(p, size, info);
+            auto c = realloc_normal(p, size, alignof(char), info);
             if (c != nullptr) {
                 p = static_cast<char*>(c);
             }

@@ -10,16 +10,15 @@
 #include <dnet/bytelen.h>
 #include <dnet/tls.h>
 #include <helper/defer.h>
+#include <dnet/quic/crypto.h>
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::crypto {
 
             bool cipher_payload_impl(
                 const ssl_import::EVP_CIPHER* meth,
-                ByteLen output,
-                ByteLen payload,
-                ByteLen head,
+                CryptoPacketInfo& info,
                 ByteLen key,
                 ByteLen iv_nonce,
                 bool enc) {
@@ -41,44 +40,36 @@ namespace utils {
                 }
                 int outlen = 0;
                 // set packet header as AAD
-                if (!ssldl.EVP_CipherUpdate_(ctx, nullptr, &outlen, head.data, head.len)) {
+                if (!ssldl.EVP_CipherUpdate_(ctx, nullptr, &outlen, info.head.data, info.head.len)) {
                     return false;
                 }
                 // encrypt plaitext or decrypt ciphertext
-                if (!ssldl.EVP_CipherUpdate_(ctx, output.data, &outlen, payload.data, payload.len - (enc ? 0 : 16))) {
+                if (!ssldl.EVP_CipherUpdate_(ctx, info.processed_payload.data, &outlen, info.payload.data, info.payload.len)) {
                     return false;
                 }
                 if (!enc) {
                     // read MAC tag from end of payload
-                    if (!ssldl.EVP_CIPHER_CTX_ctrl_(ctx, ssl_import::EVP_CTRL_AEAD_SET_TAG_, 16, payload.data + payload.len - 16)) {
+                    if (!ssldl.EVP_CIPHER_CTX_ctrl_(ctx, ssl_import::EVP_CTRL_AEAD_SET_TAG_, info.tag.len, info.tag.data)) {
                         return false;
                     }
                 }
                 // finalize cipher
-                if (!ssldl.EVP_CipherFinal_ex_(ctx, output.data, &outlen)) {
+                if (!ssldl.EVP_CipherFinal_ex_(ctx, info.processed_payload.data, &outlen)) {
                     return false;
                 }
                 if (enc) {
                     // add MAC tag to end of payload
-                    if (!ssldl.EVP_CIPHER_CTX_ctrl_(ctx, ssl_import::EVP_CTRL_AEAD_GET_TAG_, 16, output.data + output.len - 16)) {
+                    if (!ssldl.EVP_CIPHER_CTX_ctrl_(ctx, ssl_import::EVP_CTRL_AEAD_GET_TAG_, 16,
+                                                    info.processed_payload.data + info.payload.len)) {
                         return false;
                     }
                 }
                 return true;
             }
 
-            bool cipher_initial_payload(ByteLen output,
-                                        ByteLen payload,
-                                        ByteLen head,
-                                        ByteLen key,
-                                        ByteLen iv_nonce,
-                                        bool enc) {
-                return cipher_payload_impl(
-                    ssldl.EVP_aes_128_gcm_(),
-                    output, payload, head, key, iv_nonce, enc);
-            }
-
-            bool boringssl_chacha20_poly1305_cipher(const TLSCipher& cipher, ByteLen output, ByteLen payload, ByteLen head, ByteLen key, ByteLen iv_nonce, bool enc) {
+            bool boringssl_chacha20_poly1305_cipher(
+                const TLSCipher& cipher, CryptoPacketInfo& info,
+                ByteLen key, ByteLen iv_nonce, bool enc) {
                 auto ctx = ssldl.EVP_AEAD_CTX_new_(ssldl.EVP_aead_chacha20_poly1305_(), key.data, key.len, 16);
                 if (!ctx) {
                     return false;
@@ -86,34 +77,39 @@ namespace utils {
                 const auto r = helper::defer([&] {
                     ssldl.EVP_AEAD_CTX_free_(ctx);
                 });
+                auto output = info.processed_payload;
                 if (enc) {
                     size_t outlen = 0;
                     size_t outtaglen = 16;
                     return (bool)ssldl.EVP_AEAD_CTX_seal_scatter_(
                         ctx, output.data, output.data + output.len - 16,
                         &outtaglen, output.len,
-                        iv_nonce.data, iv_nonce.len, payload.data, payload.len,
-                        nullptr, 0, head.data, head.len);
+                        iv_nonce.data, iv_nonce.len, info.payload.data, info.payload.len,
+                        nullptr, 0, info.head.data, info.head.len);
                 }
                 else {
                     return (bool)ssldl.EVP_AEAD_CTX_open_gather_(
                         ctx, output.data,
                         iv_nonce.data, iv_nonce.len,
-                        payload.data, payload.len - 16, payload.data + payload.len - 16, 16,
-                        head.data, head.len);
+                        info.payload.data, info.payload.len, info.tag.data, info.tag.len,
+                        info.head.data, info.head.len);
                 }
             }
 
-            dnet_dll_implement(bool) cipher_payload(const TLSCipher& cipher, ByteLen output, ByteLen payload, ByteLen head, ByteLen key, ByteLen iv_nonce, bool enc) {
+            bool cipher_payload(const TLSCipher& cipher, CryptoPacketInfo info, ByteLen key, ByteLen iv_nonce, bool enc) {
+                if (cipher == TLSCipher{}) {
+                    // initial packet
+                    return cipher_payload_impl(ssldl.EVP_aes_128_gcm_(), info, key, iv_nonce, enc);
+                }
                 auto meth = ssldl.EVP_get_cipherbynid_(cipher.nid());
                 if (!meth) {
                     if (cipher.is_algorithm(TLS_CHACHA20_POLY1305) && is_boringssl_crypto()) {
-                        return boringssl_chacha20_poly1305_cipher(cipher, output, payload, head, key, iv_nonce, enc);
+                        return boringssl_chacha20_poly1305_cipher(cipher, info, key, iv_nonce, enc);
                     }
                     return false;
                 }
-                return cipher_payload_impl(meth, output, payload, head, key, iv_nonce, enc);
+                return cipher_payload_impl(meth, info, key, iv_nonce, enc);
             }
-        }  // namespace quic
+        }  // namespace quic::crypto
     }      // namespace dnet
 }  // namespace utils

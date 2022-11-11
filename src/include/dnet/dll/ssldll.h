@@ -35,6 +35,7 @@ namespace ssl_import {
     constexpr auto EVP_CTRL_AEAD_SET_IVLEN_ = 0x9;
     constexpr auto EVP_CTRL_AEAD_GET_TAG_ = 0x10;
     constexpr auto EVP_CTRL_AEAD_SET_TAG_ = 0x11;
+    constexpr auto X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS_ = 0x4;
     namespace common {
         const SSL_METHOD* TLS_method();
         SSL_CTX* SSL_CTX_new(const SSL_METHOD* meth);
@@ -47,10 +48,7 @@ namespace ssl_import {
         int SSL_set_ex_data(SSL* ssl, int idx, void* data);
         void* SSL_get_ex_data(const SSL* ssl, int idx);
 
-        int SSL_do_handshake(SSL* ssl);
         int SSL_get_error(const SSL* ssl, int ret);
-        void SSL_set_connect_state(SSL* ssl);
-        void SSL_set_accept_state(SSL* ssl);
         int SSL_connect(SSL* ssl);
         int SSL_accept(SSL* ssl);
         int SSL_set_alpn_protos(SSL* ssl, const unsigned char* protos, unsigned int protos_len);
@@ -82,6 +80,9 @@ namespace ssl_import {
         const char* SSL_CIPHER_standard_name(const SSL_CIPHER* cipher);
         int SSL_CIPHER_get_bits(const SSL_CIPHER* cipher, int* alg_bits);
         int SSL_CIPHER_get_cipher_nid(const SSL_CIPHER* c);
+
+        int SSL_add1_host(SSL* s, const char* hostname);
+        void SSL_set_hostflags(SSL* s, unsigned int flags);
     }  // namespace common
 
     namespace crypto {
@@ -231,7 +232,7 @@ namespace utils {
     namespace dnet {
         struct SSLDll {
            private:
-            alib<34> libsslcommon;
+            alib<32> libsslcommon;
 #define L(func) LOADER_BASE(ssl_import::common::func, func, libsslcommon, SSLDll, false)
             // common
             L(TLS_method)
@@ -242,10 +243,7 @@ namespace utils {
             L(SSL_free)
             L(SSL_set_ex_data)
             L(SSL_get_ex_data)
-            L(SSL_do_handshake)
             L(SSL_get_error)
-            L(SSL_set_connect_state)
-            L(SSL_set_accept_state)
             L(SSL_connect)
             L(SSL_accept)
             L(SSL_set_alpn_protos)
@@ -268,6 +266,7 @@ namespace utils {
             L(SSL_CIPHER_standard_name)
             L(SSL_CIPHER_get_bits)
             L(SSL_CIPHER_get_cipher_nid)
+            L(SSL_set_hostflags)
 #undef L
            private:
             alib_nptr<5> libquic;

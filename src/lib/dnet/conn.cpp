@@ -74,8 +74,8 @@ namespace utils {
                 if (!tmp) {
                     continue;
                 }
-                if (!tmp.connect(saddr.addr, saddr.addrlen)) {
-                    if (tmp.block()) {
+                if (auto err = tmp.connect(saddr.addr, saddr.addrlen)) {
+                    if (isBlock(err)) {
                         state = ConnState::start_connect;
                         sock = std::move(tmp);
                         return true;
@@ -99,8 +99,8 @@ namespace utils {
                 err = conn_error_invalid_state;
                 return true;
             }
-            if (!sock.wait_writable(sec, usec)) {
-                if (!sock.block()) {
+            if (auto e = sock.wait_writable(sec, usec)) {
+                if (!dnet::isBlock(e)) {
                     state = ConnState::failed;
                     err = conn_error_socket;
                     return false;
@@ -166,8 +166,8 @@ namespace utils {
 
         dnet_dll_implement(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap) {
             auto do_write = [&] {
-                if (!sock.write(text, size)) {
-                    if (sock.block()) {
+                if (auto [_, err] = sock.write(text, size); err) {
+                    if (isBlock(err)) {
                         state = TLSIOState::to_provider;
                         return false;
                     }
@@ -214,11 +214,14 @@ namespace utils {
                 }
                 if (state == TLSIOState::from_provider) {
                     bool red = false;
-                    while (sock.read(text, cap)) {
-                        if (sock.readsize() == 0) {
-                            return true;
+                    error::Error err;
+                    while (true) {
+                        size_t readsize = 0;
+                        std::tie(readsize, err) = sock.read(text, cap);
+                        if (err) {
+                            break;
                         }
-                        size = sock.readsize();
+                        size = readsize;
                         if (!do_provide()) {
                             return state != TLSIOState::fatal;
                         }
@@ -227,7 +230,10 @@ namespace utils {
                     if (!red) {
                         count++;
                     }
-                    if (!sock.block()) {
+                    if (err == error::eof) {
+                        return true;
+                    }
+                    if (!isBlock(err)) {
                         state = TLSIOState::fatal;
                         return false;
                     }

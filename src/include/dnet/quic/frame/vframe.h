@@ -9,12 +9,12 @@
 #pragma once
 #include "frame_util.h"
 #include <memory>
-#include "../dll/allocator.h"
-#include "../../helper/defer.h"
+#include "../../dll/allocator.h"
+#include "../../../helper/defer.h"
 
 namespace utils {
     namespace dnet {
-        namespace quic {
+        namespace quic::frame {
             template <class F>
             struct RawVFrame;
 
@@ -46,7 +46,7 @@ namespace utils {
                public:
                 ~RawVFrame() {
                     if (raw_data.data) {
-                        free_normal(raw_data.data, DNET_DEBUG_MEMORY_LOCINFO(true, raw_data.len));
+                        free_normal(raw_data.data, DNET_DEBUG_MEMORY_LOCINFO(true, raw_data.len, alignof(byte)));
                     }
                 }
 
@@ -61,13 +61,13 @@ namespace utils {
             std::shared_ptr<RawVFrame<F>> make_vframe(const F& frame) {
                 ByteLen raw;
                 auto flen = frame.frame_len();
-                raw.data = (byte*)alloc_normal(flen, DNET_DEBUG_MEMORY_LOCINFO(true, flen));
+                raw.data = (byte*)alloc_normal(flen, alignof(byte), DNET_DEBUG_MEMORY_LOCINFO(true, flen, alignof(byte)));
                 if (!raw.data) {
                     return nullptr;
                 }
                 raw.len = flen;
                 auto r = helper::defer([&] {
-                    free_normal(raw.data, DNET_DEBUG_MEMORY_LOCINFO(true, flen));
+                    free_normal(raw.data, DNET_DEBUG_MEMORY_LOCINFO(true, flen, alignof(byte)));
                 });
                 std::shared_ptr<RawVFrame<F>> d =
                     std::allocate_shared<RawVFrame<F>, glheap_allocator<RawVFrame<F>>>(
@@ -145,6 +145,6 @@ namespace utils {
                 };
             }
 
-        }  // namespace quic
+        }  // namespace quic::frame
     }      // namespace dnet
 }  // namespace utils

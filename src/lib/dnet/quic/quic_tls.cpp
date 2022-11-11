@@ -15,7 +15,7 @@ namespace utils {
         // defined at tls.cpp
         TLSCipher make_cipher(const void *c);
         int quic_callback(TLS &tls, const quic::MethodArgs &args);
-        namespace quic {
+        namespace quic::crypto {
 
             int get_tls_then(ssl_import::SSL *ssl, auto &&then) {
                 auto &s = ssldl;
@@ -133,7 +133,7 @@ namespace utils {
                 return false;
             }
 
-        }  // namespace quic
+        }  // namespace quic::crypto
 
     }  // namespace dnet
 }  // namespace utils

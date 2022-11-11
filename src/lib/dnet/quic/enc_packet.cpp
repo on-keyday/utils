@@ -14,12 +14,13 @@
 
 namespace utils {
     namespace dnet {
-        namespace quic {
-
+        namespace quic::crypto {
+            /*
             dnet_dll_implement(bool) encrypt_initial_packet(CryptoPacketInfo& info, bool enc_client) {
                 InitialKeys keys;
                 if (!info.clientDstID.valid() ||
-                    !info.head.adjacent(info.payload)) {
+                    !info.head.adjacent(info.payload) ||
+                    !info.payload.adjacent(info.tag)) {
                     return false;
                 }
                 byte pool[200];
@@ -109,12 +110,13 @@ namespace utils {
                     ByteLen{keys.key.key, keys.key.size()},
                     ByteLen{nonce, keys.iv.size()}, false);
             }
+            */
 
-            dnet_dll_implement(bool) encrypt_packet(const TLSCipher& cipher, Keys& keys, CryptoPacketInfo& info, ByteLen secret) {
+            dnet_dll_implement(bool) encrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret) {
                 if (!info.head.adjacent(info.payload)) {
                     return false;
                 }
-                const auto is_AES = cipher.is_AES_based();
+                const auto is_AES = cipher == TLSCipher{} || cipher.is_AES_based();
                 const auto is_CHACHA20 = cipher.is_CHACHA20_based();
                 if (!is_AES && !is_CHACHA20) {
                     return false;
@@ -131,12 +133,12 @@ namespace utils {
                 byte pool[200]{};
                 WPacket tmp{{pool, 200}};
                 // make key,iv,hp
-                if (!make_keys_from_secret(keys, tmp, secret, hash_len)) {
+                if (!make_keys_from_secret(tmp, keys, version, secret, hash_len)) {
                     return false;
                 }
                 PacketFlags prot{info.head.data + 0};
                 auto pn_length = prot.packet_number_length();
-                auto cipher_text_len = info.payload.len - pn_length + 16;
+                auto cipher_text_len = info.payload.len - pn_length + cipher_tag_length;
                 if (!info.processed_payload.enough(cipher_text_len)) {
                     return false;
                 }
@@ -148,12 +150,16 @@ namespace utils {
                 for (auto i = 0; i < keys.iv.len; i++) {
                     nonce[i] ^= keys.iv.data[i];
                 }
+                // pack encrypt data
+                CryptoPacketInfo pass;
+                pass.head = {info.head.data, info.head.len + pn_length};
+                pass.payload = {info.payload.data + pn_length, info.payload.len - pn_length};
+                pass.processed_payload = info.processed_payload;
+                pass.tag = info.tag;  // unused but set for debug
                 // payload encryption
                 auto res = cipher_payload(
                     cipher,
-                    info.processed_payload,
-                    ByteLen{info.payload.data + pn_length, info.payload.len - pn_length},
-                    ByteLen{info.head.data + 0, info.head.len + pn_length},
+                    pass,
                     keys.key,
                     ByteLen{nonce, keys.iv.len}, true);
                 if (!res) {
@@ -180,12 +186,13 @@ namespace utils {
                 return true;
             }
 
-            dnet_dll_implement(bool) decrypt_packet(const TLSCipher& cipher, Keys& keys, CryptoPacketInfo& info, ByteLen secret) {
+            dnet_dll_implement(bool) decrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret) {
                 if (!info.payload.enough(20) ||
-                    !info.head.adjacent(info.payload)) {
+                    !info.head.adjacent(info.payload) ||
+                    !info.payload.adjacent(info.tag)) {
                     return false;
                 }
-                const auto is_AES = cipher.is_AES_based();
+                const auto is_AES = cipher == TLSCipher{} || cipher.is_AES_based();
                 const auto is_CHACHA20 = cipher.is_CHACHA20_based();
                 if (!is_AES && !is_CHACHA20) {
                     return false;
@@ -202,7 +209,7 @@ namespace utils {
                 byte pool[200]{};
                 WPacket tmp{{pool, 200}};
                 // make key,iv,hp
-                if (!make_keys_from_secret(keys, tmp, secret, hash_len)) {
+                if (!make_keys_from_secret(tmp, keys, version, secret, hash_len)) {
                     return false;
                 }
                 PacketFlags prot{info.head.data + 0};
@@ -226,11 +233,11 @@ namespace utils {
                     info.payload.data[i] ^= masks[1 + i];
                 }
                 // check output area len
-                const auto plain_text_len = info.payload.len - pn_length - 16;
+                const auto plain_text_len = info.payload.len - pn_length - cipher_tag_length;
                 if (!info.processed_payload.valid()) {
                     info.processed_payload = ByteLen{
                         info.payload.data + pn_length,
-                        info.payload.len - pn_length - 16,
+                        info.payload.len - pn_length - cipher_tag_length,
                     };
                 }
                 if (!info.processed_payload.enough(plain_text_len)) {
@@ -244,15 +251,19 @@ namespace utils {
                 for (auto i = 0; i < keys.iv.len; i++) {
                     nonce[i] ^= keys.iv.data[i];
                 }
+                // pack decrypt data
+                CryptoPacketInfo pass;
+                pass.head = {info.head.data, info.head.len + pn_length};
+                pass.payload = {info.payload.data + pn_length, info.payload.len - pn_length};
+                pass.processed_payload = info.processed_payload;
+                pass.tag = info.tag;
                 // payload decryption
                 return cipher_payload(
                     cipher,
-                    info.processed_payload,
-                    ByteLen{info.payload.data + pn_length, info.payload.len - pn_length},
-                    ByteLen{info.head.data + 0, info.head.len + pn_length},
+                    pass,
                     keys.key,
                     ByteLen{nonce, keys.iv.len}, false);
             }
-        }  // namespace quic
+        }  // namespace quic::crypto
     }      // namespace dnet
 }  // namespace utils

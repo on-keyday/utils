@@ -11,6 +11,8 @@
 #include <WinSock2.h>
 #include <MSWSock.h>
 #include <WS2tcpip.h>
+
+#include <afunix.h>
 #else
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -20,7 +22,9 @@
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <sys/un.h>
 #endif
+
 namespace utils {
     namespace dnet {
 #ifdef _WIN32
