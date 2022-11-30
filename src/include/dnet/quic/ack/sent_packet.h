@@ -12,6 +12,7 @@
 #include <vector>
 #include "../../dll/allocator.h"
 #include <compare>
+#include "rtt.h"
 
 namespace utils {
     namespace dnet {
@@ -21,7 +22,22 @@ namespace utils {
                 initial,
                 handshake,
                 application,
+                no_space = -1,
             };
+
+            constexpr PacketNumberSpace from_packet_type(PacketType typ) {
+                switch (typ) {
+                    case PacketType::Initial:
+                        return PacketNumberSpace::initial;
+                    case PacketType::Handshake:
+                        return PacketNumberSpace::handshake;
+                    case PacketType::ZeroRTT:
+                    case PacketType::OneRTT:
+                        return PacketNumberSpace::application;
+                    default:
+                        return PacketNumberSpace::no_space;
+                }
+            }
 
             enum class PacketNumber : std::uint64_t {
                 infinite = ~std::uint64_t(0),
@@ -46,7 +62,8 @@ namespace utils {
                 size_t sent_bytes = 0;
                 bool ack_eliciting = false;
                 bool in_flight = false;
-                time_t time_sent = -1;
+                bool skiped = false;
+                time_t time_sent = invalid_time;
             };
 
             using RemovedPackets = std::vector<SentPacket, glheap_allocator<SentPacket>>;

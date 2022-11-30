@@ -75,7 +75,7 @@ namespace utils {
                     continue;
                 }
                 if (auto err = tmp.connect(saddr.addr, saddr.addrlen)) {
-                    if (isBlock(err)) {
+                    if (isSysBlock(err)) {
                         state = ConnState::start_connect;
                         sock = std::move(tmp);
                         return true;
@@ -100,7 +100,7 @@ namespace utils {
                 return true;
             }
             if (auto e = sock.wait_writable(sec, usec)) {
-                if (!dnet::isBlock(e)) {
+                if (!dnet::isSysBlock(e)) {
                     state = ConnState::failed;
                     err = conn_error_socket;
                     return false;
@@ -121,7 +121,7 @@ namespace utils {
                     return false;
                 }
             }
-            return tls.set_cacert_file(cacert);
+            return tls.set_cacert_file(cacert).is_noerr();
         }
 
         bool Conn::start_tls(const char* host, const char* alpn, size_t alpnlen) {
@@ -142,7 +142,7 @@ namespace utils {
                 err = conn_error_tls;
                 return false;
             };
-            if (!tls.has_ssl() && !tls.make_ssl()) {
+            if (!tls.has_ssl() && tls.make_ssl().is_error()) {
                 return rep();
             }
             if (alpn && alpnlen) {
@@ -153,8 +153,8 @@ namespace utils {
             if (!tls.set_hostname(host)) {
                 return rep();
             }
-            if (!tls.connect()) {
-                if (tls.block()) {
+            if (auto err = tls.connect()) {
+                if (isTLSBlock(err)) {
                     state = ConnState::tls_start;
                     return true;
                 }
@@ -167,7 +167,7 @@ namespace utils {
         dnet_dll_implement(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap) {
             auto do_write = [&] {
                 if (auto [_, err] = sock.write(text, size); err) {
-                    if (isBlock(err)) {
+                    if (isSysBlock(err)) {
                         state = TLSIOState::to_provider;
                         return false;
                     }
@@ -177,8 +177,8 @@ namespace utils {
                 return true;
             };
             auto do_provide = [&] {
-                if (!tls.provide_tls_data(text, size)) {
-                    if (tls.block()) {
+                if (auto err = tls.provide_tls_data(text, size)) {
+                    if (isTLSBlock(err)) {
                         state = TLSIOState::to_ssl;
                     }
                     else {
@@ -233,7 +233,7 @@ namespace utils {
                     if (err == error::eof) {
                         return true;
                     }
-                    if (!isBlock(err)) {
+                    if (!isSysBlock(err)) {
                         state = TLSIOState::fatal;
                         return false;
                     }
@@ -278,11 +278,12 @@ namespace utils {
             if (!tls_io()) {
                 return false;
             }
-            if (tls.connect()) {
+            auto e = tls.connect();
+            if (!e) {
                 state = ConnState::tls_connected;
                 return true;
             }
-            if (!tls.block()) {
+            if (!isTLSBlock(e)) {
                 state = ConnState::failed;
                 err = conn_error_tls;
             }

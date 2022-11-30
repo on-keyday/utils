@@ -14,12 +14,14 @@ namespace utils {
         namespace quic::ack {
             using time_t = std::int64_t;
             using utime_t = std::uint64_t;
+
+            constexpr auto invalid_time = -time_t(1);
             struct Clock {
                 utime_t granularity = 0;
                 void* ctx;
                 time_t (*now_fn)(void*);
                 constexpr time_t now() const {
-                    return now_fn ? now_fn(ctx) : -1;
+                    return now_fn ? now_fn(ctx) : invalid_time;
                 }
             };
 
@@ -91,6 +93,21 @@ namespace utils {
                     return true;
                 }
             };
+
+            constexpr size_t log2i(size_t bit) {
+                if (bit == 1) {
+                    return 0;
+                }
+                if (bit == 2 || bit == 3) {
+                    return 1;
+                }
+                for (auto i = 0; i < 64; i++) {
+                    if (bit & (1 << (63 - i))) {
+                        return 63 - i;
+                    }
+                }
+                return ~0;
+            }
 
         }  // namespace quic::ack
     }      // namespace dnet

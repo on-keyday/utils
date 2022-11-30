@@ -41,20 +41,22 @@ namespace utils {
             struct dnet_class_export QUIC {
                private:
                 QUICContexts* p = nullptr;
-                friend dnet_dll_export(QUIC) make_quic(TLS& tls, const Config&);
+                friend dnet_dll_export(QUIC) make_quic(TLS& tls, Config&&);
                 constexpr QUIC(QUICContexts* ptr)
                     : p(ptr) {}
 
                public:
                 bool provide_udp_datagram(const void* data, size_t size);
-                bool receive_quic_packets(void* data, size_t size, size_t* recved, size_t* npacket = nullptr);
-                size_t quic_packet_len(size_t npacket) const;
+                bool receive_quic_packets(void* data, size_t size, size_t* recved);
+
                 QUICTLS tls();
 
-                bool connect();
+                error::Error connect();
                 bool accept();
 
-                bool block() const;
+                error::Error close_reason();
+                error::Error last_error();
+
                 constexpr QUIC() {}
                 ~QUIC();
                 constexpr QUIC(QUIC&& q)
@@ -73,7 +75,7 @@ namespace utils {
                 }
             };
 
-            dnet_dll_export(QUIC) make_quic(TLS& tls, const Config& config);
+            dnet_dll_export(QUIC) make_quic(TLS& tls, Config&& config);
 
         }  // namespace quic
     }      // namespace dnet

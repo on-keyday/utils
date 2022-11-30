@@ -32,7 +32,7 @@ namespace durl {
     void wait_connect(Request req, dnet::AddrInfo& info, dnet::Socket& conn) {
         while (true) {
             if (auto err = conn.wait_writable(0, 1000)) {
-                if (!dnet::isBlock(err)) {
+                if (!dnet::isSysBlock(err)) {
                     request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", err.error<std::string>());
                     return;
                 }
@@ -54,7 +54,7 @@ namespace durl {
                 continue;
             }
             auto err = sock.connect(addr.addr, addr.addrlen);
-            if (err && !dnet::isBlock(err)) {
+            if (err && !dnet::isSysBlock(err)) {
                 lasterr = std::move(err);
                 continue;
             }

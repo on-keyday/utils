@@ -82,6 +82,7 @@ namespace utils {
             DEFINE_CONVERT_BETWEEN_SAME_SIZE(4)
 
 #undef DEFINE_CONVERT_BETWEEN_SAME_SIZE
+
         }  // namespace internal
     }      // namespace utf
 }  // namespace utils

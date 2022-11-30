@@ -12,9 +12,21 @@
 #include "../core/sequencer.h"
 #include "minibuffer.h"
 #include "internal/conv_method_helper.h"
+#include "../wrap/light/enum.h"
 
 namespace utils {
     namespace utf {
+
+        enum class UTFError {
+            none,
+            length,
+            invalid_first,
+            illformed_sequence,
+            out_of_range,
+            unknown,
+        };
+
+        using UTFErr = wrap::EnumWrap<UTFError, UTFError::none, UTFError::unknown>;
 
         template <class C>
         constexpr bool is_utf16_high_surrogate(C c) {
@@ -27,11 +39,12 @@ namespace utils {
         }
 
         template <class C>
-        constexpr std::uint8_t expect_len(C c) {
+        constexpr std::uint8_t expect_len(C in) {
+            std::make_unsigned_t<C> c = in;
             if (c < 0 || c > 0xff) {
                 return 0;
             }
-            if (c >= 0 & c <= 0x7f) {
+            if (c >= 0 && c <= 0x7f) {
                 return 1;
             }
             else if (is_mask_of<2>(c)) {
@@ -80,10 +93,10 @@ namespace utils {
         }
 
         template <class T, class C = char32_t>
-        constexpr bool utf8_to_utf32(Sequencer<T>& input, C& output) {
+        constexpr UTFErr utf8_to_utf32(Sequencer<T>& input, C& output) {
             using unsigned_t = std::make_unsigned_t<typename Sequencer<T>::char_type>;
             if (input.eos()) {
-                return false;
+                return UTFError::length;
             }
             auto ofs = [&](size_t ofs) {
                 return static_cast<unsigned_t>(input.current(ofs));
@@ -91,7 +104,7 @@ namespace utils {
             auto in = ofs(0);
             auto len = expect_len(in);
             if (len == 0) {
-                return false;
+                return UTFError::invalid_first;
             }
             if (len == 1) {
                 input.consume();
@@ -99,10 +112,10 @@ namespace utils {
                 return true;
             }
             if (input.remain() < len) {
-                return false;
+                return UTFError::length;
             }
             if (!is_valid_range(len, ofs(0), ofs(1))) {
-                return false;
+                return UTFError::illformed_sequence;
             }
             internal::make_utf32_from_utf8(len, input.buf.buffer, output, input.rptr);
             input.consume(len);
@@ -110,31 +123,31 @@ namespace utils {
         }
 
         template <class T, class C = char32_t>
-        constexpr bool utf8_to_utf32(T&& input, C& output) {
+        constexpr UTFErr utf8_to_utf32(T&& input, C& output) {
             Sequencer<buffer_t<T&>> seq(input);
             return utf8_to_utf32(seq, output);
         }
 
         template <class T, class C = char32_t>
-        constexpr bool utf16_to_utf32(Sequencer<T>& input, C& output) {
+        constexpr UTFErr utf16_to_utf32(Sequencer<T>& input, C& output) {
             using unsigned_t = std::make_unsigned_t<typename Sequencer<T>::char_type>;
             if (input.eos()) {
-                return false;
+                return UTFError::length;
             }
             auto ofs = [&](size_t ofs) {
                 return static_cast<unsigned_t>(input.current(ofs));
             };
             auto in = ofs(0);
             if (in > 0xffff) {
-                return false;
+                return UTFError::invalid_first;
             }
             if (is_utf16_high_surrogate(in)) {
                 if (input.remain() < 2) {
-                    return false;
+                    return UTFError::length;
                 }
                 auto sec = ofs(1);
                 if (!is_utf16_low_surrogate(sec)) {
-                    return false;
+                    return UTFError::illformed_sequence;
                 }
                 output = internal::make_surrogate_char<unsigned_t, C>(in, sec);
                 input.consume(2);
@@ -147,13 +160,13 @@ namespace utils {
         }
 
         template <class T, class C = char32_t>
-        constexpr bool utf16_to_utf32(T&& input, C& output) {
+        constexpr UTFErr utf16_to_utf32(T&& input, C& output) {
             Sequencer<buffer_t<T&>> seq(input);
             return utf16_to_utf32(seq, output);
         }
 
         template <class T, class C>
-        constexpr bool utf32_to_utf8(C input, T& output) {
+        constexpr UTFErr utf32_to_utf8(C input, T& output) {
             using unsigned_t = std::make_unsigned_t<C>;
             auto in = static_cast<unsigned_t>(input);
             if (in < 0x80) {
@@ -169,17 +182,17 @@ namespace utils {
                 internal::make_utf8_from_utf32<4>(in, output);
             }
             else {
-                return false;
+                return UTFError::out_of_range;
             }
             return true;
         }
 
         template <class T, class C>
-        constexpr bool utf32_to_utf16(C input, T& output) {
+        constexpr UTFErr utf32_to_utf16(C input, T& output) {
             using unsigned_t = std::make_unsigned_t<C>;
             auto in = static_cast<unsigned_t>(input);
             if (in >= 0x110000) {
-                return false;
+                return UTFError::out_of_range;
             }
             if (in > 0xffff) {
                 auto first = char16_t((in - 0x10000) / 0x400 + 0xD800);
@@ -194,19 +207,19 @@ namespace utils {
         }
 
         template <class T, class C>
-        constexpr bool utf8_to_utf16(T& input, C& output) {
+        constexpr UTFErr utf8_to_utf16(T& input, C& output) {
             char32_t tmp = 0;
-            if (!utf8_to_utf32(input, tmp)) {
-                return false;
+            if (auto ok = utf8_to_utf32(input, tmp); !ok) {
+                return ok;
             }
             return utf32_to_utf16(tmp, output);
         }
 
         template <class T, class C>
-        constexpr bool utf16_to_utf8(T& input, C& output) {
+        constexpr UTFErr utf16_to_utf8(T& input, C& output) {
             char32_t tmp = 0;
-            if (!utf16_to_utf32(input, tmp)) {
-                return false;
+            if (auto ok = utf16_to_utf32(input, tmp); !ok) {
+                return ok;
             }
             return utf32_to_utf8(tmp, output);
         }

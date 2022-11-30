@@ -51,7 +51,7 @@ namespace utils {
 #endif
         }
 
-        dnet_dll_implement(bool) isBlock(const error::Error& err) {
+        dnet_dll_implement(bool) isSysBlock(const error::Error& err) {
             if (err.category() != error::ErrorCategory::syserr) {
                 return false;
             }
@@ -72,8 +72,21 @@ namespace utils {
             return error::Error(get_error(), error::ErrorCategory::syserr);
         }
 
-        error::Error Socket::connect(const void* addr, size_t len) {
-            auto res = socdl.connect_(sock, static_cast<const ::sockaddr*>(addr), len);
+        error::Error Socket::connect(const raw_address* addr, size_t len) {
+            auto res = socdl.connect_(sock, reinterpret_cast<const ::sockaddr*>(addr), len);
+            if (res < 0) {
+                return Errno();
+            }
+            return error::none;
+        }
+
+        error::Error Socket::connect(const NetAddrPort& addr) {
+            sockaddr_storage st{};
+            auto [a, len] = NetAddrPort_to_sockaddr(&st, addr);
+            if (!a) {
+                return error::Error(not_supported, error::ErrorCategory::dneterr);
+            }
+            auto res = socdl.connect_(sock, a, len);
             if (res < 0) {
                 return Errno();
             }
@@ -133,12 +146,12 @@ namespace utils {
             return {res, error::none};
         }
 
-        std::pair<size_t, error::Error> Socket::read(void* data, size_t len, int flag) {
+        std::pair<size_t, error::Error> Socket::read(void* data, size_t len, int flag, bool is_stream) {
             auto res = socdl.recv_(sock, static_cast<char*>(data), len, flag);
             if (res < 0) {
                 return {0, Errno()};
             }
-            return {res, res == 0 ? error::eof : error::none};
+            return {res, res == 0 && is_stream ? error::eof : error::none};
         }
 
         std::pair<size_t, error::Error> Socket::writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag) {
@@ -162,20 +175,20 @@ namespace utils {
             return {res, error::none};
         }
 
-        std::pair<size_t, error::Error> Socket::readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag) {
+        std::pair<size_t, error::Error> Socket::readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag, bool is_stream) {
             if (!addrlen) {
                 return {0, error::Error(invalid_addr, error::ErrorCategory::validationerr)};
             }
             socklen_t fromlen = *addrlen;
             auto res = socdl.recvfrom_(sock, static_cast<char*>(data), len, flag, reinterpret_cast<sockaddr*>(addr), &fromlen);
             if (res < 0) {
-                return {0, error::Error(get_error(), error::ErrorCategory::syserr)};
+                return {0, Errno()};
             }
             *addrlen = fromlen;
-            return {res, error::none};
+            return {res, res == 0 && is_stream ? error::eof : error::none};
         }
 
-        std::tuple<size_t, NetAddrPort, error::Error> Socket::readfrom(void* data, size_t len, int flag) {
+        std::tuple<size_t, NetAddrPort, error::Error> Socket::readfrom(void* data, size_t len, int flag, bool is_stream) {
             sockaddr_storage soct{};
             socklen_t fromlen = sizeof(soct);
             auto addr = reinterpret_cast<sockaddr*>(&soct);
@@ -183,7 +196,7 @@ namespace utils {
             if (res < 0) {
                 return {0, NetAddrPort{}, Errno()};
             }
-            return {res, sockaddr_to_NetAddrPort(addr, fromlen), error::none};
+            return {res, sockaddr_to_NetAddrPort(addr, fromlen), res == 0 && is_stream ? error::eof : error::none};
         }
 
         error::Error Socket::shutdown(int mode) {

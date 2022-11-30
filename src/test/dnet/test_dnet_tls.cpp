@@ -36,7 +36,7 @@ int main() {
             sock = std::move(tmp);
             break;
         }
-        if (!dnet::isBlock(err) || tmp.wait_writable(10, 0).is_error()) {
+        if (!dnet::isSysBlock(err) || tmp.wait_writable(10, 0).is_error()) {
             continue;
         }
         sock = std::move(tmp);
@@ -52,10 +52,10 @@ int main() {
     tls.set_alpn("\x08http/1.1", 9);
     tls.set_hostname("www.google.com");
     auto res = tls.make_ssl();
-    assert(res);
+    assert(!res.is_error());
     char buf[1024 * 3];
     auto provider_loop = [&] {
-        if (tls.receive_tls_data(buf, sizeof(buf))) {
+        if (tls.receive_tls_data(buf, sizeof(buf)).is_noerr()) {
             sock.write(buf, tls.readsize());
         }
         size_t readsize = 0;
@@ -65,20 +65,20 @@ int main() {
             if (!err) {
                 break;
             }
-            assert(dnet::isBlock(err));
+            assert(dnet::isSysBlock(err));
             std::this_thread::yield();
         }
         tls.provide_tls_data(buf, readsize);
     };
-    while (!tls.connect()) {
-        assert(tls.block());
+    while (auto err = tls.connect()) {
+        assert(dnet::isTLSBlock(err));
         provider_loop();
     }
     constexpr auto data = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
     tls.write(data, strlen(data));
     provider_loop();
-    while (!tls.read(buf, sizeof(buf))) {
-        assert(tls.block());
+    while (auto err = tls.read(buf, sizeof(buf))) {
+        assert(dnet::isTLSBlock(err));
         provider_loop();
     }
 }

@@ -32,6 +32,8 @@ namespace utils {
             syserr = 0x1,
             liberr = 0x100,
             dneterr = 0x101,
+            cryptoerr = 0x102,
+            quicerr = 0x103,
             apperr = 0x1000,
             internalerr = 0x10000,
             validationerr = 0x10001,
@@ -45,6 +47,10 @@ namespace utils {
                     return "lib";
                 case ErrorCategory::dneterr:
                     return "libdnet";
+                case ErrorCategory::cryptoerr:
+                    return "libcrypto/libssl";
+                case ErrorCategory::quicerr:
+                    return "quic";
                 case ErrorCategory::apperr:
                     return "application";
                 case ErrorCategory::internalerr:
@@ -58,6 +64,13 @@ namespace utils {
 
         struct Error;
 
+        struct ErrorTraits {
+            bool has_category = false;
+            bool has_equal = false;
+            bool has_errnum = false;
+            bool has_unwrap = false;
+        };
+
         namespace internal {
 
             template <class T>
@@ -68,6 +81,11 @@ namespace utils {
             template <class T>
             concept has_category = requires(T t) {
                 { t.category() } -> std::same_as<ErrorCategory>;
+            };
+
+            template <class T>
+            concept has_errnum = requires(T t) {
+                { t.errnum() } -> std::convertible_to<std::uint64_t>;
             };
 
             template <class T>
@@ -87,6 +105,8 @@ namespace utils {
                 category,
                 unwrap,
                 reflect,
+                errnum,
+                traits,
             };
 
             template <class T>
@@ -121,6 +141,7 @@ namespace utils {
                     }
                     auto cmpf = +eqfn<std::decay_t<decltype(*tmp)>>();
                     ptr = tmp;
+                    std::get<0>(tmp->optional) = 1;
                     cmp = reinterpret_cast<bool (*)(const void*, const void*)>(cmpf);
                     error = [](void* p, helper::IPushBacker pb, WrapCtrlOrder ord, void* unwrap_s) -> std::uintptr_t {
                         auto f = decltype(tmp)(p);
@@ -149,6 +170,20 @@ namespace utils {
                         }
                         if (ord == WrapCtrlOrder::reflect) {
                             return std::uintptr_t(std::addressof(f->fn));
+                        }
+                        if (ord == WrapCtrlOrder::errnum) {
+                            if constexpr (has_errnum<decltype(f->fn)>) {
+                                return f->fn.errnum();
+                            }
+                            return 0;
+                        }
+                        if (ord == WrapCtrlOrder::traits) {
+                            ErrorTraits& attr = *(ErrorTraits*)unwrap_s;
+                            attr.has_equal = has_equal<decltype(f->fn)>;
+                            attr.has_category = has_category<decltype(f->fn)>;
+                            attr.has_errnum = has_errnum<decltype(f->fn)>;
+                            attr.has_unwrap = has_unwrap<decltype(f->fn)>;
+                            return 0;
                         }
                         f->fn.error(pb);
                         return 0;
@@ -179,6 +214,12 @@ namespace utils {
             struct Memexh {};
         }  // namespace internal
 
+        // Error is golang like error interface
+        // object should implement void error(helper::IPushBacker)
+        // specialized to number,const char*,and char* (heap str)
+        // support Error copy by reference count of internal pointer
+        // also support Error unwrap() like golang errors.Unwrap()
+        // reflection like T* as() function also support
         struct Error {
            private:
             internal::ErrType detail{};
@@ -319,8 +360,8 @@ namespace utils {
             }
 
             template <class T>
-            requires internal::has_error<T>
-            explicit Error(T&& t)
+            requires internal::has_error<T> &&(!std::is_same_v<std::decay_t<T>, Error>)
+                Error(T&& t)
                 : type_(ErrorType::wrap) {
                 new (&detail.w) internal::Wrap(std::forward<decltype(t)>(t));
                 if (!detail.w.error) {
@@ -393,15 +434,23 @@ namespace utils {
                 return ErrorCategory::apperr;
             }
 
-            std::uint64_t errnum() const {
+            constexpr std::uint64_t errnum() const {
                 if (type_ == ErrorType::number) {
                     return detail.code.value;
                 }
-                return ~0;
+                if (type_ == ErrorType::wrap) {
+                    helper::NopPushBacker nop;
+                    return detail.w.error(detail.w.ptr, nop, internal::WrapCtrlOrder::errnum, nullptr);
+                }
+                return 0;
             }
 
             constexpr bool is_error() const {
                 return type_ != ErrorType::null;
+            }
+
+            constexpr bool is_noerr() const {
+                return !is_error();
             }
 
             constexpr explicit operator bool() const {
@@ -472,15 +521,39 @@ namespace utils {
                 }
                 return nullptr;
             }
+
+            constexpr ErrorTraits traits() const {
+                if (type_ == ErrorType::null || type_ == ErrorType::memexh ||
+                    type_ == ErrorType::const_str || type_ == ErrorType::str) {
+                    return ErrorTraits{.has_category = true, .has_equal = true};
+                }
+                if (type_ == ErrorType::number) {
+                    return ErrorTraits{.has_category = true, .has_equal = true, .has_errnum = true};
+                }
+                if (type_ == ErrorType::wrap) {
+                    ErrorTraits trait;
+                    helper::NopPushBacker nop;
+                    detail.w.error(detail.w.ptr, nop, internal::WrapCtrlOrder::traits, &trait);
+                    return trait;
+                }
+                return {};
+            }
         };
 
         constexpr auto none = Error();
 
         constexpr auto eof = Error("EOF", ErrorCategory::syserr);
 
+        // memory_exhausted is an emrgency error
+        // avoid heap allocation and free memory if this occurred.
+        // this is common and exceptional error in program so that this has special ErrorType.
+        // if memory exhausting is occurred while Error object construction,
+        // Error object will replaced with this
         constexpr auto memory_exhausted = Error(internal::Memexh{});
 
         constexpr auto block = Error("BLOCK", ErrorCategory::syserr);
+
+        constexpr auto unimplemented = Error("UNIMPLEMENTED", ErrorCategory::dneterr);
 
     }  // namespace dnet::error
 }  // namespace utils

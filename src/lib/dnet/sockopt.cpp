@@ -13,6 +13,53 @@
 
 namespace utils {
     namespace dnet {
+        error::Error Socket::get_localaddr(raw_address* addr, int* addrlen) {
+            if (!addrlen) {
+                return error::Error(invalid_addr, error::ErrorCategory::validationerr);
+            }
+            socklen_t len = 0;
+            auto res = socdl.getsockname_(sock, reinterpret_cast<sockaddr*>(addr), &len);
+            if (res != 0) {
+                return Errno();
+            }
+            *addrlen = len;
+            return error::none;
+        }
+
+        std::pair<NetAddrPort, error::Error> Socket::get_localaddr() {
+            sockaddr_storage st{};
+            socklen_t len = sizeof(st);
+            auto addr = reinterpret_cast<sockaddr*>(&st);
+            auto res = socdl.getsockname_(sock, addr, &len);
+            if (res != 0) {
+                return {{}, Errno()};
+            }
+            return {sockaddr_to_NetAddrPort(addr, len), error::none};
+        }
+
+        error::Error Socket::get_remoteaddr(raw_address* addr, int* addrlen) {
+            if (!addrlen) {
+                return error::Error(invalid_addr, error::ErrorCategory::validationerr);
+            }
+            socklen_t len = 0;
+            auto res = socdl.getpeername_(sock, reinterpret_cast<sockaddr*>(addr), &len);
+            if (res != 0) {
+                return Errno();
+            }
+            *addrlen = len;
+            return error::none;
+        }
+        std::pair<NetAddrPort, error::Error> Socket::get_remoteaddr() {
+            sockaddr_storage st{};
+            socklen_t len = sizeof(st);
+            auto addr = reinterpret_cast<sockaddr*>(&st);
+            auto res = socdl.getpeername_(sock, addr, &len);
+            if (res != 0) {
+                return {{}, Errno()};
+            }
+            return {sockaddr_to_NetAddrPort(addr, len), error::none};
+        }
+
         error::Error Socket::get_option(int layer, int opt, void* buf, size_t size) {
             socklen_t len = int(size);
             auto res = socdl.getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
@@ -142,6 +189,32 @@ namespace utils {
             return error::none;
 #else
             return error::Error(not_supported, error::ErrorCategory::dneterr);
+#endif
+        }
+
+        std::tuple<int, int, int, error::Error> Socket::get_af_type_protocol() {
+#ifdef _WIN32
+            WSAPROTOCOL_INFOW info{};
+            auto err = get_option(SOL_SOCKET, SO_PROTOCOL_INFOW, info);
+            if (err) {
+                return {-1, -1, -1, err};
+            }
+            return {info.iAddressFamily, info.iSocketType, info.iProtocol, error::none};
+#else
+            int af = -1, type = -1, proto = -1;
+            auto err = get_option(SOL_SOCKET, SO_DOMAIN, af);
+            if (err) {
+                return {-1, -1, -1, err};
+            }
+            err = get_option(SOL_SOCKET, SO_TYPE, type);
+            if (err) {
+                return {af, -1, -1, err};
+            }
+            err = get_option(SOL_SOCKET, SO_PROTOCOL, proto);
+            if (err) {
+                return {af, type, -1, err};
+            }
+            return {af, type, proto, error::none};
 #endif
         }
     }  // namespace dnet

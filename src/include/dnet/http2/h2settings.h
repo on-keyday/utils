@@ -8,10 +8,35 @@
 // h2settings - http2 settings util
 #pragma once
 #include <helper/pushbacker.h>
-#include "../../net/http2/stream_state.h"
+/*
+#include <depr/net/http2/stream_state.h"
+*/
 
 namespace utils {
     namespace dnet {
+        namespace h2frame {
+            enum class Status {
+                idle,
+                closed,
+                open,
+                half_closed_remote,
+                half_closed_local,
+                reserved_remote,
+                reserved_local,
+                unknown,
+            };
+
+            BEGIN_ENUM_STRING_MSG(Status, status_name)
+            ENUM_STRING_MSG(Status::idle, "idle")
+            ENUM_STRING_MSG(Status::closed, "closed")
+            ENUM_STRING_MSG(Status::open, "open")
+            ENUM_STRING_MSG(Status::half_closed_local, "half_closed_local")
+            ENUM_STRING_MSG(Status::half_closed_remote, "half_closed_remote")
+            ENUM_STRING_MSG(Status::reserved_local, "reserved_local")
+            ENUM_STRING_MSG(Status::reserved_remote, "reserved_remote")
+            END_ENUM_STRING_MSG("unknown")
+        }  // namespace h2frame
+
         namespace h2set {
             using Skey = utils::net::http2::SettingKey;
             using Vec = helper::CharVecPushbacker<char>;

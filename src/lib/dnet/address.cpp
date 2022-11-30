@@ -24,7 +24,27 @@ namespace utils {
             else {
                 addr.data_copy(b.data, b.len);
             }
+            addr.type_ = type;
             return addr;
+        }
+
+        dnet_dll_implement(NetAddrPort) ipv4(byte a, byte b, byte c, byte d,
+                                             std::uint16_t port) {
+            byte val[] = {a, b, c, d};
+            NetAddrPort naddr;
+            naddr.addr = make_netaddr(NetAddrType::ipv4, {val, 4});
+            naddr.port = port;
+            return naddr;
+        }
+
+        dnet_dll_implement(NetAddrPort) ipv6(byte a, byte b, byte c, byte d, byte e, byte f, byte g, byte h,
+                                             byte i, byte j, byte k, byte l, byte m, byte n, byte o, byte p,
+                                             std::uint16_t port) {
+            byte val[] = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
+            NetAddrPort naddr;
+            naddr.addr = make_netaddr(NetAddrType::ipv6, {val, 16});
+            naddr.port = port;
+            return naddr;
         }
 
         NetAddrPort sockaddr_to_NetAddrPort(sockaddr* addr, size_t len) {

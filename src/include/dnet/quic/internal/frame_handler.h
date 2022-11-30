@@ -12,11 +12,15 @@
 namespace utils {
     namespace dnet {
         namespace quic::handler {
-            bool on_ack(QUICContexts* q, frame::ACKFrame& ack, ack::PacketNumberSpace space);
+            error::Error on_ack(QUICContexts* q, frame::ACKFrame& ack, ack::PacketNumberSpace space);
 
-            bool on_crypto(QUICContexts* q, frame::CryptoFrame& c, crypto::EncryptionLevel level);
+            error::Error on_crypto(QUICContexts* q, frame::CryptoFrame& c, crypto::EncryptionLevel level);
 
-            bool on_connection_close(QUICContexts* q, frame::ConnectionCloseFrame& c);
+            error::Error on_connection_close(QUICContexts* q, frame::ConnectionCloseFrame& c);
+
+            error::Error on_new_connection_id(QUICContexts* q, frame::NewConnectionIDFrame& c);
+
+            error::Error on_streams_blocked(QUICContexts* q, frame::StreamsBlockedFrame& blocked);
         }  // namespace quic::handler
     }      // namespace dnet
 }  // namespace utils

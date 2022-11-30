@@ -9,7 +9,7 @@
 #include <dnet/quic/quic.h>
 #include <helper/defer.h>
 #include <dnet/quic/internal/quic_contexts.h>
-#include <dnet/quic/packet_util.h>
+#include <dnet/quic/packet/packet_util.h>
 #include <dnet/quic/frame/frame_make.h>
 #include <dnet/dll/glheap.h>
 
@@ -27,28 +27,28 @@ namespace utils {
                 if (!tls) {
                     return false;
                 }
-                return tls->set_hostname(name, verify);
+                return tls->set_hostname(name, verify).is_noerr();
             }
 
             bool QUICTLS::set_alpn(const char* name, size_t len) {
                 if (!tls) {
                     return false;
                 }
-                return tls->set_alpn(name, len);
+                return tls->set_alpn(name, len).is_noerr();
             }
 
             bool QUICTLS::set_client_cert_file(const char* cert) {
                 if (!tls) {
                     return false;
                 }
-                return tls->set_client_cert_file(cert);
+                return tls->set_client_cert_file(cert).is_noerr();
             }
 
             bool QUICTLS::set_verify(int mode, int (*verify_callback)(int, void*)) {
                 if (!tls) {
                     return false;
                 }
-                return tls->set_verify(mode, verify_callback);
+                return tls->set_verify(mode, verify_callback).is_noerr();
             }
 
             bool QUIC::provide_udp_datagram(const void* data, size_t size) {
@@ -61,72 +61,55 @@ namespace utils {
                 }
                 p->datagrams.push_back(UDPDatagram{std::move(boxed)});
                 auto err = p->ackh.on_datagram_recived();
-                if (err != TransportError::NO_ERROR) {
-                    p->transport_error(err, FrameType::PADDING, "ackh.on_datagram_recived failed");
+                if (err) {
+                    p->errs.err = std::move(err);
                 }
                 return true;
             }
 
-            bool QUIC::receive_quic_packets(void* data, size_t size, size_t* red, size_t* npacket) {
-                size_t pcount = 0;
-                size_t offset = 0;
-                auto set_red = [&](auto v, auto np) {
-                    offset += v;
-                    pcount += np;
+            void set_errors(QUICContexts* q, error::Error& err) {
+                if (err == error::block) {
+                    return;
+                }
+                q->errs.err = err;
+                q->errs.qerr = q->errs.err.as<quic::QUICError>();
+            }
+
+            bool QUIC::receive_quic_packets(void* data, size_t size, size_t* red) {
+                if (!p || p->quic_packets.size() == 0) {
                     if (red) {
-                        *red = offset;
+                        *red = 0;
                     }
-                    if (npacket) {
-                        *npacket = pcount;
-                    }
-                };
-                if (!p || !data) {
-                    set_red(0, 0);
                     return false;
                 }
-                set_red(0, 0);
-                auto dp = static_cast<byte*>(data);
-                while (true) {
-                    if (!p->quic_packets.size()) {
-                        return pcount != 0;
-                    }
-                    auto& fr = p->quic_packets.front();
-                    auto unboxed = fr.cipher.unbox();
-                    if (offset + unboxed.len > size) {
-                        return pcount != 0;
-                    }
-                    memcpy(dp + offset, unboxed.data, unboxed.len);
-                    offset += unboxed.len;
-                    set_red(unboxed.len, 1);
-                    auto err = p->ackh.on_packet_sent(fr.pn_space, std::move(fr.sent));
-                    p->quic_packets.pop_front();
-                    if (err != TransportError::NO_ERROR) {
-                        p->transport_error(err, {}, "ackh.on_packet_sent failed");
+                auto& qp = p->quic_packets.front();
+                auto len = qp.sending_packet.len();
+                if (red) {
+                    *red = len;
+                }
+                if (size < len || !data) {
+                    return false;
+                }
+                if (qp.pn_space != ack::PacketNumberSpace::no_space) {
+                    if (auto err = p->ackh.on_packet_sent(qp.pn_space, std::move(qp.sent))) {
+                        set_errors(p, err);
                         return false;
                     }
                 }
+                auto to = (byte*)data;
+                auto from = qp.sending_packet.data();
+                for (size_t i = 0; i < len; i++) {
+                    to[i] = from[i];
+                }
+                p->quic_packets.pop_front();
                 return true;
-            }
-
-            size_t QUIC::quic_packet_len(size_t npacket) const {
-                if (!p) {
-                    return 0;
-                }
-                size_t len = 0;
-                for (size_t i = 0; i < npacket; i++) {
-                    if (i >= p->quic_packets.size()) {
-                        break;
-                    }
-                    len += p->quic_packets[i].cipher.len();
-                }
-                return len;
             }
 
             QUICTLS QUIC::tls() {
                 if (!p) {
                     return {};
                 }
-                return QUICTLS{&p->tls};
+                return QUICTLS{&p->crypto.tls};
             }
 
             int secrets(QUICContexts* c, MethodArgs args) {
@@ -135,24 +118,24 @@ namespace utils {
                         return 0;
                     }
                     auto index = int(args.level);
-                    auto& wsecret = c->wsecrets[index];
-                    auto& rsecret = c->rsecrets[index];
-                    wsecret.b = ConstByteLen{args.write_secret, args.secret_len};
-                    rsecret.b = ConstByteLen{args.read_secret, args.secret_len};
-                    if (!wsecret.b.valid() || !rsecret.b.valid()) {
+                    auto& wsecret = c->crypto.wsecrets[index];
+                    auto& rsecret = c->crypto.rsecrets[index];
+                    wsecret.secret = ConstByteLen{args.write_secret, args.secret_len};
+                    rsecret.secret = ConstByteLen{args.read_secret, args.secret_len};
+                    if (!wsecret.secret.valid() || !rsecret.secret.valid()) {
                         return 0;
                     }
-                    wsecret.cipher = c->tls.get_cipher();
-                    rsecret.cipher = c->tls.get_cipher();
+                    wsecret.cipher = c->crypto.tls.get_cipher();
+                    rsecret.cipher = c->crypto.tls.get_cipher();
                     return 1;
                 }
                 if (args.type == crypto::ArgType::wsecret) {
                     if (args.level == crypto::EncryptionLevel::initial) {
                         return 0;
                     }
-                    auto& wsecret = c->wsecrets[int(args.level) - 1];
-                    wsecret.b = ConstByteLen{args.write_secret, args.secret_len};
-                    if (!wsecret.b.valid()) {
+                    auto& wsecret = c->crypto.wsecrets[int(args.level)];
+                    wsecret.secret = ConstByteLen{args.write_secret, args.secret_len};
+                    if (!wsecret.secret.valid()) {
                         return 0;
                     }
                     wsecret.cipher = args.cipher;
@@ -162,9 +145,9 @@ namespace utils {
                     if (args.level == crypto::EncryptionLevel::initial) {
                         return 0;
                     }
-                    auto& rsecret = c->rsecrets[int(args.level) - 1];
-                    rsecret.b = ConstByteLen{args.read_secret, args.secret_len};
-                    if (!rsecret.b.valid()) {
+                    auto& rsecret = c->crypto.rsecrets[int(args.level)];
+                    rsecret.secret = ConstByteLen{args.read_secret, args.secret_len};
+                    if (!rsecret.secret.valid()) {
                         return 0;
                     }
                     rsecret.cipher = args.cipher;
@@ -178,25 +161,26 @@ namespace utils {
                     return 1;
                 }
                 if (args.type == crypto::ArgType::handshake_data) {
-                    c->hsdata[int(args.level)].data.append(args.data, args.len);
+                    c->crypto.hsdata[int(args.level)].add(args.data, args.len);
                     return 1;
                 }
                 if (args.type == crypto::ArgType::alert) {
-                    c->tls_alert = args.alert;
+                    c->crypto.tls_alert = args.alert;
                     c->state = QState::tls_alert;
                     return 1;
                 }
                 if (args.type == crypto::ArgType::flush) {
-                    c->flush_called = true;
+                    c->crypto.flush_called = true;
                     return 1;
                 }
                 return 0;
             }
 
-            bool apply_config(QUICContexts* p, const Config* c) {
+            bool apply_config(QUICContexts* p, Config* c) {
                 // ACK handler configs
                 if (!c->ack_handler.now || c->ack_handler.msec == 0 ||
-                    c->ack_handler.time_threshold.den == 0) {
+                    c->ack_handler.time_threshold.den == 0 ||
+                    !c->gen_random) {
                     return false;
                 }
                 p->ackh.clock.now_fn = c->ack_handler.now;
@@ -207,11 +191,12 @@ namespace utils {
                 p->ackh.params.packet_order_threshold = c->ack_handler.packet_threshold;
                 p->ackh.rtt.set_inirtt(c->ack_handler.initialRTT);
                 // Transport Parameter
-                p->params = c->transport_parameter.params;
+                p->params.local = c->transport_parameter.params;
+                p->srcIDs.gen_rand = std::move(c->gen_random);
                 return true;
             }
 
-            dnet_dll_implement(QUIC) make_quic(TLS& tls, const Config& config) {
+            dnet_dll_implement(QUIC) make_quic(TLS& tls, Config&& config) {
                 if (!tls.has_sslctx() || tls.has_ssl()) {
                     return {};
                 }
@@ -222,49 +207,58 @@ namespace utils {
                 if (!apply_config(p, &config)) {
                     return {};
                 }
-                p->tls = std::move(tls);
-                if (!p->tls.make_quic(qtls_, p)) {
-                    tls = std::move(p->tls);
+                p->crypto.tls = std::move(tls);
+                if (p->crypto.tls.make_quic(qtls_, p).is_error()) {
+                    tls = std::move(p->crypto.tls);
                     return {};
                 }
                 r.cancel();
                 return QUIC{p};
             }
 
-            bool QUIC::block() const {
+            error::Error QUIC::close_reason() {
                 if (!p) {
-                    return false;
+                    return error::none;
                 }
-                return p->block;
+                return p->errs.close_err;
             }
 
-            bool QUIC::connect() {
+            error::Error QUIC::last_error() {
                 if (!p) {
-                    return false;
+                    return error::none;
                 }
-                p->block = false;
+                return p->errs.err;
+            }
+
+            error::Error QUIC::connect() {
+                if (!p) {
+                    return error::Error("uninitialized", error::ErrorCategory::validationerr);
+                }
                 while (true) {
                     if (p->state == QState::start) {
-                        start_initial_handshake(p);
+                        if (auto err = start_initial_handshake(p)) {
+                            set_errors(p, err);
+                            return err;
+                        }
                         continue;
                     }
                     if (p->state == QState::receving_peer_handshake_packets) {
-                        auto res = receiving_peer_handshake_packets(p);
-                        if (res == quic_wait_state::block) {
-                            p->block = true;
-                            return false;
+                        if (auto err = receiving_peer_handshake_packets(p)) {
+                            set_errors(p, err);
+                            return err;
                         }
                         continue;
                     }
                     if (p->state == QState::on_error) {
-                        if (p->has_established) {
-                            // TODO(on-keyday): implement push to server
-                        }
                         p->state = QState::fatal;
+                        return p->errs.err;
+                    }
+                    if (p->state == QState::closed) {
+                        return error::eof;
                     }
                     break;
                 }
-                return false;
+                return error::block;
             }
         }  // namespace quic
     }      // namespace dnet

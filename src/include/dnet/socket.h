@@ -39,7 +39,7 @@ namespace utils {
             mtu_ignore,   // same as IP_PMTUDISC_PROBE
         };
 
-        dnet_dll_export(bool) isBlock(const error::Error&);
+        dnet_dll_export(bool) isSysBlock(const error::Error&);
         dnet_dll_export(bool) isMsgSize(const error::Error& err);
 
         // Socket is wrappper class of native socket
@@ -78,14 +78,20 @@ namespace utils {
                 return *this;
             }
 
-            error::Error connect(const void* addr /* = sockaddr*/, size_t len);
+            error::Error connect(const raw_address* addr /* = sockaddr*/, size_t len);
+            error::Error connect(const NetAddrPort& addr);
+
+            error::Error get_localaddr(raw_address* addr, int* addrlen);
+            std::pair<NetAddrPort, error::Error> get_localaddr();
+            error::Error get_remoteaddr(raw_address* addr, int* addrlen);
+            std::pair<NetAddrPort, error::Error> get_remoteaddr();
 
             std::pair<size_t, error::Error> write(const void* data, size_t len, int flag = 0);
-            std::pair<size_t, error::Error> read(void* data, size_t len, int flag = 0);
+            std::pair<size_t, error::Error> read(void* data, size_t len, int flag = 0, bool is_stream = true);
             std::pair<size_t, error::Error> writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag = 0);
             std::pair<size_t, error::Error> writeto(const NetAddrPort& addr, const void* data, size_t len, int flag = 0);
-            std::pair<size_t, error::Error> readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag = 0);
-            std::tuple<size_t, NetAddrPort, error::Error> readfrom(void* data, size_t len, int flag = 0);
+            std::pair<size_t, error::Error> readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag = 0, bool is_stream = false);
+            std::tuple<size_t, NetAddrPort, error::Error> readfrom(void* data, size_t len, int flag = 0, bool is_stream = false);
 
             [[nodiscard]] error::Error accept(Socket& to, raw_address* addr, int* addrlen);
             [[nodiscard]] std::tuple<Socket, NetAddrPort, error::Error> accept();
@@ -140,6 +146,9 @@ namespace utils {
             error::Error set_mtu_discover_v6(MTUConfig conf);
             std::int32_t get_mtu();
 
+            // get bound address family,socket type,protocol
+            std::tuple<int, int, int, error::Error> get_af_type_protocol();
+
             // these function sets DF flag on IP layer
             // these function is enable on windows
             // user on linux platform has to use set_mtu_discover(MTUConfig::enable_mtu) instead
@@ -175,18 +184,18 @@ namespace utils {
                     callback(redsize);
                     red = true;
                 }
-                if (isBlock(err)) {
+                if (isSysBlock(err)) {
                     return error::none;
                 }
                 return err;
             }
 
-            error::Error read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err));
-            error::Error readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport));
-            error::Error write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err));
-            error::Error writeto_async(ConstByteLen src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err));
-            error::Error connect_async(void* fnctx, void (*cb)(void*, error::Error));
-            error::Error accept_async(void* fnctx, void (*cb)(void*, error::Error));
+            error::Error read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err), int flag = 0, bool is_stream = true);
+            error::Error readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport), int flag = 0, bool is_stream = false);
+            error::Error write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag = 0);
+            error::Error writeto_async(ConstByteLen src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag = 0);
+            error::Error connect_async(const NetAddrPort& addr, void* fnctx, void (*cb)(void*, error::Error));
+            error::Error accept_async(void* fnctx, void (*cb)(void*, Socket, NetAddrPort, error::Error));
 
             error::Error read_async(auto&& fn, auto&& obj, auto&& get_sock, auto&& add_data) {
                 auto fctx = wrap_tuple(std::forward<decltype(fn)>(fn),

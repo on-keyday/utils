@@ -46,9 +46,9 @@ namespace utils {
         struct SocketDll {
            private:
 #ifdef _WIN32
-            static constexpr auto libcount = 30;
+            static constexpr auto libcount = 32;
 #else
-            static constexpr auto libcount = 20;
+            static constexpr auto libcount = 22;
 #endif
             alib<libcount> lib;
 #define L(func) LOADER_BASE(func, func, lib, SocketDll, false)
@@ -66,6 +66,8 @@ namespace utils {
             L(accept)
             L(select)
             L(gethostname)
+            L(getsockname)
+            L(getpeername)
 #ifdef _WIN32
             L(closesocket)
             L(ioctlsocket)

@@ -248,7 +248,7 @@ namespace utils {
             socdl.epoll_ctl_(get_epoll(), EPOLL_CTL_DEL, fd, nullptr);
         }
 
-        error::Error epollIOCommon(RWAsyncSuite* rw, AsyncSuite* suite, auto sock, ConstByteLen buf, auto appcb, void* ctx) {
+        error::Error epollIOCommon(RWAsyncSuite* rw, AsyncSuite* suite, auto sock, ConstByteLen buf, auto appcb, void* ctx, int flag, bool is_stream) {
             if (!register_fd(suite->sock, rw)) {
                 return Errno();
             }
@@ -264,6 +264,8 @@ namespace utils {
             }
             suite->appcb = reinterpret_cast<void (*)()>(appcb);
             suite->ctx = ctx;
+            suite->plt.flags = flag;
+            suite->is_stream = is_stream;
             return error::none;
         }
 
@@ -322,12 +324,12 @@ namespace utils {
             }
         }
 
-        void set_epoll_or_errno(error::Error& err) {
+        void set_epoll_or_errno(error::Error& err, bool eof = false) {
             if (auto eperr = err.as<EpollError>()) {
-                eperr->syserr = Errno();
+                eperr->syserr = eof ? error::eof : Errno();
             }
             else {
-                err = Errno();
+                err = eof ? error::eof : Errno();
             }
         }
 
@@ -356,9 +358,9 @@ namespace utils {
             return {AsyncState::completed, error::none};
         }
 
-        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err)) {
+        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err), int flag, bool is_stream) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = epollIOCommon(rw, suite, sock, {nullptr, bufsize}, cb, fnctx); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, {nullptr, bufsize}, cb, fnctx, flag, is_stream); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -373,12 +375,15 @@ namespace utils {
                     }
                     else {
                         red = res;
+                        if (suite->is_stream && res == 0) {
+                            set_epoll_or_errno(err, true);
+                        }
                     }
                     auto app = (void (*)(void*, ByteLen, bool, error::Error))suite->appcb;
                     suite->on_operation = false;  // clear for reentrant
                     app(suite->ctx, suite->boxed.unbox().resized(red), suite->boxed.len() == red, std::move(err));
                 };
-                auto [n, err] = read(suite->boxed.data(), suite->boxed.len());
+                auto [n, err] = read(suite->boxed.data(), suite->boxed.len(), flag, is_stream);
                 return handleStart(unlock, err, suite, [&, n = &n] {
                     cb(fnctx, suite->boxed.unbox().resized(*n),
                        suite->boxed.len() == *n, error::none);
@@ -386,9 +391,9 @@ namespace utils {
             });
         }
 
-        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addr)) {
+        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addr), int flag, bool is_stream) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = epollIOCommon(rw, suite, sock, {nullptr, bufsize}, cb, fnctx); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, {nullptr, bufsize}, cb, fnctx, flag, is_stream); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -400,13 +405,16 @@ namespace utils {
                     size_t red = 0;
                     auto saddr = reinterpret_cast<sockaddr*>(&addr);
                     auto res = socdl.recvfrom_(
-                        suite->sock, suite->boxed.data(), suite->boxed.len(), 0,
+                        suite->sock, suite->boxed.data(), suite->boxed.len(), suite->plt.flags,
                         saddr, &addrlen);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
                     else {
                         red = res;
+                        if (suite->is_stream && res == 0) {
+                            set_epoll_or_errno(err, true);
+                        }
                     }
                     const auto s = helper::defer([&] {
                         suite->decr();
@@ -418,7 +426,7 @@ namespace utils {
                 };
                 sockaddr_storage addr{};
                 int addrlen = sizeof(addr);
-                auto [n, err] = readfrom((dnet::raw_address*)&addr, &addrlen, suite->boxed.data(), suite->boxed.len());
+                auto [n, err] = readfrom((dnet::raw_address*)&addr, &addrlen, suite->boxed.data(), suite->boxed.len(), flag, is_stream);
                 return handleStart(unlock, err, suite, [&, n = &n] {
                     cb(fnctx, suite->boxed.unbox().resized(*n),
                        suite->boxed.len() == *n, error::none,
@@ -427,12 +435,12 @@ namespace utils {
             });
         }
 
-        error::Error Socket::write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err)) {
+        error::Error Socket::write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
                 if (!src.data) {
                     return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
                 }
-                if (auto err = epollIOCommon(rw, suite, sock, src, cb, fnctx); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, src, cb, fnctx, flag, false); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -441,7 +449,7 @@ namespace utils {
                     const auto d = decr_suite(suite);
                     check_epoll_mask(err);
                     size_t red = 0;
-                    auto res = socdl.send_(suite->sock, suite->boxed.data(), suite->boxed.len(), 0);
+                    auto res = socdl.send_(suite->sock, suite->boxed.data(), suite->boxed.len(), suite->plt.flags);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
@@ -452,19 +460,19 @@ namespace utils {
                     suite->on_operation = false;
                     app(suite->ctx, red, std::move(err));
                 };
-                auto [n, err] = write(suite->boxed.data(), suite->boxed.len(), 0);
+                auto [n, err] = write(suite->boxed.data(), suite->boxed.len(), flag);
                 return handleStart(unlock, err, suite, [&, n = &n] {
                     cb(fnctx, *n, error::none);
                 });
             });
         }
 
-        error::Error Socket::writeto_async(ConstByteLen src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err)) {
+        error::Error Socket::writeto_async(ConstByteLen src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
                 if (!src.data) {
                     return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
                 }
-                if (auto err = epollIOCommon(rw, suite, sock, src, cb, fnctx); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, src, cb, fnctx, flag, false); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -482,7 +490,7 @@ namespace utils {
                         app(suite->ctx, 0, error::memory_exhausted);
                         return;
                     }
-                    auto res = socdl.sendto_(suite->sock, suite->boxed.data(), suite->boxed.len(), 0, addr, addrlen);
+                    auto res = socdl.sendto_(suite->sock, suite->boxed.data(), suite->boxed.len(), suite->plt.flags, addr, addrlen);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
@@ -493,7 +501,7 @@ namespace utils {
                     app(suite->ctx, red, std::move(err));
                 };
                 suite->plt.addr = addr;  // copy address
-                auto [n, err] = writeto(addr, suite->boxed.data(), suite->boxed.len(), 0);
+                auto [n, err] = writeto(addr, suite->boxed.data(), suite->boxed.len(), flag);
                 return handleStart(unlock, err, suite, [&, n = &n] {
                     cb(fnctx, *n, error::none);
                 });

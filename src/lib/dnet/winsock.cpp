@@ -15,241 +15,6 @@
 
 namespace utils {
     namespace dnet {
-        /*
-                Socket make_socket(uintptr_t uptr);
-                struct AsyncBuffer {
-                    AsyncBufferCommon common;
-                    WSABUF buf;
-                    ::sockaddr_storage storage;
-                    int stlen = 0;
-                    DWORD flags = 0;
-
-                    std::uintptr_t tmpsock = ~0;  // for accept mode
-                    std::atomic_uint32_t ref;
-                    void incref() {
-                        ref++;
-                    }
-
-                    void decref() {
-                        if (ref.fetch_sub(1) == 1) {
-                            delete_with_global_heap(this, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncBuffer), alignof(AsyncBuffer)));
-                        }
-                    }
-
-                    static void get_ptrs(AsyncHead* h, void** ol, void** wsabuf, int* bufcount, void** storage,
-                                         int** stlen, void** flags, std::uintptr_t** tmpsockp) {
-                        auto buf = reinterpret_cast<AsyncBuffer*>(h);
-                        *ol = &buf->common.ol;
-                        buf->buf.buf = buf->common.ebuf.buf;
-                        buf->buf.len = buf->common.ebuf.size;
-                        *wsabuf = &buf->buf;
-                        *bufcount = 1;
-                        *storage = &buf->storage;
-                        buf->stlen = sizeof(buf->storage);
-                        *stlen = &buf->stlen;
-                        *flags = &buf->flags;
-                        *tmpsockp = &buf->tmpsock;
-                    }
-
-                    static void start(AsyncHead* h, std::uintptr_t) {
-                        auto buf = reinterpret_cast<AsyncBuffer*>(h);
-                        buf->incref();
-                    }
-                    static void completion(AsyncHead* h, size_t len) {
-                        if (!h) {
-                            return;
-                        }
-                        auto buf = reinterpret_cast<AsyncBuffer*>(h);
-                        auto& comp = buf->common.comp;
-                        if (comp.user_completion) {
-                            auto mode = buf->common.head.method;
-                            auto user = buf->common.user;
-                            auto& ebuf = buf->common.ebuf;
-                            DWORD tmp;
-                            int err = 0;
-                            if (!GetOverlappedResult((HANDLE)buf->common.head.handling, &buf->common.ol, &tmp, false)) {
-                                err = get_error();
-                            }
-                            if (mode == am_recvfrom) {
-                                comp.user_completion_from(user, ebuf.buf, len,
-                                                          ebuf.size, &buf->storage, buf->stlen, err);
-                            }
-                            else if (mode == am_recv) {
-                                comp.user_completion(user, ebuf.buf, len, ebuf.size, err);
-                            }
-                            else if (mode == am_accept) {
-                                comp.user_completion_accept(user, make_socket(buf->tmpsock), err);
-                            }
-                            else if (mode == am_connect || mode == am_send || mode == am_sendto) {
-                                comp.user_completion_connect(user, err);
-                            }
-                        }
-                        buf->decref();
-                    }
-
-                    static void canceled(AsyncHead* h) {
-                        auto buf = reinterpret_cast<AsyncBuffer*>(h);
-                        buf->decref();
-                    }
-
-                    constexpr AsyncBuffer()
-                        : ref(1) {
-                        common.head.get_ptrs = get_ptrs;
-                        common.head.start = start;
-                        common.head.completion = completion;
-                        common.head.canceled = canceled;
-                    }
-                };
-
-                AsyncBuffer* AsyncBuffer_new() {
-                    return new_from_global_heap<AsyncBuffer>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncBuffer), alignof(AsyncBuffer)));
-                }
-
-                void AsyncBuffer_gc(void* ptr, std::uintptr_t sock) {
-                    auto buf = static_cast<AsyncBuffer*>(ptr);
-                    if (buf->common.incomplete) {
-                        kerlib.CancelIoEx_((HANDLE)sock, nullptr);
-                        SleepEx(0, true);
-                    }
-                    buf->decref();
-                }
-
-                struct Needs {
-                    OVERLAPPED* ol;
-                    WSABUF* buf = nullptr;
-                    sockaddr_storage* storage = nullptr;
-                    int* stlen = 0;
-                    DWORD* flags = nullptr;
-                    int bufcount = 0;
-                    std::uintptr_t* tmpsock;
-                };
-
-                void get_ptrs(AsyncHead* head, Needs& needs) {
-                    head->get_ptrs(head, (void**)&needs.ol, (void**)&needs.buf, &needs.bufcount,
-                                   (void**)&needs.storage, &needs.stlen, (void**)&needs.flags, &needs.tmpsock);
-                }
-
-                bool validate(AsyncHead* head, Needs& needs, AsyncMethod mode) {
-                    const auto olptr = (const char*)(head) + sizeof(AsyncHead);
-                    if (!needs.ol || !needs.buf || needs.bufcount <= 0 || !needs.flags) {
-                        set_error(invalid_get_ptrs_result);
-                        return false;
-                    }
-                    if (mode == AsyncMethod::am_recvfrom) {
-                        if (!needs.stlen || *needs.stlen <= 0 || !needs.storage) {
-                            set_error(invalid_get_ptrs_result);
-                            return false;
-                        }
-                    }
-                    if (mode == AsyncMethod::am_accept) {
-                        if (!needs.tmpsock) {
-                            set_error(invalid_get_ptrs_result);
-                            return false;
-                        }
-                    }
-                    if ((void*)(needs.ol) != (void*)(olptr)) {
-                        set_error(invalid_ol_ptr_position);
-                        return false;
-                    }
-                    return true;
-                }
-
-
-
-                bool start_async_operation(
-                    void* ptr, std::uintptr_t sock, AsyncMethod mode,
-                    *for connectex*
-            const void* addr = nullptr, size_t addrlen = 0) {
-                if (!register_handle(sock)) {
-                    if (sock == ~0) {
-                        return false;  // yes completely wrong
-                    }
-                    // TODO(on-keyday):
-                    // multiple registration is failed with ERROR_INVALID_PARAMETER
-                    // should we hold flag of registration?
-                    if (get_error() != ERROR_INVALID_PARAMETER) {
-                        return false;
-                    }
-                }
-                AsyncHead* head = static_cast<AsyncHead*>(ptr);
-                if (head->reserved != async_reserved || !head->get_ptrs || !head->completion) {
-                    set_error(invalid_async_head);
-                    return false;
-                }
-                head->method = mode;
-                if (head->start) {
-                    head->start(head, sock);
-                }
-                Needs needs;
-                get_ptrs(head, needs);
-                if (!validate(head, needs, mode)) {
-                    if (head->canceled) {
-                        // if canceld
-                        head->canceled(head);
-                    }
-                    return false;
-                }
-                int res = -1;
-                DWORD trsf = 0;
-                head->handling = sock;
-                if (mode == am_recvfrom) {
-                    res = socdl.WSARecvFrom_(sock, needs.buf, needs.bufcount, &trsf, needs.flags,
-                                             reinterpret_cast<sockaddr*>(needs.storage), needs.stlen, needs.ol, nullptr);
-                }
-                else if (mode == am_recv) {
-                    res = socdl.WSARecv_(sock, needs.buf, needs.bufcount, &trsf, needs.flags, needs.ol, nullptr);
-                }
-                else if (mode == am_accept) {
-                    // TODO(on-keyday): support other protocol?
-                    auto len = needs.buf->len;
-                    auto reqlen = sizeof(sockaddr_in6) + 16;
-                    auto tmp = socdl.WSASocketW_(AF_INET6, SOCK_STREAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
-                    if (tmp != -1) {
-                        goto ENDACCEPT;
-                    }
-                    set_nonblock(tmp, true);
-                    if (len < reqlen * 2) {
-                        set_error(invalid_get_ptrs_result);
-                        sockclose(tmp);
-                        goto ENDACCEPT;
-                    }
-                    *needs.tmpsock = tmp;
-                    if (socdl.AcceptEx_(sock, tmp, needs.buf->buf, len - reqlen * 2, reqlen, reqlen, needs.flags, needs.ol)) {
-                        // syncronized completion
-                        head->completion(head, *needs.flags);
-                        res = 0;
-                    }
-                ENDACCEPT:;
-                }
-                else if (mode == am_connect) {
-                    if (socdl.ConnectEx_(sock, static_cast<const sockaddr*>(addr), addrlen, nullptr, 0, nullptr, needs.ol)) {
-                        // syncronized completion
-                        head->completion(head, 0);
-                        res = 0;
-                    }
-                }
-                else if (mode == am_send) {
-                    res = socdl.WSASend_(sock, needs.buf, needs.bufcount, &trsf, *needs.flags, needs.ol, nullptr);
-                }
-                else if (mode == am_sendto) {
-                    res = socdl.WSASendTo_(sock, needs.buf, needs.bufcount, &trsf, *needs.flags, reinterpret_cast<const sockaddr*>(addr), addrlen, needs.ol, nullptr);
-                }
-                else {
-                    set_error(not_supported);
-                }
-                if (res != 0) {
-                    res = get_error();
-                    if (res != WSA_IO_PENDING) {
-                        head->handling = ~0;
-                        if (head->canceled) {
-                            head->canceled(head);
-                        }
-                        return false;
-                    }
-                }
-                return true;
-            }
-            */
 
         static auto init_iocp_handle() {
             if (!kerlib.load()) {
@@ -315,25 +80,29 @@ namespace utils {
             return ev;
         }
 
-        error::Error winIOCommon(std::uintptr_t sock, ConstByteLen buf, AsyncSuite* suite, auto appcb, void* fnctx) {
+        error::Error winIOCommon(std::uintptr_t sock, ConstByteLen* buf, AsyncSuite* suite, auto appcb, void* fnctx, int flag, bool is_stream) {
             if (!register_handle(sock)) {
                 return Errno();
             }
             suite->sock = sock;
-            if (!buf.data) {
-                suite->boxed = BoxByteLen{buf.len};
+            if (buf) {
+                if (!buf->data) {
+                    suite->boxed = BoxByteLen{buf->len};
+                }
+                else {
+                    suite->boxed = *buf;
+                }
+                if (!suite->boxed.valid()) {
+                    return error::memory_exhausted;
+                }
+                suite->plt.buf.buf = reinterpret_cast<char*>(suite->boxed.data());
+                suite->plt.buf.len = suite->boxed.len();
             }
-            else {
-                suite->boxed = buf;
-            }
-            if (!suite->boxed.valid()) {
-                return error::memory_exhausted;
-            }
-            suite->plt.buf.buf = reinterpret_cast<char*>(suite->boxed.data());
-            suite->plt.buf.len = suite->boxed.len();
             suite->plt.ol = {};
             suite->appcb = reinterpret_cast<void (*)()>(appcb);
             suite->ctx = fnctx;
+            suite->is_stream = is_stream;
+            suite->plt.flags = flag;
             return error::none;
         }
 
@@ -374,9 +143,10 @@ namespace utils {
             return {AsyncState::started, error::none};
         }
 
-        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err)) {
+        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err), int flag, bool is_stream) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = winIOCommon(sock, {nullptr, bufsize}, suite, cb, fnctx)) {
+                ConstByteLen tmp{nullptr, bufsize};
+                if (auto err = winIOCommon(sock, &tmp, suite, cb, fnctx, flag, is_stream)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -396,9 +166,10 @@ namespace utils {
             });
         }
 
-        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport)) {
+        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport), int flag, bool is_stream) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = winIOCommon(sock, {nullptr, bufsize}, suite, cb, fnctx)) {
+                ConstByteLen tmp{nullptr, bufsize};
+                if (auto err = winIOCommon(sock, &tmp, suite, cb, fnctx, flag, is_stream)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -422,12 +193,12 @@ namespace utils {
             });
         }
 
-        error::Error Socket::write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err)) {
+        error::Error Socket::write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
                 if (!src.data) {
                     return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
                 }
-                if (auto err = winIOCommon(sock, src, suite, cb, fnctx)) {
+                if (auto err = winIOCommon(sock, &src, suite, cb, fnctx, flag, false)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -446,12 +217,12 @@ namespace utils {
             });
         }
 
-        error::Error Socket::writeto_async(ConstByteLen src, const NetAddrPort& naddr, void* fnctx, void (*cb)(void*, size_t, error::Error err)) {
+        error::Error Socket::writeto_async(ConstByteLen src, const NetAddrPort& naddr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
                 if (!src.data) {
                     return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
                 }
-                if (auto err = winIOCommon(sock, src, suite, cb, fnctx)) {
+                if (auto err = winIOCommon(sock, &src, suite, cb, fnctx, flag, false)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -471,6 +242,64 @@ namespace utils {
                 return handleStart(rw, suite, [&] {
                     cb(fnctx, suite->plt.read, error::none);
                 });
+            });
+        }
+
+        error::Error Socket::connect_async(const NetAddrPort& addr, void* fnctx, void (*cb)(void*, error::Error)) {
+            return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
+                if (auto err = winIOCommon(sock, nullptr, suite, cb, fnctx, 0, false)) {
+                    return {AsyncState::failed, err};
+                }
+                suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
+                    const auto r = helper::defer([&] {
+                        s->decr();
+                    });
+                    auto app = reinterpret_cast<void (*)(void*, error::Error)>(s->appcb);
+                    s->on_operation = false;
+                    app(s->ctx, std::move(err));
+                };
+                sockaddr_storage st;
+                auto [ptr, len] = NetAddrPort_to_sockaddr(&st, addr);
+                if (!ptr) {
+                    return {AsyncState::failed, error::Error(not_supported, error::ErrorCategory::dneterr)};
+                }
+                set_error(0);
+                socdl.ConnectEx_(sock, ptr, len, nullptr, 0, nullptr, &suite->plt.ol);
+                return handleStart(rw, suite, [&]() {
+                    cb(fnctx, error::none);
+                });
+            });
+        }
+
+        error::Error Socket::accept_async(void* fnctx, void (*cb)(void*, Socket, NetAddrPort, error::Error)) {
+            return error::unimplemented;  // now unimplemented
+
+            return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
+                auto stlen = (sizeof(sockaddr_storage) + 16);
+                ConstByteLen tmp{nullptr, stlen * 2};
+                if (auto err = winIOCommon(sock, &tmp, suite, cb, fnctx, 0, false)) {
+                    return {AsyncState::failed, err};
+                }
+                suite->cb = [](AsyncSuite* s, size_t, error::Error err) {
+
+                };
+                auto [af, type, proto, err] = get_af_type_protocol();
+                if (err) {
+                    return {AsyncState::failed, err};
+                }
+                suite->plt.accept_sock = socdl.WSASocketW_(af, type, proto, nullptr, 0, WSA_FLAG_OVERLAPPED);
+                if (suite->plt.accept_sock == -1) {
+                    return {AsyncState::failed, Errno()};
+                }
+                set_error(0);
+                auto res = handleStart(rw, suite, [&] {
+
+                });
+                if (res.first == AsyncState::failed) {
+                    sockclose(suite->plt.accept_sock);
+                    suite->plt.accept_sock = ~0;
+                }
+                return res;
             });
         }
     }  // namespace dnet

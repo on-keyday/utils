@@ -24,7 +24,7 @@ namespace utils {
             template <class Out>
             static Out& invoke(Out& out, T&& t, stringstream&, thread::LiteLock*) {
                 path_string tmp;
-                utf::convert<true>(t, tmp);
+                utf::convert(t, tmp, utf::ConvertMode::replace);
                 out.write(tmp);
                 return out;
             }

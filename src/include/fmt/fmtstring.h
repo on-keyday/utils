@@ -8,6 +8,7 @@
 // fmtstring - format string parser
 #pragma once
 #include "../core/sequencer.h"
+#include "../number/parse.h"
 
 namespace utils {
     namespace fmt {
@@ -37,6 +38,7 @@ namespace utils {
 
         struct FmtFlag {
             bool number_sign = false;
+            bool plus = false;
         };
 
         constexpr auto fmtprefix(auto detail) {
@@ -50,6 +52,7 @@ namespace utils {
                     }
                     break;
                 }
+                return detail(seq, flag);
             };
         }
     }  // namespace fmt

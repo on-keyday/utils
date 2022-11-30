@@ -9,6 +9,7 @@
 #pragma once
 #include "byte.h"
 #include "boxbytelen.h"
+#include "../net_util/ipaddr.h"
 
 namespace utils {
     namespace dnet {
@@ -157,7 +158,61 @@ namespace utils {
         struct NetAddrPort {
             NetAddr addr;
             NetPort port;
+
+            template <class Str>
+            void to_string(Str& str, bool detect_ipv4_mapped = false) {
+                if (addr.type() == NetAddrType::ipv4) {
+                    ipaddr::ipv4_to_string_with_port(str, addr.data(), port);
+                }
+                else if (addr.type() == NetAddrType::ipv6) {
+                    ipaddr::ipv6_to_string_with_port(str, addr.data(), port,
+                                                     (detect_ipv4_mapped && ipaddr::is_ipv4_mapped(addr.data())));
+                }
+                else if (addr.type() == NetAddrType::unix_path) {
+                    helper::append(str, (const char*)addr.data());
+                }
+                else {
+                    helper::append(str, "<opaque sockaddr>");
+                }
+            }
+
+            template <class Str>
+            Str to_string(bool detect_ipv4_mapped = false) {
+                Str str;
+                to_string(str, detect_ipv4_mapped);
+                return str;
+            }
         };
+
+        dnet_dll_export(NetAddrPort) ipv4(byte a, byte b, byte c, byte d, std::uint16_t port);
+        dnet_dll_export(NetAddrPort) ipv6(byte a, byte b, byte c, byte d, byte e, byte f, byte g, byte h,
+                                          byte i, byte j, byte k, byte l, byte m, byte n, byte o, byte p,
+                                          std::uint16_t port);
+
+        inline NetAddrPort ipv4(const byte* addr, std::uint16_t port) {
+            return ipv4(addr[0], addr[1], addr[2], addr[3], port);
+        }
+
+        inline NetAddrPort ipv6(const byte* addr, std::uint16_t port) {
+            return ipv6(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
+                        addr[8], addr[9], addr[10], addr[11], addr[12], addr[13], addr[14], addr[15], port);
+        }
+
+        std::pair<NetAddr, bool> toipv4(auto&& addr, std::uint16_t port) {
+            auto d = ipaddr::to_ipv4(addr);
+            if (!d.second) {
+                return {{}, false};
+            }
+            return {ipv4(d.first.addr, port), true};
+        }
+
+        std::pair<NetAddr, bool> toipv6(auto&& addr, std::uint16_t port) {
+            auto d = ipaddr::to_ipv6(addr);
+            if (!d.second) {
+                return {{}, false};
+            }
+            return {ipv4(d.first.addr), true};
+        }
 
     }  // namespace dnet
 }  // namespace utils

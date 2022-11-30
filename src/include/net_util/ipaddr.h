@@ -314,5 +314,151 @@ namespace utils {
                    in[2 * 5] == 0xff &&
                    in[2 * 5 + 1] == 0xff;
         }
+
+        auto port_writer(auto& out) {
+            return [&](std::uint16_t v) {
+                auto b1 = v / 10000;
+                v -= b1 * 10000;
+                auto b2 = v / 1000;
+                v -= b2 * 1000;
+                auto b3 = v / 100;
+                v -= b3 * 100;
+                auto b4 = v / 10;
+                v -= b4 * 10;
+                auto b5 = v;
+                if (b1) {
+                    out.push_back(b1 + '0');
+                }
+                if (b1 || b2) {
+                    out.push_back(b2 + '0');
+                }
+                if (b1 || b2 || b3) {
+                    out.push_back(b3 + '0');
+                }
+                if (b1 || b2 || b3 || b4) {
+                    out.push_back(b4 + '0');
+                }
+                out.push_back(b5 + '0');
+            };
+        }
+
+        constexpr void ipv4_to_string_with_port(auto& out, auto&& addr, std::uint16_t port) {
+            ipv4_to_string(out, addr);
+            out.push_back(':');
+            port_writer(out)(port);
+        }
+
+        constexpr void ipv6_to_string_with_port(auto& out, auto&& addr, std::uint16_t port, bool ipv4mapped = false, bool omit_0 = true, bool omit_hex = true) {
+            out.push_back('[');
+            ipv6_to_string(out, addr, ipv4mapped, omit_0, omit_hex);
+            out.push_back(']');
+            out.push_back(':');
+            port_writer(out)(port);
+        }
+
+        template <class T>
+        constexpr bool parse_ipv4_with_port(Sequencer<T>& seq, auto&& addr, auto& port, bool eof = true) {
+            if (!parse_ipv4(seq, addr, false)) {
+                return false;
+            }
+            if (seq.seek_if(":")) {
+                std::uint16_t num;
+                if (!number::parse_integer(seq, num, 10)) {
+                    return false;
+                }
+                port = num;
+            }
+            if (eof) {
+                if (!seq.eos()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        template <class T>
+        constexpr bool parse_ipv6_with_port(Sequencer<T>& seq, auto&& addr, auto& port, bool eof = true, bool enable_ipv4mapped = true) {
+            if (!seq.seek_if("[")) {
+                return false;
+            }
+            if (!parse_ipv6(seq, addr, false, enable_ipv4mapped)) {
+                return false;
+            }
+            if (!seq.seek_if("]")) {
+                return false;
+            }
+            if (seq.seek_if(":")) {
+                std::uint16_t num;
+                if (!number::parse_integer(seq, num, 10)) {
+                    return false;
+                }
+                port = num;
+            }
+            if (eof) {
+                if (!seq.eos()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        template <size_t s>
+        struct ByteBuf {
+            std::uint8_t addr[s];
+            std::uint16_t port;
+        };
+
+        constexpr std::pair<ByteBuf<4>, bool> to_ipv4(auto&& addr) {
+            auto seq = make_ref_seq(addr);
+            ByteBuf<4> buf;
+            if (!parse_ipv4(seq, buf.addr)) {
+                return {buf, false};
+            }
+            buf.port = 0;
+            return {buf, true};
+        }
+
+        constexpr std::pair<ByteBuf<16>, bool> to_ipv6(auto&& addr, bool ipv4map = false) {
+            auto seq = make_ref_seq(addr);
+            ByteBuf<16> buf;
+            if (!parse_ipv6(seq, buf.addr, true, ipv4map)) {
+                return {buf, false};
+            }
+            buf.port = 0;
+            return {buf, true};
+        }
+
+        constexpr std::pair<ByteBuf<4>, bool> to_ipv4withport(auto&& addr) {
+            auto seq = make_ref_seq(addr);
+            ByteBuf<4> buf;
+            int port = -1;
+            if (!parse_ipv4_with_port(seq, buf.addr, port)) {
+                return {buf, false};
+            }
+            if (port == -1) {
+                buf.port = 0;
+            }
+            else {
+                buf.port = port;
+            }
+            return {buf, true};
+        }
+
+        constexpr std::pair<ByteBuf<16>, bool> to_ipv6withport(auto&& addr, bool ipv4map = false) {
+            auto seq = make_ref_seq(addr);
+            ByteBuf<16> buf;
+            int port = -1;
+            if (!parse_ipv6_with_port(seq, buf.addr, port, true, ipv4map)) {
+                return {buf, false};
+            }
+            if (port == -1) {
+                buf.port = 0;
+            }
+            else {
+                buf.port = port;
+            }
+            return {buf, true};
+        }
+
     }  // namespace ipaddr
 }  // namespace utils

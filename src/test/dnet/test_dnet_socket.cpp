@@ -11,7 +11,7 @@
 #include <dnet/dll/sockdll.h>
 #include <cassert>
 #include <string>
-#include <net/http/http_headers.h>
+#include <net_util/http/http_headers.h>
 #include <map>
 
 using namespace utils;
@@ -45,7 +45,7 @@ int main() {
         if (!err) {
             goto END;
         }
-        if (dnet::isBlock(err)) {
+        if (dnet::isSysBlock(err)) {
             if (!tmp.wait_writable(10, 0).is_error()) {
                 goto END;
             }

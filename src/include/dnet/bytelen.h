@@ -12,6 +12,7 @@
 #include <bit>
 #include "quic/types.h"
 #include "byte.h"
+#include <utility>
 
 namespace utils {
     namespace dnet {
@@ -299,8 +300,8 @@ namespace utils {
                 return match_len(in, get_size(in), is_equal);
             }
 
-            template <bool non_zero = true, class Eq = decltype(internal::equal_fn())>
-            constexpr bool expect(auto&& in, Eq&& eq = internal::equal_fn()) const {
+            template <class In, bool non_zero = true, class Eq = decltype(internal::equal_fn())>
+            constexpr bool expect(In&& in, Eq&& eq = internal::equal_fn()) const {
                 auto size = get_size(in);
                 if (non_zero && size == 0) {
                     return false;
@@ -309,8 +310,8 @@ namespace utils {
                 return l == size;
             }
 
-            template <bool non_zero = true, class Eq = decltype(internal::equal_fn())>
-            constexpr bool expectfwd(auto&& in, Eq&& eq = internal::equal_fn()) const {
+            template <class In, bool non_zero = true, class Eq = decltype(internal::equal_fn())>
+            constexpr bool expectfwd(In&& in, Eq&& eq = internal::equal_fn()) const {
                 auto size = get_size(in);
                 if (non_zero && size == 0) {
                     return false;
@@ -374,6 +375,17 @@ namespace utils {
                 }
                 return true;
             }
+
+            template <class B>
+            constexpr bool copy_to(B* to, size_t len) const {
+                if (!to || !enough(len)) {
+                    return false;
+                }
+                for (auto i = 0; i < len; i++) {
+                    to[i] = data[i];
+                }
+                return true;
+            }
         };
 
         using ByteLen = ByteLenBase<byte>;
@@ -418,6 +430,7 @@ namespace utils {
             }
 
             constexpr ByteLen acquire(size_t len) {
+                counter += len;
                 if (b.len < offset + len) {
                     return {};
                 }
@@ -539,56 +552,21 @@ namespace utils {
                 return buf;
             }
 
-            quic::FrameFlags frame_type(quic::FrameType ty) {
-                auto len = acquire(1);
-                if (!len.enough(1)) {
+            std::pair<quic::FrameFlags, ByteLen> frame_type(quic::FrameType ty) {
+                auto val = qvarint(size_t(ty));
+                if (!val.valid()) {
                     return {};
                 }
-                *len.data = byte(ty);
-                return quic::FrameFlags{len.data};
+                return {quic::FrameFlags{size_t(ty)}, val};
             }
 
-            quic::PacketFlags packet_flags(byte raw) {
+            std::pair<quic::PacketFlags, ByteLen> packet_flags(byte raw) {
                 auto len = acquire(1);
                 if (!len.enough(1)) {
                     return {};
                 }
                 *len.data = raw;
-                return quic::PacketFlags{len.data};
-            }
-
-            quic::PacketFlags packet_flags(std::uint32_t version, quic::PacketType type, byte pn_length, bool spin = false, bool key_phase = false) {
-                byte raw = 0;
-                auto lentomask = [&] {
-                    return byte(pn_length - 1);
-                };
-                auto valid_pnlen = [&] {
-                    return 1 <= pn_length && pn_length <= 4;
-                };
-                auto typmask = quic::packet_type_to_mask(type, version);
-                if (typmask == 0xff) {
-                    return {};
-                }
-                if (type == quic::PacketType::Initial || type == quic::PacketType::ZeroRTT ||
-                    type == quic::PacketType::HandShake || type == quic::PacketType::Retry) {
-                    if (!valid_pnlen()) {
-                        return {};
-                    }
-                    raw = typmask | lentomask();
-                }
-                else if (type == quic::PacketType::VersionNegotiation) {
-                    raw = typmask;
-                }
-                else if (type == quic::PacketType::OneRTT) {
-                    if (!valid_pnlen()) {
-                        return {};
-                    }
-                    raw = typmask | (spin ? 0x20 : 0) | (key_phase ? 0x04 : 0) | lentomask();
-                }
-                else {
-                    return {};
-                }
-                return packet_flags(raw);
+                return {quic::PacketFlags{*len.data}, len};
             }
 
             constexpr ByteLen packet_number(std::uint32_t value, byte len) {
@@ -621,6 +599,19 @@ namespace utils {
             }
         };
 
+        ByteLen range_aquire(WPacket& wp, auto&& cb) {
+            auto begin_offset = wp.offset;
+            if (!cb(wp)) {
+                return {};
+            }
+            auto end_offset = wp.offset;
+            if (begin_offset > end_offset) {
+                return {};
+            }
+            wp.offset = begin_offset;
+            return wp.acquire(end_offset - begin_offset);
+        }
+
         template <class T>
         constexpr T byteswap(T t) {
             byte d[sizeof(T)];
@@ -633,6 +624,94 @@ namespace utils {
         constexpr T netorder(T t) {
             return std::endian::native == std::endian::big ? t : byteswap(t);
         }
+
+        struct QVarInt {
+            std::uint64_t value = 0;
+            size_t len = 0;
+            static constexpr size_t lenmask = (size_t(0xC0) << (7 * 8));
+            constexpr QVarInt() = default;
+            constexpr QVarInt(size_t v)
+                : value(v & ~lenmask) {}
+
+            constexpr operator size_t() const {
+                return value;
+            }
+
+            constexpr bool parse(ByteLen& b) {
+                if (!b.qvarint(value)) {
+                    return false;
+                }
+                len = b.qvarintlen();
+                b = b.forward(len);
+                return true;
+            }
+
+            constexpr bool render(WPacket& w) const {
+                if (value & lenmask) {
+                    return false;
+                }
+                w.qvarint(value);
+                return true;
+            }
+
+            constexpr size_t minimum_len() const {
+                if (value & lenmask) {
+                    return 0;
+                }
+                if (value < 0x40) {
+                    return 1;
+                }
+                if (value < 0x4000) {
+                    return 2;
+                }
+                if (value < 0x40000000) {
+                    return 4;
+                }
+                return 8;
+            }
+
+            constexpr bool is_minimum() const {
+                auto minlen = minimum_len();
+                if (minlen == 0) {
+                    return false;
+                }
+                return minlen == len;
+            }
+        };
+
+        // QPacketNumber is packet number representation on wire
+        // value of this is truncated to len
+        struct QPacketNumber {
+            std::uint32_t value = 0;
+            std::uint32_t len = 0;
+
+            constexpr QPacketNumber() = default;
+            constexpr QPacketNumber(std::uint32_t v)
+                : value(v) {}
+
+            constexpr QPacketNumber(std::uint32_t v, std::uint32_t l)
+                : value(v), len(l) {}
+            constexpr bool parse(ByteLen& b, byte l) {
+                if (!b.packet_number(value, l)) {
+                    return false;
+                }
+                b = b.forward(l);
+                len = l;
+                return true;
+            }
+
+            constexpr bool render(WPacket& w, byte l) const {
+                if (l < 1 || 4 < l) {
+                    return false;
+                }
+                w.packet_number(value, l);
+                return true;
+            }
+
+            constexpr operator std::uint32_t() {
+                return value;
+            }
+        };
 
     }  // namespace dnet
 }  // namespace utils

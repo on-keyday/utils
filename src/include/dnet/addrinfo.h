@@ -10,6 +10,7 @@
 #include <utility>
 #include "dll/dllh.h"
 #include "../core/strlen.h"
+#include "address.h"
 
 namespace utils {
     namespace dnet {
@@ -86,6 +87,7 @@ namespace utils {
                 select = nullptr;
             }
             const void* sockaddr(SockAddr& info) const;
+            NetAddrPort netaddr() const;
             bool string(void* text, size_t len, int* port = nullptr, int* err = nullptr) const;
 
             IPText string(int* port = nullptr, int* err = nullptr) const {

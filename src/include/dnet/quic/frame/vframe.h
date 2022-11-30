@@ -11,6 +11,7 @@
 #include <memory>
 #include "../../dll/allocator.h"
 #include "../../../helper/defer.h"
+#include "../../boxbytelen.h"
 
 namespace utils {
     namespace dnet {
@@ -37,19 +38,13 @@ namespace utils {
             template <class F>
             struct RawVFrame : VFrame {
                private:
-                ByteLen raw_data;
+                BoxByteLen raw_data;
                 F frame_;
                 static_assert(std::is_base_of_v<Frame, F>, "must be derived from Frame");
                 template <class T>
                 friend std::shared_ptr<RawVFrame<T>> make_vframe(const T& frame);
 
                public:
-                ~RawVFrame() {
-                    if (raw_data.data) {
-                        free_normal(raw_data.data, DNET_DEBUG_MEMORY_LOCINFO(true, raw_data.len, alignof(byte)));
-                    }
-                }
-
                 F* frame() const {
                     return &frame_;
                 }
@@ -59,32 +54,23 @@ namespace utils {
             // if you want to cast Frame by Frame.type, use make_vframe_ex
             template <class F>
             std::shared_ptr<RawVFrame<F>> make_vframe(const F& frame) {
-                ByteLen raw;
-                auto flen = frame.frame_len();
-                raw.data = (byte*)alloc_normal(flen, alignof(byte), DNET_DEBUG_MEMORY_LOCINFO(true, flen, alignof(byte)));
-                if (!raw.data) {
-                    return nullptr;
-                }
-                raw.len = flen;
-                auto r = helper::defer([&] {
-                    free_normal(raw.data, DNET_DEBUG_MEMORY_LOCINFO(true, flen, alignof(byte)));
-                });
-                std::shared_ptr<RawVFrame<F>> d =
-                    std::allocate_shared<RawVFrame<F>, glheap_allocator<RawVFrame<F>>>(
-                        glheap_allocator<RawVFrame<F>>{});
-                WPacket wp{raw};
-                if (!frame.render(wp)) {
-                    return nullptr;
-                }
-                if (wp.overflow) {
-                    return nullptr;
-                }
-                if (!d->frame_.parse(wp.b)) {
-                    return nullptr;
-                }
+                size_t enbox = frame.visit_bytelen(nop_visitor());
+                auto d = std::allocate_shared<RawVFrame<F>>(glheap_allocator<RawVFrame<F>>{});
                 d->type_ = frame.type.type();
-                d->raw_data = raw;
-                r.cancel();
+                d->frame_ = frame;
+                if (enbox) {
+                    d->raw_data = BoxByteLen{enbox};
+                    if (!d->raw_data.valid()) {
+                        return nullptr;
+                    }
+                    WPacket wp{d->raw_data.unbox()};
+                    auto res = d->frame_.visit_bytelen([&](ByteLen& b) {
+                        b = wp.copy_from(b);
+                    });
+                    if (res != enbox) {
+                        return nullptr;
+                    }
+                }
                 return d;
             }
 
@@ -106,6 +92,26 @@ namespace utils {
                         return std::static_pointer_cast<RawVFrame<F>>(vf);
                     }
                     return nullptr;
+                });
+            }
+
+            bool vframe_apply(const std::shared_ptr<VFrame>& vf, auto&& cb) {
+                if (!vf) {
+                    return false;
+                }
+                return frame_type_to_Type(vf->type(), [&](auto serv) {
+                    auto p = std::static_pointer_cast<RawVFrame<decltype(serv)>>(vf);
+                    return (bool)cb(p);
+                });
+            }
+
+            bool vframe_apply_lite(const std::shared_ptr<VFrame>& vf, auto&& cb) {
+                if (!vf) {
+                    return false;
+                }
+                return frame_type_to_Type(vf->type(), [&](auto serv) {
+                    auto p = static_cast<RawVFrame<decltype(serv)>>(vf.get());
+                    return (bool)cb(p);
                 });
             }
 

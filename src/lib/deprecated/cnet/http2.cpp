@@ -8,15 +8,15 @@
 
 #include <platform/windows/dllexport_source.h>
 #include <deprecated/cnet/http2.h>
-#include <net/http2/frame.h>
-#include <net/http2/request_methods.h>
-#include "../../net/http2/frame_reader.h"
+#include <deprecated/net/http2/frame.h>
+#include <deprecated/net/http2/request_methods.h>
+#include "../net/http2/frame_reader.h"
 #include <wrap/light/vector.h>
 #include <number/array.h>
 #include <net_util/hpack.h>
-#include "../../net/http2/stream_impl.h"
+#include "../net/http2/stream_impl.h"
 #include <wrap/pair_iter.h>
-#include <net/http/http_headers.h>
+#include <net_util/http/http_headers.h>
 
 #define LOGHTTP2(ctx, record, msg) record.log(logobj{ \
     __FILE__,                                         \

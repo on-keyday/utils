@@ -12,9 +12,10 @@
 #include <cstddef>
 #include <memory>
 #include "httpstring.h"
-#include "quic/crypto_keys.h"
+#include "quic/crypto/crypto_keys.h"
 #include "../helper/strutil.h"
 #include "../helper/equal.h"
+#include "error.h"
 
 namespace utils {
     namespace dnet {
@@ -128,6 +129,8 @@ namespace utils {
             struct QUIC;
         }  // namespace quic
 
+        dnet_dll_export(bool) isTLSBlock(const error::Error& err);
+
         // TLS is wrapper class of OpenSSL/BoringSSL library
         struct dnet_class_export TLS {
            private:
@@ -165,26 +168,26 @@ namespace utils {
                 return opt != nullptr;
             }
             // make_ssl set up SSL structure for TLS
-            bool make_ssl();
+            error::Error make_ssl();
 
-            bool set_cacert_file(const char* cacert, const char* dir = nullptr);
-            bool set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
-            bool set_alpn(const void* p, size_t len);
-            bool set_hostname(const char* hostname, bool verify = true);
-            bool set_client_cert_file(const char* cert);
-            bool set_cert_chain(const char* pubkey, const char* prvkey);
+            error::Error set_cacert_file(const char* cacert, const char* dir = nullptr);
+            error::Error set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
+            error::Error set_alpn(const void* p, size_t len);
+            error::Error set_hostname(const char* hostname, bool verify = true);
+            error::Error set_client_cert_file(const char* cert);
+            error::Error set_cert_chain(const char* pubkey, const char* prvkey);
 
             // make_quic set up SSL structure for QUIC
-            bool make_quic(int (*cb)(void*, quic::MethodArgs), void* user);
+            error::Error make_quic(int (*cb)(void*, quic::MethodArgs), void* user);
 
             template <class T>
-            bool make_quic(int (*cb)(T*, quic::MethodArgs), std::type_identity_t<T>* user) {
+            error::Error make_quic(int (*cb)(T*, quic::MethodArgs), std::type_identity_t<T>* user) {
                 auto cb_void = reinterpret_cast<int (*)(void*, quic::MethodArgs)>(cb);
                 void* user_void = user;
                 return make_quic(cb_void, user_void);
             }
 
-            bool set_quic_transport_params(const void* params, size_t len);
+            error::Error set_quic_transport_params(const void* params, size_t len);
 
             const byte* get_peer_quic_transport_params(size_t* len);
 
@@ -192,21 +195,21 @@ namespace utils {
                 return prevred;
             }
 
-            bool provide_tls_data(const void* data, size_t len, size_t* written = nullptr);
-            bool receive_tls_data(void* data, size_t len);
+            error::Error provide_tls_data(const void* data, size_t len, size_t* written = nullptr);
+            error::Error receive_tls_data(void* data, size_t len);
 
-            bool provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t len);
-            bool progress_quic();
+            error::Error provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t len);
+            error::Error progress_quic();
 
-            bool write(const void* data, size_t len, size_t* written = nullptr);
-            bool read(void* data, size_t len);
+            error::Error write(const void* data, size_t len, size_t* written = nullptr);
+            error::Error read(void* data, size_t len);
 
-            bool connect();
-            bool accept();
+            error::Error connect();
+            error::Error accept();
 
-            bool shutdown();
+            error::Error shutdown();
 
-            bool block() const;
+            // bool block() const;
 
             bool closed() const;
 
@@ -214,7 +217,7 @@ namespace utils {
                 return err;
             }
 
-            bool verify_ok();
+            error::Error verify_ok();
 
             bool has_ssl() const;
             bool has_sslctx() const;
@@ -267,5 +270,5 @@ namespace utils {
         dnet_dll_export(bool) is_boringssl_crypto();
         dnet_dll_export(bool) is_openssl_crypto();
 
-       }  // namespace dnet
+    }  // namespace dnet
 }  // namespace utils

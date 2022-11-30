@@ -8,150 +8,132 @@
 #include <dnet/dll/dllcpp.h>
 #include <dnet/quic/internal/quic_contexts.h>
 #include <dnet/quic/frame/frame_make.h>
-#include <dnet/quic/packet_util.h>
+#include <dnet/quic/packet/packet_util.h>
 #include <dnet/quic/frame/frame_util.h>
 #include <dnet/quic/internal/packet_handler.h>
-#include <malloc.h>
+#include <dnet/quic/crypto/crypto.h>
+#include <dnet/quic/internal/gen_packet.h>
 
 namespace utils {
     namespace dnet {
         namespace quic {
-            std::pair<WPacket, BoxByteLen> make_tmpbuf(size_t size) {
-                BoxByteLen ub{size};
-                WPacket wp{{ub.data(), ub.len()}};
-                return {wp, std::move(ub)};
+
+            struct CryptoMessageError {
+                String dnstr;
+                error::Error base;
+                void error(auto&& pb) {
+                    if (base != error::none) {
+                        base.error(pb);
+                        helper::append(pb, " ");
+                    }
+                    helper::append(pb, dnstr);
+                }
+            };
+
+            error::Error handle_crypto_error(QUICContexts* q, error::Error err) {
+                if (isTLSBlock(err)) {
+                    return error::none;  // blocked but no error
+                }
+                String str;
+                TLS::get_errors([&](const char* data, size_t len) {
+                    str.push_back(' ');
+                    str.append(data, len);
+                    return 1;
+                });
+                if (q->state == QState::tls_alert) {
+                    return QUICError{
+                        .msg = q->crypto.established ? "crypto context error" : "crypto handshake error",
+                        .transport_error = to_CRYPTO_ERROR(q->crypto.tls_alert),
+                        .frame_type = FrameType::CRYPTO,
+                        .base = CryptoMessageError{std::move(str), std::move(err)},
+                    };
+                }
+                return QUICError{
+                    .msg = "unknown tls error",
+                    .frame_type = FrameType::CRYPTO,
+                    .base = CryptoMessageError{std::move(str), std::move(err)},
+                };
             }
 
-            bool start_tls_handshake(WPacket& wp, QUICContexts* p) {
-                if (!p->params.original_dst_connection_id.enough(8)) {
+            error::Error start_tls_handshake(QUICContexts* p) {
+                if (!p->params.local.original_dst_connection_id.enough(8)) {
                     p->initialDstID = p->srcIDs.genrandom(20);
-                    p->params.original_dst_connection_id = {p->initialDstID.data(), 20};
+                    p->params.local.original_dst_connection_id = {p->initialDstID.data(), 20};
                 }
-                auto tparam = p->params.to_transport_param(wp);
-                ubytes tp;
-                for (auto& param : tparam) {
-                    if (is_defined_both_set_allowed(param.id.qvarint())) {
-                        if (!param.data.valid()) {
-                            continue;
-                        }
-                        auto plen = param.param_len();
-                        auto oldlen = tp.size();
-                        tp.resize(oldlen + plen);
-                        WPacket tmp{tp.data() + oldlen, plen};
-                        if (!param.render(tmp)) {
-                            p->internal_error("failed to generate transport parameter");
-                            return false;
+                auto wp = p->get_tmpbuf();
+                auto [_, issued] = p->srcIDs.issue(20);
+                p->params.local.initial_src_connection_id = issued;
+                auto tparam = p->params.local.to_transport_param(wp);
+                auto tp = range_aquire(wp, [&](WPacket& w) {
+                    for (auto& param : tparam) {
+                        if (trsparam::is_defined_both_set_allowed(param.first.id.value)) {
+                            if (!param.second) {
+                                continue;
+                            }
+                            auto plen = param.first.render_len();
+                            WPacket tmp{w.acquire(plen)};
+                            if (!param.first.render(tmp)) {
+                                return false;
+                            }
                         }
                     }
+                    return true;
+                });
+                if (!tp.valid()) {
+                    return QUICError{
+                        .msg = "failed to generate transport parameter",
+                    };
                 }
-                if (!p->tls.set_quic_transport_params(tp.data(), tp.size())) {
-                    p->internal_error("failed to set transport parameter");
-                    return false;
+                if (auto err = p->crypto.tls.set_quic_transport_params(tp.data, tp.len)) {
+                    return QUICError{
+                        .msg = "failed to set transport parameter",
+                        .base = std::move(err),
+                    };
                 }
-                if (!p->tls.connect()) {
-                    if (!p->tls.block()) {
-                        if (p->state == QState::tls_alert) {
-                            p->transport_error(to_CRYPTO_ERROR(p->tls_alert), FrameType::CRYPTO, "TLS message error");
-                            return false;
-                        }
-                        p->internal_error("unknwon error on tls.connect.");
-                        p->tls.get_errors([&](const char* data, size_t len) {
-                            p->debug_msg.push_back(' ');
-                            p->debug_msg.append(data, len);
-                            return 1;
-                        });
-                        return false;
-                    }
+                if (auto err = p->crypto.tls.connect()) {
+                    return handle_crypto_error(p, std::move(err));
                 }
-                return true;
+                return error::none;
             }
 
-            void start_initial_handshake(QUICContexts* p) {
-                auto [wp, _] = make_tmpbuf(3600);
-                if (!start_tls_handshake(wp, p)) {
-                    return;
+            error::Error start_initial_handshake(QUICContexts* p) {
+                if (auto err = start_tls_handshake(p)) {
+                    return err;
                 }
-                wp.reset_offset();
-                auto& data = p->hsdata[0].data;
-                auto crypto_data = ByteLen{data.data(), data.size()};
-                auto srcID = p->srcIDs.issue(20);
-                auto crypto = frame::make_crypto(wp, 0, crypto_data);
-                auto crlen = wp.acquire(crypto.frame_len());
-                WPacket tmp{crlen};
-                crypto.render(tmp);
-                auto initial = packet::make_initial_plain(
-                    wp, {0, 1}, 1,
-                    {srcID.data(), srcID.size()}, p->params.original_dst_connection_id, {},
-                    crlen, crypto::cipher_tag_length, 1200);
-                auto ofs = wp.offset;
-                auto packet = packet::make_cryptoinfo(wp, initial, crypto::cipher_tag_length);
-                auto plain = packet.composition();
-                if (!plain.valid()) {
-                    p->internal_error("failed to generate initial packet");
-                    return;
+                auto crypto_data = p->crypto.hsdata[int(crypto::EncryptionLevel::initial)].get();
+                auto cframe = frame::make_crypto(nullptr, 0, crypto_data);
+                handler::PacketArg arg;
+                arg.dstID = p->params.local.original_dst_connection_id;
+                arg.srcID = p->params.local.initial_src_connection_id;
+                arg.origDstID = arg.dstID;
+                arg.reqlen = 1200;
+                arg.version = version_1;
+                auto err = handler::generate_initial_packet(p, arg, [&](WPacket& wp, size_t space) {
+                    cframe.render(wp);
+                    wp.add(0, space - cframe.render_len());
+                });
+                if (err) {
+                    return err;
                 }
-                BoxByteLen plain_data = plain;
-                if (!plain_data.valid()) {
-                    p->internal_error("memory exhausted");
-                    return;
-                }
-                crypto::Keys keys;
-                auto secret = crypto::make_initial_secret(wp, 1, initial.dstID, true);
-                if (!crypto::encrypt_packet(keys, 1, {}, packet, secret)) {
-                    p->internal_error("failed to encrypt initial packet");
-                    return;
-                }
-                auto dat = QUICPackets{};
-                dat.cipher = packet.composition();
-                if (!dat.cipher.valid()) {
-                    p->internal_error("memory exhausted");
-                    return;
-                }
-                dat.sent.sent_plain = std::move(plain_data);
-                dat.sent.sent_bytes = dat.cipher.len();
-                dat.sent.ack_eliciting = true;
-                dat.sent.in_flight = true;
-                dat.sent.packet_number = ack::PacketNumber{0};
-                dat.pn_space = ack::PacketNumberSpace::initial;
-                p->quic_packets.push_back(std::move(dat));
                 p->state = QState::receving_peer_handshake_packets;
+                return error::none;
             }
 
-            quic_wait_state receiving_peer_handshake_packets(QUICContexts* q) {
+            error::Error receiving_peer_handshake_packets(QUICContexts* q) {
                 if (!q->datagrams.size()) {
-                    return quic_wait_state::block;
+                    return error::block;
                 }
                 auto dgram = std::move(q->datagrams.front());
+                q->datagrams.pop_front();
                 auto unboxed = dgram.b.unbox();
-                auto is_stateless_reset = [](packet::StatelessReset&) { return false; };
-                auto get_dstID_len = [&](ByteLen head, size_t* len) {
-                    for (auto& issued : q->srcIDs.connIDs) {
-                        if (head.expect(issued)) {
-                            *len = issued.size();
-                            return true;
-                        }
-                    }
-                    *len = 0;
-                    return false;
-                };
-                auto cb = [&](PacketType typ, packet::Packet& p, bool err, bool valid_type) {
-                    if (err) {
-                        return false;
-                    }
-                    if (!valid_type) {
-                        if (typ == PacketType::LongPacket) {
-                            auto lp = static_cast<packet::LongPacketBase&>(p);
-                            auto version = lp.version.as<std::uint32_t>();
-                        }
-                    }
-                    if (typ == PacketType::Initial) {
-                        return handler::on_initial_packet(q, static_cast<packet::InitialPacketCipher&>(p));
-                    }
-                    q->internal_error("unknown packet");
-                    return false;
-                };
-                packet::parse_packets(unboxed, cb, is_stateless_reset, get_dstID_len);
-                return quic_wait_state::next;
+                auto err = handler::recv_QUIC_packets(q, unboxed);
+                if (err) {
+                    return err;
+                }
+                return error::none;
+            }
+
+            error::Error generate_acks(QUICContexts* q) {
             }
 
         }  // namespace quic

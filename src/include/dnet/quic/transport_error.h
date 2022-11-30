@@ -8,6 +8,9 @@
 // error - QUIC error code
 #pragma once
 #include "../byte.h"
+#include <helper/appender.h>
+#include "../error.h"
+#include "types.h"
 
 namespace utils {
     namespace dnet {
@@ -37,6 +40,125 @@ namespace utils {
             constexpr TransportError to_CRYPTO_ERROR(byte b) {
                 return TransportError(int(TransportError::CRYPTO_ERROR) + b);
             }
+
+            constexpr bool is_CRYPTO_ERROR(TransportError err) {
+                return int(err) >= 0x100 && int(err) <= 0x1FF;
+            }
+
+            constexpr const char* errmsg(TransportError err) {
+                switch (err) {
+#define CASE(err)             \
+    case TransportError::err: \
+        return #err;
+                    CASE(NO_ERROR)
+                    CASE(INTERNAL_ERROR)
+                    CASE(CONNECTION_REFUSED)
+                    CASE(FLOW_CONTROL_ERROR)
+                    CASE(STREAM_LIMIT_ERROR)
+                    CASE(STREAM_STATE_ERROR)
+                    CASE(FINAL_SIZE_ERROR)
+                    CASE(FRAME_ENCODING_ERROR)
+                    CASE(TRANSPORT_PARAMETER_ERROR)
+                    CASE(CONNECTION_ID_LIMIT_ERROR)
+                    CASE(PROTOCOL_VIOLATION)
+                    CASE(INVALID_TOKEN)
+                    CASE(APPLICATION_ERROR)
+                    CASE(CRYPTO_BUFFER_EXCEEDED)
+                    CASE(KEY_UPDATE_ERROR)
+                    CASE(AEAD_LIMIT_REACHED)
+                    CASE(NO_VIABLE_PATH)
+                    default: {
+                        if (is_CRYPTO_ERROR(err)) {
+                            return "CRYPTO_ERROR";
+                        }
+                        return nullptr;
+                    }
+                }
+            }
+
+            struct QUICError {
+                const char* msg = nullptr;
+                const char* rfc_ref = nullptr;
+                const char* rfc_comment = nullptr;
+                TransportError transport_error = TransportError::INTERNAL_ERROR;
+                PacketType packet_type = PacketType::Unknown;
+                FrameType frame_type = FrameType::PADDING;
+                error::Error base;
+                void error(auto&& pb) {
+                    helper::appends(pb, "quic: ", msg);
+                    if (rfc_ref) {
+                        helper::appends(pb, "rfc=", rfc_ref);
+                    }
+                    if (rfc_comment) {
+                        helper::appends(pb, "rfc_comment=", rfc_comment);
+                    }
+                    if (transport_error != TransportError::NO_ERROR) {
+                        helper::append(pb, " transport_error=");
+                        if (auto msg = errmsg(transport_error)) {
+                            helper::append(pb, msg);
+                            if (is_CRYPTO_ERROR(transport_error)) {
+                                helper::append(pb, "(");
+                                number::to_string(pb, int(transport_error) & 0xFF, 16);
+                                helper::append(pb, ")");
+                            }
+                        }
+                        else {
+                            helper::append(pb, "TransportError(");
+                            number::to_string(pb, int(transport_error));
+                            helper::append(pb, ")");
+                        }
+                    }
+                    if (frame_type != FrameType::PADDING) {
+                        helper::append(pb, " frame_type=");
+                        if (auto msg = to_string(frame_type)) {
+                            helper::append(pb, msg);
+                            if (is_STREAM(frame_type)) {
+                                if (FrameFlags{frame_type}.STREAM_off()) {
+                                    helper::append(pb, "|OFF");
+                                }
+                                if (FrameFlags{frame_type}.STREAM_len()) {
+                                    helper::append(pb, "|LEN");
+                                }
+                                if (FrameFlags{frame_type}.STREAM_fin()) {
+                                    helper::append(pb, "|FIN");
+                                }
+                            }
+                        }
+                        else {
+                            helper::append(pb, "FrameType(");
+                            number::to_string(pb, FrameFlags{frame_type}.value);
+                            helper::append(pb, ")");
+                        }
+                    }
+                    if (packet_type != PacketType::Unknown) {
+                        helper::append(pb, "packet_type=");
+                        if (auto msg = to_string(packet_type)) {
+                            helper::append(pb, msg);
+                        }
+                        else {
+                            helper::append(pb, "PacketType(");
+                            number::to_string(pb, int(packet_type));
+                            helper::append(pb, ")");
+                        }
+                    }
+                    if (base != error::none) {
+                        helper::append(pb, " base=");
+                        base.error(pb);
+                    }
+                }
+
+                error::ErrorCategory category() {
+                    return error::ErrorCategory::quicerr;
+                }
+
+                error::Error unwrap() {
+                    return base;
+                }
+
+                std::uint64_t errnum() const {
+                    return (std::uint64_t)transport_error;
+                }
+            };
         }  // namespace quic
     }      // namespace dnet
 }  // namespace utils

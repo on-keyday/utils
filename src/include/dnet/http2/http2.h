@@ -13,7 +13,7 @@
 #include "h2err.h"
 #include "h2frame.h"
 #include "h2state.h"
-#include <net/http/header.h>
+#include <net_util/http/header.h>
 
 namespace utils {
     namespace dnet {
@@ -21,15 +21,15 @@ namespace utils {
         namespace concepts {
             template <class T>
             concept has_view = requires(T t) {
-                {t.size()};
-                {t[1]};
-            };
+                                   { t.size() };
+                                   { t[1] };
+                               };
 
             template <class T>
             concept has_iter = requires(T t) {
-                {t.begin()};
-                {t.end()};
-            };
+                                   { t.begin() };
+                                   { t.end() };
+                               };
         }  // namespace concepts
 
         namespace internal {

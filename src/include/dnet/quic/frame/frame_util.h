@@ -14,33 +14,35 @@ namespace utils {
         namespace quic::frame {
 
             constexpr auto frame_type_to_Type(FrameType f, auto&& cb) {
+                switch (f) {
 #define PARSE(frame_type, TYPE) \
-    if (f == frame_type) {      \
-        return cb(TYPE{});      \
-    }
-                PARSE(FrameType::PADDING, PaddingFrame)
-                PARSE(FrameType::PING, PingFrame)
-                PARSE(FrameType::ACK, ACKFrame)
-                PARSE(FrameType::RESET_STREAM, ResetStreamFrame)
-                PARSE(FrameType::STOP_SENDING, StopSendingFrame)
-                PARSE(FrameType::CRYPTO, CryptoFrame)
-                PARSE(FrameType::NEW_TOKEN, NewTokenFrame)
-                PARSE(FrameType::STREAM, StreamFrame)
-                PARSE(FrameType::MAX_DATA, MaxDataFrame)
-                PARSE(FrameType::MAX_STREAM_DATA, MaxStreamDataFrame)
-                PARSE(FrameType::MAX_STREAMS, MaxStreamsFrame)
-                PARSE(FrameType::DATA_BLOCKED, DataBlockedFrame)
-                PARSE(FrameType::STREAM_DATA_BLOCKED, StreamDataBlockedFrame)
-                PARSE(FrameType::STREAMS_BLOCKED, StreamsBlockedFrame)
-                PARSE(FrameType::NEW_CONNECTION_ID, NewConnectionIDFrame)
-                PARSE(FrameType::RETIRE_CONNECTION_ID, RetireConnectionIDFrame)
-                PARSE(FrameType::PATH_CHALLENGE, PathChallengeFrame)
-                PARSE(FrameType::PATH_RESPONSE, PathResponseFrame)
-                PARSE(FrameType::CONNECTION_CLOSE, ConnectionCloseFrame)
-                PARSE(FrameType::HANDSHAKE_DONE, HandshakeDoneFrame)
-                PARSE(FrameType::DATAGRAM, DatagramFrame)
+    case frame_type:            \
+        return cb(TYPE{});
+                    PARSE(FrameType::PADDING, PaddingFrame)
+                    PARSE(FrameType::PING, PingFrame)
+                    PARSE(FrameType::ACK, ACKFrame)
+                    PARSE(FrameType::RESET_STREAM, ResetStreamFrame)
+                    PARSE(FrameType::STOP_SENDING, StopSendingFrame)
+                    PARSE(FrameType::CRYPTO, CryptoFrame)
+                    PARSE(FrameType::NEW_TOKEN, NewTokenFrame)
+                    PARSE(FrameType::STREAM, StreamFrame)
+                    PARSE(FrameType::MAX_DATA, MaxDataFrame)
+                    PARSE(FrameType::MAX_STREAM_DATA, MaxStreamDataFrame)
+                    PARSE(FrameType::MAX_STREAMS, MaxStreamsFrame)
+                    PARSE(FrameType::DATA_BLOCKED, DataBlockedFrame)
+                    PARSE(FrameType::STREAM_DATA_BLOCKED, StreamDataBlockedFrame)
+                    PARSE(FrameType::STREAMS_BLOCKED, StreamsBlockedFrame)
+                    PARSE(FrameType::NEW_CONNECTION_ID, NewConnectionIDFrame)
+                    PARSE(FrameType::RETIRE_CONNECTION_ID, RetireConnectionIDFrame)
+                    PARSE(FrameType::PATH_CHALLENGE, PathChallengeFrame)
+                    PARSE(FrameType::PATH_RESPONSE, PathResponseFrame)
+                    PARSE(FrameType::CONNECTION_CLOSE, ConnectionCloseFrame)
+                    PARSE(FrameType::HANDSHAKE_DONE, HandshakeDoneFrame)
+                    PARSE(FrameType::DATAGRAM, DatagramFrame)
 #undef PARSE
-                return cb(Frame{});
+                    default:
+                        return cb(Frame{});
+                }
             }
 
             // parse_frame parses b as a frame and invoke cb with parsed frame
@@ -64,7 +66,7 @@ namespace utils {
                     }
                     return true;
                 };
-                return frame_type_to_Type(FrameFlags{b.data}.type(), [&](auto frame) {
+                return frame_type_to_Type(FrameFlags{*b.data}.type(), [&](auto frame) {
                     auto res = frame.parse(b);
                     if constexpr (std::is_same_v<decltype(frame), Frame>) {
                         cb(frame, true);
@@ -99,7 +101,7 @@ namespace utils {
 
             template <class F>
             constexpr F* frame_cast(Frame* f) {
-                if (!f || !f->type.valid()) {
+                if (!f) {
                     return nullptr;
                 }
                 return frame_type_to_Type(f->type.type(), [&](auto frame) -> F* {
@@ -131,8 +133,7 @@ namespace utils {
             }
 
             constexpr size_t sizeof_frame(FrameType type) {
-                byte b = byte(type);
-                auto ct = FrameFlags{&b}.type();
+                auto ct = FrameFlags{type}.type();
                 return frame_type_to_Type(ct, [&](auto f) -> size_t {
                     return sizeof(f);
                 });

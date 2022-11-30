@@ -103,6 +103,7 @@ namespace utils {
                 }
                 static constexpr size_t offset = 0;
                 static constexpr bool expect_eof = true;
+                static constexpr bool allow_zero_prefixed = true;
             };
 
         }  // namespace internal
@@ -120,6 +121,7 @@ namespace utils {
             bool accept_exp = true;
             size_t offset = 0;
             bool expect_eof = true;
+            bool allow_zero_prefixed = true;
         };
 
         template <class Ignore>
@@ -133,6 +135,7 @@ namespace utils {
             }
             size_t offset = 0;
             static constexpr bool expect_eof = true;
+            static constexpr bool allow_zero_prefixed = true;
         };
 
         template <class Result, class T, class Config = internal::ReadConfig>
@@ -140,8 +143,10 @@ namespace utils {
             if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }
-            bool zerosize = true;
-            bool first = true;
+            bool zero_prefix = false;
+            size_t count = 0;
+            // bool zerosize = true;
+            bool on_err = true;
             bool dot = false;
             bool exp = false;
             while (!seq.eos()) {
@@ -164,7 +169,7 @@ namespace utils {
                             if (!exp &&
                                 ((radix == 10 && (e == 'e' || e == 'E')) ||
                                  (radix == 16 && (e == 'p' || e == 'P')))) {
-                                if (first) {
+                                if (on_err) {
                                     return NumError::invalid;
                                 }
                                 dot = true;
@@ -176,7 +181,7 @@ namespace utils {
                                     seq.consume();
                                 }
                                 radix = 10;
-                                first = true;
+                                on_err = true;
                                 continue;
                             }
                         }
@@ -189,15 +194,21 @@ namespace utils {
                     }
                     break;
                 }
+                if (!config.allow_zero_prefixed && e == '0' && count == 0) {
+                    zero_prefix = true;
+                }
                 result.push_back(e);
                 seq.consume();
-                first = false;
-                zerosize = false;
+                on_err = false;
+                count++;
             }
-            if (first) {
-                if (zerosize) {
+            if (on_err) {
+                if (count == 0) {
                     return NumError::not_match;
                 }
+                return NumError::invalid;
+            }
+            if (zero_prefix && count != 1 && !dot && !exp) {
                 return NumError::invalid;
             }
             if (is_float) {

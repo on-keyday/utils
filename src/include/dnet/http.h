@@ -9,8 +9,8 @@
 #pragma once
 #include "dll/httpbuf.h"
 #include "httpstring.h"
-#include "../net/http/http_headers.h"
-#include "../net/http/predefined.h"
+#include "../net_util/http/http_headers.h"
+#include "../net_util/http/predefined.h"
 
 namespace utils {
     namespace dnet {

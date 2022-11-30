@@ -15,6 +15,7 @@
 #include "../transport_error.h"
 #include "../../../helper/condincr.h"
 #include "congestion.h"
+#include "../../error.h"
 
 namespace utils {
     namespace dnet {
@@ -71,6 +72,8 @@ namespace utils {
             };
 
             struct PacketSpaceHistory {
+                size_t issue_packet_number = 0;
+                size_t highest_sent = 0;
                 PacketNumber largest_acked_packet = PacketNumber::infinite;
                 time_t last_ack_eliciting_packet_time = 0;
                 time_t loss_time = 0;
@@ -82,13 +85,25 @@ namespace utils {
                 Packets sent_packets;
                 frame::ECNCounts ecn;
                 size_t ack_eliciting_in_flight = 0;
+                size_t largest_recv_packet = 0;
 
                 bool on_sent_packet(SentPacket&& sent) {
                     auto time_sent = sent.time_sent;
                     auto is_ack_eliciting_in_flight = sent.in_flight && sent.ack_eliciting;
+                    auto sent_number = size_t(sent.packet_number);
                     if (!sent_packets.emplace(sent.packet_number, std::move(sent)).second) {
                         return false;
                     }
+                    for (auto i = highest_sent + 1; i < sent_number; i++) {
+                        sent_packets.emplace(
+                            PacketNumber(i),
+                            SentPacket{
+                                .packet_number = PacketNumber(i),
+                                .skiped = true,
+                                .time_sent = time_sent,
+                            });
+                    }
+                    highest_sent = sent_number;
                     if (is_ack_eliciting_in_flight) {
                         last_ack_eliciting_packet_time = sent.time_sent;
                         ack_eliciting_in_flight++;
@@ -96,16 +111,36 @@ namespace utils {
                     return true;
                 }
 
-                TransportError detect_and_remove_acked_packets(RemovedPackets& rem, bool& incl_ack_eliciting, const frame::ACKFrame& ack) {
+                struct PnRangeError {
+                    size_t pn = 0;
+                    size_t begin = 0;
+                    size_t end = 0;
+                    void error(auto&& pb) {
+                        helper::append(pb, "pn=");
+                        number::to_string(pb, pn);
+                        helper::append(pb, "begin=");
+                        number::to_string(pb, begin);
+                        helper::append(pb, " end=");
+                        number::to_string(pb, end);
+                    }
+                };
+
+                error::Error detect_and_remove_acked_packets(RemovedPackets& rem, bool& incl_ack_eliciting, const frame::ACKFrame& ack) {
                     incl_ack_eliciting = false;
                     std::vector<frame::ACKRange, glheap_allocator<frame::ACKRange>> ranges;
-                    if (!frame::get_ackranges(ranges, ack)) {
-                        return TransportError::FRAME_ENCODING_ERROR;
+                    if (auto err = frame::get_ackranges(ranges, ack)) {
+                        return QUICError{
+                            .msg = "ACK range decoding failed",
+                            .transport_error = TransportError::FRAME_ENCODING_ERROR,
+                            .frame_type = ack.type.type_detail(),
+                            .base = std::move(err),
+                        };
                     }
                     bool removed = false;
                     auto incr = helper::cond_incr(removed);
                     auto largest = ranges[0].largest;
                     auto smallest = ranges[ranges.size() - 1].smallest;
+                    const auto rsize = ranges.size();
                     for (auto it = sent_packets.begin(); it != sent_packets.end(); incr(it)) {
                         auto& sent = it->second;
                         auto pn = sent.packet_number;
@@ -113,7 +148,6 @@ namespace utils {
                             largest < pn) {
                             continue;
                         }
-                        const auto rsize = ranges.size();
                         if (rsize > 1) {
                             frame::ACKRange range;
                             for (size_t i = 0; i < rsize; i++) {
@@ -127,8 +161,19 @@ namespace utils {
                                 continue;
                             }
                             if (pn > range.largest) {
-                                return TransportError::INTERNAL_ERROR;
+                                return QUICError{
+                                    .msg = "library bug!! range is invalid for pn",
+
+                                    .base = PnRangeError{.pn = size_t(pn), .begin = largest, .end = smallest},
+                                };
                             }
+                        }
+                        if (sent.skiped) {
+                            return QUICError{
+                                .msg = "ack recived skipped packet.",
+                                .transport_error = TransportError::PROTOCOL_VIOLATION,
+                                .base = PnRangeError{.pn = size_t(pn)},
+                            };
                         }
                         if (sent.ack_eliciting && sent.in_flight) {
                             ack_eliciting_in_flight--;
@@ -138,17 +183,23 @@ namespace utils {
                         it = sent_packets.erase(it);
                         removed = true;
                     }
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
 
-                TransportError detect_and_remove_lost_packets(RemovedPackets& lost_packets, Clock& clock, RTT& rtt, LossDetectParam& param) {
+                error::Error detect_and_remove_lost_packets(RemovedPackets& lost_packets, Clock& clock, RTT& rtt, LossDetectParam& param) {
                     if (largest_acked_packet == PacketNumber::infinite) {
-                        return TransportError::INTERNAL_ERROR;
+                        return QUICError{
+                            .msg = "largest_acked_packet is not set. nothing acked before loss detection.",
+
+                        };
                     }
                     loss_time = 0;
                     auto loss_delay = param.loss_delay(clock, rtt);
                     if (loss_delay < 0) {
-                        return TransportError::INTERNAL_ERROR;
+                        return QUICError{
+                            .msg = "loss_delay calculation overflow or failure. calculation result is under 0",
+
+                        };
                     }
                     auto lost_send_time = clock.now() - loss_delay;
                     bool removed = false;
@@ -176,7 +227,7 @@ namespace utils {
                             }
                         }
                     }
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
             };
 
@@ -254,16 +305,16 @@ namespace utils {
                     return {pto_timeout, pto_space};
                 }
 
-                TransportError set_loss_detection_timer(
+                error::Error set_loss_detection_timer(
                     LossDetectTimer& timer, LossDetectParam& param, Clock& clock, RTT& rtt, LossDetectFlags& flags) {
                     auto [earliest_loss_time, _] = get_loss_time_and_space();
                     if (earliest_loss_time != 0) {
                         timer.update(earliest_loss_time);
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     if (flags.server_is_at_anti_amplification_limit) {
                         timer.cancel();
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     if (no_ack_eliciting_in_flight() &&
                         flags.peer_completed_address_validation()) {
@@ -271,17 +322,22 @@ namespace utils {
                     }
                     auto [timeout, _2] = get_pto_and_space(param, clock, rtt, flags);
                     if (timeout == -1) {
-                        return TransportError::INTERNAL_ERROR;
+                        return QUICError{
+                            .msg = "failed to calculate pto_timeout",
+
+                        };
                     }
                     timer.update(timeout);
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
 
-                TransportError on_packet_number_space_discarded(
+                error::Error on_packet_number_space_discarded(
                     Congestion& cong, PacketNumberSpace space,
                     LossDetectTimer& timer, LossDetectParam& param, Clock& clock, RTT& rtt, LossDetectFlags& flags) {
                     if (space != PacketNumberSpace::initial && space != PacketNumberSpace::handshake) {
-                        return TransportError::INTERNAL_ERROR;
+                        return QUICError{
+                            .msg = "invalid packet number space. need initial or handshake",
+                        };
                     }
                     auto& pn_space = pn_spaces[int(space)];
                     for (auto& p : pn_space.sent_packets) {

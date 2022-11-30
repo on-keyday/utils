@@ -17,10 +17,10 @@ namespace utils {
             struct Congestion;
 
             struct CongestionEventHandlers {
-                closure::Closure<TransportError, Congestion*> congestion_event;
-                closure::Closure<TransportError, Congestion*, SentPacket*> on_ack;
-                closure::Closure<TransportError> maybeSendOnePacket;
-                closure::Closure<TransportError, Congestion*, RemovedPackets&> handle_persistent_congestion;
+                closure::Closure<error::Error, Congestion*> congestion_event;
+                closure::Closure<error::Error, Congestion*, SentPacket*> on_ack;
+                closure::Closure<error::Error> maybeSendOnePacket;
+                closure::Closure<error::Error, Congestion*, RemovedPackets&> handle_persistent_congestion;
                 closure::Closure<bool> is_on_app_or_flow_control_limit;
             };
 
@@ -51,52 +51,52 @@ namespace utils {
                     return time <= congestion_recovery_start_time;
                 }
 
-                TransportError on_congestion_event(Clock& clock, time_t time_sent) {
+                error::Error on_congestion_event(Clock& clock, time_t time_sent) {
                     if (in_congestion_recovery(time_sent)) {
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     congestion_recovery_start_time = clock.now();
                     if (handlers.congestion_event) {
                         auto err = handlers.congestion_event(this);
-                        if (err != TransportError::NO_ERROR) {
+                        if (err) {
                             return err;
                         }
                     }
                     if (handlers.maybeSendOnePacket) {
                         return handlers.maybeSendOnePacket();
                     }
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
 
-                TransportError on_packets_ack(RemovedPackets& acked) {
+                error::Error on_packets_ack(RemovedPackets& acked) {
                     for (auto& p : acked) {
                         auto err = on_packet_ack(p);
-                        if (err != TransportError::NO_ERROR) {
+                        if (err) {
                             return err;
                         }
                     }
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
 
-                TransportError on_packet_ack(SentPacket& acked) {
+                error::Error on_packet_ack(SentPacket& acked) {
                     if (!acked.in_flight) {
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     bytes_in_flight -= acked.sent_bytes;
                     if (handlers.is_on_app_or_flow_control_limit &&
                         handlers.is_on_app_or_flow_control_limit()) {
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     if (in_congestion_recovery(acked.time_sent)) {
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     if (handlers.on_ack) {
                         return handlers.on_ack(this, &acked);
                     }
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
 
-                TransportError on_packets_lost(Clock& clock, RTT& rtt, RemovedPackets& packets) {
+                error::Error on_packets_lost(Clock& clock, RTT& rtt, RemovedPackets& packets) {
                     time_t sent_time_of_last_loss = 0;
                     for (auto& packet : packets) {
                         if (packet.in_flight) {
@@ -106,12 +106,12 @@ namespace utils {
                     }
                     if (sent_time_of_last_loss != 0) {
                         auto err = on_congestion_event(clock, sent_time_of_last_loss);
-                        if (err != TransportError::NO_ERROR) {
+                        if (err) {
                             return err;
                         }
                     }
                     if (rtt.first_ack_sample == 0) {
-                        return TransportError::NO_ERROR;
+                        return error::none;
                     }
                     if (handlers.handle_persistent_congestion) {
                         RemovedPackets pc_lost;
@@ -122,7 +122,7 @@ namespace utils {
                         }
                         return handlers.handle_persistent_congestion(this, pc_lost);
                     }
-                    return TransportError::NO_ERROR;
+                    return error::none;
                 }
             };
 

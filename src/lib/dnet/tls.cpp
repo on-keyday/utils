@@ -112,105 +112,97 @@ namespace utils {
             return {new_tls};
         }
 
-        bool check_opt(void* opt, int& err, auto&& callback) {
+        error::Error check_opt(void* opt, int& err, auto&& callback) {
             if (!opt) {
-                err = invalid_tls;
-                return false;
+                return error::Error(invalid_tls, error::ErrorCategory::validationerr);
             }
             auto ctx = static_cast<SSLContexts*>(opt);
             if (!ctx->sslctx) {
-                err = invalid_tls;
-                return false;
+                return error::Error(invalid_tls, error::ErrorCategory::validationerr);
             }
             return callback(ctx);
         }
 
-        bool check_opt_bio(void* opt, int& err, auto&& callback) {
+        error::Error check_opt_bio(void* opt, int& err, auto&& callback) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (!c->ssl || !c->wbio) {
-                    err = should_setup_ssl;
-                    return false;
+                    return error::Error(should_setup_ssl, error::ErrorCategory::validationerr);
                 }
                 return callback(c);
             });
         }
 
-        bool check_opt_ssl(void* opt, int& err, auto&& callback) {
+        error::Error check_opt_ssl(void* opt, int& err, auto&& callback) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (!c->ssl) {
-                    err = should_setup_ssl;
-                    return false;
+                    return error::Error(should_setup_ssl, error::ErrorCategory::validationerr);
                 }
                 return callback(c);
             });
         }
 
-        bool check_opt_quic(void* opt, int& err, auto&& callback) {
+        error::Error check_opt_quic(void* opt, int& err, auto&& callback) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (!c->ssl || c->wbio) {
-                    err = should_setup_quic;
-                    return false;
+                    error::Error(should_setup_quic, error::ErrorCategory::validationerr);
                 }
                 return callback(c);
             });
         }
 
-        bool TLS::set_alpn(const void* p, size_t len) {
+        error::Error TLS::set_alpn(const void* p, size_t len) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_set_alpn_protos_(c->ssl, static_cast<const unsigned char*>(p), len);
                 if (res != 0) {
-                    err = set_ssl_value_failed;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
-                return res == 0;
+                return error::none;
             });
         }
 
-        bool TLS::set_cacert_file(const char* cacert, const char* dir) {
+        error::Error TLS::set_cacert_file(const char* cacert, const char* dir) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (!ssldl.SSL_CTX_load_verify_locations_(c->sslctx, cacert, dir)) {
                     err = set_ssl_value_failed;
-                    return false;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
-                return true;
+                return error::none;
             });
         }
 
-        bool TLS::set_verify(int mode, int (*verify_callback)(int, void*)) {
+        error::Error TLS::set_verify(int mode, int (*verify_callback)(int, void*)) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 ssldl.SSL_CTX_set_verify_(c->sslctx, mode,
                                           (int (*)(int, ssl_import::X509_STORE_CTX*))(verify_callback));
-                return true;
+                return error::none;
             });
         }
 
-        bool TLS::make_ssl() {
+        error::Error TLS::make_ssl() {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (c->ssl) {
-                    return false;
+                    return error::Error("already initialized", error::ErrorCategory::validationerr);
                 }
                 auto ssl = ssldl.SSL_new_(c->sslctx);
                 if (!ssl) {
-                    err = no_resource;
-                    return false;
+                    return error::memory_exhausted;
                 }
                 auto r = helper::defer([&]() {
                     ssldl.SSL_free_(ssl);
                 });
                 if (!load_crypto()) {
-                    err = libload_failed;
-                    return false;
+                    return error::Error(libload_failed, error::ErrorCategory::dneterr);
                 }
                 ssl_import::BIO *pass = nullptr, *hold = nullptr;
                 ssldl.BIO_new_bio_pair_(&pass, 0, &hold, 0);
                 if (!pass || !hold) {
-                    err = no_resource;
-                    return false;
+                    return error::memory_exhausted;
                 }
                 ssldl.SSL_set_bio_(ssl, pass, pass);
                 c->ssl = ssl;
                 c->wbio = hold;
                 r.cancel();
-                return true;
+                return error::none;
             });
         }
 
@@ -220,7 +212,7 @@ namespace utils {
                 if (c->cb) {
                     res = c->cb(c->user, args);
                 }
-                return true;
+                return error::none;
             });
             return res;
         }
@@ -229,99 +221,90 @@ namespace utils {
             bool set_quic_method(void* ptr);
         }
 
-        bool TLS::make_quic(int (*cb)(void*, quic::MethodArgs), void* user) {
+        error::Error TLS::make_quic(int (*cb)(void*, quic::MethodArgs), void* user) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 if (c->ssl) {
-                    return false;
+                    return error::Error("already initialized", error::ErrorCategory::dneterr);
                 }
                 auto ssl = ssldl.SSL_new_(c->sslctx);
                 if (!ssl) {
-                    err = no_resource;
-                    return false;
+                    return error::memory_exhausted;
                 }
                 auto r = helper::defer([&]() {
                     ssldl.SSL_free_(ssl);
                 });
                 if (!ssldl.SSL_set_ex_data_(ssl, ssl_appdata_index, this)) {
-                    err = set_ssl_value_failed;
-                    return false;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
                 if (!quic::crypto::set_quic_method(ssl)) {
                     err = libload_failed;
-                    return false;
+                    return error::Error(libload_failed, error::ErrorCategory::dneterr);
                 }
                 c->ssl = ssl;
                 c->cb = cb;
                 c->user = user;
                 r.cancel();
-                return true;
+                return error::none;
             });
         }
 
-        bool TLS::set_hostname(const char* hostname, bool verify) {
+        error::Error TLS::set_hostname(const char* hostname, bool verify) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
-                auto common = [&]() -> bool {
+                auto common = [&]() -> error::Error {
                     if (!verify) {
-                        return true;
+                        return error::none;
                     }
                     ssldl.SSL_set_hostflags_(c->ssl, ssl_import::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS_);
                     if (!ssldl.SSL_set1_host_(c->ssl, hostname)) {
-                        err = set_ssl_value_failed;
-                        return false;
+                        return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                     }
-                    return true;
+                    return error::none;
                 };
                 if (is_boringssl_ssl()) {
                     if (!ssldl.SSL_set_tlsext_host_name_(c->ssl, hostname)) {
-                        err = set_ssl_value_failed;
-                        return false;
+                        return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                     }
                     return common();
                 }
                 else if (is_openssl_ssl()) {
                     if (!ssldl.SSL_ctrl_(c->ssl, ssl_import::SSL_CTRL_SET_TLSEXT_HOSTNAME_, 0, (void*)hostname)) {
-                        err = set_ssl_value_failed;
-                        return false;
+                        return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                     }
                     return common();
                 }
-                err = not_supported;
-                return false;
+                return error::Error(not_supported, error::ErrorCategory::dneterr);
             });
         }
 
-        bool TLS::set_client_cert_file(const char* cert) {
+        error::Error TLS::set_client_cert_file(const char* cert) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 auto ptr = ssldl.SSL_load_client_CA_file_(cert);
                 if (!ptr) {
-                    return false;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
                 ssldl.SSL_CTX_set_client_CA_list_(c->sslctx, ptr);
-                return true;
+                return error::none;
             });
         }
 
-        bool TLS::set_cert_chain(const char* pubkey, const char* prvkey) {
+        error::Error TLS::set_cert_chain(const char* pubkey, const char* prvkey) {
             return check_opt(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_CTX_use_certificate_chain_file_(c->sslctx, pubkey);
                 if (!res) {
-                    err = set_ssl_value_failed;
-                    return false;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
                 res = ssldl.SSL_CTX_use_PrivateKey_file_(c->sslctx, prvkey, ssl_import::SSL_FILETYPE_PEM_);
                 if (!res) {
-                    err = set_ssl_value_failed;
-                    return false;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
                 if (!ssldl.SSL_CTX_check_private_key_(c->sslctx)) {
-                    err = set_ssl_value_failed;
-                    return false;
+                    return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
                 }
-                return true;
+                return error::none;
             });
         }
 
-        bool TLS::provide_tls_data(const void* data, size_t len, size_t* written) {
+        error::Error TLS::provide_tls_data(const void* data, size_t len, size_t* written) {
             return check_opt_bio(opt, err, [&](SSLContexts* c) {
                 if (is_openssl_crypto()) {
                     size_t tmp = 0;
@@ -330,96 +313,85 @@ namespace utils {
                     }
                     if (!ssldl.BIO_write_ex_(c->wbio, data, len, written)) {
                         if (ssldl.BIO_test_flags_(c->wbio, ssl_import::BIO_FLAGS_SHOULD_RETRY_)) {
-                            err = ssl_blocking;
-                            return false;
+                            return error::block;
                         }
-
-                        err = bio_operation_failed;
-                        return false;
+                        return error::Error(bio_operation_failed, error::ErrorCategory::dneterr);
                     }
-                    return true;
+                    return error::none;
                 }
                 else if (is_boringssl_crypto()) {
                     auto res = ssldl.BIO_write_(c->wbio, data, int(len));
                     if (res < 0) {
                         if (ssldl.BIO_should_retry_(c->wbio)) {
-                            err = ssl_blocking;
-                            return false;
+                            return error::block;
                         }
-                        err = bio_operation_failed;
-                        return false;
+                        return error::Error(bio_operation_failed, error::ErrorCategory::dneterr);
                     }
                     if (written) {
                         *written = res;
                     }
-                    return true;
+                    return error::none;
                 }
-                err = not_supported;
-                return false;
+                return error::Error(not_supported, error::ErrorCategory::dneterr);
             });
         }
 
-        bool TLS::receive_tls_data(void* data, size_t len) {
+        error::Error TLS::receive_tls_data(void* data, size_t len) {
             auto& red = prevred;
             return check_opt_bio(opt, err, [&](SSLContexts* c) {
                 if (is_openssl_crypto()) {
                     if (!ssldl.BIO_read_ex_(c->wbio, data, len, &red)) {
                         if (ssldl.BIO_test_flags_(c->wbio, ssl_import::BIO_FLAGS_SHOULD_RETRY_)) {
-                            err = ssl_blocking;
-                            return false;
+                            return error::block;
                         }
-                        err = bio_operation_failed;
-                        return false;
+                        return error::Error(bio_operation_failed, error::ErrorCategory::dneterr);
                     }
-                    return true;
+                    return error::none;
                 }
                 else if (is_boringssl_crypto()) {
                     auto res = ssldl.BIO_read_(c->wbio, data, int(len));
                     if (res < 0) {
                         if (ssldl.BIO_should_retry_(c->wbio)) {
-                            err = ssl_blocking;
-                            return false;
+                            return error::block;
                         }
-                        err = bio_operation_failed;
-                        return false;
+                        return error::Error(bio_operation_failed, error::ErrorCategory::dneterr);
                     }
                     red = res;
-                    return true;
+                    return error::none;
                 }
-                err = not_supported;
-                return false;
+                return error::Error(not_supported, error::ErrorCategory::dneterr);
             });
         }
 
-        bool TLS::provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t size) {
+        error::Error TLS::provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t size) {
             return check_opt_quic(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_provide_quic_data_(c->ssl,
                                                         ssl_import::quic_ext::OSSL_ENCRYPTION_LEVEL(level),
                                                         reinterpret_cast<const uint8_t*>(data), size);
                 if (!res) {
-                    err = ssldl.SSL_get_error_(c->ssl, 0);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::cryptoerr);
                 }
-                return (bool)res;
+                return error::none;
             });
         }
 
-        bool TLS::progress_quic() {
+        error::Error TLS::progress_quic() {
             return check_opt_quic(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_process_quic_post_handshake_(c->ssl);
                 if (!res) {
-                    err = ssldl.SSL_get_error_(c->ssl, 0);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::cryptoerr);
                 }
-                return (bool)res;
+                return error::none;
             });
         }
 
-        bool TLS::set_quic_transport_params(const void* params, size_t len) {
+        error::Error TLS::set_quic_transport_params(const void* params, size_t len) {
             return check_opt_quic(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_set_quic_transport_params_(c->ssl, static_cast<const uint8_t*>(params), len);
                 if (!res) {
-                    err = ssldl.SSL_get_error_(c->ssl, 0);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::cryptoerr);
                 }
-                return (bool)res;
+                return error::none;
             });
         }
 
@@ -428,7 +400,7 @@ namespace utils {
             size_t l = 0;
             check_opt_quic(opt, err, [&](SSLContexts* c) {
                 ssldl.SSL_get_peer_quic_transport_params_(c->ssl, &data, &l);
-                return true;
+                return error::none;
             });
             if (len) {
                 *len = l;
@@ -436,68 +408,70 @@ namespace utils {
             return data;
         }
 
-        bool TLS::write(const void* data, size_t len, size_t* written) {
+        error::Error TLS::write(const void* data, size_t len, size_t* written) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_write_(c->ssl, data, int(len));
-                if (res < 0) {
-                    err = ssldl.SSL_get_error_(c->ssl, res);
+                if (res <= 0) {
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
                 }
                 else if (written) {
                     *written = res;
                 }
-                return res >= 0;
+                return error::none;
             });
         }
 
-        bool TLS::read(void* data, size_t len) {
+        error::Error TLS::read(void* data, size_t len) {
             auto& red = prevred;
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_read_(c->ssl, data, int(len));
                 if (res <= 0) {
-                    err = ssldl.SSL_get_error_(c->ssl, res);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
                 }
                 else {
                     red = res;
                 }
-                return res > 0;
+                return error::none;
             });
         }
 
-        bool TLS::block() const {
-            return err == ssl_blocking || err == ssl_import::SSL_ERROR_WANT_READ_;
+        dnet_dll_implement(bool) isTLSBlock(const error::Error& err) {
+            return err == error::block ||
+                   (err.category() == error::ErrorCategory::cryptoerr &&
+                    err.errnum() == ssl_import::SSL_ERROR_WANT_READ_);
         }
 
         bool TLS::closed() const {
             return err == ssl_import::SSL_ERROR_ZERO_RETURNED_;
         }
 
-        bool TLS::connect() {
+        error::Error TLS::connect() {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_connect_(c->ssl);
                 if (res < 0) {
-                    err = ssldl.SSL_get_error_(c->ssl, res);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
                 }
-                return res >= 0;
+                return error::none;
             });
         }
 
-        bool TLS::accept() {
+        error::Error TLS::accept() {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_accept_(c->ssl);
                 if (res < 0) {
-                    err = ssldl.SSL_get_error_(c->ssl, res);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
                 }
-                return res >= 0;
+                return error::none;
             });
         }
 
-        bool TLS::shutdown() {
+        error::Error TLS::shutdown() {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_shutdown_(c->ssl);
                 if (res < 0) {
-                    err = ssldl.SSL_get_error_(c->ssl, res);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
                 }
-                return res >= 0;
+                return error::none;
             });
         }
 
@@ -515,22 +489,22 @@ namespace utils {
             return static_cast<SSLContexts*>(opt)->sslctx != nullptr;
         }
 
-        bool TLS::verify_ok() {
+        error::Error TLS::verify_ok() {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 auto res = ssldl.SSL_get_verify_result_(c->ssl);
                 if (res != ssl_import::X509_V_OK_) {
-                    err = res;
-                    return false;
+                    return error::Error(res, error::ErrorCategory::cryptoerr);
                 }
-                return true;
+                return error::none;
             });
         }
 
         bool TLS::get_alpn(const char** selected, unsigned int* len) {
             return check_opt_ssl(opt, err, [&](SSLContexts* c) {
-                ssldl.SSL_get0_alpn_selected_(c->ssl, reinterpret_cast<const unsigned char**>(selected), len);
-                return true;
-            });
+                       ssldl.SSL_get0_alpn_selected_(c->ssl, reinterpret_cast<const unsigned char**>(selected), len);
+                       return error::none;
+                   })
+                .is_noerr();
         }
 
         void TLS::get_errors(int (*cb)(const char*, size_t, void*), void* user) {
@@ -572,7 +546,7 @@ namespace utils {
             TLSCipher ciph;
             check_opt_ssl(opt, err, [&](SSLContexts* c) {
                 ciph = make_cipher(ssldl.SSL_get_current_cipher_(c->ssl));
-                return true;
+                return error::none;
             });
             return ciph;
         }

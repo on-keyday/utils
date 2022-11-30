@@ -9,7 +9,7 @@
 // sock_inc - socket common include
 #pragma once
 #include <platform/windows/dllexport_header.h>
-#include <net/core/init_net.h>
+#include <deprecated/net/core/init_net.h>
 #ifdef _WIN32
 #ifdef __MINGW32__
 #define _WIN32_WINNT 0x0501

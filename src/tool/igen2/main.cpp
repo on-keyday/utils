@@ -9,6 +9,7 @@
 #include <cmdline/template/parse_and_err.h>
 #include <bnf/bnf.h>
 #include <bnf/matching.h>
+#include <bnf/compile.h>
 #include <wrap/argv.h>
 #include <wrap/cout.h>
 #include <file/file_view.h>
@@ -17,6 +18,112 @@ namespace option = utils::cmdline::option;
 namespace bnf = utils::bnf;
 namespace templ = utils::cmdline::templ;
 auto& cout = utils::wrap::cout_wrap();
+
+constexpr int parse_utf8(const char8_t* input, size_t inlen, unsigned int* output, size_t* parsedlen) {
+    if (!input || !inlen || !output || !parsedlen) {
+        return 0;
+    }
+
+    unsigned char top = (unsigned char)input[0];
+    if (top <= 0x7f) {
+        *output = top;
+        *parsedlen = 1;
+        return 1;
+    }
+
+    if (inlen < 2) {
+        return 0;
+    }
+
+    unsigned char second = (unsigned char)input[1];
+    if ((top & 0xE0) == 0xC0) {
+        if (top < 0xC2 || 0xDf < top || second < 0x80 || 0xBF < second) {
+            return 0;
+        }
+
+        *output = 0;
+        *output |= (unsigned int)(top & 0x3f) << 6;
+        *output |= (unsigned int)(second & 0x3f);
+        *parsedlen = 2;
+        return 1;
+    }
+
+    if (inlen < 3) {
+        return 0;
+    }
+
+    unsigned char third = (unsigned char)input[2];
+    if ((top & 0xF0) == 0xE0) {
+        if (top < 0xE0 || 0xEF < top) {
+            return 0;
+        }
+
+        if (top == 0xE0 && (second < 0xA0 || 0xBF < second)) {
+            return 0;
+        }
+
+        if (top == 0xE4 && (second < 0x80 || 0x9F < second)) {
+            return 0;
+        }
+
+        if (top != 0xE0 && top != 0xE4 && (second < 0x80 || 0xBF < second)) {
+            return 0;
+        }
+
+        *output = 0;
+        *output |= (unsigned int)(top & 0x1F) << 12;
+        *output |= (unsigned int)(second & 0x3F) << 6;
+        *output |= (unsigned int)(third & 0x3F);
+        *parsedlen = 3;
+        return 1;
+    }
+
+    if (inlen < 4) {
+        return 0;
+    }
+
+    unsigned char forth = (unsigned char)input[3];
+    if ((top & 0xF8) == 0xF0) {
+        if (top < 0xF0 || 0xF4 < top) {
+            return 0;
+        }
+
+        if (top == 0xF0 && (second < 0x90 || 0xBF < second)) {
+            return 0;
+        }
+
+        if (top == 0xF4 && (second < 0x80 || 0x8F < second)) {
+            return 0;
+        }
+
+        if (top != 0xF0 && top != 0xF4 && (second < 0x80 || 0xBF < second)) {
+            return 0;
+        }
+
+        *output = 0;
+        *output |= (unsigned int)(top & 0x0F) << 18;
+        *output |= (unsigned int)(second & 0x3F) << 12;
+        *output |= (unsigned int)(third & 0x3F) << 6;
+        *output |= (unsigned int)(forth & 0x3F);
+        *parsedlen = 4;
+        return 1;
+    }
+
+    return 0;
+}
+
+constexpr char32_t parse_literal(const char8_t* input, size_t* len) {
+    if (!input || !len) {
+        return false;
+    }
+    unsigned int output;
+    size_t parsed = 0;
+    if (!parse_utf8(input, *len, &output, &parsed)) {
+        char buf[] = "expect 0 byte utf string. but invalid byte detected.";
+        buf[7] = '0' + parsed;
+    }
+    return output;
+}
 
 struct Option : templ::HelpOption {
     std::string input, deffile;
@@ -64,6 +171,9 @@ bool parse_test() {
         cout << errc.pack.pack();
         return false;
     }
+    bnf::IW<std::string> val("", "    ");
+    bnf::utf8parser_writer("parse_utf8")(val, "constexpr", "char8_t");
+    cout << val.t;
     return true;
 }
 

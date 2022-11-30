@@ -42,7 +42,7 @@ namespace utils {
             template <bool constructible, bool mask_failure, class Out, class In, class Fn>
             constexpr bool cast_fn(std::enable_if_t<!constructible && !std::is_same_v<Out, std::remove_cvref_t<In>>, In>&& in, Fn&& fn) {
                 Out v;
-                if (!utf::convert<mask_failure>(in, v)) {
+                if (!utf::convert(in, v, mask_failure ? utf::ConvertMode::unsafe : utf::ConvertMode::none)) {
                     return false;
                 }
                 fn(v);

@@ -1,3 +1,7 @@
+#    utils - utility library
+#    Copyright (c) 2021-2022 on-keyday (https://github.com/on-keyday)
+#    Released under the MIT license
+#    https://opensource.org/licenses/mit-license.php
 cmake_minimum_required(VERSION 3.16)
 project(utils)
 include_directories("src/include")
@@ -49,14 +53,14 @@ add_executable(tokenizer "src/test/deprecated/tokenize/test_tokenizer.cpp")
 add_executable(make_parser "src/test/deprecated/syntax/test_make_parser_clang_bug.cpp")
 add_executable(syntaxc "src/test/deprecated/syntax/test_syntaxc.cpp")
 add_executable(number "src/test/number/test_number.cpp")
-add_executable(netcore "src/test/net/test_netcore.cpp")
-add_executable(urlparse "src/test/net/test_urlparse.cpp")
-add_executable(base64 "src/test/net/test_base64.cpp")
-add_executable(urlencode "src/test/net/test_urlencode.cpp")
-add_executable(sha1 "src/test/net/test_sha1.cpp")
+add_executable(netcore "src/test/deprecated/net/test_netcore.cpp")
+add_executable(urlparse "src/test/deprecated/net/test_urlparse.cpp")
+add_executable(base64 "src/test/deprecated/net/test_base64.cpp")
+add_executable(urlencode "src/test/deprecated/net/test_urlencode.cpp")
+add_executable(sha1 "src/test/deprecated/net/test_sha1.cpp")
 add_executable(to_string "src/test/number/test_to_string.cpp")
-add_executable(punycode "src/test/net/test_punycode.cpp")
-add_executable(http1 "src/test/net/test_http1.cpp")
+add_executable(punycode "src/test/deprecated/net/test_punycode.cpp")
+add_executable(http1 "src/test/deprecated/net/test_http1.cpp")
 
 if(WIN32)
   add_executable(io_completion_port "src/test/platform/windows/test_io_completion_port.cpp")
@@ -64,7 +68,7 @@ if(WIN32)
 endif()
 
 add_executable(worker "src/test/async/test_worker.cpp")
-add_executable(cookie "src/test/net/test_cookie.cpp")
+add_executable(cookie "src/test/deprecated/net/test_cookie.cpp")
 add_executable(strutil "src/test/helper/test_strutil.cpp")
 add_executable(dispatcher "src/test/deprecated/syntax/test_dispatcher.cpp")
 add_executable(tree "src/test/deprecated/syntax/test_tree.cpp")
@@ -76,16 +80,16 @@ add_executable(jsonpath "src/test/json/test_jsonpath.cpp")
 add_executable(parser "src/test/deprecated/parser/test_parser.cpp")
 add_executable(digitcount "src/test/number/test_digitcount.cpp")
 add_executable(utfcast "src/test/utf/test_utfcast.cpp")
-add_executable(asyncdns "src/test/net/async/test_asyncdns.cpp")
-add_executable(asynctcp "src/test/net/async/test_asynctcp.cpp")
-add_executable(http2frame "src/test/net/test_http2frame.cpp")
+add_executable(asyncdns "src/test/deprecated/net/async/test_asyncdns.cpp")
+add_executable(asynctcp "src/test/deprecated/net/async/test_asynctcp.cpp")
+add_executable(http2frame "src/test/deprecated/net/test_http2frame.cpp")
 add_executable(optparse "src/test/cmdline/test_optparse.cpp")
 add_executable(optctx "src/test/cmdline/test_optctx.cpp")
 add_executable(subcmd "src/test/cmdline/test_subcmd.cpp")
 add_executable(coroutine "src/test/async/test_coroutine.cpp")
-add_executable(asynctcp2 "src/test/net/async/test_asynctcp2.cpp")
-add_executable(http2base "src/test/net/async/test_http2base.cpp")
-add_executable(http2protocol "src/test/net/async/test_http2protocol.cpp")
+add_executable(asynctcp2 "src/test/deprecated/net/async/test_asynctcp2.cpp")
+add_executable(http2base "src/test/deprecated/net/async/test_http2base.cpp")
+add_executable(http2protocol "src/test/deprecated/net/async/test_http2protocol.cpp")
 add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cpp")
 add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
 add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
@@ -96,7 +100,7 @@ add_executable(expression "src/test/deprecated/parser/test_expression.cpp")
 add_executable(cnethttp2 "src/test/deprecated/cnet/test_cnethttp2.cpp")
 add_executable(cnetmem "src/test/deprecated/cnet/test_cnetmem.cpp")
 add_executable(base_iface "src/test/iface/test_base_iface.cpp")
-add_executable(guessurl "src/test/net/test_guessurl.cpp")
+add_executable(guessurl "src/test/deprecated/net/test_guessurl.cpp")
 add_executable(container_iface "src/test/iface/test_container.cpp")
 add_executable(token_stream "src/test/deprecated/parser/stream/test_token_stream.cpp")
 add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
@@ -116,7 +120,8 @@ add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
 add_executable(dnetquic_initial "src/test/dnet/test_dnetquic_initial.cpp")
 add_executable(dnetquic_context "src/test/dnet/test_dnetquic_context.cpp")
 add_executable(dnet_error "src/test/dnet/test_dnet_error.cpp")
-add_executable(ipparse "src/test/net/test_ipparse.cpp")
+add_executable(ipparse "src/test/deprecated/net/test_ipparse.cpp")
+add_executable(dnet_stun "src/test/dnet/test_dnet_stun.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -179,24 +184,27 @@ target_sources(utils
 
 target_sources(utnet
   PRIVATE
-  "src/lib/net/core/init_net.cpp"
-  "src/lib/net/dns/dns.cpp"
-  "src/lib/net/tcp/tcp.cpp"
-  "src/lib/net/ssl/ssl_common.cpp"
-  "src/lib/net/ssl/ssl_conn.cpp"
-  "src/lib/net/http/http1.cpp"
   "src/lib/platform/windows/io_completion_port.cpp"
   "src/lib/platform/linux/epoll.cpp"
-  "src/lib/net/async/async_dns.cpp"
-  "src/lib/net/async/common_pool.cpp"
-  "src/lib/net/async/async_tcp.cpp"
-  "src/lib/net/ssl/ssl_async.cpp"
-  "src/lib/net/http2/conn.cpp"
-  "src/lib/net/http2/stream_update.cpp"
-  "src/lib/net/http2/stream_make.cpp"
-  "src/lib/net/http2/stream_context.cpp"
-  "src/lib/net/http2/request.cpp"
-  "src/lib/net/http2/request_methods.cpp"
+  "src/lib/async/worker.cpp"
+
+  # almost all deprecated
+  "src/lib/deprecated/net/core/init_net.cpp"
+  "src/lib/deprecated/net/dns/dns.cpp"
+  "src/lib/deprecated/net/tcp/tcp.cpp"
+  "src/lib/deprecated/net/ssl/ssl_common.cpp"
+  "src/lib/deprecated/net/ssl/ssl_conn.cpp"
+  "src/lib/deprecated/net/http/http1.cpp"
+  "src/lib/deprecated/net/async/async_dns.cpp"
+  "src/lib/deprecated/net/async/common_pool.cpp"
+  "src/lib/deprecated/net/async/async_tcp.cpp"
+  "src/lib/deprecated/net/ssl/ssl_async.cpp"
+  "src/lib/deprecated/net/http2/conn.cpp"
+  "src/lib/deprecated/net/http2/stream_update.cpp"
+  "src/lib/deprecated/net/http2/stream_make.cpp"
+  "src/lib/deprecated/net/http2/stream_context.cpp"
+  "src/lib/deprecated/net/http2/request.cpp"
+  "src/lib/deprecated/net/http2/request_methods.cpp"
   "src/lib/deprecated/cnet/cnet.cpp"
   "src/lib/deprecated/cnet/tcp.cpp"
   "src/lib/deprecated/cnet/ssl.cpp"
@@ -204,7 +212,6 @@ target_sources(utnet
   "src/lib/deprecated/cnet/http2.cpp"
   "src/lib/deprecated/cnet/mem_buffer.cpp"
   "src/lib/deprecated/cnet/mem_iface.cpp"
-  "src/lib/async/worker.cpp"
 )
 
 target_sources(dnet PRIVATE
@@ -220,17 +227,19 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/string.cpp"
   "src/lib/dnet/heaps.cpp"
   "src/lib/dnet/conn.cpp"
-  "src/lib/dnet/quic/quic_tls.cpp"
-  "src/lib/dnet/quic/enc_keys.cpp"
-  "src/lib/dnet/quic/masks.cpp"
-  "src/lib/dnet/quic/enc_packet.cpp"
-  "src/lib/dnet/quic/cipher_payload.cpp"
+  "src/lib/dnet/quic/crypto/quic_tls.cpp"
+  "src/lib/dnet/quic/crypto/enc_keys.cpp"
+  "src/lib/dnet/quic/crypto/masks.cpp"
+  "src/lib/dnet/quic/crypto/enc_packet.cpp"
+  "src/lib/dnet/quic/crypto/cipher_payload.cpp"
   "src/lib/dnet/quic/context/quic.cpp"
   "src/lib/dnet/quic/context/handshake.cpp"
   "src/lib/dnet/quic/context/packet_handler.cpp"
   "src/lib/dnet/quic/context/frame_handler.cpp"
   "src/lib/dnet/address.cpp"
   "src/lib/dnet/sockopt.cpp"
+  "src/lib/dnet/mem.cpp"
+  "src/lib/dnet/quic/context/gen_packet.cpp"
 )
 
 target_sources(dnetserv PRIVATE
@@ -342,6 +351,7 @@ target_link_libraries(dnet_http2 dnet)
 target_link_libraries(dnetquic_initial dnet)
 target_link_libraries(dnetquic_context dnet)
 target_link_libraries(dnet_error dnet)
+target_link_libraries(dnet_stun dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)

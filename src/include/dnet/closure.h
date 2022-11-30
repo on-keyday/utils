@@ -19,95 +19,152 @@ namespace utils {
                 enum ClCtrl {
                     clone_,
                     del_,
-                    size_,
                     cloneable_,
-                    ptr_,
-                    typeid_,
                 };
 
                 template <class Ret, class... Args>
                 struct Clfn {
                     Ret (*fn)(void*, Args...);
                     std::uintptr_t (*ctrl)(void*, ClCtrl);
+
+                    constexpr Clfn(Ret (*fn)(void*, Args...), std::uintptr_t (*ctrl)(void*, ClCtrl))
+                        : fn(fn), ctrl(ctrl) {}
                 };
 
-                template <class T, class Ret, class... Args>
-                struct ClfnImpl : Clfn<Ret, Args...> {
-                    T real_fn;
-                    static Ret fn_(void* p, Args... args) {
-                        if constexpr (std::is_same_v<Ret, void>) {
-                            (void)static_cast<ClfnImpl*>(p)->real_fn(std::forward<decltype(args)>(args)...);
-                        }
-                        else {
-                            return static_cast<ClfnImpl*>(p)->real_fn(std::forward<decltype(args)>(args)...);
-                        }
+                template <class T, class Impl, bool enable_clone>
+                std::uintptr_t ctrl_(void* p, ClCtrl c) {
+                    auto ptr = static_cast<Impl*>(p);
+                    if (c == del_) {
+                        delete_with_global_heap(ptr, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(Impl), alignof(Impl)));
+                        return 0;
                     }
-                    static std::uintptr_t ctrl_(void* p, ClCtrl c) {
-                        auto ptr = static_cast<ClfnImpl*>(p);
-                        if (c == del_) {
-                            delete_with_global_heap(ptr, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ClfnImpl), alignof(ClfnImpl)));
-                            return 0;
-                        }
-                        if (c == clone_) {
-                            if constexpr (std::is_copy_constructible_v<T>) {
-                                auto ptr = alloc_normal(sizeof(ClfnImpl), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(ClfnImpl), alignof(ClfnImpl)));
-                                if (!ptr) {
-                                    return 0;
-                                }
-                                auto f = new (ptr) ClfnImpl(std::as_const(ptr->real_fn));
-                                return std::uintptr_t(f);
+                    if (c == clone_) {
+                        if constexpr (enable_clone && std::is_copy_constructible_v<T>) {
+                            auto ptr = alloc_normal(sizeof(Impl), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(Impl), alignof(Impl)));
+                            if (!ptr) {
+                                return 0;
                             }
-                            return 0;
-                        }
-                        if (c == size_) {
-                            return sizeof(ptr->real_fn);
-                        }
-                        if (c == cloneable_) {
-                            return std::is_copy_constructible_v<T>;
-                        }
-                        if (c == ptr_) {
-                            return std::uintptr_t(std::addressof(ptr->real_fn));
-                        }
-                        if (c == typeid_) {
-                            return std::uintptr_t(&typeid(T));
+                            auto f = new (ptr) Impl(std::as_const(ptr->real_fn));
+                            return std::uintptr_t(f);
                         }
                         return 0;
                     }
+                    if (c == cloneable_) {
+                        return std::is_copy_constructible_v<T>;
+                    }
+                    return 0;
+                }
 
-                    template <class... A>
-                    ClfnImpl(A&&... args)
-                        : real_fn(args...), Clfn<Ret, Args...>(fn_, ctrl_) {}
+                template <class T, class Ret, class... Args>
+                struct ClfnImpl1 : Clfn<Ret, Args...> {
+                    T real_fn;
+                    static Ret fn_(void* p, Args... args) {
+                        if constexpr (std::is_same_v<Ret, void>) {
+                            (void)static_cast<ClfnImpl1*>(p)->real_fn(std::forward<decltype(args)>(args)...);
+                        }
+                        else {
+                            return static_cast<ClfnImpl1*>(p)->real_fn(std::forward<decltype(args)>(args)...);
+                        }
+                    }
+
+                    template <class A>
+                    ClfnImpl1(A&& args)
+                        : real_fn(std::forward<A>(args)), Clfn<Ret, Args...>(fn_, ctrl_<T, ClfnImpl1, true>) {}
+                };
+
+                template <class T, class Ctx, class Ret, class... Args>
+                struct ClfnImpl2 : Clfn<Ret, Args...> {
+                    T real_fn;
+                    Ctx ctx;
+                    static Ret fn_(void* p, Args... args) {
+                        auto ptr = static_cast<ClfnImpl2*>(p);
+                        if constexpr (std::is_same_v<Ret, void>) {
+                            (void)ptr->real_fn(ptr->ctx, std::forward<decltype(args)>(args)...);
+                        }
+                        else {
+                            return ptr->real_fn(ptr->ctx, std::forward<decltype(args)>(args)...);
+                        }
+                    }
+
+                    template <class A>
+                    ClfnImpl2(A&& args)
+                        : real_fn(std::forward<A>(args)), Clfn<Ret, Args...>(fn_, ctrl_<T, ClfnImpl2, false>) {}
+
+                    template <class A, class B>
+                    ClfnImpl2(A&& args, B&& ctx)
+                        : real_fn(std::forward<A>(args)), ctx(std::forward<B>(ctx)), Clfn<Ret, Args...>(fn_, ctrl_<T, ClfnImpl2, false>) {}
                 };
             }  // namespace internal
 
+            // Closure is heap allocated function callback mechanism
+            // alive until destructor call
             template <class Ret, class... Args>
             struct Closure {
                private:
                 using Fnc = internal::Clfn<Ret, Args...>;
                 Fnc* fn = nullptr;
+                template <class Impl_t>
+                static auto alloc_impl() {
+                    return alloc_normal(sizeof(Impl_t), alignof(Impl_t), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(Impl_t), alignof(Impl_t)));
+                }
+
+                constexpr Closure(Fnc* ptr)
+                    : fn(ptr) {}
 
                public:
                 constexpr Closure() = default;
-                template <class Fn, std::enable_if_t<!std::is_same_v<std::decay_t<Fn>, Closure>, int> = 0>
+
+#define DISABLE_SELF(Fn) std::enable_if_t<!std::is_same_v<std::decay_t<Fn>, Closure>, int> = 0
+                template <class Fn, DISABLE_SELF(Fn)>
                 Closure(Fn&& f) {
-                    using Fn_t = std::decay_t<Fn>;
-                    using Impl_t = internal::ClfnImpl<Fn_t, Ret, Args...>;
-                    auto ptr = alloc_normal(sizeof(Impl_t), alignof(Impl_t), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(Impl_t), alignof(Impl_t)));
-                    if (!ptr) {
-                        return;
-                    }
-                    fn = new (ptr) Impl_t(std::forward<decltype(f)>(f));
+                    *this = Closure::create(std::forward<Fn>(f));
                 }
+
+                template <class Fn, DISABLE_SELF(Fn)>
+                static Closure create(Fn&& f) {
+                    using Fn_t = std::decay_t<Fn>;
+                    using Impl_t = internal::ClfnImpl1<Fn_t, Ret, Args...>;
+                    auto ptr = alloc_impl<Impl_t>();
+                    if (!ptr) {
+                        return {};
+                    }
+                    auto fn = new (ptr) Impl_t(std::forward<Fn>(f));
+                    return Closure(static_cast<Fnc*>(fn));
+                }
+
+                template <class Ctx, class Fn, DISABLE_SELF(Fn)>
+                static Closure create(Fn&& f) {
+                    using Fn_t = std::decay_t<Fn>;
+                    using Impl_t = internal::ClfnImpl2<Fn_t, Ctx, Ret, Args...>;
+                    auto ptr = alloc_impl<Impl_t>();
+                    if (!ptr) {
+                        return {};
+                    }
+                    auto fn = new (ptr) Impl_t(std::forward<Fn>(f));
+                    return Closure(static_cast<Fnc*>(fn));
+                }
+
+                template <class Ctx, class Fn, DISABLE_SELF(Fn)>
+                static Closure create(Fn&& f, Ctx&& ctx) {
+                    using Fn_t = std::decay_t<Fn>;
+                    using Ctx_t = std::decay_t<Ctx>;
+                    using Impl_t = internal::ClfnImpl2<Fn_t, Ctx_t, Ret, Args...>;
+                    auto ptr = alloc_impl<Impl_t>();
+                    if (!ptr) {
+                        return {};
+                    }
+                    auto fn = new (ptr) Impl_t(std::forward<Fn>(f), std::forward<Ctx>(ctx));
+                    return Closure(static_cast<Fnc*>(fn));
+                }
+
+#undef DISABLE_SELF
+                // common functions
 
                 constexpr Closure(Closure&& in)
                     : fn(std::exchange(in.fn, nullptr)) {}
 
                 constexpr auto operator()(auto&&... args) const {
                     return fn->fn(fn, std::forward<decltype(args)>(args)...);
-                }
-
-                constexpr size_t size() const {
-                    return fn->ctrl(fn, internal::size_);
                 }
 
                 constexpr Closure(const Closure& in) {
@@ -145,6 +202,42 @@ namespace utils {
                     if (fn) {
                         fn->ctrl(fn, internal::del_);
                     }
+                }
+            };
+
+            // Callback is reference callback mechanism
+            // alive inner function
+            template <class Ret, class... Args>
+            struct Callback {
+               private:
+                void* f = nullptr;
+                Ret (*cb)(void* f, Args...) = nullptr;
+
+                template <class Fn>
+                static Ret cb_(void* f, Args... args) {
+                    auto& fn = *static_cast<Fn*>(f);
+                    if constexpr (std::is_same_v<Ret, void>) {
+                        (void)fn(std::forward<decltype(args)>(args)...);
+                    }
+                    else {
+                        return fn(std::forward<decltype(args)>(args)...);
+                    }
+                }
+
+               public:
+                constexpr Callback() = default;
+                constexpr Callback(const Callback&) = default;
+                constexpr Callback& operator=(const Callback&) = default;
+                template <class F>
+                constexpr Callback(F&& v)
+                    : f(std::addressof(v)), cb(cb_<std::decay_t<F>>) {}
+
+                constexpr Ret operator()(auto&&... args) const {
+                    return cb(f, std::forward<decltype(args)>(args)...);
+                }
+
+                constexpr operator bool() const {
+                    return cb != nullptr;
                 }
             };
 

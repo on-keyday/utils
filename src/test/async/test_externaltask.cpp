@@ -8,9 +8,9 @@
 
 #include <async/worker.h>
 #include <wrap/cout.h>
-#include <net/tcp/tcp.h>
-#include <net/http/http1.h>
-#include <net/core/platform.h>
+#include <deprecated/net/tcp/tcp.h>
+#include <deprecated/net/http/http1.h>
+#include <deprecated/net/core/platform.h>
 #include <platform/windows/io_completetion_port.h>
 #include <chrono>
 #include <thread>

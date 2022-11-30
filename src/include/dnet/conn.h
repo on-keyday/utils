@@ -126,7 +126,7 @@ namespace utils {
                     return false;
                 }
                 if (tls) {
-                    return tls.write(data, len) && tls_io();
+                    return tls.write(data, len).is_noerr() && tls_io();
                 }
                 return !sock.write(data, len).second.is_error();
             }

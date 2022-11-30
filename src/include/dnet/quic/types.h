@@ -15,15 +15,42 @@ namespace utils {
             enum class PacketType {
                 Initial,
                 ZeroRTT,  // 0-RTT
-                HandShake,
+                Handshake,
                 Retry,
                 VersionNegotiation,  // section 17.2.1
                 OneRTT,              // 1-RTT
 
                 Unknown,
                 LongPacket,
-                StateLessReset,
+                StatelessReset,
             };
+
+            constexpr bool is_LongPacket(PacketType type) {
+                return type == PacketType::Initial ||
+                       type == PacketType::ZeroRTT ||
+                       type == PacketType::Handshake ||
+                       type == PacketType::Retry;
+            }
+
+            constexpr const char* to_string(PacketType type) {
+#define MAP(code)          \
+    case PacketType::code: \
+        return #code;
+                switch (type) {
+                    MAP(Initial)
+                    MAP(ZeroRTT)
+                    MAP(Handshake)
+                    MAP(Retry)
+                    MAP(VersionNegotiation)
+                    MAP(OneRTT)
+                    MAP(Unknown)
+                    MAP(LongPacket)
+                    MAP(StatelessReset)
+                    default:
+                        return nullptr;
+                }
+#undef MAP
+            }
 
             // packe_type_to_mask returns packet number byte mask for type and version
             // if succeeded returns mask else returns 0xff
@@ -40,7 +67,7 @@ namespace utils {
                             return 0xC0;
                         case PacketType::ZeroRTT:
                             return 0xD0;
-                        case PacketType::HandShake:
+                        case PacketType::Handshake:
                             return 0xE0;
                         case PacketType::Retry:
                             return 0xF0;
@@ -48,7 +75,7 @@ namespace utils {
                             break;
                     }
                 }
-                return 0xff;
+                return 0;
             }
 
             constexpr PacketType long_packet_type(byte typbit_1_to_3, std::uint32_t version) {
@@ -62,7 +89,7 @@ namespace utils {
                         case 1:
                             return PacketType::ZeroRTT;
                         case 2:
-                            return PacketType::HandShake;
+                            return PacketType::Handshake;
                         case 3:
                             return PacketType::Retry;
                         default:
@@ -73,10 +100,10 @@ namespace utils {
             }
 
             struct PacketFlags {
-                byte* value = nullptr;
+                byte value = 0;
 
                 constexpr byte raw() const {
-                    return value ? *value : 0xff;
+                    return value;
                 }
 
                 constexpr bool invalid() const {
@@ -123,17 +150,69 @@ namespace utils {
                     }
                 }
 
-                constexpr void protect(byte with) {
-                    if (!value) {
-                        return;
-                    }
-                    *value ^= (with & protect_mask());
+                constexpr byte protect(byte with) const {
+                    return raw() ^ (with & protect_mask());
                 }
 
                 constexpr byte packet_number_length() const {
                     return (raw() & 0x3) + 1;
                 }
+
+                constexpr byte reserved_bits() const {
+                    if (is_short()) {
+                        return raw() & 0x18;
+                    }
+                    return raw() & 0x0C;
+                }
+
+                constexpr bool spin_bit() const {
+                    if (is_short()) {
+                        return raw() & 0x20;
+                    }
+                    return false;
+                }
+
+                constexpr bool key_phase() const {
+                    if (is_short()) {
+                        return raw() & 0x04;
+                    }
+                    return false;
+                }
             };
+
+            constexpr PacketFlags make_packet_flags(std::uint32_t version, PacketType type, byte pn_length, bool spin = false, bool key_phase = false) {
+                byte raw = 0;
+                auto lentomask = [&] {
+                    return byte(pn_length - 1);
+                };
+                auto valid_pnlen = [&] {
+                    return 1 <= pn_length && pn_length <= 4;
+                };
+                auto typmask = packet_type_to_mask(type, version);
+                if (typmask == 0) {
+                    return {};
+                }
+                if (type == PacketType::Initial || type == PacketType::ZeroRTT ||
+                    type == PacketType::Handshake || type == PacketType::Retry) {
+                    if (!valid_pnlen()) {
+                        return {};
+                    }
+                    raw = typmask | lentomask();
+                }
+                else if (type == PacketType::VersionNegotiation) {
+                    raw = typmask;
+                }
+                else if (type == PacketType::OneRTT) {
+                    if (!valid_pnlen()) {
+                        return {};
+                    }
+                    raw = typmask | (spin ? 0x20 : 0) | (key_phase ? 0x04 : 0) | lentomask();
+                }
+                else {
+                    return PacketFlags{0};
+                }
+                return PacketFlags{raw};
+            }
 
             enum class FrameType {
                 PADDING,                                 // section 19.1
@@ -197,6 +276,45 @@ namespace utils {
                        type == FrameType::DATAGRAM_LEN;
             }
 
+            constexpr const char* to_string(FrameType type) {
+#define MAP(code)         \
+    case FrameType::code: \
+        return #code;
+                switch (type) {
+                    MAP(PADDING)
+                    MAP(PING)
+                    MAP(ACK)
+                    MAP(ACK_ECN)
+                    MAP(RESET_STREAM)
+                    MAP(STOP_SENDING)
+                    MAP(CRYPTO)
+                    MAP(NEW_TOKEN)
+                    MAP(MAX_DATA)
+                    MAP(MAX_STREAM_DATA)
+                    MAP(MAX_STREAMS_BIDI)
+                    MAP(MAX_STREAMS_UNI)
+                    MAP(DATA_BLOCKED)
+                    MAP(STREAM_DATA_BLOCKED)
+                    MAP(STREAMS_BLOCKED_BIDI)
+                    MAP(STREAMS_BLOCKED_UNI)
+                    MAP(NEW_CONNECTION_ID)
+                    MAP(RETIRE_CONNECTION_ID)
+                    MAP(PATH_CHALLENGE)
+                    MAP(PATH_RESPONSE)
+                    MAP(CONNECTION_CLOSE)
+                    MAP(CONNECTION_CLOSE_APP)
+                    MAP(HANDSHAKE_DONE)
+                    MAP(DATAGRAM)
+                    MAP(DATAGRAM_LEN)
+                    default:
+                        if (is_STREAM(type)) {
+                            return "STREAM";
+                        }
+                        return nullptr;
+                }
+#undef MAP
+            }
+
             // rfc 9000 12.4. Frames and Frame Types
             // Table 3. Frame Types
 
@@ -248,8 +366,9 @@ namespace utils {
             }
 
             struct FrameFlags {
-                byte* value = nullptr;
+                size_t value = 0;
 
+                /*
                 constexpr bool valid() const {
                     return value != nullptr;
                 }
@@ -257,9 +376,20 @@ namespace utils {
                 constexpr byte raw() const {
                     return value ? *value : 0;
                 }
+                */
+                constexpr FrameFlags() = default;
+                constexpr FrameFlags(size_t typ)
+                    : value(typ) {}
+
+                constexpr FrameFlags(FrameType typ)
+                    : value(size_t(typ)) {}
+
+                constexpr byte as_byte() const {
+                    return value & 0xff;
+                }
 
                 constexpr FrameType type_detail() const {
-                    return FrameType(raw());
+                    return FrameType(value);
                 }
 
                 constexpr FrameType type() const {
@@ -287,21 +417,21 @@ namespace utils {
 
                 constexpr bool STREAM_fin() const {
                     if (type() == FrameType::STREAM) {
-                        return raw() & 0x01;
+                        return as_byte() & 0x01;
                     }
                     return false;
                 }
 
                 constexpr bool STREAM_len() const {
                     if (type() == FrameType::STREAM) {
-                        return raw() & 0x02;
+                        return as_byte() & 0x02;
                     }
                     return false;
                 }
 
                 constexpr bool STREAM_off() const {
                     if (type() == FrameType::STREAM) {
-                        return raw() & 0x04;
+                        return as_byte() & 0x04;
                     }
                     return false;
                 }

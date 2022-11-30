@@ -8,7 +8,7 @@
 // h2state - http2 state machines
 #pragma once
 #include "h2frame.h"
-#include <net/http2/stream_state.h>
+#include <deprecated/net/http2/stream_state.h>
 #include "../httpstring.h"
 #include "h2frame.h"
 #include "h2err.h"

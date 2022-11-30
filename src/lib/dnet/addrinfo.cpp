@@ -20,6 +20,7 @@
 #include <cstring>
 #include <dnet/dll/errno.h>
 #include <net_util/ipaddr.h>
+#include <dnet/dll/asyncbase.h>
 #ifndef _WIN32
 #include <signal.h>
 #include <thread>
@@ -71,6 +72,14 @@ namespace utils {
             info.addr = reinterpret_cast<const raw_address*>(ptr->ai_addr);
             info.addrlen = ptr->ai_addrlen;
             return ptr->ai_addr;
+        }
+
+        NetAddrPort AddrInfo::netaddr() const {
+            if (!select) {
+                return {};
+            }
+            auto ptr = raw_paddrinfo(select);
+            return sockaddr_to_NetAddrPort(ptr->ai_addr, ptr->ai_addrlen);
         }
 
         bool string_from_sockaddr_impl(int af, const void* addr, size_t addrlen, void* text, size_t len, int* err, int* port) {

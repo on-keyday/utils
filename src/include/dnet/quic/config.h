@@ -8,10 +8,12 @@
 // config - QUIC config
 #pragma once
 #include "time.h"
-#include "transport_param.h"
+#include "transport_parameter/transport_param.h"
 #include <cstddef>
 #include "../dll/allocator.h"
 #include <vector>
+#include "../closure.h"
+#include <random>
 
 namespace utils {
     namespace dnet {
@@ -30,9 +32,11 @@ namespace utils {
                 } ack_handler;
 
                 struct {
-                    DefinedTransportParams params;
-                    std::vector<TransportParameter, glheap_allocator<TransportParameter>> custom;
+                    trsparam::DefinedTransportParams params;
+                    std::vector<trsparam::TransportParameter, glheap_allocator<trsparam::TransportParameter>> custom;
                 } transport_parameter;
+
+                closure::Closure<std::uint32_t> gen_random;
             };
 
             inline Config default_config() {
@@ -40,6 +44,9 @@ namespace utils {
                 conf.ack_handler.now = time::default_now;
                 conf.ack_handler.msec = time::millisec;
                 conf.ack_handler.initialRTT = 333 * time::millisec;
+                conf.gen_random = closure::Closure<std::uint32_t>::create<std::random_device>([](std::random_device& dev) {
+                    return std::uint32_t(dev());
+                });
                 return conf;
             }
         }  // namespace quic

@@ -9,7 +9,7 @@
 // http2 - http2 interface
 #pragma once
 #include "cnet.h"
-#include <net/http2/frame.h>
+#include <deprecated/net/http2/frame.h>
 #include <helper/pushbacker.h>
 
 namespace utils {

@@ -28,6 +28,7 @@ namespace utils {
             DWORD flags;
             sockaddr_storage addr;
             int addrlen;
+            std::uintptr_t accept_sock = ~0;
         };
 
         struct PlatformRWAsyncSuite {
@@ -37,6 +38,7 @@ namespace utils {
         struct PlatformAsyncSuite {
             std::atomic_bool lock;
             NetAddrPort addr;
+            int flag;
         };
 
         struct PlatformRWAsyncSuite {
@@ -55,6 +57,7 @@ namespace utils {
             std::atomic_bool on_operation = false;
             BoxByteLen boxed;
             ByteLen user;
+            bool is_stream = false;
 
             void incr() {
                 ++storng_ref;

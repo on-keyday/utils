@@ -8,18 +8,19 @@
 
 #include <dnet/tls.h>
 #include <cassert>
-#include <dnet/quic/transport_param.h>
+#include <dnet/quic/transport_parameter/transport_param.h>
 #include <string>
 #include <random>
 #include <dnet/quic/frame/frame.h>
 #include <dnet/quic/frame/frame_util.h>
-#include <dnet/quic/packet.h>
+#include <dnet/quic/packet/packet.h>
 #include <dnet/socket.h>
 #include <dnet/plthead.h>
 #include <dnet/addrinfo.h>
 #include <dnet/quic/frame/vframe.h>
-#include <dnet/quic/packet_util.h>
+#include <dnet/quic/packet/packet_util.h>
 #include <dnet/quic/frame/frame_make.h>
+#include <dnet/quic/crypto/crypto.h>
 
 using namespace utils;
 using ubytes = std::basic_string<dnet::byte>;
@@ -81,10 +82,10 @@ void test_dnetquic_initial() {
     tls.set_cacert_file(nullptr, "D:/MiniTools/QUIC_mock/goserver/keys/");
     tls.set_verify(dnet::SSL_VERIFY_PEER_);
     Test test;
-    auto res = tls.make_quic(quic_method, &test);
+    auto res = tls.make_quic(quic_method, &test).is_noerr();
     assert(res);
     tls.set_alpn("\x02h3", 3);
-    dnet::quic::DefinedTransportParams params{};
+    dnet::quic::trsparam::DefinedTransportParams params{};
     dnet::WPacket srcw, dstw;
     dnet::byte src[3000]{}, data[5000]{};
     srcw.b.data = src;
@@ -95,31 +96,30 @@ void test_dnetquic_initial() {
     dstw.b.data = data;
     dstw.b.len = sizeof(data);
     for (auto& param : list) {
-        auto pid = dnet::quic::DefinedTransportParamID(param.id.qvarint());
-        if (!dnet::quic::is_defined_both_set_allowed(int(pid)) ||
-            !param.data.valid()) {
+        auto pid = dnet::quic::trsparam::DefinedTransportParamID(param.first.id.value);
+        if (!dnet::quic::trsparam::is_defined_both_set_allowed(int(pid)) || !param.second) {
             continue;
         }
-        res = param.render(dstw);
+        res = param.first.render(dstw);
         assert(res);
     }
-    res = tls.set_quic_transport_params(dstw.b.data, dstw.offset);
+    res = tls.set_quic_transport_params(dstw.b.data, dstw.offset).is_noerr();
     assert(res);
-    tls.connect();
-    assert(tls.block());
+    auto block = tls.connect();
+    assert(dnet::isTLSBlock(block));
     dstw.offset = 0;
     srcw.offset = 0;
     auto dstID = genrandom(20);
-    auto crypto = dnet::quic::frame::make_crypto(srcw, 0, {test.handshake_data.data(), test.handshake_data.size()});
-    auto payload = dnet::WPacket{srcw.acquire(crypto.frame_len())};
+    auto crypto = dnet::quic::frame::make_crypto(nullptr, 0, {test.handshake_data.data(), test.handshake_data.size()});
+    auto payload = dnet::WPacket{srcw.acquire(crypto.render_len())};
     crypto.render(payload);
     auto packet = dnet::quic::packet::make_initial_plain(
-        srcw, {0, 1}, 1, {dstID.data(), 20}, {srcID.data(), 20},
-        srcw.acquire(0), payload.b, 16, 1200);
-    auto info = dnet::quic::packet::make_cryptoinfo(dstw, packet, 16);
-    auto secret = dnet::quic::crypto::make_initial_secret(srcw, 1, packet.dstID, true);
+        {0, 1}, 1, {dstID.data(), 20}, {srcID.data(), 20},
+        {}, payload.b, 16, 1200);
+    auto info = dnet::quic::packet::make_cryptoinfo_from_plain_packet(dstw, packet.first, 16);
+    auto secret = dnet::quic::crypto::make_initial_secret(srcw, 1, packet.first.dstID, true);
     dnet::quic::crypto::Keys keys;
-    res = dnet::quic::crypto::encrypt_packet(keys, 1, {}, info, secret);
+    res = dnet::quic::crypto::encrypt_packet(keys, 1, {}, info, secret).is_noerr();
 
     assert(res);
     auto packet_ = info.composition();
@@ -145,7 +145,7 @@ void test_dnetquic_initial() {
             dstw.offset = readsize;
             break;
         }
-        else if (dnet::isBlock(err)) {
+        else if (dnet::isSysBlock(err)) {
             assert(false);
         }
     }
