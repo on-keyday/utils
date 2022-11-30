@@ -5,7 +5,7 @@ you will be able to build from only these codes when deprecated is removed.
 I don't provide guarantee for your problem if you use these code.
 
 
-# what including (22/11/30)
+# what including (2022/11/30)
 + async - fiber/ucontext based coroutine
 + bin_fmt - binray format (unusable)
 + bnf - bnf parser (stop developing)
