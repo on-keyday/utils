@@ -15,9 +15,10 @@
 #include <helper/appender.h>
 #include <number/parse.h>
 #include <number/prefix.h>
-#include <helper/string_reader.h>
 #include "ifaces.h"
 #include <helper/equal.h>
+#include <helper/strutil.h>
+#include <view/slice.h>
 
 namespace utils {
     namespace parser {
@@ -54,7 +55,7 @@ namespace utils {
                 wrap::shared_ptr<Token<String, Kind, Vec>> ret;
                 while (!seq.eos()) {
                     if (no_space) {
-                        if (helper::space::match_space<false>(seq)) {
+                        if (space::match_space<false>(seq)) {
                             break;
                         }
                     }
@@ -154,8 +155,39 @@ namespace utils {
             return ret;
         }
 
+        constexpr auto string_reader(auto&& end, auto&& esc, bool allow_line = false) {
+            return [=](auto& seq, auto& tok) {
+                while (!seq.eos()) {
+                    if (auto n = seq.match_n(end)) {
+                        auto sz = bufsize(esc);
+                        if (sz) {
+                            if (helper::ends_with(tok, esc)) {
+                                auto sl = view::make_ref_slice(tok, 0, tok.size() - sz);
+                                if (!helper::ends_with(sl, esc)) {
+                                    return true;
+                                }
+                                seq.consume(n);
+                                helper ::append(tok, end);
+                                continue;
+                            }
+                        }
+                        return true;
+                    }
+                    auto c = seq.current();
+                    if (c == '\n' || c == '\r') {
+                        if (!allow_line) {
+                            return false;
+                        }
+                    }
+                    tok.push_back(c);
+                    seq.consume();
+                }
+                return false;
+            };
+        }
+
         auto string_rule(auto& end, auto& esc, bool allow_line) {
-            auto strreader = helper::string_reader(end, esc, allow_line);
+            auto strreader = string_reader(end, esc, allow_line);
             return [strreader](auto& seq, auto& tok, int& flag, auto& pos, auto& err) {
                 if (!strreader(seq, tok->token)) {
                     flag = -1;

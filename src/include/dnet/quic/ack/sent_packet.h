@@ -13,6 +13,8 @@
 #include "../../dll/allocator.h"
 #include <compare>
 #include "rtt.h"
+#include "../../easy/vector.h"
+#include "packet_number.h"
 
 namespace utils {
     namespace dnet {
@@ -39,21 +41,10 @@ namespace utils {
                 }
             }
 
+            /*
             enum class PacketNumber : std::uint64_t {
                 infinite = ~std::uint64_t(0),
-            };
-
-            constexpr auto operator<=>(const PacketNumber& a, const PacketNumber& b) {
-                return std::uint64_t(a) <=> std::uint64_t(b);
-            }
-
-            constexpr auto operator<=>(const PacketNumber& a, size_t b) {
-                return std::uint64_t(a) <=> std::uint64_t(b);
-            }
-
-            constexpr auto operator+(const PacketNumber& a, size_t b) {
-                return PacketNumber(std::uint64_t(a) + b);
-            }
+            };*/
 
             struct SentPacket {
                 BoxByteLen sent_plain;
@@ -66,7 +57,28 @@ namespace utils {
                 time_t time_sent = invalid_time;
             };
 
-            using RemovedPackets = std::vector<SentPacket, glheap_allocator<SentPacket>>;
+            struct RemovedPackets {
+                easy::Vec<SentPacket> rem;
+                error::Error push_back(SentPacket&& sent) {
+                    return rem.push_back(std::move(sent));
+                }
+
+                SentPacket* begin() {
+                    return rem.data();
+                }
+
+                SentPacket* end() {
+                    return rem.data() + rem.size();
+                }
+
+                SentPacket& operator[](size_t i) {
+                    return rem[i];
+                }
+
+                bool empty() const {
+                    return rem.empty();
+                }
+            };
 
         }  // namespace quic::ack
     }      // namespace dnet

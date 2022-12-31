@@ -172,7 +172,7 @@ namespace utils {
             auto define_block(Fn cond_expr, bool reqname = false, const char* type = "struct", char brackbegin = '{', char brackend = '}') {
                 return [=]<class T>(Sequencer<T>& seq, Expr*& expr, ErrorStack& stack) {
                     auto space = [&] {
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                     };
                     auto pos = save_and_space(seq);
                     String name;
@@ -189,7 +189,7 @@ namespace utils {
                         pos.pos = seq.rptr;
                     }
                     auto push_msg = [&](auto brack, bool eof = false) {
-                        number::Array<30, char, true> msg{0};
+                        number::Array<char, 30, true> msg{0};
                         helper::append(msg, "expect `");
                         msg.push_back(brack);
                         helper::appends(msg, "` but ", eof ? "reached eof" : "not");
@@ -338,7 +338,7 @@ namespace utils {
                 const char* begin = nullptr;
                 const char* end = nullptr;
                 bool recursive = false;
-                CommentExpr<number::Array<1, char>>* as_expr(size_t pos) {
+                CommentExpr<number::Array<char, 1>>* as_expr(size_t pos) {
                     return nullptr;
                 }
             };

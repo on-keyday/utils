@@ -25,7 +25,7 @@ namespace utils {
             struct TCPServer {
                 ::SOCKET litener = -1;
                 TCPStatus status = TCPStatus::idle;
-                number::Array<10, char, true> port{};
+                number::Array<char, 10, true> port{};
                 ::addrinfo* info = nullptr;
                 ::addrinfo* selected = nullptr;
                 int ipver = 0;

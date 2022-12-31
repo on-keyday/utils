@@ -11,7 +11,7 @@
 #include <deprecated/net/async/tcp.h>
 #include <deprecated/net/async/pool.h>
 #include <deprecated/net/ssl/ssl.h>
-#include <platform/windows/io_completetion_port.h>
+// #include <platform/windows/io_completetion_port.h>
 #include <deprecated/net/http/http1.h>
 #include <net_util/http/header.h>
 #include <thread>
@@ -60,9 +60,9 @@ void test_asynctcp2() {
         });
     };
     std::thread([] {
-        auto iocp = platform::windows::get_iocp();
+        // auto iocp = platform::windows::get_iocp();
         while (true) {
-            iocp->wait_callbacks(8, ~0);
+            // iocp->wait_callbacks(8, ~0);
         }
     }).detach();
     using namespace std::chrono;

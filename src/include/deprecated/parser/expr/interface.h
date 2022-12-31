@@ -149,7 +149,7 @@ namespace utils {
                 StartPos pos;
                 pos.start = seq.rptr;
                 pos.reset = true;
-                helper::space::consume_space(seq, line);
+                space::consume_space(seq, line);
                 pos.pos = seq.rptr;
                 pos.ptr = &seq.rptr;
                 return pos;
@@ -158,7 +158,7 @@ namespace utils {
             template <class T>
             auto bind_space(Sequencer<T>& seq) {
                 return [&](bool line = true) {
-                    return helper::space::consume_space(seq, line);
+                    return space::consume_space(seq, line);
                 };
             }
 

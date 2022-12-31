@@ -77,7 +77,7 @@ namespace utils {
                 libssl_mod = "libssl";
             }
 #ifdef _WIN32
-            number::Array<1024, wchar_t, true> buf{};
+            number::Array<wchar_t, 1024, true> buf{};
             utf::convert(libssl_mod, buf);
             return load_lib(this, libsslcommon, libsslcommon.libp, buf.c_str(), false);
 #else
@@ -90,7 +90,7 @@ namespace utils {
                 libcrypto_mod = "libcrypto";
             }
 #ifdef _WIN32
-            number::Array<1024, wchar_t, true> buf{};
+            number::Array<wchar_t, 1024, true> buf{};
             utf::convert(libcrypto_mod, buf);
             auto res = load_lib(this, libcryptocommon, libcryptocommon.libp, buf.c_str(), false);
 #else

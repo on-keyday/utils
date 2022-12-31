@@ -18,7 +18,7 @@ namespace utils {
             };
 
             struct Flow {
-                Direction direction;
+                Direction_ direction;
                 packet::number packet_number;
                 packet::types packet;
                 frame::types frames[3];
@@ -60,7 +60,7 @@ namespace utils {
             constexpr auto UnspecDstFieldLeastLen = 8;
 
             struct SrcDst {
-                Direction direction;
+                Direction_ direction;
                 packet::types packet;
                 const byte* dst;
                 const byte* src;

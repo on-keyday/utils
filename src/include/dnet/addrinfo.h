@@ -17,22 +17,11 @@ namespace utils {
         // raw_address is maker of sockaddr
         // cast sockaddr to raw_address
         struct raw_address;
+
         // SockAddr wraps native addrinfo representation
         struct SockAddr {
-            union {
-                struct {
-                    const raw_address* addr;
-                    int addrlen;
-                };
-                struct {
-                    const char* hostname;
-                    int namelen;
-                };
-            };
-            int af = 0;
-            int type = 0;
-            int proto = 0;
-            int flag = 0;
+            NetAddrPort addr;
+            SockAttr attr;
         };
 #ifdef _WIN32
         constexpr auto INET6_ADDRSTRLEN_ = 65;
@@ -86,8 +75,10 @@ namespace utils {
             constexpr void reset_iterator() {
                 select = nullptr;
             }
+            /*
             const void* sockaddr(SockAddr& info) const;
-            NetAddrPort netaddr() const;
+            NetAddrPort netaddr() const;*/
+            SockAddr sockaddr() const;
             bool string(void* text, size_t len, int* port = nullptr, int* err = nullptr) const;
 
             IPText string(int* port = nullptr, int* err = nullptr) const {
@@ -122,8 +113,8 @@ namespace utils {
             int err;
             constexpr WaitAddrInfo(void* o, int e)
                 : opt(o), err(e) {}
-            friend dnet_dll_export(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port);
-            friend dnet_dll_export(WaitAddrInfo) get_self_host_address(const SockAddr& addr, const char* port);
+            friend dnet_dll_export(WaitAddrInfo) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr);
+            friend dnet_dll_export(WaitAddrInfo) get_self_host_address(view::rvec port, SockAttr attr);
 
            public:
             constexpr WaitAddrInfo(WaitAddrInfo&& info)
@@ -148,12 +139,12 @@ namespace utils {
             ~WaitAddrInfo();
         };
 
-        [[nodiscard]] dnet_dll_export(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port);
+        [[nodiscard]] dnet_dll_export(WaitAddrInfo) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr = {});
 
         // this invokes resolve_address with addr.flag|=AI_PASSIVE and addr.hostname=nullptr, addr.namelen=0
-        [[nodiscard]] dnet_dll_export(WaitAddrInfo) get_self_server_address(const SockAddr& addr, const char* port);
+        [[nodiscard]] dnet_dll_export(WaitAddrInfo) get_self_server_address(view::rvec port, SockAttr attr = {});
 
         // this invokes resolve_address with addr.hostname=gethostname()
-        [[nodiscard]] dnet_dll_export(WaitAddrInfo) get_self_host_address(const SockAddr& addr, const char* port = nullptr);
+        [[nodiscard]] dnet_dll_export(WaitAddrInfo) get_self_host_address(view::rvec port = {}, SockAttr attr = {});
     }  // namespace dnet
 }  // namespace utils

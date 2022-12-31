@@ -11,9 +11,9 @@
 
 namespace utils {
     namespace number {
-        template <size_t sz, class T, bool strmode = false>
+        template <class T, size_t size_, bool strmode = false>
         struct Array {
-            T buf[sz];
+            T buf[size_];
             size_t i = 0;
             constexpr T operator[](size_t f) const {
                 return buf[f];
@@ -24,7 +24,7 @@ namespace utils {
             }
 
             constexpr void push_back(T t) {
-                if (strmode ? i >= sz - 1 : i >= sz) {
+                if (strmode ? i >= size_ - 1 : i >= size_) {
                     return;
                 }
                 buf[i] = t;
@@ -36,7 +36,7 @@ namespace utils {
             }
 
             constexpr size_t capacity() const {
-                return strmode ? sz - 1 : sz;
+                return strmode ? size_ - 1 : size_;
             }
         };
     }  // namespace number

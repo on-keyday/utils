@@ -30,8 +30,8 @@ namespace utils {
                 error_http_status,
             };
 
-            using ClientKey = number::Array<26 + utils::strlen(websocket_magic_guid), char, true>;
-            using SHAHash = number::Array<20, char>;
+            using ClientKey = number::Array<char, 26 + utils::strlen(websocket_magic_guid), true>;
+            using SHAHash = number::Array<char, 20>;
 
             Error open(HTTP& http, auto&& path, auto&& header, auto& compare_sec_key) {
                 std::random_device dev;
@@ -42,7 +42,7 @@ namespace utils {
                 }
                 ClientKey fixed;
                 SHAHash hash;
-                if (!net::base64::encode(helper::SizedView(data, sizeof(data)), fixed)) {
+                if (!net::base64::encode(view::CharVec(data, sizeof(data)), fixed)) {
                     return error_base64;
                 }
                 header.emplace("Sec-WebSocket-Key", fixed.c_str());
@@ -64,7 +64,7 @@ namespace utils {
 
             template <class TmpString = String>
             Error accept(HTTP& http, auto&& path, auto&& header, auto&& pass_sec_key, size_t* red = nullptr) {
-                number::Array<4, char, true> meth;
+                number::Array<char, 4, true> meth;
                 HTTPBodyInfo body;
                 ClientKey fixed;
                 bool version = false;
@@ -128,7 +128,7 @@ namespace utils {
 
             template <class TmpString = String>
             Error verify(HTTP& http, auto&& header, auto&& compare_sec_key, size_t* red = nullptr) {
-                number::Array<4, char, true> meth;
+                number::Array<char, 4, true> meth;
                 HTTPBodyInfo body;
                 ClientKey fixed;
                 bool accept = false;

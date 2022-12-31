@@ -16,7 +16,7 @@ namespace utils {
             return [](auto&& type_, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
                 MINL_FUNC_LOG_OLD("struct_signature")
                 const auto begin = seq.rptr;
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 const char* str_ = nullptr;
                 const char* field_str_ = nullptr;
@@ -35,7 +35,7 @@ namespace utils {
                     seq.rptr = begin;
                     return false;
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 if (!seq.seek_if("{")) {
                     errc.say("expected ", word, " begin { but not");
                     errc.trace(start, seq);
@@ -46,7 +46,7 @@ namespace utils {
                 root->str = str_;
                 auto cur = root;
                 while (true) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.eos()) {
                         errc.say("unexpected eof at reading ", word, " field");
                         errc.trace(start, seq);
@@ -67,10 +67,10 @@ namespace utils {
                             return true;
                         }
                         name_end = seq.rptr;
-                        helper::space::consume_space(seq, false);
+                        space::consume_space(seq, false);
                         if (seq.seek_if(",")) {
                             name.push_back(',');
-                            helper::space::consume_space(seq, true);
+                            space::consume_space(seq, true);
                             continue;
                         }
                         break;
@@ -85,9 +85,9 @@ namespace utils {
                     auto ty = std::static_pointer_cast<TypeNode>(tmp);
                     tmp = nullptr;
                     auto field_end = seq.rptr;
-                    helper::space::consume_space(seq, false);
+                    space::consume_space(seq, false);
                     if (seq.seek_if("=")) {
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         tmp = expr(seq);
                         if (!tmp) {
                             errc.say("expected ", word, " field initialization expr but not");
@@ -118,7 +118,7 @@ namespace utils {
         constexpr auto type_signatures(auto&& struct_parse, auto&& func_parse) {
             auto f = [=](auto&& f, auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
                 MINL_FUNC_LOG_OLD("type_signature")
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 auto self_call = [&](auto&& stat_, auto&& expr, auto& seq, auto& node, bool& err, auto& errc) {
                     return f(f, stat_, expr, seq, node, err, errc);
@@ -162,7 +162,7 @@ namespace utils {
                     return true;
                 }
                 else if (expect_ident(seq, "typeof")) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (!seq.seek_if("(")) {
                         errc.say("expect type typeof() begin ( but not");
                         errc.trace(start, seq);
@@ -176,7 +176,7 @@ namespace utils {
                         err = true;
                         return true;
                     }
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (!seq.seek_if(")")) {
                         errc.say("expect type typeof() end ) but not");
                         errc.trace(start, seq);
@@ -192,7 +192,7 @@ namespace utils {
                 }
                 else if (expect_ident(seq, "genr")) {
                     const auto end = seq.rptr;
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (!seq.seek_if("(")) {
                         seq.rptr = end;
                         auto gen = std::make_shared<GenericTypeNode>();
@@ -201,7 +201,7 @@ namespace utils {
                         node = std::move(gen);
                         return true;
                     }
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     std::string tp;
                     if (!ident_default_read(tp, seq)) {
                         errc.say("expect type parameter identifier but not");
@@ -209,7 +209,7 @@ namespace utils {
                         err = true;
                         return true;
                     }
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.seek_if(")")) {
                         errc.say("expect type parameter end ) but not");
                         errc.trace(start, seq);
@@ -225,7 +225,7 @@ namespace utils {
                 }
                 else if (seq.seek_if("...")) {
                     const auto end = seq.rptr;
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (!seq.match(")")) {
                         if (!self_call(stat_, expr, seq, node, err, errc) || err) {
                             err = true;
@@ -246,7 +246,7 @@ namespace utils {
                     return true;
                 }
                 else if (seq.seek_if("[")) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     const char* type_ = array_str_;
                     if (seq.seek_if("]")) {
                         type_ = vector_str_;
@@ -257,7 +257,7 @@ namespace utils {
                             err = true;
                             return true;
                         }
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         if (!seq.seek_if("]")) {
                             errc.say("expected array end ] but not");
                             errc.trace(start, seq);
@@ -303,10 +303,10 @@ namespace utils {
                             return true;
                         }
                         const auto end = seq.rptr;
-                        helper::space::consume_space(seq, false);
+                        space::consume_space(seq, false);
                         if (seq.consume_if('.')) {
                             str.push_back('.');
-                            helper::space::consume_space(seq, true);
+                            space::consume_space(seq, true);
                             continue;
                         }
                         seq.rptr = end;
@@ -327,12 +327,12 @@ namespace utils {
         constexpr auto type_define(auto&& type_parse) {
             return [=](auto&& stat_, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD("type_define")
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, "type")) {
                     return false;
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 if (seq.match("<")) {  // type primitive
                     seq.rptr = start;
                     return false;
@@ -350,10 +350,10 @@ namespace utils {
                         return true;
                     }
                     const auto name_end = seq.rptr;
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.seek_if("=")) {
                         type_ = type_alias_str_;
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                     }
                     if (!type_parse(stat_, expr, seq, node, err, errc) || err) {
                         errc.say("expected type signature but not");
@@ -375,7 +375,7 @@ namespace utils {
                 curnode = root;
                 if (seq.seek_if("(")) {
                     while (true) {
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         if (seq.seek_if(")")) {
                             break;
                         }
@@ -401,11 +401,11 @@ namespace utils {
             return [=](auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD("type_primitive")
                 const auto begin = seq.rptr;
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 std::shared_ptr<MinNode> tmp;
                 if (expect_ident(seq, "type")) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (!seq.seek_if("<")) {
                         // TODO(on-keyday): error?
                         errc.say("expect type primitive begin < but not");
@@ -420,7 +420,7 @@ namespace utils {
                         err = true;
                         return true;
                     }
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (!seq.seek_if(">")) {
                         // TODO(on-keyday): error?
                         errc.say("expect type primitive end > but not");

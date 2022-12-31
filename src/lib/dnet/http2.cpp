@@ -10,7 +10,7 @@
 #include <dnet/dll/httpbufproxy.h>
 #include <dnet/errcode.h>
 #include <helper/appender.h>
-#include <helper/view.h>
+#include <view/charvec.h>
 #include <helper/pushbacker.h>
 #include <helper/strutil.h>
 #include <unordered_map>
@@ -115,7 +115,7 @@ namespace utils {
 
         bool HTTP2::provide_http2_data(const void* data, size_t size) {
             return check_opt(opt, err, [&](HTTP2Connection* s) {
-                helper::append(s->input, helper::SizedView(static_cast<const char*>(data), size));
+                helper::append(s->input, view::CharVec(static_cast<const char*>(data), size));
                 return true;
             });
         }
@@ -327,16 +327,16 @@ namespace utils {
             using t = h2frame::FrameType;
             if (f->type == t::data) {
                 auto d = static_cast<h2frame::DataFrame*>(f);
-                helper::append(strm.data_buf, helper::SizedView(d->data, d->datalen));
+                helper::append(strm.data_buf, view::CharVec(d->data, d->datalen));
             }
             if (f->type == t::header || f->type == t::continuous) {
                 if (f->type == t::header) {
                     auto h = static_cast<h2frame::HeaderFrame*>(f);
-                    helper::append(strm.header_buf, helper::SizedView(h->data, h->datalen));
+                    helper::append(strm.header_buf, view::CharVec(h->data, h->datalen));
                 }
                 else {
                     auto h = static_cast<h2frame::ContinuationFrame*>(f);
-                    helper::append(strm.header_buf, helper::SizedView(h->data, h->len));
+                    helper::append(strm.header_buf, view::CharVec(h->data, h->len));
                 }
                 if (f->flag & h2frame::Flag::end_headers) {
                     s->hpkerr = hpack::decode(strm.header_buf, s->conn.recv.table, strm.header, s->conn.state.recv.settings.header_table_size);

@@ -8,7 +8,7 @@
 // tls_head - tls header
 #pragma once
 #include <cstdint>
-#include "byte.h"
+#include "../core/byte.h"
 
 namespace utils {
     namespace dnet {

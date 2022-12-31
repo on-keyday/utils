@@ -12,6 +12,7 @@
 #pragma once
 
 #include "../endian/reader.h"
+#include "../endian/buf.h"
 #include "../helper/pushbacker.h"
 
 namespace utils {
@@ -26,7 +27,9 @@ namespace utils {
                     std::uint32_t a = h[0], b = h[1], c = h[2], d = h[3], e = h[4];
                     for (auto i = 0; i < 80; i++) {
                         if (i < 16) {
-                            w[i] = endian::to_network_us<std::uint32_t>(&bits[i * 4]);
+                            endian::Buf<std::uint32_t> buf;
+                            buf.from(bits + (i * 4));
+                            w[i] = buf.read_be();
                         }
                         else {
                             w[i] = rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
@@ -64,29 +67,42 @@ namespace utils {
             }  // namespace internal
 
             template <class T, class Out>
-            constexpr bool make_sha1(Sequencer<T>& t, Out& out) {
+            constexpr bool make_sha1(Sequencer<T>& seq, Out& out) {
                 std::uint32_t hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
-                endian::Reader<buffer_t<std::remove_reference_t<T>&>> r{t.buf};
                 using Buffer = helper::FixedPushBacker<std::uint8_t[64], 64>;
                 size_t total = 0;
                 bool intotal = false;
-                r.seq.rptr = t.rptr;
-                while (!r.seq.eos()) {
-                    Buffer b;
-                    auto red = r.template read_seq<std::uint8_t, decltype(b), 1, 0, true>(b, 64, 0);
+                auto read_ = [&]() {
+                    Buffer buf = {};
+                    auto i = 0;
+                    for (; i < 64; i++) {
+                        if (seq.eos()) {
+                            break;
+                        }
+                        buf.push_back(seq.current());
+                        seq.consume();
+                    }
+                    return std::pair{buf, i};
+                };
+                endian::Buf<std::uint64_t> total_buf;
+                auto flush_total = [&](auto& b) {
+                    total_buf.write_be(total);
+                    total_buf.into_array(b.buf, 56);
+                };
+                while (!seq.eos()) {
+                    auto [b, red] = read_();
                     total += red * 8;
-                    std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
                     if (red < 64) {
                         b.buf[red] = 0x80;
                         intotal = true;
                         if (red < 56) {
-                            ptr[7] = endian::to_network(&total);
+                            flush_total(b);
                             internal::calc_sha1(hash, b.buf);
                         }
                         else {
                             internal::calc_sha1(hash, b.buf);
-                            ::memset(b.buf, 0, 64);
-                            ptr[7] = endian::to_network(&total);
+                            b = {};
+                            flush_total(b);
                             internal::calc_sha1(hash, b.buf);
                         }
                     }
@@ -95,19 +111,18 @@ namespace utils {
                     }
                 }
                 if (!intotal) {
-                    Buffer b;
-                    std::uint64_t* ptr = reinterpret_cast<std::uint64_t*>(b.buf);
+                    Buffer b = {};
                     b.buf[0] = 0x80;
-                    ptr[7] = endian::to_network(&total);
+                    flush_total(b);
                     internal::calc_sha1(hash, b.buf);
                 }
                 for (auto h : hash) {
-                    auto be = endian::to_network(&h);
+                    endian::Buf<std::uint32_t> buf;
+                    buf.write_be(h);
                     for (auto k = 0; k < 4; k++) {
-                        out.push_back(reinterpret_cast<char*>(&be)[k]);
+                        out.push_back(buf[k]);
                     }
                 }
-                t.rptr = r.seq.rptr;
                 return true;
             }
 

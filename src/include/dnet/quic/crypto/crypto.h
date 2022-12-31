@@ -11,6 +11,7 @@
 #include "crypto_keys.h"
 #include "../../error.h"
 #include "crypto_packet.h"
+#include "../../closure.h"
 
 namespace utils {
     namespace dnet {
@@ -38,7 +39,9 @@ namespace utils {
             // info is packet payload
             // secret is write secret
             // if cipher is TLSCipher{},secret will interpret as initial secret
-            dnet_dll_export(error::Error) encrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret);
+            dnet_dll_export(error::Error) encrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret, std::uint64_t original_packet_number);
+
+            using PacketNumberDecoder = closure::Callback<std::uint64_t, QPacketNumber>;
 
             // decrypt_packet decrypts packet with specific cipher
             // version is QUIC packet header version field value
@@ -47,7 +50,7 @@ namespace utils {
             // info is packet payload
             // secret is write secret
             // if cipher is TLSCipher{},secret will interpret as initial secret
-            dnet_dll_export(error::Error) decrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret);
+            dnet_dll_export(error::Error) decrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret, PacketNumberDecoder decode);
 
             // internal functions
             // bool cipher_initial_payload(ByteLen output, ByteLen payload, ByteLen head, ByteLen key, ByteLen iv_nonce, bool enc);

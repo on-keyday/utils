@@ -10,6 +10,7 @@
 #pragma once
 #include "escape.h"
 #include "../helper/readutil.h"
+#include "../view/char.h"
 
 namespace utils {
     namespace escape {
@@ -103,7 +104,7 @@ namespace utils {
                 }
                 const auto start = seq.rptr;
                 if (seq.consume_if(store_c)) {
-                    const auto view = helper::CharView(store_c, count);
+                    const auto view = view::CharView(store_c, count);
                     if (seq.seek_if(view)) {
                         str.push_back(store_c);
                         helper::append(str, view);

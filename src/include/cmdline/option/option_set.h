@@ -16,6 +16,7 @@
 #include "../../wrap/pair_iter.h"
 #include "optparser.h"
 #include "../../utf/convert.h"
+#include "../../view/slice.h"
 
 #include <algorithm>
 
@@ -33,7 +34,7 @@ namespace utils {
             };
 
             bool make_cvtvec(auto& option, auto& mainname, auto& desc, auto& cvtvec) {
-                auto spltview = helper::make_ref_splitview(option, ",");
+                auto spltview = view::make_ref_splitview(option, ",");
                 mainname = utf::convert<wrap::string>(spltview[0]);
                 if (desc.find(mainname) != desc.end()) {
                     return false;

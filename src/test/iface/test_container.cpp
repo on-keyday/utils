@@ -6,8 +6,8 @@
 */
 
 
-#include <iface/container.h>
-#include <iface/storage.h>
+#include <deprecated/iface/container.h>
+#include <deprecated/iface/storage.h>
 #include <deque>
 #include <string>
 #include <wrap/cout.h>

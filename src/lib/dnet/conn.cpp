@@ -21,11 +21,7 @@ namespace utils {
                 err = conn_error_invalid_arguemnt;
                 return false;
             }
-            SockAddr hint{};
-            hint.hostname = host;
-            hint.namelen = strlen(host);
-            hint.type = SOCK_STREAM;
-            wait = resolve_address(hint, port);
+            wait = resolve_address(host, port, {.socket_type = SOCK_STREAM});
             if (wait.failed()) {
                 err = conn_error_dns;
                 return false;
@@ -68,13 +64,12 @@ namespace utils {
                 return false;
             }
             while (addr.next()) {
-                SockAddr saddr;
-                addr.sockaddr(saddr);
-                auto tmp = make_socket(saddr.af, saddr.type, saddr.proto);
+                auto saddr = addr.sockaddr();
+                auto tmp = make_socket(saddr.attr);
                 if (!tmp) {
                     continue;
                 }
-                if (auto err = tmp.connect(saddr.addr, saddr.addrlen)) {
+                if (auto err = tmp.connect(saddr.addr)) {
                     if (isSysBlock(err)) {
                         state = ConnState::start_connect;
                         sock = std::move(tmp);
@@ -166,7 +161,7 @@ namespace utils {
 
         dnet_dll_implement(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap) {
             auto do_write = [&] {
-                if (auto [_, err] = sock.write(text, size); err) {
+                if (auto [_, err] = sock.write(view::rvec(text, size)); err) {
                     if (isSysBlock(err)) {
                         state = TLSIOState::to_provider;
                         return false;
@@ -216,12 +211,12 @@ namespace utils {
                     bool red = false;
                     error::Error err;
                     while (true) {
-                        size_t readsize = 0;
-                        std::tie(readsize, err) = sock.read(text, cap);
+                        view::wvec readsize;
+                        std::tie(readsize, err) = sock.read(view::wvec(text, cap));
                         if (err) {
                             break;
                         }
-                        size = readsize;
+                        size = readsize.size();
                         if (!do_provide()) {
                             return state != TLSIOState::fatal;
                         }

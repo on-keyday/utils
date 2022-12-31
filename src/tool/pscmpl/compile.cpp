@@ -7,8 +7,10 @@
 
 #include "pscmpl.h"
 #include <helper/equal.h>
+#include <view/char.h>
 
 namespace pscmpl {
+    namespace view = utils::view;
 
     using namespace utils::wrap;
 
@@ -34,7 +36,7 @@ namespace pscmpl {
     }
 
     bool is_range_expr(expr::Expr* bin, CompileContext& ctx, bool& suc, bool not_consume) {
-        utils::number::Array<3, char> v;
+        utils::number::Array<char, 3> v;
         bin->stringify(v);
         if (v.size() == 1 && v[0] == '-' &&
             is(bin->index(0), "string") && is(bin->index(1), "string")) {
@@ -56,13 +58,13 @@ namespace pscmpl {
                 return true;
             }
             ctx.write("((input.current()>='");
-            if (!utils::escape::escape_str(hlp::CharView<char>{v[1]}, ctx.buffer)) {
+            if (!utils::escape::escape_str(view::CharView<char>{v[1]}, ctx.buffer)) {
                 ctx.pushstack(bin->index(0));
                 suc = ctx.error("string escape failed");
                 return true;
             }
             ctx.write("'&&input.current()<='");
-            if (!utils::escape::escape_str(hlp::CharView<char>{v[2]}, ctx.buffer)) {
+            if (!utils::escape::escape_str(view::CharView<char>{v[2]}, ctx.buffer)) {
                 ctx.pushstack(bin->index(1));
                 suc = ctx.error("string escape failed");
                 return true;
@@ -444,7 +446,7 @@ namespace pscmpl {
                 }
             }
             else {
-                utils::number::Array<10, char, true> val;
+                utils::number::Array< char,10, true> val;
                 p->stringify(val);
                 auto cmd = [](mnemonic::Command v) {
                     return mnemonic::mnemonics[int(v)].str;

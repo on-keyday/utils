@@ -27,21 +27,18 @@ struct SockHolder {
 
 int main() {
     dnet::SockAddr addr{};
-    addr.hostname = "www.google.com";
-    addr.namelen = strlen(addr.hostname);
-    addr.type = SOCK_STREAM;
-    auto resolve = dnet::resolve_address(addr, "http");
+    auto resolve = dnet::resolve_address("www.google.com", "http", {.socket_type = SOCK_STREAM});
     auto list = resolve.wait();
     assert(!resolve.failed());
     dnet::Socket sock;
     while (list.next()) {
-        list.sockaddr(addr);
-        auto tmp = dnet::make_socket(addr.af, addr.type, addr.proto);
+        auto addr = list.sockaddr();
+        auto tmp = dnet::make_socket(addr.attr.protocol, addr.attr.socket_type, addr.attr.protocol);
         if (!tmp) {
             continue;
         }
 
-        auto err = tmp.connect(addr.addr, addr.addrlen);
+        auto err = tmp.connect(addr.addr);
         if (!err) {
             goto END;
         }
@@ -59,7 +56,7 @@ int main() {
     }
     assert(sock);
     constexpr auto data = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
-    if (auto [_, err] = sock.write(data, strlen(data)); err) {
+    if (auto [_, err] = sock.write(data); err) {
         return -1;
     }
     SockHolder holder{std::move(sock)};
@@ -70,12 +67,12 @@ int main() {
             size_t size = len;
             char buf[2048]{};
             while (true) {
-                auto [readsize, err] = h->sock.read(buf, 2048);
+                auto [read, err] = h->sock.read(buf);
                 if (err) {
                     break;
                 }
-                h->str.append(buf, readsize);
-                len += readsize;
+                h->str.append(read.as_char(), read.size());
+                len += read.size();
             }
         };
         if (len == bufmax) {

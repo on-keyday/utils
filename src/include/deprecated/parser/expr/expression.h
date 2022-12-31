@@ -83,7 +83,7 @@ namespace utils {
                 if (!variable(seq, name, pos, filter)) {
                     return false;
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 expr = new VarExpr<String>{std::move(name), pos};
                 return true;
             }
@@ -336,7 +336,7 @@ namespace utils {
                     delete bexpr;
                     return -1;
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 bexpr->right = right;
                 return 1;
             }
@@ -509,7 +509,7 @@ namespace utils {
                         if (!recur(seq, expr, stack)) {
                             return pos.fatal();
                         }
-                        utils::helper::space::consume_space(seq, true);
+                        utils::space::consume_space(seq, true);
                         if (!seq.consume_if(')')) {
                             PUSH_ERROR(stack, "brackets", "expect `)` but not", pos.pos, seq.rptr)
                             delete expr;

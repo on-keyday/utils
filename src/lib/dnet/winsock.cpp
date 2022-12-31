@@ -87,16 +87,16 @@ namespace utils {
             suite->sock = sock;
             if (buf) {
                 if (!buf->data) {
-                    suite->boxed = BoxByteLen{buf->len};
+                    suite->boxed = make_storage(buf->len);
                 }
                 else {
-                    suite->boxed = *buf;
+                    suite->boxed = make_storage(buf->data, buf->len);
                 }
-                if (!suite->boxed.valid()) {
+                if (suite->boxed.null()) {
                     return error::memory_exhausted;
                 }
-                suite->plt.buf.buf = reinterpret_cast<char*>(suite->boxed.data());
-                suite->plt.buf.len = suite->boxed.len();
+                suite->plt.buf.buf = suite->boxed.as_char();
+                suite->plt.buf.len = suite->boxed.size();
             }
             suite->plt.ol = {};
             suite->appcb = reinterpret_cast<void (*)()>(appcb);
@@ -155,13 +155,15 @@ namespace utils {
                     });
                     auto app = reinterpret_cast<void (*)(void*, ByteLen, bool, error::Error)>(s->appcb);
                     s->on_operation = false;
-                    app(s->ctx, s->boxed.unbox().resized(size), size == s->boxed.len(), std::move(err));
+                    auto sub = s->boxed.substr(0, size);
+                    app(s->ctx, ByteLen{sub.data(), sub.size()}, size == s->boxed.size(), std::move(err));
                 };
                 set_error(0);
                 socdl.WSARecv_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
-                    cb(fnctx, suite->boxed.unbox().resized(suite->plt.read),
-                       suite->boxed.len() == suite->plt.read, error::none);
+                    auto sub = suite->boxed.substr(0, suite->plt.read);
+                    cb(fnctx, ByteLen{sub.data(), sub.size()},
+                       suite->boxed.size() == suite->plt.read, error::none);
                 });
             });
         }
@@ -178,7 +180,8 @@ namespace utils {
                     });
                     auto app = reinterpret_cast<void (*)(void*, ByteLen, bool, error::Error, NetAddrPort&&)>(s->appcb);
                     s->on_operation = false;
-                    app(s->ctx, s->boxed.unbox().resized(size), size == s->boxed.len(), std::move(err),
+                    auto sub = s->boxed.substr(0, size);
+                    app(s->ctx, ByteLen{sub.data(), sub.size()}, size == s->boxed.size(), std::move(err),
                         sockaddr_to_NetAddrPort(reinterpret_cast<sockaddr*>(&s->plt.addr), s->plt.addrlen));
                 };
                 auto addr = reinterpret_cast<sockaddr*>(&suite->plt.addr);
@@ -186,8 +189,9 @@ namespace utils {
                 set_error(0);
                 socdl.WSARecvFrom_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags, addr, &suite->plt.addrlen, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
-                    cb(fnctx, suite->boxed.unbox().resized(suite->plt.read),
-                       suite->boxed.len() == suite->plt.read, error::none,
+                    auto sub = suite->boxed.substr(0, suite->plt.read);
+                    cb(fnctx, ByteLen{sub.data(), sub.size()},
+                       suite->boxed.size() == suite->plt.read, error::none,
                        sockaddr_to_NetAddrPort(reinterpret_cast<sockaddr*>(&suite->plt.addr), suite->plt.addrlen));
                 });
             });

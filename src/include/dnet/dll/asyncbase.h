@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <atomic>
 #include "../boxbytelen.h"
+#include "../storage.h"
 #include "../../helper/defer.h"
 #include "../address.h"
 #include "../errcode.h"
@@ -55,7 +56,8 @@ namespace utils {
             void* ctx = nullptr;
             std::atomic_uint32_t storng_ref;
             std::atomic_bool on_operation = false;
-            BoxByteLen boxed;
+            storage boxed;
+            // BoxByteLen boxed;
             ByteLen user;
             bool is_stream = false;
 

@@ -151,7 +151,7 @@ namespace utils {
         }
 
         error::Error TLS::set_alpn(const void* p, size_t len) {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_set_alpn_protos_(c->ssl, static_cast<const unsigned char*>(p), len);
                 if (res != 0) {
                     return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
@@ -161,7 +161,7 @@ namespace utils {
         }
 
         error::Error TLS::set_cacert_file(const char* cacert, const char* dir) {
-            return check_opt(opt, err, [&](SSLContexts* c) {
+            return check_opt(opt, err, [&](SSLContexts* c) -> error::Error {
                 if (!ssldl.SSL_CTX_load_verify_locations_(c->sslctx, cacert, dir)) {
                     err = set_ssl_value_failed;
                     return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
@@ -179,7 +179,7 @@ namespace utils {
         }
 
         error::Error TLS::make_ssl() {
-            return check_opt(opt, err, [&](SSLContexts* c) {
+            return check_opt(opt, err, [&](SSLContexts* c) -> error::Error {
                 if (c->ssl) {
                     return error::Error("already initialized", error::ErrorCategory::validationerr);
                 }
@@ -222,7 +222,7 @@ namespace utils {
         }
 
         error::Error TLS::make_quic(int (*cb)(void*, quic::MethodArgs), void* user) {
-            return check_opt(opt, err, [&](SSLContexts* c) {
+            return check_opt(opt, err, [&](SSLContexts* c) -> error::Error {
                 if (c->ssl) {
                     return error::Error("already initialized", error::ErrorCategory::dneterr);
                 }
@@ -277,7 +277,7 @@ namespace utils {
         }
 
         error::Error TLS::set_client_cert_file(const char* cert) {
-            return check_opt(opt, err, [&](SSLContexts* c) {
+            return check_opt(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto ptr = ssldl.SSL_load_client_CA_file_(cert);
                 if (!ptr) {
                     return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
@@ -288,7 +288,7 @@ namespace utils {
         }
 
         error::Error TLS::set_cert_chain(const char* pubkey, const char* prvkey) {
-            return check_opt(opt, err, [&](SSLContexts* c) {
+            return check_opt(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_CTX_use_certificate_chain_file_(c->sslctx, pubkey);
                 if (!res) {
                     return error::Error(set_ssl_value_failed, error::ErrorCategory::dneterr);
@@ -305,7 +305,7 @@ namespace utils {
         }
 
         error::Error TLS::provide_tls_data(const void* data, size_t len, size_t* written) {
-            return check_opt_bio(opt, err, [&](SSLContexts* c) {
+            return check_opt_bio(opt, err, [&](SSLContexts* c) -> error::Error {
                 if (is_openssl_crypto()) {
                     size_t tmp = 0;
                     if (!written) {
@@ -338,7 +338,7 @@ namespace utils {
 
         error::Error TLS::receive_tls_data(void* data, size_t len) {
             auto& red = prevred;
-            return check_opt_bio(opt, err, [&](SSLContexts* c) {
+            return check_opt_bio(opt, err, [&](SSLContexts* c) -> error::Error {
                 if (is_openssl_crypto()) {
                     if (!ssldl.BIO_read_ex_(c->wbio, data, len, &red)) {
                         if (ssldl.BIO_test_flags_(c->wbio, ssl_import::BIO_FLAGS_SHOULD_RETRY_)) {
@@ -364,32 +364,32 @@ namespace utils {
         }
 
         error::Error TLS::provide_quic_data(quic::crypto::EncryptionLevel level, const void* data, size_t size) {
-            return check_opt_quic(opt, err, [&](SSLContexts* c) {
+            return check_opt_quic(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_provide_quic_data_(c->ssl,
                                                         ssl_import::quic_ext::OSSL_ENCRYPTION_LEVEL(level),
                                                         reinterpret_cast<const uint8_t*>(data), size);
                 if (!res) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::sslerr);
                 }
                 return error::none;
             });
         }
 
         error::Error TLS::progress_quic() {
-            return check_opt_quic(opt, err, [&](SSLContexts* c) {
+            return check_opt_quic(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_process_quic_post_handshake_(c->ssl);
                 if (!res) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::sslerr);
                 }
                 return error::none;
             });
         }
 
         error::Error TLS::set_quic_transport_params(const void* params, size_t len) {
-            return check_opt_quic(opt, err, [&](SSLContexts* c) {
+            return check_opt_quic(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_set_quic_transport_params_(c->ssl, static_cast<const uint8_t*>(params), len);
                 if (!res) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, 0), error::ErrorCategory::sslerr);
                 }
                 return error::none;
             });
@@ -409,10 +409,10 @@ namespace utils {
         }
 
         error::Error TLS::write(const void* data, size_t len, size_t* written) {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_write_(c->ssl, data, int(len));
                 if (res <= 0) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::sslerr);
                 }
                 else if (written) {
                     *written = res;
@@ -423,10 +423,10 @@ namespace utils {
 
         error::Error TLS::read(void* data, size_t len) {
             auto& red = prevred;
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_read_(c->ssl, data, int(len));
                 if (res <= 0) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::sslerr);
                 }
                 else {
                     red = res;
@@ -437,7 +437,7 @@ namespace utils {
 
         dnet_dll_implement(bool) isTLSBlock(const error::Error& err) {
             return err == error::block ||
-                   (err.category() == error::ErrorCategory::cryptoerr &&
+                   (err.category() == error::ErrorCategory::sslerr &&
                     err.errnum() == ssl_import::SSL_ERROR_WANT_READ_);
         }
 
@@ -446,30 +446,30 @@ namespace utils {
         }
 
         error::Error TLS::connect() {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_connect_(c->ssl);
                 if (res < 0) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::sslerr);
                 }
                 return error::none;
             });
         }
 
         error::Error TLS::accept() {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_accept_(c->ssl);
                 if (res < 0) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::sslerr);
                 }
                 return error::none;
             });
         }
 
         error::Error TLS::shutdown() {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_shutdown_(c->ssl);
                 if (res < 0) {
-                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::cryptoerr);
+                    return error::Error(ssldl.SSL_get_error_(c->ssl, res), error::ErrorCategory::sslerr);
                 }
                 return error::none;
             });
@@ -490,7 +490,7 @@ namespace utils {
         }
 
         error::Error TLS::verify_ok() {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 auto res = ssldl.SSL_get_verify_result_(c->ssl);
                 if (res != ssl_import::X509_V_OK_) {
                     return error::Error(res, error::ErrorCategory::cryptoerr);
@@ -500,7 +500,7 @@ namespace utils {
         }
 
         bool TLS::get_alpn(const char** selected, unsigned int* len) {
-            return check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            return check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                        ssldl.SSL_get0_alpn_selected_(c->ssl, reinterpret_cast<const unsigned char**>(selected), len);
                        return error::none;
                    })
@@ -544,7 +544,7 @@ namespace utils {
 
         TLSCipher TLS::get_cipher() {
             TLSCipher ciph;
-            check_opt_ssl(opt, err, [&](SSLContexts* c) {
+            check_opt_ssl(opt, err, [&](SSLContexts* c) -> error::Error {
                 ciph = make_cipher(ssldl.SSL_get_current_cipher_(c->ssl));
                 return error::none;
             });

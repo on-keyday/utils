@@ -337,14 +337,14 @@ namespace utils {
 
         template <class Char, size_t len_max>
         struct URIFixed {
-            number::Array<len_max, Char, true> scheme;
-            number::Array<len_max, Char, true> authority;
-            number::Array<len_max, Char, true> userinfo;
-            number::Array<len_max, Char, true> hostname;
-            number::Array<len_max, Char, true> port;
-            number::Array<len_max, Char, true> path;
-            number::Array<len_max, Char, true> query;
-            number::Array<len_max, Char, true> fragment;
+            number::Array<Char, len_max, true> scheme;
+            number::Array<Char, len_max, true> authority;
+            number::Array<Char, len_max, true> userinfo;
+            number::Array<Char, len_max, true> hostname;
+            number::Array<Char, len_max, true> port;
+            number::Array<Char, len_max, true> path;
+            number::Array<Char, len_max, true> query;
+            number::Array<Char, len_max, true> fragment;
         };
 
         template <size_t len, class Char>

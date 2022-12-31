@@ -120,7 +120,7 @@ namespace utils {
                     }
                     template <class URL, class Raw>
                     static CookieErr parse(const Raw& raw, cookie_t& cookie, const URL& url) {
-                        if (!url.host.size() || !url.path.size()) {
+                        if (!url.hostname.size() || !url.path.size()) {
                             return CookieError::invalid_url;
                         }
                         auto data = helper::split<string_t, Vec>(raw, "; ");
@@ -208,7 +208,7 @@ namespace utils {
                             cookie.path = url.path;
                         }
                         if (!any(cookie.flag & CookieFlag::domain_set)) {
-                            cookie.domain = url.host;
+                            cookie.domain = url.hostname;
                         }
                         return CookieError::none;
                     }

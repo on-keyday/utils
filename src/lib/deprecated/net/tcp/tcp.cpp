@@ -12,7 +12,7 @@
 #include <deprecated/net/core/platform.h>
 #include <deprecated/net/core/init_net.h>
 #ifdef _WIN32
-#include <platform/windows/io_completetion_port.h>
+// #include <platform/windows/io_completetion_port.h>
 #endif
 #ifdef __linux__
 #include <platform/linux/epoll.h>
@@ -31,7 +31,7 @@ namespace utils {
 #ifdef _WIN32
             struct TCPIOCP {
                 ::OVERLAPPED ol{0};
-                platform::windows::CompletionType type = platform::windows::CompletionType::tcp_read;
+                // platform::windows::CompletionType type = platform::windows::CompletionType::tcp_read;
                 ReadInfo* info = nullptr;
                 async::AnyFuture f;
 
@@ -39,7 +39,8 @@ namespace utils {
             };
 
             bool tcp_callback() {
-                auto iocp = platform::windows::get_iocp();
+                /*
+                //  auto iocp = platform::windows::get_iocp();
                 iocp->register_callback([](void* ol, size_t t) {
                     auto ptr = static_cast<TCPIOCP*>(ol);
                     if (ptr->type != platform::windows::CompletionType::tcp_read) {
@@ -51,14 +52,14 @@ namespace utils {
                     }
                     req->complete();
                     return true;
-                });
+                });*/
                 return true;
             }
 
             void tcp_iocp_init(SOCKET sock, TCPIOCP* ptr) {
                 static bool ini = tcp_callback();
                 if (ptr && !ptr->already_set) {
-                    platform::windows::get_iocp()->register_handle(reinterpret_cast<void*>(sock));
+                    // platform::windows::get_iocp()->register_handle(reinterpret_cast<void*>(sock));
                     ptr->already_set = true;
                 }
             }

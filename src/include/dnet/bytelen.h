@@ -11,8 +11,9 @@
 #include <type_traits>
 #include <bit>
 #include "quic/types.h"
-#include "byte.h"
+#include "../core/byte.h"
 #include <utility>
+#include "../endian/buf.h"
 
 namespace utils {
     namespace dnet {
@@ -22,13 +23,13 @@ namespace utils {
 
             template <class T>
             concept has_size = requires(T t) {
-                { t.size() } -> convertible<size_t>;
-            };
+                                   { t.size() } -> convertible<size_t>;
+                               };
 
             template <class T>
             concept has_logical_not = requires(T t) {
-                { !t } -> convertible<bool>;
-            };
+                                          { !t } -> convertible<bool>;
+                                      };
 
             constexpr auto equal_fn() {
                 return [](auto&& a, auto&& b) { return a == b; };
@@ -59,20 +60,8 @@ namespace utils {
                 if (!enough((offset + 1) * sizeof(T))) {
                     return false;
                 }
-                using Result = std::make_unsigned_t<T>;
-                Result result{};
                 auto ofs = offset * sizeof(T);
-                if (big_endian) {
-                    for (auto i = 0; i < sizeof(T); i++) {
-                        result |= Result(data[i + ofs]) << (8 * (sizeof(T) - 1 - i));
-                    }
-                }
-                else {
-                    for (auto i = 0; i < sizeof(T); i++) {
-                        result |= Result(data[i + ofs]) << (8 * i);
-                    }
-                }
-                value = result;
+                endian::read_from(value, data, big_endian, ofs);
                 return true;
             }
 
@@ -103,28 +92,6 @@ namespace utils {
             constexpr T as(size_t offset = 0, bool big_endian = true) const {
                 T val{};
                 as(val, offset, big_endian);
-                return val;
-            }
-
-            // as_netorder packs byte into t as same as byte representation in b.data
-            // in big endian platform
-            // byte[0, 0, 0, 1] -> int32(0x00000001)
-            // in little endian platform
-            // byte[0, 0, 0, 1] -> int32(0x01000000)
-            template <class T>
-            constexpr bool as_netorder(T& t, size_t offset = 0) const {
-                if constexpr (std::endian::native == std::endian::big) {
-                    return as(t, offset, true);
-                }
-                else {
-                    return as(t, offset, false);
-                }
-            }
-
-            template <class T>
-            constexpr T as_netorder(size_t offset = 0) const {
-                T val;
-                as_netorder(val, offset);
                 return val;
             }
 
@@ -354,37 +321,6 @@ namespace utils {
                 size_t val = 0;
                 msbvarint(val, len_max);
                 return val;
-            }
-
-            constexpr bool equal_to(const ByteLenBase& cmp) const {
-                if (len != cmp.len) {
-                    return false;
-                }
-                if (!std::is_constant_evaluated()) {
-                    if (data == cmp.data) {
-                        return true;
-                    }
-                }
-                if (!data || !cmp.data) {
-                    return false;
-                }
-                for (size_t i = 0; i < len; i++) {
-                    if (data[i] != cmp.data[i]) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            template <class B>
-            constexpr bool copy_to(B* to, size_t len) const {
-                if (!to || !enough(len)) {
-                    return false;
-                }
-                for (auto i = 0; i < len; i++) {
-                    to[i] = data[i];
-                }
-                return true;
             }
         };
 
@@ -654,7 +590,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr size_t minimum_len() const {
+            static size_t minimum_len(size_t value) {
                 if (value & lenmask) {
                     return 0;
                 }
@@ -668,6 +604,10 @@ namespace utils {
                     return 4;
                 }
                 return 8;
+            }
+
+            constexpr size_t minimum_len() const {
+                return minimum_len(value);
             }
 
             constexpr bool is_minimum() const {

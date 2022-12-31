@@ -48,11 +48,11 @@ namespace utils {
             free_normal(p, info);
         }
 
-        inline char* get_cvec(size_t sz, DebugInfo info) {
+        inline char* get_charvec(size_t sz, DebugInfo info) {
             return static_cast<char*>(alloc_normal(sz, alignof(char), info));
         }
 
-        inline bool resize_cvec(char*& p, size_t size, DebugInfo info) {
+        inline bool resize_charvec(char*& p, size_t size, DebugInfo info) {
             auto c = realloc_normal(p, size, alignof(char), info);
             if (c != nullptr) {
                 p = static_cast<char*>(c);
@@ -60,7 +60,7 @@ namespace utils {
             return c != nullptr;
         }
 
-        inline void free_cvec(char* p, DebugInfo info) {
+        inline void free_charvec(char* p, DebugInfo info) {
             free_normal(p, info);
         }
 

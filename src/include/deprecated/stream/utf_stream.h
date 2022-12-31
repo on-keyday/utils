@@ -8,11 +8,11 @@
 // utf_stream - read any utf string
 #pragma once
 #include "stream.h"
-#include <helper/view.h>
 #include <number/array.h>
 #include <utf/conv_method.h>
 #include <number/to_string.h>
 #include "token_stream.h"
+#include <view/charvec.h>
 
 namespace utils {
     namespace parser {
@@ -39,7 +39,7 @@ namespace utils {
             template <class Fn>
             bool read_utf_string(Input& input, Token* perr, Fn&& should_stop) {
                 char tmpbuf[20];
-                number::Array<5, std::uint8_t, true> utf8;
+                number::Array<std::uint8_t, 5, true> utf8;
                 size_t r;
                 while (true) {
                     //  load raw binary data
@@ -54,7 +54,7 @@ namespace utils {
                         }
                         return false;
                     }
-                    auto view = helper::SizedView((const std::uint8_t*)ptr, r);
+                    auto view = view::CharVec((const std::uint8_t*)ptr, r);
                     // here seq.rptr == 0
                     auto seq = make_ref_seq(view);
                     auto should_stop_seq = [&](size_t e) {
@@ -207,7 +207,7 @@ namespace utils {
                     }
                     offset += size;
                     index++;
-                    helper::append(str, helper::SizedView{u8, size});
+                    helper::append(str, view::CharVec{u8, size});
                     return false;
                 };
             }

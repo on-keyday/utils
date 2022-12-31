@@ -52,11 +52,11 @@ namespace utils {
         }
 
         dnet_dll_implement(bool) isSysBlock(const error::Error& err) {
-            if (err.category() != error::ErrorCategory::syserr) {
-                return false;
-            }
             if (err == error::block) {
                 return true;
+            }
+            if (err.category() != error::ErrorCategory::syserr) {
+                return false;
             }
             if (err.type() != error::ErrorType::number) {
                 return false;
@@ -138,43 +138,48 @@ namespace utils {
             return sock_wait(sock, sec, usec, false);
         }
 
-        std::pair<size_t, error::Error> Socket::write(const void* data, size_t len, int flag) {
-            auto res = socdl.send_(sock, static_cast<const char*>(data), len, flag);
+        std::pair<view::rvec, error::Error> Socket::write(view::rvec data, int flag) {
+            auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
+            auto res = socdl.send_(sock, sub.as_char(), sub.size(), flag);
             if (res < 0) {
-                return {0, Errno()};
+                return {data, Errno()};
             }
-            return {res, error::none};
+            return {data.substr(res), error::none};
         }
 
-        std::pair<size_t, error::Error> Socket::read(void* data, size_t len, int flag, bool is_stream) {
-            auto res = socdl.recv_(sock, static_cast<char*>(data), len, flag);
+        std::pair<view::wvec, error::Error> Socket::read(view::wvec data, int flag, bool is_stream) {
+            auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
+            auto res = socdl.recv_(sock, sub.as_char(), sub.size(), flag);
             if (res < 0) {
-                return {0, Errno()};
+                return {{}, Errno()};
             }
-            return {res, res == 0 && is_stream ? error::eof : error::none};
+            return {data.substr(0, res), res == 0 && is_stream ? error::eof : error::none};
         }
 
+        /*
         std::pair<size_t, error::Error> Socket::writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag) {
             auto res = socdl.sendto_(sock, static_cast<const char*>(data), int(len), flag, reinterpret_cast<const sockaddr*>(addr), int(addrlen));
             if (res < 0) {
                 return {0, Errno()};
             }
             return {res, error::none};
-        }
+        }*/
 
-        std::pair<size_t, error::Error> Socket::writeto(const NetAddrPort& addr, const void* data, size_t len, int flag) {
+        std::pair<view::rvec, error::Error> Socket::writeto(const NetAddrPort& addr, view::rvec data, int flag) {
             sockaddr_storage st;
             auto [addrptr, addrlen] = NetAddrPort_to_sockaddr(&st, addr);
             if (!addrptr) {
-                return {0, error::Error(not_supported, error::ErrorCategory::validationerr)};
+                return {data, error::Error(not_supported, error::ErrorCategory::validationerr)};
             }
-            auto res = socdl.sendto_(sock, static_cast<const char*>(data), len, flag, addrptr, addrlen);
+            auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
+            auto res = socdl.sendto_(sock, sub.as_char(), sub.size(), flag, addrptr, addrlen);
             if (res < 0) {
-                return {0, Errno()};
+                return {data, Errno()};
             }
-            return {res, error::none};
+            return {data.substr(res), error::none};
         }
 
+        /*
         std::pair<size_t, error::Error> Socket::readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag, bool is_stream) {
             if (!addrlen) {
                 return {0, error::Error(invalid_addr, error::ErrorCategory::validationerr)};
@@ -186,17 +191,18 @@ namespace utils {
             }
             *addrlen = fromlen;
             return {res, res == 0 && is_stream ? error::eof : error::none};
-        }
+        }*/
 
-        std::tuple<size_t, NetAddrPort, error::Error> Socket::readfrom(void* data, size_t len, int flag, bool is_stream) {
+        std::tuple<view::wvec, NetAddrPort, error::Error> Socket::readfrom(view::wvec data, int flag, bool is_stream) {
             sockaddr_storage soct{};
             socklen_t fromlen = sizeof(soct);
             auto addr = reinterpret_cast<sockaddr*>(&soct);
-            auto res = socdl.recvfrom_(sock, static_cast<char*>(data), len, flag, addr, &fromlen);
+            auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
+            auto res = socdl.recvfrom_(sock, sub.as_char(), sub.size(), flag, addr, &fromlen);
             if (res < 0) {
-                return {0, NetAddrPort{}, Errno()};
+                return {{}, NetAddrPort{}, Errno()};
             }
-            return {res, sockaddr_to_NetAddrPort(addr, fromlen), res == 0 && is_stream ? error::eof : error::none};
+            return {data.substr(0, res), sockaddr_to_NetAddrPort(addr, fromlen), res == 0 && is_stream ? error::eof : error::none};
         }
 
         error::Error Socket::shutdown(int mode) {
@@ -219,6 +225,19 @@ namespace utils {
             return error::none;
         }
 
+        error::Error Socket::bind(const NetAddrPort& addr) {
+            ::sockaddr_storage storage;
+            auto [addr_ptr, len] = NetAddrPort_to_sockaddr(&storage, addr);
+            if (!addr_ptr) {
+                return error::Error(not_supported, error::ErrorCategory::validationerr);
+            }
+            auto res = socdl.bind_(sock, addr_ptr, len);
+            if (res != 0) {
+                return Errno();
+            }
+            return error::none;
+        }
+
         error::Error Socket::listen(int back) {
             auto res = socdl.listen_(sock, back);
             if (res != 0) {
@@ -227,6 +246,7 @@ namespace utils {
             return error::none;
         }
 
+        /*
         error::Error Socket::accept(Socket& to, raw_address* addr, int* addrlen) {
             if (to.sock != ~0) {
                 return error::Error(non_invalid_socket, error::ErrorCategory::validationerr);
@@ -243,7 +263,7 @@ namespace utils {
             set_nonblock(new_sock);
             to = make_socket(std::uintptr_t(new_sock));
             return error::none;
-        }
+        }*/
 
         std::tuple<Socket, NetAddrPort, error::Error> Socket::accept() {
             sockaddr_storage st{};

@@ -48,7 +48,7 @@ namespace utils {
             Kind kind;
             ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
                 auto be = seq.rptr;
-                auto e = helper::space::match_space<true>(seq);
+                auto e = space::match_space<true>(seq);
                 if (e) {
                     char16_t v[] = {e, 0};
                     auto ret = make_token<String, Kind, Vec>(utf::convert<String>(v), kind, pos);
@@ -65,7 +65,7 @@ namespace utils {
             Kind kind;
             ParseResult<String, Kind, Vec> parse(Sequencer<Input>& seq, Pos& pos) override {
                 auto be = seq.rptr;
-                auto e = helper::space::match_space<true>(seq);
+                auto e = space::match_space<true>(seq);
                 if (e) {
                     char16_t v[] = {e, 0};
                     auto e = utf::convert<utf::Minibuffer<typename Sequencer<Input>::char_type>>(v);

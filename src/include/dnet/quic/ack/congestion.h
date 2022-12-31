@@ -18,7 +18,9 @@ namespace utils {
 
             struct CongestionEventHandlers {
                 closure::Closure<error::Error, Congestion*> congestion_event;
+                closure::Closure<error::Error, Congestion*, SentPacket*> on_ack_window;
                 closure::Closure<error::Error, Congestion*, SentPacket*> on_ack;
+                closure::Closure<error::Error, Congestion*, SentPacket*> on_lost;
                 closure::Closure<error::Error> maybeSendOnePacket;
                 closure::Closure<error::Error, Congestion*, RemovedPackets&> handle_persistent_congestion;
                 closure::Closure<bool> is_on_app_or_flow_control_limit;
@@ -83,6 +85,7 @@ namespace utils {
                         return error::none;
                     }
                     bytes_in_flight -= acked.sent_bytes;
+                    handlers.on_ack(this, &acked);
                     if (handlers.is_on_app_or_flow_control_limit &&
                         handlers.is_on_app_or_flow_control_limit()) {
                         return error::none;
@@ -90,8 +93,8 @@ namespace utils {
                     if (in_congestion_recovery(acked.time_sent)) {
                         return error::none;
                     }
-                    if (handlers.on_ack) {
-                        return handlers.on_ack(this, &acked);
+                    if (handlers.on_ack_window) {
+                        return handlers.on_ack_window(this, &acked);
                     }
                     return error::none;
                 }
@@ -102,6 +105,11 @@ namespace utils {
                         if (packet.in_flight) {
                             bytes_in_flight -= packet.sent_bytes;
                             sent_time_of_last_loss = max_(sent_time_of_last_loss, packet.time_sent);
+                        }
+                        if (handlers.on_lost) {
+                            if (auto err = handlers.on_lost(this, &packet)) {
+                                return err;
+                            }
                         }
                     }
                     if (sent_time_of_last_loss != 0) {
@@ -134,6 +142,27 @@ namespace utils {
                 }
                 size_t sstresh = 0;
                 size_t loss_reduction_factor = 0;
+
+                static void set_handler(CongestionEventHandlers& h) {
+                    h.congestion_event = closure::Closure<error::Error, Congestion*>::create(
+                        [](NewRenoCC& r, Congestion* c) {
+                            c->congestion_window = max_(r.sstresh, c->minimum_window);
+                            return error::none;
+                        },
+                        NewRenoCC{});
+                    auto ptr = static_cast<NewRenoCC*>(h.congestion_event.ctx_ptr());
+                    h.on_ack_window = closure::Closure<error::Error, Congestion*, SentPacket*>::create(
+                        [](NewRenoCC* r, Congestion* c, SentPacket* p) {
+                            if (c->congestion_window < r->sstresh) {
+                                c->congestion_window += p->sent_bytes;
+                            }
+                            else {
+                                c->congestion_window += c->max_datagram_size * p->sent_bytes / c->congestion_window;
+                            }
+                            return error::none;
+                        },
+                        ptr);
+                }
             };
 
             struct Pacer {

@@ -17,13 +17,13 @@ namespace utils {
 
         template <class T>
         constexpr bool read_space(Sequencer<T>& seq, char16_t& c, size_t& count) {
-            c = helper::space::match_space(seq);
+            c = space::match_space(seq);
             if (c == 0) {
                 return false;
             }
             count = 0;
             using char_t = std::remove_cvref_t<typename BufferType<T>::char_type>;
-            auto matched = helper::space::get_space<char_t>(c);
+            auto matched = space::get_space<char_t>(c);
             while (seq.seek_if(matched)) {
                 count++;
             }
@@ -41,7 +41,7 @@ namespace utils {
             String to_string() const override {
                 String cmp;
                 using char_t = std::remove_cvref_t<typename BufferType<String>::char_type>;
-                auto sp = helper::space::get_space<char_t>(space);
+                auto sp = space::get_space<char_t>(space);
                 for (size_t i = 0; i < count; i++) {
                     for (size_t i = 0; i < sp.size(); i++) {
                         cmp.push_back(sp[i]);

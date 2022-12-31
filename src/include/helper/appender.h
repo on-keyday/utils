@@ -15,6 +15,7 @@
 namespace utils {
     namespace helper {
         namespace internal {
+            /*
             SFINAE_BLOCK_TU_BEGIN(has_append, std::declval<T>().append(std::declval<const U>()))
             constexpr static void invoke(T& target, const U& to_append) {
                 target.append(to_append);
@@ -28,11 +29,30 @@ namespace utils {
                 }
             }
             SFINAE_BLOCK_TU_END()
+            */
+
+            template <class T, class U>
+            concept has_append = requires(T t, U u) {
+                                     t.append(u);
+                                 };
+
+            constexpr void append_impl(auto& dst, const auto& src) {
+                if constexpr (has_append<decltype(dst), decltype(src)>) {
+                    dst.append(src);
+                }
+                else {
+                    auto seq = make_ref_seq(src);
+                    while (!seq.eos()) {
+                        dst.push_back(seq.current());
+                        seq.consume();
+                    }
+                }
+            }
         }  // namespace internal
 
         template <class T, class U>
         constexpr void append(T& t, const U& u) {
-            return internal::has_append<T, U>::invoke(t, u);
+            return internal::append_impl(t, u);
         }
 
         template <class T>

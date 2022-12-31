@@ -41,7 +41,7 @@ namespace utils {
                 ::SSL_CTX* sslctx;
                 ::BIO* bio;
                 wrap::string cert_file;
-                number::Array<50, unsigned char, true> alpn{0};
+                number::Array<unsigned char, 50, true> alpn{0};
                 Host<char> host;
                 bool setup = false;
                 wrap::string buffer;
@@ -131,7 +131,7 @@ namespace utils {
                         return sslcodeerror{"failed to write", ::SSL_get_error(tls->ssl, -1)};
                     }
                 }
-                number::Array<1024, char> v;
+                number::Array<char, 1024> v;
                 while (true) {
                     auto err = ::BIO_read_ex(tls->bio, v.buf, v.capacity(), &v.i);
                     tls->append_to_buffer(v.c_str(), v.size());
@@ -278,7 +278,7 @@ namespace utils {
                         continue;
                     }
                     else if (err == 0) {
-                        number::Array<1024, char> tmpbuf;
+                        number::Array<char, 1024> tmpbuf;
                         err = SSL_read_ex(tls->ssl, tmpbuf.buf, tmpbuf.capacity(), &tmpbuf.i);
                         if (!err) {
                             if (need_IO(tls)) {

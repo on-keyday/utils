@@ -9,16 +9,17 @@
 // literals - json literals
 #pragma once
 #include "json.h"
+#include "../view/charvec.h"
 
 namespace utils {
     namespace json {
         namespace literals {
             inline JSON operator""_json(const char* s, size_t sz) {
-                return parse<JSON>(helper::SizedView(s, sz));
+                return parse<JSON>(view::CharVec(s, sz));
             }
 
             inline OrderedJSON operator""_ojson(const char* s, size_t sz) {
-                return parse<OrderedJSON>(helper::SizedView(s, sz));
+                return parse<OrderedJSON>(view::CharVec(s, sz));
             }
 
         }  // namespace literals

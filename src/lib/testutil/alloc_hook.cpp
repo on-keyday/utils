@@ -42,7 +42,7 @@ namespace utils {
         } closer;
 
         bool STDCALL set_log_file(const char* file) {
-            number::Array<1024, wrap::path_char, true> file_{0};
+            number::Array<wrap::path_char, 1024, true> file_{0};
             utf::convert(file, file_);
             if (dumpfile) {
                 ::CloseHandle(dumpfile);
@@ -61,7 +61,7 @@ namespace utils {
             auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
             long long delta = 0;
             auto save_log = [&](auto name) {
-                number::Array<80, char> arr{0};
+                number::Array<char, 80> arr{0};
                 helper::appends(arr, name, ":/size:");
                 number::insert_space(arr, 7, nSize);
                 number::to_string(arr, nSize);

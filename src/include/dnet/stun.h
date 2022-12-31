@@ -8,8 +8,9 @@
 // stun - stun client implement
 #pragma once
 #include <cstdint>
-#include "byte.h"
+#include "../core/byte.h"
 #include "bytelen.h"
+#include "../view/iovec.h"
 
 namespace utils {
     namespace dnet {
@@ -119,10 +120,10 @@ namespace utils {
                         return false;
                     }
                     if (a.family == 1) {
-                        return ConstByteLen{a.address, 4}.equal_to(ConstByteLen{b.address, 4});
+                        return view::rvec(a.address, 4) == view::rvec(b.address, 4);
                     }
                     else {
-                        return ConstByteLen{a.address, 16}.equal_to(ConstByteLen{b.address, 16});
+                        return view::rvec(a.address, 16) == view::rvec(b.address, 16);
                     }
                 }
 
@@ -169,7 +170,7 @@ namespace utils {
                             b.data[i] ^= xor_[i];
                         }
                     }
-                    b.copy_to(address, len);
+                    view::copy(address, view::rvec(b.data, b.len));
                     b = b.forward(len);
                     return true;
                 }
@@ -288,7 +289,7 @@ namespace utils {
                 StunResult request(WPacket& w) {
                     StunHeader h;
                     h.type = msg_binding_request;
-                    ByteLen{transaction_id, 12}.copy_to(h.transaction_id, 12);
+                    view::copy(h.transaction_id, transaction_id);
                     if (state == StunState::start) {
                         nat = NATType::unknown;
                         errcode = 0;

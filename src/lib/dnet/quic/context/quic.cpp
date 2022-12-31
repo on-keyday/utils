@@ -10,7 +10,7 @@
 #include <helper/defer.h>
 #include <dnet/quic/internal/quic_contexts.h>
 #include <dnet/quic/packet/packet_util.h>
-#include <dnet/quic/frame/frame_make.h>
+#include <dnet/quic/frame/crypto.h>
 #include <dnet/dll/glheap.h>
 
 namespace utils {
@@ -73,20 +73,18 @@ namespace utils {
                 }
                 q->errs.err = err;
                 q->errs.qerr = q->errs.err.as<quic::QUICError>();
+                q->state = QState::on_error;
             }
 
-            bool QUIC::receive_quic_packets(void* data, size_t size, size_t* red) {
+            bool QUIC::receive_quic_packet(PacketType& typ, void* data, size_t size, size_t& red) {
                 if (!p || p->quic_packets.size() == 0) {
-                    if (red) {
-                        *red = 0;
-                    }
+                    red = 0;
                     return false;
                 }
                 auto& qp = p->quic_packets.front();
                 auto len = qp.sending_packet.len();
-                if (red) {
-                    *red = len;
-                }
+                red = len;
+                typ = qp.sent.type;
                 if (size < len || !data) {
                     return false;
                 }
@@ -102,6 +100,32 @@ namespace utils {
                     to[i] = from[i];
                 }
                 p->quic_packets.pop_front();
+                return true;
+            }
+
+            bool QUIC::receive_udp_datagram(void* data, size_t size, size_t& recved) {
+                recved = 0;
+                if (!p || p->quic_packets.size() == 0) {
+                    return false;
+                }
+                size_t limit = p->udp_limit();
+                if (size < limit) {
+                    recved = limit;
+                    return false;
+                }
+                size_t red = 0;
+                auto seq = reinterpret_cast<byte*>(data);
+                PacketType typ = PacketType::Unknown;
+                for (;;) {
+                    if (!receive_quic_packet(typ, seq + recved, limit - recved, red)) {
+                        break;
+                    }
+                    recved += red;
+                    if (has_LengthField(typ)) {
+                        continue;
+                    }
+                    break;
+                }
                 return true;
             }
 
@@ -192,6 +216,9 @@ namespace utils {
                 p->ackh.rtt.set_inirtt(c->ack_handler.initialRTT);
                 // Transport Parameter
                 p->params.local = c->transport_parameter.params;
+                if (!p->params.boxing()) {
+                    return false;
+                }
                 p->srcIDs.gen_rand = std::move(c->gen_random);
                 return true;
             }
@@ -248,6 +275,18 @@ namespace utils {
                             return err;
                         }
                         continue;
+                    }
+                    if (p->state == QState::sending_local_handshake_packets) {
+                        if (auto err = sending_local_handshake_packets(p)) {
+                            set_errors(p, err);
+                            return err;
+                        }
+                        continue;
+                    }
+                    if (p->state == QState::waiting_for_handshake_done) {
+                        // handshake not completed yet,
+                        // but can send data now
+                        return error::none;
                     }
                     if (p->state == QState::on_error) {
                         p->state = QState::fatal;

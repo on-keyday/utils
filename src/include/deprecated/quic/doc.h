@@ -677,7 +677,7 @@ namespace utils {
                 byte* DstConnectionID;
             };
             */
-            
+
             enum class types {
                 Initial = 0x0,
                 ZeroRTT = 0x1,  // 0-RTT
@@ -742,13 +742,13 @@ namespace utils {
 
         }  // namespace packet
 
-        using Direction = bool;
+        using Direction_ = bool;
         using Mode = bool;
         constexpr Mode client = true;
         constexpr Mode server = false;
 
-        constexpr Direction client_to_server = true;
-        constexpr Direction server_to_client = false;
+        constexpr Direction_ client_to_server = true;
+        constexpr Direction_ server_to_client = false;
 
         namespace crypto {
 
@@ -792,7 +792,7 @@ namespace utils {
             struct tag_section_7_0;
 
             struct FlowOfHandshake {
-                Direction direction;
+                Direction_ direction;
                 packet::types packet;
                 frame::types frame;
             };

@@ -16,7 +16,7 @@ using namespace utils::parser;
 
 namespace pscmpl {
     namespace hlp = utils::helper;
-
+    namespace space = utils::space;
     struct ProgramState {
         size_t package = 0;
         utils::wrap::vector<expr::Expr*> locs;
@@ -71,9 +71,9 @@ namespace pscmpl {
         auto cmds = expr::define_command_each(exp);
         auto fn = [cmds, exp]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             size_t start = seq.rptr;
-            hlp::space::consume_space(seq, true);
+            space::consume_space(seq, true);
             if (seq.seek_if("var")) {
-                if (!hlp::space::consume_space(seq, true)) {
+                if (!space::consume_space(seq, true)) {
                     seq.rptr = start;
                     goto OUT;
                 }
@@ -99,7 +99,7 @@ namespace pscmpl {
             [st, &state]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
                 auto pos = expr::save_and_space(seq);
                 auto read_str_and_pack = [&](const char* type) {
-                    hlp::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     string v;
                     size_t strpos = 0;
                     bool fatal = false;
@@ -133,7 +133,7 @@ namespace pscmpl {
         auto br = expr::define_brackets(prim, exp, "brackets");
         auto recursive = [br, anonymous_blcok]<class U>(utils::Sequencer<U>& seq, expr::Expr*& expr, expr::ErrorStack& stack) {
             size_t start = seq.rptr;
-            utils::helper::space::consume_space(seq, true);
+            utils::space::consume_space(seq, true);
             if (seq.match("{")) {
                 return anonymous_blcok(seq, expr, stack);
             }

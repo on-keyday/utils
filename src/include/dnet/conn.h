@@ -128,7 +128,7 @@ namespace utils {
                 if (tls) {
                     return tls.write(data, len).is_noerr() && tls_io();
                 }
-                return !sock.write(data, len).second.is_error();
+                return !sock.write(view::rvec(data, len)).second.is_error();
             }
 
             bool read(char* data, size_t len, size_t& red) {
@@ -141,18 +141,20 @@ namespace utils {
                     return res;
                 }
                 error::Error res;
-                std::tie(red, res) = sock.read(data, len);
+                view::wvec red_v;
+                std::tie(red_v, res) = sock.read(view::wvec(data, len));
+                red = red_v.size();
                 return !res.is_error();
             }
         };
         dnet_dll_export(bool) do_tls_io_loop(Socket& sock, TLS& tls, TLSIOState& state, char* text, size_t& size, size_t cap);
 
         inline Socket make_server_socket(const SockAddr& resolved, int backlog = 10, bool reuse = true, bool v6only = false) {
-            auto sock = dnet::make_socket(resolved.af, resolved.type, resolved.proto);
+            auto sock = dnet::make_socket(resolved.attr.address_family, resolved.attr.socket_type, resolved.attr.protocol);
             if (!sock ||
                 sock.set_reuse_addr(reuse).is_error() ||
                 sock.set_ipv6only(v6only).is_error() ||
-                sock.bind(resolved.addr, resolved.addrlen).is_error() ||
+                sock.bind(resolved.addr).is_error() ||
                 sock.listen(backlog).is_error()) {
                 return {};
             }

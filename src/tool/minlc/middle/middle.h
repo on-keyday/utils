@@ -8,7 +8,7 @@
 // c_lang - c language objects
 // (refactor)
 #pragma once
-#include <minilang/minlsymbols.h>
+#include <minilang/old/minlsymbols.h>
 #include "../errc.h"
 #include <vector>
 #include <string_view>

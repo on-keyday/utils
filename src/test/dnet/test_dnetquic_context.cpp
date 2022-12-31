@@ -20,37 +20,32 @@ void test_dnetquic_context() {
     tls.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
     auto q = quic::make_quic(tls, std::move(conf));
     q.tls().set_alpn("\x02h3", 3);
+    q.tls().set_hostname("localhost");
     auto err = q.connect();
     auto str = err.error<std::string>();
     assert(err == error::block);
     byte data[3000]{};
     size_t red = 0;
-    auto res = q.receive_quic_packets(data, 3000, &red);
+    auto res = q.receive_udp_datagram(data, 3000, red);
     assert(res);
     SockAddr addr;
-    addr.hostname = "localhost";
-    addr.namelen = strlen(addr.hostname);
-    addr.af = AF_INET;
-    addr.type = SOCK_DGRAM;
-    addr.proto = 0;
     Socket sock;
-    auto waddr = resolve_address(addr, "8090");
+    auto waddr = resolve_address("localhost", "8090", {.address_family = AF_INET, .socket_type = SOCK_DGRAM, .protocol = 0});
     auto reslv = waddr.wait();
-    NetAddrPort naddr;
     while (reslv.next()) {
-        reslv.sockaddr(addr);
-        sock = make_socket(addr.af, addr.type, addr.proto);
+        addr = reslv.sockaddr();
+        sock = make_socket(addr.attr.address_family, addr.attr.socket_type, addr.attr.protocol);
         if (!sock) {
             continue;
         }
-        naddr = reslv.netaddr();
         break;
     }
+    // sock.set_connreset(false);
     assert(sock);
-    sock.writeto(naddr, data, red);
+    sock.writeto(addr.addr, data, red);
     using namespace std::chrono_literals;
     while (true) {
-        auto [n, peer, err] = sock.readfrom(data, sizeof(data));
+        auto [n, peer, err] = sock.readfrom(data);
         if (err) {
             if (isSysBlock(err)) {
                 std::this_thread::sleep_for(1ms);
@@ -58,14 +53,13 @@ void test_dnetquic_context() {
             }
             assert(!err);
         }
-        auto str = peer.to_string<std::string>();
-        q.provide_udp_datagram(data, n);
+        str = peer.to_string<std::string>();
+        q.provide_udp_datagram(data, n.size());
         break;
     }
-    q.connect();
-    auto re = q.close_reason().error<std::string>();
-    str = q.last_error().error<std::string>();
-    auto msg = str.data();
+    err = q.connect();
+    str = err.error<std::string>();
+    assert(!err);
 }
 
 int main() {

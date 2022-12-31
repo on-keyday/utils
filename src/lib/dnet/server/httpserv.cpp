@@ -61,7 +61,7 @@ namespace utils {
             void start_handling(HTTPServ* serv, Requester&& req, StateContext&& s) {
                 char buf[1024];
                 bool red = false;
-                if (auto err = req.client.sock.read_until_block(red, buf, sizeof(buf), [&](size_t readsize) {
+                if (auto err = req.client.sock.read_until_block(red, buf, [&](size_t readsize) {
                         req.http.add_input(buf, readsize);
                     })) {
                     s.log(debug, "connection closed at reading first data", req.client);

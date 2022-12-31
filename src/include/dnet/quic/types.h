@@ -7,7 +7,8 @@
 
 // types - QUIC basic types
 #pragma once
-#include "../byte.h"
+#include "../../core/byte.h"
+#include <cstdint>
 
 namespace utils {
     namespace dnet {
@@ -30,6 +31,10 @@ namespace utils {
                        type == PacketType::ZeroRTT ||
                        type == PacketType::Handshake ||
                        type == PacketType::Retry;
+            }
+
+            constexpr bool has_LengthField(PacketType type) {
+                return is_LongPacket(type) && type != PacketType::Retry;
             }
 
             constexpr const char* to_string(PacketType type) {
@@ -245,6 +250,20 @@ namespace utils {
                 DATAGRAM_LEN,
             };
 
+            constexpr FrameType make_STREAM(bool off, bool len, bool fin) {
+                byte val = 0x8;
+                if (off) {
+                    val |= 0x4;
+                }
+                if (len) {
+                    val |= 0x2;
+                }
+                if (fin) {
+                    val |= 0x1;
+                }
+                return FrameType(val);
+            }
+
             constexpr bool is_STREAM(FrameType type) {
                 constexpr auto st = int(FrameType::STREAM);
                 const auto ty = int(type);
@@ -337,8 +356,9 @@ namespace utils {
                 return is_STREAM(type);
             }
 
+            // judge in_flight
             constexpr bool is_ByteCounted(FrameType type) {
-                return type != FrameType::ACK;
+                return !is_ACK(type);
             }
 
             constexpr bool is_InitialPacketOK(FrameType type) {
@@ -365,18 +385,26 @@ namespace utils {
                 return true;  // all types are allowed
             }
 
+            // sender can send
+            constexpr bool is_UniStreamSenderOK(FrameType type) {
+                return is_STREAM(type) ||
+                       type == FrameType::STREAM_DATA_BLOCKED ||
+                       type == FrameType::RESET_STREAM;
+            }
+
+            // receiver can send
+            constexpr bool is_UniStreamReceiverOK(FrameType type) {
+                return type == FrameType::MAX_STREAM_DATA ||
+                       type == FrameType::STOP_SENDING;
+            }
+
+            constexpr bool is_BidiStreamOK(FrameType type) {
+                return is_UniStreamReceiverOK(type) || is_UniStreamSenderOK(type);
+            }
+
             struct FrameFlags {
                 size_t value = 0;
 
-                /*
-                constexpr bool valid() const {
-                    return value != nullptr;
-                }
-
-                constexpr byte raw() const {
-                    return value ? *value : 0;
-                }
-                */
                 constexpr FrameFlags() = default;
                 constexpr FrameFlags(size_t typ)
                     : value(typ) {}
@@ -417,21 +445,21 @@ namespace utils {
 
                 constexpr bool STREAM_fin() const {
                     if (type() == FrameType::STREAM) {
-                        return as_byte() & 0x01;
+                        return value & 0x01;
                     }
                     return false;
                 }
 
                 constexpr bool STREAM_len() const {
                     if (type() == FrameType::STREAM) {
-                        return as_byte() & 0x02;
+                        return value & 0x02;
                     }
                     return false;
                 }
 
                 constexpr bool STREAM_off() const {
                     if (type() == FrameType::STREAM) {
-                        return as_byte() & 0x04;
+                        return value & 0x04;
                     }
                     return false;
                 }
@@ -440,6 +468,14 @@ namespace utils {
                     return type_detail() == FrameType::DATAGRAM_LEN;
                 }
             };
+
+            // TailFrame must be in packet tail because no length field at final field of frame exists
+            constexpr bool is_TailFrame(FrameType typ) {
+                if (is_STREAM(typ)) {
+                    return !FrameFlags{typ}.STREAM_len();
+                }
+                return typ == FrameType::DATAGRAM;
+            }
 
         }  // namespace quic
     }      // namespace dnet

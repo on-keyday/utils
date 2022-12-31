@@ -12,6 +12,7 @@
 #include "../core/sequencer.h"
 #include "../helper/pushbacker.h"
 #include "../endian/reader.h"
+#include "../endian/buf.h"
 
 namespace utils {
     namespace net {
@@ -56,19 +57,30 @@ namespace utils {
             }
 
             template <class In, class Out>
-            constexpr bool encode(In&& buf, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
-                static_assert(sizeof(typename BufferType<In&>::char_type) == 1, "expect 1 byte sequence");
+            constexpr bool encode(In&& in, Out& out, std::uint8_t c62 = '+', std::uint8_t c63 = '/', bool no_padding = false) {
                 helper::CountPushBacker<Out&> cb{out};
-                endian::Reader<buffer_t<In&>> r{buf};
-                while (!r.seq.eos()) {
-                    std::uint32_t num;
-                    auto red = r.template read_ntoh<std::uint32_t, 4, 1, true>(num);
+                auto seq = make_ref_seq(in);
+                static_assert(sizeof(seq.current()) == 1, "expect 1 byte sequence");
+                auto read_three = [&]() {
+                    endian::Buf<std::uint32_t> buf = {};
+                    auto i = 0;
+                    for (; i < 3; i++) {
+                        if (seq.eos()) {
+                            break;
+                        }
+                        buf[i + 1] = seq.current();
+                        seq.consume();
+                    }
+                    return std::pair{buf.read_be(), i};
+                };
+                while (!seq.eos()) {
+                    auto [num, red] = read_three();
                     if (!red) {
                         break;
                     }
                     std::uint8_t buf[] = {std::uint8_t((num >> 18) & 0x3f), std::uint8_t((num >> 12) & 0x3f), std::uint8_t((num >> 6) & 0x3f), std::uint8_t(num & 0x3f)};
                     for (auto i = 0; i < red + 1; i++) {
-                        cb.push_back(get_char(buf[i]));
+                        cb.push_back(get_char(buf[i], c62, c63));
                     }
                 }
                 while (!no_padding && cb.count % 4) {
@@ -97,11 +109,10 @@ namespace utils {
                         redsize++;
                         seq.consume();
                     }
-                    std::uint8_t* rep_ptr = reinterpret_cast<std::uint8_t*>(&rep);
-                    rep = endian::from_network<std::uint32_t>(&rep);
-                    rep >>= 8;
+                    endian::Buf<std::uint32_t> buf = {};
+                    buf.write_be(rep);
                     for (auto i = 0; i < redsize - 1; i++) {
-                        out.push_back(rep_ptr[i]);
+                        out.push_back(buf[1 + i]);
                     }
                 }
                 while (consume_padding && seq.current() == '=') {

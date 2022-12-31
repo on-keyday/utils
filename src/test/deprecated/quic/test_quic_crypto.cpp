@@ -74,7 +74,7 @@ std::string make_packet_raw(const char* packet) {
     assert(rseq.size() % 2 == 0);
     auto b = rseq.size() / 2;
     for (size_t i = 0; i < b; i++) {
-        number::Array<2, char> a{rseq.current(), rseq.current(1)};
+        number::Array<char, 2> a{rseq.current(), rseq.current(1)};
         a.i = 2;
         byte b;
         auto ok = number::parse_integer(a, b, 16);

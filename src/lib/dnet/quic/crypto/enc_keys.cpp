@@ -11,6 +11,7 @@
 #include <dnet/quic/crypto/crypto.h>
 #include <helper/defer.h>
 #include <dnet/quic/version.h>
+#include <endian/buf.h>
 
 namespace utils {
     namespace dnet {
@@ -101,17 +102,16 @@ namespace utils {
                     return false;
                 }
                 byte label_len = 6 + quic_label.len;
-                byte tmpdat[2];
-                WPacket tmp{ByteLen{tmpdat, 2}};
-                auto outlen = tmp.as<std::uint16_t>(output.len);
+                endian::Buf<std::uint16_t> outlen;
+                outlen.write_be(output.len);
                 // refer RFC8446 section 3.4
                 // A variable vector length has a vector length as a prefix of vector.
                 // strlen("tls13 ")
                 // WARN(on-keyday): DON'T forget " " after "tls13"
                 // output.len + (6 + quic_label.len) + "tls13 " + quic_label.data +
                 // (hash_value.len==0) + (hash_value=="")
-                tmp = {w.zeromem(2 + 1 + label_len + 1), 0};
-                tmp.append(outlen.data, outlen.len);
+                auto tmp = WPacket{w.zeromem(2 + 1 + label_len + 1), 0};
+                tmp.append(outlen.data, outlen.size());
                 tmp.add(label_len, 1);
                 tmp.append("tls13 ", 6);
                 tmp.append(quic_label.data, quic_label.len);

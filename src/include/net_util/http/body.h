@@ -14,6 +14,7 @@
 #include "../../number/parse.h"
 #include "../../helper/equal.h"
 #include "../../number/to_string.h"
+#include "../../view/sized.h"
 
 namespace utils {
     namespace net {
@@ -99,7 +100,7 @@ namespace utils {
             void render_chuncked_data(Buf& buf, Data&& data = "", size_t len = 0) {
                 number::to_string(buf, len, 16);
                 helper::append(buf, "\r\n");
-                helper::append(buf, helper::RefSizedView(data, len));
+                helper::append(buf, view::SizedView(data, len));
                 helper::append(buf, "\r\n");
             }
         }  // namespace h1body

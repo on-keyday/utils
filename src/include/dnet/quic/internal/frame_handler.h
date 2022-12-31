@@ -6,13 +6,14 @@
 */
 
 #pragma once
-#include "../frame/frame_make.h"
+// #include "../frame/frame_make.h"
 #include "quic_contexts.h"
+#include "../frame/wire.h"
 
 namespace utils {
     namespace dnet {
         namespace quic::handler {
-            error::Error on_ack(QUICContexts* q, frame::ACKFrame& ack, ack::PacketNumberSpace space);
+            error::Error on_ack(QUICContexts* q, frame::ACKFrame<easy::Vec>& ack, ack::PacketNumberSpace space);
 
             error::Error on_crypto(QUICContexts* q, frame::CryptoFrame& c, crypto::EncryptionLevel level);
 

@@ -21,7 +21,7 @@ namespace utils {
             wrap::string scheme;
             wrap::string user;
             wrap::string password;
-            wrap::string host;
+            wrap::string hostname;
             wrap::string port;
             wrap::string path;
             wrap::string query;
@@ -41,7 +41,7 @@ namespace utils {
 
             wrap::string host_port() {
                 wrap::string ret;
-                ret += host;
+                ret += hostname;
                 if (port.size() && port.front() != ':') {
                     port += ':';
                 }
@@ -127,9 +127,9 @@ namespace utils {
                 bool on_port = false;
                 bool has_dot = false;
                 if (seq.seek_if("[")) {
-                    parsed.host.push_back('[');
-                    if (helper::read_until(parsed.host, seq, "]")) {
-                        parsed.host.push_back(']');
+                    parsed.hostname.push_back('[');
+                    if (helper::read_until(parsed.hostname, seq, "]")) {
+                        parsed.hostname.push_back(']');
                     }
                     has_dot = true;
                 }
@@ -150,7 +150,7 @@ namespace utils {
                             if (seq.current() == '.') {
                                 has_dot = true;
                             }
-                            parsed.host.push_back(seq.current());
+                            parsed.hostname.push_back(seq.current());
                         }
                     }
                     seq.consume();
@@ -158,7 +158,7 @@ namespace utils {
                 }
                 if (!has_dot) {
                     unknown_data = true;
-                    parsed.other = std::move(parsed.host);
+                    parsed.other = std::move(parsed.hostname);
                     if (on_port) {
                         parsed.other.append(parsed.port);
                         parsed.port.clear();
@@ -210,7 +210,7 @@ namespace utils {
             };
 
             struct URIStruct {
-                using Struct = number::Array<10, URIParts>;
+                using Struct = number::Array<URIParts, 10>;
                 Struct suggest;
             };
 
@@ -419,10 +419,10 @@ namespace utils {
             if (uri.scheme.size() && uri.scheme.back() == ':') {
                 uri.scheme.pop_back();
             }
-            if (uri.host.size()) {
-                if (uri.host.front() == '[' && uri.host.back() == ']') {
-                    uri.host.pop_back();
-                    uri.host.erase(0, 1);
+            if (uri.hostname.size()) {
+                if (uri.hostname.front() == '[' && uri.hostname.back() == ']') {
+                    uri.hostname.pop_back();
+                    uri.hostname.erase(0, 1);
                 }
             }
             if (uri.port.size() && uri.port.front() == ':') {

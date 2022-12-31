@@ -7,14 +7,14 @@
 
 // error - error type
 #pragma once
+#include "dll/dllh.h"
+#include "dll/glheap.h"
 #include <concepts>
-#include "bytelen.h"
-#include "boxbytelen.h"
+#include "../view/iovec.h"
 #include "../helper/defer.h"
 #include "../helper/pushbacker.h"
 #include "../helper/appender.h"
 #include "../number/to_string.h"
-#include "../helper/view.h"
 
 namespace utils {
     namespace dnet::error {
@@ -22,7 +22,6 @@ namespace utils {
             null,
             memexh,
             number,
-            const_str,
             str,
             wrap,
         };
@@ -34,6 +33,7 @@ namespace utils {
             dneterr = 0x101,
             cryptoerr = 0x102,
             quicerr = 0x103,
+            sslerr = 0x104,
             apperr = 0x1000,
             internalerr = 0x10000,
             validationerr = 0x10001,
@@ -48,7 +48,9 @@ namespace utils {
                 case ErrorCategory::dneterr:
                     return "libdnet";
                 case ErrorCategory::cryptoerr:
-                    return "libcrypto/libssl";
+                    return "libcrypto";
+                case ErrorCategory::sslerr:
+                    return "libssl";
                 case ErrorCategory::quicerr:
                     return "quic";
                 case ErrorCategory::apperr:
@@ -71,32 +73,58 @@ namespace utils {
             bool has_unwrap = false;
         };
 
+        enum class NumErrMode {
+            // print "code=val,categoly=categ"
+            use_default,
+            // print "code=val,categoly="
+            use_code,
+            // print ""
+            use_nothing,
+        };
+
+        dnet_dll_export(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker pb, std::uint64_t code));
+
         namespace internal {
+            dnet_dll_export(void) invoke_categspec(helper::IPushBacker pb, ErrorCategory categ, std::uint64_t val);
+            dnet_dll_export(NumErrMode) categspec_mode(ErrorCategory categ);
+
+            constexpr void categ_spec_error(auto& out, ErrorCategory categ, std::uint64_t val) {
+                if (!std::is_constant_evaluated()) {
+                    invoke_categspec(out, categ, val);
+                }
+            }
+
+            constexpr NumErrMode categ_spec_mode(ErrorCategory categ) {
+                if (std::is_constant_evaluated()) {
+                    return NumErrMode::use_default;
+                }
+                return categspec_mode(categ);
+            }
 
             template <class T>
             concept has_error = requires(T t) {
-                {t.error(std::declval<helper::IPushBacker>())};
-            };
+                                    { t.error(std::declval<helper::IPushBacker>()) };
+                                };
 
             template <class T>
             concept has_category = requires(T t) {
-                { t.category() } -> std::same_as<ErrorCategory>;
-            };
+                                       { t.category() } -> std::same_as<ErrorCategory>;
+                                   };
 
             template <class T>
             concept has_errnum = requires(T t) {
-                { t.errnum() } -> std::convertible_to<std::uint64_t>;
-            };
+                                     { t.errnum() } -> std::convertible_to<std::uint64_t>;
+                                 };
 
             template <class T>
             concept has_equal = requires(const T& t) {
-                { t == t } -> dnet::internal::convertible<bool>;
-            };
+                                    { t == t } -> std::convertible_to<bool>;
+                                };
 
             template <class T>
             concept has_unwrap = requires(T t) {
-                { t.unwrap() } -> std::same_as<Error>;
-            };
+                                     { t.unwrap() } -> std::same_as<Error>;
+                                 };
 
             enum class WrapCtrlOrder {
                 call,
@@ -204,14 +232,18 @@ namespace utils {
             };
 
             union ErrType {
-                WithCateg<ByteLenBase<const char>> cstr;
-                WithCateg<BoxByteLenBase<char>> str;
+                WithCateg<view::basic_rvec<char, byte>> str;
                 WithCateg<std::uint64_t> code;
                 Wrap w;
                 constexpr ~ErrType() {}
             };
 
             struct Memexh {};
+            struct None {
+                constexpr operator bool() const {
+                    return false;
+                }
+            };
         }  // namespace internal
 
         // Error is golang like error interface
@@ -233,12 +265,8 @@ namespace utils {
                     detail.code = std::exchange(from.detail.code, internal::WithCateg<std::uint64_t>{});
                     type_ = ErrorType::number;
                 }
-                else if (from.type_ == ErrorType::const_str) {
-                    detail.cstr = std::exchange(from.detail.cstr, internal::WithCateg<ByteLenBase<const char>>{});
-                    type_ = ErrorType::const_str;
-                }
                 else if (from.type_ == ErrorType::str) {
-                    detail.str = std::move(detail.str);
+                    detail.str = std::exchange(from.detail.str, internal::WithCateg<view::basic_rvec<char, byte>>{});
                     type_ = ErrorType::str;
                 }
                 else if (from.type_ == ErrorType::wrap) {
@@ -258,19 +286,9 @@ namespace utils {
                     detail.code = from.detail.code;
                     type_ = ErrorType::number;
                 }
-                else if (from.type_ == ErrorType::const_str) {
-                    detail.cstr = from.detail.cstr;
-                    type_ = ErrorType::const_str;
-                }
                 else if (from.type_ == ErrorType::str) {
-                    detail.str.value = from.detail.str.value.unbox();
-                    if (detail.str.value.valid()) {
-                        type_ = ErrorType::str;
-                    }
-                    else {
-                        type_ = ErrorType::memexh;
-                    }
-                    detail.str.categ = from.detail.str.categ;
+                    detail.str = from.detail.str;
+                    type_ = ErrorType::str;
                 }
                 else if (from.type_ == ErrorType::wrap) {
                     helper::NopPushBacker nop;
@@ -283,10 +301,7 @@ namespace utils {
             }
 
             constexpr void destruct() {
-                if (type_ == ErrorType::str) {
-                    detail.str.value.~BoxByteLenBase();
-                }
-                else if (type_ == ErrorType::wrap) {
+                if (type_ == ErrorType::wrap) {
                     detail.w.~Wrap();
                 }
                 type_ = ErrorType::null;
@@ -297,6 +312,9 @@ namespace utils {
 
             constexpr Error(const internal::Memexh&)
                 : type_(ErrorType::memexh) {}
+
+            constexpr Error(const internal::None&)
+                : Error() {}
 
             constexpr Error(Error&& from) {
                 move(std::move(from));
@@ -330,38 +348,21 @@ namespace utils {
                 detail.code.categ = categ;
             }
 
-            constexpr explicit Error(ByteLenBase<const char> c, ErrorCategory categ = ErrorCategory::apperr)
-                : type_(ErrorType::const_str) {
-                detail.cstr.value = c;
-                detail.cstr.categ = categ;
-            }
-
-            explicit Error(BoxByteLenBase<char>&& c, ErrorCategory categ = ErrorCategory::apperr)
+            constexpr explicit Error(view::basic_rvec<char, byte> c, ErrorCategory categ = ErrorCategory::apperr)
                 : type_(ErrorType::str) {
-                detail.str.value = std::move(c);
+                detail.str.value = c;
                 detail.str.categ = categ;
             }
 
             constexpr explicit Error(const char* data, ErrorCategory categ = ErrorCategory::apperr, std::int64_t len = -1)
-                : type_(ErrorType::const_str) {
-                auto size = len >= 0 ? len : utils::strlen(data);
-                detail.cstr.value = {data, size};
-                detail.cstr.categ = categ;
-            }
-
-            template <class B>
-            explicit Error(ByteLenBase<B> b, ErrorCategory categ = ErrorCategory::apperr)
                 : type_(ErrorType::str) {
-                detail.str.value = b;
-                if (!detail.str.value.valid()) {
-                    type_ = ErrorType::memexh;
-                }
+                detail.str.value = view::basic_rvec<char, byte>(data);
                 detail.str.categ = categ;
             }
 
             template <class T>
-            requires internal::has_error<T> &&(!std::is_same_v<std::decay_t<T>, Error>)
-                Error(T&& t)
+                requires internal::has_error<T> && (!std::is_same_v<std::decay_t<T>, Error>)
+            Error(T&& t)
                 : type_(ErrorType::wrap) {
                 new (&detail.w) internal::Wrap(std::forward<decltype(t)>(t));
                 if (!detail.w.error) {
@@ -381,22 +382,25 @@ namespace utils {
                 else if (type_ == ErrorType::memexh) {
                     helper::append(t, "!<memexh>");
                 }
-                else if (type_ == ErrorType::const_str) {
-                    helper::append(t, helper::SizedView(detail.cstr.value.data, detail.cstr.value.len));
-                }
                 else if (type_ == ErrorType::str) {
-                    helper::append(t, helper::SizedView(detail.str.value.data(), detail.str.value.len()));
+                    helper::append(t, detail.str.value);
                 }
                 else if (type_ == ErrorType::number) {
-                    helper::append(t, "code=");
-                    number::to_string(t, detail.code.value);
-                    helper::append(t, ",categoly=");
-                    if (auto msg = categoly_string(detail.code.categ)) {
-                        helper::append(t, msg);
+                    auto mode = internal::categ_spec_mode(detail.code.categ);
+                    if (mode != NumErrMode::use_nothing) {
+                        helper::append(t, "code=");
+                        number::to_string(t, detail.code.value);
+                        helper::append(t, ",categoly=");
+                        if (mode == NumErrMode::use_default) {
+                            if (auto msg = categoly_string(detail.code.categ)) {
+                                helper::append(t, msg);
+                            }
+                            else {
+                                number::to_string(t, size_t(detail.code.categ));
+                            }
+                        }
                     }
-                    else {
-                        number::to_string(t, size_t(detail.code.categ));
-                    }
+                    internal::categ_spec_error(t, detail.code.categ, detail.code.value);
                 }
                 else if (type_ == ErrorType::wrap) {
                     detail.w.error(detail.w.ptr, t, internal::WrapCtrlOrder::call, nullptr);
@@ -413,9 +417,6 @@ namespace utils {
             constexpr ErrorCategory category() const {
                 if (type_ == ErrorType::number) {
                     return detail.code.categ;
-                }
-                if (type_ == ErrorType::const_str) {
-                    return detail.cstr.categ;
                 }
                 if (type_ == ErrorType::str) {
                     return detail.str.categ;
@@ -472,15 +473,7 @@ namespace utils {
                     if (left.detail.str.categ != right.detail.str.categ) {
                         return false;
                     }
-                    auto l = left.detail.str.value.unbox();
-                    auto r = right.detail.str.value.unbox();
-                    return l.equal_to(r);
-                }
-                if (left.type_ == ErrorType::const_str) {
-                    if (left.detail.cstr.categ != right.detail.cstr.categ) {
-                        return false;
-                    }
-                    return left.detail.cstr.value.equal_to(right.detail.cstr.value);
+                    return left.detail.str.value == right.detail.str.value;
                 }
                 if (left.type_ == ErrorType::wrap) {
                     if (left.detail.w.cmp != right.detail.w.cmp) {
@@ -524,7 +517,7 @@ namespace utils {
 
             constexpr ErrorTraits traits() const {
                 if (type_ == ErrorType::null || type_ == ErrorType::memexh ||
-                    type_ == ErrorType::const_str || type_ == ErrorType::str) {
+                    type_ == ErrorType::str) {
                     return ErrorTraits{.has_category = true, .has_equal = true};
                 }
                 if (type_ == ErrorType::number) {
@@ -540,7 +533,9 @@ namespace utils {
             }
         };
 
-        constexpr auto none = Error();
+        constexpr auto none = internal::None{};
+
+        static_assert(Error(none).type() == ErrorType::null);
 
         constexpr auto eof = Error("EOF", ErrorCategory::syserr);
 
@@ -549,7 +544,7 @@ namespace utils {
         // this is common and exceptional error in program so that this has special ErrorType.
         // if memory exhausting is occurred while Error object construction,
         // Error object will replaced with this
-        constexpr auto memory_exhausted = Error(internal::Memexh{});
+        constexpr auto memory_exhausted = internal::Memexh{};
 
         constexpr auto block = Error("BLOCK", ErrorCategory::syserr);
 

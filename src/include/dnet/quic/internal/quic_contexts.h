@@ -7,6 +7,7 @@
 
 // quic_contexts
 #pragma once
+#include "../../dll/dllh.h"
 #include "../../boxbytelen.h"
 #include "../quic.h"
 #include "../../tls.h"
@@ -24,13 +25,19 @@
 #include "../ack/loss_detection.h"
 #include "../../error.h"
 #include "../../mem.h"
-#include "../frame/vframe.h"
+// #include "../frame/vframe.h"
+#include "../frame/dynframe.h"
+#include "../dgram/limit.h"
+#include "../../address.h"
+// #include "../stream/stream_impl.h"
+// #include "../stream/stream_handler.h"
 
 namespace utils {
     namespace dnet {
         namespace quic {
             struct UDPDatagram {
-                BoxByteLen b;
+                BoxByteLen data;
+                NetAddrPort addr;
             };
 
             struct SendWaitQUICPacket {
@@ -66,9 +73,13 @@ namespace utils {
             struct ConnID {
                 ubytes id;
                 byte stateless_reset_token[16] = {};
+
+                ByteLen get() {
+                    return {id.data(), id.size()};
+                }
             };
 
-            using ConnIDMap = std::unordered_map<size_t, ConnID, std::hash<size_t>, std::equal_to<size_t>, glheap_objpool_allocator<std::pair<const size_t, ConnID>>>;
+            using ConnIDMap = easy::H<size_t, ConnID>;
 
             struct ConnIDIssuer {
                 ConnIDMap connIDs;
@@ -83,7 +94,7 @@ namespace utils {
                     ExternalRandomDevice dev{gen_rand};
                     std::uniform_int_distribution<> uni(0, 0xff);
                     for (size_t i = 0; i < len; i++) {
-                        val.push_back(dnet::byte(uni(dev)));
+                        val.push_back(byte(uni(dev)));
                     }
                     return val;
                 }
@@ -117,6 +128,13 @@ namespace utils {
                 ConnIDMap connIDs;
                 size_t largest_retired = 0;
 
+                auto& get() {
+                    for (auto& d : connIDs) {
+                        return d.second;
+                    }
+                    __builtin_unreachable();
+                }
+
                 bool retire(size_t id) {
                     if (id < largest_retired) {
                         return false;
@@ -135,53 +153,80 @@ namespace utils {
                 }
             };
 
-            using ACKRangeVec = std::vector<frame::ACKRange, glheap_allocator<frame::ACKRange>>;
-
             struct UnackedPacketNumber {
-                std::vector<ack::PacketNumber, glheap_allocator<ack::PacketNumber>> numbers;
-                bool gen_range(ACKRangeVec& range) {
-                    if (numbers.size() == 0) {
-                        return false;
-                    }
-                    if (numbers.size() == 1) {
-                        auto res = size_t(numbers[0]);
-                        range.push_back(frame::ACKRange{res, res});
-                        return true;
-                    }
-                    std::sort(numbers.begin(), numbers.end(), std::greater<>{});
-                    auto size = numbers.size();
-                    frame::ACKRange cur;
-                    cur.largest = size_t(numbers[0]);
-                    cur.smallest = cur.largest;
-                    for (size_t i = 1; i < size; i++) {
-                        if (numbers[i - 1] == numbers[i] + 1) {
-                            cur.smallest = size_t(numbers[i]);
-                        }
-                        else {
-                            range.push_back(std::move(cur));
-                            cur.largest = size_t(numbers[i]);
-                            cur.smallest = cur.largest;
-                        }
-                    }
-                    range.push_back(std::move(cur));
-                    return true;
+                easy::Vec<ack::PacketNumber> numbers;
+                bool gen_range(ack::ACKRangeVec& range) {
+                    return ack::gen_ragnes_from_recved(numbers, range);
+                }
+
+                void clear() {
+                    numbers.clear();
                 }
             };
 
             struct UnmergedFrame {
-                using VFramePtr = std::shared_ptr<frame::VFrame>;
-                std::vector<VFramePtr, glheap_allocator<VFramePtr>> frames;
+                std::deque<frame::DynFramePtr, glheap_allocator<frame::DynFramePtr>> frames;
 
-                error::Error push(const auto& frame) {
-                    auto vf = frame::make_vframe(frame);
+                error::Error push(auto&& frame) {
+                    auto vf = frame::makeDynFrame(std::move(frame));
                     frames.push_back(std::move(vf));
                     return error::none;
+                }
+
+                error::Error push_front(const auto& frame) {
+                    auto vf = frame::makeDynFrame(frame);
+                    frames.push_front(std::move(vf));
+                    return error::none;
+                }
+
+                void pop(size_t count) {
+                    for (size_t i = 0; i < count; i++) {
+                        frames.pop_front();
+                    }
+                }
+
+                frame::DynFramePtr& front() {
+                    return frames.front();
+                }
+
+                frame::DynFramePtr& operator[](size_t i) {
+                    return frames[i];
+                }
+
+                size_t size() const {
+                    return frames.size();
+                }
+            };
+
+            struct UnmergedFrames {
+                UnmergedFrame frames[3];
+                error::Error push(ack::PacketNumberSpace space, auto&& frame) {
+                    return frames[int(space)].push(std::move(frame));
+                }
+
+                error::Error push_front(ack::PacketNumberSpace space, auto&& frame) {
+                    return frames[int(space)].push_front(std::move(frame));
+                }
+
+                UnmergedFrame* begin() {
+                    return frames;
+                }
+
+                UnmergedFrame* end() {
+                    return frames + 3;
+                }
+
+                UnmergedFrame& operator[](size_t i) {
+                    assert(0 <= i && i <= 2);
+                    return frames[i];
                 }
             };
 
             enum class QState {
                 start,
                 receving_peer_handshake_packets,
+                sending_local_handshake_packets,
+                waiting_for_handshake_done,
                 established,
 
                 tls_alert,
@@ -215,10 +260,11 @@ namespace utils {
                     return error::none;
                 }
 
-                error::Error enqueue_plain(BoxByteLen plain) {
+                error::Error enqueue_plain(BoxByteLen plain, PacketType typ) {
                     SendWaitQUICPacket sent;
                     sent.sending_packet = std::move(plain);
                     sent.pn_space = ack::PacketNumberSpace::no_space;
+                    sent.sent.type = typ;
                     quic_packets.push_back(std::move(sent));
                     return error::none;
                 }
@@ -240,6 +286,7 @@ namespace utils {
                 bool zero_connID = false;
                 bool remote_src_recved = false;
                 bool is_server = false;
+                size_t max_udp_datagram_size = dgram::initial_datagram_size_limit;
             };
 
             struct QUICContexts {
@@ -264,14 +311,15 @@ namespace utils {
 
                 // transport parameter and connection id
                 trsparam::TransportParameters params;
-                ubytes initialDstID;
                 // srcIDs is issued by local
                 ConnIDIssuer srcIDs;
                 // dstIDs is issued by remote
                 ConnIDManager dstIDs;
 
                 // frames
-                UnmergedFrame frames;
+                UnmergedFrames frames;
+
+                // streams
 
                 // temporary packet creation buffer
                 BoxByteLen tmpbuf;
@@ -284,10 +332,15 @@ namespace utils {
                     wp.b = tmpbuf.unbox();
                     return wp;
                 }
+
+                size_t udp_limit() {
+                    return dgram::current_limit(flags.max_udp_datagram_size, params.peer.max_udp_payload_size);
+                }
             };
 
             error::Error start_initial_handshake(QUICContexts* p);
             error::Error receiving_peer_handshake_packets(QUICContexts* q);
+            error::Error sending_local_handshake_packets(QUICContexts* q);
 
             error::Error handle_crypto_error(QUICContexts* q, error::Error err);
 

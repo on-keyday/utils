@@ -12,7 +12,7 @@
 #include <iomanip>
 
 constexpr auto digit_value() {
-    utils::number::Array<63, char> value{};
+    utils::number::Array<char, 63> value{};
     utils::number::insert_space(value, 4, 0xff);
     return value;
 }

@@ -63,7 +63,7 @@ add_executable(punycode "src/test/deprecated/net/test_punycode.cpp")
 add_executable(http1 "src/test/deprecated/net/test_http1.cpp")
 
 if(WIN32)
-  add_executable(io_completion_port "src/test/platform/windows/test_io_completion_port.cpp")
+  # add_executable(io_completion_port "src/test/platform/windows/test_io_completion_port.cpp")
   add_executable(externaltask "src/test/async/test_externaltask.cpp")
 endif()
 
@@ -122,6 +122,9 @@ add_executable(dnetquic_context "src/test/dnet/test_dnetquic_context.cpp")
 add_executable(dnet_error "src/test/dnet/test_dnet_error.cpp")
 add_executable(ipparse "src/test/deprecated/net/test_ipparse.cpp")
 add_executable(dnet_stun "src/test/dnet/test_dnet_stun.cpp")
+add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
+add_executable(dnetquic_frame "src/test/dnet/test_dnetquic_frame.cpp")
+add_executable(dnetquic_packet "src/test/dnet/test_dnetquic_packet.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -148,6 +151,12 @@ add_executable(durl "src/tool/durl/main.cpp"
   "src/tool/durl/http.cpp"
 )
 add_executable(igen2 "src/tool/igen2/main.cpp")
+add_executable(vstack "src/tool/vstack/main.cpp"
+"src/tool/vstack/write.cpp"
+"src/tool/vstack/resolve.cpp"
+"src/tool/vstack/func.cpp"
+"src/tool/vstack/ssa.cpp"
+)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -184,8 +193,6 @@ target_sources(utils
 
 target_sources(utnet
   PRIVATE
-  "src/lib/platform/windows/io_completion_port.cpp"
-  "src/lib/platform/linux/epoll.cpp"
   "src/lib/async/worker.cpp"
 
   # almost all deprecated
@@ -240,6 +247,8 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/sockopt.cpp"
   "src/lib/dnet/mem.cpp"
   "src/lib/dnet/quic/context/gen_packet.cpp"
+  "src/lib/dnet/quic/context/gen_frame.cpp"
+  "src/lib/dnet/error.cpp"
 )
 
 target_sources(dnetserv PRIVATE
@@ -292,7 +301,7 @@ target_link_libraries(netcore utils utnet)
 target_link_libraries(http1 utils utnet Threads::Threads)
 
 if(WIN32)
-  target_link_libraries(io_completion_port utils utnet)
+  # target_link_libraries(io_completion_port utils utnet)
   target_link_libraries(externaltask utils utnet)
 endif()
 
@@ -323,6 +332,8 @@ target_link_libraries(expression utils)
 target_link_libraries(cnethttp2 utils utnet)
 target_link_libraries(cnetmem utils utnet)
 target_link_libraries(container_iface utils utnet)
+target_link_libraries(expand_iovec utils)
+target_link_libraries(dnetquic_frame utils dnet)
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
@@ -333,6 +344,7 @@ target_link_libraries(minilang utils)
 target_link_libraries(minlc utils)
 target_link_libraries(durl utils dnet)
 target_link_libraries(igen2 utils)
+target_link_libraries(vstack utils)
 
 # libquic
 target_link_libraries(quic_udp quic utils)
@@ -357,7 +369,7 @@ target_link_libraries(dnet_stun dnet)
 target_link_libraries(dnetserv dnet)
 
 if(WIN32)
-  target_link_libraries(io_completion_port ws2_32)
+  # target_link_libraries(io_completion_port ws2_32)
   target_link_libraries(utnet libssl libcrypto ws2_32 dnet)
   target_link_libraries(quic ws2_32)
 else()

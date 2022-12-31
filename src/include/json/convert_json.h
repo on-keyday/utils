@@ -19,6 +19,7 @@ namespace utils {
             none = 0x0,
             force_element = 0x1,
             allow_null_obj_array = 0x2,
+            not_clear_string = 0x4,
         };
 
         DEFINE_ENUM_FLAGOP(FromFlag)
@@ -27,76 +28,81 @@ namespace utils {
 
             template <class T>
             concept to_array_interface = requires(T t) {
-                {t.size()};
-                {t[size_t(0)]};
-            };
+                                             { t.size() };
+                                             { t[size_t(0)] };
+                                         };
 
             template <class T>
             concept to_map_interface = requires(T t) {
-                {get<1>(*t.begin())};
-                {t.end()};
-            };
+                                           { get<1>(*t.begin()) };
+                                           { t.end() };
+                                       };
 
             template <class T, class JSON>
             concept to_json_adl = requires(T t, JSON j) {
-                {to_json(t, j)};
-            };
+                                      { to_json(t, j) };
+                                  };
 
             template <class T, class JSON>
             concept to_json_method = requires(T t, JSON j) {
-                {t.to_json(j)};
-            };
+                                         { t.to_json(j) };
+                                     };
 
             template <class T, class JSON>
             concept from_json_adl = requires(T t, JSON j) {
-                {from_json(t, j)};
-            };
+                                        { from_json(t, j) };
+                                    };
 
             template <class T, class JSON>
             concept from_json_method = requires(T t, JSON j) {
-                {t.from_json(j)};
-            };
+                                           { t.from_json(j) };
+                                       };
 
             template <class T, class JSON>
             concept from_json_adl_flag = requires(T t, JSON j) {
-                {from_json(t, j, FromFlag::none)};
-            };
+                                             { from_json(t, j, FromFlag::none) };
+                                         };
 
             template <class T, class JSON>
             concept from_json_method_flag = requires(T t, JSON j) {
-                {t.from_json(j, FromFlag::none)};
-            };
+                                                { t.from_json(j, FromFlag::none) };
+                                            };
 
             template <class T>
             concept derefable = requires(T t) {
-                {*t};
-                {!t};
-            };
+                                    { *t };
+                                    { !t };
+                                };
 
             template <class T>
             concept indexable = requires(T t) {
-                {t[1]};
-            };
+                                    { t[1] };
+                                };
 
             template <class T>
             concept from_array_t = indexable<T> && requires(T t) {
-                {t.size()};
-            };
+                                                       { t.size() };
+                                                   };
 
             template <class T>
             concept from_map_t = requires(T t) {
-                {t["key"]};
-            };
+                                     { t["key"] };
+                                 };
 
             template <class T>
             concept pushbackable = requires(T t) {
-                {t.push_back('C')};
-            };
+                                       { t.push_back('C') };
+                                   };
 
             template <class T>
             concept to_int_from_elm = requires(T t) {
-                {int(t[1])};
-            };
+                                          { int(t[1]) };
+                                      };
+
+            template <class T>
+            concept has_clear = requires(T t) {
+                                    { t.clear() };
+                                };
 
             template <class JSON>
             struct is_json_t {
@@ -168,6 +174,11 @@ namespace utils {
                 }
                 else if constexpr (std::is_same_v<T_cv, typename json_t::string_t> ||
                                    (helper::is_utf_convertable<T> && pushbackable<T>)) {
+                    if constexpr (has_clear<T>) {
+                        if (!any(flag & FromFlag::not_clear_string)) {
+                            t.clear();
+                        }
+                    }
                     if (any(flag & FromFlag::force_element)) {
                         return js.force_as_string(t);
                     }

@@ -47,7 +47,11 @@ namespace utils {
 
                public:
                 bool provide_udp_datagram(const void* data, size_t size);
-                bool receive_quic_packets(void* data, size_t size, size_t* recved);
+                // receive_quic_packet deque single QUIC packet
+                // use receive_udp_datagram instead
+                bool receive_quic_packet(PacketType& typ, void* data, size_t size, size_t& recved);
+
+                bool receive_udp_datagram(void* data, size_t size, size_t& recved);
 
                 QUICTLS tls();
 

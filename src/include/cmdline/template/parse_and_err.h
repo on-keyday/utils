@@ -8,10 +8,15 @@
 // parse_and_err - parse and error
 #pragma once
 #include "../option/optcontext.h"
+#include "help_option.h"
 
 namespace utils {
     namespace cmdline {
         namespace templ {
+
+            // void show(string usage_or_err)
+            // int then(Option opt,option::Context ctx)
+            // opt.bind(ctx) is used
             template <class String>
             int parse_or_err(int argc, char** argv, auto&& opt, auto&& show, auto&& then) {
                 option::Context ctx;

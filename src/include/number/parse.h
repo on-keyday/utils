@@ -234,7 +234,7 @@ namespace utils {
         }
 
         template <class String, class Config = internal::ReadConfig>
-        constexpr NumErr is_float_number(String&& v, int radix = 10, Config config = Config{}) {
+        constexpr NumErr is_float_number(String&& v, int radix = 10, Config&& config = Config{}) {
             if (radix != 10 && radix != 16) {
                 return false;
             }
@@ -247,12 +247,12 @@ namespace utils {
         }
 
         template <class String, class Config = internal::ReadConfig>
-        constexpr NumErr is_integer(String&& v, int radix = 10, Config config = Config{}) {
+        constexpr NumErr is_integer(String&& v, int radix = 10, Config&& config = Config{}) {
             return is_number(v, radix, nullptr, config);
         }
 
         template <class T, class U, class Config = internal::ReadConfig>
-        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10, Config config = Config{}) {
+        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10, Config&& config = Config{}) {
             internal::PushBackParserInt<U> parser;
             parser.radix = radix;
             bool minus = false;

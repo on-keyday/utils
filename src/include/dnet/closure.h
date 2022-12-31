@@ -20,7 +20,13 @@ namespace utils {
                     clone_,
                     del_,
                     cloneable_,
+                    get_ctx_,
                 };
+
+                template <class T>
+                concept has_ctx = requires(T t) {
+                                      { t.ctx };
+                                  };
 
                 template <class Ret, class... Args>
                 struct Clfn {
@@ -51,6 +57,12 @@ namespace utils {
                     }
                     if (c == cloneable_) {
                         return std::is_copy_constructible_v<T>;
+                    }
+                    if (c == get_ctx_) {
+                        if constexpr (has_ctx<Impl>) {
+                            return (std::uintptr_t)std::addressof(ptr->ctx);
+                        }
+                        return 0;
                     }
                     return 0;
                 }
@@ -202,6 +214,10 @@ namespace utils {
                     if (fn) {
                         fn->ctrl(fn, internal::del_);
                     }
+                }
+
+                constexpr void* ctx_ptr() const {
+                    return reinterpret_cast<void*>(fn->ctrl(fn, internal::get_ctx_));
                 }
             };
 

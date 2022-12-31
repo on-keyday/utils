@@ -14,7 +14,7 @@
 namespace utils {
     namespace helper {
         namespace internal {
-
+            // deprecated
             SFINAE_BLOCK_T_BEGIN(has_subscript, std::declval<T>()[1])
             using char_type = std::remove_cvref_t<decltype(std::declval<T>()[1])>;
             constexpr static size_t size() {
@@ -38,11 +38,59 @@ namespace utils {
                 return has_subscript<T>::size();
             }
             SFINAE_BLOCK_T_END()
+
+            template <class T>
+            concept has_char_type = requires {
+                                        typename T::char_type;
+                                    };
+
+            template <class T>
+            concept has_value_type = requires {
+                                         typename T::value_type;
+                                     };
+
+            template <class T>
+            concept has_index = requires(T t) {
+                                    { t[1] };
+                                };
+
+            template <class T>
+            struct PBSize {
+                using type = void;
+            };
+
+            template <class T, class Ret, class Arg>
+            struct PBSize<Ret (T::*)(Arg)> {
+                using type = Arg;
+            };
+
+            template <class T>
+            concept has_pbsize =
+                std::is_same_v<void, typename PBSize<decltype(T::push_back)>::type> == false;
+
+            template <class T>
+            constexpr size_t append_sizeof() {
+                if constexpr (has_pbsize<T>) {
+                    return sizeof(typename PBSize<decltype(T::push_back)>::type);
+                }
+                else if constexpr (has_char_type<T>) {
+                    return sizeof(typename T::char_type);
+                }
+                else if constexpr (has_value_type<T>) {
+                    return sizeof(typename T::value_type);
+                }
+                else if constexpr (has_index<T>) {
+                    return sizeof(std::declval<T>()[1]);
+                }
+                else {
+                    return ~0;
+                }
+            }
         }  // namespace internal
 
         template <class T>
         constexpr size_t append_size() {
-            return internal::append_size<T>::size();
+            return internal::append_sizeof<T>();
         }
 
         template <class T>

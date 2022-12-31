@@ -20,7 +20,7 @@ void test_cnet_mem_buffer() {
     using namespace utils::cnet;
     using namespace utils::number;
     auto buf = mem::new_buffer(::malloc, ::realloc, ::free);
-    Array<40, char> arr;
+    Array<char, 40> arr;
     mem::append(buf, "client hello");
     arr.i = mem::remove(buf, arr.buf, 12);
     assert(arr.i == 12);
@@ -38,7 +38,7 @@ void test_cnet_mem_interface() {
     using namespace utils::number;
     CNet *mem1, *mem2;
     mem::make_pair(mem1, mem2, ::malloc, ::realloc, ::free);
-    Array<50, char> arr{0};
+    Array<char, 50> arr{0};
     utils::helper::append(arr, "client hello");
     auto old = arr.i;
     write({}, mem1, arr.buf, arr.size(), &arr.i);
@@ -55,7 +55,7 @@ void test_thread_io() {
     // peer1 <- hello <- peer2
     // peer1 -> how are you? -> peer2
     // peer1 <- (respond emotion) <- peer2
-    using Buf = Array<100, char>;
+    using Buf = Array<char, 100>;
     auto read_while = [](CNet *mem, Buf &arr) {
         arr.i = 0;
         while (arr.size() == 0) {
@@ -99,7 +99,7 @@ void test_http_protocol() {
     using namespace utils::number;
     auto reader = [](CNet *mem) {
         return [=](auto &seq, size_t expect, bool end) {
-            Array<1024, char> v{0};
+            Array<char, 1024> v{0};
             auto &buf = seq.buf.buffer;
             while (v.size() == 0) {
                 read({}, mem, v.buf, v.capacity(), &v.i);

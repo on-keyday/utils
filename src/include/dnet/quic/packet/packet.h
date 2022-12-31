@@ -586,9 +586,10 @@ namespace utils {
                     return internal::parse_packet_number_and_payload(b, *this, parse_payload);
                 }
 
-                constexpr size_t packet_len() const {
+                constexpr size_t parse_len() const {
                     return HandshakePacketPartial::parse_len() +
-                           length.len;
+                           packet_number.len +
+                           payload.len;
                 }
 
                 constexpr bool render(WPacket& w, PayloadLevel level = PayloadLevel::payload_length) const {
@@ -782,7 +783,7 @@ namespace utils {
                 }
 
                 constexpr size_t render_len() const {
-                    return Packet::parse_len() + dstID.len;
+                    return Packet::render_len() + dstID.len;
                 }
 
                 OneRTTPacketPartial& as_partial() {

@@ -20,7 +20,7 @@ namespace utils {
                 if (count == 0) {
                     return false;
                 }
-                auto wait = dnet::get_self_server_address({.type = SOCK_STREAM}, port);
+                auto wait = dnet::get_self_server_address(port, {.socket_type = SOCK_STREAM});
                 if (wait.failed(err)) {
                     return false;
                 }
@@ -29,8 +29,7 @@ namespace utils {
                     return false;
                 }
                 while (addr.next()) {
-                    SockAddr resolved;
-                    addr.sockaddr(resolved);
+                    auto resolved = addr.sockaddr();
                     auto sock = make_server_socket(resolved, backlog, reuse, ipv6only);
                     if (!sock) {
                         continue;
@@ -52,15 +51,11 @@ namespace utils {
                 if (auto err = sock.wait_readable(0, 1000)) {
                     return failed(err, true /*at wait*/);
                 }
-                ::sockaddr_storage st;
-                int len = sizeof(st);
-                dnet::Socket new_sock;
-                if (auto err = sock.accept(new_sock, (dnet::raw_address*)&st, &len)) {
+                auto [new_sock, addr, err] = sock.accept();
+                if (err) {
                     return failed(err, false /*at accept*/);
                 }
-                int port = 0;
-                auto ipaddr = string_from_sockaddr(&st, len, &port);
-                accepted(new_sock, ipaddr, port);
+                accepted(std::move(new_sock), std::move(addr));
                 return true;
             }
         }  // namespace server

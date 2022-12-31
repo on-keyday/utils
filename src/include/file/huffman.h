@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <compare>
 #include <initializer_list>
+#include "../core/byte.h"
 
 namespace utils {
     namespace huffman {

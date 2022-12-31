@@ -13,6 +13,7 @@
 #include "../helper/space.h"
 #include "../helper/strutil.h"
 #include "../escape/escape.h"
+#include "../view/slice.h"
 
 namespace utils {
 
@@ -25,7 +26,7 @@ namespace utils {
             using array_t = typename JSONBase<String, Vec, Object>::array_t;
 
             auto consume_space = [&] {
-                while (helper::space::match_space<true>(seq, true)) {
+                while (space::match_space<true>(seq, true)) {
                 }
             };
 #define DETECT_EOF() \
@@ -51,7 +52,7 @@ namespace utils {
                 return true;
             };
             auto unescape = [&](auto& str, size_t be, size_t en) -> JSONErr {
-                auto sl = helper::make_ref_slice(seq.buf.buffer, be, en);
+                auto sl = view::make_ref_slice(seq.buf.buffer, be, en);
                 if (!escape::unescape_str(sl, str)) {
                     return JSONError::invalid_escape;
                 }

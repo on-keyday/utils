@@ -254,12 +254,12 @@ namespace utils {
             }
             suite->sock = sock;
             if (!buf.data) {
-                suite->boxed = BoxByteLen{buf.len};
+                suite->boxed = make_storage(buf.len);
             }
             else {
-                suite->boxed = buf;
+                suite->boxed = make_storage(buf.data, buf.len);
             }
-            if (!suite->boxed.valid()) {
+            if (suite->boxed.null()) {
                 return error::memory_exhausted;
             }
             suite->appcb = reinterpret_cast<void (*)()>(appcb);
@@ -421,15 +421,17 @@ namespace utils {
                     });
                     auto app = reinterpret_cast<void (*)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addr)>(suite->appcb);
                     suite->on_operation = false;
-                    app(suite->ctx, suite->boxed.unbox().resized(red),
-                        suite->boxed.len() == red, std::move(err), sockaddr_to_NetAddrPort(saddr, addrlen));
+                    auto sub = suite->boxed.substr(0, red);
+                    app(suite->ctx, ByteLen{sub.data(), sub.size()},
+                        suite->boxed.size() == red, std::move(err), sockaddr_to_NetAddrPort(saddr, addrlen));
                 };
                 sockaddr_storage addr{};
                 int addrlen = sizeof(addr);
                 auto [n, err] = readfrom((dnet::raw_address*)&addr, &addrlen, suite->boxed.data(), suite->boxed.len(), flag, is_stream);
                 return handleStart(unlock, err, suite, [&, n = &n] {
-                    cb(fnctx, suite->boxed.unbox().resized(*n),
-                       suite->boxed.len() == *n, error::none,
+                    auto sub = suite->boxed.substr(0, *n);
+                    cb(fnctx, ByteLen{sub.data(), sub.size()},
+                       suite->boxed.size() == *n, error::none,
                        sockaddr_to_NetAddrPort(reinterpret_cast<sockaddr*>(&addr), addrlen));
                 });
             });

@@ -26,7 +26,7 @@ namespace utils {
 
                 template <class Body = const char*>
                 bool respond(int status, auto&& header, Body&& body = "", size_t len = 0) {
-                    number::Array<40, char, true> lenstr{};
+                    number::Array<char, 40, true> lenstr{};
                     number::to_string(lenstr, len);
                     header.emplace("Content-Length", lenstr.c_str());
                     return http.write_response(status, header, body, len);
@@ -36,7 +36,7 @@ namespace utils {
                     const char* data;
                     size_t len;
                     http.borrow_output(data, len);
-                    client.sock.write(data, len);
+                    client.sock.write(view::rvec(data, len));
                 }
 
                 template <class Body = const char*>
@@ -58,7 +58,7 @@ namespace utils {
 
             template <class String>
             bool has_keep_alive(HTTP& http, auto&& header) {
-                number::Array<20, char, true> version;
+                number::Array<char, 20, true> version;
                 bool keep_alive = false;
                 bool close = false;
                 if (!http.read_request<String>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {

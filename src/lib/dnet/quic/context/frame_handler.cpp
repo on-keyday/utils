@@ -12,7 +12,7 @@
 namespace utils {
     namespace dnet {
         namespace quic::handler {
-            error::Error on_ack(QUICContexts* q, frame::ACKFrame& ack, ack::PacketNumberSpace space) {
+            error::Error on_ack(QUICContexts* q, frame::ACKFrame<easy::Vec>& ack, ack::PacketNumberSpace space) {
                 if (auto err = q->ackh.on_ack_received(ack, space)) {
                     return err;
                 }
@@ -51,16 +51,16 @@ namespace utils {
                 // check offset
                 // avoid heap allocation
                 if (set.read_offset == offset) {
-                    if (auto err = q->crypto.tls.provide_quic_data(level, c.crypto_data.data, c.crypto_data.len)) {
+                    if (auto err = q->crypto.tls.provide_quic_data(level, c.crypto_data.data(), c.crypto_data.size())) {
                         return err;
                     }
-                    set.read_offset += c.crypto_data.len;
+                    set.read_offset += c.crypto_data.size();
                     added = true;
                 }
                 else {
                     crypto::CryptoData store;
                     store.offset = offset;
-                    store.b = c.crypto_data;
+                    store.b = ConstByteLen{c.crypto_data.data(), c.crypto_data.size()};
                     if (!store.b.valid()) {
                         return error::memory_exhausted;
                     }
@@ -123,7 +123,7 @@ namespace utils {
             error::Error on_connection_close(QUICContexts* q, frame::ConnectionCloseFrame& c) {
                 q->errs.close_err = ConnectionCloseError{
                     .err = TransportError(c.error_code.value),
-                    .msg = String((const char*)c.reason_phrase.data, c.reason_phrase.len),
+                    .msg = String((const char*)c.reason_phrase.data(), c.reason_phrase.size()),
                     .type = FrameType(c.frame_type.value),
                 };
                 q->state = QState::closed;
@@ -151,7 +151,7 @@ namespace utils {
                         .frame_type = FrameType::NEW_CONNECTION_ID,
                     };
                 }
-                if (c.retire_proior_to > c.squecne_number) {
+                if (c.retire_proior_to > c.sequecne_number) {
                     return QUICError{
                         .msg = "retire_proir_to field is grater than sequence_number",
                         .rfc_ref = "rfc9000 19.15 NEW_CONNECTION_ID Frames",
@@ -162,11 +162,12 @@ namespace utils {
                     };
                 }
                 if (q->dstIDs.retire(c.retire_proior_to)) {
-                    if (auto err = q->frames.push(frame::make_retire_connection_id(nullptr, c.retire_proior_to))) {
+                    if (auto err = q->frames.push(ack::PacketNumberSpace::application,
+                                                  frame::RetireConnectionIDFrame{.sequence_number = c.retire_proior_to})) {
                         return err;
                     }
                 }
-                if (!q->dstIDs.add_new(c.squecne_number, {c.connectionID.data, c.connectionID.len}, c.stateless_reset_token.data)) {
+                if (!q->dstIDs.add_new(c.sequecne_number, {c.connectionID.data(), c.connectionID.size()}, c.stateless_reset_token)) {
                     return QUICError{
                         .msg = "failed to add remote connectionID",
                     };
@@ -175,6 +176,11 @@ namespace utils {
             }
 
             error::Error on_streams_blocked(QUICContexts* q, frame::StreamsBlockedFrame& blocked) {
+                return error::none;
+            }
+
+            error::Error on_handshake_done(QUICContexts* q) {
+                q->state = QState::established;
                 return error::none;
             }
         }  // namespace quic::handler

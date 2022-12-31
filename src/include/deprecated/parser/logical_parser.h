@@ -11,7 +11,6 @@
 
 #include "parser_base.h"
 #include <helper/appender.h>
-#include <helper/iface_cast.h>
 
 namespace utils {
     namespace parser {
@@ -178,7 +177,7 @@ namespace utils {
                     if (!vec) {
                         ListError<String, Vec> e;
                         err = std::move(e);
-                        auto l = helper::iface_cast<ListError<String, Vec>>(&err);
+                        auto l = err.template type_assert<ListError<String, Vec>>();
                         assert(l);
                         vec = l->get_list();
                         assert(vec);

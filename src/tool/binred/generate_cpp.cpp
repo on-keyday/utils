@@ -9,9 +9,11 @@
 #include "type_list.h"
 
 #include "../../include/helper/appender.h"
+#include <view/slice.h>
 
 namespace binred {
     namespace hlp = utils::helper;
+    namespace view = utils::view;
     using tree_t = utw::shared_ptr<Tree>;
 
     bool find_name(const utw::string& name, Struct& st) {
@@ -411,7 +413,7 @@ namespace binred {
         if (data.pkgname.size()) {
             bool viewed = false;
             if (any(flag & GenFlag::sep_namespace)) {
-                auto spltview = hlp::make_ref_splitview(data.pkgname, "::");
+                auto spltview = view::make_ref_splitview(data.pkgname, "::");
                 auto sz = spltview.size();
                 for (auto i = 0; i < sz; i++) {
                     render_cpp_namespace_begin(str, spltview[i]);
@@ -520,7 +522,7 @@ namespace binred {
         if (data.pkgname.size()) {
             bool viewed = false;
             if (any(flag & GenFlag::sep_namespace)) {
-                auto spltview = hlp::make_ref_splitview(data.pkgname, "::");
+                auto spltview = view::make_ref_splitview(data.pkgname, "::");
                 auto sz = spltview.size();
                 for (auto i = sz - 1; i != ~0; i--) {
                     render_cpp_namespace_end(str, spltview[i]);

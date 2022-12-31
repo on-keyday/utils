@@ -252,16 +252,16 @@ namespace utils {
                     return {};
                 }
                 plain.dstID = dstID;
+                plain.packet_number = packet_number;
+                plain.payload = payload;
                 size_t padding_len = 0;
                 if (reqlen) {
-                    auto known_usage = plain.as_partial().render_len() + payload_tag_len + payload.len;
+                    auto known_usage = plain.render_len() + payload_tag_len;
                     if (reqlen < known_usage) {
                         return {};
                     }
                     padding_len = reqlen - known_usage;
                 }
-                plain.packet_number = packet_number;
-                plain.payload = payload;
                 return internal::test_plain(plain, padding_len, payload_tag_len, reqlen);
             }
 
@@ -335,6 +335,101 @@ namespace utils {
                     return {};
                 }
                 return info;
+            }
+
+            constexpr auto packet_type_to_Packet(PacketType type, auto&& cb) {
+                switch (type) {
+#define MAP(t, Tplain, Tcipher) \
+    case t:                     \
+        return cb(Tplain{}, Tcipher{});
+                    MAP(PacketType::Initial, InitialPacketPlain, InitialPacketCipher)
+                    MAP(PacketType::ZeroRTT, ZeroRTTPacketPlain, ZeroRTTPacketCipher)
+                    MAP(PacketType::Handshake, HandshakePacketPlain, HandshakePacketCipher)
+                    MAP(PacketType::Retry, RetryPacket, RetryPacket)
+                    MAP(PacketType::LongPacket, LongPacket, LongPacket)
+                    MAP(PacketType::OneRTT, OneRTTPacketPlain, OneRTTPacketCipher)
+                    MAP(PacketType::VersionNegotiation, VersionNegotiationPacket, VersionNegotiationPacket)
+                    MAP(PacketType::StatelessReset, StatelessReset, StatelessReset)
+#undef MAP
+                    default:
+                        return cb(Packet{}, Packet{});
+                }
+            }
+
+            constexpr size_t guess_packet_with_payload_len(PacketType typ, size_t dstIDlen, size_t srcIDlen, size_t tokenlen, QPacketNumber pn, size_t payload_len) {
+                return packet::packet_type_to_Packet(typ, [&](auto a, auto b) -> size_t {
+                    if constexpr (!std::is_same_v<decltype(a), decltype(b)>) {
+                        a.flags.value |= byte(pn.len - 1);
+                        if constexpr (std::is_same_v<decltype(a), packet::OneRTTPacketPlain>) {
+                            a.dstID = {nullptr, dstIDlen};
+                            a.packet_number = pn;
+                        }
+                        else {
+                            a.dstID = {nullptr, dstIDlen};
+                            a.srcID = {nullptr, srcIDlen};
+                            if constexpr (std::is_same_v<decltype(a), packet::InitialPacketPlain>) {
+                                a.token = {nullptr, tokenlen};
+                            }
+                            a.length = payload_len + pn.len;
+                            a.packet_number = pn;
+                        }
+                        a.payload = {nullptr, payload_len};
+                        return a.render_len();
+                    }
+                    return 0;
+                });
+            }
+
+            // returns (initial,handshake_zerortt,onertt)
+            constexpr std::tuple<size_t, size_t, size_t> guess_header_len(size_t dstID, size_t srcID, size_t token, QPacketNumber pnini, QPacketNumber pnhs, QPacketNumber pnapp) {
+                return {
+                    guess_packet_with_payload_len(PacketType::Initial, dstID, srcID, token, pnini, 0),
+                    guess_packet_with_payload_len(PacketType::Handshake, dstID, srcID, token, pnhs, 0),
+                    guess_packet_with_payload_len(PacketType::OneRTT, dstID, srcID, token, pnapp, 0),
+                };
+            }
+
+            struct GuessTuple {
+                // frame count
+                size_t count;
+                // full packet length (header and payload)
+                size_t packet_len;
+                // pure payload length (exclude packet_number,cipher tag)
+                size_t payload_len;
+                // limit reached
+                bool limit_reached;
+                // length field value (packet_number,payload,cipher tag)
+                QVarInt length_field;
+            };
+
+            // void cb(size_t index,size_t& payload_len)
+            // returns (count,packet_len,payload_len,limit_reached,length)
+            constexpr GuessTuple guess_packet_and_payload_len(size_t limit, PacketType type, size_t dstIDlen, size_t srcIDlen, size_t tokenlen, QPacketNumber pn, size_t payload_tag_len, auto&& cb) {
+                size_t i = 0;
+                size_t payload_len = 0;
+                size_t prev_payload_len = 0;
+                size_t prev_packet_len = 0;
+                for (;;) {
+                    QVarInt qv{pn.len + prev_payload_len + payload_tag_len};
+                    qv.len = qv.minimum_len();
+                    cb(i, payload_len);
+                    if (payload_len <= prev_payload_len) {
+                        return {
+                            i,
+                            prev_packet_len,
+                            prev_payload_len,
+                            false,
+                            qv,
+                        };
+                    }
+                    auto packet_len = guess_packet_with_payload_len(type, dstIDlen, srcIDlen, tokenlen, pn, payload_len + payload_tag_len);
+                    if (packet_len > limit) {
+                        return {i, prev_packet_len, prev_payload_len, true, qv};
+                    }
+                    prev_packet_len = packet_len;
+                    prev_payload_len = payload_len;
+                    i++;
+                }
             }
 
         }  // namespace quic::packet

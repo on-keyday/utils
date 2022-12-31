@@ -9,10 +9,10 @@
 // stream - parser stream
 #pragma once
 
-#include <iface/error_log.h>
+#include <deprecated/iface/error_log.h>
 #include <helper/appender.h>
 #include <helper/equal.h>
-#include <iface/macros.h>
+#include <deprecated/iface/macros.h>
 #include <wrap/light/enum.h>
 
 namespace utils {
@@ -43,28 +43,28 @@ namespace utils {
             namespace internal {
                 template <class T>
                 concept has_child = requires(T t) {
-                    {t.child(size_t{})};
-                };
+                                        { t.child(size_t{}) };
+                                    };
 
                 template <class T>
                 concept has_info = requires(T t) {
-                    {t.info()};
-                };
+                                       { t.info() };
+                                   };
 
                 template <class T>
                 concept has_raw = requires(T t) {
-                    {t.raw()};
-                };
+                                      { t.raw() };
+                                  };
 
                 template <class T, class Stream>
                 concept has_substream = requires(T t) {
-                    {t.substream(Stream{}, "key")};
-                };
+                                            { t.substream(Stream{}, "key") };
+                                        };
 
                 template <class T>
                 concept has_truncate = requires(T t) {
-                    {t.truncate()};
-                };
+                                           { t.truncate() };
+                                       };
 
             }  // namespace internal
 
@@ -82,8 +82,8 @@ namespace utils {
             namespace internal {
                 template <class T>
                 concept has_err = requires(T t) {
-                    {t.err()};
-                };
+                                      { t.err() };
+                                  };
             }  // namespace internal
 
             struct TokenBase : iface::Powns {
@@ -180,23 +180,23 @@ namespace utils {
 
             template <class T>
             concept has_change = requires(T t) {
-                {t.change("context")};
-            };
+                                     { t.change("context") };
+                                 };
 
             template <class T>
             concept has_add = requires(T t) {
-                {t.add("record", std::declval<const Token&>())};
-            };
+                                  { t.add("record", std::declval<const Token&>()) };
+                              };
 
             template <class T>
             concept has_scope = requires(T t, bool enter) {
-                {t.scope("record", enter)};
-            };
+                                    { t.scope("record", enter) };
+                                };
 
             template <class T>
             concept has_exists = requires(T t, size_t lookup_level) {
-                {t.exists("record", std::declval<const Token&>(), lookup_level)};
-            };
+                                     { t.exists("record", std::declval<const Token&>(), lookup_level) };
+                                 };
 
             struct SemanticsBase : iface::Powns {
                private:
@@ -259,18 +259,18 @@ namespace utils {
 
             template <class T>
             concept consumer_condition_1 = requires(T t) {
-                {t("string", 7, std::declval<size_t*>())};
-            };
+                                               { t("string", 7, std::declval<size_t*>()) };
+                                           };
 
             template <class T>
             concept consumer_condition_2 = requires(T t) {
-                {t("string", 7)};
-            };
+                                               { t("string", 7) };
+                                           };
 
             template <class T>
             concept consumer_condition_3 = requires(T t) {
-                {t("string")};
-            };
+                                               { t("string") };
+                                           };
 
             constexpr auto consumeStop = false;
             constexpr auto consumeContinue = true;
@@ -500,4 +500,4 @@ namespace utils {
     }      // namespace parser
 }  // namespace utils
 
-#include <iface/undef_macros.h>
+#include <deprecated/iface/undef_macros.h>

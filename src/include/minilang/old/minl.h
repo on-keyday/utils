@@ -11,29 +11,29 @@
 #include <memory>
 // using string
 #include <string>
-#include <helper/view.h>
 #include <escape/read_string.h>
 #include <number/prefix.h>
 #include <helper/space.h>
-#include "../minnode.h"
+#include "minnode.h"
+#include <view/charvec.h>
 
 namespace utils {
     namespace minilang {
-        using CView = helper::SizedView<const char>;
+        using CView = view::CharVec<const char>;
         using Seq = Sequencer<CView>;
 
         template <class T>
         concept PassCtx = requires(T t) {
-            {t.user_defined};
-            {t.more_inner};
-            {t.parse_on};
-        };
+                              { t.user_defined };
+                              { t.more_inner };
+                              { t.parse_on };
+                          };
 
         constexpr auto primitive() {
             return [](auto&& pass, auto& seq, auto& errc) -> std::shared_ptr<MinNode> {
                 MINL_FUNC_LOG_OLD("primitive")
                 std::string str;
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 auto num_read = [&](std::shared_ptr<NumberNode>& node) {
                     if (!number::is_digit(seq.current())) {
@@ -123,7 +123,7 @@ namespace utils {
             return [=](auto& seq, auto& expected, Pos& pos) {
                 auto fold = [&](auto op) {
                     const auto tmp = seq.rptr;
-                    helper::space::consume_space(seq, false);
+                    space::consume_space(seq, false);
                     const auto start = seq.rptr;
                     if (seq.seek_if(op.op)) {
                         for (auto c : op.errs) {
@@ -152,7 +152,7 @@ namespace utils {
                 std::string str;
                 Pos pos{};
                 if (expect(seq, str, pos)) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     auto node = f(f, pass, seq, errc);
                     if (!node) {
                         return node;
@@ -180,7 +180,7 @@ namespace utils {
                 std::string expected;
                 Pos pos{};
                 while (expect(seq, expected, pos)) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     auto right = inner(pass, seq, errc);
                     if (!right) {
                         return right;
@@ -206,7 +206,7 @@ namespace utils {
                 std::string expected;
                 Pos pos{};
                 while (expect(seq, expected, pos)) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     auto right = f(f, pass, seq, errc);
                     if (!right) {
                         return right;
@@ -267,7 +267,7 @@ namespace utils {
                     }
                     const auto start = seq.rptr;
                     if (seq.seek_if(op.begin)) {
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         if (seq.seek_if(op.end)) {
                             auto tmp = std::make_shared<BinaryNode>();
                             tmp->str = op.op;
@@ -281,10 +281,10 @@ namespace utils {
                             err = true;
                             return false;
                         }
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         if (op.rem_comma) {
                             seq.seek_if(op.rem_comma);
-                            helper::space::consume_space(seq, true);
+                            space::consume_space(seq, true);
                         }
                         if (!seq.seek_if(op.end)) {
                             errc.say("expect ", op.end, " but not");
@@ -306,13 +306,13 @@ namespace utils {
                     if (!node) {
                         return false;
                     }
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     const auto start = seq.rptr;
                     if (!seq.seek_if(op.op)) {
                         return false;
                     }
                     const auto end = seq.rptr;
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     auto in = prim(pass, seq, errc);
                     if (!in) {
                         err = true;

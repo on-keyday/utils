@@ -7,9 +7,10 @@
 
 // address - address representation
 #pragma once
-#include "byte.h"
+#include "../core/byte.h"
 #include "boxbytelen.h"
 #include "../net_util/ipaddr.h"
+#include "storage.h"
 
 namespace utils {
     namespace dnet {
@@ -32,10 +33,10 @@ namespace utils {
 
         struct NetAddr {
            private:
-            friend NetAddr make_netaddr(NetAddrType, ByteLen);
+            friend NetAddr make_netaddr(NetAddrType, view::rvec);
             union {
                 byte bdata[16];
-                BoxByteLen fdata;
+                storage fdata;
             };
             NetAddrType type_ = NetAddrType::null;
 
@@ -47,8 +48,8 @@ namespace utils {
 
             void copy(const NetAddr& from) {
                 if (internal::NetAddronHeap(from.type_)) {
-                    fdata = from.fdata.unbox();
-                    if (!fdata.valid()) {
+                    fdata = make_storage(from.fdata.cdata(), from.fdata.size());
+                    if (!fdata.null()) {
                         type_ = NetAddrType::null;
                         return;
                     }
@@ -76,7 +77,7 @@ namespace utils {
 
             ~NetAddr() {
                 if (internal::NetAddronHeap(type_)) {
-                    fdata.~BoxByteLenBase();
+                    fdata.~basic_storage_vec();
                 }
             }
             NetAddr(const NetAddr& from) {
@@ -107,7 +108,7 @@ namespace utils {
 
             constexpr const byte* data() const {
                 if (internal::NetAddronHeap(type_)) {
-                    return fdata.data();
+                    return fdata.cdata();
                 }
                 return const_cast<byte*>(bdata);
             }
@@ -122,7 +123,7 @@ namespace utils {
                 if (type_ == NetAddrType::ipv6) {
                     return 16;
                 }
-                return fdata.len();
+                return fdata.size();
             }
 
             constexpr NetAddrType type() const {
@@ -132,26 +133,32 @@ namespace utils {
 
         struct NetPort {
            private:
-            byte port[2]{};
+            std::uint16_t port = 0;
 
            public:
             constexpr operator std::uint16_t() const {
-                return ConstByteLen{port, 2}.as<std::uint16_t>();
+                return port;
             }
             constexpr NetPort(std::uint16_t v) {
-                WPacket w{{port, 2}};
-                w.as(v);
-            }
-
-            constexpr explicit NetPort(std::uint16_t v, bool big_endian) {
-                WPacket w{{port, 2}};
-                w.as(v, big_endian);
+                port = v;
             }
 
             constexpr NetPort() = default;
 
-            constexpr const byte* data() const {
+            constexpr std::uint16_t u16() const {
                 return port;
+            }
+
+            constexpr bool is_system() const {
+                return port <= 1023;
+            }
+
+            constexpr bool is_user() const {
+                return 1024 <= port && port <= 49151;
+            }
+
+            constexpr bool is_dynamic_private() const {
+                return 49152 <= port;
             }
         };
 
@@ -213,6 +220,14 @@ namespace utils {
             }
             return {ipv4(d.first.addr), true};
         }
+
+        // SockAttr is socket basic attributes to make socket
+        struct SockAttr {
+            int address_family = 0;
+            int socket_type = 0;
+            int protocol = 0;
+            int flag = 0;
+        };
 
     }  // namespace dnet
 }  // namespace utils

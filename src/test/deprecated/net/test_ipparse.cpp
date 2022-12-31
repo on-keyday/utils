@@ -31,7 +31,7 @@ constexpr auto testv4(auto str) {
 }
 
 constexpr auto outv6(auto str, bool v4 = false) {
-    utils::number::Array<50, char, true> data{};
+    utils::number::Array<char, 50, true> data{};
     auto seq = utils::make_ref_seq(str);
     utils::ipaddr::ipv6_to_string(data, str, v4);
     return data;

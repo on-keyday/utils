@@ -10,7 +10,7 @@
 #include <deprecated/net/async/pool.h>
 #include <async/worker.h>
 #include <thread>
-#include <platform/windows/io_completetion_port.h>
+// #include <platform/windows/io_completetion_port.h>
 
 namespace utils {
     namespace net {
@@ -23,9 +23,9 @@ namespace utils {
         std::atomic_bool flag;
 
         void completion_thread(bool inf) {
-            auto iocp = platform::windows::get_iocp();
+            // auto iocp = platform::windows::get_iocp();
             while (flag) {
-                iocp->wait_callbacks(64, inf ? ~0 : 500);
+                // iocp->wait_callbacks(64, inf ? ~0 : 500);
             }
         }
 

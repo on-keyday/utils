@@ -196,8 +196,8 @@ namespace utils {
                 auto fn = [](void* user, const char* key, size_t ksize, const char* value, size_t vsize) {
                     auto h = decltype(ptr)(user);
                     String k, v;
-                    helper::append(k, helper::SizedView(key, ksize));
-                    helper::append(v, helper::SizedView(value, vsize));
+                    helper::append(k, view::CharVec(key, ksize));
+                    helper::append(v, view::CharVec(value, vsize));
                     h->emplace(std::move(k), std::move(v));
                 };
                 return get_header_impl(fn, ptr);

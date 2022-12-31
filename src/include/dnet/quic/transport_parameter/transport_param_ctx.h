@@ -20,7 +20,7 @@ namespace utils {
                     DefinedTransportParams local;
                     DefinedTransportParams peer;
                     TransportParamBox local_box;
-                    TransportParamBox remote_box;
+                    TransportParamBox peer_box;
                     DuplicateSetChecker peer_checker;
 
                    private:
@@ -79,8 +79,12 @@ namespace utils {
                         return set_(local, local_box, nullptr, param, false);
                     }
 
+                    bool boxing() {
+                        return local_box.boxing(local) && peer_box.boxing(peer);
+                    }
+
                     error::Error set_peer(TransportParameter param, bool local_is_server) {
-                        return set_(peer, remote_box, &peer_checker, param, false);
+                        return set_(peer, peer_box, &peer_checker, param, false);
                     }
                 };
             }  // namespace trsparam

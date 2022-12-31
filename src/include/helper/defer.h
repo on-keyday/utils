@@ -13,6 +13,7 @@
 
 namespace utils {
     namespace helper {
+
         template <class Fn>
         struct Defer {
            private:

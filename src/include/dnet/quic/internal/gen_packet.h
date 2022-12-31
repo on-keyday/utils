@@ -23,9 +23,16 @@ namespace utils {
                 std::uint32_t version = 0;
                 bool spin = false;
                 bool key_phase = false;
+
+                bool ack_eliciting = false;
+                bool in_flight = false;
             };
-            using GenPayloadCB = closure::Callback<void, WPacket&, size_t>;
-            error::Error generate_initial_packet(QUICContexts* p, PacketArg arg, GenPayloadCB cb);
+            using GenPayloadCB = closure::Callback<error::Error, PacketArg&, WPacket&, size_t /*space*/, size_t /*packet number*/>;
+            dnet_dll_export(error::Error) generate_initial_packet(QUICContexts* p, PacketArg arg, GenPayloadCB cb);
+            dnet_dll_export(error::Error) generate_handshake_packet(QUICContexts* q, PacketArg arg, GenPayloadCB gen_payload);
+            dnet_dll_export(error::Error) generate_onertt_packet(QUICContexts* q, PacketArg arg, GenPayloadCB gen_payload);
+
+            dnet_dll_export(error::Error) generate_packets(QUICContexts* q);
 
         }  // namespace quic::handler
     }      // namespace dnet

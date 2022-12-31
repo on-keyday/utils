@@ -9,18 +9,22 @@
 #include <dnet/quic/internal/packet_handler.h>
 #include <dnet/quic/internal/frame_handler.h>
 #include <dnet/quic/packet/packet_util.h>
-#include <dnet/quic/frame/frame_util.h>
-#include <dnet/quic/frame/vframe.h>
+// #include <dnet/quic/frame/frame_util.h>
+// #include <dnet/quic/frame/vframe.h>
 #include <dnet/quic/crypto/crypto.h>
+#include <core/sequencer.h>
+#include <dnet/quic/frame/cast.h>
+#include <dnet/quic/frame/parse.h>
 
 namespace utils {
     namespace dnet {
         namespace quic::handler {
 
-            error::Error handle_frames(QUICContexts* q, ByteLen raw_frames, QPacketNumber packet_number, PacketState state) {
+            dnet_dll_implement(error::Error) handle_frames(QUICContexts* q, ByteLen raw_frames, QPacketNumber packet_number, PacketState state) {
                 bool should_gen_ack = false;
                 error::Error err;
-                frame::parse_frames(raw_frames, [&](frame::Frame& f, bool enc_err) {
+                io::reader r{view::rvec(raw_frames.data, raw_frames.len)};
+                frame::parse_frames<easy::Vec>(r, [&](frame::Frame& f, bool enc_err) {
                     auto typ = f.type.type_detail();
                     if (enc_err) {
                         err = QUICError{
@@ -49,19 +53,19 @@ namespace utils {
                     if (typ == FrameType::PING) {
                         return true;
                     }
-                    else if (auto a = frame::frame_cast<frame::ACKFrame>(&f)) {
+                    else if (auto a = frame::cast<frame::ACKFrame<easy::Vec>>(&f)) {
                         err = on_ack(q, *a, state.space);
                     }
-                    else if (auto c = frame::frame_cast<frame::CryptoFrame>(&f)) {
+                    else if (auto c = frame::cast<frame::CryptoFrame>(&f)) {
                         err = on_crypto(q, *c, state.enc_level);
                     }
-                    else if (auto c = frame::frame_cast<frame::ConnectionCloseFrame>(&f)) {
+                    else if (auto c = frame::cast<frame::ConnectionCloseFrame>(&f)) {
                         err = on_connection_close(q, *c);
                     }
-                    else if (auto n = frame::frame_cast<frame::NewConnectionIDFrame>(&f)) {
+                    else if (auto n = frame::cast<frame::NewConnectionIDFrame>(&f)) {
                         err = on_new_connection_id(q, *n);
                     }
-                    else if (auto b = frame::frame_cast<frame::StreamsBlockedFrame>(&f)) {
+                    else if (auto b = frame::cast<frame::StreamsBlockedFrame>(&f)) {
                         err = on_streams_blocked(q, *b);
                     }
                     else {
@@ -88,9 +92,11 @@ namespace utils {
 
             error::Error common_decrypt_and_handle_frame(QUICContexts* q, std::uint32_t version, PacketState state, ByteLen src, auto& cipher, auto get_pn) {
                 auto secret = q->crypto.rsecrets[int(state.enc_level)].secret.unbox();
-                crypto::CryptoPacketInfo info = packet::make_cryptoinfo_from_cipher_packet(cipher, src, crypto::cipher_tag_length);
+                crypto::CryptoPacketInfo info = packet::make_cryptoinfo_from_cipher_packet(cipher, src, crypto::authentication_tag_length);
                 crypto::Keys keys;
-                if (auto err = crypto::decrypt_packet(keys, version, {}, info, secret)) {
+                if (auto err = crypto::decrypt_packet(keys, version, {}, info, secret, [&](QPacketNumber qpn) {
+                        return std::uint64_t(q->ackh.decode_packet_number(qpn, state.space));
+                    })) {
                     return QUICError{
                         .msg = "failed to decrypt packet",
                         .transport_error = TransportError::CRYPTO_ERROR,
@@ -101,7 +107,7 @@ namespace utils {
                 return handle_frames(q, info.processed_payload, get_pn(plain_text), state);
             }
 
-            error::Error on_initial_packet(QUICContexts* q, ByteLen src, packet::InitialPacketCipher& packet) {
+            dnet_dll_implement(error::Error) on_initial_packet(QUICContexts* q, ByteLen src, packet::InitialPacketCipher& packet) {
                 auto wp = q->get_tmpbuf();
                 auto version = packet.version;
                 auto& storage = q->crypto.rsecrets[int(crypto::EncryptionLevel::initial)];
@@ -125,7 +131,7 @@ namespace utils {
                                                        });
             }
 
-            error::Error on_handshake_packet(QUICContexts* q, ByteLen src, packet::HandshakePacketCipher& packet) {
+            dnet_dll_implement(error::Error) on_handshake_packet(QUICContexts* q, ByteLen src, packet::HandshakePacketCipher& packet) {
                 if (!q->crypto.has_read_secret(crypto::EncryptionLevel::handshake)) {
                     ParsePendingQUICPackets qp;
                     qp.queued_at = q->ackh.clock.now();
@@ -150,7 +156,7 @@ namespace utils {
                                                        });
             }
 
-            error::Error on_retry_packet(QUICContexts* q, ByteLen src, packet::RetryPacket& packet) {
+            dnet_dll_implement(error::Error) on_retry_packet(QUICContexts* q, ByteLen src, packet::RetryPacket& packet) {
                 packet::RetryPseduoPacket pseduo;
                 pseduo.from_retry_packet(q->params.local.original_dst_connection_id, packet);
                 auto tmp = q->get_tmpbuf();
@@ -168,11 +174,11 @@ namespace utils {
                 return error::none;
             }
 
-            error::Error on_0rtt_packet(QUICContexts* q, ByteLen src, packet::ZeroRTTPacketCipher&) {
+            dnet_dll_implement(error::Error) on_0rtt_packet(QUICContexts* q, ByteLen src, packet::ZeroRTTPacketCipher&) {
                 return error::none;
             }
 
-            error::Error on_1rtt_packet(QUICContexts* q, ByteLen src, packet::OneRTTPacketCipher& packet) {
+            dnet_dll_implement(error::Error) on_1rtt_packet(QUICContexts* q, ByteLen src, packet::OneRTTPacketCipher& packet) {
                 if (!q->crypto.has_read_secret(crypto::EncryptionLevel::application)) {
                     ParsePendingQUICPackets qp;
                     qp.queued_at = q->ackh.clock.now();
@@ -198,15 +204,16 @@ namespace utils {
                                                        });
             }
 
-            error::Error on_stateless_reset(QUICContexts* q, ByteLen src, packet::StatelessReset&) {
+            dnet_dll_implement(error::Error) on_stateless_reset(QUICContexts* q, ByteLen src, packet::StatelessReset&) {
                 return error::none;
             }
 
-            error::Error recv_QUIC_packets(QUICContexts* q, ByteLen src) {
+            dnet_dll_implement(error::Error) recv_QUIC_packets(QUICContexts* q, ByteLen src) {
                 auto is_stateless_reset = [](packet::StatelessReset&) { return false; };
                 auto get_dstID_len = [&](ByteLen head, size_t* len) {
+                    auto seq = make_cpy_seq(view::rvec(head.data, head.len));
                     for (auto& issued : q->srcIDs.connIDs) {
-                        if (head.expect(issued.second.id)) {
+                        if (seq.match(issued.second.id)) {
                             *len = issued.second.id.size();
                             return true;
                         }
@@ -236,9 +243,9 @@ namespace utils {
                         auto long_packet = static_cast<packet::LongPacketBase&>(p);
                         size_t seq_id = ~0;
                         for (auto& val : q->srcIDs.connIDs) {
-                            if (ByteLen{val.second.id.data(), val.second.id.size()}.equal_to(long_packet.dstID)) {
+                            if (view::rvec(val.second.id) ==
+                                view::rvec(long_packet.dstID.data, long_packet.dstID.len)) {
                                 seq_id = val.first;
-                                break;
                             }
                         }
                         if (seq_id == ~0) {

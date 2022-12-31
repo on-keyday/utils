@@ -11,24 +11,24 @@
 #include <dnet/quic/transport_parameter/transport_param.h>
 #include <string>
 #include <random>
-#include <dnet/quic/frame/frame.h>
-#include <dnet/quic/frame/frame_util.h>
+#include <dnet/quic/frame_old/frame.h>
+#include <dnet/quic/frame_old/frame_util.h>
 #include <dnet/quic/packet/packet.h>
 #include <dnet/socket.h>
 #include <dnet/plthead.h>
 #include <dnet/addrinfo.h>
-#include <dnet/quic/frame/vframe.h>
+#include <dnet/quic/frame_old/vframe.h>
 #include <dnet/quic/packet/packet_util.h>
-#include <dnet/quic/frame/frame_make.h>
+#include <dnet/quic/frame_old/frame_make.h>
 #include <dnet/quic/crypto/crypto.h>
 
 using namespace utils;
-using ubytes = std::basic_string<dnet::byte>;
+using ubytes = std::basic_string<byte>;
 
 struct Test {
     ubytes handshake_data;
     bool flush;
-    dnet::byte alert;
+    byte alert;
     dnet::quic::crypto::EncryptionLevel wlevel = {};
     dnet::quic::crypto::EncryptionLevel rlevel = {};
     ubytes wsecret;
@@ -65,7 +65,7 @@ ubytes genrandom(size_t len) {
     auto dev = std::random_device();
     std::uniform_int_distribution<> uni(0, 0xff);
     for (size_t i = 0; i < len; i++) {
-        val.push_back(dnet::byte(uni(dev)));
+        val.push_back(byte(uni(dev)));
     }
     return val;
 }
@@ -87,7 +87,7 @@ void test_dnetquic_initial() {
     tls.set_alpn("\x02h3", 3);
     dnet::quic::trsparam::DefinedTransportParams params{};
     dnet::WPacket srcw, dstw;
-    dnet::byte src[3000]{}, data[5000]{};
+    byte src[3000]{}, data[5000]{};
     srcw.b.data = src;
     srcw.b.len = sizeof(src);
     auto srcID = genrandom(20);
@@ -119,30 +119,27 @@ void test_dnetquic_initial() {
     auto info = dnet::quic::packet::make_cryptoinfo_from_plain_packet(dstw, packet.first, 16);
     auto secret = dnet::quic::crypto::make_initial_secret(srcw, 1, packet.first.dstID, true);
     dnet::quic::crypto::Keys keys;
-    res = dnet::quic::crypto::encrypt_packet(keys, 1, {}, info, secret).is_noerr();
+    res = dnet::quic::crypto::encrypt_packet(keys, 1, {}, info, secret, 0).is_noerr();
 
     assert(res);
     auto packet_ = info.composition();
 
-    dnet::SockAddr addr{};
-    addr.hostname = "localhost";
-    addr.namelen = 9;
-    addr.type = SOCK_DGRAM;
-    auto wait = dnet::resolve_address(addr, "8090");
+    auto wait = dnet::resolve_address("localhost", "8090", {.socket_type = SOCK_DGRAM});
     auto resolved = wait.wait();
     assert(!wait.failed());
     resolved.next();
-    resolved.sockaddr(addr);
-    auto sock = dnet::make_socket(addr.af, addr.type, addr.proto);
+    auto addr = resolved.sockaddr();
+
+    auto sock = dnet::make_socket(addr.attr.address_family, addr.attr.socket_type, addr.attr.protocol);
     assert(sock);
     dnet::error::Error err;
-    std::tie(std::ignore, err) = sock.writeto(addr.addr, addr.addrlen, packet_.data, packet_.len);
+    std::tie(std::ignore, err) = sock.writeto(addr.addr, view::rvec(packet_.data, packet_.len));
     assert(!err);
     ::sockaddr_storage storage;
     int addrlen = sizeof(storage);
     while (true) {
-        if (auto [readsize, err] = sock.readfrom(reinterpret_cast<dnet::raw_address*>(&storage), &addrlen, dstw.b.data, dstw.b.len); !err) {
-            dstw.offset = readsize;
+        if (auto [read, addr, err] = sock.readfrom(view::wvec(dstw.b.data, dstw.b.len)); !err) {
+            dstw.offset = read.size();
             break;
         }
         else if (dnet::isSysBlock(err)) {

@@ -17,7 +17,7 @@
 
 #include <helper/appender.h>
 
-#include <helper/view.h>
+#include <view/charvec.h>
 
 // #include "../../wrap/light/string.h"
 
@@ -86,7 +86,7 @@ namespace utils {
                 size_t red = 0;
                 State st = read(io, inbuf, inbufsize, &red);
                 if (st == State::complete) {
-                    helper::append(buf, helper::SizedView(inbuf, red));
+                    helper::append(buf, view::CharVec(inbuf, red));
                     if (red >= inbufsize) {
                         continue;
                     }

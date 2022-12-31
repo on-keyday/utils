@@ -11,7 +11,7 @@
 #include <platform/windows/dllexport_header.h>
 #include <wrap/light/enum.h>
 #include <helper/equal.h>
-#include <iface/error_log.h>
+#include <deprecated/iface/error_log.h>
 #include <helper/appender.h>
 #include <number/array.h>
 
@@ -246,9 +246,9 @@ namespace utils {
         }
 
         template <class Char>
-        using Host = number::Array<254, Char, true>;
+        using Host = number::Array<Char, 254, true>;
         template <class Char>
-        using Port = number::Array<10, Char, true>;
+        using Port = number::Array<Char, 10, true>;
 
     }  // namespace cnet
 }  // namespace utils

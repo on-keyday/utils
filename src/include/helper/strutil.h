@@ -11,7 +11,7 @@
 
 #include "../core/sequencer.h"
 
-#include "view.h"
+#include "../view/reverse.h"
 
 #include "compare_type.h"
 
@@ -26,9 +26,9 @@ namespace utils {
 
         template <class In, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool ends_with(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
-            using reverse_type = ReverseView<buffer_t<In&>>;
+            using reverse_type = view::ReverseView<buffer_t<In&>>;
             Sequencer<reverse_type> intmp(reverse_type{in});
-            ReverseView<buffer_t<Cmp&>> cmptmp{cmp};
+            view::ReverseView<buffer_t<Cmp&>> cmptmp{cmp};
             return intmp.match(cmptmp, compare);
         }
 
@@ -104,44 +104,6 @@ namespace utils {
                 }
             }
             return count;
-        }
-
-        template <class T, class Sep = const char*>
-        struct SplitView {
-            Buffer<buffer_t<T>> buf;
-            Sep sep;
-            template <class V>
-            constexpr SplitView(V&& t)
-                : buf(std::forward<V>(t)) {}
-
-            constexpr auto operator[](size_t index) const {
-                constexpr auto eq = default_compare();
-                size_t first = index == 0 ? 0 : find(buf.buffer, sep, index - 1, 0, eq);
-                size_t second = find(buf.buffer, sep, index, 0, eq);
-                if (first == ~0 && second == ~0) {
-                    return make_ref_slice(buf.buffer, 0, 0);
-                }
-                auto add = make_ref_seq(sep).size();
-                return make_ref_slice(buf.buffer, index == 0 ? first : first + add, second);
-            }
-
-            constexpr size_t size() const {
-                return count(buf.buffer, sep) + 1;
-            }
-        };
-
-        template <class T, class Sep>
-        constexpr auto make_ref_splitview(T&& t, Sep&& sep) {
-            SplitView<buffer_t<T&>, buffer_t<Sep>> splt{t};
-            splt.sep = sep;
-            return splt;
-        }
-
-        template <class T, class Sep>
-        constexpr auto make_cpy_splitview(T&& t, Sep&& sep) {
-            SplitView<buffer_t<std::remove_reference_t<T>>, buffer_t<Sep>> splt{std::forward<T>(t)};
-            splt.sep = sep;
-            return splt;
         }
 
     }  // namespace helper

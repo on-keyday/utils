@@ -11,7 +11,7 @@
 #include <dnet/dll/glheap.h>
 #include <dnet/http2/http2.h>
 #include <helper/equal.h>
-#include <helper/view.h>
+#include <view/charvec.h>
 #include <cstring>
 
 namespace utils {
@@ -90,7 +90,7 @@ namespace utils {
         }
 
         String::String(const char* val, size_t size) {
-            helper::append(*this, helper::SizedView(val, size));
+            helper::append(*this, view::CharVec(val, size));
         }
 
         size_t String::cap() const {
@@ -124,13 +124,13 @@ namespace utils {
         bool String::recap(size_t i) {
             HTTPBufProxy p{buf};
             if (!p.text()) {
-                p.text() = get_cvec(i, DNET_DEBUG_MEMORY_LOCINFO(true, i, alignof(char)));
+                p.text() = get_charvec(i, DNET_DEBUG_MEMORY_LOCINFO(true, i, alignof(char)));
                 if (!p.text()) {
                     return false;
                 }
             }
             else {
-                if (!resize_cvec(p.text(), i, DNET_DEBUG_MEMORY_LOCINFO(true, p.cap(), alignof(char)))) {
+                if (!resize_charvec(p.text(), i, DNET_DEBUG_MEMORY_LOCINFO(true, p.cap(), alignof(char)))) {
                     return false;
                 }
             }

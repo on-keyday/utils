@@ -10,7 +10,6 @@
 #include <dnet/addrinfo.h>
 #include <utf/convert.h>
 #include <number/array.h>
-#include <helper/view.h>
 #include <dnet/dll/glheap.h>
 #include <helper/defer.h>
 #include <dnet/errcode.h>
@@ -21,6 +20,7 @@
 #include <dnet/dll/errno.h>
 #include <net_util/ipaddr.h>
 #include <dnet/dll/asyncbase.h>
+#include <view/charvec.h>
 #ifndef _WIN32
 #include <signal.h>
 #include <thread>
@@ -33,16 +33,16 @@ namespace utils {
         void free_addr(void* p) {
             socdl.FreeAddrInfoExW_(raw_paddrinfo(p));
         }
-        using Host = number::Array<255, wchar_t, true>;
-        using Port = number::Array<20, wchar_t, true>;
+        using Host = number::Array<wchar_t, 255, true>;
+        using Port = number::Array<wchar_t, 20, true>;
         constexpr auto cancel_ok = 0;
 #else
         using raw_paddrinfo = addrinfo*;
         void free_addr(void* p) {
             socdl.freeaddrinfo_(raw_paddrinfo(p));
         }
-        using Host = number::Array<255, char, true>;
-        using Port = number::Array<20, char, true>;
+        using Host = number::Array<char, 255, true>;
+        using Port = number::Array<char, 20, true>;
         constexpr auto cancel_ok = EAI_CANCELED;
 #endif
 
@@ -60,6 +60,18 @@ namespace utils {
             return select;
         }
 
+        SockAddr AddrInfo::sockaddr() const {
+            SockAddr addr;
+            auto ptr = raw_paddrinfo(select);
+            addr.addr = sockaddr_to_NetAddrPort(ptr->ai_addr, ptr->ai_addrlen);
+            addr.attr.address_family = ptr->ai_family;
+            addr.attr.socket_type = ptr->ai_socktype;
+            addr.attr.protocol = ptr->ai_protocol;
+            addr.attr.flag = ptr->ai_flags;
+            return addr;
+        }
+
+        /*
         const void* AddrInfo::sockaddr(SockAddr& info) const {
             if (!select) {
                 return nullptr;
@@ -80,7 +92,7 @@ namespace utils {
             }
             auto ptr = raw_paddrinfo(select);
             return sockaddr_to_NetAddrPort(ptr->ai_addr, ptr->ai_addrlen);
-        }
+        }*/
 
         bool string_from_sockaddr_impl(int af, const void* addr, size_t addrlen, void* text, size_t len, int* err, int* port) {
             const char* ptr = nullptr;
@@ -243,11 +255,11 @@ namespace utils {
             return false;
         }
 
-        static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host* host, Port* port) {
+        static WaitObject* platform_resolve_address(const SockAttr& addr, int& err, Host* host, Port* port) {
             ADDRINFOEXW hint{};
-            hint.ai_family = addr.af;
-            hint.ai_socktype = addr.type;
-            hint.ai_protocol = addr.proto;
+            hint.ai_family = addr.address_family;
+            hint.ai_socktype = addr.socket_type;
+            hint.ai_protocol = addr.protocol;
             hint.ai_flags = addr.flag;
             timeval timeout;
             timeout.tv_sec = 60;
@@ -297,7 +309,7 @@ namespace utils {
             return false;
         }
 
-        static WaitObject* platform_resolve_address(const SockAddr& addr, int& err, Host* host, Port* port) {
+        static WaitObject* platform_resolve_address(const SockAttr& addr, int& err, Host* host, Port* port) {
             auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
             if (!obj) {
                 err = no_resource;
@@ -306,9 +318,9 @@ namespace utils {
             auto r = helper::defer([&] {
                 delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
             });
-            obj->hint.ai_family = addr.af;
-            obj->hint.ai_socktype = addr.type;
-            obj->hint.ai_protocol = addr.proto;
+            obj->hint.ai_family = addr.address_family;
+            obj->hint.ai_socktype = addr.socket_type;
+            obj->hint.ai_protocol = addr.protocol;
             obj->hint.ai_flags = addr.flag;
             obj->cb.ar_request = &obj->hint;
             if (host) {
@@ -371,7 +383,7 @@ namespace utils {
             }
         }
 
-        dnet_dll_implement(WaitAddrInfo) resolve_address(const SockAddr& addr, const char* port) {
+        dnet_dll_implement(WaitAddrInfo) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr) {
             if (!init_sockdl()) {
                 return {
                     nullptr,
@@ -380,29 +392,25 @@ namespace utils {
             }
             Host host{};
             Port port_{};
-            if (addr.hostname) {
-                utf::convert(helper::SizedView(addr.hostname, addr.namelen), host);
+            if (!hostname.null()) {
+                utf::convert(view::rvec(hostname), host);
             }
-            if (port) {
+            if (!port.null()) {
                 utf::convert(port, port_);
             }
             int err = 0;
-            auto obj = platform_resolve_address(addr, err, addr.hostname ? &host : nullptr, port ? &port_ : nullptr);
+            auto obj = platform_resolve_address(attr, err, !hostname.null() ? &host : nullptr, !port.null() ? &port_ : nullptr);
             if (!obj) {
                 return {nullptr, err};
             }
             return {obj, 0};
         }
 
-        dnet_dll_implement(WaitAddrInfo) get_self_server_address(const SockAddr& addr, const char* port) {
-            auto hint = addr;
-            hint.hostname = nullptr;
-            hint.namelen = 0;
-            hint.flag |= AI_PASSIVE;
-            return resolve_address(hint, port);
+        dnet_dll_implement(WaitAddrInfo) get_self_server_address(view::rvec port, SockAttr attr) {
+            return resolve_address({}, port, attr);
         }
 
-        dnet_dll_export(WaitAddrInfo) get_self_host_address(const SockAddr& addr, const char* port) {
+        dnet_dll_export(WaitAddrInfo) get_self_host_address(view::rvec port, SockAttr attr) {
             if (!init_sockdl()) {
                 return {nullptr, libload_failed};
             }
@@ -411,10 +419,7 @@ namespace utils {
             if (err != 0) {
                 return {nullptr, (int)get_error()};
             }
-            auto hint = addr;
-            hint.hostname = host;
-            hint.namelen = utils::strlen(host);
-            return resolve_address(hint, port);
+            return resolve_address(host, port, attr);
         }
     }  // namespace dnet
 }  // namespace utils

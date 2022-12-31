@@ -11,12 +11,12 @@
 #include "dll/httpbuf.h"
 #include "httpstring.h"
 #include "../helper/appender.h"
-#include "../helper/view.h"
+#include "../view/charvec.h"
 #include "../helper/pushbacker.h"
 #include "../helper/readutil.h"
 #include <cstdint>
 #include <random>
-#include "byte.h"
+#include "../core/byte.h"
 
 namespace utils {
     namespace dnet {
@@ -86,7 +86,7 @@ namespace utils {
                     lens[0] |= 0x80;
                 }
                 buf.push_back(first_byte);
-                helper::append(buf, helper::SizedView(lens, len));
+                helper::append(buf, view::CharVec(lens, len));
                 if (frame.masked) {
                     byte keys[]{
                         byte((frame.maskkey >> 24) & 0xff),
@@ -94,9 +94,9 @@ namespace utils {
                         byte((frame.maskkey >> 8) & 0xff),
                         byte((frame.maskkey) & 0xff),
                     };
-                    helper::append(buf, helper::SizedView(keys, 4));
+                    helper::append(buf, view::CharVec(keys, 4));
                     if (no_mask) {
-                        helper::append(buf, helper::SizedView(frame.data, frame.len));
+                        helper::append(buf, view::CharVec(frame.data, frame.len));
                     }
                     else {
                         for (size_t i = 0; i < frame.len; i++) {
@@ -105,7 +105,7 @@ namespace utils {
                     }
                 }
                 else {
-                    helper::append(buf, helper::SizedView(frame.data, frame.len));
+                    helper::append(buf, view::CharVec(frame.data, frame.len));
                 }
                 return true;
             }
@@ -323,7 +323,7 @@ namespace utils {
                 String str;
                 str.push_back((code >> 8) & 0xff);
                 str.push_back((code)&0xff);
-                helper::append(str, helper::SizedView(phrase, len));
+                helper::append(str, view::CharVec(phrase, len));
                 return write_close(str.begin(), str.size());
             }
 

@@ -11,14 +11,14 @@
 void test_urlparse() {
     utils::net::URI url;
     utils::net::rough_uri_parse("google.com", url);
-    assert(url.host == "google.com" && "expect google.com but not");
+    assert(url.hostname == "google.com" && "expect google.com but not");
     url = {};
     utils::net::rough_uri_parse("https://on-keyday:pass@gmail.com:443/?a=b#tag", url);
     assert(url.scheme == "https:");
     assert(url.has_double_slash == true);
     assert(url.user == "on-keyday");
     assert(url.password == "pass");
-    assert(url.host == "gmail.com");
+    assert(url.hostname == "gmail.com");
     assert(url.port == ":443");
     assert(url.path == "/");
     assert(url.query == "?a=b");
@@ -28,7 +28,7 @@ void test_urlparse() {
     utils::net::rough_uri_parse("file:///D:/Minitools/Utils/test.txt", url);
     assert(url.scheme == "file:");
     assert(url.has_double_slash == true);
-    assert(url.host == "");
+    assert(url.hostname == "");
     assert(url.path == "/D:/Minitools/Utils/test.txt");
     url = {};
     utils::net::rough_uri_parse(R"(javascript:alert("hogehoge"))", url);
@@ -42,7 +42,7 @@ void test_urlparse() {
     utils::net::rough_uri_parse("mailto:friend@example.com", url);
     assert(url.scheme == "mailto:");
     assert(url.user == "friend");
-    assert(url.host == "example.com");
+    assert(url.hostname == "example.com");
 }
 
 int main() {

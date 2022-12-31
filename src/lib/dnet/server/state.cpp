@@ -54,10 +54,10 @@ namespace utils {
             void State::accept_thread(Socket listener, std::shared_ptr<State> state) {
                 Enter start{state->count.current_acceptor_thread};
                 while (!state->count.end_flag.test()) {
-                    auto handle = [&](Socket& sock, IPText addr, int port) {
+                    auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
                         state->count.total_accepted++;
                         state->check_and_start();
-                        state->send << Client{std::move(sock), addr, port};
+                        state->send << Client{std::move(sock), std::move(addr)};
                     };
                     do_accept(listener, handle, [&](error::Error&, bool waiting) {
                         if (!waiting) {
@@ -83,11 +83,11 @@ namespace utils {
                         Enter active(count.current_handling_handler_thread);
                         q.fn(std::move(q.ptr), StateContext{shared_from_this()});
                     }
-                    auto handle = [&](Socket& sock, IPText addr, int port) {
+                    auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
                         count.total_accepted++;
                         Enter active(count.current_handling_handler_thread);
                         if (handler) {
-                            handler(ctx, Client{std::move(sock), addr, port}, StateContext{shared_from_this()});
+                            handler(ctx, Client{std::move(sock), std::move(addr)}, StateContext{shared_from_this()});
                         }
                     };
                     do_accept(listener, handle, [&](error::Error& err, bool waiting) {

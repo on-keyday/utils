@@ -6,7 +6,7 @@
 */
 
 
-#include <iface/base_iface.h>
+#include <deprecated/iface/base_iface.h>
 #include <string>
 #include <cassert>
 #include <map>

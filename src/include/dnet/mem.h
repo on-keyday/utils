@@ -8,7 +8,7 @@
 // mem - memory util
 #pragma once
 #include "dll/dllh.h"
-#include "byte.h"
+#include "../core/byte.h"
 namespace utils {
     namespace dnet {
 

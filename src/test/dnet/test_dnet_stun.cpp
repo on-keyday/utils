@@ -17,20 +17,17 @@ void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
     using namespace std::chrono_literals;
     stun::StunContext ctx;
     SockAddr resolv;
-    resolv.hostname = "stun.l.google.com";
-    resolv.type = SOCK_DGRAM;
-    resolv.af = af;
-    resolv.namelen = strlen(resolv.hostname);
-    auto wait = resolve_address(resolv, "19302");
+    constexpr auto stun_sever = "stun.l.google.com";
+    auto wait = resolve_address(stun_sever, "19302", {.address_family = af, .socket_type = SOCK_DGRAM});
     auto addr = wait.wait();
     assert(!wait.failed());
     Socket sock;
-    NetAddrPort server;
+    SockAddr server;
     while (addr.next()) {
         sock = make_socket(af, SOCK_DGRAM, 0);
         assert(sock);
-        server = addr.netaddr();
-        auto err = sock.connect(server);
+        server = addr.sockaddr();
+        auto err = sock.connect(server.addr);
         if (!err || isSysBlock(err)) {
             break;
         }
@@ -52,10 +49,10 @@ void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
             continue;
         }
         if (result == stun::StunResult::do_roundtrip) {
-            sock.writeto(server, w.b.data, w.offset);
+            sock.writeto(server.addr, utils::view::rvec(w.b.data, w.offset));
             int count = 0;
             while (true) {
-                auto [n, addr, err] = sock.readfrom(w.b.data, w.b.len);
+                auto [n, addr, err] = sock.readfrom(utils::view::wvec(w.b.data, w.b.len));
                 if (err) {
                     if (count > 100) {
                         result = ctx.no_response();
@@ -67,7 +64,7 @@ void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
                     }
                     continue;
                 }
-                auto recv = w.b.resized(n);
+                auto recv = w.b.resized(n.size());
                 result = ctx.response(recv);
                 break;
             }

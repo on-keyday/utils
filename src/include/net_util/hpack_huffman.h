@@ -637,7 +637,7 @@ namespace utils {
         template <std::uint32_t n, class T>
         constexpr HpkErr decode_integer(endian::Reader<T>& se, size_t& sz, std::uint8_t& firstmask) {
             static_assert(n > 0 && n <= 8, "invalid range");
-            constexpr unsigned char msk = static_cast<std::uint8_t>(~0) >> (8 - n);
+            constexpr unsigned char msk = 0xff >> (8 - n);
             std::uint8_t tmp = 0;
             if (!se.read(tmp)) {
                 return HpackError::internal;

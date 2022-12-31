@@ -7,16 +7,16 @@
 
 
 #include <net_util/cookie.h>
-#include <net_util/uri.h>
+#include <net_util/uri_parse.h>
 #include <wrap/light/lite.h>
 
 void test_cookie() {
     utils::wrap::vector<utils::net::cookie::Cookie<utils::wrap::string>> cookies;
     utils::wrap::map<utils::wrap::string, utils::wrap::string> header;
     header = {{"Set-Cookie", "id=a3fWa; Expires=Thu, 21 Oct 2021 07:28:00 GMT; Secure; HttpOnly"}};
-    utils::net::URI uri;
+    utils::uri::URI<std::string> uri;
     uri.path = "/";
-    uri.host = "google.com";
+    uri.hostname = "google.com";
     utils::net::cookie::parse_set_cookie(header, cookies, uri);
 }
 

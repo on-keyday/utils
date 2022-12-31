@@ -38,11 +38,33 @@ namespace utils {
                 return std::addressof(t);
             }
             SFINAE_BLOCK_T_END()
+
+            template <class T>
+            concept has_arrow = requires(T t) {
+                                    { t.operator->() };
+                                };
+
+            template <class T>
+            concept has_deref = requires(T t) {
+                                    { std::addressof(*t) };
+                                };
+
+            constexpr auto deref_impl(auto& t) {
+                if constexpr (has_arrow<decltype(t)>) {
+                    return t.operator->();
+                }
+                else if constexpr (has_deref<decltype(t)>) {
+                    return std::addressof(*t);
+                }
+                else {
+                    return std::addressof(t);
+                }
+            }
         }  // namespace internal
 
         template <class T>
         constexpr auto deref(T&& t) {
-            return internal::derefable<T>::deref(t);
+            return internal::deref_impl(t);
         }
 
         template <class T>

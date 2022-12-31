@@ -154,5 +154,5 @@ int main() {
         }
     } v{};
     err = v;
-    auto& r = utils::helper::iface_cast<decltype(v)&>(err);
+    auto& r = *err.type_assert<decltype(v)>();
 }

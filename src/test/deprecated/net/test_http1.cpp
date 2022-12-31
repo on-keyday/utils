@@ -11,6 +11,7 @@
 #include <wrap/light/string.h>
 #include <wrap/cout.h>
 #include <deprecated/net/http/http1.h>
+#include <view/slice.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -78,5 +79,5 @@ void test_http1() {
 
 int main() {
     test_http1();
-    constexpr auto e = utils::helper::make_ref_slice("call a or b", 2, 3);
+    constexpr auto e = utils::view::make_ref_slice("call a or b", 2, 3);
 }

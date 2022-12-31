@@ -13,8 +13,7 @@ namespace utils {
         namespace server {
             struct Client {
                 Socket sock;
-                IPText ipaddr;
-                int port;
+                NetAddrPort addr;
             };
         }  // namespace server
     }      // namespace dnet

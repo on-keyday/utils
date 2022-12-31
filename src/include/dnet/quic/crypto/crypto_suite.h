@@ -21,6 +21,7 @@ namespace utils {
             namespace crypto {
                 struct HandshakeData {
                     dnet::String data;
+                    size_t offset = 0;
 
                     bool add(const byte* p, size_t len) {
                         return data.append((const char*)p, len);
@@ -30,24 +31,25 @@ namespace utils {
                         return data.size();
                     }
 
+                    size_t remain() {
+                        return data.size() - offset;
+                    }
+
                     ByteLen get(size_t l = ~0, size_t off = 0) {
-                        if (data.size() < off) {
+                        if (data.size() - offset < off) {
                             return {};
                         }
                         if (data.size() - off < l) {
-                            return {(byte*)data.text() + off, data.size() - off};
+                            return {(byte*)data.text() + offset + off, data.size() - offset - off};
                         }
-                        return {(byte*)data.text() + off, l};
+                        return {(byte*)data.text() + offset + off, l};
                     }
 
                     void consume(size_t l = ~0) {
-                        if (l < data.size()) {
-                            l = data.size();
+                        if (l > data.size() - offset) {
+                            l = data.size() - offset;
                         }
-                        clear_memory((byte*)data.text(), l);
-                        auto v = data.size() - l;
-                        memcpy((byte*)data.text(), (byte*)data.text() + l, v);
-                        data.resize(v);
+                        offset += l;
                     }
                 };
 

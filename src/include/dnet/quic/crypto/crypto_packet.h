@@ -12,8 +12,11 @@
 namespace utils {
     namespace dnet {
         namespace quic::crypto {
-            // TODO(on-keyday): check each encryption model
-            constexpr auto cipher_tag_length = 16;
+            // On QUIC version 1, this is 16 byte
+            // see also:
+            // https://tex2e.github.io/rfc-translater/html/rfc9001.html#5-3--AEAD-Usage
+            // https://tex2e.github.io/rfc-translater/html/rfc9001.html#A-2--Client-Initial
+            constexpr auto authentication_tag_length = 16;
 
             struct CryptoPacketInfo {
                 // head is header of QUIC packet without packet number
@@ -25,7 +28,9 @@ namespace utils {
                 // for QUIC v1, tag length is 16
                 // tag.data must be adjacent to payload.data
                 ByteLen tag;
-                // processed_payload is encrypted/decrypted payload without packet number and tags
+                // processed_payload is encrypted/decrypted payload without packet number
+                // when encoding include tag space (QUICv1:16byte)
+                // when decoding exclude tag space
                 ByteLen processed_payload;
 
                 ByteLen composition() const {

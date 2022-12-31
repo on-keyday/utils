@@ -69,10 +69,10 @@ namespace utils {
                     return error::none;
                 }
 
-                error::Error on_ack_received(frame::ACKFrame& ack, PacketNumberSpace space) {
+                error::Error on_ack_received(frame::ACKFrame<easy::Vec>& ack, PacketNumberSpace space) {
                     auto& pn_space = pn_spaces[int(space)];
                     auto largest_pn = PacketNumber(ack.largest_ack.value);
-                    if (pn_space.largest_acked_packet == PacketNumber::infinite) {
+                    if (pn_space.largest_acked_packet == infinity) {
                         pn_space.largest_acked_packet = largest_pn;
                     }
                     else {
@@ -127,24 +127,11 @@ namespace utils {
                     return pn_spaces.set_loss_detection_timer(timer, params, clock, rtt, flags);
                 }
 
-                error::Error process_ecn(frame::ACKFrame& ack, PacketNumberSpace space) {
-                    error::Error err;
-                    auto res = frame::ACKFrame::parse_ecn_counts(ack.ecn_counts, [&](auto ect0, auto ect1, auto ce) {
-                        auto& pn_space = pn_spaces[int(space)];
-                        pn_space.ecn = frame::ECNCounts{ect0, ect1, ce};
-                        auto sent = pn_space.sent_packets[PacketNumber(ack.largest_ack.value)].time_sent;
-                        err = cong.on_congestion_event(clock, sent);
-                        return true;
-                    });
-                    if (res == 0) {
-                        return QUICError{
-                            .msg = "ecn counts encoding is not valid",
-                            .transport_error = TransportError::FRAME_ENCODING_ERROR,
-                            .frame_type = ack.type.type_detail(),
-                            .base = std::move(err),
-                        };
-                    }
-                    return err;
+                error::Error process_ecn(frame::ACKFrame<easy::Vec>& ack, PacketNumberSpace space) {
+                    auto& pn_space = pn_spaces[int(space)];
+                    pn_space.ecn = ack.ecn_counts;
+                    auto sent = pn_space.sent_packets[PacketNumber(ack.largest_ack.value)].time_sent;
+                    return cong.on_congestion_event(clock, sent);
                 }
 
                 error::Error maybeTimeout() {
@@ -215,7 +202,7 @@ namespace utils {
                 QPacketNumber encode_packet_number(size_t pn, PacketNumberSpace space) {
                     auto largest_ack = pn_spaces[int(space)].largest_acked_packet;
                     size_t num_unacked = 0;
-                    if (largest_ack == PacketNumber::infinite) {
+                    if (largest_ack == infinity) {
                         num_unacked = pn + 1;
                     }
                     else {

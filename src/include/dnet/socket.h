@@ -86,17 +86,26 @@ namespace utils {
             error::Error get_remoteaddr(raw_address* addr, int* addrlen);
             std::pair<NetAddrPort, error::Error> get_remoteaddr();
 
-            std::pair<size_t, error::Error> write(const void* data, size_t len, int flag = 0);
-            std::pair<size_t, error::Error> read(void* data, size_t len, int flag = 0, bool is_stream = true);
-            std::pair<size_t, error::Error> writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag = 0);
-            std::pair<size_t, error::Error> writeto(const NetAddrPort& addr, const void* data, size_t len, int flag = 0);
-            std::pair<size_t, error::Error> readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag = 0, bool is_stream = false);
-            std::tuple<size_t, NetAddrPort, error::Error> readfrom(void* data, size_t len, int flag = 0, bool is_stream = false);
+            // returns (remain,err)
+            std::pair<view::rvec, error::Error> write(view::rvec data, int flag = 0);
 
-            [[nodiscard]] error::Error accept(Socket& to, raw_address* addr, int* addrlen);
+            // returns (read,err)
+            std::pair<view::wvec, error::Error> read(view::wvec data, int flag = 0, bool is_stream = true);
+            // std::pair<size_t, error::Error> writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag = 0);
+
+            // returns (remain,err)
+            std::pair<view::rvec, error::Error> writeto(const NetAddrPort& addr, view::rvec data, int flag = 0);
+            // std::pair<size_t, error::Error> readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag = 0, bool is_stream = false);
+
+            std::tuple<view::wvec, NetAddrPort, error::Error> readfrom(view::wvec data, int flag = 0, bool is_stream = false);
+
+            // [[nodiscard]] error::Error accept(Socket& to, raw_address* addr, int* addrlen);
             [[nodiscard]] std::tuple<Socket, NetAddrPort, error::Error> accept();
             error::Error bind(const raw_address* addr /* = sockaddr*/, size_t len);
-            error::Error listen(int back = 10);
+
+            error::Error bind(const NetAddrPort& addr);
+
+            error::Error listen(int backlog = 10);
 
             // wait_readable waits socket until to be readable using select function or until timeout
             error::Error wait_readable(std::uint32_t sec, std::uint32_t usec);
@@ -172,16 +181,16 @@ namespace utils {
             // if something is read, red would be true
             // otherwise false
             // read_until_block returns block() function result
-            error::Error read_until_block(bool& red, void* data, size_t size, auto&& callback) {
+            error::Error read_until_block(bool& red, view::wvec data, auto&& callback) {
                 red = false;
                 error::Error err;
                 while (true) {
-                    size_t redsize = 0;
-                    std::tie(redsize, err) = read(data, size);
+                    view::wvec red_v;
+                    std::tie(red_v, err) = read(data);
                     if (err) {
                         break;
                     }
-                    callback(redsize);
+                    callback(red_v.size());
                     red = true;
                 }
                 if (isSysBlock(err)) {
@@ -221,7 +230,7 @@ namespace utils {
                     add(obj, (const char*)b.data, b.len);
                     if (!err && full) {
                         bool red = false;
-                        s.read_until_block(red, b.data, b.len, [&](size_t redsize) {
+                        s.read_until_block(red, view::wvec(b.data, b.len), [&](size_t redsize) {
                             add(obj, (const char*)b.data, redsize);
                         });
                     }
@@ -267,6 +276,10 @@ namespace utils {
         // socket is always non-blocking
         // if you want blocking socket, call Socket::set_blocking explicit
         dnet_dll_export(Socket) make_socket(int address_family, int socket_type, int protocol);
+
+        inline Socket make_socket(SockAttr attr) {
+            return make_socket(attr.address_family, attr.socket_type, attr.protocol);
+        }
 
     }  // namespace dnet
 }  // namespace utils

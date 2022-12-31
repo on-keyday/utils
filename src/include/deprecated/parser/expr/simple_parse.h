@@ -29,7 +29,7 @@ namespace utils {
                 else {
                     return false;
                 }
-                if (!helper::space::consume_space(seq, true) &&
+                if (!space::consume_space(seq, true) &&
                     number::is_alnum(seq.current())) {
                     return false;
                 }
@@ -43,7 +43,7 @@ namespace utils {
                 if (!number::prefix_integer(seq, v, &pf)) {
                     return false;
                 }
-                if (!helper::space::consume_space(seq, true) &&
+                if (!space::consume_space(seq, true) &&
                     number::is_alnum(seq.current())) {
                     return false;
                 }
@@ -59,7 +59,7 @@ namespace utils {
                     }
                     return false;
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 return pos_.ok();
             }
 

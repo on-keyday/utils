@@ -129,13 +129,14 @@ namespace utils {
             hint.ai_flags = flags;
             DnsResult result;
             dnet::SockAddr addr{};
-            addr.hostname = host;
-            addr.namelen = strlen(host);
-            addr.af = address_family;
-            addr.type = socket_type;
-            addr.proto = protocol;
-            addr.flag = flags;
-            result.wait = dnet::resolve_address(addr, port);
+            result.wait = dnet::resolve_address(
+                host, port,
+                {
+                    .address_family = address_family,
+                    .socket_type = socket_type,
+                    .protocol = protocol,
+                    .flag = flags,
+                });
             return result;
         }
 

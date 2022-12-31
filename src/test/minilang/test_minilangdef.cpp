@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <minilang/langdef.h>
+#include <minilang/old/langdef.h>
 
 int main() {
     namespace ld = utils::minilang::langdef;

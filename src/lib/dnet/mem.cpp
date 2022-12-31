@@ -6,7 +6,7 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/byte.h>
+#include <core/byte.h>
 namespace utils {
     namespace dnet {
 

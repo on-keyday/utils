@@ -46,14 +46,13 @@ namespace durl {
     void resolved(Request& req, dnet::AddrInfo& info) {
         dnet::error::Error lasterr;
         while (info.next()) {
-            dnet::SockAddr addr;
-            info.sockaddr(addr);
-            auto sock = dnet::make_socket(addr.af, addr.type, addr.proto);
+            auto addr = info.sockaddr();
+            auto sock = dnet::make_socket(addr.attr);
             if (!sock) {
                 lasterr = dnet::error::Error("make_socket failed");
                 continue;
             }
-            auto err = sock.connect(addr.addr, addr.addrlen);
+            auto err = sock.connect(addr.addr);
             if (err && !dnet::isSysBlock(err)) {
                 lasterr = std::move(err);
                 continue;
@@ -84,10 +83,7 @@ namespace durl {
             }
         }
         dnet::SockAddr addr{};
-        addr.hostname = uri.hostname.c_str();
-        addr.namelen = uri.hostname.size();
-        addr.type = SOCK_STREAM;
-        auto wait = dnet::resolve_address(addr, uri.port.c_str());
+        auto wait = dnet::resolve_address(uri.hostname, uri.port, {.socket_type = SOCK_STREAM});
         int err = 0;
         if (wait.failed(&err)) {
             request_message(uri, "resolve address failed at code ", err);

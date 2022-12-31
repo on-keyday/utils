@@ -21,17 +21,14 @@ using namespace utils;
 int main() {
     dnet::SockAddr addr{};
     constexpr auto host = "www.google.com";
-    addr.hostname = host;
-    addr.namelen = strlen(host);
-    addr.type = SOCK_STREAM;
-    auto resolve = dnet::resolve_address(addr, "https");
+    auto resolve = dnet::resolve_address(host, "https", {.socket_type = SOCK_STREAM});
     auto list = resolve.wait();
     assert(!resolve.failed());
     dnet::Socket sock;
     while (list.next()) {
-        list.sockaddr(addr);
-        auto tmp = dnet::make_socket(addr.af, addr.type, addr.proto);
-        auto err = tmp.connect(addr.addr, addr.addrlen);
+        addr = list.sockaddr();
+        auto tmp = dnet::make_socket(addr.attr);
+        auto err = tmp.connect(addr.addr);
         if (!err) {
             sock = std::move(tmp);
             break;
@@ -56,19 +53,19 @@ int main() {
     char buf[1024 * 3];
     auto provider_loop = [&] {
         if (tls.receive_tls_data(buf, sizeof(buf)).is_noerr()) {
-            sock.write(buf, tls.readsize());
+            sock.write(view::rvec(buf, tls.readsize()));
         }
-        size_t readsize = 0;
+        view::wvec v;
         dnet::error::Error err;
         while (true) {
-            std::tie(readsize, err) = sock.read(buf, sizeof(buf));
+            std::tie(v, err) = sock.read(buf);
             if (!err) {
                 break;
             }
             assert(dnet::isSysBlock(err));
             std::this_thread::yield();
         }
-        tls.provide_tls_data(buf, readsize);
+        tls.provide_tls_data(buf, v.size());
     };
     while (auto err = tls.connect()) {
         assert(dnet::isTLSBlock(err));

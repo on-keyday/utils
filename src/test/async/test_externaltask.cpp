@@ -11,7 +11,7 @@
 #include <deprecated/net/tcp/tcp.h>
 #include <deprecated/net/http/http1.h>
 #include <deprecated/net/core/platform.h>
-#include <platform/windows/io_completetion_port.h>
+// #include <platform/windows/io_completetion_port.h>
 #include <chrono>
 #include <thread>
 
@@ -77,8 +77,8 @@ void test_externaltask() {
 
             auto res = c->write(text.c_str(), text.size(), nullptr);
             assert(res == net::State::complete);
-            auto iocp = platform::windows::get_iocp();
-            iocp->register_handle((void*)sock);
+            /*auto iocp = platform::windows::get_iocp();
+            iocp->register_handle((void*)sock);*/
             auto will = ctx.clone();
             OutParam param;
             param.host_ = host;
@@ -101,20 +101,21 @@ void test_externaltask() {
         });
     };
     std::thread([&]() {
-        auto iocp = platform::windows::get_iocp();
-        while (true) {
-            iocp->wait_completion(
-                [](void* ol, size_t count) {
-                    if (!ol) {
-                        return;
-                    }
-                    auto param = (OutParam*)ol;
-                    auto req = param->f.get_taskrequest();
-                    utils::wrap::cout_wrap() << utils::wrap::packln("handling ", param->host_, "...");
-                    req->complete();
-                },
-                8, INFINITE);
-        }
+        /* auto iocp = platform::windows::get_iocp();
+
+       while (true) {
+           iocp->wait_completion(
+               [](void* ol, size_t count) {
+                   if (!ol) {
+                       return;
+                   }
+                   auto param = (OutParam*)ol;
+                   auto req = param->f.get_taskrequest();
+                   utils::wrap::cout_wrap() << utils::wrap::packln("handling ", param->host_, "...");
+                   req->complete();
+               },
+               8, INFINITE);
+       }*/
     }).detach();
     auto begin = system_clock::now();
     auto g = spawn("google.com");
@@ -148,5 +149,5 @@ void test_externaltask() {
 }
 
 int main() {
-    test_externaltask();
+    // test_externaltask();
 }

@@ -17,6 +17,7 @@
 #include "../utf/view.h"
 #include <limits>
 #include <cstring>
+#include "../view/slice.h"
 
 namespace utils {
     namespace net {
@@ -295,7 +296,7 @@ namespace utils {
                     }
                     else {
                         helper::append(result, "xn--");
-                        auto slice = helper::make_ref_slice(in, inipos, seq.rptr);
+                        auto slice = view::make_ref_slice(in, inipos, seq.rptr);
                         auto e = encode(slice, result);
                         if (!e) {
                             return e;
@@ -329,7 +330,7 @@ namespace utils {
                         return number::NumError::invalid;
                     }
                     if (is_international) {
-                        auto slice = helper::make_ref_slice(in, inipos, seq.rptr);
+                        auto slice = view::make_ref_slice(in, inipos, seq.rptr);
                         auto e = decode(slice, result);
                         if (!e) {
                             return e;

@@ -12,9 +12,11 @@
 #include "../../include/number/char_range.h"
 #include <random>
 #include <regex>
+#include <view/slice.h>
 
 namespace ifacegen {
     namespace hlp = utils::helper;
+    namespace view = utils::view;
 
     constexpr auto decltype_func = "decltype";
     constexpr auto copy_func = "__copy__";
@@ -1085,7 +1087,7 @@ namespace ifacegen {
         if (data.pkgname.size()) {
             bool viewed = false;
             if (any(flag & GenFlag::sep_namespace)) {
-                auto spltview = hlp::make_ref_splitview(data.pkgname, "::");
+                auto spltview = view::make_ref_splitview(data.pkgname, "::");
                 auto sz = spltview.size();
                 for (auto i = 0; i < sz; i++) {
                     render_cpp_namespace_begin(str, spltview[i]);
@@ -1139,7 +1141,7 @@ namespace ifacegen {
         if (data.pkgname.size()) {
             bool viewed = false;
             if (any(flag & GenFlag::sep_namespace)) {
-                auto spltview = hlp::make_ref_splitview(data.pkgname, "::");
+                auto spltview = view::make_ref_splitview(data.pkgname, "::");
                 auto sz = spltview.size();
                 for (auto i = sz - 1; i != ~0; i--) {
                     render_cpp_namespace_end(str, spltview[i]);

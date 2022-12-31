@@ -9,7 +9,7 @@
 #include "../../include/wrap/cin.h"
 #include "../../include/wrap/cout.h"
 #include "../../include/wrap/iocommon.h"
-#include "../../include/helper/view.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #include <fcntl.h>

@@ -11,11 +11,13 @@
 #include <memory>
 #include "../../helper/defer.h"
 #include <initializer_list>
+#include <vector>
+#include "../error.h"
 
 namespace utils {
     namespace dnet {
         namespace easy {
-            template <class T, class Alloc = glheap_allocator<T>>
+            /*template <class T, class Alloc = glheap_allocator<T>>
             struct vector {
                private:
                 T* head = nullptr;
@@ -187,6 +189,62 @@ namespace utils {
 
                 const T* end() const {
                     return head + len;
+                }
+            };*/
+
+            template <class T>
+            struct Vec {
+               private:
+                std::vector<T, glheap_allocator<T>> vec;
+
+               public:
+                error::Error push_back(auto&& t) {
+                    vec.push_back(std::forward<decltype(t)>(t));
+                    return error::none;
+                }
+
+                auto begin() {
+                    return vec.begin();
+                }
+
+                auto end() {
+                    return vec.end();
+                }
+
+                auto begin() const {
+                    return vec.begin();
+                }
+
+                auto end() const {
+                    return vec.end();
+                }
+
+                auto data() {
+                    return vec.data();
+                }
+
+                auto data() const {
+                    return vec.data();
+                }
+
+                size_t size() const {
+                    return vec.size();
+                }
+
+                decltype(auto) operator[](size_t i) {
+                    return vec[i];
+                }
+
+                decltype(auto) operator[](size_t i) const {
+                    return vec[i];
+                }
+
+                auto empty() const {
+                    return vec.empty();
+                }
+
+                void clear() {
+                    vec.clear();
                 }
             };
         }  // namespace easy

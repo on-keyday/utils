@@ -11,6 +11,8 @@
 #include "httpstring.h"
 #include "../net_util/http/http_headers.h"
 #include "../net_util/http/predefined.h"
+#include "../view/charvec.h"
+#include "../view/sized.h"
 
 namespace utils {
     namespace dnet {
@@ -104,7 +106,7 @@ namespace utils {
                 if (!h::render_request(output, method, path, header, h::default_validator())) {
                     return false;
                 }
-                helper::append(output, helper::SizedView(body, blen));
+                helper::append(output, view::CharVec(body, blen));
                 return true;
             }
 
@@ -117,17 +119,17 @@ namespace utils {
                 if (!h::render_response(output, status, reason, header, h::default_validator(), false, helper::no_check(), http_1_0 ? 0 : 1)) {
                     return false;
                 }
-                helper::append(output, helper::RefSizedView(body, blen));
+                helper::append(output, view::SizedView(body, blen));
                 return true;
             }
 
             void write_data(auto&& data, size_t len) {
-                helper::append(output, helper::RefSizedView(data, len));
+                helper::append(output, view::SizedView(data, len));
             }
 
             void write_chunked_data(auto&& data, size_t len) {
                 namespace h = net::h1body;
-                h::render_chuncked_data(output, helper::RefSizedView(data, len));
+                h::render_chuncked_data(output, view::SizedView(data, len));
             }
 
             void write_end_of_chunck() {
@@ -145,7 +147,7 @@ namespace utils {
             }
 
             size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
-                auto check = make_cpy_seq(helper::SizedView(output.begin(), output.size()));
+                auto check = make_cpy_seq(view::CharVec(output.begin(), output.size()));
                 if (limit > output.size()) {
                     limit = output.size();
                 }
@@ -157,7 +159,7 @@ namespace utils {
             }
 
             size_t get_input(auto& buf, size_t limit = ~0, bool peek = false) {
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 if (limit > input.size()) {
                     limit = input.size();
                 }
@@ -177,7 +179,7 @@ namespace utils {
             }
 
             void add_input(auto&& data, size_t size) {
-                helper::append(input, helper::RefSizedView(data, size));
+                helper::append(input, view::SizedView(data, size));
             }
 
             // check_response make sure input contains full of response header
@@ -186,7 +188,7 @@ namespace utils {
             // begin_ok represents header is begin with HTTP/1.1 or HTTP/1.0 or not
             size_t check_response(bool* begin_ok = nullptr) {
                 namespace h = net::h1header;
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 auto begcheck = [&](auto& seq) {
                     auto begin_check = seq.seek_if("HTTP/1.1") || seq.seek_if("HTTP/1.0");
                     if (begin_ok) {
@@ -204,7 +206,7 @@ namespace utils {
             // if validate_method is true this function checks header begin with known http method
             size_t check_request(bool* begin_ok = nullptr, bool validate_method = true) {
                 namespace h = net::h1header;
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 auto begcheck = [&](auto& seq) {
                     if (validate_method) {
                         for (auto meth : net::h1value::methods) {
@@ -234,7 +236,7 @@ namespace utils {
                                  Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
                 namespace h = net::h1header;
                 HTTPBodyInfo body{};
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 auto body_check = net::h1body::bodyinfo_preview(body.type, body.expect);
                 if (!h::parse_response<TmpString>(
                         check, version, status, reason, header, [&](auto&& key, auto&& value) {
@@ -259,7 +261,7 @@ namespace utils {
                                 Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
                 namespace h = net::h1header;
                 HTTPBodyInfo body{};
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 auto body_check = net::h1body::bodyinfo_preview(body.type, body.expect);
                 if (!h::parse_request<TmpString>(
                         check, method, path, version, header, [&](auto&& key, auto&& value) {
@@ -280,14 +282,14 @@ namespace utils {
 
             template <class Version = decltype(helper::nop)&>
             bool peek_request_line(auto&& method, auto&& path, Version&& version = helper::nop) {
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 namespace h = net::h1header;
                 return h::parse_request_line(check, method, path, version);
             }
 
             template <class Reason = decltype(helper::nop)&, class Version = decltype(helper::nop)&>
             bool peek_status_line(auto&& status, Reason&& reason = helper::nop, Version&& version = helper::nop) {
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 namespace h = net::h1header;
                 return h::parse_status_line(check, version, status, reason);
             }
@@ -302,7 +304,7 @@ namespace utils {
                     return false;  // TODO(on-keyday): read only body?
                 }
                 namespace h = net::h1body;
-                auto check = make_cpy_seq(helper::SizedView(input.begin(), input.size()));
+                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 check.rptr = read_from;
                 auto res = h::read_body(buf, check, info.expect, info.type);
                 if (res == -1) {

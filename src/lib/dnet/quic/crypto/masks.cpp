@@ -9,6 +9,7 @@
 #include <dnet/dll/ssldll.h>
 #include <helper/defer.h>
 #include <cstring>
+#include <endian/buf.h>
 
 namespace utils {
     namespace dnet {
@@ -42,7 +43,7 @@ namespace utils {
                 int outlen = 32;
                 byte zeros[5]{0};
                 if (ssldl.CRYPTO_chacha_20_) {
-                    auto counter = ByteLen{sample}.as<std::uint32_t>(0, false);
+                    auto counter = endian::Buf<std::uint32_t, byte*>{sample}.read_le();
                     ssldl.CRYPTO_chacha_20_(data, zeros, 5, hp_key, sample + 4, counter);
                     memcpy(masks, zeros, 5);
                     return true;

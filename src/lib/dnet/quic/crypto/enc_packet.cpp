@@ -23,7 +23,7 @@ namespace utils {
             static constexpr auto err_chacha_mask = error::Error("failed to generate header mask ChaCha20-based", error::ErrorCategory::cryptoerr);
             static constexpr auto err_not_enough_paylaod = error::Error("not enough CryptoPacketInfo.processed_payload length", error::ErrorCategory::validationerr);
 
-            dnet_dll_implement(error::Error) encrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret) {
+            dnet_dll_implement(error::Error) encrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret, std::uint64_t original_packet_number) {
                 if (!info.head.adjacent(info.payload)) {
                     return err_packet_format;
                 }
@@ -49,14 +49,16 @@ namespace utils {
                 }
                 PacketFlags prot{*info.head.data};
                 auto pn_length = prot.packet_number_length();
-                auto cipher_text_len = info.payload.len - pn_length + cipher_tag_length;
+                auto cipher_text_len = info.payload.len - pn_length + authentication_tag_length;
                 if (!info.processed_payload.enough(cipher_text_len)) {
                     return err_not_enough_paylaod;
                 }
                 // make nonce from iv and packet number
                 byte nonce[32]{0};
-                for (auto i = 0; i < pn_length; i++) {
-                    nonce[keys.iv.len - 1 - (pn_length - 1 - i)] = info.payload.data[i];
+                tmp.reset_offset();
+                auto orig_num = tmp.as(original_packet_number);
+                for (auto i = 0; i < 8; i++) {
+                    nonce[keys.iv.len - 1 - (7 - i)] = orig_num.data[i];
                 }
                 for (auto i = 0; i < keys.iv.len; i++) {
                     nonce[i] ^= keys.iv.data[i];
@@ -97,11 +99,12 @@ namespace utils {
                 return error::none;
             }
 
-            dnet_dll_implement(error::Error) decrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret) {
+            dnet_dll_implement(error::Error) decrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret, PacketNumberDecoder decode) {
                 if (!info.payload.enough(20) ||
                     !info.head.adjacent(info.payload) ||
                     !info.payload.adjacent(info.tag) ||
-                    info.tag.len != cipher_tag_length) {
+                    info.tag.len != authentication_tag_length ||
+                    !decode) {
                     return err_packet_format;
                 }
                 const auto is_AES = cipher == TLSCipher{} || cipher.is_AES_based();
@@ -157,8 +160,13 @@ namespace utils {
                 // make nonce from iv and packet number
                 // see https://tex2e.github.io/blog/protocol/quic-initial-packet-decrypt
                 byte nonce[32]{0};
-                for (auto i = 0; i < pn_length; i++) {
-                    nonce[keys.iv.len - 1 - (pn_length - 1 - i)] = info.payload.data[i];
+                std::uint32_t pn;
+                ByteLen{info.payload.data, pn_length}.packet_number(pn, pn_length);
+                auto orig_pn = decode(QPacketNumber{pn, pn_length});
+                tmp.reset_offset();
+                auto orig_data = tmp.as(orig_pn);
+                for (auto i = 0; i < 8; i++) {
+                    nonce[keys.iv.len - 1 - (7 - i)] = orig_data.data[i];
                 }
                 for (auto i = 0; i < keys.iv.len; i++) {
                     nonce[i] ^= keys.iv.data[i];

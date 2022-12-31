@@ -11,6 +11,7 @@
 #include "../../boxbytelen.h"
 #include <cstdint>
 #include "../../easy/array.h"
+#include "../../../view/iovec.h"
 
 namespace utils {
     namespace dnet {
@@ -177,7 +178,7 @@ namespace utils {
                     byte stateless_reset_token[16];
 
                     constexpr bool parse(ByteLen& b) {
-                        if (!b.copy_to(ipv4_address, 4)) {
+                        if (view::copy(ipv4_address, view::rvec(b.data, b.len)) < 0) {
                             return false;
                         }
                         b = b.forward(4);
@@ -185,7 +186,7 @@ namespace utils {
                             return false;
                         }
                         b = b.forward(2);
-                        if (!b.copy_to(ipv6_address, 16)) {
+                        if (view::copy(ipv6_address, view::rvec(b.data, b.len)) < 0) {
                             return false;
                         }
                         b = b.forward(16);
@@ -201,7 +202,7 @@ namespace utils {
                             return false;
                         }
                         b = b.forward(connectionID_length);
-                        if (!b.copy_to(stateless_reset_token, 16)) {
+                        if (view::copy(stateless_reset_token, view::rvec(b.data, b.len)) < 0) {
                             return false;
                         }
                         b = b.forward(16);
@@ -451,6 +452,8 @@ namespace utils {
                     over_20_ack_delay_exponent,
                     over_2pow14_max_ack_delay,
                     zero_length_connid,
+                    too_large_max_streams_bidi,
+                    too_large_max_streams_uni,
                 };
 
                 constexpr const char* to_string(TransportParamError err) {
@@ -465,6 +468,10 @@ namespace utils {
                             return "ack_delay_exponent is over 20";
                         case TransportParamError::zero_length_connid:
                             return "preferred_address.connectionID.len is 0";
+                        case TransportParamError::too_large_max_streams_bidi:
+                            return "max_bidi_streams greater than 2^60";
+                        case TransportParamError::too_large_max_streams_uni:
+                            return "max_uni_streams greater than 2^60";
                         default:
                             return nullptr;
                     }
@@ -485,6 +492,12 @@ namespace utils {
                     }
                     if (param.preferred_address.connectionID.data && param.preferred_address.connectionID.len < 1) {
                         return TransportParamError::zero_length_connid;
+                    }
+                    if (param.initial_max_streams_bidi >= size_t(1) << 60) {
+                        return TransportParamError::too_large_max_streams_bidi;
+                    }
+                    if (param.initial_max_streams_uni >= size_t(1) << 60) {
+                        return TransportParamError::too_large_max_streams_uni;
                     }
                     return TransportParamError::none;
                 }

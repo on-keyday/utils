@@ -15,7 +15,7 @@ namespace utils {
         constexpr auto block_stat() {
             return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD("block_stat")
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!seq.seek_if("{")) {
                     return false;
@@ -24,7 +24,7 @@ namespace utils {
                 root->str = block_statement_str_;
                 auto cur = root;
                 while (true) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.seek_if("}")) {
                         break;
                     }
@@ -53,13 +53,13 @@ namespace utils {
         constexpr auto for_if_stat_base(auto stat_name, bool none_expr_ok, int max_index, auto make_obj) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD(stat_name)
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, stat_name)) {
                     return false;
                 }
                 auto space = [&] {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                 };
 
                 std::shared_ptr<MinNode> first, second, third;
@@ -158,12 +158,12 @@ namespace utils {
                 auto if_ = std::static_pointer_cast<IfStatNode>(node);
                 while (true) {
                     const auto start = seq.rptr;
-                    helper::space::consume_space(seq, false);
+                    space::consume_space(seq, false);
                     if (!expect_ident(seq, "else")) {
                         seq.rptr = start;
                         return true;
                     }
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.match("{")) {
                         std::shared_ptr<MinNode> tmp;
                         if (!stat(stat, expr, seq, tmp, err, errc)) {
@@ -193,12 +193,12 @@ namespace utils {
         constexpr auto switch_statement() {
             return [](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 const auto start = seq.rptr;
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 if (!expect_ident(seq, "switch")) {
                     seq.rptr = start;
                     return false;
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 std::shared_ptr<MinNode> swcond;
                 if (!seq.match("{")) {
                     swcond = expr(seq, brc_cond);
@@ -209,7 +209,7 @@ namespace utils {
                         return true;
                     }
                 }
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 if (!seq.seek_if("{")) {
                     errc.say("expect switch statement begin { but not");
                     errc.trace(start, seq);
@@ -222,7 +222,7 @@ namespace utils {
                 root_switch->expr = std::move(swcond);
                 std::shared_ptr<BlockNode> block = swnode;
                 while (true) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.eos()) {
                         errc.say("unexpected eof at switch statement");
                         errc.trace(start, seq);
@@ -241,7 +241,7 @@ namespace utils {
                             err = true;
                             return true;
                         }
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         if (!seq.seek_if(":")) {
                             errc.say("expect switch case : but not");
                             errc.trace(start, seq);
@@ -258,7 +258,7 @@ namespace utils {
                         continue;
                     }
                     if (expect_ident(seq, "default")) {
-                        helper::space::consume_space(seq, true);
+                        space::consume_space(seq, true);
                         if (!seq.seek_if(":")) {
                             errc.say("expect switch default : but not");
                             errc.trace(start, seq);
@@ -311,7 +311,7 @@ namespace utils {
         constexpr auto one_word(auto word, auto ident) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD(word)
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
                     return false;
@@ -326,7 +326,7 @@ namespace utils {
         constexpr auto one_word_symbol(auto word, auto ident) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD(word)
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!seq.seek_if(word)) {
                     return false;
@@ -341,14 +341,14 @@ namespace utils {
         constexpr auto one_word_plus_and_block(auto word, auto ident, auto&& parse_after, bool not_must) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD(word)
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
                     return false;
                 }
                 std::shared_ptr<MinNode> after, block;
                 if (not_must) {
-                    helper::space::consume_space(seq, true);
+                    space::consume_space(seq, true);
                     if (seq.match("{")) {
                         goto BLOCK;
                     }
@@ -361,7 +361,7 @@ namespace utils {
                     return true;
                 }
             BLOCK:
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 if (!seq.match("{")) {
                     errc.say("expect ", word, " statement block begin { but not");
                     errc.trace(start, seq);
@@ -386,14 +386,14 @@ namespace utils {
         constexpr auto one_word_plus_expr(auto word, auto ident, bool not_must) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD(word)
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
                     return false;
                 }
                 std::shared_ptr<MinNode> after;
                 if (not_must) {
-                    helper::space::consume_space(seq, false);
+                    space::consume_space(seq, false);
                     if (helper::match_eol<false>(seq)) {
                         goto END;
                     }
@@ -418,7 +418,7 @@ namespace utils {
         constexpr auto one_word_plus(auto word, auto ident, auto&& parse_after) {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) {
                 MINL_FUNC_LOG_OLD(word)
-                helper::space::consume_space(seq, true);
+                space::consume_space(seq, true);
                 const auto start = seq.rptr;
                 if (!expect_ident(seq, word)) {
                     return false;

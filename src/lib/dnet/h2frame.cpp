@@ -9,12 +9,13 @@
 #include <dnet/http2/h2frame.h>
 #include <dnet/http2/http2.h>
 #include <dnet/dll/httpbuf.h>
-#include <helper/view.h>
 #include <helper/pushbacker.h>
+#include <view/charvec.h>
+#include <view/char.h>
 
 namespace utils {
     namespace dnet {
-        using Seq = Sequencer<helper::SizedView<const char>>;
+        using Seq = Sequencer<view::CharVec<const char>>;
         struct ArgPack {
             const char* text;
             size_t size;
@@ -274,7 +275,7 @@ namespace utils {
             if (!text) {
                 return false;
             }
-            auto seq = make_cpy_seq(helper::SizedView(text, size));
+            auto seq = make_cpy_seq(view::CharVec(text, size));
             if (seq.remain() < 9) {
                 return false;
             }
@@ -294,7 +295,7 @@ namespace utils {
                 err.err = http2_invalid_argument;
                 return false;
             }
-            auto seq = make_cpy_seq(helper::SizedView(text, size));
+            auto seq = make_cpy_seq(view::CharVec(text, size));
             ArgPack pack{
                 text,
                 size,
@@ -486,10 +487,10 @@ namespace utils {
         static void render_padding(CVec& vec, auto& f) {
             if (f.padding) {
                 if (f.pad) {
-                    helper::append(vec, helper::SizedView(f.pad, f.padding));
+                    helper::append(vec, view::CharVec(f.pad, f.padding));
                 }
                 else {
-                    helper::append(vec, helper::CharView(0, f.padding));
+                    helper::append(vec, view::CharView(0, f.padding));
                 }
             }
         }
@@ -516,7 +517,7 @@ namespace utils {
                 p.debug = "expected data in DataFrame but nullptr is detected";
                 return false;
             }
-            helper::append(vec, helper::SizedView(f.data, f.datalen));
+            helper::append(vec, view::CharVec(f.data, f.datalen));
             render_padding(vec, f);
             return true;
         }
@@ -542,7 +543,7 @@ namespace utils {
                 p.debug = "expected data in HeaderFrame but nullptr is detected";
                 return false;
             }
-            helper::append(vec, helper::SizedView(f.data, f.datalen));
+            helper::append(vec, view::CharVec(f.data, f.datalen));
             render_padding(vec, f);
             return true;
         }
@@ -592,7 +593,7 @@ namespace utils {
                     p.debug = "expected data in SettingsFrame but nullptr is detected";
                     return false;
                 }
-                helper::append(vec, helper::SizedView(f.settings, f.len));
+                helper::append(vec, view::CharVec(f.settings, f.len));
             }
             return true;
         }
@@ -615,7 +616,7 @@ namespace utils {
                 p.debug = "expected data in PushPromiseFrame but nullptr is detected";
                 return false;
             }
-            helper::append(vec, helper::SizedView(f.data, f.datalen));
+            helper::append(vec, view::CharVec(f.data, f.datalen));
             render_padding(vec, f);
             return true;
         }
@@ -650,7 +651,7 @@ namespace utils {
                 p.debug = "expected debug_data in GoAway but nullptr is detected";
                 return false;
             }
-            helper::append(vec, helper::SizedView(f.debug_data, f.dbglen));
+            helper::append(vec, view::CharVec(f.debug_data, f.dbglen));
             return false;
         }
 
@@ -678,7 +679,7 @@ namespace utils {
                 p.debug = "expected data in ContinuousFrame but nullptr is detected";
                 return false;
             }
-            helper::append(vec, helper::SizedView(f.data, f.len));
+            helper::append(vec, view::CharVec(f.data, f.len));
             return true;
         }
 

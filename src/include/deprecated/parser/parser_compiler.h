@@ -17,7 +17,6 @@
 #include <wrap/light/map.h>
 #include <wrap/light/set.h>
 #include <escape/read_string.h>
-#include <helper/iface_cast.h>
 #include <json/convert_json.h>
 
 namespace utils {
@@ -40,11 +39,11 @@ namespace utils {
             eof,
             regex,
         };
-#define CONSUME_SPACE(line, eof)             \
-    helper::space::consume_space(seq, line); \
+#define CONSUME_SPACE(line, eof)     \
+    space::consume_space(seq, line); \
     if (eof && seq.eos()) return nullptr;
-#define CONSUME_SPACE_B(line, eof)           \
-    helper::space::consume_space(seq, line); \
+#define CONSUME_SPACE_B(line, eof)   \
+    space::consume_space(seq, line); \
     if (eof && seq.eos()) return false;
 
         namespace internal {
@@ -225,7 +224,7 @@ namespace utils {
                                c != ']' && c != '*' && c != '\"' && c != '\\' &&
                                c != '&' && c != '\'' && c != '`' && c != '=' &&
                                c != '!' && c != '?' && c != '(' && c != ')' && c != ',' &&
-                               !helper::space::match_space(seq, true);
+                               !space::match_space(seq, true);
                     })) {
                     seq.rptr = beg;
                     return nullptr;
@@ -653,7 +652,7 @@ namespace utils {
                 }
                 else if (tok->declkind() == ParserKind::func) {
                     auto ref = static_cast<FuncParser<Input, String, Kind, Vec>*>(&*tok);
-                    auto v = helper::iface_cast<FatalFunc<Input, String, Kind, Vec>>(&ref->func);
+                    auto v = ref->func.template type_assert<FatalFunc<Input, String, Kind, Vec>>();
                     if (v) {
                         return rep(v->subparser);
                     }
@@ -681,7 +680,7 @@ namespace utils {
                 CONSUME_SPACE(true, true)
                 String tok;
                 if (!helper::read_whilef<true>(tok, seq, [&](auto&& c) {
-                        return c != ':' && !helper::space::match_space(seq, true);
+                        return c != ':' && !space::match_space(seq, true);
                     })) {
                     return nullptr;
                 }

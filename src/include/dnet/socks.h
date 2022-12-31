@@ -8,7 +8,7 @@
 // socks - socks5 protocol
 #pragma once
 #include <cstdint>
-#include "byte.h"
+#include "../core/byte.h"
 
 namespace utils {
     namespace dnet {

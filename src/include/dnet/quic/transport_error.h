@@ -7,7 +7,7 @@
 
 // error - QUIC error code
 #pragma once
-#include "../byte.h"
+#include "../../core/byte.h"
 #include <helper/appender.h>
 #include "../error.h"
 #include "types.h"

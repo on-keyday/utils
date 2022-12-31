@@ -19,6 +19,7 @@
 #include <testutil/timer.h>
 #include <async/light/context.h>
 #include <async/light/pool.h>
+#include <view/charvec.h>
 using namespace utils;
 auto& cout = wrap::cout_wrap();
 
@@ -106,7 +107,7 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
     auto err = cnet::open(multi, ssl);
     if (!err) {
         cnet::ssl::error_callback(ssl, [](const char* msg, size_t len) {
-            cout << helper::SizedView(msg, len);
+            cout << view::CharVec(msg, len);
         });
         assert(suc);
     }
@@ -117,14 +118,14 @@ void test_tcp_cnet(async::light::Context<void> as, const char* host, const char*
     wrap::string buf, body;
     wrap::hash_multimap<wrap::string, wrap::string> h;
     suc = net::h1header::read_response<wrap::string>(buf, helper::nop, h, body, [&](auto& seq, size_t expect, bool finalcall) {
-        number::Array<1024, char> tmpbuf{0};
+        number::Array<char, 1024> tmpbuf{0};
         size_t r = 0;
         while (!r) {
             auto suc = cnet::read({}, conn, tmpbuf.buf, tmpbuf.capacity(), &r);
             if (!suc) {
                 cout << "error:" << cnet::get_error(conn) << "\n";
                 cnet::ssl::error_callback(conn, [](const char* msg, size_t len) {
-                    cout << helper::SizedView(msg, len);
+                    cout << view::CharVec(msg, len);
                 });
                 return false;
             }

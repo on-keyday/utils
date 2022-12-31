@@ -7,13 +7,14 @@
 
 // bnf - bnf dialect parser
 #pragma once
-#include "../minilang/parser/minl_binary.h"
-#include "../minilang/parser/minl_primitive.h"
-#include "../minilang/parser/minl_block.h"
-#include "../minilang/parser/minl_bnf.h"
-#include "../minilang/minlutil.h"
-#include "../minilang/parser/minl_comment.h"
+#include "../minilang/old/parser/minl_binary.h"
+#include "../minilang/old/parser/minl_primitive.h"
+#include "../minilang/old/parser/minl_block.h"
+#include "../minilang/old/parser/minl_bnf.h"
+#include "../minilang/old/minlutil.h"
+#include "../minilang/old/parser/minl_comment.h"
 #include "../utf/convert.h"
+#include "../view/char.h"
 
 namespace utils {
     namespace bnf {
@@ -359,7 +360,7 @@ namespace utils {
                             return false;
                         }
                         std::string utf8;
-                        if (!utf::convert(helper::CharView(std::uint32_t(num->integer)), utf8)) {
+                        if (!utf::convert(view::CharView(std::uint32_t(num->integer)), utf8)) {
                             errc.say("failed to convert char code to utf8");
                             errc.node(num);
                             return false;

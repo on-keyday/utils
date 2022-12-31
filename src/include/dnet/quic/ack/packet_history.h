@@ -10,12 +10,12 @@
 #include "rtt.h"
 #include "sent_packet.h"
 #include "../../dll/allocator.h"
-#include <unordered_map>
-#include "../frame/frame.h"
+#include "../frame/ack.h"
 #include "../transport_error.h"
 #include "../../../helper/condincr.h"
 #include "congestion.h"
 #include "../../error.h"
+#include "../../easy/hashmap.h"
 
 namespace utils {
     namespace dnet {
@@ -71,18 +71,43 @@ namespace utils {
                 }
             };
 
+            using ACKRangeVec = easy::Vec<frame::ACKRange>;
+
+            constexpr bool gen_ragnes_from_recved(auto&& recved, auto&& ack_range) {
+                auto size = recved.size();
+                if (size == 0) {
+                    return false;
+                }
+                if (size == 1) {
+                    auto res = size_t(recved[0]);
+                    ack_range.push_back(frame::ACKRange{res, res});
+                    return true;
+                }
+                std::sort(recved.begin(), recved.end(), std::greater<>{});
+                frame::ACKRange cur;
+                cur.largest = size_t(recved[0]);
+                cur.smallest = cur.largest;
+                for (size_t i = 1; i < size; i++) {
+                    if (recved[i - 1] == recved[i] + 1) {
+                        cur.smallest = size_t(recved[i]);
+                    }
+                    else {
+                        ack_range.push_back(std::move(cur));
+                        cur.largest = size_t(recved[i]);
+                        cur.smallest = cur.largest;
+                    }
+                }
+                ack_range.push_back(std::move(cur));
+                return true;
+            }
+
             struct PacketSpaceHistory {
                 size_t issue_packet_number = 0;
                 size_t highest_sent = 0;
-                PacketNumber largest_acked_packet = PacketNumber::infinite;
+                PacketNumber largest_acked_packet = infinity;
                 time_t last_ack_eliciting_packet_time = 0;
                 time_t loss_time = 0;
-                using Packets =
-                    std::unordered_map<
-                        PacketNumber, SentPacket,
-                        std::hash<PacketNumber>, std::equal_to<PacketNumber>,
-                        glheap_objpool_allocator<std::pair<const PacketNumber, SentPacket>>>;
-                Packets sent_packets;
+                easy::H<PacketNumber, SentPacket> sent_packets;
                 frame::ECNCounts ecn;
                 size_t ack_eliciting_in_flight = 0;
                 size_t largest_recv_packet = 0;
@@ -125,15 +150,14 @@ namespace utils {
                     }
                 };
 
-                error::Error detect_and_remove_acked_packets(RemovedPackets& rem, bool& incl_ack_eliciting, const frame::ACKFrame& ack) {
+                error::Error detect_and_remove_acked_packets(RemovedPackets& rem, bool& incl_ack_eliciting, const frame::ACKFrame<easy::Vec>& ack) {
                     incl_ack_eliciting = false;
-                    std::vector<frame::ACKRange, glheap_allocator<frame::ACKRange>> ranges;
-                    if (auto err = frame::get_ackranges(ranges, ack)) {
+                    auto [ranges, ok] = frame::convert_from_ACKFrame(ack);
+                    if (!ok) {
                         return QUICError{
-                            .msg = "ACK range decoding failed",
+                            .msg = "ACK range validation failed",
                             .transport_error = TransportError::FRAME_ENCODING_ERROR,
                             .frame_type = ack.type.type_detail(),
-                            .base = std::move(err),
                         };
                     }
                     bool removed = false;
@@ -163,7 +187,6 @@ namespace utils {
                             if (pn > range.largest) {
                                 return QUICError{
                                     .msg = "library bug!! range is invalid for pn",
-
                                     .base = PnRangeError{.pn = size_t(pn), .begin = largest, .end = smallest},
                                 };
                             }
@@ -187,10 +210,9 @@ namespace utils {
                 }
 
                 error::Error detect_and_remove_lost_packets(RemovedPackets& lost_packets, Clock& clock, RTT& rtt, LossDetectParam& param) {
-                    if (largest_acked_packet == PacketNumber::infinite) {
+                    if (largest_acked_packet == infinity) {
                         return QUICError{
                             .msg = "largest_acked_packet is not set. nothing acked before loss detection.",
-
                         };
                     }
                     loss_time = 0;
