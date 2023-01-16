@@ -33,5 +33,53 @@ namespace utils {
             w.offset(sizeof(T));
             return true;
         }
-    }  // namespace io
+
+        template <class C, class U>
+        constexpr bool write_uint24(basic_writer<C, U>& w, std::uint32_t val, bool be = true) {
+            if (val > 0xffffff) {
+                return false;
+            }
+            auto rem = w.remain();
+            if (rem.size() < 3) {
+                return false;
+            }
+            rem[1] = (val >> 8) & 0xff;
+            rem[be ? 0 : 2] = (val >> 16) & 0xff;
+            rem[be ? 2 : 0] = val & 0xff;
+            w.offset(3);
+            return true;
+        }
+
+        template <class C, class U>
+        constexpr bool read_uint24(basic_reader<C, U>& r, std::uint32_t& val, bool be = true) {
+            auto [data, ok] = r.read(3);
+            if (!ok) {
+                return false;
+            }
+            std::uint32_t tmp = 0;
+            tmp |= std::uint32_t(data[1]) << 8;
+            tmp |= std::uint32_t(data[0]) << (be ? 16 : 0);
+            tmp |= std::uint32_t(data[2]) << (be ? 0 : 16);
+            val = tmp;
+            return true;
+        }
+
+        namespace test {
+            constexpr bool check_uint24() {
+                byte data[3];
+                io::writer w{data};
+                std::uint32_t val = 0x9324f2;
+                write_uint24(w, val);
+                if (data[0] != 0x93 || data[1] != 0x24 || data[2] != 0xf2) {
+                    return false;
+                }
+                io::reader r{data};
+                val = 0;
+                read_uint24(r, val);
+                return val == 0x9324f2;
+            }
+
+            static_assert(check_uint24());
+        }  // namespace test
+    }      // namespace io
 }  // namespace utils

@@ -14,7 +14,6 @@
 #include <helper/defer.h>
 #include <dnet/errcode.h>
 #include <helper/strutil.h>
-#include <dnet/bytelen.h>
 #include <bit>
 #include <cstring>
 #include <dnet/dll/errno.h>
@@ -92,7 +91,7 @@ namespace utils {
             }
             auto ptr = raw_paddrinfo(select);
             return sockaddr_to_NetAddrPort(ptr->ai_addr, ptr->ai_addrlen);
-        }*/
+        }
 
         bool string_from_sockaddr_impl(int af, const void* addr, size_t addrlen, void* text, size_t len, int* err, int* port) {
             const char* ptr = nullptr;
@@ -140,7 +139,7 @@ namespace utils {
                 set_err(invalid_addr);
                 return false;
             }
-            /*
+
             // NOTE: remove ipv6 prefix for ipv4 mapped addresss
             if (helper::contains(ptr, ".") && helper::starts_with(ptr, "::ffff:")) {
                 constexpr auto start_offset = 7;
@@ -156,7 +155,7 @@ namespace utils {
                 // 127.0.0.1-----------
                 memmove(dst, dst + start_offset, len - start_offset);
                 memset(dst + tlen - start_offset, 0, start_offset);
-            }*/
+            }
             return true;
         }
 
@@ -175,6 +174,7 @@ namespace utils {
             auto info = static_cast<raw_paddrinfo>(select);
             return string_from_sockaddr_impl(info->ai_family, info->ai_addr, info->ai_addrlen, text, len, err, port);
         }
+        */
 
         struct WaitObject {
             raw_paddrinfo info;

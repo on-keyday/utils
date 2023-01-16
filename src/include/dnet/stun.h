@@ -9,8 +9,8 @@
 #pragma once
 #include <cstdint>
 #include "../core/byte.h"
-#include "bytelen.h"
 #include "../view/iovec.h"
+#include "../io/number.h"
 
 namespace utils {
     namespace dnet {
@@ -41,56 +41,51 @@ namespace utils {
                 const std::uint32_t magic_cookie = 0x2112A442;
                 byte transaction_id[12];
 
-                void pack(WPacket& w) const {
-                    w.as(type);
-                    w.as(length);
-                    w.as(magic_cookie);
-                    w.copy_from(ConstByteLen{transaction_id, 12});
+                void pack(io::writer& w) const {
+                    io::write_num(w, type);
+                    io::write_num(w, length);
+                    io::write_num(w, magic_cookie);
+                    w.write(transaction_id);
                 }
 
-                bool unpack(ByteLen& b) {
+                bool unpack(io::reader& r) {
                     std::uint32_t cookie = 0;
-                    if (!(b.as(type) &&
-                          (b = b.forward(2), b.as(length)) &&
-                          (b = b.forward(2), b.as(cookie) && cookie == magic_cookie) &&
-                          (b = b.forward(4), b.enough(12)))) {
-                        return false;
-                    }
-                    memcpy(transaction_id, b.data, 12);
-                    b = b.forward(12);
-                    return true;
+                    return io::read_num(r, type) &&
+                           io::read_num(r, length) &&
+                           io::read_num(r, cookie) &&
+                           cookie == magic_cookie &&
+                           r.read(transaction_id);
                 }
             };
 
             struct Attribute {
                 std::uint16_t type;
                 std::uint16_t length;
-                ByteLen value;
-                bool pack(WPacket& w, bool enc_value = false) const {
+                view::rvec value;
+                bool pack(io::writer& w, bool enc_value = false) const {
                     if (enc_value) {
-                        if (!value.enough(length)) {
+                        if (value.size() > 0xffff) {
                             return false;
                         }
+                        return io::write_num(w, type) &&
+                               io::write_num(w, std::uint16_t(value.size())) &&
+                               w.write(value);
                     }
-                    w.as(type);
-                    w.as(length);
-                    if (enc_value) {
-                        w.copy_from(value.resized(length));
-                    }
-                    return true;
+                    return io::write_num(w, type) &&
+                           io::write_num(w, length);
                 }
 
-                bool unpack(ByteLen& b, bool dec_value = true) {
-                    if (!((b.as(type) &&
-                           (b = b.forward(2), b.as(length)) &&
-                           (b = b.forward(2), b.enough(length))))) {
+                bool unpack(io::reader& r, bool dec_value = true) {
+                    if (!io::read_num(r, type) ||
+                        !io::read_num(r, length)) {
                         return false;
                     }
                     if (dec_value) {
-                        value = b.resized(length);
-                        b = b.forward(length);
+                        return r.read(value, length);
                     }
-                    return true;
+                    else {
+                        return r.remain().size() >= length;
+                    }
                 }
             };
 
@@ -127,51 +122,56 @@ namespace utils {
                     }
                 }
 
-                bool pack(WPacket& w, const byte* xor_ = nullptr) const {
+                bool pack(io::writer& w, const byte* xor_ = nullptr) const {
                     if (family != 0x1 && family != 0x2) {
                         return false;
                     }
-                    w.as<byte>(0);
-                    w.as(family);
-                    if (auto v = w.as(port); v.valid() && xor_) {
-                        v.data[0] ^= xor_[0];
-                        v.data[1] ^= xor_[1];
+                    if (!w.write(0, 1) ||
+                        !w.write(family, 1) ||
+                        !io::write_num(w, port)) {
+                        return false;
+                    }
+                    if (xor_) {
+                        auto data = w.written();
+                        data[data.size() - 2] ^= xor_[0];
+                        data[data.size() - 1] ^= xor_[1];
                     }
                     size_t len = family == 0x1 ? 4 : 16;
-                    if (auto v = w.copy_from(ConstByteLen{address, len}); v.valid() && xor_) {
+                    if (!w.write(view::rvec(address, len))) {
+                        return false;
+                    }
+                    if (xor_) {
+                        auto data = w.written();
                         for (auto i = 0; i < len; i++) {
-                            v.data[i] ^= xor_[i];
+                            data[data.size() - (len - i)] ^= xor_[i];
                         }
                     }
                     return true;
                 }
 
-                bool unpack(ByteLen& b, const byte* xor_ = nullptr) {
+                bool unpack(io::reader& r, const byte* xor_ = nullptr) {
                     byte tmp;
-                    if (!(b.as(tmp) && tmp == 0 &&
-                          (b = b.forward(1),
-                           b.as(family) && (family == 0x1 || family == 0x2)))) {
-                        return false;
+                    if (!r.read(view::wvec(&tmp, 1)) ||
+                        tmp != 0 ||
+                        !r.read(view::wvec(&family, 1))) {
                     }
-                    if (!(b = b.forward(1), b.enough(2))) {
+                    if (!io::read_num(r, port)) {
                         return false;
                     }
                     if (xor_) {
-                        b.data[0] ^= xor_[0];
-                        b.data[1] ^= xor_[1];
+                        port ^= std::uint16_t(xor_[0]) << 8 | xor_[1];
                     }
-                    port = b.as<std::uint16_t>();
                     auto len = family == 1 ? 4 : 16;
-                    if (!(b = b.forward(2), b.enough(len))) {
+                    auto [data, ok] = r.read(len);
+                    if (!ok) {
                         return false;
                     }
+                    view::copy(address, data);
                     if (xor_) {
                         for (auto i = 0; i < len; i++) {
-                            b.data[i] ^= xor_[i];
+                            address[i] ^= xor_[i];
                         }
                     }
-                    view::copy(address, view::rvec(b.data, b.len));
-                    b = b.forward(len);
                     return true;
                 }
             };
@@ -179,7 +179,7 @@ namespace utils {
             struct ChangeRequest {
                 bool change_ip = false;
                 bool change_port = false;
-                void pack(WPacket& w) const {
+                void pack(io::writer& w) const {
                     std::uint32_t val = 0;
                     if (change_ip) {
                         val |= 0x4;
@@ -187,14 +187,13 @@ namespace utils {
                     if (change_port) {
                         val |= 0x2;
                     }
-                    w.as(val);
+                    io::write_num(w, val);
                 }
-                bool unpack(ByteLen& in) {
+                bool unpack(io::reader& r) {
                     std::uint32_t val = 0;
-                    if (!in.as(val)) {
+                    if (!io::read_num(r, val)) {
                         return false;
                     }
-                    in = in.forward(4);
                     change_ip = (val & 0x4) != 0;
                     change_port = (val & 0x2) != 0;
                     return true;
@@ -203,18 +202,18 @@ namespace utils {
 
             struct ErrorCode {
                 std::uint32_t code;
-                bool pack(WPacket& w) const {
+                bool pack(io::writer& w) const {
                     auto class_ = code / 100;
                     auto number = code % 100;
                     if (class_ < 3 || 6 < class_) {
                         return false;
                     }
                     // 10bit
-                    w.as(std::uint32_t(class_ << 7 | number));
-                    return true;
+                    return io::write_num(w, std::uint32_t(class_ << 7 | number));
                 }
-                bool unpack(ByteLen& b) {
-                    if (!b.as(code)) {
+
+                bool unpack(io::reader& r) {
+                    if (!io::read_num(r, code)) {
                         return false;
                     }
                     if (code & 0xFFFFFC00) {
@@ -223,7 +222,7 @@ namespace utils {
                     auto class_ = (code >> 7) & 0x7;
                     auto number_ = code & 0x7F;
                     code = class_ * 100 + number_;
-                    return false;
+                    return true;
                 }
             };
 
@@ -270,8 +269,8 @@ namespace utils {
                 disconnected_failed,
             };
 
-            bool read_attr(ByteLen& b, Attribute& attr) {
-                if (!attr.unpack(b)) {
+            bool read_attr(io::reader& r, Attribute& attr) {
+                if (!attr.unpack(r)) {
                     return false;
                 }
                 return true;
@@ -286,7 +285,7 @@ namespace utils {
                 byte transaction_id[12];
                 int errcode = 0;
 
-                StunResult request(WPacket& w) {
+                StunResult request(io::writer& w) {
                     StunHeader h;
                     h.type = msg_binding_request;
                     view::copy(h.transaction_id, transaction_id);
@@ -338,21 +337,22 @@ namespace utils {
                 }
 
                private:
-                StunResult handle_response(ByteLen& b, MappedAddress& mapped) {
-                    auto root = b;
+                StunResult handle_response(io::reader& r, MappedAddress& mapped) {
+                    auto root = r.remain();
                     StunHeader h;
-                    if (!h.unpack(b)) {
+                    if (!h.unpack(r)) {
                         return StunResult::encoding_failed;
                     }
-                    if (!b.enough(h.length)) {
+                    if (r.remain().size() < h.length) {
                         return StunResult::truncated_failed;
                     }
                     if (h.type == msg_binding_error_response) {
                         Attribute attr;
-                        while (read_attr(b, attr)) {
+                        while (read_attr(r, attr)) {
                             if (attr.type == attr_error_code) {
                                 ErrorCode code;
-                                if (code.unpack(attr.value)) {
+                                io::reader r{attr.value};
+                                if (code.unpack(r)) {
                                     errcode = code.code;
                                 }
                                 break;
@@ -362,16 +362,18 @@ namespace utils {
                     }
                     if (h.type == msg_binding_response) {
                         Attribute attr;
-                        while (read_attr(b, attr)) {
+                        while (read_attr(r, attr)) {
                             if (attr.type == attr_mapped_address) {
-                                if (!mapped.unpack(attr.value)) {
+                                io::reader r{attr.value};
+                                if (!mapped.unpack(r)) {
                                     return StunResult::encoding_failed;
                                 }
                                 break;
                             }
                             if (attr.type == attr_xor_mapped_address) {
-                                auto xor_ = root.data + 4;
-                                if (!mapped.unpack(attr.value, xor_)) {
+                                auto xor_ = root.data() + 4;
+                                io::reader r{attr.value};
+                                if (!mapped.unpack(r, xor_)) {
                                     return StunResult::encoding_failed;
                                 }
                                 break;
@@ -412,9 +414,9 @@ namespace utils {
                     return StunResult::done;
                 }
 
-                StunResult response(ByteLen& b) {
+                StunResult response(io::reader& r) {
                     if (state == StunState::test_1_started) {
-                        auto res = handle_response(b, first_time);
+                        auto res = handle_response(r, first_time);
                         if (res != StunResult::do_request) {
                             state = StunState::finish;
                             return res;
@@ -424,7 +426,7 @@ namespace utils {
                     }
                     if (state == StunState::test_2_started) {
                         MappedAddress mp;
-                        auto res = handle_response(b, mp);
+                        auto res = handle_response(r, mp);
                         if (res != StunResult::do_request) {
                             state = StunState::finish;
                             return res;
@@ -439,7 +441,7 @@ namespace utils {
                         return StunResult::done;
                     }
                     if (state == StunState::test_1_again_started) {
-                        auto res = handle_response(b, second_time);
+                        auto res = handle_response(r, second_time);
                         if (res != StunResult::do_request) {
                             return res;
                         }
@@ -453,7 +455,7 @@ namespace utils {
                     }
                     if (state == StunState::test_3_started) {
                         MappedAddress mp;
-                        auto res = handle_response(b, mp);
+                        auto res = handle_response(r, mp);
                         if (res != StunResult::do_request) {
                             return res;
                         }

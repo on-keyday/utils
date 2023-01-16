@@ -33,7 +33,7 @@ namespace utils {
                 return r.size() == index;
             }
 
-            constexpr view::basic_rvec<C, U> remain() {
+            constexpr view::basic_rvec<C, U> remain() const {
                 return r.substr(index);
             }
 
@@ -44,6 +44,10 @@ namespace utils {
                 else {
                     index += add;
                 }
+            }
+
+            constexpr size_t offset() const noexcept {
+                return index;
             }
 
             constexpr view::basic_rvec<C, U> already_read() {
@@ -88,7 +92,7 @@ namespace utils {
             }
 
             constexpr byte top() const noexcept {
-                return empty() ? 0 : r.data()[0];
+                return empty() ? 0 : remain().data()[0];
             }
         };
 

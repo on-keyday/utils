@@ -5,12 +5,13 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <dnet/quic/packet_wire/versionnego.h>
-#include <dnet/quic/packet_number.h>
-#include <dnet/quic/packet_wire/initial_packet.h>
-#include <dnet/quic/packet_wire/handshake_0rtt.h>
+#include <dnet/quic/packet/wire.h>
+#include <dnet/quic/packet/crypto.h>
+#include <dnet/quic/packet/creation.h>
 
 int main() {
-    using namespace utils::dnet::quic::packet::test;
-    auto val = check_version_negotiation();
+    using namespace utils::dnet::quic::packet;
+    auto val = test::check_onertt();
+    val = test::check_render_in_place();
+    val = test::check_packet_creation();
 }

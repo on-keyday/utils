@@ -37,6 +37,7 @@ namespace utils {
                     arg.write_secret = write_secret;
                     arg.secret_len = secret_len;
                     arg.level = EncryptionLevel(level);
+                    arg.cipher = tls.get_cipher();
                     return quic_callback(tls, arg);
                 });
             }

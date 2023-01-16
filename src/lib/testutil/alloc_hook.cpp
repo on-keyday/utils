@@ -32,7 +32,7 @@ namespace utils {
 
         Hooker log_hooker;
 
-        int reqfirst = 0;
+        int reqfirst = -1;
 
         struct DumpFileCloser {
             ~DumpFileCloser() {
@@ -95,10 +95,10 @@ namespace utils {
                     log_hooker(info);
                 }
             };
-            if (reqfirst == 0) {
-                reqfirst = lRequest;
-            }
             if (nAllocType == _HOOK_ALLOC) {
+                if (reqfirst == -1) {
+                    reqfirst = lRequest;
+                }
                 total_alloced += nSize;
                 save_log("malloc");
                 callback(HookType::alloc);
@@ -108,7 +108,7 @@ namespace utils {
                     nSize = _msize_dbg(pvData, _NORMAL_BLOCK);
                     _CrtIsMemoryBlock(pvData, nSize,
                                       &lRequest, nullptr, nullptr);
-                    if (lRequest < reqfirst) {
+                    if (reqfirst == -1 || lRequest < reqfirst) {
                         return res;
                     }
                     total_alloced -= nSize;

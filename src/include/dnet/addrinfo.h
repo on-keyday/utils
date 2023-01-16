@@ -75,10 +75,12 @@ namespace utils {
             constexpr void reset_iterator() {
                 select = nullptr;
             }
+
+            SockAddr sockaddr() const;
             /*
             const void* sockaddr(SockAddr& info) const;
-            NetAddrPort netaddr() const;*/
-            SockAddr sockaddr() const;
+            NetAddrPort netaddr() const;
+
             bool string(void* text, size_t len, int* port = nullptr, int* err = nullptr) const;
 
             IPText string(int* port = nullptr, int* err = nullptr) const {
@@ -88,13 +90,14 @@ namespace utils {
                 IPText text;
                 string(text.text, sizeof(text.text), port, err);
                 return text;
-            }
+            }*/
 
             constexpr AddrInfo()
                 : AddrInfo(nullptr) {}
             ~AddrInfo();
         };
 
+        /*
         dnet_dll_export(bool) string_from_sockaddr(const void* addr, size_t addrlen, void* text, size_t len, int* port, int* err);
 
         inline IPText string_from_sockaddr(const void* addr, size_t addrlen, int* port = nullptr, int* err = nullptr) {
@@ -104,7 +107,7 @@ namespace utils {
             IPText text;
             string_from_sockaddr(addr, addrlen, text.text, sizeof(text.text), port, err);
             return text;
-        }
+        }*/
 
         // WaitAddrInfo is waiter calss of dns resolevement
         struct dnet_class_export WaitAddrInfo {
@@ -139,6 +142,7 @@ namespace utils {
             ~WaitAddrInfo();
         };
 
+        // you MUST set attr to find address
         [[nodiscard]] dnet_dll_export(WaitAddrInfo) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr = {});
 
         // this invokes resolve_address with addr.flag|=AI_PASSIVE and addr.hostname=nullptr, addr.namelen=0

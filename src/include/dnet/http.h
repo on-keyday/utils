@@ -7,12 +7,12 @@
 
 // http - http request response generator
 #pragma once
-#include "dll/httpbuf.h"
-#include "httpstring.h"
+// #include "httpstring.h"
 #include "../net_util/http/http_headers.h"
 #include "../net_util/http/predefined.h"
 #include "../view/charvec.h"
 #include "../view/sized.h"
+#include "storage.h"
 
 namespace utils {
     namespace dnet {
@@ -96,8 +96,8 @@ namespace utils {
         // local user data <- output
         struct HTTP {
            private:
-            String input;
-            String output;
+            flex_storage input;
+            flex_storage output;
 
            public:
             template <class Body = const char*>
@@ -137,12 +137,12 @@ namespace utils {
             }
 
             void borrow_output(const char*& data, size_t& size) {
-                data = output.begin();
+                data = output.as_char();
                 size = output.size();
             }
 
             void borrow_input(const char*& data, size_t& size) {
-                data = input.begin();
+                data = input.as_char();
                 size = input.size();
             }
 
@@ -153,7 +153,8 @@ namespace utils {
                 }
                 helper::read_n(buf, check, limit);
                 if (!peek) {
-                    output.shift(limit);
+                    view::shift(output, 0, limit, output.size() - limit);
+                    output.resize(output.size() - limit);
                 }
                 return limit;
             }
@@ -165,7 +166,7 @@ namespace utils {
                 }
                 helper::read_n(buf, check, limit);
                 if (!peek) {
-                    input.shift(limit);
+                    input.shift_front(limit);
                 }
                 return limit;
             }
@@ -230,7 +231,7 @@ namespace utils {
                 return h::guess_and_read_raw_header(check, always_false, begcheck);
             }
 
-            template <class TmpString = String, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
+            template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
                       class Preview = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
             size_t read_response(auto&& status, auto&& header, HTTPBodyInfo* info, bool peek = false, Reason&& reason = helper::nop, Version&& version = helper::nop,
                                  Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
@@ -255,7 +256,7 @@ namespace utils {
                 return check.rptr;
             }
 
-            template <class TmpString = String, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
+            template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
                       class Preview = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
             size_t read_request(auto&& method, auto&& path, auto&& header, HTTPBodyInfo* info, bool peek = false, Version&& version = helper::nop,
                                 Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
@@ -318,13 +319,13 @@ namespace utils {
                 }
                 if (res == 0) {
                     if (peek < 0) {
-                        input.shift(check.rptr);
+                        input.shift_front(check.rptr);
                         return check.rptr != 0;
                     }
                     return false;
                 }
                 if (peek <= 0) {
-                    input.shift(check.rptr);
+                    input.shift_front(check.rptr);
                 }
                 return true;
             }
@@ -358,7 +359,7 @@ namespace utils {
                 if (!beg) {
                     return 0;
                 }
-                String in;
+                flex_storage in;
                 if (len == 0) {
                     len = input.size();
                 }

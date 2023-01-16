@@ -8,7 +8,7 @@
 // accept - acceptor
 #pragma once
 #include "../addrinfo.h"
-#include "../conn.h"
+#include "../socket.h"
 #include "../plthead.h"
 
 namespace utils {

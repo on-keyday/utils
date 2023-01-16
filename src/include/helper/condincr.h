@@ -10,6 +10,8 @@
 
 namespace utils {
     namespace helper {
+        // if cond is false then increment
+        // after increment or cond is true, cond=false would be executed
         constexpr auto cond_incr(bool& cond) {
             return [&](auto& it) {
                 if (!cond) {

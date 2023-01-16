@@ -90,9 +90,11 @@ namespace utils {
                 }
                 io::reader r{w.written()};
                 size_t i = 0;
-                return parse_frames<quic::test::FixedTestVec>(r, [&](auto&& fr, bool) {
-                    return fr.type.type() == known_frame_types[i++];
-                });
+                return parse_frames<quic::test::FixedTestVec>(
+                    r, [&](auto&& fr, bool) {
+                        return fr.type.type() == known_frame_types[i++];
+                    },
+                    -1, false);
             }
 
             static_assert(check_parse());

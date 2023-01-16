@@ -15,7 +15,7 @@ namespace utils {
     namespace dnet {
         namespace quic::crypto {
 
-            bool generate_masks_aes_based(const byte* hp_key, byte* sample, byte* masks, bool is_aes256) {
+            bool generate_masks_aes_based(const byte* hp_key, const byte* sample, byte* masks, bool is_aes256) {
                 auto& c = ssldl;
                 auto ctx = c.EVP_CIPHER_CTX_new_();
                 if (!ctx) {
@@ -38,12 +38,12 @@ namespace utils {
                 return true;
             }
 
-            bool generate_masks_chacha20_based(const byte* hp_key, byte* sample, byte* masks) {
+            bool generate_masks_chacha20_based(const byte* hp_key, const byte* sample, byte* masks) {
                 byte data[32];
                 int outlen = 32;
                 byte zeros[5]{0};
                 if (ssldl.CRYPTO_chacha_20_) {
-                    auto counter = endian::Buf<std::uint32_t, byte*>{sample}.read_le();
+                    auto counter = endian::Buf<std::uint32_t, const byte*>{sample}.read_le();
                     ssldl.CRYPTO_chacha_20_(data, zeros, 5, hp_key, sample + 4, counter);
                     memcpy(masks, zeros, 5);
                     return true;

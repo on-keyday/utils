@@ -12,7 +12,7 @@
 #include <string>
 #include <thread>
 
-void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
+void test_dnet_stun_run(utils::io::writer& w, int af) {
     using namespace utils::dnet;
     using namespace std::chrono_literals;
     stun::StunContext ctx;
@@ -44,15 +44,16 @@ void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
     stun::StunResult result = stun::StunResult::do_request;
     while (true) {
         if (result == stun::StunResult::do_request) {
-            w.offset = 0;
+            w.reset();
             result = ctx.request(w);
             continue;
         }
         if (result == stun::StunResult::do_roundtrip) {
-            sock.writeto(server.addr, utils::view::rvec(w.b.data, w.offset));
+            sock.writeto(server.addr, w.written());
             int count = 0;
             while (true) {
-                auto [n, addr, err] = sock.readfrom(utils::view::wvec(w.b.data, w.b.len));
+                w.reset();
+                auto [n, addr, err] = sock.readfrom(w.remain());
                 if (err) {
                     if (count > 100) {
                         result = ctx.no_response();
@@ -64,8 +65,8 @@ void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
                     }
                     continue;
                 }
-                auto recv = w.b.resized(n.size());
-                result = ctx.response(recv);
+                utils::io::reader r{n};
+                result = ctx.response(r);
                 break;
             }
             continue;
@@ -76,7 +77,7 @@ void test_dnet_stun_run(utils::dnet::WPacket& w, int af) {
 
 void test_dnet_stun() {
     byte buf[2500];
-    utils::dnet::WPacket w{{buf, sizeof(buf)}};
+    utils::io::writer w{buf};
     test_dnet_stun_run(w, AF_INET);
 }
 

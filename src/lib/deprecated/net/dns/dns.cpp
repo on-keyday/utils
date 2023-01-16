@@ -71,8 +71,8 @@ namespace utils {
         bool Address::stringify(IBuffer buf, size_t index) {
             if (!addr.exists()) {
                 if (saddr) {
-                    auto text = dnet::string_from_sockaddr(saddr, sizeof(sockaddr_storage));
-                    helper::append(buf, text);
+                    // auto text = dnet::string_from_sockaddr(saddr, sizeof(sockaddr_storage));
+                    // helper::append(buf, text);
                     return true;
                 }
             }
@@ -92,7 +92,7 @@ namespace utils {
                 reset_curp();
                 return false;
             }
-            auto text = addr.string();
+            auto text = addr.sockaddr().addr.to_string<std::string>();
             helper::append(buf, text);
             return true;
         }

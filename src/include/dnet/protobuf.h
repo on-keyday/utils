@@ -7,7 +7,7 @@
 
 // protobuf - protocol buffers format
 #pragma once
-#include "bytelen.h"
+#include <cstddef>
 
 namespace utils {
     namespace dnet {

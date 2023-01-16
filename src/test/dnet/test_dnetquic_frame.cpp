@@ -11,6 +11,10 @@
 #include <dnet/quic/frame/dynframe.h>
 #include <dnet/heap.h>
 #include <dnet/quic/frame/parse.h>
+#include <dnet/quic/stream/stream_base.h>
+#include <dnet/quic/stream/impl/stream.h>
+#include <dnet/quic/event/stream_event.h>
+#include <dnet/debug.h>
 
 void make_and_parse(auto&& st) {
     utils::dnet::quic::frame::DynFramePtr dyn = makeDynFrame(std::move(st));
@@ -23,17 +27,7 @@ void make_and_parse(auto&& st) {
 
 int main() {
     using namespace utils::dnet::quic::frame;
-    utils::dnet::Allocs allocs;
-    allocs.alloc_ptr = [](void*, size_t size, size_t, utils::dnet::DebugInfo*) {
-        return malloc(size);
-    };
-    allocs.realloc_ptr = [](void*, void* p, size_t size, size_t, utils::dnet::DebugInfo*) {
-        return realloc(p, size);
-    };
-    allocs.free_ptr = [](void*, void* p, utils::dnet::DebugInfo*) {
-        return free(p);
-    };
-    allocs.ctx = nullptr;
+    auto allocs = utils::dnet::debug::allocs();
     utils::dnet::set_normal_allocs(allocs);
     utils::test::set_alloc_hook(true);
     StreamFrame st;
@@ -41,4 +35,6 @@ int main() {
     make_and_parse(st);
     DataBlockedFrame data;
     make_and_parse(data);
+    auto val = test::check_stream_range();
+    val = utils::dnet::quic::stream::test::check_stream_send();
 }

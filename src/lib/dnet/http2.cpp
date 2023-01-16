@@ -7,7 +7,6 @@
 
 #include <dnet/dll/dllcpp.h>
 #include <dnet/http2/http2.h>
-#include <dnet/dll/httpbufproxy.h>
 #include <dnet/errcode.h>
 #include <helper/appender.h>
 #include <view/charvec.h>
@@ -25,16 +24,16 @@
 
 namespace std {
     template <>
-    struct hash<utils::dnet::String> {
-        auto operator()(const utils::dnet::String& str) const {
+    struct hash<utils::dnet::flex_storage> {
+        auto operator()(const utils::dnet::flex_storage& str) const {
             constexpr auto hash = std::hash<std::string_view>{};
-            return hash(std::string_view(str.begin(), str.size()));
+            return hash(std::string_view(str.as_char(), str.size()));
         }
     };
 }  // namespace std
 
 namespace utils {
-    namespace dnet {
+    namespace dnet::http2 {
         /*
         quic::allocate::Alloc alloc_init{
             .alloc = [](void*, size_t s, size_t) { return static_cast<void*>(get_cvec(s, DNET_DEBUG_MEMORY_LOCINFO(true, s))); },
@@ -45,29 +44,29 @@ namespace utils {
             .put = [](void*, void* c) { free_cvec(static_cast<char*>(c), DNET_DEBUG_MEMORY_LOCINFO(false, 0)); },
         };*/
         struct WrapedHeader {
-            using strpair = std::pair<String, String>;
+            using strpair = std::pair<flex_storage, flex_storage>;
             std::vector<strpair, glheap_allocator<strpair>> buf;
             void emplace(auto&& key, auto&& value) {
-                buf.push_back({std::forward<decltype(key)>(key), std::forward<decltype(value)>(value)});
+                buf.push_back(strpair{std::forward<decltype(key)>(key), std::forward<decltype(value)>(value)});
             }
         };
 
         struct Stream {
-            h2stream::StreamNumState state;
-            h2frame::Priority prio;
-            String data_buf;
-            String header_buf;
+            stream::StreamNumState state;
+            frame::Priority prio;
+            flex_storage data_buf;
+            flex_storage header_buf;
             WrapedHeader header;
             int rst_code;
         };
 
         struct HTTP2Connection {
-            String input;
-            String output;
+            flex_storage input;
+            flex_storage output;
             using HashMap = std::unordered_map<int, Stream, std::hash<int>, std::equal_to<int>, glheap_objpool_allocator<std::pair<const int, Stream>>>;
             HashMap streams;
-            h2stream::ConnState conn;
-            String debug;
+            stream::ConnState conn;
+            flex_storage debug;
             hpack::HpackError hpkerr{};
             bool preface_ok = false;
 
@@ -83,12 +82,12 @@ namespace utils {
             auto debug__ = debug_;
         }
 
-        h2stream::State& state(HTTP2Connection* c) {
+        stream::State& state(HTTP2Connection* c) {
             return c->conn.state.s0.com.state;
         }
 
         bool is_closed(HTTP2Connection* c) {
-            return state(c) == h2stream::State::closed;
+            return state(c) == stream::State::closed;
         }
 
         HTTP2Connection* check_opt(void* opt, int& err) {
@@ -128,24 +127,24 @@ namespace utils {
                 }
                 auto pb = helper::CharVecPushbacker(static_cast<char*>(data), size);
                 helper::append(pb, s->output);
-                s->output.shift(pb.size_);
+                s->output.shift_front(pb.size_);
                 *red = pb.size();
                 return true;
             });
         }
 
-        bool fast_enque_frame(HTTP2Connection* s, h2frame::Frame& f, ErrCode& err) {
-            if (s->output.cap() == 0) {
-                s->output.recap(20);
-            }
+        bool fast_enque_frame(HTTP2Connection* s, frame::Frame& f, ErrCode& err) {
             auto& p = s->output;
-            while (!render_frame(p.text(), p.refsize(), p.cap(), err, &f, true)) {
-                if (err.err == http2_need_more_buffer) {
-                    if (!p.recap(p.cap() * 2)) {
-                        return false;
-                    }
-                    continue;
-                }
+            const auto old = p.expand(frame::frame_len(f));
+            if (p.size() == old) {
+                err.err = http2_unknown_type;
+                return false;
+            }
+            io::writer w{p};
+            w.offset(old);
+            if (!frame::render_frame(w, f)) {
+                err.err = http2_invalid_data;
+                p.resize(old);
                 return false;
             }
             return true;
@@ -160,24 +159,24 @@ namespace utils {
                 assert(res);
                 helper::append(sets, settings);
             }
-            h2frame::SettingsFrame f;
+            frame::SettingsFrame f;
             f.id = 0;
             f.len = sets.size();
-            f.settings = sets.c_str();
+            f.settings = sets;
             f.flag = {};
             return fast_enque_frame(s, f, s->conn.state.s0.com.errs);
         }
 
         bool idle_to_open(HTTP2Connection* s) {
-            if (state(s) == h2stream::State::idle) {
+            if (state(s) == stream::State::idle) {
                 if (!s->conn.state.is_server) {
-                    helper::append(s->output, http2_connection_preface);
+                    helper::append(s->output, view::rvec(http2_connection_preface));
                 }
                 if (!enque_settings(s)) {
-                    state(s) = h2stream::State::closed;
+                    state(s) = stream::State::closed;
                     return false;  // aborted
                 }
-                state(s) = h2stream::State::open;
+                state(s) = stream::State::open;
             }
             return true;
         }
@@ -185,33 +184,24 @@ namespace utils {
         bool check_preface(HTTP2Connection* s) {
             if (!s->preface_ok) {
                 if (!helper::starts_with(s->input, http2_connection_preface)) {
-                    state(s) = h2stream::State::closed;
+                    state(s) = stream::State::closed;
                     s->conn.state.s0.com.errs.err = http2_invalid_preface;
-                    s->conn.state.s0.com.errs.h2err = h2frame::H2Error::protocol;
+                    s->conn.state.s0.com.errs.h2err = H2Error::protocol;
                     s->conn.state.s0.com.errs.debug = "connection preface not found";
                     return false;
                 }
                 constexpr auto len = strlen(http2_connection_preface);
-                s->input.shift(len);
+                s->input.shift_front(len);
                 s->preface_ok = true;
             }
             return true;
         }
 
-        bool enque_frame(HTTP2Connection* s, h2stream::StreamNumState& sn, h2frame::Frame& f, ErrCode& err) {
+        bool enque_frame(HTTP2Connection* s, stream::StreamNumState& sn, frame::Frame& f, ErrCode& err) {
             if (!idle_to_open(s)) {
                 return false;
             }
-            char tmpbuf[10]{};
-            size_t tmp = 0;
-            // do auto correction
-            err.err = http2_error_none;
-            render_frame(tmpbuf, tmp, 10, err, &f, true);
-            if (err.err != http2_error_none &&
-                err.err != http2_need_more_buffer) {
-                return false;  // error detected
-            }
-            if (!h2stream::send_frame(s->conn.state, sn, f)) {
+            if (!stream::send_frame(s->conn.state, sn, f)) {
                 err = sn.com.errs;
                 sn.com.errs = {};
                 return false;  // error detected
@@ -224,23 +214,22 @@ namespace utils {
                 warning(s, "enque_conn_error called after conncetion closed");
                 return;  // already sent?
             }
-            h2frame::GoAwayFrame goaway;
+            frame::GoAwayFrame goaway;
             goaway.code = std::uint32_t(e.h2err);
             goaway.processed_id = s->conn.state.max_closed_id;
-            goaway.debug_data = e.debug;
-            goaway.dbglen = e.debug ? strlen(e.debug) : 0;
+            goaway.debug = view::rvec(e.debug);
             ErrCode err;
             enque_frame(s, s->conn.state.s0, goaway, err);
-            state(s) = h2stream::State::closed;
+            state(s) = stream::State::closed;
             s->conn.state.s0.com.errs = e;  // save connection error
         }
 
-        void enque_strm_error(HTTP2Connection* s, Stream& strm, h2frame::H2Error e, const char* msg) {
+        void enque_strm_error(HTTP2Connection* s, Stream& strm, H2Error e, const char* msg) {
             if (is_closed(s)) {
                 warning(s, "enque_strm_error called after connection closed");
                 return;  // connection already aborted?
             }
-            h2frame::RstStreamFrame rst{};
+            frame::RstStreamFrame rst{};
             rst.id = strm.state.com.id;
             rst.code = std::uint32_t(e);
             rst.len = 4;
@@ -248,25 +237,25 @@ namespace utils {
             enque_frame(s, strm.state, rst, err);
         }
 
-        bool connection_update_recv(HTTP2Connection* s, h2frame::Frame* f) {
-            if (f->type == h2frame::FrameType::ping) {
-                if (f->flag & h2frame::Flag::ack) {
+        bool connection_update_recv(HTTP2Connection* s, frame::Frame* f) {
+            if (f->type == frame::FrameType::ping) {
+                if (f->flag & frame::Flag::ack) {
                     return true;  // nothing to do
                 }
                 ErrCode err{};
-                f->flag |= h2frame::Flag::ack;
+                f->flag |= frame::Flag::ack;
                 if (!enque_frame(s, s->conn.state.s0, *f, err)) {
                     return false;
                 }
             }
-            if (f->type == h2frame::FrameType::settings) {
-                if (f->flag & h2frame::Flag::ack) {
+            if (f->type == frame::FrameType::settings) {
+                if (f->flag & frame::Flag::ack) {
                     return true;  // nothing to do
                 }
-                auto set = static_cast<h2frame::SettingsFrame*>(f);
+                auto set = static_cast<frame::SettingsFrame*>(f);
                 auto update_settings = [&](std::uint16_t key, std::uint32_t value) {
                     using sk = h2set::Skey;
-                    using e = h2frame::H2Error;
+                    using e = H2Error;
                     auto& settings = s->conn.state.recv.settings;
                     if (key == k(sk::table_size)) {
                         settings.header_table_size = value;
@@ -287,9 +276,9 @@ namespace utils {
                     }
                     if (key == k(sk::initial_windows_size)) {
                         auto old = settings.initial_window_size;
-                        h2stream::set_new_window(s->conn.state.s0.send.window, old, value);
+                        stream::set_new_window(s->conn.state.s0.send.window, old, value);
                         for (auto& v : s->streams) {
-                            h2stream::set_new_window(v.second.state.send.window, old, value);
+                            stream::set_new_window(v.second.state.send.window, old, value);
                         }
                         settings.initial_window_size = value;
                     }
@@ -303,54 +292,54 @@ namespace utils {
                 if (!h2set::read_settings(set->settings, set->len, update_settings)) {
                     enque_conn_error(s, {
                                             .err = http2_library_bug,
-                                            .h2err = h2frame::H2Error::frame_size,
+                                            .h2err = H2Error::frame_size,
                                             .debug = "invalid SettingsFrame length. settings frame size detection failed at parse_frame",
                                         });
                     return false;
                 }
-                f->flag |= h2frame::Flag::ack;
+                f->flag |= frame::Flag::ack;
                 ErrCode err{};
                 if (!enque_frame(s, s->conn.state.s0, *f, err)) {
                     return false;
                 }
             }
-            if (f->type == h2frame::FrameType::goaway) {
-                auto g = static_cast<h2frame::GoAwayFrame*>(f);
-                s->conn.state.s0.com.errs.h2err = h2frame::H2Error(g->code);
-                s->debug = String(g->debug_data, g->dbglen);
-                state(s) = h2stream::State::closed;
+            if (f->type == frame::FrameType::goaway) {
+                auto g = static_cast<frame::GoAwayFrame*>(f);
+                s->conn.state.s0.com.errs.h2err = H2Error(g->code);
+                s->debug = g->debug;
+                state(s) = stream::State::closed;
             }
             return true;
         }
 
-        bool stream_update_recv(HTTP2Connection* s, Stream& strm, h2frame::Frame* f) {
-            using t = h2frame::FrameType;
+        bool stream_update_recv(HTTP2Connection* s, Stream& strm, frame::Frame* f) {
+            using t = frame::FrameType;
             if (f->type == t::data) {
-                auto d = static_cast<h2frame::DataFrame*>(f);
-                helper::append(strm.data_buf, view::CharVec(d->data, d->datalen));
+                auto d = static_cast<frame::DataFrame*>(f);
+                helper::append(strm.data_buf, d->data);
             }
             if (f->type == t::header || f->type == t::continuous) {
                 if (f->type == t::header) {
-                    auto h = static_cast<h2frame::HeaderFrame*>(f);
-                    helper::append(strm.header_buf, view::CharVec(h->data, h->datalen));
+                    auto h = static_cast<frame::HeaderFrame*>(f);
+                    helper::append(strm.header_buf, h->data);
                 }
                 else {
-                    auto h = static_cast<h2frame::ContinuationFrame*>(f);
-                    helper::append(strm.header_buf, view::CharVec(h->data, h->len));
+                    auto h = static_cast<frame::ContinuationFrame*>(f);
+                    helper::append(strm.header_buf, h->data);
                 }
-                if (f->flag & h2frame::Flag::end_headers) {
+                if (f->flag & frame::Flag::end_headers) {
                     s->hpkerr = hpack::decode(strm.header_buf, s->conn.recv.table, strm.header, s->conn.state.recv.settings.header_table_size);
                     if (s->hpkerr != hpack::HpackError::none) {
-                        enque_conn_error(s, {.err = http2_hpack_error, .h2err = h2frame::H2Error::compression, .debug = "HPACK decode failure"});
+                        enque_conn_error(s, {.err = http2_hpack_error, .h2err = H2Error::compression, .debug = "HPACK decode failure"});
                         return false;
                     }
                 }
             }
             if (f->type == t::priority) {
-                strm.prio = static_cast<h2frame::PriorityFrame*>(f)->priority;
+                strm.prio = static_cast<frame::PriorityFrame*>(f)->priority;
             }
             if (f->type == t::rst_stream) {
-                strm.rst_code = static_cast<h2frame::RstStreamFrame*>(f)->code;
+                strm.rst_code = static_cast<frame::RstStreamFrame*>(f)->code;
             }
             return true;
         }
@@ -373,9 +362,9 @@ namespace utils {
             return res.first != s->streams.end();
         }
 
-        bool progress_callback(void* c, h2frame::Frame* f, ErrCode err) {
+        bool progress_callback(void* c, frame::Frame* f, ErrCode err) {
             auto s = static_cast<HTTP2Connection*>(c);
-            h2stream::StreamNumState* strm;
+            stream::StreamNumState* strm;
             Stream* object = nullptr;
             if (f->id != 0) {
                 insert_stream(s, f->id);  // for receivieng state
@@ -383,7 +372,7 @@ namespace utils {
                 if (ps == s->streams.end()) {
                     enque_conn_error(s, {
                                             .err = http2_resource,
-                                            .h2err = h2frame::H2Error::internal,
+                                            .h2err = H2Error::internal,
                                             .debug = "stream resource allocation failed",
                                         });
                     return false;
@@ -403,7 +392,7 @@ namespace utils {
                 }
                 return false;
             }
-            if (!h2stream::recv_frame(s->conn.state, *strm, *f)) {
+            if (!stream::recv_frame(s->conn.state, *strm, *f)) {
                 if (strm->com.errs.strm && object) {
                     enque_strm_error(s, *object, strm->com.errs.h2err, strm->com.errs.debug);
                 }
@@ -412,7 +401,7 @@ namespace utils {
                 }
                 return false;
             }
-            if (h2stream::is_connection_level(f->type)) {
+            if (stream::is_connection_level(f->type)) {
                 if (!connection_update_recv(s, f)) {
                     return false;
                 }
@@ -420,7 +409,7 @@ namespace utils {
                     s->conn_cb(s->conn_user, *f, s->conn);
                 }
             }
-            else if (h2stream::is_stream_level(f->type)) {
+            else if (stream::is_stream_level(f->type)) {
                 if (!stream_update_recv(s, *object, f)) {
                     return false;
                 }
@@ -434,7 +423,7 @@ namespace utils {
         bool HTTP2::progress() {
             return check_opt(opt, err, [&](HTTP2Connection* s) {
                 auto& p = s->input;
-                if (!p.text()) {
+                if (!p.size()) {
                     return true;  // nothing to do
                 }
                 if (!check_preface(s)) {
@@ -442,14 +431,27 @@ namespace utils {
                 }
                 size_t red = 0;
                 ErrCode code;
-                auto res = parse_frame(p.text(), p.size(), red, code, progress_callback, s);
+                io::reader r{p};
+                frame::parse_frame(r, [&](frame::Frame& fr, frame::UnknownFrame& un, bool err) {
+                    if (&fr == &un) {
+                        return true;  // skip unknown type frame
+                    }
+                    ErrCode code;
+                    if (err) {
+                        code.h2err = H2Error::protocol;
+                        code.debug = "invalid frame format";
+                    }
+                    return progress_callback(opt, &fr, code);
+                });
+                /*
+                auto res = parse_frame(p.as_char(), p.size(), red, code, progress_callback, s);
                 if (!res) {
                     size_t add = false;
-                    pass_frame(p.text() + red, p.size() - red, add);
+                    pass_frame(p.as_char() + red, p.size() - red, add);
                     red += add;
-                }
-                p.shift(red);
-                return res;
+                }*/
+                p.shift_front(r.already_read().size());
+                return true;
             });
         }
 
@@ -459,7 +461,7 @@ namespace utils {
                 return {};
             }
             if (new_id <= 0) {
-                new_id = h2stream::get_next_id(s->conn.state);
+                new_id = stream::get_next_id(s->conn.state);
             }
             if (!insert_stream(s, new_id)) {
                 err = http2_create_stream;
@@ -483,7 +485,7 @@ namespace utils {
         void HTTP2::fast_open() {
             check_opt(opt, err, [&](HTTP2Connection* c) {
                 if (!is_closed(c)) {
-                    state(c) = h2stream::State::open;
+                    state(c) = stream::State::open;
                 }
                 return true;
             });
@@ -510,7 +512,7 @@ namespace utils {
             if (!c) {
                 return true;
             }
-            return state(c) == h2stream::State::closed;
+            return state(c) == stream::State::closed;
         }
 
         void HTTP2::set_stream_callback(HTTP2StreamCallback cb, void* user) {
@@ -529,15 +531,15 @@ namespace utils {
             });
         }
 
-        bool HTTP2::write_frame(h2frame::Frame& frame, ErrCode& errs) {
+        bool HTTP2::write_frame(frame::Frame& frame, ErrCode& errs) {
             return check_opt(opt, err, [&](HTTP2Connection* c) {
-                if (h2stream::is_connection_level(frame.type) ||
-                    (frame.type == h2frame::FrameType::window_update && frame.id == 0)) {
+                if (stream::is_connection_level(frame.type) ||
+                    (frame.type == frame::FrameType::window_update && frame.id == 0)) {
                     return enque_frame(c, c->conn.state.s0, frame, errs);
                 }
                 if (frame.id == 0) {
                     errs.err = http2_invalid_id;
-                    errs.h2err = h2frame::H2Error::protocol;
+                    errs.h2err = H2Error::protocol;
                     errs.debug = "Frame.id == 0 for stream related frame";
                     return false;
                 }
@@ -546,7 +548,7 @@ namespace utils {
                 if (kv == c->streams.end()) {
                     enque_conn_error(c, {
                                             .err = http2_resource,
-                                            .h2err = h2frame::H2Error::internal,
+                                            .h2err = H2Error::internal,
                                             .debug = "stream resource allocation failure",
                                         });
                     return false;
@@ -559,7 +561,7 @@ namespace utils {
             return check_opt(opt, err, [&](HTTP2Connection* c) {
                 enque_conn_error(c, {
                                         .err = http2_user_error,
-                                        .h2err = h2frame::H2Error(code),
+                                        .h2err = H2Error(code),
                                         .debug = debug,
                                     });
                 return true;
@@ -567,7 +569,7 @@ namespace utils {
         }
 
         struct tmp_head {
-            using strpair = std::pair<String, String>;
+            using strpair = std::pair<flex_storage, flex_storage>;
             strpair pair;
             internal::data_set set;
             bool is_end() const {
@@ -581,7 +583,7 @@ namespace utils {
                 pair.first.resize(0);
                 pair.second.resize(0);
                 auto cb = [](void* c, char t) {
-                    auto s = static_cast<String*>(c);
+                    auto s = static_cast<flex_storage*>(c);
                     s->push_back(t);
                 };
                 set.load(set.iter, true, &pair.first, cb);
@@ -627,7 +629,7 @@ namespace utils {
         };
 
         bool HTTP2Stream::write_hpack_header(internal::data_set data,
-                                             std::uint8_t* padding, h2frame::Priority* prio, bool end_stream,
+                                             std::uint8_t* padding, frame::Priority* prio, bool end_stream,
                                              ErrCode& errc) {
             auto c = check_opt(opt, errc.err);
             if (!c) {
@@ -637,46 +639,45 @@ namespace utils {
             if (kv == c->streams.end()) {
                 return false;
             }
-            String buf;
+            flex_storage buf;
             TmpHeader tmph{data};
             c->hpkerr = hpack::encode(buf, c->conn.send.table, tmph, c->conn.state.send.settings.header_table_size, true);
             if (c->hpkerr != hpack::HpackError::none) {
                 enque_conn_error(c, {
                                         .err = http2_hpack_error,
-                                        .h2err = h2frame::H2Error::compression,
+                                        .h2err = H2Error::compression,
                                         .debug = "HPACK encode failure",
                                     });
                 return false;
             }
-            h2frame::HeaderFrame head{};
+            frame::HeaderFrame head{};
             head.id = id_;
-            head.data = buf.c_str();
             if (prio) {
-                head.flag |= h2frame::Flag::priority;
+                head.flag |= frame::Flag::priority;
                 head.priority = *prio;
             }
             if (padding) {
-                head.flag |= h2frame::Flag::padded;
+                head.flag |= frame::Flag::padded;
                 head.padding = *padding;
             }
             if (end_stream) {
-                head.flag |= h2frame::Flag::end_stream;
+                head.flag |= frame::Flag::end_stream;
             }
             const auto frame_size = c->conn.state.recv.settings.max_frame_size;
             size_t progress = 0;
-            auto increment_progress = [&](auto& set_len) {
+            auto increment_progress = [&]() {
                 if (buf.size() - progress <= frame_size) {
-                    set_len = buf.size() - progress;
+                    head.data = buf;
                     progress = buf.size();
                 }
                 else {
-                    set_len = frame_size;
+                    head.data = buf.rvec().substr(progress, frame_size);
                     progress += frame_size;
                 }
             };
-            increment_progress(head.datalen);
+            increment_progress();
             if (progress == buf.size()) {
-                head.flag |= h2frame::Flag::end_headers;
+                head.flag |= frame::Flag::end_headers;
             }
             if (!enque_frame(c, kv->second.state, head, errc)) {
                 return false;
@@ -684,12 +685,11 @@ namespace utils {
             while (progress != buf.size()) {
                 // now enter danger zone
                 // failure of this section causes connection error
-                h2frame::ContinuationFrame fr{};
+                frame::ContinuationFrame fr{};
                 fr.id = id_;
-                fr.data = buf.c_str() + progress;
-                increment_progress(fr.len);
+                increment_progress();
                 if (progress == buf.size()) {
-                    fr.flag |= h2frame::Flag::end_headers;
+                    fr.flag |= frame::Flag::end_headers;
                 }
                 if (!enque_frame(c, kv->second.state, fr, errc)) {
                     enque_conn_error(c, errc);
@@ -712,8 +712,8 @@ namespace utils {
             if (kv == c->streams.end()) {
                 return false;
             }
-            h2frame::DataFrame f{};
-            auto send_size = h2stream::get_sendable_size(c->conn.state.s0.send, kv->second.state.send);
+            frame::DataFrame f{};
+            auto send_size = stream::get_sendable_size(c->conn.state.s0.send, kv->second.state.send);
             if (send_size < len) {
                 if (!sent) {
                     return false;
@@ -722,13 +722,12 @@ namespace utils {
             }
             f.id = id_;
             if (padding) {
-                f.flag |= h2frame::Flag::padded;
+                f.flag |= frame::Flag::padded;
             }
             if (end_stream) {
-                f.flag |= h2frame::Flag::end_stream;
+                f.flag |= frame::Flag::end_stream;
             }
             f.data = data;
-            f.datalen = len;
             if (!enque_frame(c, kv->second.state, f, code)) {
                 if (err) {
                     *err = code;
@@ -749,8 +748,8 @@ namespace utils {
                 return false;
             }
             for (auto& field : kv->second.header.buf) {
-                add(user, field.first.c_str(), field.first.size(),
-                    field.second.c_str(), field.second.size());
+                add(user, field.first.as_char(), field.first.size(),
+                    field.second.as_char(), field.second.size());
             }
             return true;
         }
@@ -766,8 +765,8 @@ namespace utils {
             // stream 0 state represents connection state
             // flow is
             // State.idle -> State.open -> State.closed
-            state(c) = h2stream::State::idle;
+            state(c) = stream::State::idle;
             return HTTP2(c);
         }
-    }  // namespace dnet
+    }  // namespace dnet::http2
 }  // namespace utils

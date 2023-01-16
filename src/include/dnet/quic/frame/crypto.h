@@ -8,6 +8,7 @@
 // crypto - cryptographic frame
 #pragma once
 #include "typeonly.h"
+#include "calc_data.h"
 
 namespace utils {
     namespace dnet::quic::frame {
@@ -55,6 +56,21 @@ namespace utils {
                 cb(crypto_data);
             }
         };
+
+        constexpr std::pair<CryptoFrame, bool> make_fit_size_Crypto(std::uint64_t to_fit, std::uint64_t offset, view::rvec src) {
+            StreamDataRange range;
+            range.fixed_length = 1 + varint::len(offset);
+            range.max_length = src.size();
+            auto [_, len, ok] = shrink_to_fit_with_len(to_fit, range);
+            if (!ok) {
+                return {{}, false};
+            }
+            CryptoFrame frame;
+            frame.offset = offset;
+            frame.length = len;
+            frame.crypto_data = src.substr(0, len);
+            return {frame, true};
+        }
 
         namespace test {
             constexpr bool check_crypto() {

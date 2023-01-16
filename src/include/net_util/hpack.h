@@ -139,7 +139,7 @@ namespace utils {
                 };
                 auto read_idx_and_literal = [&](size_t idx) -> HpkErr {
                     if (idx < predefined_header_size) {
-                        key = get<0>(predefined_header[idx]);
+                        key = String(get<0>(predefined_header[idx]));
                     }
                     else {
                         if (table.size() <= idx - predefined_header_size) {

@@ -163,6 +163,48 @@ namespace utils {
             return true;
         }
 
+        // render ack directly from ACKRange
+        template <template <class...> class Vec>
+        constexpr bool render_ack_direct(io::writer& w, Vec<ACKRange>& ranges, std::uint64_t ack_delay, ECNCounts ecn = {}) {
+            if (!is_sorted_ack_ranges(ranges)) {
+                return false;
+            }
+            const bool has_ecn = ecn.ect0 > 0 || ecn.ect1 > 0 || ecn.ecn_ce > 0;
+            if (!varint::write(w, has_ecn ? std::uint64_t(FrameType::ACK_ECN) : std::uint64_t(FrameType::ACK))) {
+                return false;
+            }
+            bool first = true;
+            ACKRange prev{};
+            for (ACKRange range : ranges) {
+                if (first) {
+                    if (!varint::write(w, range.largest) ||                    // largest_ack
+                        !varint::write(w, ack_delay) ||                        // ack_delay
+                        !varint::write(w, ranges.size() - 1) ||                // ack_range_count
+                        !varint::write(w, ranges.largest - range.smallest)) {  // first_ack_range
+                        return false;
+                    }
+                    first = false;
+                }
+                else {
+                    const auto gap = prev.smallest - range.largest - 2;
+                    const auto len = range.largest - range.smallest;
+                    if (!varint::write(w, gap) ||  // gap
+                        !varint::write(w, len)) {  // ack_range
+                        return false;
+                    }
+                }
+                prev = range;
+            }
+            if (has_ecn) {
+                if (!varint::write(w, ecn.ecn_ce) ||
+                    !varint::write(w, ecn.ect0) ||
+                    !varint::write(w, ecn.ect1)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         template <template <class...> class Vec>
         constexpr std::pair<ACKFrame<Vec>, bool> convert_to_ACKFrame(const Vec<ACKRange>& ranges) {
             if (!is_sorted_ack_ranges(ranges)) {
@@ -215,7 +257,7 @@ namespace utils {
 
         namespace test {
 
-              constexpr bool check_ack() {
+            constexpr bool check_ack() {
                 quic::test::FixedTestVec<ACKRange> range;
                 ACKRange cmp[] = {
                     ACKRange{.largest = 92339, .smallest = 92333},

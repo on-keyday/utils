@@ -12,7 +12,6 @@
 #include "dllh.h"
 #include <cstdint>
 #include <atomic>
-#include "../boxbytelen.h"
 #include "../storage.h"
 #include "../../helper/defer.h"
 #include "../address.h"
@@ -58,7 +57,7 @@ namespace utils {
             std::atomic_bool on_operation = false;
             storage boxed;
             // BoxByteLen boxed;
-            ByteLen user;
+            // ByteLen user;
             bool is_stream = false;
 
             void incr() {
@@ -176,7 +175,7 @@ namespace utils {
                 r->decr();
             });
             bool expect = false;
-            if (r->on_operation.compare_exchange_strong(expect, true)) {
+            if (r->on_operation.exchange(true)) {
                 return error::Error(operation_imcomplete, error::ErrorCategory::dneterr);
             }
             auto op = helper::defer([&] {

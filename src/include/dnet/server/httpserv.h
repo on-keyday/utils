@@ -13,6 +13,7 @@
 #include "../http.h"
 #include "../http2/http2.h"
 #include "state.h"
+#include "../tls.h"
 
 namespace utils {
     namespace dnet {
@@ -56,12 +57,12 @@ namespace utils {
             dnetserv_dll_export(void) http_handler(void* ctx, Client&& cl, StateContext s);
             dnetserv_dll_export(void) handle_keep_alive(Requester&& cl, StateContext s);
 
-            template <class String>
+            template <class TmpString>
             bool has_keep_alive(HTTP& http, auto&& header) {
                 number::Array<char, 20, true> version;
                 bool keep_alive = false;
                 bool close = false;
-                if (!http.read_request<String>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {
+                if (!http.read_request<TmpString>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {
                         if (helper::equal(key, "Connection", helper::ignore_case())) {
                             if (helper::contains(value, "close")) {
                                 close = true;
@@ -92,7 +93,7 @@ namespace utils {
                 };
             }
 
-            constexpr auto http2_add(HTTP2& http2) {
+            constexpr auto http2_add(http2::HTTP2& http2) {
                 return [&](auto&&, const char* data, size_t len) {
                     http2.provide_http2_data(data, len);
                 };

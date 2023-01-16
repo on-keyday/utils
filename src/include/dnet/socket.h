@@ -16,7 +16,6 @@
 #include "heap.h"
 #include "../helper/defer.h"
 #include "dll/glheap.h"
-#include "bytelen.h"
 #include "address.h"
 #include "error.h"
 
@@ -199,10 +198,10 @@ namespace utils {
                 return err;
             }
 
-            error::Error read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err), int flag = 0, bool is_stream = true);
-            error::Error readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport), int flag = 0, bool is_stream = false);
-            error::Error write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag = 0);
-            error::Error writeto_async(ConstByteLen src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag = 0);
+            error::Error read_async(size_t bufsize, void* fnctx, void (*cb)(void*, view::wvec data, bool full, error::Error err), int flag = 0, bool is_stream = true);
+            error::Error readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, view::wvec data, bool truncated, error::Error err, NetAddrPort&& addrport), int flag = 0, bool is_stream = false);
+            error::Error write_async(view::rvec src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag = 0);
+            error::Error writeto_async(view::rvec src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag = 0);
             error::Error connect_async(const NetAddrPort& addr, void* fnctx, void (*cb)(void*, error::Error));
             error::Error accept_async(void* fnctx, void (*cb)(void*, Socket, NetAddrPort, error::Error));
 
@@ -218,7 +217,7 @@ namespace utils {
                     delete_with_global_heap(fctx, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*fctx)), alignof(decltype(*fctx))));
                 });
                 Socket& s = std::get<2>(fctx->fn)(std::get<1>(fctx->fn));
-                error::Error res = s.read_async(2000, fctx, [](void* p, ByteLen b, bool full, error::Error err) {
+                error::Error res = s.read_async(2000, fctx, [](void* p, view::wvec b, bool full, error::Error err) {
                     auto f = decltype(fctx)(p);
                     const auto r = helper::defer([&] {
                         delete_with_global_heap(f, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*f)), alignof(decltype(*f))));
@@ -227,11 +226,11 @@ namespace utils {
                     auto& get = std::get<2>(f->fn);
                     auto& add = std::get<3>(f->fn);
                     Socket& s = get(obj);
-                    add(obj, (const char*)b.data, b.len);
+                    add(obj, (const char*)b.as_char(), b.size());
                     if (!err && full) {
                         bool red = false;
-                        s.read_until_block(red, view::wvec(b.data, b.len), [&](size_t redsize) {
-                            add(obj, (const char*)b.data, redsize);
+                        s.read_until_block(red, b, [&](size_t redsize) {
+                            add(obj, (const char*)b.as_char(), redsize);
                         });
                     }
                     (void)std::get<0>(f->fn)(obj, std::move(err));
@@ -242,7 +241,7 @@ namespace utils {
                 return res;
             }
 
-            bool readfrom_async(auto&& fn, auto&& obj, size_t bufsize, auto&& get_sock) {
+            error::Error readfrom_async(auto&& fn, auto&& obj, size_t bufsize, auto&& get_sock) {
                 auto fctx = wrap_tuple(std::forward<decltype(fn)>(fn),
                                        std::forward<decltype(obj)>(obj),
                                        std::forward<decltype(get_sock)>(get_sock));
@@ -250,7 +249,7 @@ namespace utils {
                     delete_with_global_heap(fctx, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*fctx)), alignof(decltype(*fctx))));
                 });
                 Socket& s = std::get<2>(fctx->fn)(std::get<1>(fctx->fn));
-                auto res = s.readfrom_async(bufsize, fctx, [](void* p, ByteLen d, bool truncate, int err, NetAddrPort&& addr) {
+                auto res = s.readfrom_async(bufsize, fctx, [](void* p, view::wvec d, bool truncate, error::Error err, NetAddrPort&& addr) {
                     auto f = decltype(fctx)(p);
                     const auto r = helper::defer([&] {
                         delete_with_global_heap(f, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*f)), alignof(decltype(*f))));
@@ -261,7 +260,7 @@ namespace utils {
                     // sock.set_err(err);
                     (void)std::get<0>(f->fn)(obj, d, std::move(addr), truncate, std::move(err));
                 });
-                if (res) {
+                if (!res.is_error()) {
                     r.cancel();
                 }
                 return res;

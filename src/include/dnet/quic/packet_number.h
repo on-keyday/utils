@@ -18,6 +18,8 @@ namespace utils {
         struct Value {
             std::uint64_t value = 0;
 
+            constexpr Value() = default;
+
             constexpr Value(std::uint64_t v) noexcept
                 : value(v) {}
 
@@ -26,11 +28,13 @@ namespace utils {
             }
         };
 
+        constexpr Value infinity = {~std::uint64_t(0)};
+
         constexpr bool is_wire_len(byte len) noexcept {
             return 1 <= len && len <= 4;
         }
 
-        constexpr std::pair<std::uint64_t, bool> decode(std::uint32_t value, byte len, std::uint64_t largest_pn) noexcept {
+        constexpr std::pair<Value, bool> decode(std::uint32_t value, byte len, std::uint64_t largest_pn) noexcept {
             if (!is_wire_len(len)) {
                 return {0, false};
             }
@@ -55,6 +59,10 @@ namespace utils {
             };
             auto selected = closer(expected_pn, base + value, closer(expected_pn, prev + value, next + value));
             return {selected, true};
+        }
+
+        constexpr std::pair<Value, bool> decode(WireVal pn_wire, std::uint64_t largest_pn) noexcept {
+            return decode(pn_wire.value, pn_wire.len, largest_pn);
         }
 
         constexpr std::uint64_t log2i(std::uint64_t bit) noexcept {
@@ -109,7 +117,7 @@ namespace utils {
             return w.write(view::rvec(data.data + 4 - value.len, value.len));
         }
 
-        constexpr bool read(io::reader& r, std::uint32_t& value, byte len) {
+        constexpr bool read(io::reader& r, std::uint32_t& value, byte len) noexcept {
             if (!is_wire_len(len)) {
                 return false;
             }
@@ -123,6 +131,14 @@ namespace utils {
             }
             data.read_be(value);
             return true;
+        }
+
+        constexpr std::pair<WireVal, bool> read(io::reader& r, byte len) noexcept {
+            std::uint32_t value;
+            if (!read(r, value, len)) {
+                return {{}, false};
+            }
+            return {WireVal{.value = value, .len = len}, true};
         }
 
         namespace test {
@@ -156,3 +172,15 @@ namespace utils {
 
     }  // namespace dnet::quic::packetnum
 }  // namespace utils
+
+namespace std {
+    template <class T>
+    struct hash;
+
+    template <>
+    struct hash<utils::dnet::quic::packetnum::Value> {
+        constexpr size_t operator()(auto&& pn) const {
+            return std::hash<size_t>{}(pn.value);
+        }
+    };
+}  // namespace std

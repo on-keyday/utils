@@ -8,9 +8,6 @@
 // h2settings - http2 settings util
 #pragma once
 #include <helper/pushbacker.h>
-/*
-#include <depr/net/http2/stream_state.h"
-*/
 
 namespace utils {
     namespace dnet {

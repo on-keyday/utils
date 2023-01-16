@@ -11,8 +11,7 @@
 #include <utility>
 #include <cstddef>
 #include <memory>
-#include "httpstring.h"
-#include "quic/crypto/crypto_keys.h"
+#include "quic/crypto/enc_level.h"
 #include "../helper/strutil.h"
 #include "../helper/equal.h"
 #include "error.h"
@@ -55,6 +54,7 @@ namespace utils {
             }
         };
 
+        /*
         // encryption algorithm RFC name for QUIC
         constexpr auto TLS_AES_PREFIX = "TLS_AES_";
         constexpr auto TLS_CHACHA20_PREFIX = "TLS_CHACHA20_";
@@ -62,6 +62,7 @@ namespace utils {
         constexpr auto TLS_AES_128_CCM = "TLS_AES_128_CCM";
         constexpr auto TLS_AES_256_GCM = "TLS_AES_256_GCM";
         constexpr auto TLS_CHACHA20_POLY1305 = "TLS_CHACHA20_POLY1305";
+        */
 
         // OPENSSL verify mode. used by TLS.set_verify
         constexpr auto SSL_VERIFY_NONE_ = 0x00;
@@ -89,14 +90,6 @@ namespace utils {
 
             constexpr explicit operator bool() const {
                 return cipher != nullptr;
-            }
-
-            bool is_AES_based() const {
-                return helper::starts_with(rfcname(), TLS_AES_PREFIX);
-            }
-
-            bool is_CHACHA20_based() const {
-                return helper::starts_with(rfcname(), TLS_CHACHA20_PREFIX);
             }
 
             bool is_algorithm(const char* alg_rfc_name) const {
@@ -178,6 +171,7 @@ namespace utils {
             error::Error set_cert_chain(const char* pubkey, const char* prvkey);
 
             // make_quic set up SSL structure for QUIC
+            // cb returns 1 if succeeded else returns 0
             error::Error make_quic(int (*cb)(void*, quic::MethodArgs), void* user);
 
             template <class T>

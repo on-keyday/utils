@@ -12,8 +12,10 @@
 #include "mtu.h"
 #include "conn_manage.h"
 #include "ack.h"
+#include "conn_id.h"
 
 namespace utils::dnet::quic::frame {
+    static_assert(test::check_padding());
     static_assert(test::check_dgram());
     static_assert(test::check_crypto());
     static_assert(test::check_reset_stream());

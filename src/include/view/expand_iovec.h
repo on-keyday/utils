@@ -313,17 +313,13 @@ namespace utils {
                 *(end() - 1) = c;
             }
 
-            constexpr basic_expand_storage_vec& append(view::basic_rvec<C, U> in) {
-                auto old_size = resize_nofill(size_ + in.size());
+            constexpr basic_expand_storage_vec& append(auto&& in) {
+                auto old_size = resize_nofill(size_ + std::size(in));
                 auto wbuf = data_.wbuf();
                 for (size_t i = old_size; i < size_; i++) {
                     wbuf[i] = in[i - old_size];
                 }
                 return *this;
-            }
-
-            constexpr basic_expand_storage_vec& append(auto&&... args) {
-                return append(view::basic_rvec<C, U>(args...));
             }
 
             constexpr int compare(const basic_expand_storage_vec& in) {
@@ -336,6 +332,31 @@ namespace utils {
 
             constexpr friend auto operator<=>(const basic_expand_storage_vec& a, const basic_expand_storage_vec& b) {
                 return a.rvec() <=> b.rvec();
+            }
+
+            constexpr void fill(C c) {
+                wvec().fill(c);
+            }
+
+            constexpr void force_fill(C c) {
+                wvec().force_fill(c);
+            }
+
+            constexpr bool shift_front(size_t n) {
+                constexpr auto shift_fn = view::make_shift_fn<C, U>();
+                auto range = wvec();
+                if (!shift_fn(range, 0, n, range.size() - n)) {
+                    return false;
+                }
+                resize(range.size() - n);
+                return true;
+            }
+
+            // call resize(size()+add) then return old size()
+            constexpr size_t expand(size_t add) {
+                const auto old = size_;
+                resize(size_ + add);
+                return old;
             }
         };
 

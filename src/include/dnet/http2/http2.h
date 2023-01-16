@@ -16,7 +16,7 @@
 #include <net_util/http/header.h>
 
 namespace utils {
-    namespace dnet {
+    namespace dnet::http2 {
 
         namespace concepts {
             template <class T>
@@ -98,7 +98,7 @@ namespace utils {
                 : opt(o), id_(i) {}
 
             bool write_hpack_header(internal::data_set data,
-                                    std::uint8_t* padding, h2frame::Priority* prio, bool end_stream,
+                                    std::uint8_t* padding, frame::Priority* prio, bool end_stream,
                                     ErrCode& errc);
 
            public:
@@ -128,7 +128,7 @@ namespace utils {
             template <class Header>
             bool write_header(Header&& h,
                               bool end_stream = false,
-                              h2frame::Priority* prio = nullptr,
+                              frame::Priority* prio = nullptr,
                               std::uint8_t* padding = nullptr, ErrCode* errc = nullptr) {
                 auto it = h.begin();
                 const auto end = h.end();
@@ -204,8 +204,8 @@ namespace utils {
             }
         };
 
-        using HTTP2StreamCallback = void (*)(void*, h2frame::Frame&, h2stream::StreamNumState);
-        using HTTP2ConnectionCallback = void (*)(void*, h2frame::Frame&, const h2stream::ConnState&);
+        using HTTP2StreamCallback = void (*)(void*, frame::Frame&, stream::StreamNumState);
+        using HTTP2ConnectionCallback = void (*)(void*, frame::Frame&, const stream::ConnState&);
 
         struct dnet_class_export HTTP2 {
            private:
@@ -268,7 +268,7 @@ namespace utils {
 
             // write_frame writes frame directry
             // this function is unsafe
-            bool write_frame(h2frame::Frame& frame, ErrCode& errs);
+            bool write_frame(frame::Frame& frame, ErrCode& errs);
 
             // flush_preface flushs connection prefaces
             bool flush_preface();
@@ -277,5 +277,5 @@ namespace utils {
         };
 
         dnet_dll_export(HTTP2) create_http2(bool server, h2set::PredefinedSettings settings = {});
-    }  // namespace dnet
+    }  // namespace dnet::http2
 }  // namespace utils

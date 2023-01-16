@@ -12,193 +12,183 @@
 #include <helper/defer.h>
 #include <dnet/tls.h>
 #include <dnet/quic/version.h>
+#include <dnet/quic/types.h>
+#include <dnet/quic/crypto/tls_suite.h>
+#include <dnet/quic/crypto/internal.h>
 
 namespace utils {
     namespace dnet {
         namespace quic::crypto {
 
-            static constexpr auto err_packet_format = error::Error("CryptoPacketInfo: QUIC packet format is not valid", error::ErrorCategory::validationerr);
+            static constexpr auto err_packet_format = error::Error("CryptoPacket: QUIC packet format is not valid", error::ErrorCategory::validationerr);
             static constexpr auto err_cipher_spec = error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
             static constexpr auto err_aes_mask = error::Error("failed to generate header mask AES-based", error::ErrorCategory::cryptoerr);
             static constexpr auto err_chacha_mask = error::Error("failed to generate header mask ChaCha20-based", error::ErrorCategory::cryptoerr);
-            static constexpr auto err_not_enough_paylaod = error::Error("not enough CryptoPacketInfo.processed_payload length", error::ErrorCategory::validationerr);
+            static constexpr auto err_not_enough_paylaod = error::Error("not enough CryptoPacket.processed_payload length", error::ErrorCategory::validationerr);
+            static constexpr auto err_unknown = error::Error("unknown packet parser error. library bug!", error::ErrorCategory::dneterr);
+            static constexpr auto err_decode_pn = error::Error("failed to decode packet number", error::ErrorCategory::quicerr);
 
-            dnet_dll_implement(error::Error) encrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret, std::uint64_t original_packet_number) {
-                if (!info.head.adjacent(info.payload)) {
-                    return err_packet_format;
+            tls::TLSSuite judge_cipher(const TLSCipher& cipher) {
+                if (cipher == TLSCipher{}) {
+                    return tls::TLSSuite::AES_128_GCM_SHA256;
                 }
-                const auto is_AES = cipher == TLSCipher{} || cipher.is_AES_based();
-                const auto is_CHACHA20 = cipher.is_CHACHA20_based();
-                if (!is_AES && !is_CHACHA20) {
+                return tls::to_suite(cipher.rfcname());
+            }
+
+            constexpr size_t sample_len = 16;
+
+            error::Error gen_masks(byte* masks, view::rvec hp_key, const TLSCipher& cipher, view::rvec sample) {
+                auto suite = judge_cipher(cipher);
+                if (suite == tls::TLSSuite::Unsupported) {
                     return err_cipher_spec;
                 }
-                bool is_AES256 = false;
-                int hash_len = 0;
-                if (is_CHACHA20) {
-                    hash_len = 32;
-                }
-                else {
-                    is_AES256 = cipher.is_algorithm(TLS_AES_256_GCM);
-                    hash_len = is_AES256 ? 32 : 16;
-                }
-                byte pool[200]{};
-                WPacket tmp{{pool, 200}};
-                // make key,iv,hp
-                if (auto err = make_keys_from_secret(tmp, keys, version, secret, hash_len)) {
-                    return err;
-                }
-                PacketFlags prot{*info.head.data};
-                auto pn_length = prot.packet_number_length();
-                auto cipher_text_len = info.payload.len - pn_length + authentication_tag_length;
-                if (!info.processed_payload.enough(cipher_text_len)) {
-                    return err_not_enough_paylaod;
-                }
-                // make nonce from iv and packet number
-                byte nonce[32]{0};
-                tmp.reset_offset();
-                auto orig_num = tmp.as(original_packet_number);
-                for (auto i = 0; i < 8; i++) {
-                    nonce[keys.iv.len - 1 - (7 - i)] = orig_num.data[i];
-                }
-                for (auto i = 0; i < keys.iv.len; i++) {
-                    nonce[i] ^= keys.iv.data[i];
-                }
-                // pack encrypt data
-                CryptoPacketInfo pass;
-                pass.head = {info.head.data, info.head.len + pn_length};
-                pass.payload = {info.payload.data + pn_length, info.payload.len - pn_length};
-                pass.processed_payload = info.processed_payload;
-                pass.tag = info.tag;  // unused but set for debug
-                // payload encryption
-                auto err = cipher_payload(
-                    cipher,
-                    pass,
-                    keys.key,
-                    ByteLen{nonce, keys.iv.len}, true);
-                if (err) {
-                    return err;
-                }
-                // header protection
-                auto sample_start = info.processed_payload.data + 4 - pn_length;
-                byte masks[5]{0};
-                if (is_AES) {
-                    if (!generate_masks_aes_based(keys.hp.data, sample_start, masks, is_AES256)) {
+                if (tls::is_AES_based(suite)) {
+                    if (!generate_masks_aes_based(hp_key.data(), sample.data(), masks, tls::hash_len(suite) == 32)) {
                         return err_aes_mask;
                     }
                 }
                 else {
-                    if (!generate_masks_chacha20_based(keys.hp.data, sample_start, masks)) {
+                    if (!generate_masks_chacha20_based(hp_key.data(), sample.data(), masks)) {
                         return err_chacha_mask;
                     }
-                }
-                info.head.data[0] = prot.protect(masks[0]);  // protect packet number length
-                // protect packet number field
-                for (size_t i = 0; i < pn_length; i++) {
-                    info.payload.data[i] ^= masks[1 + i];
                 }
                 return error::none;
             }
 
-            dnet_dll_implement(error::Error) decrypt_packet(Keys& keys, std::uint32_t version, const TLSCipher& cipher, CryptoPacketInfo& info, ByteLen secret, PacketNumberDecoder decode) {
-                if (!info.payload.enough(20) ||
-                    !info.head.adjacent(info.payload) ||
-                    !info.payload.adjacent(info.tag) ||
-                    info.tag.len != authentication_tag_length ||
-                    !decode) {
-                    return err_packet_format;
+            // make nonce from iv and packet number
+            // see https://tex2e.github.io/blog/protocol/quic-initial-packet-decrypt
+            // see https://tex2e.github.io/rfc-translater/html/rfc9001.html#5-3--AEAD-Usage
+            void make_nonce(view::rvec iv, byte (&nonce)[32], packetnum::Value packet_number) {
+                endian::Buf<std::uint64_t, byte*> data{nonce + iv.size() - 8};
+                data.write_be(packet_number);
+                for (auto i = 0; i < iv.size(); i++) {
+                    nonce[i] ^= iv[i];
                 }
-                const auto is_AES = cipher == TLSCipher{} || cipher.is_AES_based();
-                const auto is_CHACHA20 = cipher.is_CHACHA20_based();
-                if (!is_AES && !is_CHACHA20) {
-                    return err_cipher_spec;
-                }
-                bool is_AES256 = false;
-                int hash_len = 0;
-                if (is_CHACHA20) {
-                    hash_len = 32;
-                }
-                else {
-                    is_AES256 = cipher.is_algorithm(TLS_AES_256_GCM);
-                    hash_len = is_AES256 ? 32 : 16;
-                }
-                byte pool[200]{};
-                WPacket tmp{{pool, 200}};
-                // make key,iv,hp
-                if (auto err = make_keys_from_secret(tmp, keys, version, secret, hash_len)) {
-                    return err;
-                }
-                // header unprotection
-                auto sample_start = info.payload.data + 4;
-                byte masks[5]{0};
-                if (is_AES) {
-                    if (!generate_masks_aes_based(keys.hp.data, sample_start, masks, is_AES256)) {
-                        return err_aes_mask;
-                    }
-                }
-                else {
-                    if (!generate_masks_chacha20_based(keys.hp.data, sample_start, masks)) {
-                        return err_chacha_mask;
-                    }
-                }
-                info.head.data[0] = PacketFlags{info.head.data[0]}.protect(masks[0]);  // unprotect packet number length
-                auto pn_length = PacketFlags{info.head.data[0]}.packet_number_length();
-                // unprotect packet number field
-                for (size_t i = 0; i < pn_length; i++) {
-                    info.payload.data[i] ^= masks[1 + i];
-                }
-                // check output area len
-                const auto plain_text_len = info.payload.len - pn_length;
-                if (!info.processed_payload.valid()) {
-                    info.processed_payload = ByteLen{
-                        info.payload.data + pn_length,
-                        info.payload.len - pn_length,
-                    };
-                }
-                if (!info.processed_payload.enough(plain_text_len)) {
-                    return err_not_enough_paylaod;
-                }
-                // make nonce from iv and packet number
-                // see https://tex2e.github.io/blog/protocol/quic-initial-packet-decrypt
-                byte nonce[32]{0};
-                std::uint32_t pn;
-                ByteLen{info.payload.data, pn_length}.packet_number(pn, pn_length);
-                auto orig_pn = decode(QPacketNumber{pn, pn_length});
-                tmp.reset_offset();
-                auto orig_data = tmp.as(orig_pn);
-                for (auto i = 0; i < 8; i++) {
-                    nonce[keys.iv.len - 1 - (7 - i)] = orig_data.data[i];
-                }
-                for (auto i = 0; i < keys.iv.len; i++) {
-                    nonce[i] ^= keys.iv.data[i];
-                }
-                // pack decrypt data
-                CryptoPacketInfo pass;
-                pass.head = {info.head.data, info.head.len + pn_length};
-                pass.payload = {info.payload.data + pn_length, info.payload.len - pn_length};
-                pass.processed_payload = info.processed_payload;
-                pass.tag = info.tag;
-                // payload decryption
-                return cipher_payload(
-                    cipher,
-                    pass,
-                    keys.key,
-                    ByteLen{nonce, keys.iv.len}, false);
             }
 
-            dnet_dll_implement(error::Error) generate_retry_integrity_tag(Key<16>& tag, ByteLen pseduo_packet, std::uint32_t version) {
+            void apply_hp_pn_mask(byte* mask, view::wvec pn_wire) {
+                for (auto& w : pn_wire) {
+                    w ^= *mask;
+                    mask++;
+                }
+            }
+
+            void apply_hp_first_byte_mask(byte mask, byte* first_byte) {
+                *first_byte = PacketFlags{*first_byte}.protect(mask);
+            }
+
+            error::Error protect_header(byte pnlen, view::rvec hp_key, const TLSCipher& cipher, packet::CryptoPacket& packet) {
+                auto [encrypted, ok1] = packet.parse(sample_len, authentication_tag_length);
+                if (!ok1) {
+                    return err_unknown;
+                }
+                // generate header protection mask
+                byte masks[5]{0};
+                auto err = gen_masks(masks, hp_key, cipher, encrypted.sample);
+                if (err) {
+                    return err;
+                }
+                auto pn_wire = encrypted.protected_payload.substr(0, pnlen);
+                if (pn_wire.size() != pnlen) {
+                    return err_unknown;
+                }
+                // apply protection
+                apply_hp_first_byte_mask(masks[0], &encrypted.head[0]);
+                apply_hp_pn_mask(masks + 1, pn_wire);
+                return error::none;
+            }
+
+            std::pair<packetnum::WireVal, error::Error> unprotect_header(view::rvec hp_key, const TLSCipher& cipher, packet::CryptoPacket& packet) {
+                auto [encrypted, ok1] = packet.parse(sample_len, authentication_tag_length);
+                if (!ok1) {
+                    return {{}, err_packet_format};
+                }
+                // generate header protection mask
+                byte masks[5]{0};
+                auto err = gen_masks(masks, hp_key, cipher, encrypted.sample);
+                if (err) {
+                    return {{}, err};
+                }
+                // apply unprotection for first_byte
+                apply_hp_first_byte_mask(masks[0], &encrypted.head[0]);
+                // get packet_number field value
+                auto pnlen = PacketFlags{encrypted.head[0]}.packet_number_length();
+                auto pn_wire = encrypted.protected_payload.substr(0, pnlen);
+                if (pn_wire.size() != pnlen) {
+                    return {{}, err_packet_format};
+                }
+                // apply unprotection for packet_number field
+                apply_hp_pn_mask(masks + 1, pn_wire);
+                io::reader r{pn_wire};
+                auto [wireval, ok2] = packetnum::read(r, pnlen);
+                if (!ok2) {
+                    return {{}, err_decode_pn};
+                }
+                return {wireval, error::none};
+            }
+
+            dnet_dll_implement(error::Error) encrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet) {
+                if (packet.head_len < 1 || packet.src.size() < 1) {
+                    return err_packet_format;
+                }
+                auto flags = PacketFlags{packet.src[0]};
+                auto pnlen = flags.packet_number_length();
+                auto [parsed, ok] = packet.parse_pnknown(pnlen, authentication_tag_length);
+                if (!ok) {
+                    return err_packet_format;
+                }
+                // make nonce from iv and packet number
+                byte nonce[32]{0};
+                make_nonce(keys.iv(), nonce, packet.packet_number);
+                // encrypt payload
+                if (auto err = cipher_payload(cipher, parsed, keys.key(), view::rvec(nonce, keys.iv().size()), true)) {
+                    return err;
+                }
+                // apply header protection
+                return protect_header(pnlen, keys.hp(), cipher, packet);
+            }
+
+            dnet_dll_implement(error::Error) decrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
+                if (packet.head_len < 1 || packet.src.size() < 1) {
+                    return err_packet_format;
+                }
+                // apply header unprotection
+                auto [pn_wire, err] = unprotect_header(keys.hp(), cipher, packet);
+                if (err) {
+                    return err;
+                }
+                auto [pnknown, ok] = packet.parse_pnknown(pn_wire.len, authentication_tag_length);
+                if (!ok) {
+                    return err_unknown;
+                }
+                // decode packet number
+                std::tie(packet.packet_number, ok) = packetnum::decode(pn_wire, largest_pn);
+                if (!ok) {
+                    return err_decode_pn;
+                }
+                // make nonce from iv and packet number
+                byte nonce[32]{0};
+                make_nonce(keys.iv(), nonce, packet.packet_number);
+                // decrypt payload
+                return cipher_payload(cipher, pnknown, keys.key(), view::rvec(nonce, keys.iv().size()), false);
+            }
+
+            dnet_dll_export(error::Error) generate_retry_integrity_tag(view::wvec tag, view::rvec pseduo_packet, std::uint32_t version) {
                 if (version == version_1) {
-                    CryptoPacketInfo info;
-                    info.tag = {tag.key, tag.size()};
-                    info.head = pseduo_packet;
+                    packet::CryptoPacketPnKnown info;
                     byte tmp = 0;
-                    info.payload = {&tmp, 0};
-                    info.processed_payload = {&tmp, 0};
+                    info.auth_tag = tag;
+                    info.head = pseduo_packet;
+                    info.protected_payload = view::wvec(&tmp, 0);
                     auto key = quic_v1_retry_integrity_tag_key;
                     auto nonce = quic_v1_retry_integrity_tag_nonce;
-                    return cipher_payload({}, info, {key.key, key.size()}, {nonce.key, nonce.size()}, true);
+                    return cipher_payload({}, info,
+                                          quic_v1_retry_integrity_tag_key.key,
+                                          quic_v1_retry_integrity_tag_nonce.key, true);
                 }
                 return error::Error("unknown QUIC version", error::ErrorCategory::quicerr);
             }
+
         }  // namespace quic::crypto
     }      // namespace dnet
 }  // namespace utils

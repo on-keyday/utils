@@ -80,17 +80,17 @@ namespace utils {
             return ev;
         }
 
-        error::Error winIOCommon(std::uintptr_t sock, ConstByteLen* buf, AsyncSuite* suite, auto appcb, void* fnctx, int flag, bool is_stream) {
+        error::Error winIOCommon(std::uintptr_t sock, const byte* data, size_t len, AsyncSuite* suite, auto appcb, void* fnctx, int flag, bool is_stream) {
             if (!register_handle(sock)) {
                 return Errno();
             }
             suite->sock = sock;
-            if (buf) {
-                if (!buf->data) {
-                    suite->boxed = make_storage(buf->len);
+            if (len) {
+                if (!data) {
+                    suite->boxed = make_storage(len);
                 }
                 else {
-                    suite->boxed = make_storage(buf->data, buf->len);
+                    suite->boxed = make_storage(view::rvec(data, len));
                 }
                 if (suite->boxed.null()) {
                     return error::memory_exhausted;
@@ -143,66 +143,66 @@ namespace utils {
             return {AsyncState::started, error::none};
         }
 
-        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool full, error::Error err), int flag, bool is_stream) {
+        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, view::wvec data, bool full, error::Error err), int flag, bool is_stream) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                ConstByteLen tmp{nullptr, bufsize};
-                if (auto err = winIOCommon(sock, &tmp, suite, cb, fnctx, flag, is_stream)) {
+                if (auto err = winIOCommon(sock, nullptr, bufsize, suite, cb, fnctx, flag, is_stream)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
                     const auto r = helper::defer([&] {
                         s->decr();
                     });
-                    auto app = reinterpret_cast<void (*)(void*, ByteLen, bool, error::Error)>(s->appcb);
+                    auto app = reinterpret_cast<void (*)(void*, view::wvec, bool, error::Error)>(s->appcb);
                     s->on_operation = false;
                     auto sub = s->boxed.substr(0, size);
-                    app(s->ctx, ByteLen{sub.data(), sub.size()}, size == s->boxed.size(), std::move(err));
+                    app(s->ctx, sub, size == s->boxed.size(), std::move(err));
                 };
                 set_error(0);
                 socdl.WSARecv_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
                     auto sub = suite->boxed.substr(0, suite->plt.read);
-                    cb(fnctx, ByteLen{sub.data(), sub.size()},
+                    cb(fnctx, sub,
                        suite->boxed.size() == suite->plt.read, error::none);
                 });
             });
         }
 
-        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, ByteLen data, bool truncated, error::Error err, NetAddrPort&& addrport), int flag, bool is_stream) {
+        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, view::wvec data, bool truncated, error::Error err, NetAddrPort&& addrport), int flag, bool is_stream) {
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                ConstByteLen tmp{nullptr, bufsize};
-                if (auto err = winIOCommon(sock, &tmp, suite, cb, fnctx, flag, is_stream)) {
+                if (auto err = winIOCommon(sock, nullptr, bufsize, suite, cb, fnctx, flag, is_stream)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
                     const auto r = helper::defer([&] {
                         s->decr();
                     });
-                    auto app = reinterpret_cast<void (*)(void*, ByteLen, bool, error::Error, NetAddrPort&&)>(s->appcb);
+                    auto app = reinterpret_cast<void (*)(void*, view::wvec, bool, error::Error, NetAddrPort&&)>(s->appcb);
                     s->on_operation = false;
                     auto sub = s->boxed.substr(0, size);
-                    app(s->ctx, ByteLen{sub.data(), sub.size()}, size == s->boxed.size(), std::move(err),
+                    app(s->ctx, sub, size == s->boxed.size(), std::move(err),
                         sockaddr_to_NetAddrPort(reinterpret_cast<sockaddr*>(&s->plt.addr), s->plt.addrlen));
                 };
                 auto addr = reinterpret_cast<sockaddr*>(&suite->plt.addr);
                 suite->plt.addrlen = sizeof(suite->plt.addr);
+                suite->plt.ol = {};
                 set_error(0);
-                socdl.WSARecvFrom_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags, addr, &suite->plt.addrlen, &suite->plt.ol, nullptr);
+                socdl.WSARecvFrom_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags,
+                                   addr, &suite->plt.addrlen, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
                     auto sub = suite->boxed.substr(0, suite->plt.read);
-                    cb(fnctx, ByteLen{sub.data(), sub.size()},
+                    cb(fnctx, sub,
                        suite->boxed.size() == suite->plt.read, error::none,
                        sockaddr_to_NetAddrPort(reinterpret_cast<sockaddr*>(&suite->plt.addr), suite->plt.addrlen));
                 });
             });
         }
 
-        error::Error Socket::write_async(ConstByteLen src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
+        error::Error Socket::write_async(view::rvec src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (!src.data) {
+                if (src.null()) {
                     return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
                 }
-                if (auto err = winIOCommon(sock, &src, suite, cb, fnctx, flag, false)) {
+                if (auto err = winIOCommon(sock, src.data(), src.size(), suite, cb, fnctx, flag, false)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -221,12 +221,12 @@ namespace utils {
             });
         }
 
-        error::Error Socket::writeto_async(ConstByteLen src, const NetAddrPort& naddr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
+        error::Error Socket::writeto_async(view::rvec src, const NetAddrPort& naddr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (!src.data) {
+                if (src.null()) {
                     return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
                 }
-                if (auto err = winIOCommon(sock, &src, suite, cb, fnctx, flag, false)) {
+                if (auto err = winIOCommon(sock, src.data(), src.size(), suite, cb, fnctx, flag, false)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -251,7 +251,7 @@ namespace utils {
 
         error::Error Socket::connect_async(const NetAddrPort& addr, void* fnctx, void (*cb)(void*, error::Error)) {
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = winIOCommon(sock, nullptr, suite, cb, fnctx, 0, false)) {
+                if (auto err = winIOCommon(sock, nullptr, 0, suite, cb, fnctx, 0, false)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t size, error::Error err) {
@@ -280,8 +280,7 @@ namespace utils {
 
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
                 auto stlen = (sizeof(sockaddr_storage) + 16);
-                ConstByteLen tmp{nullptr, stlen * 2};
-                if (auto err = winIOCommon(sock, &tmp, suite, cb, fnctx, 0, false)) {
+                if (auto err = winIOCommon(sock, nullptr, stlen * 2, suite, cb, fnctx, 0, false)) {
                     return {AsyncState::failed, err};
                 }
                 suite->cb = [](AsyncSuite* s, size_t, error::Error err) {

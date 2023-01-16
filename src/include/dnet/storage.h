@@ -37,14 +37,12 @@ namespace utils {
             return storage(dst, size);
         }
 
-        inline storage make_storage(const byte* src, size_t size) {
-            auto dst = make_storage(size);
+        inline storage make_storage(view::rvec src) {
+            auto dst = make_storage(src.size());
             if (dst.null()) {
                 return {};
             }
-            for (auto i = 0; i < size; i++) {
-                dst[i] = src[i];
-            }
+            view::copy(dst, src);
             return dst;
         }
 

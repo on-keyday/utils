@@ -5,61 +5,80 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <dnet/quic/quic.h>
-#include <dnet/addrinfo.h>
+#include <dnet/quic/context/context.h>
+#include <random>
+#include <dnet/quic/version.h>
+#include <chrono>
 #include <dnet/socket.h>
 #include <dnet/plthead.h>
-#include <thread>
+#include <dnet/addrinfo.h>
 using namespace utils::dnet;
 
 void test_dnetquic_context() {
     set_libcrypto("D:/quictls/boringssl/built/lib/crypto.dll");
     set_libssl("D:/quictls/boringssl/built/lib/ssl.dll");
-    auto conf = quic::default_config();
-    auto tls = create_tls();
-    tls.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
-    auto q = quic::make_quic(tls, std::move(conf));
-    q.tls().set_alpn("\x02h3", 3);
-    q.tls().set_hostname("localhost");
-    auto err = q.connect();
-    auto str = err.error<std::string>();
-    assert(err == error::block);
-    byte data[3000]{};
-    size_t red = 0;
-    auto res = q.receive_udp_datagram(data, 3000, red);
-    assert(res);
-    SockAddr addr;
+    auto ctx = std::make_shared<quic::context::Context<std::mutex>>();
+    ctx->crypto.tls = create_tls();
+    ctx->crypto.tls.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
+    ctx->init_tls();
+    ctx->crypto.tls.set_alpn("\2h3", 3);
+    ctx->connIDs.issuer.user_gen_random = [](std::shared_ptr<void>&, utils::view::wvec data) {
+        std::random_device dev;
+        std::uniform_int_distribution uni(0, 255);
+        for (auto& d : data) {
+            d = uni(dev);
+        }
+        return true;
+    };
+    ctx->conf.version = quic::version_1;
+    ctx->ackh.clock.now_fn = [](void*) {
+        return quic::time::Time(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    };
+    ctx->ackh.clock.granularity = 1;
+    auto val = ctx->connect_start();
+    assert(val);
+    utils::view::rvec data;
+
+    auto wait = resolve_address("localhost", "8090", {.socket_type = SOCK_DGRAM});
+    auto info = wait.wait();
+    assert(!wait.failed());
     Socket sock;
-    auto waddr = resolve_address("localhost", "8090", {.address_family = AF_INET, .socket_type = SOCK_DGRAM, .protocol = 0});
-    auto reslv = waddr.wait();
-    while (reslv.next()) {
-        addr = reslv.sockaddr();
-        sock = make_socket(addr.attr.address_family, addr.attr.socket_type, addr.attr.protocol);
+    NetAddrPort addr;
+    while (info.next()) {
+        auto saddr = info.sockaddr();
+        sock = make_socket(saddr.attr);
         if (!sock) {
             continue;
         }
+        addr = saddr.addr;
         break;
     }
-    // sock.set_connreset(false);
-    assert(sock);
-    sock.writeto(addr.addr, data, red);
-    using namespace std::chrono_literals;
+    auto fn = [&](Socket& insock, utils::view::rvec data, NetAddrPort addr, bool, error::Error err) {
+        assert(!err);
+        auto d = utils::view::wvec(const_cast<byte*>(data.data()), data.size());
+        ctx->parse_udp_payload(d);
+        sock = std::move(insock);
+    };
+    auto get_sock = [](Socket& sock) -> decltype(auto) { return sock; };
+    byte buf[3000];
     while (true) {
-        auto [n, peer, err] = sock.readfrom(data);
-        if (err) {
-            if (isSysBlock(err)) {
-                std::this_thread::sleep_for(1ms);
-                continue;
-            }
-            assert(!err);
+        std::tie(data, val) = ctx->create_udp_payload();
+        if (!val && ctx->conn_err == utils::dnet::quic::ack::errIdleTimeout) {
+            break;
         }
-        str = peer.to_string<std::string>();
-        q.provide_udp_datagram(data, n.size());
-        break;
+        assert(val);
+        if (data.size()) {
+            sock.writeto(addr, data);
+        }
+        while (true) {
+            auto [d, peer, err] = sock.readfrom(buf);
+            if (isSysBlock(err)) {
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
+                break;
+            }
+            ctx->parse_udp_payload(d);
+        }
     }
-    err = q.connect();
-    str = err.error<std::string>();
-    assert(!err);
 }
 
 int main() {

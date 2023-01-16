@@ -6,7 +6,8 @@
 */
 
 #include "durl.h"
-#include <dnet/conn.h>
+#include <dnet/socket.h>
+#include <dnet/addrinfo.h>
 #include <dnet/plthead.h>
 #include <thread>
 
@@ -33,7 +34,7 @@ namespace durl {
         while (true) {
             if (auto err = conn.wait_writable(0, 1000)) {
                 if (!dnet::isSysBlock(err)) {
-                    request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", err.error<std::string>());
+                    request_message(req.uri, "failed to connect to ", info.sockaddr().addr.to_string<std::string>(), ". last error is ", err.error<std::string>());
                     return;
                 }
                 continue;
@@ -59,7 +60,7 @@ namespace durl {
             }
         }
         info.next();  // seek to top
-        request_message(req.uri, "failed to connect to ", info.string(), ". last error is ", lasterr.error<std::string>());
+        request_message(req.uri, "failed to connect to ", info.sockaddr().addr.to_string<std::string>(), ". last error is ", lasterr.error<std::string>());
         reqcounter--;
     }
 

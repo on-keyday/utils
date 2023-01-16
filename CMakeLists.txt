@@ -104,6 +104,7 @@ add_executable(guessurl "src/test/deprecated/net/test_guessurl.cpp")
 add_executable(container_iface "src/test/iface/test_container.cpp")
 add_executable(token_stream "src/test/deprecated/parser/stream/test_token_stream.cpp")
 add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
+#[[
 add_executable(quic_varint "src/test/deprecated/quic/test_quic_varint.cpp")
 add_executable(quic_udp "src/test/deprecated/quic/test_quic_udp.cpp")
 add_executable(quic_shared_ptr "src/test/deprecated/quic/test_quic_shared_ptr.cpp")
@@ -112,6 +113,7 @@ add_executable(quic_frame "src/test/deprecated/quic/test_quic_frame.cpp")
 add_executable(quic_crypto "src/test/deprecated/quic/test_quic_crypto.cpp")
 add_executable(quic_hash_map "src/test/deprecated/quic/test_quic_hash_map.cpp")
 add_executable(quic_init_conn "src/test/deprecated/quic/test_quic_init_conn.cpp")
+]]
 add_executable(dnet_socket "src/test/dnet/test_dnet_socket.cpp")
 add_executable(dnet_tls "src/test/dnet/test_dnet_tls.cpp")
 add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
@@ -125,6 +127,7 @@ add_executable(dnet_stun "src/test/dnet/test_dnet_stun.cpp")
 add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
 add_executable(dnetquic_frame "src/test/dnet/test_dnetquic_frame.cpp")
 add_executable(dnetquic_packet "src/test/dnet/test_dnetquic_packet.cpp")
+add_executable(dnetquic_stream "src/test/dnet/test_dnetquic_stream.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
@@ -227,28 +230,16 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/addrinfo.cpp"
   "src/lib/dnet/ssldll.cpp"
   "src/lib/dnet/tls.cpp"
-  "src/lib/dnet/httpbuf.cpp"
-  "src/lib/dnet/h2frame.cpp"
   "src/lib/dnet/http2.cpp"
-  "src/lib/dnet/h2frame_c.cpp"
-  "src/lib/dnet/string.cpp"
   "src/lib/dnet/heaps.cpp"
-  "src/lib/dnet/conn.cpp"
+  "src/lib/dnet/address.cpp"
+  "src/lib/dnet/sockopt.cpp"
+  "src/lib/dnet/error.cpp"
   "src/lib/dnet/quic/crypto/quic_tls.cpp"
   "src/lib/dnet/quic/crypto/enc_keys.cpp"
   "src/lib/dnet/quic/crypto/masks.cpp"
   "src/lib/dnet/quic/crypto/enc_packet.cpp"
   "src/lib/dnet/quic/crypto/cipher_payload.cpp"
-  "src/lib/dnet/quic/context/quic.cpp"
-  "src/lib/dnet/quic/context/handshake.cpp"
-  "src/lib/dnet/quic/context/packet_handler.cpp"
-  "src/lib/dnet/quic/context/frame_handler.cpp"
-  "src/lib/dnet/address.cpp"
-  "src/lib/dnet/sockopt.cpp"
-  "src/lib/dnet/mem.cpp"
-  "src/lib/dnet/quic/context/gen_packet.cpp"
-  "src/lib/dnet/quic/context/gen_frame.cpp"
-  "src/lib/dnet/error.cpp"
 )
 
 target_sources(dnetserv PRIVATE
@@ -267,7 +258,7 @@ else()
   target_compile_definitions(dnet PRIVATE _DEBUG=1)
 endif()
 
-# libquic
+#[[ libquic
 add_library(quic SHARED)
 
 target_sources(quic
@@ -285,7 +276,7 @@ target_sources(quic
   "src/lib/deprecated/quic/conn/conn.cpp"
   "src/lib/deprecated/quic/flow/init.cpp"
 )
-
+]]
 if(WIN32)
   # target_sources(quic PRIVATE "src/lib/quic/core/dll.rc")
 endif()
@@ -333,7 +324,7 @@ target_link_libraries(cnethttp2 utils utnet)
 target_link_libraries(cnetmem utils utnet)
 target_link_libraries(container_iface utils utnet)
 target_link_libraries(expand_iovec utils)
-target_link_libraries(dnetquic_frame utils dnet)
+
 
 target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
 
@@ -346,7 +337,7 @@ target_link_libraries(durl utils dnet)
 target_link_libraries(igen2 utils)
 target_link_libraries(vstack utils)
 
-# libquic
+#[[ libquic
 target_link_libraries(quic_udp quic utils)
 target_link_libraries(quic_shared_ptr quic)
 target_link_libraries(quic_event quic)
@@ -354,6 +345,7 @@ target_link_libraries(quic_frame quic)
 target_link_libraries(quic_hash_map quic)
 target_link_libraries(quic_crypto quic)
 target_link_libraries(quic_init_conn quic)
+]]
 
 # libdnet
 target_link_libraries(dnet_socket dnet)
@@ -364,6 +356,8 @@ target_link_libraries(dnetquic_initial dnet)
 target_link_libraries(dnetquic_context dnet)
 target_link_libraries(dnet_error dnet)
 target_link_libraries(dnet_stun dnet)
+target_link_libraries(dnetquic_frame utils dnet)
+target_link_libraries(dnetquic_stream utils dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)
@@ -371,7 +365,7 @@ target_link_libraries(dnetserv dnet)
 if(WIN32)
   # target_link_libraries(io_completion_port ws2_32)
   target_link_libraries(utnet libssl libcrypto ws2_32 dnet)
-  target_link_libraries(quic ws2_32)
+  # target_link_libraries(quic ws2_32)
 else()
   target_link_libraries(utils libssl.so libcrypto.so)
   target_link_libraries(utnet dnet)
@@ -392,10 +386,11 @@ if(WIN32)
       TARGET dnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnet.dll" "test/libdnet.dll"
     )
+    #[[
     add_custom_command(
       TARGET quic POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libquic.dll" "test/libquic.dll"
-    )
+    )]]
     add_custom_command(
       TARGET utils POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"

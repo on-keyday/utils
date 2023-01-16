@@ -62,7 +62,7 @@ namespace utils {
                 return error_none;
             }
 
-            template <class TmpString = String>
+            template <class TmpString = flex_storage>
             Error accept(HTTP& http, auto&& path, auto&& header, auto&& pass_sec_key, size_t* red = nullptr) {
                 number::Array<char, 4, true> meth;
                 HTTPBodyInfo body;
@@ -126,7 +126,7 @@ namespace utils {
                 return error_none;
             }
 
-            template <class TmpString = String>
+            template <class TmpString = flex_storage>
             Error verify(HTTP& http, auto&& header, auto&& compare_sec_key, size_t* red = nullptr) {
                 number::Array<char, 4, true> meth;
                 HTTPBodyInfo body;

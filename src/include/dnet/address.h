@@ -8,7 +8,6 @@
 // address - address representation
 #pragma once
 #include "../core/byte.h"
-#include "boxbytelen.h"
 #include "../net_util/ipaddr.h"
 #include "storage.h"
 
@@ -48,7 +47,7 @@ namespace utils {
 
             void copy(const NetAddr& from) {
                 if (internal::NetAddronHeap(from.type_)) {
-                    fdata = make_storage(from.fdata.cdata(), from.fdata.size());
+                    fdata = make_storage(from.fdata);
                     if (!fdata.null()) {
                         type_ = NetAddrType::null;
                         return;
@@ -221,7 +220,7 @@ namespace utils {
             return {ipv4(d.first.addr), true};
         }
 
-        // SockAttr is socket basic attributes to make socket
+        // SockAttr is basic attributes to make socket
         struct SockAttr {
             int address_family = 0;
             int socket_type = 0;

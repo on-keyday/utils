@@ -170,6 +170,10 @@ namespace utils {
                 return data()[i];
             }
 
+            constexpr const C& operator[](size_t i) const noexcept {
+                return data()[i];
+            }
+
             constexpr C* begin() noexcept {
                 return data();
             }
@@ -194,6 +198,18 @@ namespace utils {
 
             constexpr basic_wvec substr(size_t pos = 0, size_t n = ~0) const noexcept {
                 return wsubstr(pos, n);
+            }
+
+            constexpr void fill(C d) {
+                for (C& c : *this) {
+                    c = d;
+                }
+            }
+
+            constexpr void force_fill(C d) {
+                for (C& c : *this) {
+                    static_cast<volatile C&>(c) = d;
+                }
             }
         };
 
@@ -221,7 +237,7 @@ namespace utils {
                 : del(std::exchange(in.del, D{})),
                   basic_wvec<C, U>(const_cast<byte*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)) {}
 
-            basic_storage_vec& operator=(basic_storage_vec&& in) {
+            constexpr basic_storage_vec& operator=(basic_storage_vec&& in) {
                 if (this == &in) {
                     return *this;
                 }
@@ -232,10 +248,16 @@ namespace utils {
                 return *this;
             }
 
-            ~basic_storage_vec() {
+            constexpr void clear() {
                 if (!this->null()) {
                     del(this->data(), this->size_);
+                    this->data_ = nullptr;
+                    this->size_ = 0;
                 }
+            }
+
+            constexpr ~basic_storage_vec() {
+                clear();
             }
         };
 
@@ -264,6 +286,60 @@ namespace utils {
         //  1 if dst.size() <  src.size()
         // -1 if dst.size() >  src.size()
         constexpr auto copy = make_copy_fn<byte, char>();
+
+        template <class C, class U>
+        constexpr auto make_shift_fn() {
+            return [](basic_wvec<C, U> range, size_t to, size_t from, size_t len) {
+                const auto size = range.size();
+                if (to >= size || from >= size) {
+                    return false;
+                }
+                if (size - to < len || size - from < len) {
+                    return false;
+                }
+                if (to < from) {
+                    for (size_t i = 0; i < len; i++) {
+                        range[to + i] = range[from + i];
+                    }
+                }
+                else {
+                    for (size_t i = len; i > 0; i--) {
+                        range[to + i - 1] = range[from + i - 1];
+                    }
+                }
+                return true;
+            };
+        }
+
+        constexpr auto shift = make_shift_fn<byte, char>();
+
+        namespace test {
+            constexpr bool test_shift() {
+                byte data[10] = "glspec ol";
+                shift(data, 0, 3, 3);
+                auto ok = data[0] == 'p' &&
+                          data[1] == 'e' &&
+                          data[2] == 'c' &&
+                          data[3] == 'p';
+                if (!ok) {
+                    return false;
+                }
+                data[0] = 'a';
+                data[1] = 'n';
+                data[2] = 't';
+                shift(data, 3, 0, 7);
+                ok = data[3] == 'a' &&
+                     data[4] == 'n' &&
+                     data[5] == 't' &&
+                     data[6] == 'p' &&
+                     data[7] == 'e' &&
+                     data[8] == 'c' &&
+                     data[9] == ' ';
+                return ok;
+            }
+
+            static_assert(test_shift());
+        }  // namespace test
 
     }  // namespace view
 }  // namespace utils

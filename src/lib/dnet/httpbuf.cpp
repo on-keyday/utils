@@ -12,6 +12,7 @@
 
 namespace utils {
     namespace dnet {
+        /*
         HTTPBuf::~HTTPBuf() {
             free_charvec(text, DNET_DEBUG_MEMORY_LOCINFO(true, cap, alignof(char)));
             text = nullptr;
@@ -37,6 +38,6 @@ namespace utils {
             }
             p.text()[p.size()] = c;
             p.size()++;
-        }
+        }*/
     }  // namespace dnet
 }  // namespace utils

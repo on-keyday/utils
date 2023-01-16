@@ -25,7 +25,7 @@ namespace utils {
             constexpr Value(std::uint64_t v, byte l)
                 : value(v), len(l) {}
 
-            constexpr operator std::uint64_t() {
+            constexpr operator std::uint64_t() const noexcept {
                 return value;
             }
         };
@@ -167,7 +167,7 @@ namespace utils {
             return ok;
         }
 
-        constexpr void write_unchecked(auto&& output, size_t value, byte len) {
+        constexpr void write_unchecked(auto&& output, std::uint64_t value, byte len) {
             switch (len) {
                 case 1:
                     output[0] = byte(value);

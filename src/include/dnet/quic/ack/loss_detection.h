@@ -9,6 +9,7 @@
 #pragma once
 #include "packet_history.h"
 #include "congestion.h"
+#include "idle_timer.h"
 #include <algorithm>
 #include <ranges>
 
@@ -16,63 +17,77 @@ namespace utils {
     namespace dnet {
         namespace quic::ack {
 
-            struct LossEventHandlers {
-                closure::Closure<error::Error> sendOneACKElicitingHandshakePacket;
-                closure::Closure<error::Error> sendOneACKElicitingPaddedInitialPacket;
-                closure::Closure<error::Error, PacketNumberSpace> sendOneOrTwoACKElicitingPackets;
-            };
+            constexpr auto errIdleTimeout = error::Error("IDLE_TIMEOUT");
 
             struct LossDetectionHandler {
                 PacketHistories pn_spaces;
-                Clock clock;
+                time::Clock clock;
                 RTT rtt;
-                LossDetectParam params;
-                LossDetectTimer timer;
+                LossDetectParams loss_detect_params;
+                PTOParams pto;
+                time::Timer loss_detect_timer;
                 LossDetectFlags flags;
                 Congestion cong;
-                LossEventHandlers handlers;
+                IdleTimer idle_timer;
 
                 error::Error on_packet_sent(PacketNumberSpace space, SentPacket&& sent) {
-                    auto in_flight = sent.in_flight;
-                    auto sent_bytes = sent.sent_bytes;
-                    auto time_sent = clock.now();
-                    if (time_sent == invalid_time) {
+                    const auto in_flight = sent.in_flight;
+                    const auto sent_bytes = sent.sent_bytes;
+                    const auto ack_eliciting = sent.ack_eliciting;
+                    const auto time_sent = clock.now();
+                    if (!time_sent.valid()) {
                         return QUICError{
-                            .msg = "clock.now is not valid. that is clock is broken",
-
+                            .msg = "clock.now is not valid. clock is broken",
                         };
                     }
                     sent.time_sent = time_sent;
-                    auto& pn_space = pn_spaces[int(space)];
+                    auto& pn_space = pn_spaces[space_to_index(space)];
                     if (!pn_space.on_sent_packet(std::move(sent))) {
                         return QUICError{
                             .msg = "failed to add sent packet. maybe already added",
-
                         };
                     }
+                    flags.sent_bytes += sent_bytes;
                     if (in_flight) {
                         cong.on_packet_sent(sent_bytes);
+                        if (auto err = pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags)) {
+                            return err;
+                        }
+                    }
+                    pto.on_packet_sent(ack_eliciting);
+                    idle_timer.on_packet_sent(time_sent, ack_eliciting);
+                    if (space == PacketNumberSpace::handshake) {
+                        flags.has_sent_handshake = true;
                     }
                     return error::none;
                 }
 
-                error::Error on_datagram_recived() {
-                    if (flags.server_is_at_anti_amplification_limit) {
-                        auto err = pn_spaces.set_loss_detection_timer(timer, params, clock, rtt, flags);
+                error::Error on_packet_recived(PacketNumberSpace space, std::uint64_t recv_size) {
+                    if (space == PacketNumberSpace::handshake) {
+                        flags.has_recived_handshake = true;
+                    }
+                    idle_timer.on_packet_recieved(clock.now());
+                    auto was_limit = flags.is_at_anti_amplification_limit();
+                    flags.recv_bytes += recv_size;
+                    if (was_limit && flags.is_at_anti_amplification_limit()) {
+                        auto err = pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags);
                         if (err) {
                             return err;
                         }
-                        if (timer.timeout < clock.now()) {
+                        if (loss_detect_timer.timeout(clock)) {
                             return on_loss_detection_timeout();
                         }
                     }
                     return error::none;
                 }
 
-                error::Error on_ack_received(frame::ACKFrame<easy::Vec>& ack, PacketNumberSpace space) {
-                    auto& pn_space = pn_spaces[int(space)];
-                    auto largest_pn = PacketNumber(ack.largest_ack.value);
-                    if (pn_space.largest_acked_packet == infinity) {
+                error::Error on_ack_received(frame::ACKFrame<slib::vector>& ack, PacketNumberSpace space) {
+                    if (space == PacketNumberSpace::handshake) {
+                        flags.has_recived_handshake_ack = true;
+                    }
+                    auto& pn_space = pn_spaces[space_to_index(space)];
+                    auto largest_pn = packetnum::Value(ack.largest_ack.value);
+                    if (pn_space.largest_acked_packet == packetnum::infinity) {
                         pn_space.largest_acked_packet = largest_pn;
                     }
                     else {
@@ -96,7 +111,6 @@ namespace utils {
                         if (!rtt.sample_rtt(clock, largest.time_sent, ack.ack_delay.value)) {
                             return QUICError{
                                 .msg = "sample_rtt calculation failed. maybe clock is broken",
-
                                 .frame_type = FrameType::ACK,
                             };
                         }
@@ -107,7 +121,7 @@ namespace utils {
                         }
                     }
                     RemovedPackets lost_packets;
-                    err = pn_space.detect_and_remove_lost_packets(lost_packets, clock, rtt, params);
+                    err = pn_space.detect_and_remove_lost_packets(lost_packets, clock, rtt, loss_detect_params);
                     if (err) {
                         return err;
                     }
@@ -121,147 +135,104 @@ namespace utils {
                     if (err) {
                         return err;
                     }
-                    if (flags.peer_completed_address_validation()) {
-                        params.pto_count = 0;
-                    }
-                    return pn_spaces.set_loss_detection_timer(timer, params, clock, rtt, flags);
+                    pto.on_ack_recved(flags);
+                    return pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags);
                 }
 
-                error::Error process_ecn(frame::ACKFrame<easy::Vec>& ack, PacketNumberSpace space) {
-                    auto& pn_space = pn_spaces[int(space)];
+                error::Error process_ecn(frame::ACKFrame<slib::vector>& ack, PacketNumberSpace space) {
+                    auto& pn_space = pn_spaces[space_to_index(space)];
                     pn_space.ecn = ack.ecn_counts;
-                    auto sent = pn_space.sent_packets[PacketNumber(ack.largest_ack.value)].time_sent;
+                    auto sent = pn_space.sent_packets[packetnum::Value(ack.largest_ack.value)].time_sent;
                     return cong.on_congestion_event(clock, sent);
                 }
 
                 error::Error maybeTimeout() {
-                    if (timer.timeout != -1 && timer.timeout < clock.now()) {
+                    if (loss_detect_timer.timeout(clock)) {
                         return on_loss_detection_timeout();
                     }
+                    if (idle_timer.is_idle_timeout(clock)) {
+                        return errIdleTimeout;
+                    }
                     return error::none;
+                }
+
+                void set_handshake_confirmed() {
+                    flags.handshake_confirmed = true;
+                    idle_timer.handshake_confirmed = true;
+                }
+
+                void apply_transport_param(std::uint64_t peer_idle_timeout, std::uint64_t local_idle_timeout) {
+                    if (peer_idle_timeout == 0) {
+                        idle_timer.idle_timeout = local_idle_timeout;
+                    }
+                    else if (local_idle_timeout == 0) {
+                        idle_timer.idle_timeout = peer_idle_timeout;
+                    }
+                    else {
+                        idle_timer.idle_timeout = min_(local_idle_timeout, peer_idle_timeout);
+                    }
                 }
 
                 error::Error on_loss_detection_timeout() {
                     auto [earliest_loss_time, space] = pn_spaces.get_loss_time_and_space();
                     if (earliest_loss_time != 0) {
                         RemovedPackets losts;
-                        auto err = pn_spaces[int(space)].detect_and_remove_lost_packets(losts, clock, rtt, params);
+                        auto err = pn_spaces[space_to_index(space)].detect_and_remove_lost_packets(losts, clock, rtt, loss_detect_params);
                         if (err) {
                             return err;
                         }
                         if (losts.empty()) {
                             return QUICError{
                                 .msg = "loss_detection_timeout but lost packet not found",
-
                             };
                         }
-                        // on_packets_lost
-                        return pn_spaces.set_loss_detection_timer(timer, params, clock, rtt, flags);
+                        if (auto err = cong.on_packets_lost(clock, rtt, losts)) {
+                            return err;
+                        }
+                        return pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags);
                     }
-                    if (pn_spaces.no_ack_eliciting_in_flight()) {
-                        if (flags.peer_completed_address_validation()) {
-                            return QUICError{
-                                .msg = "no ack eliciting in flight but peer completed address validation",
-
-                            };
-                        }
-                        if (flags.has_handshake_keys) {
-                            if (handlers.sendOneACKElicitingHandshakePacket) {
-                                auto err = handlers.sendOneACKElicitingHandshakePacket();
-                                if (err) {
-                                    return err;
-                                }
-                            }
+                    if (pn_spaces.no_ack_eliciting_in_flight() &&
+                        !flags.peer_completed_address_validation()) {
+                        if (flags.has_sent_handshake) {
+                            pto.on_pto_no_flight(PacketNumberSpace::handshake);
                         }
                         else {
-                            if (handlers.sendOneACKElicitingPaddedInitialPacket) {
-                                auto err = handlers.sendOneACKElicitingPaddedInitialPacket();
-                                if (err) {
-                                    return err;
-                                }
-                            }
+                            pto.on_pto_no_flight(PacketNumberSpace::initial);
                         }
                     }
                     else {
-                        if (handlers.sendOneOrTwoACKElicitingPackets) {
-                            auto [_, space] = pn_spaces.get_pto_and_space(params, clock, rtt, flags);
-                            auto err = handlers.sendOneOrTwoACKElicitingPackets(space);
-                            if (err) {
-                                return err;
-                            }
+                        auto [t, space] = pn_spaces.get_pto_and_space(pto, clock, rtt, flags);
+                        if (!t.valid()) {
+                            return error::none;  // TODO(on-keyday): is this ok?
                         }
+                        pto.on_pto_timeout(space);
                     }
-                    params.pto_count++;
-                    return pn_spaces.set_loss_detection_timer(timer, params, clock, rtt, flags);
+                    return pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags);
                 }
 
                 error::Error on_packet_number_space_discarded(PacketNumberSpace space) {
-                    return pn_spaces.on_packet_number_space_discarded(cong, space, timer, params, clock, rtt, flags);
+                    return pn_spaces.on_packet_number_space_discarded(cong, space, loss_detect_timer, pto, clock, rtt, flags);
                 }
 
-                QPacketNumber encode_packet_number(size_t pn, PacketNumberSpace space) {
-                    auto largest_ack = pn_spaces[int(space)].largest_acked_packet;
-                    size_t num_unacked = 0;
-                    if (largest_ack == infinity) {
-                        num_unacked = pn + 1;
-                    }
-                    else {
-                        num_unacked = pn - size_t(largest_ack);
-                    }
-                    auto min_bits = log2i(num_unacked) + 1;
-                    auto min_bytes = min_bits / 8 + (min_bits % 8 ? 1 : 0);
-                    if (min_bytes == 1) {
-                        return {std::uint32_t(pn & 0xff), 1};
-                    }
-                    if (min_bytes == 2) {
-                        return {std::uint32_t(pn & 0xffff), 2};
-                    }
-                    if (min_bytes == 3) {
-                        return {std::uint32_t(pn & 0xffffff), 3};
-                    }
-                    if (min_bytes == 4) {
-                        return {std::uint32_t(pn & 0xffffffff), 4};
-                    }
-                    return {};  // is this occurer?
-                }
-
-                std::pair<QPacketNumber, size_t> next_packet_number(PacketNumberSpace space) {
-                    auto& should_issue = pn_spaces[int(space)].issue_packet_number;
-                    auto yielded = encode_packet_number(should_issue, space);
-                    return {yielded, should_issue};
+                // returns (pn,largest_acked_pn)
+                std::pair<packetnum::Value, std::uint64_t> next_packet_number(PacketNumberSpace space) {
+                    auto& pn_space = pn_spaces[space_to_index(space)];
+                    return {
+                        pn_space.issue_packet_number,
+                        pn_space.largest_acked_packet,
+                    };
                 }
 
                 void consume_packet_number(PacketNumberSpace space) {
-                    pn_spaces[int(space)].issue_packet_number++;
+                    pn_spaces[space_to_index(space)].issue_packet_number++;
                 }
 
-                PacketNumber decode_packet_number(QPacketNumber pn, PacketNumberSpace space) {
-                    auto& largest_pn = pn_spaces[int(space)].largest_recv_packet;
-                    auto expected_pn = largest_pn + 1;
-                    auto pn_win = 1 << (pn.len * 8);
-                    auto half_win = pn_win >> 1;
-                    auto pn_mask = pn_win - 1;
-                    auto base = (size_t(expected_pn) & ~pn_mask);
-                    size_t next = base + pn_win;
-                    size_t prev = base < pn_win ? 0 : base - pn_win;
-                    auto delta = [](size_t a, size_t b) {
-                        if (a < b) {
-                            return b - a;
-                        }
-                        return a - b;
-                    };
-                    auto closer = [&](size_t t, size_t a, size_t b) {
-                        if (delta(t, a) < delta(t, b)) {
-                            return a;
-                        }
-                        return b;
-                    };
-                    auto selected = closer(expected_pn, base + pn.value, closer(expected_pn, prev + pn.value, next + pn.value));
-                    return PacketNumber(selected);
+                std::uint64_t get_largest_pn(PacketNumberSpace space) {
+                    return pn_spaces[space_to_index(space)].largest_recv_packet;
                 }
 
-                void update_higest_recv_packet(PacketNumber pn, PacketNumberSpace space) {
-                    auto& high = pn_spaces[int(space)].largest_recv_packet;
+                void update_higest_recv_packet(packetnum::Value pn, PacketNumberSpace space) {
+                    auto& high = pn_spaces[space_to_index(space)].largest_recv_packet;
                     if (high < size_t(pn)) {
                         high = size_t(pn);
                     }

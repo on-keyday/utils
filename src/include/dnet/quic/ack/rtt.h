@@ -8,63 +8,41 @@
 // rtt - round trip time for ACK handling
 #pragma once
 #include <cstdint>
+#include "../time.h"
+#include "constant.h"
 
 namespace utils {
     namespace dnet {
         namespace quic::ack {
-            using time_t = std::int64_t;
-            using utime_t = std::uint64_t;
-
-            constexpr auto invalid_time = -time_t(1);
-            struct Clock {
-                utime_t granularity = 0;
-                void* ctx;
-                time_t (*now_fn)(void*);
-                constexpr time_t now() const {
-                    return now_fn ? now_fn(ctx) : invalid_time;
-                }
-            };
 
             struct RTTSampler {
-                time_t time_sent = 0;
+                time::Time time_sent = 0;
             };
 
-            constexpr auto abs(auto a) {
-                return a < 0 ? -a : a;
-            }
-
-            constexpr auto max_(auto a, auto b) {
-                return a < b ? b : a;
-            }
-
-            constexpr auto min_(auto a, auto b) {
-                return a < b ? a : b;
-            }
-
             struct RTT {
-                time_t latest_rtt = -1;
-                time_t min_rtt = -1;
-                time_t smoothed_rtt = -1;
-                time_t rttvar = -1;
-                time_t max_ack_delay = -1;
-                time_t first_ack_sample = 0;
+                time::Time latest_rtt = time::invalid;
+                time::Time min_rtt = time::invalid;
+                time::Time smoothed_rtt = time::invalid;
+                time::Time rttvar = time::invalid;
+                time::Time max_ack_delay = time::invalid;
+                time::Time first_ack_sample = 0;
 
                 constexpr bool reset() {
-                    latest_rtt = -1;
-                    min_rtt = -1;
-                    smoothed_rtt = -1;
-                    rttvar = -1;
-                    max_ack_delay = -1;
+                    latest_rtt = time::invalid;
+                    min_rtt = time::invalid;
+                    smoothed_rtt = time::invalid;
+                    rttvar = time::invalid;
+                    max_ack_delay = time::invalid;
                     first_ack_sample = 0;
                     return true;
                 }
 
-                constexpr void set_inirtt(time_t inirtt) {
+                constexpr void set_inirtt(time::time_t inirtt) {
                     smoothed_rtt = inirtt;
                     rttvar = inirtt >> 1;
                 }
 
-                constexpr bool sample_rtt(Clock& clock, time_t time_sent, utime_t ack_delay) {
+                constexpr bool sample_rtt(time::Clock& clock, time::Time time_sent, time::utime_t ack_delay) {
                     auto rtt = clock.now() - time_sent;
                     if (rtt < 0) {
                         return false;
@@ -78,7 +56,7 @@ namespace utils {
                     }
                     else {
                         if (max_ack_delay >= 0) {
-                            ack_delay = min_(ack_delay, max_ack_delay);
+                            ack_delay = min_(ack_delay, time::utime_t(max_ack_delay.value));
                         }
                         auto adjusted_rtt = latest_rtt;
                         if (latest_rtt >= min_rtt + ack_delay) {
@@ -93,21 +71,6 @@ namespace utils {
                     return true;
                 }
             };
-
-            constexpr size_t log2i(size_t bit) {
-                if (bit == 1) {
-                    return 0;
-                }
-                if (bit == 2 || bit == 3) {
-                    return 1;
-                }
-                for (auto i = 0; i < 64; i++) {
-                    if (bit & (1 << (63 - i))) {
-                        return 63 - i;
-                    }
-                }
-                return ~0;
-            }
 
         }  // namespace quic::ack
     }      // namespace dnet

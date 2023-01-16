@@ -17,7 +17,7 @@ namespace utils {
         NetAddr make_netaddr(NetAddrType type, view::rvec b) {
             NetAddr addr;
             if (internal::NetAddronHeap(type)) {
-                addr.fdata = make_storage(b.data(), b.size());
+                addr.fdata = make_storage(b);
                 if (addr.fdata.null()) {
                     return {};
                 }

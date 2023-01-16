@@ -348,12 +348,6 @@ namespace utils {
                 detail.code.categ = categ;
             }
 
-            constexpr explicit Error(view::basic_rvec<char, byte> c, ErrorCategory categ = ErrorCategory::apperr)
-                : type_(ErrorType::str) {
-                detail.str.value = c;
-                detail.str.categ = categ;
-            }
-
             constexpr explicit Error(const char* data, ErrorCategory categ = ErrorCategory::apperr, std::int64_t len = -1)
                 : type_(ErrorType::str) {
                 detail.str.value = view::basic_rvec<char, byte>(data);

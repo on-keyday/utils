@@ -31,5 +31,12 @@ namespace utils {
 
         using PaddingFrame = TypeOnly<FrameType::PADDING>;
 
+        namespace test {
+            constexpr bool check_padding() {
+                PaddingFrame frame;
+                return do_test(frame, [] { return true; });
+            }
+        }  // namespace test
+
     }  // namespace dnet::quic::frame
 }  // namespace utils
