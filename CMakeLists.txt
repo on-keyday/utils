@@ -362,7 +362,7 @@ target_link_libraries(dnetquic_stream utils dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)
-
+#[[
 if(WIN32)
   # target_link_libraries(io_completion_port ws2_32)
   # target_link_libraries(utnet libssl libcrypto ws2_32 dnet)
@@ -371,7 +371,7 @@ else()
   # target_link_libraries(utils libssl.so libcrypto.so)
   # target_link_libraries(utnet dnet)
   # target_link_libraries(asynctcp2 Threads::Threads)
-endif()
+endif()]]
 
 if(WIN32)
   if(UTILS_BUILD_SHARED_LIBS)
