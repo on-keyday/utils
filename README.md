@@ -27,7 +27,6 @@ I don't provide guarantee for your problem if you use these code.
 + escape - string escapes (stable)
 + file - file util (stable)
   + huffman.h is unstable
-+ fmt - format string (not developed)
 + helper - implementation helper library
   + I think this is actual 'utility' library
 + json - JSON parser/renderer (stable)
