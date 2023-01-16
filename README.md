@@ -5,7 +5,7 @@ you will be able to build from only these codes when deprecated is removed.
 I don't provide guarantee for your problem if you use these code.
 
 
-# what is included (2022/11/30)
+# what is included (2023/1/16)
 + async - fiber/ucontext based coroutine
 + bnf - bnf parser (stop developing)
 + cmdline - command line parser (stable)
