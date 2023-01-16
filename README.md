@@ -1,7 +1,7 @@
 # utils
 this library is developing only for my fun and study
-this library has no dependency but has OpenSSL for deprecated library.
-you will be able to build from only these codes when deprecated is removed.
+this library has no dependency ~~but has OpenSSL for deprecated library.
+you will be able to build from only these codes when deprecated is removed.~~
 I don't provide guarantee for your problem if you use these code.
 
 
