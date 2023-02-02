@@ -130,7 +130,6 @@ namespace utils {
                 OneRTTPacketPlain plain;
                 byte id[] = {'h', 'e', 'l', 'l'};
                 byte tag[16] = "kdkdkd";
-                byte null[16]{};
                 byte payload[10]{};
                 byte data[100]{};
                 plain.dstID = id;

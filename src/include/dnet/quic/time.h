@@ -7,6 +7,8 @@
 
 // time - QUIC time
 #pragma once
+#include <cstdint>
+#include <type_traits>
 
 namespace utils {
     namespace dnet::quic::time {
@@ -34,11 +36,36 @@ namespace utils {
         constexpr auto invalid = Time{-1};
 
         struct Clock {
+           private:
             void* ptr = nullptr;
             Time (*now_fn)(void*) = nullptr;
-            time::time_t granularity = 1000000;  // millisec
-            Time now() {
+            time::utime_t millisecond = 1;  // millisec
+
+           public:
+            constexpr Clock() = default;
+
+            constexpr Clock(void* p, time::time_t millisec, Time (*fn)(void*))
+                : ptr(p), now_fn(fn), millisecond(millisec) {}
+
+            template <class T>
+            constexpr Clock(std::type_identity_t<T>* p, time::utime_t millisec, Time (*fn)(T*))
+                : Clock(p, millisec, reinterpret_cast<Time (*)(void*)>(fn)) {}
+
+            constexpr Time now() {
                 return now_fn ? now_fn(ptr) : invalid;
+            }
+
+            constexpr time::time_t to_clock_granurarity(time::time_t millisec) const noexcept {
+                return millisec * millisecond;
+            }
+
+            constexpr time::time_t to_millisec(time::time_t t) const noexcept {
+                return t / millisecond;
+            }
+
+            constexpr time::time_t to_nanosec(time::time_t t) noexcept {
+                const auto ratio = 1000000;
+                return t * ratio / millisecond;
             }
         };
 
@@ -54,6 +81,10 @@ namespace utils {
                 else {
                     deadline = time;
                 }
+            }
+
+            time::Time get_deadline() const {
+                return deadline;
             }
 
             void cancel() {

@@ -9,45 +9,10 @@
 // convert - generic function for convert utf
 #pragma once
 
-#include "internal/convert_impl.h"
 #include "internal/convimpl.h"
 
 namespace utils {
     namespace utf {
-
-        template <bool mask_failure = false, class T, class U>
-        [[deprecated]] constexpr bool convert_one_old(T&& in, U& out) {
-            Sequencer<buffer_t<T&>> seq(in);
-            return internal::convert_impl<mask_failure, buffer_t<T&>, U>(seq, out);
-        }
-
-        template <bool mask_failure = false, class T, class U>
-        [[deprecated]] constexpr bool convert_one_old(Sequencer<T>& in, U& out) {
-            return internal::convert_impl<mask_failure, T, U>(in, out);
-        }
-
-        template <bool mask_failure = false, class T, class U>
-        [[deprecated]] constexpr bool convert_old(Sequencer<T>& in, U& out) {
-            while (!in.eos()) {
-                if (!convert_one_old<mask_failure>(in, out)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        template <bool mask_failure = false, class T, class U>
-        [[deprecated]] constexpr bool convert_old(T&& in, U& out) {
-            Sequencer<buffer_t<T&>> seq(in);
-            return convert_old<mask_failure>(seq, out);
-        }
-
-        template <class String, bool mask_failure = false, class T>
-        [[deprecated]] constexpr String convert_old(T&& in) {
-            String result;
-            convert_old<mask_failure>(in, result);
-            return result;
-        }
 
         enum class ConvertMode {
             none,
@@ -60,28 +25,28 @@ namespace utils {
             code_point,
         };
 
-        template <class T>
+        template <size_t insize = 0, size_t outsize = 0, class T>
         constexpr UTFErr convert_one(Sequencer<T>& in, auto&& out, ConvertMode cvt = ConvertMode::none, SameSizeMode same_size = SameSizeMode::none) {
             if (cvt == ConvertMode::none) {
                 if (same_size == SameSizeMode::none) {
-                    return internal::convert_impl2(in, out, internal::on_samesize_none(), internal::on_fail_none());
+                    return internal::convert_impl2<insize, outsize>(in, out, internal::on_samesize_none(), internal::on_fail_none());
                 }
                 else if (same_size == SameSizeMode::code_point) {
-                    return internal::convert_impl2(in, out, internal::on_samesize_code_point(), internal::on_fail_none());
+                    return internal::convert_impl2<insize, outsize>(in, out, internal::on_samesize_code_point(), internal::on_fail_none());
                 }
                 else {
-                    return UTFError::unknown;
+                    return UTFError::invalid_parameter;
                 }
             }
             else if (cvt == ConvertMode::replace) {
                 if (same_size == SameSizeMode::none) {
-                    return internal::convert_impl2(in, out, internal::on_samesize_none(), internal::on_fail_replace());
+                    return internal::convert_impl2<insize, outsize>(in, out, internal::on_samesize_none(), internal::on_fail_replace());
                 }
                 else if (same_size == SameSizeMode::code_point) {
-                    return internal::convert_impl2(in, out, internal::on_samesize_code_point(), internal::on_fail_replace());
+                    return internal::convert_impl2<insize, outsize>(in, out, internal::on_samesize_code_point(), internal::on_fail_replace());
                 }
                 else {
-                    return UTFError::unknown;
+                    return UTFError::invalid_parameter;
                 }
             }
             else if (cvt == ConvertMode::unsafe) {
@@ -92,38 +57,40 @@ namespace utils {
                     return internal::convert_impl2(in, out, internal::on_samesize_code_point(), internal::on_fail_unsafe());
                 }
                 else {
-                    return UTFError::unknown;
+                    return UTFError::invalid_parameter;
                 }
             }
             else {
-                return UTFError::unknown;
+                return UTFError::invalid_parameter;
             }
         }
 
+        template <size_t insize = 0, size_t outsize = 0>
         constexpr UTFErr convert_one(auto&& in, auto&& out, ConvertMode cvt = ConvertMode::none, SameSizeMode same_size = SameSizeMode::none) {
             auto seq = make_ref_seq(in);
-            return convert_one(seq, out, cvt, same_size);
+            return convert_one<insize, outsize>(seq, out, cvt, same_size);
         }
 
-        template <class T>
+        template <size_t insize = 0, size_t outsize = 0, class T>
         constexpr UTFErr convert(Sequencer<T>& in, auto&& out, ConvertMode cvt = ConvertMode::none, SameSizeMode same_size = SameSizeMode::none) {
             while (!in.eos()) {
-                if (auto ok = convert_one(in, out, cvt, same_size); !ok) {
+                if (auto ok = convert_one<insize, outsize>(in, out, cvt, same_size); !ok) {
                     return ok;
                 }
             }
             return UTFError::none;
         }
 
+        template <size_t insize = 0, size_t outsize = 0>
         constexpr UTFErr convert(auto&& in, auto&& out, ConvertMode cvt = ConvertMode::none, SameSizeMode same_size = SameSizeMode::none) {
             auto seq = make_ref_seq(in);
-            return convert(seq, out, cvt, same_size);
+            return convert<insize, outsize>(seq, out, cvt, same_size);
         }
 
-        template <class Out>
+        template <class Out, size_t insize = 0, size_t outsize = 0>
         constexpr Out convert(auto&& in, ConvertMode cvt = ConvertMode::none, SameSizeMode same_size = SameSizeMode::none) {
             Out out;
-            convert(in, out, cvt, same_size);
+            convert<insize, outsize>(in, out, cvt, same_size);
             return out;
         }
 

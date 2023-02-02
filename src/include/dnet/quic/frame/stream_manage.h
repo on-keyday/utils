@@ -216,6 +216,30 @@ namespace utils {
         using StreamDataBlockedFrame = MaxStreamDataBase<FrameType::STREAM_DATA_BLOCKED>;
         using MaxStreamDataFrame = MaxStreamDataBase<FrameType::MAX_STREAM_DATA>;
 
+        // get_streamID gets streamID if f is stream related frame
+        // stream related frames are
+        // - STOP_SENDING
+        // - RESET_STREAM
+        // - STREAM
+        // - STREAM_DATA_BLOCKED
+        // - MAX_STREAM_DATA
+        constexpr std::pair<std::uint64_t, bool> get_streamID(const frame::Frame& f) noexcept {
+            switch (f.type.type()) {
+                case FrameType::STOP_SENDING:
+                    return {static_cast<const frame::StopSendingFrame&>(f).streamID, true};
+                case FrameType::RESET_STREAM:
+                    return {static_cast<const frame::ResetStreamFrame&>(f).streamID, true};
+                case FrameType::STREAM:
+                    return {static_cast<const frame::StreamFrame&>(f).streamID, true};
+                case FrameType::STREAM_DATA_BLOCKED:
+                    return {static_cast<const frame::StreamDataBlockedFrame&>(f).streamID, true};
+                case FrameType::MAX_STREAM_DATA:
+                    return {static_cast<const frame::MaxStreamDataFrame&>(f).streamID, true};
+                default:
+                    return {~std::uint64_t(0), false};
+            }
+        }
+
         namespace test {
             constexpr bool check_reset_stream() {
                 ResetStreamFrame frame;

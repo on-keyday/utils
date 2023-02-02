@@ -10,33 +10,32 @@
 #pragma once
 
 #include "endian.h"
+#include "buf.h"
 #include "../core/buffer.h"
 
 namespace utils {
     namespace endian {
         template <class T, class Char>
         struct EndianView {
-            Buffer<buffer_t<T>> buf;
-            bool reverse = false;
+            T buf;
+            bool little_endian = false;
 
-            using char_type = typename Buffer<T>::char_type;
-
-            static_assert(sizeof(char_type) == 1, "expect sizeof(char_type) is 1");
+            static_assert(sizeof(buf[1]) == 1, "expect sizeof(char_type) is 1");
 
             constexpr Char operator[](size_t pos) const {
                 if (pos >= size()) {
                     return Char();
                 }
-                std::uint8_t tmp[sizeof(Char)] = {0};
+                Buf<T> buf;
                 auto idx = pos * sizeof(Char);
                 for (size_t i = 0; i < sizeof(Char); i++) {
-                    tmp[i] = buf.at(idx + i);
+                    buf[i] = buf[idx + i];
                 }
-                if (reverse) {
-                    return internal::reverse_endian<Char>(tmp);
+                if (little_endian) {
+                    return buf.read_le();
                 }
                 else {
-                    return internal::copy_as_is<Char>(tmp);
+                    return buf.read_be();
                 }
             }
 

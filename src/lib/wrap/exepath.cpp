@@ -8,7 +8,7 @@
 #include <platform/windows/dllexport_source.h>
 #include <wrap/exepath.h>
 #include <helper/appender.h>
-#include <utf/convert.h>
+#include <unicode/utf/convert.h>
 #ifdef _WIN32
 #include <windows.h>
 #else

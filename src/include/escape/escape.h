@@ -10,8 +10,9 @@
 #pragma once
 
 #include "../core/sequencer.h"
-#include <helper/appender.h>
-#include "../utf/convert.h"
+#include "../helper/appender.h"
+#include "../unicode/utf/convert.h"
+#include "../unicode/utf/minibuffer.h"
 #include "../number/char_range.h"
 #include "../number/to_string.h"
 #include "../number/parse.h"
@@ -218,13 +219,13 @@ namespace utils {
                                 return e;
                             }
                             buf.push_back(i);
-                            if (utf::is_utf16_high_surrogate(i)) {
+                            if (unicode::utf16::is_high_surrogate(i)) {
                                 auto p = seq.rptr;
                                 if (seq.seek_if("\\u")) {
                                     if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
                                         return e;
                                     }
-                                    if (!utf::is_utf16_low_surrogate(i)) {
+                                    if (!unicode::utf16::is_low_surrogate(i)) {
                                         seq.rptr = p;
                                     }
                                     else {

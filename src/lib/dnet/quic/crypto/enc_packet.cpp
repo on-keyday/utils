@@ -25,6 +25,7 @@ namespace utils {
             static constexpr auto err_aes_mask = error::Error("failed to generate header mask AES-based", error::ErrorCategory::cryptoerr);
             static constexpr auto err_chacha_mask = error::Error("failed to generate header mask ChaCha20-based", error::ErrorCategory::cryptoerr);
             static constexpr auto err_not_enough_paylaod = error::Error("not enough CryptoPacket.processed_payload length", error::ErrorCategory::validationerr);
+            static constexpr auto err_too_short_payload = error::Error("not enough payload length. least 20 byte required", error::ErrorCategory::cryptoerr);
             static constexpr auto err_unknown = error::Error("unknown packet parser error. library bug!", error::ErrorCategory::dneterr);
             static constexpr auto err_decode_pn = error::Error("failed to decode packet number", error::ErrorCategory::quicerr);
 
@@ -131,6 +132,9 @@ namespace utils {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
                 }
+                if (packet.payload_len() < 20) {
+                    return err_too_short_payload;
+                }
                 auto flags = PacketFlags{packet.src[0]};
                 auto pnlen = flags.packet_number_length();
                 auto [parsed, ok] = packet.parse_pnknown(pnlen, authentication_tag_length);
@@ -151,6 +155,9 @@ namespace utils {
             dnet_dll_implement(error::Error) decrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
+                }
+                if (packet.payload_len() < 20) {
+                    return err_too_short_payload;
                 }
                 // apply header unprotection
                 auto [pn_wire, err] = unprotect_header(keys.hp(), cipher, packet);

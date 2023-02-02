@@ -24,9 +24,9 @@ namespace utils {
             }
 
             // encode `input` as little endian into `this->out`
-            constexpr void write_li(auto input) {
+            constexpr void write_le(auto input) {
                 Buf<decltype(input)> buf;
-                buf.write_li(input);
+                buf.write_le(input);
                 buf.into(out);
             }
         };

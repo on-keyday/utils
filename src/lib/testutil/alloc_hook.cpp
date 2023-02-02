@@ -6,7 +6,7 @@
 */
 
 #include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/utf/convert.h"
+#include "../../include/unicode/utf/convert.h"
 #include "../../include/wrap/light/char.h"
 #include "../../include/testutil/alloc_hook.h"
 #include "../../include/testutil/timer.h"

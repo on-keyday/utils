@@ -27,7 +27,7 @@ namespace utils {
                 if (!last_recv_time.valid() && !first_ack_eliciting_packet_after_idle_sent_time.valid()) {
                     return false;
                 }
-                const auto timeout = current_timeout() * clock.granularity;
+                const auto timeout = current_timeout();
                 if (timeout == 0) {
                     return false;
                 }

@@ -102,7 +102,7 @@ namespace utils {
                 return true;
             }
             space::consume_space(seq, false);
-            if (!(seq.eos() || helper::match_eol<false>(seq) || seq.match("{") || seq.match("}"))) {
+            if (!(seq.eos() || space::parse_eol<false>(seq) || seq.match("{") || seq.match("}"))) {
                 std::shared_ptr<MinNode> tmp;
                 if (seq.seek_if("(")) {
                     std::shared_ptr<FuncParamNode> ret, root;
@@ -200,7 +200,7 @@ namespace utils {
                         break;
                     }
                     std::shared_ptr<MinNode> typ, init;
-                    if (!seq.match("=") && !seq.eos() && !helper::match_eol<false>(seq)) {
+                    if (!seq.match("=") && !seq.eos() && !space::parse_eol<false>(seq)) {
                         if (!type_(stat, expr, seq, typ, err, errc) || err) {
                             errc.say("expect ", expect, " type but not");
                             errc.trace(start, seq);
@@ -228,7 +228,6 @@ namespace utils {
                     return true;
                 };
                 err = false;
-                const auto group_start = seq.rptr;
                 root = std::make_shared<LetNode>();
                 root->str = grp_str;
                 letnode = root;

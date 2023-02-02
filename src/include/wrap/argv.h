@@ -10,7 +10,7 @@
 // need to link libutils
 #pragma once
 #include "../platform/windows/dllexport_header.h"
-#include "../utf/convert.h"
+#include "../unicode/utf/convert.h"
 #include "light/string.h"
 #include "light/vector.h"
 

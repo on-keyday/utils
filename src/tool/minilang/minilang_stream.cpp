@@ -10,8 +10,8 @@
 #include <deprecated/stream/tree_stream.h>
 #include <number/char_range.h>
 #include <wrap/cout.h>
-#include <helper/line_pos.h>
-#include <utf/convert.h>
+#include <space/line_pos.h>
+#include <unicode/utf/convert.h>
 #include <deprecated/stream/utf_stream.h>
 #include <deprecated/stream/semantics_stream.h>
 #include <deprecated/stream/string_stream.h>
@@ -101,7 +101,7 @@ namespace minilang {
         cout << tok.stoken() << "\n";
         wrap::string s;
         seq.rptr = tok.pos();
-        helper::write_src_loc(s, seq);
+        space::write_src_loc(s, seq);
         cout << s << "\n";
         if (is_kind(tok, st::tokenBinary)) {
             walk(as<st::BinaryToken>(tok)->left, seq);

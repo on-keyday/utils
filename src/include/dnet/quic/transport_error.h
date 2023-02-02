@@ -74,6 +74,7 @@ namespace utils {
                         return nullptr;
                     }
                 }
+#undef CASE
             }
 
             struct QUICError {

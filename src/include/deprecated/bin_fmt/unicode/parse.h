@@ -11,7 +11,7 @@
 
 #include "unicode_data.h"
 #include "../../helper/strutil.h"
-#include "../../utf/convert.h"
+#include "../../unicode/utf/convert.h"
 
 namespace utils {
     namespace unicode {

@@ -99,7 +99,7 @@ namespace utils {
             }
 
             constexpr basic_rvec rsubstr(size_t pos = 0, size_t n = ~0) const noexcept {
-                if (pos >= size_) {
+                if (pos > size_) {
                     return {};  // empty
                 }
                 if (n > size_ - pos) {
@@ -141,6 +141,14 @@ namespace utils {
 
             constexpr friend std::strong_ordering operator<=>(const basic_rvec& l, const basic_rvec& r) {
                 return l.compare(r) <=> 0;
+            }
+
+            constexpr const C& front() const noexcept {
+                return data_[0];
+            }
+
+            constexpr const C& back() const noexcept {
+                return data_[size_ - 1];
             }
         };
 
@@ -187,7 +195,7 @@ namespace utils {
             }
 
             constexpr basic_wvec wsubstr(size_t pos = 0, size_t n = ~0) const noexcept {
-                if (pos >= this->size_) {
+                if (pos > this->size_) {
                     return {};  // empty
                 }
                 if (n > this->size_ - pos) {
@@ -210,6 +218,14 @@ namespace utils {
                 for (C& c : *this) {
                     static_cast<volatile C&>(c) = d;
                 }
+            }
+
+            constexpr C& front() noexcept {
+                return data()[0];
+            }
+
+            constexpr C& back() noexcept {
+                return data()[this->size_ - 1];
             }
         };
 
@@ -313,6 +329,31 @@ namespace utils {
 
         constexpr auto shift = make_shift_fn<byte, char>();
 
+        // for test
+        template <class T, size_t len>
+        constexpr auto cstr_to_bytes(const T (&val)[len]) {
+            static_assert(sizeof(T) == 1);
+            struct {
+                byte data_[len - 1];
+
+                constexpr size_t size() const {
+                    return len - 1;
+                }
+
+                constexpr byte* data() {
+                    return data_;
+                }
+
+                constexpr const byte* data() const {
+                    return data_;
+                }
+            } ret;
+            for (size_t i = 0; i < len - 1; i++) {
+                ret.data_[i] = val[i];
+            }
+            return ret;
+        }
+
         namespace test {
             constexpr bool test_shift() {
                 byte data[10] = "glspec ol";
@@ -338,7 +379,14 @@ namespace utils {
                 return ok;
             }
 
+            constexpr bool test_zero() {
+                byte data[1];
+                auto t = view::rvec(data, 0);
+                return !t.substr(0, 0).null() && t.substr(1, 0).null();
+            }
+
             static_assert(test_shift());
+            static_assert(test_zero());
         }  // namespace test
 
     }  // namespace view

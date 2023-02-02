@@ -7,7 +7,7 @@
 
 #include <minilang/token/cast.h>
 #include <wrap/cout.h>
-#include <helper/line_pos.h>
+#include <space/line_pos.h>
 
 namespace vstack {
     namespace token = utils::minilang::token;
@@ -19,7 +19,7 @@ namespace vstack {
         std::shared_ptr<token::Token> tok;
         void error_with_seq(auto&& seq, auto&&... err) {
             std::string o;
-            utils::helper::write_src_loc(o, seq);
+            utils::space::write_src_loc(o, seq);
             make_out()("error: ", err..., "\n", o, "\n");
         }
 
@@ -27,7 +27,7 @@ namespace vstack {
             std::string o;
             auto base = seq.rptr;
             seq.rptr = token->pos.begin;
-            utils::helper::write_src_loc(o, seq);
+            utils::space::write_src_loc(o, seq);
             make_out()(o, "\n");
             seq.rptr = base;
         }

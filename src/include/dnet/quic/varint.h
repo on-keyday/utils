@@ -140,7 +140,7 @@ namespace utils {
                     break;
                 default:
                     // undefined behaviour
-                    break;
+                    return ~std::uint64_t(0);
             }
             data &= ~len_bit_mask(len);
             return data;

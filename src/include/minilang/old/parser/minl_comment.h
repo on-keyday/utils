@@ -23,7 +23,7 @@ namespace utils {
                 return [=](auto&& p) -> std::shared_ptr<CommentNode> {
                     MINL_FUNC_LOG("comment")
                     auto line_comment = [&](auto& comment) {
-                        while (!p.seq.eos() && !helper::match_eol<true>(p.seq)) {
+                        while (!p.seq.eos() && !space::parse_eol<true>(p.seq)) {
                             comment.push_back(p.seq.current());
                             p.seq.consume();
                         }

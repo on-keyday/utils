@@ -13,7 +13,7 @@
 #include "../minilang/old/parser/minl_bnf.h"
 #include "../minilang/old/minlutil.h"
 #include "../minilang/old/parser/minl_comment.h"
-#include "../utf/convert.h"
+#include "../unicode/utf/convert.h"
 #include "../view/char.h"
 
 namespace utils {

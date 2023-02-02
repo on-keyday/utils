@@ -450,7 +450,7 @@ namespace utils {
                     pass_frame(p.as_char() + red, p.size() - red, add);
                     red += add;
                 }*/
-                p.shift_front(r.already_read().size());
+                p.shift_front(r.read().size());
                 return true;
             });
         }

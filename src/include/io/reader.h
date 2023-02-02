@@ -20,13 +20,17 @@ namespace utils {
             constexpr basic_reader(view::basic_rvec<C, U> r)
                 : r(r) {}
 
-            constexpr void reset() {
-                index = 0;
+            constexpr void reset(size_t pos = 0) {
+                if (r.size() < pos) {
+                    index = r.size();
+                    return;
+                }
+                index = pos;
             }
 
-            constexpr void reset(view::basic_rvec<C, U> o) {
+            constexpr void reset(view::basic_rvec<C, U> o, size_t pos = 0) {
                 r = o;
-                index = 0;
+                reset(pos);
             }
 
             constexpr bool empty() const {
@@ -50,17 +54,20 @@ namespace utils {
                 return index;
             }
 
-            constexpr view::basic_rvec<C, U> already_read() {
+            // read() returns already read span
+            constexpr view::basic_rvec<C, U> read() const noexcept {
                 return r.substr(0, index);
             }
 
-            constexpr view::basic_rvec<C, U> read_best(size_t n) {
+            // read_best() reads maximum n bytes
+            constexpr view::basic_rvec<C, U> read_best(size_t n) noexcept {
                 auto result = r.substr(index, n);
                 offset(n);
                 return result;
             }
 
-            constexpr bool read(view::basic_rvec<C, U>& data, size_t n) {
+            // read() reads n bytes strictly or doesn't read if not enough remaining data
+            constexpr bool read(view::basic_rvec<C, U>& data, size_t n) noexcept {
                 size_t before = index;
                 data = read_best(n);
                 if (data.size() != n) {
@@ -70,13 +77,16 @@ namespace utils {
                 return true;
             }
 
-            constexpr std::pair<view::basic_rvec<C, U>, bool> read(size_t n) {
+            // read() reads n bytes strictly or doesn't read if not enough remaining data.
+            constexpr std::pair<view::basic_rvec<C, U>, bool> read(size_t n) noexcept {
                 view::basic_rvec<C, U> data;
                 bool ok = read(data, n);
                 return {data, ok};
             }
 
-            constexpr bool read(view::basic_wvec<C, U> buf) {
+            // read() reads buf.size() bytes strictly or doesn't read if not enough remaining data.
+            // if read, copy data to buf
+            constexpr bool read(view::basic_wvec<C, U> buf) noexcept {
                 auto [data, ok] = read(buf.size());
                 if (!ok) {
                     return false;

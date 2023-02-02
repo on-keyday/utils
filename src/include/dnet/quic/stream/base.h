@@ -49,9 +49,9 @@ namespace utils {
         constexpr size_t type_to_mask(StreamType typ) {
             switch (typ) {
                 case StreamType::uni:
-                    return 0x0;
-                case StreamType::bidi:
                     return 0x2;
+                case StreamType::bidi:
+                    return 0x0;
                 default:
                     return ~0;
             }
@@ -85,10 +85,10 @@ namespace utils {
                     return StreamType::unknown;
                 }
                 if (id & 0x2) {
-                    return StreamType::bidi;
+                    return StreamType::uni;
                 }
                 else {
-                    return StreamType::uni;
+                    return StreamType::bidi;
                 }
             }
 
@@ -181,29 +181,25 @@ namespace utils {
             reset_recved,
         };
 
-        enum class RecvState {
-            recv,
-            size_known,
-            data_recved,
-            reset_recved,
-            data_read,
-            reset_read,
-        };
-
         struct SendUniStreamState {
             Limiter limit;
-            SendState state = SendState::ready;
             std::uint64_t error_code = 0;
+            SendState state = SendState::ready;
             bool require_reset = false;
+
+            constexpr bool is_terminal_state() const noexcept {
+                return state == SendState::data_recved ||
+                       state == SendState::reset_recved;
+            }
 
             constexpr bool can_send() const noexcept {
                 return state == SendState::ready ||
                        state == SendState::send;
             }
 
-            constexpr bool reset_state() const noexcept {
-                return state == SendState::reset_sent ||
-                       state == SendState::reset_recved;
+            constexpr bool can_retransmit() const noexcept {
+                return state == SendState::send ||
+                       state == SendState::data_sent;
             }
 
             constexpr bool reset() noexcept {
@@ -227,7 +223,7 @@ namespace utils {
                 return true;
             }
 
-            // send_len is absolute value, StreamFrame.offset+StreamFrame.length
+            // send_max is absolute value, StreamFrame.offset+StreamFrame.length
             constexpr bool send(size_t send_max) noexcept {
                 if (!can_send() || !limit.update_use(send_max)) {
                     return false;  // cannot send
@@ -268,11 +264,23 @@ namespace utils {
             }
         };
 
+        enum class RecvState {
+            // pre recv state (no data or no reset recved)
+            // this is same as recv semantics
+            pre_recv,
+            recv,
+            size_known,
+            data_recved,
+            reset_recved,
+            data_read,
+            reset_read,
+        };
+
         struct RecvUniStreamState {
             Limiter limit;
             std::uint64_t error_code = 0;
-            bool stop_set = false;
-            RecvState state = RecvState::recv;
+            RecvState state = RecvState::pre_recv;
+            bool stop_required = false;
             bool should_send_limit_update = false;
 
             bool update_recv_limit(std::uint64_t new_limit) {
@@ -280,14 +288,20 @@ namespace utils {
                 return should_send_limit_update;
             }
 
+            // state is RecvState::pre_recv or RecvState::recv
+            constexpr bool is_recv() const noexcept {
+                return state == RecvState::pre_recv ||
+                       state == RecvState::recv;
+            }
+
             constexpr bool can_recv() const noexcept {
-                return state == RecvState::recv ||
+                return is_recv() ||
                        state == RecvState::size_known;
             }
 
-            // recv_len is absolute value, StreamFrame.offset+StreamFrame.length
+            // recv_max is absolute value, StreamFrame.offset+StreamFrame.length
             constexpr bool recv(size_t recv_max) noexcept {
-                if (size_known_state() && recv_max > limit.curused()) {
+                if (is_size_known() && recv_max > limit.curused()) {
                     return false;
                 }
                 if (!can_recv() || !limit.update_use(recv_max)) {
@@ -304,13 +318,16 @@ namespace utils {
                     return true;
                 }
                 if (state != RecvState::recv) {
+                    // not allow RecvState::pre_recv
+                    // call recv() before this
                     return false;
                 }
                 state = RecvState::size_known;
                 return true;
             }
 
-            constexpr bool size_known_state() const noexcept {
+            // state is RecvState::reset_recved || RecvState::size_known
+            constexpr bool is_size_known() const noexcept {
                 return state == RecvState::reset_recved ||
                        state == RecvState::size_known;
             }
@@ -325,7 +342,7 @@ namespace utils {
                 if (state == RecvState::data_read || state == RecvState::reset_read) {
                     return true;  // needless to reset
                 }
-                if (size_known_state() && fin_size != limit.curused()) {
+                if (is_size_known() && fin_size != limit.curused()) {
                     return false;
                 }
                 if (!limit.update_use(fin_size)) {
@@ -336,13 +353,24 @@ namespace utils {
                 return true;
             }
 
+            constexpr bool stop_sending(std::uint64_t code) noexcept {
+                if (!can_stop_sending()) {
+                    return false;
+                }
+                error_code = code;
+                stop_required = true;
+                return true;
+            }
+
             constexpr bool reset_read() noexcept {
                 if (state != RecvState::reset_recved) {
                     return false;
                 }
+                state = RecvState::reset_read;
                 return true;
             }
 
+            // all data recved
             constexpr bool recved() noexcept {
                 if (state != RecvState::size_known) {
                     return false;
@@ -351,20 +379,12 @@ namespace utils {
                 return true;
             }
 
+            // all data read
             constexpr bool data_read() noexcept {
                 if (state != RecvState::data_recved) {
                     return false;
                 }
                 state = RecvState::data_read;
-                return true;
-            }
-
-            constexpr bool stop_sending(std::uint64_t code) noexcept {
-                if (!can_stop_sending()) {
-                    return false;
-                }
-                error_code = code;
-                stop_set = true;
                 return true;
             }
         };

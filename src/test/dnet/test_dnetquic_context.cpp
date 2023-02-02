@@ -31,10 +31,9 @@ void test_dnetquic_context() {
         return true;
     };
     ctx->conf.version = quic::version_1;
-    ctx->ackh.clock.now_fn = [](void*) {
-        return quic::time::Time(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-    };
-    ctx->ackh.clock.granularity = 1;
+    ctx->ackh.clock = quic::time::Clock{nullptr, 1, [](void*) {
+                                            return quic::time::Time(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+                                        }};
     auto val = ctx->connect_start();
     assert(val);
     utils::view::rvec data;

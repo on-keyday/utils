@@ -55,12 +55,12 @@ namespace utils {
                 wrap::shared_ptr<Token<String, Kind, Vec>> ret;
                 while (!seq.eos()) {
                     if (no_space) {
-                        if (space::match_space<false>(seq)) {
+                        if (space::parse_space<false>(seq)) {
                             break;
                         }
                     }
                     if (no_line) {
-                        if (helper::match_eol<false>(seq)) {
+                        if (space::parse_eol<false>(seq)) {
                             break;
                         }
                     }

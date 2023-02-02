@@ -39,8 +39,7 @@ namespace utils {
                 return {0, false};
             }
             auto expected_pn = largest_pn + 1;
-            auto pn_win = 1 << (len * 8);
-            auto half_win = pn_win >> 1;
+            auto pn_win = 1 << (len << 3);
             auto pn_mask = pn_win - 1;
             auto base = (std::uint64_t(expected_pn) & ~pn_mask);
             std::uint64_t next = base + pn_win;

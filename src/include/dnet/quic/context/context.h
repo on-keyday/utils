@@ -7,22 +7,23 @@
 
 // context - quic context suite
 #pragma once
-#include "../crypto/suite.h"
 #include "../ack/loss_detection.h"
 #include "../packet/creation.h"
 #include "../conn/id_manage.h"
 #include "../event/event.h"
 #include "../event/crypto_event.h"
-#include "../mtu/mtu.h"
-#include "../crypto/crypto_tag.h"
-#include "../crypto/crypto.h"
-#include "../transport_parameter/suite.h"
-#include "../crypto/callback.h"
-#include "../crypto/decrypt.h"
-#include "../frame/parse.h"
 #include "../event/ack_event.h"
 #include "../event/conn_id_event.h"
-#include "../stream/impl/conn_manage.h"
+#include "../event/stream_event.h"
+#include "../mtu/mtu.h"
+#include "../crypto/suite.h"
+#include "../crypto/crypto_tag.h"
+#include "../crypto/crypto.h"
+#include "../crypto/callback.h"
+#include "../crypto/decrypt.h"
+#include "../transport_parameter/suite.h"
+#include "../frame/parse.h"
+#include "../stream/impl/conn.h"
 #include "../log/log.h"
 
 namespace utils {
@@ -69,22 +70,56 @@ namespace utils {
                     return false;
                 }
                 auto& peer = params.peer;
-                connIDs.accept_initial(summary.srcID, peer.stateless_reset_token);
+                connIDs.add_initial_stateless_reset_token(peer.stateless_reset_token);
                 if (!peer.preferred_address.connectionID.null()) {
                     connIDs.accept_transport_param(peer.preferred_address.connectionID, peer.preferred_address.stateless_reset_token);
                 }
                 mtu.apply_transport_param(peer.max_udp_payload_size);
                 auto& local = params.local;
-                ackh.apply_transport_param(peer.max_idle_timeout, local.max_idle_timeout);
+                ackh.apply_transport_param(peer.max_idle_timeout, local.max_idle_timeout,
+                                           peer.max_ack_delay, peer.ack_delay_exponent);
                 auto by_peer = trsparam::to_initial_limits(peer);
                 auto by_local = trsparam::to_initial_limits(local);
                 streams->apply_initial_limits(by_local, by_peer);
                 transport_param_read = true;
+                logger.debug("apply transport parameter");
                 return true;
             }
 
             auto init_tls() {
                 return crypto.tls.make_quic(crypto::qtls_callback, &crypto);
+            }
+
+            void init_write_events() {
+                event::FrameWriteEvent w;
+                w.on_event = event::send_ack;
+                w.arg = std::shared_ptr<ack::UnackedPacket>(this->shared_from_this(), &unacked);
+                list.on_write[event::kind::ack] = std::move(w);
+                w.on_event = event::send_crypto;
+                w.arg = std::shared_ptr<crypto::CryptoSuite>(this->shared_from_this(), &crypto);
+                list.on_write[event::kind::crypto] = std::move(w);
+                w.on_event = event::send_conn_id;
+                w.arg = std::shared_ptr<conn::IDManager>(this->shared_from_this(), &connIDs);
+                list.on_write[event::kind::conn_id] = std::move(w);
+                w.on_event = event::send_streams<Lock>;
+                w.arg = streams;
+                list.on_write[event::kind::streams] = std::move(w);
+            }
+
+            void init_recv_events() {
+                event::FrameRecvEvent r;
+                r.on_event = event::recv_ack;
+                r.arg = std::shared_ptr<ack::LossDetectionHandler>(this->shared_from_this(), &ackh);
+                list.on_read[event::kind::ack] = std::move(r);
+                r.on_event = event::recv_crypto;
+                r.arg = std::shared_ptr<crypto::CryptoSuite>(this->shared_from_this(), &crypto);
+                list.on_read[event::kind::crypto] = std::move(r);
+                r.on_event = event::recv_conn_id;
+                r.arg = std::shared_ptr<conn::IDManager>(this->shared_from_this(), &connIDs);
+                list.on_read[event::kind::conn_id] = std::move(r);
+                r.on_event = event::recv_streams<Lock>;
+                r.arg = streams;
+                list.on_read[event::kind::streams] = std::move(r);
             }
 
             error::Error write_packet(io::writer& w, packet::PacketSummary summary, bool fill_all) {
@@ -104,10 +139,10 @@ namespace utils {
                 bool no_payload = false;
                 event::ACKWaitVec wait;
                 packet::PacketStatus status;
-                auto render_payload = [&](io::writer& w) {
+                auto render_payload = [&](io::writer& w, packetnum::WireVal wire) {
                     auto offset = w.offset();
                     frame::fwriter fw{w};
-                    err = list.send(summary, wait, fw);
+                    err = list.send(summary, wait, fw, false);
                     if (err) {
                         return false;
                     }
@@ -123,11 +158,19 @@ namespace utils {
                             fw.write(frame::PaddingFrame{});  // apply one
                         }
                     }
+                    else {
+                        // least 4 byte needed for sample skip size
+                        // see https://datatracker.ietf.org/doc/html/rfc9001#section-5.4.2
+                        if (w.written().size() + wire.len < crypto::sample_skip_size) {
+                            fw.write(frame::PaddingFrame{});  // apply one
+                            w.write(0, crypto::sample_skip_size - w.written().size() - wire.len - 1);
+                        }
+                    }
                     status = fw.status;
+                    logger.sending_packet(summary, w.written());
                     return true;
                 };
                 auto copy = w;
-                bool initial_used = false;
                 auto [plain, res] = packet::create_packet(
                     copy, summary, largest_acked,
                     crypto::authentication_tag_length, fill_all, render_payload);
@@ -162,37 +205,6 @@ namespace utils {
                 return error::none;
             }
 
-            bool init_write_events() {
-                event::FrameWriteEvent w;
-                w.on_event = event::send_crypto;
-                w.arg = std::shared_ptr<crypto::CryptoSuite>(this->shared_from_this(), &crypto);
-                w.prio = event::priority::crypto;
-                list.on_write.push_back(std::move(w));
-                w.on_event = event::send_ack;
-                w.arg = std::shared_ptr<ack::UnackedPacket>(this->shared_from_this(), &unacked);
-                w.prio = event::priority::ack;
-                list.on_write.push_back(std::move(w));
-                w.on_event = event::send_conn_id;
-                w.arg = std::shared_ptr<conn::IDManager>(this->shared_from_this(), &connIDs);
-                w.prio = event::priority::conn_id;
-                list.on_write.push_back(std::move(w));
-                return true;
-            }
-
-            bool init_recv_events() {
-                event::FrameRecvEvent r;
-                r.on_event = event::recv_ack;
-                r.arg = std::shared_ptr<ack::LossDetectionHandler>(this->shared_from_this(), &ackh);
-                list.on_recv.push_back(std::move(r));
-                r.on_event = event::recv_crypto;
-                r.arg = std::shared_ptr<crypto::CryptoSuite>(this->shared_from_this(), &crypto);
-                list.on_recv.push_back(std::move(r));
-                r.on_event = event::recv_conn_id;
-                r.arg = std::shared_ptr<conn::IDManager>(this->shared_from_this(), &connIDs);
-                list.on_recv.push_back(std::move(r));
-                return true;
-            }
-
             error::Error set_tls_config() {
                 // set transport parameter
                 packet_creation_buffer.resize(1200);
@@ -207,23 +219,21 @@ namespace utils {
                 return error::none;
             }
 
-            bool init(bool is_server) {
+            void init(bool is_server) {
                 conf.is_server = is_server;
                 crypto.is_server = is_server;
                 ackh.flags.is_server = is_server;
                 streams = stream::impl::make_conn<Lock>(is_server
                                                             ? stream::Direction::server
                                                             : stream::Direction::client);
-                if (!init_write_events() || !init_recv_events()) {
-                    return false;
-                }
-                return true;
+                init_write_events();
+                init_recv_events();
+                ack::NewRenoCC::set_handler(ackh.cong.handlers);
+                ackh.init(ack::default_initial_rtt, mtu.current_datagram_size());
             }
 
             bool connect_start() {
-                if (!init(false)) {
-                    return false;
-                }
+                init(false);
                 if (auto issued = connIDs.issuer.issue(10, true); issued.seq == -1) {
                     return false;
                 }
@@ -251,12 +261,18 @@ namespace utils {
             std::pair<view::rvec, bool> create_udp_payload() {
                 if (auto err = ackh.maybeTimeout()) {
                     conn_err = std::move(err);
+                    if (conn_err == ack::errIdleTimeout) {
+                        logger.debug("connection close: idle timeout");
+                    }
                     return {{}, false};
+                }
+                if (!ackh.can_send()) {
+                    return {{}, true};
                 }
                 packet_creation_buffer.resize(mtu.current_datagram_size());
                 io::writer w{packet_creation_buffer};
                 const bool has_initial = crypto.write_installed(PacketType::Initial);
-                const bool has_handshake = crypto.write_installed(PacketType::Handshake);
+                bool has_handshake = crypto.write_installed(PacketType::Handshake);
                 const bool has_onertt = crypto.write_installed(PacketType::OneRTT);
                 if (has_initial) {
                     packet::PacketSummary summary;
@@ -272,14 +288,21 @@ namespace utils {
                             return {{}, false};
                         }
                     }
+                    else {
+                        logger.debug("sending Initial");
+                    }
+                }
+                if (has_handshake && crypto.maybe_drop_handshake()) {
+                    if (auto err = ackh.on_packet_number_space_discarded(ack::PacketNumberSpace::handshake)) {
+                        conn_err = std::move(err);
+                        return {{}, false};
+                    }
+                    has_handshake = false;
+                    logger.debug("drop handshake keys");
+                    ackh.set_handshake_confirmed();
+                    logger.debug("handshake confirmed");
                 }
                 if (has_handshake) {
-                    if (crypto.maybe_drop_handshake()) {
-                        if (auto err = ackh.on_packet_number_space_discarded(ack::PacketNumberSpace::handshake)) {
-                            conn_err = std::move(err);
-                        }
-                        goto ONE_RTT;
-                    }
                     packet::PacketSummary summary;
                     summary.type = PacketType::Handshake;
                     summary.srcID = connIDs.issuer.pick_up_id();
@@ -291,15 +314,16 @@ namespace utils {
                         }
                     }
                     else {
+                        logger.debug("sending Handshake");
                         if (!conf.is_server && crypto.maybe_drop_initial()) {
                             if (auto err = ackh.on_packet_number_space_discarded(ack::PacketNumberSpace::initial)) {
                                 conn_err = std::move(err);
                                 return {{}, false};
                             }
+                            logger.debug("drop initial keys");
                         }
                     }
                 }
-            ONE_RTT:
                 if (has_onertt) {
                     packet::PacketSummary summary;
                     summary.type = PacketType::OneRTT;
@@ -311,6 +335,9 @@ namespace utils {
                             return {{}, false};
                         }
                     }
+                    else {
+                        logger.debug("sending OneRTT");
+                    }
                 }
                 return {w.written(), true};
             }
@@ -319,6 +346,18 @@ namespace utils {
                 if (auto err = ackh.on_packet_recived(ack::from_packet_type(summary.type), length)) {
                     conn_err = std::move(err);
                     return false;
+                }
+                logger.debug("receive packet");
+                logger.recv_packet(summary, payload);
+                if (summary.type == PacketType::Initial) {
+                    if (summary.srcID.size() == 0) {
+                        connIDs.acceptor.use_zero_length = true;
+                    }
+                    else {
+                        if (connIDs.accept_initial(summary.srcID)) {
+                            logger.debug("save server connection ID");
+                        }
+                    }
                 }
                 io::reader r{payload};
                 packet::PacketStatus status;
@@ -337,25 +376,20 @@ namespace utils {
                             return false;
                         }
                         if (f.type.type_detail() == FrameType::CRYPTO) {
-                            if (!apply_transport_param(summary)) {
-                                return false;
-                            }
-                        }
-                        if (f.type.type_detail() == FrameType::CRYPTO ||
-                            f.type.type_detail() == FrameType::HANDSHAKE_DONE) {
-                            if (crypto.maybe_drop_handshake()) {
-                                if (auto err = ackh.on_packet_number_space_discarded(ack::PacketNumberSpace::handshake)) {
-                                    conn_err = std::move(err);
-                                    return false;
-                                }
-                            }
-                            if (crypto.handshake_confirmed()) {
-                                ackh.set_handshake_confirmed();
-                            }
+                            apply_transport_param(summary);
                         }
                         return true;
                     })) {
                     return false;
+                }
+                if (summary.type == PacketType::OneRTT && crypto.maybe_drop_handshake()) {
+                    if (auto err = ackh.on_packet_number_space_discarded(ack::PacketNumberSpace::handshake)) {
+                        conn_err = std::move(err);
+                        return false;
+                    }
+                    logger.debug("drop handshake keys");
+                    ackh.set_handshake_confirmed();
+                    logger.debug("handshake confirmed");
                 }
                 if (status.is_ack_eliciting) {
                     unacked.add(ack::from_packet_type(summary.type), summary.packet_number);
@@ -376,8 +410,11 @@ namespace utils {
                     return true;
                 };
                 auto decrypt_err = [&](PacketType type, auto&& packet, packet::CryptoPacket cp, error::Error err, bool is_decrypted) {
+                    logger.debug("drop packet");
                     logger.drop_packet(type, cp.packet_number, std::move(err));
-                    return false;
+                    // decrypt failure doesn't make packet parse failure
+                    // see https://tex2e.github.io/rfc-translater/html/rfc9000#12-2--Coalescing-Packets
+                    return true;
                 };
                 auto plain_err = [&](PacketType type, auto&& packet, view::wvec src, bool err, bool valid_type) {
                     logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure"));

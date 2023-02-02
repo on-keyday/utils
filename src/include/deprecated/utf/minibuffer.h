@@ -10,7 +10,7 @@
 #pragma once
 
 #include <cstdint>
-#include "../core/buffer.h"
+#include "../../core/buffer.h"
 
 namespace utils {
     namespace utf {

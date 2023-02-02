@@ -255,6 +255,14 @@ namespace utils {
             return {std::move(ranges), ok};
         }
 
+        constexpr std::uint64_t encode_ack_delay(std::uint64_t base, std::uint64_t exponent) {
+            return base / (1 << exponent);
+        }
+
+        constexpr std::uint64_t decode_ack_delay(std::uint64_t base, std::uint64_t exponent) {
+            return base * (1 << exponent);
+        }
+
         namespace test {
 
             constexpr bool check_ack() {

@@ -9,6 +9,7 @@
 // statement - statement expression
 #pragma once
 #include "expression.h"
+#include <space/eol.h>
 
 namespace utils {
     namespace parser {
@@ -189,7 +190,7 @@ namespace utils {
                         pos.pos = seq.rptr;
                     }
                     auto push_msg = [&](auto brack, bool eof = false) {
-                        number::Array<char, 30, true> msg{0};
+                        number::Array<char, 30, true> msg{};
                         helper::append(msg, "expect `");
                         msg.push_back(brack);
                         helper::appends(msg, "` but ", eof ? "reached eof" : "not");
@@ -368,7 +369,7 @@ namespace utils {
                                 }
                             }
                             else {
-                                if (helper::match_eol<true>(seq) || seq.eos()) {
+                                if (space::parse_eol<true>(seq) || seq.eos()) {
                                     break;
                                 }
                             }

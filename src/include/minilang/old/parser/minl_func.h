@@ -100,7 +100,7 @@ namespace utils {
                     return nullptr;
                 }
                 space::consume_space(p.seq, false);
-                if (!(p.seq.eos() || helper::match_eol<false>(p.seq) ||
+                if (!(p.seq.eos() || space::parse_eol<false>(p.seq) ||
                       p.seq.match("{") || p.seq.match("}"))) {
                     std::shared_ptr<MinNode> tmp;
                     if (p.seq.seek_if("(")) {

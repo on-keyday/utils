@@ -13,7 +13,7 @@
 #include "../helper/sfinae.h"
 #include "../thread/lite_lock.h"
 #include "light/string.h"
-#include "../utf/convert.h"
+#include "../unicode/utf/convert.h"
 #include "light/stream.h"
 
 namespace utils {
@@ -24,7 +24,7 @@ namespace utils {
             template <class Out>
             static Out& invoke(Out& out, T&& t, stringstream&, thread::LiteLock*) {
                 path_string tmp;
-                utf::convert(t, tmp, utf::ConvertMode::replace);
+                utf::convert(t, tmp);
                 out.write(tmp);
                 return out;
             }

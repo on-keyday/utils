@@ -58,7 +58,7 @@ namespace utils {
                         .frame_type = FrameType::NEW_CONNECTION_ID,
                     };
                 }
-                if (c.retire_proior_to > c.sequecne_number) {
+                if (c.retire_proior_to > c.sequence_number) {
                     return QUICError{
                         .msg = "retire_proir_to field is grater than sequence_number",
                         .rfc_ref = "rfc9000 19.15 NEW_CONNECTION_ID Frames",
@@ -69,7 +69,7 @@ namespace utils {
                     };
                 }
                 acceptor.retire(c.retire_proior_to);
-                if (!acceptor.accept(c.sequecne_number, c.connectionID, c.stateless_reset_token)) {
+                if (!acceptor.accept(c.sequence_number, c.connectionID, c.stateless_reset_token)) {
                     return QUICError{
                         .msg = "failed to add remote connectionID",
                     };
@@ -84,7 +84,7 @@ namespace utils {
             IOResult send_new_connection_id(auto&& observer_vec, frame::fwriter& w) {
                 auto do_render = [&](auto& f) -> IOResult {
                     frame::NewConnectionIDFrame frame;
-                    frame.sequecne_number = f.second.id.seq;
+                    frame.sequence_number = f.second.id.seq;
                     frame.connectionID = f.second.id.id;
                     view::copy(frame.stateless_reset_token, f.second.id.stateless_reset_token);
                     frame.retire_proior_to = f.second.retire_proior_to;
@@ -160,8 +160,18 @@ namespace utils {
                 };
             }
 
-            void accept_initial(view::rvec id, byte (&stateless_reset_token)[16]) {
-                acceptor.accept(0, id, stateless_reset_token);
+            bool accept_initial(view::rvec id) {
+                if (acceptor.max_seq != -1) {
+                    return false;
+                }
+                byte stateless_reset_token[16]{};
+                return acceptor.accept(0, id, stateless_reset_token);
+            }
+
+            void add_initial_stateless_reset_token(byte (&stateless_reset_token)[16]) {
+                if (auto found = acceptor.idlist.find(0); found != acceptor.idlist.end()) {
+                    view::copy(found->second.stateless_reset_token, stateless_reset_token);
+                }
             }
 
             void accept_transport_param(view::rvec id, byte (&stateless_reset_token)[16]) {

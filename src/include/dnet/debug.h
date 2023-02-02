@@ -18,9 +18,9 @@ namespace utils {
     namespace dnet::debug {
 
         template <class T>
-        constexpr void do_callback(void* cb, int i) {
+        constexpr void do_callback(void* cb, int i, DebugInfo* info) {
             if constexpr (!std::is_same_v<T, void>) {
-                (*(T*)cb)(i);
+                (*(T*)cb)(i, info);
             }
         }
 
@@ -29,15 +29,15 @@ namespace utils {
             utils::dnet::Allocs allocs;
 #ifdef _WIN32
             allocs.alloc_ptr = [](void* cb, size_t size, size_t, utils::dnet::DebugInfo* info) {
-                do_callback<T>(cb, 1);
+                do_callback<T>(cb, 1, info);
                 return _malloc_dbg(size, _NORMAL_BLOCK, info->file, info->line);
             };
             allocs.realloc_ptr = [](void* cb, void* p, size_t size, size_t, utils::dnet::DebugInfo* info) {
-                do_callback<T>(cb, 2);
+                do_callback<T>(cb, 2, info);
                 return _realloc_dbg(p, size, _NORMAL_BLOCK, info->file, info->line);
             };
-            allocs.free_ptr = [](void* cb, void* p, utils::dnet::DebugInfo*) {
-                do_callback<T>(cb, 0);
+            allocs.free_ptr = [](void* cb, void* p, utils::dnet::DebugInfo* info) {
+                do_callback<T>(cb, 0, info);
                 return _free_dbg(p, _NORMAL_BLOCK);
             };
             allocs.ctx = cb;

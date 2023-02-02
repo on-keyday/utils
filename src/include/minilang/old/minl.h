@@ -13,7 +13,7 @@
 #include <string>
 #include <escape/read_string.h>
 #include <number/prefix.h>
-#include <helper/space.h>
+#include <space/space.h>
 #include "minnode.h"
 #include <view/charvec.h>
 

@@ -87,42 +87,6 @@ namespace utils {
             return true;
         }
 
-        template <bool consume = true, class T>
-        constexpr size_t match_eol(Sequencer<T>& seq) {
-            if (seq.match("\r\n")) {
-                if constexpr (consume) {
-                    seq.consume(2);
-                }
-                return 2;
-            }
-            else if (seq.current() == '\n' || seq.current() == '\r') {
-                if constexpr (consume) {
-                    seq.consume(1);
-                }
-                return 1;
-            }
-            return 0;
-        }
-
-        template <class T>
-        constexpr void get_linepos(Sequencer<T>& seq, size_t& line, size_t& pos) {
-            auto rptr = seq.rptr;
-            seq.rptr = 0;
-            line = 0;
-            pos = 0;
-            for (; seq.rptr < rptr;) {
-                if (match_eol<true>(seq)) {
-                    pos = 0;
-                    line++;
-                }
-                else {
-                    seq.consume();
-                    pos++;
-                }
-            }
-            seq.rptr = rptr;
-        }
-
         template <class T, class Result, class Else, class Func>
         constexpr bool append_if(Result& result, Else& els, Sequencer<T>& seq, Func&& func) {
             bool allmatch = true;

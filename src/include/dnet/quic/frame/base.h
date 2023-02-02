@@ -67,7 +67,7 @@ namespace utils {
                 if (!ok2) {
                     return false;
                 }
-                bool ok3 = r.already_read().size() == frame.len(true) &&
+                bool ok3 = r.read().size() == frame.len(true) &&
                            w.written().size() == prev;
                 if (!ok3) {
                     return false;

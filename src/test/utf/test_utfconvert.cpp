@@ -6,35 +6,31 @@
 */
 
 
-#include "../../include/utf/conv_method.h"
-#include "../../include/utf/convert.h"
+#include "../../include/unicode/utf/convert.h"
+#include "../../include/unicode/utf/minibuffer.h"
 #include <string>
 
 constexpr char32_t test_utf8_to_utf32() {
     char8_t testword[] = u8"𠮷";
-    char32_t result = 0;
-    utils::utf::utf8_to_utf32(testword, result);
-    return result;
+    return utils::unicode::utf8::decode_one_unchecked(testword, 0, utils::unicode::utf8::first_byte_to_len(testword[0]));
 }
 
 constexpr char32_t test_utf16_to_utf32() {
     char16_t testword[] = u"𠮷";
-    char32_t result = 0;
-    utils::utf::utf16_to_utf32(testword, result);
-    return result;
+    return utils::unicode::utf16::decode_one_unchecked(testword, 0, 2);
 }
 
 constexpr utils::utf::Minibuffer<char8_t> test_utf32_to_utf8() {
     char32_t testword = U'𠮷';
     utils::utf::Minibuffer<char8_t> result;
-    utils::utf::utf32_to_utf8(testword, result);
+    utils::unicode::utf8::encode_one_unchecked(result, testword, 4);
     return result;
 }
 
 constexpr utils::utf::Minibuffer<char16_t> test_utf32_to_utf16() {
     char32_t testword = U'𠮷';
     utils::utf::Minibuffer<char16_t> result;
-    utils::utf::utf32_to_utf16(testword, result);
+    utils::unicode::utf16::encode_one_unchecked(result, testword, 2);
     return result;
 }
 

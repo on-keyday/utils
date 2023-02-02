@@ -11,6 +11,7 @@
 
 #include "../../core/sequencer.h"
 #include "../../helper/readutil.h"
+#include "../../space/eol.h"
 #include "../../number/parse.h"
 #include "../../helper/equal.h"
 #include "../../number/to_string.h"
@@ -35,7 +36,7 @@ namespace utils {
                 auto inipos = seq.rptr;
                 if (type == BodyType::chuncked) {
                     while (true) {
-                        helper::match_eol(seq);
+                        space::parse_eol<true>(seq);
                         if (seq.eos()) {
                             return 0;
                         }
@@ -44,7 +45,7 @@ namespace utils {
                         if (e != number::NumError::none) {
                             return -1;
                         }
-                        if (!helper::match_eol(seq)) {
+                        if (!space::parse_eol<true>(seq)) {
                             return -1;
                         }
                         if (num != 0) {
@@ -58,7 +59,7 @@ namespace utils {
                             }
                             continue;
                         }
-                        helper::match_eol(seq);
+                        space::parse_eol<true>(seq);
                         if (num == 0) {
                             return 1;
                         }

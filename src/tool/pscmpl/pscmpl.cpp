@@ -9,7 +9,7 @@
 #include <cmdline/option/optcontext.h>
 #include <wrap/cout.h>
 #include <file/file_view.h>
-#include <helper/line_pos.h>
+#include <space/line_pos.h>
 #include <deprecated/parser/expr/jsoncvt.h>
 #include <json/json_export.h>
 #include "pscmpl.h"
@@ -23,7 +23,7 @@ utils::Sequencer<utils::file::View&>* seqptr;
 
 void write_loc(size_t sz = 1) {
     utils::wrap::string loc;
-    utils::helper::write_src_loc(loc, *seqptr, sz);
+    utils::space::write_src_loc(loc, *seqptr, sz);
     cerr << loc << "\n";
 }
 

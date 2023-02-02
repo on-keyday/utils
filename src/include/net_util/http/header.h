@@ -48,7 +48,7 @@ namespace utils {
             template <class String, class T, class Result, class Preview, class Prepare>
             bool parse_common(Sequencer<T>& seq, Result& result, Preview&& preview, Prepare&& prepare) {
                 while (true) {
-                    if (helper::match_eol(seq)) {
+                    if (space::parse_eol<true>(seq)) {
                         break;
                     }
                     String key, value;
@@ -71,7 +71,7 @@ namespace utils {
                     }
                     preview(key, value);
                     result.emplace(std::move(key), std::move(value));
-                    if (!helper::match_eol(seq)) {
+                    if (!space::parse_eol<true>(seq)) {
                         return false;
                     }
                 }
@@ -101,7 +101,7 @@ namespace utils {
                     })) {
                     return false;
                 }
-                if (!helper::match_eol(seq)) {
+                if (!space::parse_eol<true>(seq)) {
                     return false;
                 }
                 return true;
@@ -145,7 +145,7 @@ namespace utils {
                     })) {
                     return false;
                 }
-                if (!helper::match_eol(seq)) {
+                if (!space::parse_eol<true>(seq)) {
                     return false;
                 }
                 return true;

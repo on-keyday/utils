@@ -12,7 +12,7 @@
 #ifdef _WIN32
 #include <Windows.h>
 #endif
-#include <utf/convert.h>
+#include <unicode/utf/convert.h>
 #include <helper/defer.h>
 using namespace utils;
 #ifdef _WIN32
@@ -43,10 +43,10 @@ static bool read_record(wrap::path_string& buf, INPUT_RECORD& rec, bool& zero_in
             }
             if (!no_echo) {
                 wchar_t last = buf.size() ? buf.back() : 0;
-                if (utf::is_utf16_high_surrogate(C)) {
+                if (unicode::utf16::is_high_surrogate(C)) {
                     // skip
                 }
-                else if (utf::is_utf16_low_surrogate(C) && utf::is_utf16_high_surrogate(C)) {
+                else if (unicode::utf16::is_low_surrogate(C) && unicode::utf16::is_high_surrogate(C)) {
                     wchar_t r[]{last, C, 0};
                     cout << r;
                 }

@@ -11,7 +11,6 @@
 #include "keys.h"
 #include "../../error.h"
 #include "../packet/crypto.h"
-#include "../../closure.h"
 #include "crypto_tag.h"
 #include "tls_suite.h"
 

@@ -9,7 +9,8 @@
 // space - space matcher
 #pragma once
 
-#include "../utf/convert.h"
+#include "../unicode/utf/convert.h"
+#include "../unicode/utf/minibuffer.h"
 
 namespace utils {
 
@@ -43,7 +44,7 @@ namespace utils {
         }
 
         template <bool consume = false, class T>
-        constexpr char16_t match_space(Sequencer<T>& seq, bool incline = false) {
+        constexpr char16_t parse_space(Sequencer<T>& seq, bool incline = false) {
             auto ret = seq.current();
             if (ret == ' ' || ret == '\t' || (incline && (ret == '\n' || ret == '\r'))) {
                 if constexpr (consume) {
@@ -68,11 +69,10 @@ namespace utils {
         template <class T>
         bool consume_space(Sequencer<T>& seq, bool inclline = false) {
             bool ret = false;
-            while (match_space<true>(seq, inclline)) {
+            while (parse_space<true>(seq, inclline)) {
                 ret = true;
             }
             return ret;
         }
     }  // namespace space
-
 }  // namespace utils

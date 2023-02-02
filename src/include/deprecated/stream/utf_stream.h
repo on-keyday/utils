@@ -9,7 +9,7 @@
 #pragma once
 #include "stream.h"
 #include <number/array.h>
-#include <utf/conv_method.h>
+#include <unicode/utf/convert.h>
 #include <number/to_string.h>
 #include "token_stream.h"
 #include <view/charvec.h>
@@ -102,11 +102,16 @@ namespace utils {
                     }
                     // convertion loop
                     while (!seq.eos()) {
-                        char32_t c;
                         // for prepare utf8 and error
-                        auto len = utf::expect_len(seq.current());
+                        auto len = unicode::utf8::first_byte_to_len(seq.current());
+                        struct {
+                            char32_t c;
+                            void push_back(char32_t i) {
+                                c = i;
+                            }
+                        } tmp;
                         // if len==0 then convertion will failure
-                        if (!len || !utf::utf8_to_utf32(seq, c)) {
+                        if (!len || !utf::convert_one<1, 4>(seq, tmp)) {
                             if (seq.remain() < len) {
                                 // convertion is failed by lack of bytes
                                 // break to next loop
@@ -131,7 +136,7 @@ namespace utils {
                         }
                         // if should stop returns true then
                         // seek input and return
-                        if (should_stop(c, utf8.c_str(), utf8.size())) {
+                        if (should_stop(tmp.c, utf8.c_str(), utf8.size())) {
                             // seq.rptr-len is ok offset
                             input.offset_seek(seq.rptr - len);
                             return true;

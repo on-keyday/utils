@@ -6,7 +6,7 @@
 */
 
 
-#include <utf/cast.h>
+#include <deprecated/utf/cast.h>
 #include <wrap/light/string.h>
 
 void test_utfcast() {

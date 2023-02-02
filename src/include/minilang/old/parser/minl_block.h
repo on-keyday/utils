@@ -66,7 +66,7 @@ namespace utils {
                 return [=](auto&& p) -> decltype(inner(p)) {
                     const auto start = p.seq.rptr;
                     space::consume_space(p.seq, false);
-                    if (helper::match_eol<true>(p.seq)) {
+                    if (space::parse_eol<true>(p.seq)) {
                         return nullptr;
                     }
                     return inner(p);

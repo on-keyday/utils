@@ -408,16 +408,22 @@ namespace utils {
         }
 
         constexpr bool should_Retransmit(FrameType type) noexcept {
-            return type == FrameType::CRYPTO ||        // ok
-                   type == FrameType::STREAM ||        // ok
-                   type == FrameType::RESET_STREAM ||  // ok
-                   type == FrameType::STOP_SENDING ||  // ok
-                   type == FrameType::MAX_DATA ||
-                   type == FrameType::MAX_STREAM_DATA ||  // ok
-                   is_MAX_STREAMS(type) ||
-                   type == FrameType::NEW_CONNECTION_ID ||
-                   type == FrameType::RETIRE_CONNECTION_ID ||
-                   type == FrameType::HANDSHAKE_DONE;  // ok
+            return type == FrameType::CRYPTO ||                // ok
+                   type == FrameType::STREAM ||                // ok
+                   type == FrameType::RESET_STREAM ||          // ok
+                   type == FrameType::STOP_SENDING ||          // ok
+                   type == FrameType::MAX_DATA ||              // ok
+                   type == FrameType::MAX_STREAM_DATA ||       // ok
+                   is_MAX_STREAMS(type) ||                     // ok
+                   type == FrameType::NEW_CONNECTION_ID ||     // ok
+                   type == FrameType::RETIRE_CONNECTION_ID ||  // ok
+                   type == FrameType::HANDSHAKE_DONE;          // ok
+        }
+
+        // FrameType::MAX_DATA or FrameType::MAX_STREAMS(UNI/BIDI)
+        constexpr bool is_ConnRelated(FrameType type) noexcept {
+            return type == FrameType::MAX_DATA ||
+                   is_MAX_STREAMS(type);
         }
 
         struct FrameFlags {
@@ -438,6 +444,8 @@ namespace utils {
                 return FrameType(value);
             }
 
+            // type() returns filtered type
+            // for example, STREAM(FIN) becomes STREAM(no flag)
             constexpr FrameType type() const {
                 auto ty = type_detail();
                 if (is_STREAM(ty)) {

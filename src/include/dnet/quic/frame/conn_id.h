@@ -13,7 +13,7 @@ namespace utils {
     namespace dnet::quic::frame {
 
         struct NewConnectionIDFrame : Frame {
-            varint::Value sequecne_number;
+            varint::Value sequence_number;
             varint::Value retire_proior_to;
             byte length = 0;  // only parse
             view::rvec connectionID;
@@ -24,7 +24,7 @@ namespace utils {
 
             constexpr bool parse(io::reader& r) noexcept {
                 return parse_check(r, FrameType::NEW_CONNECTION_ID) &&
-                       varint::read(r, sequecne_number) &&
+                       varint::read(r, sequence_number) &&
                        varint::read(r, retire_proior_to) &&
                        r.read(view::wvec(&length, 1)) &&
                        r.read(connectionID, length) &&
@@ -33,7 +33,7 @@ namespace utils {
 
             constexpr size_t len(bool = false) const noexcept {
                 return type_minlen(FrameType::NEW_CONNECTION_ID) +
-                       varint::len(sequecne_number) +
+                       varint::len(sequence_number) +
                        varint::len(retire_proior_to) +
                        1 +
                        connectionID.size() +
@@ -46,7 +46,7 @@ namespace utils {
                 }
                 byte len = connectionID.size();
                 return type_minwrite(w, FrameType::NEW_CONNECTION_ID) &&
-                       varint::write(w, sequecne_number) &&
+                       varint::write(w, sequence_number) &&
                        varint::write(w, retire_proior_to) &&
                        w.write(view::rvec(&len, 1)) &&
                        w.write(connectionID) &&
@@ -92,14 +92,14 @@ namespace utils {
         namespace test {
             constexpr bool check_new_connection_id() {
                 NewConnectionIDFrame frame;
-                frame.sequecne_number = 1;
+                frame.sequence_number = 1;
                 frame.retire_proior_to = 0;
                 byte data[] = "hello or world !";
                 view::copy(frame.stateless_reset_token, data);
                 frame.connectionID = view::rvec(data, 16);
                 return do_test(frame, [&] {
                     return frame.type.type() == FrameType::NEW_CONNECTION_ID &&
-                           frame.sequecne_number == 1 &&
+                           frame.sequence_number == 1 &&
                            frame.retire_proior_to == 0 &&
                            frame.length == 16 &&
                            frame.connectionID == view::rvec(data, 16) &&

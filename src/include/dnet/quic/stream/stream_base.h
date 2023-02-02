@@ -30,7 +30,8 @@ namespace utils {
             }
 
             constexpr bool update(std::uint64_t new_discard, view::rvec new_src, bool is_fin) {
-                if (fin || src.size() + discarded_offset > new_src.size() + new_discard ||
+                if (fin ||
+                    src.size() + discarded_offset > new_src.size() + new_discard ||
                     new_discard > written_offset) {
                     return false;
                 }
@@ -81,11 +82,11 @@ namespace utils {
             bool ok = true, block = false;
             frame::StreamFrame frame;
             std::uint64_t max_conn_data = 0;
-            conn.send([&](std::uint64_t conn_limit, std::uint64_t max_data) -> std::uint64_t {
+            conn.use_send_credit([&](std::uint64_t conn_limit, std::uint64_t max_data) -> std::uint64_t {
                 max_conn_data = max_data;
                 // now enter lock, do fast!
                 const std::uint64_t flow_control_limit = conn_limit < payload_limit ? conn_limit : payload_limit;
-                if (flow_control_limit == 0) {
+                if (flow_control_limit == 0 && !data.should_fin()) {
                     block = true;
                     return 0;  // now connection level flow control limit
                 }
@@ -146,6 +147,11 @@ namespace utils {
                 return data.update(discard, src, fin);
             }
 
+            constexpr bool has_data_to_send() const {
+                return state.can_send() &&
+                       data.remain() != 0;
+            }
+
             // settings by peer
             constexpr void set_initial(const InitialLimits& ini, Direction self) {
                 if (id.type() == StreamType::uni) {
@@ -162,7 +168,7 @@ namespace utils {
             }
 
             template <class ConnLock>
-            constexpr std::pair<IOResult, std::uint64_t> send(ConnectionBase<ConnLock>& conn, frame::fwriter& w, auto&& save_fragment) {
+            constexpr std::pair<IOResult, std::uint64_t> send_stream(ConnectionBase<ConnLock>& conn, frame::fwriter& w, auto&& save_fragment) {
                 return send_impl(w, conn, id, state, data, save_fragment);
             }
 
@@ -195,7 +201,7 @@ namespace utils {
                 return IOResult::not_in_io_state;
             }
 
-            constexpr IOResult send_reset_retransmit(frame::fwriter& w) {
+            constexpr IOResult send_retransmit_reset(frame::fwriter& w) {
                 if (state.state != SendState::reset_sent) {
                     return IOResult::not_in_io_state;
                 }
@@ -232,8 +238,8 @@ namespace utils {
             }
 
             // save_retransmit is bool(sent,remain,has_remain)
-            constexpr IOResult send_retransmit(frame::fwriter& w, std::uint64_t offset, view::rvec fragment, bool fin, auto&& save_retransmit) {
-                if (state.state == SendState::data_recved || state.reset_state()) {
+            constexpr IOResult send_retransmit_stream(frame::fwriter& w, std::uint64_t offset, view::rvec fragment, bool fin, auto&& save_retransmit) {
+                if (!state.can_retransmit()) {
                     return IOResult::not_in_io_state;
                 }
                 if (offset + fragment.size() > data.written_offset) {
@@ -281,7 +287,7 @@ namespace utils {
             if (w.remain().size() < blocked.len()) {
                 return IOResult::no_capacity;
             }
-            return w.write(blocked) ? IOResult::ok : IOResult::fatal;
+            return w.write(blocked) ? IOResult::ok : IOResult::fatal;  // must success
         }
 
         // returns (result,err_if_fatal)
@@ -308,7 +314,7 @@ namespace utils {
             std::uint64_t cur_used = state.limit.curused();
             if (cur_used - prev_used) {  // new usage exists
                 // update connection limit usage
-                if (!conn.recv(cur_used - prev_used)) {
+                if (!conn.use_recv_credit(cur_used - prev_used)) {
                     return {
                         IOResult::block_by_conn,
                         QUICError{
@@ -361,7 +367,7 @@ namespace utils {
             }
 
             template <class ConnLock>
-            constexpr std::pair<IOResult, error::Error> recv(ConnectionBase<ConnLock>& conn, const frame::StreamFrame& frame, auto&& deliver_data) {
+            constexpr std::pair<IOResult, error::Error> recv_stream(ConnectionBase<ConnLock>& conn, const frame::StreamFrame& frame, auto&& deliver_data) {
                 return recv_impl(frame, conn, id, state, deliver_data);
             }
 
@@ -376,6 +382,9 @@ namespace utils {
             }
 
             constexpr IOResult send_max_stream_data(frame::fwriter& w) {
+                if (!state.is_recv()) {
+                    return IOResult::not_in_io_state;
+                }
                 // decide new limit by user callback
                 frame::MaxStreamDataFrame frame;
                 frame.streamID = id.id;
@@ -388,7 +397,7 @@ namespace utils {
                 if (!w.write(frame)) {
                     return IOResult::fatal;
                 }
-                state.should_send_limit_update = false;
+                state.should_send_limit_update = false;  // clear primary send flag
                 return IOResult::ok;
             }
 
@@ -418,7 +427,7 @@ namespace utils {
                 }
                 auto cur_used = state.limit.curused();
                 if (cur_used - prev_used) {  // new usage exists
-                    if (!conn.recv(cur_used - prev_used)) {
+                    if (!conn.use_recv_credit(cur_used - prev_used)) {
                         return {
                             IOResult::block_by_stream,
                             QUICError{
@@ -428,7 +437,6 @@ namespace utils {
                             }};
                     }
                 }
-                state.error_code = reset.application_protocol_error_code;
                 return {IOResult::ok, error::none};
             }
 
@@ -437,7 +445,7 @@ namespace utils {
             }
 
             constexpr IOResult send_stop_sending(frame::fwriter& w) {
-                if (!state.stop_set || !state.can_stop_sending()) {
+                if (!state.stop_required || !state.can_stop_sending()) {
                     return IOResult::not_in_io_state;
                 }
                 frame::StopSendingFrame frame;
@@ -446,7 +454,7 @@ namespace utils {
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
                 }
-                return w.write(frame) ? IOResult::ok : IOResult::fatal;
+                return w.write(frame) ? IOResult::ok : IOResult::fatal;  // must success
             }
         };
 
@@ -462,7 +470,7 @@ namespace utils {
                 byte src[11000]{};
                 base.data.src = src;
                 frame::fwriter fw{w};
-                auto [result, ig1] = base.send(conn, fw, [](Fragment frag) {
+                auto [result, ig1] = base.send_stream(conn, fw, [](Fragment frag) {
                     return frag.offset == 0 && frag.fragment.size() == 61;
                 });
                 if (result != IOResult::ok) {
@@ -470,7 +478,7 @@ namespace utils {
                 }
                 base.data.src = view::wvec(src, 63);
                 w.reset();
-                auto [result1, ig3] = base.send(conn, fw, [](Fragment frag) {
+                auto [result1, ig3] = base.send_stream(conn, fw, [](Fragment frag) {
                     return frag.offset == 61 && frag.fragment.size() == 2;
                 });
                 return result == IOResult::ok;

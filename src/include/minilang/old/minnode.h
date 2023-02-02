@@ -10,7 +10,8 @@
 #include <memory>
 #include <string>
 #include <number/prefix.h>
-#include <helper/space.h>
+#include <space/space.h>
+#include <space/eol.h>
 #include <view/slice.h>
 
 namespace utils {
@@ -390,8 +391,8 @@ namespace utils {
         constexpr auto ident_default() {
             return [](auto& seq) -> bool {
                 return !seq.eos() &&
-                       (!number::is_control_char(seq.current()) &&
-                            !number::is_symbol_char(seq.current()) ||
+                       ((!number::is_control_char(seq.current()) &&
+                         !number::is_symbol_char(seq.current())) ||
                         seq.current() == '_');
             };
         }

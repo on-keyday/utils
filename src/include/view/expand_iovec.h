@@ -322,6 +322,10 @@ namespace utils {
                 return *this;
             }
 
+            constexpr basic_expand_storage_vec& append(const C* ptr, size_t len) {
+                return append(view::rvec(ptr, len));
+            }
+
             constexpr int compare(const basic_expand_storage_vec& in) {
                 return rvec().compare(in.rvec());
             }
@@ -357,6 +361,22 @@ namespace utils {
                 const auto old = size_;
                 resize(size_ + add);
                 return old;
+            }
+
+            constexpr const C& front() const noexcept {
+                return wvec().front();
+            }
+
+            constexpr const C& back() const noexcept {
+                return wvec().back();
+            }
+
+            constexpr C& front() noexcept {
+                return wvec().front();
+            }
+
+            constexpr C& back() noexcept {
+                return wvec().back();
             }
         };
 

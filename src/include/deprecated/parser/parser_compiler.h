@@ -224,7 +224,7 @@ namespace utils {
                                c != ']' && c != '*' && c != '\"' && c != '\\' &&
                                c != '&' && c != '\'' && c != '`' && c != '=' &&
                                c != '!' && c != '?' && c != '(' && c != ')' && c != ',' &&
-                               !space::match_space(seq, true);
+                               !space::parse_space(seq, true);
                     })) {
                     seq.rptr = beg;
                     return nullptr;
@@ -244,7 +244,7 @@ namespace utils {
                 }
                 size_t count = 0;
                 while (!count && !seq.consume_if(')')) {
-                    if (seq.eos() || helper::match_eol<false>(seq)) {
+                    if (seq.eos() || space::parse_eol<false>(seq)) {
                         return false;
                     }
                     auto c = seq.current();
@@ -473,7 +473,7 @@ namespace utils {
                 }
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
-                    if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || helper::match_eol<false>(seq) || seq.eos()) {
+                    if (seq.current() == ']' || seq.current() == '|' || seq.current() == '/' || space::parse_eol<false>(seq) || seq.eos()) {
                         break;
                     }
                     mkand(root);
@@ -501,7 +501,7 @@ namespace utils {
                 or_t or_;
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
-                    if (seq.current() != '/' || seq.current() == ']' || helper::match_eol<false>(seq) || seq.eos()) {
+                    if (seq.current() != '/' || seq.current() == ']' || space::parse_eol<false>(seq) || seq.eos()) {
                         break;
                     }
                     if (!seq.consume_if('|')) {
@@ -531,7 +531,7 @@ namespace utils {
                 or_t or_;
                 while (!seq.eos()) {
                     CONSUME_SPACE(false, false)
-                    if (seq.current() == ']' || helper::match_eol<false>(seq) || seq.eos()) {
+                    if (seq.current() == ']' || space::parse_eol<false>(seq) || seq.eos()) {
                         break;
                     }
                     if (!seq.consume_if('/')) {
@@ -554,7 +554,7 @@ namespace utils {
             template <class Input, class String, class Kind, template <class...> class Vec, class Src, class Fn>
             wrap::shared_ptr<Parser<Input, String, Kind, Vec>> compile_oneline(auto& tok, Sequencer<Src>& seq, Fn&& fn, auto& set) {
                 auto res = compile_some<Input, String, Kind, Vec>(tok, seq, fn, set);
-                if (!seq.eos() && !helper::match_eol(seq)) {
+                if (!seq.eos() && !space::parse_eol<true>(seq)) {
                     return nullptr;
                 }
                 return res;
@@ -680,7 +680,7 @@ namespace utils {
                 CONSUME_SPACE(true, true)
                 String tok;
                 if (!helper::read_whilef<true>(tok, seq, [&](auto&& c) {
-                        return c != ':' && !space::match_space(seq, true);
+                        return c != ':' && !space::parse_space(seq, true);
                     })) {
                     return nullptr;
                 }

@@ -70,17 +70,18 @@ namespace utils {
 
             template <class T>
             constexpr size_t append_sizeof() {
-                if constexpr (has_pbsize<T>) {
-                    return sizeof(typename PBSize<decltype(T::push_back)>::type);
+                using T_ = std::decay_t<T>;
+                if constexpr (has_pbsize<T_>) {
+                    return sizeof(typename PBSize<decltype(T_::push_back)>::type);
                 }
-                else if constexpr (has_char_type<T>) {
-                    return sizeof(typename T::char_type);
+                else if constexpr (has_char_type<T_>) {
+                    return sizeof(typename T_::char_type);
                 }
                 else if constexpr (has_value_type<T>) {
-                    return sizeof(typename T::value_type);
+                    return sizeof(typename T_::value_type);
                 }
-                else if constexpr (has_index<T>) {
-                    return sizeof(std::declval<T>()[1]);
+                else if constexpr (has_index<T_>) {
+                    return sizeof(std::declval<T_>()[1]);
                 }
                 else {
                     return ~0;

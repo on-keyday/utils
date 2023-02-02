@@ -59,7 +59,6 @@ namespace utils {
         namespace test {
             constexpr auto check_handshake_zerortt() {
                 HandshakePacketPlain plain;
-                byte tag[16] = "hello world! or";
                 byte id[9] = "idididid";
                 byte payload[11]{};  // dummy
                 byte data[1210]{};

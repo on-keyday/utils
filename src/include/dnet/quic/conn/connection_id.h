@@ -97,8 +97,10 @@ namespace utils {
         struct IDAcceptor {
             std::int64_t max_seq = -1;
 
-            slib::hash_map<std::int64_t, ID> idlist;
             bool use_zero_length = false;
+
+            slib::hash_map<std::int64_t, ID> idlist;
+            slib::hash_map<std::int64_t, RetireWait> retire_wait;
 
             bool accept(std::int64_t sequence_number, view::rvec connectionID, const byte (&stateless_reset_token)[16]) {
                 ID id;
@@ -119,10 +121,8 @@ namespace utils {
                 for (auto& v : idlist) {
                     return v.second.id;  // temporary
                 }
-                return view::rvec();
+                return {};
             }
-
-            slib::hash_map<std::int64_t, RetireWait> retire_wait;
 
             bool retire(std::int64_t seq) {
                 if (!idlist.erase(seq)) {

@@ -12,41 +12,49 @@
 #include "../frame/base.h"
 #include "../packet_number.h"
 #include "../ack/ack_lost_record.h"
-#include "../../../helper/condincr.h"
 #include "../packet/summary.h"
 #include "../../std/list.h"
 #include "../../std/vector.h"
 #include "../../error.h"
+#include "../frame/writer.h"
 
 namespace utils {
     namespace dnet::quic::event {
         enum class Status {
-            discard,  // discard from list
             reorder,  // reorder
             fatal,    // can't continue connection
         };
 
         using ACKWaitVec = slib::vector<std::weak_ptr<ack::ACKLostRecord>>;
 
-        enum class priority : byte {
-            conn_close = 0,
-            ping = 1,
-            ack = 2,
-            crypto = 3,
-            conn_id = 4,
-            highest = 10,
-            normal = 25,
-            lowest = 255,
+        enum class kind : byte {
+            ack = 0,
+            crypto = 1,
+            conn_id = 2,
+            streams = 3,
         };
 
-        constexpr auto operator<=>(const priority& a, const priority& b) noexcept {
-            return byte(a) <=> byte(b);
-        }
+        template <class Event>
+        struct Events {
+            static constexpr size_t num_events = 4;
+            Event events[num_events];
+
+            Event& operator[](kind k) {
+                return events[int(k)];
+            }
+
+            Event* begin() {
+                return events;
+            }
+
+            Event* end() {
+                return events + num_events;
+            }
+        };
 
         struct FrameWriteEvent {
-            priority prio = priority::normal;
             std::weak_ptr<void> arg;
-            std::pair<Status, error::Error> (*on_event)(const packet::PacketSummary&, ACKWaitVec& vec, frame::fwriter& w, priority& prio, std::shared_ptr<void>& arg);
+            std::pair<Status, error::Error> (*on_event)(const packet::PacketSummary&, ACKWaitVec& vec, frame::fwriter& w, std::shared_ptr<void>& arg);
         };
 
         struct FrameRecvEvent {
@@ -54,63 +62,39 @@ namespace utils {
             std::pair<Status, error::Error> (*on_event)(const packet::PacketSummary&, frame::Frame& f, std::shared_ptr<void>& arg);
         };
 
-        // TODO(on-keyday): to reduce waste callback call,
-        // use map for read list and write list
         struct EventList {
-            using WriteList = slib::list<FrameWriteEvent>;
-            using ReadList = slib::list<FrameRecvEvent>;
-            WriteList on_write;
-            ReadList on_recv;
-            error::Error send(const packet::PacketSummary& packet, ACKWaitVec& vec, frame::fwriter& w) {
-                on_write.sort([](auto&& a, auto&& b) { return a.prio < b.prio; });
-                bool rem = false;
-                auto incr = helper::cond_incr(rem);
-                for (auto it = on_write.begin(); it != on_write.end(); incr(it)) {
-                    if (!it->on_event) {
-                        it = on_write.erase(it);
-                        rem = true;
+            Events<FrameWriteEvent> on_write;
+            Events<FrameRecvEvent> on_read;
+
+            error::Error send(const packet::PacketSummary& packet, ACKWaitVec& vec, frame::fwriter& w, bool only_ack) {
+                for (auto& event : on_write) {
+                    if (!event.on_event) {
                         continue;
                     }
-                    auto arg = it->arg.lock();
+                    auto arg = event.arg.lock();
                     if (!arg) {
-                        it = on_write.erase(it);
-                        rem = true;
                         continue;
                     }
-                    auto [status, err] = it->on_event(packet, vec, w, it->prio, arg);
+                    auto [status, err] = event.on_event(packet, vec, w, arg);
                     if (status == Status::fatal) {
                         return err ? err : error::Error("unknown fatal error");
-                    }
-                    if (status == Status::discard) {
-                        it = on_write.erase(it);
-                        rem = true;
                     }
                 }
                 return error::none;
             }
 
             error::Error recv(const packet::PacketSummary& packet, frame::Frame& frame) {
-                bool rem = false;
-                auto incr = helper::cond_incr(rem);
-                for (auto it = on_recv.begin(); it != on_recv.end(); incr(it)) {
-                    if (!it->on_event) {
-                        it = on_recv.erase(it);
-                        rem = true;
+                for (auto& event : on_read) {
+                    if (!event.on_event) {
                         continue;
                     }
-                    auto arg = it->arg.lock();
+                    auto arg = event.arg.lock();
                     if (!arg) {
-                        it = on_recv.erase(it);
-                        rem = true;
                         continue;
                     }
-                    auto [status, err] = it->on_event(packet, frame, arg);
+                    auto [status, err] = event.on_event(packet, frame, arg);
                     if (status == Status::fatal) {
-                        return err;
-                    }
-                    if (status == Status::discard) {
-                        it = on_recv.erase(it);
-                        rem = true;
+                        return err ? err : error::Error("unknown fatal error");
                     }
                 }
                 return error::none;

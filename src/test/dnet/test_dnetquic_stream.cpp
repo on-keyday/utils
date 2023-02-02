@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <dnet/quic/stream/impl/conn_manage.h>
+#include <dnet/quic/stream/impl/conn.h>
 #include <mutex>
 #include <testutil/alloc_hook.h>
 #include <dnet/debug.h>
@@ -40,11 +40,23 @@ namespace test {
 
 }  // namespace test
 
+struct RecvQ {
+    utils::dnet::slib::list<std::shared_ptr<test::impl::BidiStream<std::mutex>>> que;
+
+    auto accept() {
+        auto res = std::move(que.front());
+        que.pop_front();
+        return res;
+    }
+};
+
 int main() {
-    auto pers = [](int i) {
-        if (i) {
-            return 0;
+    int count = 0;
+    auto pers = [&](int i, auto) {
+        if (count == 20) {
+            ;
         }
+        count++;
         return 1;
     };
     utils::dnet::set_normal_allocs(utils::dnet::debug::allocs(&pers));
@@ -58,64 +70,56 @@ int main() {
     auto conn_peer = test::impl::make_conn<std::mutex>(test::stream::Direction::server);
     conn_peer->apply_initial_limits(peer, local);
     auto stream_1 = conn_local->open_bidi();
-    assert(stream_1 && stream_1->send.id() == 2);
-    stream_1->send.add_data("Hello peer!", false);
+    assert(stream_1 && stream_1->sender.id() == 2);
+    stream_1->sender.add_data("Hello peer!", false);
     utils::byte traffic[1000];
     utils::io::writer w{traffic};
     std::vector<std::weak_ptr<utils::dnet::quic::ack::ACKLostRecord>> locals, peers;
     namespace frame = utils::dnet::quic::frame;
     frame::fwriter fw{w};
-    auto ok = stream_1->send.send(0, fw, locals);
+    IOResult ok = conn_local->send(fw, locals);
     assert(ok == IOResult::ok && locals.size() == 1);
+    RecvQ q;
+    conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<std::mutex>> d) {
+        static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
+    });
 
     utils::io::reader r{w.written()};
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
-        auto stream = frame::cast<frame::StreamFrame>(&f);
-        assert(stream);
-        auto e = conn_peer->check_creation(f.type.type_detail(), stream->streamID.value);
-        assert(e.is_noerr());
-        auto stream_1_peer = conn_peer->accept_bidi();
-        assert(stream_1_peer && stream_1_peer->recv.id() == 2);
-        e = stream_1_peer->recv.recv(0, *stream);
-        assert(e.is_noerr());
-        auto res = stream_1_peer->recv.request_stop_sending(23);
+        auto [res, e] = conn_peer->recv(f);
+        assert(res && e.is_noerr());
+        auto stream_1_peer = q.accept();
+        assert(stream_1_peer && stream_1_peer->receiver.id() == 2);
+        res = stream_1_peer->receiver.request_stop_sending(23);
         assert(res);
         w.reset();
-        ok = stream_1_peer->recv.send_stop_sending(fw, peers);
+        ok = conn_peer->send(fw, peers);
         assert(ok == IOResult::ok);
         return true;
     });
     locals[0].lock()->ack();
-    auto state = stream_1->send.detect_ack();
-    assert(state == test::stream::SendState::send);
+    auto res = stream_1->sender.detect_ack_lost();
+    assert(res == IOResult::no_data);
     r.reset(w.written());
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
-        auto stop = frame::cast<frame::StopSendingFrame>(&f);
-        assert(stop);
-        auto e = conn_local->check_creation(f.type.type_detail(), stop->streamID.value);
-        assert(e.is_noerr());
-        stream_1->send.recv_stop_sending(*stop);
+        auto [res, e] = conn_local->recv(f);
+        assert(res && e.is_noerr());
         w.reset();
-        ok = stream_1->send.send_reset(fw, locals);
+        auto ok = conn_local->send(fw, locals);
         assert(ok == IOResult::ok);
     });
-    state = stream_1->send.detect_ack();
-    assert(state == test::stream::SendState::reset_sent);
+    res = stream_1->sender.detect_ack_lost();
+    assert(res == IOResult::no_data);
     r.reset(w.written());
     peers[0].lock()->ack();
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
-        auto reset = frame::cast<frame::ResetStreamFrame>(&f);
-        assert(reset);
-        auto e = conn_peer->check_creation(f.type.type_detail(), reset->streamID.value);
-        assert(e.is_noerr());
-        auto stream_1_peer = conn_peer->find_recv_bidi(reset->streamID.value);
-        e = stream_1_peer->recv.recv_reset(*reset);
-        assert(e.is_noerr());
+        auto [res, e] = conn_peer->recv(f);
+        assert(res && e.is_noerr());
     });
     locals[1].lock()->ack();
-    state = stream_1->send.detect_ack();
-    assert(state == test::stream::SendState::reset_recved);
+    res = stream_1->sender.detect_ack_lost();
+    assert(res == IOResult::not_in_io_state);
 }

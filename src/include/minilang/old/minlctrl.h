@@ -394,7 +394,7 @@ namespace utils {
                 std::shared_ptr<MinNode> after;
                 if (not_must) {
                     space::consume_space(seq, false);
-                    if (helper::match_eol<false>(seq)) {
+                    if (space::parse_eol<false>(seq)) {
                         goto END;
                     }
                 }

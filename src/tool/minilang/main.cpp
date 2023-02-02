@@ -9,7 +9,7 @@
 #include <cmdline/option/optcontext.h>
 #include <wrap/cout.h>
 #include <file/file_view.h>
-#include <helper/line_pos.h>
+#include <space/line_pos.h>
 #include <fstream>
 using namespace utils::cmdline;
 namespace hlp = utils::helper;
@@ -47,7 +47,7 @@ void dump_stack(auto& opt, auto& stack, auto& seq) {
         cerr << v.msg << "\n";
         seq.rptr = v.node->expr->pos();
         wrap::string err;
-        auto linepos = hlp::write_src_loc(err, seq);
+        auto linepos = utils::space::write_src_loc(err, seq);
         cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
         cout << err << "\n";
     }
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
             }
             wrap::string err;
             seq.rptr = v.end;
-            auto linepos = hlp::write_src_loc(err, seq);
+            auto linepos = utils::space::write_src_loc(err, seq);
             cout << "src: " << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
             cout << err << "\n";
         }

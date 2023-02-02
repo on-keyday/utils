@@ -255,10 +255,7 @@ namespace utils {
                 }
                 auto [timeout, _2] = get_pto_and_space(param, clock, rtt, flags);
                 if (timeout == -1) {
-                    return QUICError{
-                        .msg = "failed to calculate pto_timeout",
-
-                    };
+                    return error::none;  // is this ok?
                 }
                 timer.set_deadline(timeout);
                 return error::none;

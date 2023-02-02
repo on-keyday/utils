@@ -15,5 +15,7 @@ namespace utils {
         // https://tex2e.github.io/rfc-translater/html/rfc9001.html#A-2--Client-Initial
         constexpr auto authentication_tag_length = 16;
 
+        constexpr auto sample_skip_size = 4;
+
     }  // namespace dnet::quic::crypto
 }  // namespace utils

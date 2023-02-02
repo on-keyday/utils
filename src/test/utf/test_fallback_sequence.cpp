@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/utf/internal/fallback_sequence.h"
+#include "../../include/unicode/utf/fallback_sequence.h"
 
 constexpr bool test_fallback_utf8() {
     char8_t testword[] = u8"𠮷野家𠮷";

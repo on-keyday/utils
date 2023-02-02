@@ -15,10 +15,6 @@ namespace utils {
     namespace dnet {
         namespace quic::ack {
 
-            struct RTTSampler {
-                time::Time time_sent = 0;
-            };
-
             struct RTT {
                 time::Time latest_rtt = time::invalid;
                 time::Time min_rtt = time::invalid;
@@ -26,20 +22,16 @@ namespace utils {
                 time::Time rttvar = time::invalid;
                 time::Time max_ack_delay = time::invalid;
                 time::Time first_ack_sample = 0;
+                std::uint64_t ack_delay_exponent = 3;
 
-                constexpr bool reset() {
-                    latest_rtt = time::invalid;
-                    min_rtt = time::invalid;
-                    smoothed_rtt = time::invalid;
-                    rttvar = time::invalid;
+                constexpr bool reset(time::Clock& clock, time::time_t inirtt_millisec) {
+                    latest_rtt = 0;
+                    min_rtt = 0;
+                    smoothed_rtt = clock.to_clock_granurarity(inirtt_millisec);
+                    rttvar = inirtt_millisec >> 1;
                     max_ack_delay = time::invalid;
                     first_ack_sample = 0;
                     return true;
-                }
-
-                constexpr void set_inirtt(time::time_t inirtt) {
-                    smoothed_rtt = inirtt;
-                    rttvar = inirtt >> 1;
                 }
 
                 constexpr bool sample_rtt(time::Clock& clock, time::Time time_sent, time::utime_t ack_delay) {

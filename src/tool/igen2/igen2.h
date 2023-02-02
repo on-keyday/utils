@@ -7,7 +7,7 @@
 
 #pragma once
 #include <wrap/cout.h>
-#include <helper/line_pos.h>
+#include <space/line_pos.h>
 #include <bnf/bnf.h>
 extern utils::wrap::UtfOut& cout;
 namespace igen2 {
@@ -30,7 +30,7 @@ namespace igen2 {
         void trace(auto start, auto&& s) {
             std::string w;
             seq->rptr = s.rptr;
-            utils::helper::write_src_loc(w, *seq);
+            utils::space::write_src_loc(w, *seq);
             if (buffer_mode) {
                 pack.packln(w);
                 return;
@@ -42,7 +42,7 @@ namespace igen2 {
             if (seq) {
                 std::string w;
                 seq->rptr = node->pos.begin;
-                utils::helper::write_src_loc(w, *seq, node->pos.end - node->pos.begin);
+                utils::space::write_src_loc(w, *seq, node->pos.end - node->pos.begin);
                 if (buffer_mode) {
                     pack.packln(w);
                     return;

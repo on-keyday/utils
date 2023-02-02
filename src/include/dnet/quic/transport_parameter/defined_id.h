@@ -33,6 +33,35 @@ namespace utils {
             grease_quic_bit = 0x2ab2,        // RFC 9287 - Greasing the QUIC Bit
         };
 
+        constexpr const char* to_string(DefinedID id) noexcept {
+#define MAP(code)         \
+    case DefinedID::code: \
+        return #code;
+            switch (id) {
+                MAP(original_dst_connection_id)
+                MAP(max_idle_timeout)
+                MAP(stateless_reset_token)
+                MAP(max_udp_payload_size)
+                MAP(initial_max_data)
+                MAP(initial_max_stream_data_bidi_local)
+                MAP(initial_max_stream_data_bidi_remote)
+                MAP(initial_max_stream_data_uni)
+                MAP(initial_max_streams_bidi)
+                MAP(initial_max_streams_uni)
+                MAP(ack_delay_exponent)
+                MAP(max_ack_delay)
+                MAP(disable_active_migration)
+                MAP(preferred_address)
+                MAP(initial_src_connection_id)
+                MAP(retry_src_connection_id)
+                MAP(max_datagram_frame_size)
+                MAP(grease_quic_bit)
+                default:
+                    return nullptr;
+            }
+#undef MAP
+        }
+
         constexpr auto implemented_defined = 19;
 
         constexpr bool is_defined_both_set_allowed(std::uint64_t id_raw) {

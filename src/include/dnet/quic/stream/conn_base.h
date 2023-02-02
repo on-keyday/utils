@@ -63,7 +63,7 @@ namespace utils {
 
             // called by each stream
             // you shouldn't get lock by yourself
-            constexpr bool send(auto&& cb) {
+            constexpr bool use_send_credit(auto&& cb) {
                 const auto locked = do_lock(send_locker);
                 std::uint64_t reqsize = cb(state.conn.send.avail_size(), state.conn.send.curlimit());
                 if (reqsize == 0) {
@@ -74,7 +74,7 @@ namespace utils {
 
             // called by each stream
             // you shouldn't get lock by yourself
-            constexpr bool recv(std::uint64_t use_delta) {
+            constexpr bool use_recv_credit(std::uint64_t use_delta) {
                 const auto locked = do_lock(recv_locker);
                 return state.conn.recv.use(use_delta);
             }
@@ -96,6 +96,17 @@ namespace utils {
                     return state.bidi_issuer.update_limit(limit.max_streams);
                 }
                 return error::none;
+            }
+
+            constexpr error::Error recv(const frame::Frame& frame) {
+                if (is_MAX_STREAMS(frame.type.type_detail())) {
+                    return recv_max_streams(static_cast<const frame::MaxStreamsFrame&>(frame));
+                }
+                if (frame.type.type_detail() == FrameType::MAX_DATA) {
+                    recv_max_data(static_cast<const frame::MaxDataFrame&>(frame));
+                    return error::none;
+                }
+                return QUICError{.msg = "unexpected frame type. expect MAX_STREAMS(bidi/uni) or MAX_DATA"};
             }
 
             constexpr IOResult update_max_data(auto&& decide_new_limit) {
@@ -194,6 +205,7 @@ namespace utils {
                 auto id = issuer.issue();
                 if (id == invalid_id) {
                     cb(id, issuer.limit.on_limit(1));
+                    return;
                 }
                 cb(id, false);
             }
@@ -246,10 +258,11 @@ namespace utils {
                 }
             }
 
-            constexpr std::pair<bool, error::Error> check_recv_issued(FrameType type, StreamID id) {
+            constexpr std::pair<bool, error::Error> check_recv_frame(FrameType type, StreamID id) {
                 if (id.dir() == state.local_dir()) {
                     if (id.type() == StreamType::bidi) {
                         const auto locked = do_lock(open_bidi_locker);
+                        // check whether id is already issued id
                         if (!state.bidi_issuer.is_issued(id)) {
                             return {true,
                                     QUICError{
@@ -258,6 +271,7 @@ namespace utils {
                                         .frame_type = type,
                                     }};
                         }
+                        // check FrameType (this detect library user's bug)
                         if (!is_BidiStreamOK(type)) {
                             return {
                                 true,
@@ -271,6 +285,7 @@ namespace utils {
                     }
                     else if (id.type() == StreamType::uni) {
                         const auto locked = do_lock(open_uni_locker);
+                        // check whether id is already issued id
                         if (!state.uni_issuer.is_issued(id)) {
                             return {true,
                                     QUICError{
@@ -279,11 +294,12 @@ namespace utils {
                                         .frame_type = type,
                                     }};
                         }
+                        // check FrameType (this detect peer's error)
                         if (!is_UniStreamReceiverOK(type)) {
                             return {
                                 true,
                                 QUICError{
-                                    .msg = "not allowed frame type for bidirectional stream.",
+                                    .msg = "not allowed frame type for sending unidirectional stream.",
                                     .transport_error = TransportError::STREAM_STATE_ERROR,
                                     .frame_type = type,
                                 }};
@@ -291,7 +307,38 @@ namespace utils {
                         return {true, error::none};
                     }
                 }
-                return {false, error::none};
+                else if (id.dir() == state.peer_dir()) {
+                    if (id.type() == StreamType::bidi) {
+                        // check FrameType (this detect library user's bug)
+                        if (!is_BidiStreamOK(type)) {
+                            return {
+                                true,
+                                QUICError{
+                                    .msg = "not allowed frame type for bidirectional stream. library bug!",
+                                    .transport_error = TransportError::STREAM_STATE_ERROR,
+                                    .frame_type = type,
+                                }};
+                        }
+                        return {false, error::none};
+                    }
+                    else {
+                        // check FrameType (this detect peer's error)
+                        if (!is_UniStreamSenderOK(type)) {
+                            return {
+                                true,
+                                QUICError{
+                                    .msg = "not allowed frame type for receiving unidirectional stream.",
+                                    .transport_error = TransportError::STREAM_STATE_ERROR,
+                                    .frame_type = type,
+                                }};
+                        }
+                        return {false, error::none};
+                    }
+                }
+                return {
+                    false,
+                    QUICError{.msg = "unexpected stream type. library bug!!"},
+                };
             }
         };
 

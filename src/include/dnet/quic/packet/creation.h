@@ -12,6 +12,7 @@
 namespace utils {
     namespace dnet::quic::packet {
 
+        // render_payload is bool(io::writer&,packetnum::WireVal)
         constexpr std::pair<CryptoPacket, bool> create_packet(io::writer& w, PacketSummary summary,
                                                               std::uint64_t largest_acked, size_t auth_tag_len, bool use_full,
                                                               auto&& render_payload) {
@@ -31,7 +32,7 @@ namespace utils {
             };
             auto with_padding = [&](io::writer& w) {
                 auto poffset = w.offset();
-                if (!render_payload(w)) {
+                if (!render_payload(w, std::as_const(wire))) {
                     return false;
                 }
                 if (use_full && !w.full()) {
@@ -89,7 +90,7 @@ namespace utils {
                 summary.version = 1;
                 summary.dstID = id;
                 summary.srcID = id;
-                auto [crypto, ok] = create_packet(w, summary, packetnum::infinity, 16, true, [&](io::writer& w) {
+                auto [crypto, ok] = create_packet(w, summary, packetnum::infinity, 16, true, [&](io::writer& w, packetnum::WireVal) {
                     return w.write(1, 250);
                 });
                 if (!ok) {

@@ -18,7 +18,6 @@ namespace utils {
         template <class T>
         constexpr T radix_base_max(std::uint32_t radix) {
             auto mx = (std::numeric_limits<T>::max)();
-            size_t count = 0;
             T t = 1;
             mx /= radix;
             while (mx) {

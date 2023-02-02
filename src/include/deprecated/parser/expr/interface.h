@@ -9,7 +9,7 @@
 // interface - common interface class
 #pragma once
 #include <cstdint>
-#include <helper/space.h>
+#include <space/space.h>
 #include <helper/pushbacker.h>
 
 namespace utils {

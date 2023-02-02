@@ -12,7 +12,7 @@
 #include <deprecated/net/dns/dns.h>
 
 #include <wrap/light/string.h>
-#include <utf/convert.h>
+#include <unicode/utf/convert.h>
 #include <helper/strutil.h>
 
 #include <cassert>

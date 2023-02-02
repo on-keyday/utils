@@ -22,7 +22,7 @@ namespace utils {
             }
             size_t offset = r.offset();
             auto invoke_cb = [&](PacketType type, auto& packet, bool err, bool valid_type) {
-                auto src = r.already_read().substr(offset);
+                auto src = r.read().substr(offset);
                 if constexpr (std::is_convertible_v<decltype(cb(type, packet, src, err, valid_type)), bool>) {
                     if (!cb(type, packet, src, err, valid_type)) {
                         return false;

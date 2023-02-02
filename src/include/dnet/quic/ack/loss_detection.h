@@ -10,6 +10,7 @@
 #include "packet_history.h"
 #include "congestion.h"
 #include "idle_timer.h"
+#include "controler_impl.h"
 #include <algorithm>
 #include <ranges>
 
@@ -29,6 +30,17 @@ namespace utils {
                 LossDetectFlags flags;
                 Congestion cong;
                 IdleTimer idle_timer;
+                TokenBudgetPacer pacer;
+
+                void init(time::time_t inirtt_millisec,
+                          std::uint64_t max_udp_payload_size) {
+                    rtt.reset(clock, inirtt_millisec);
+                    cong.init(max_udp_payload_size);
+                }
+
+                bool can_send() {
+                    return pacer.can_send(clock);
+                }
 
                 error::Error on_packet_sent(PacketNumberSpace space, SentPacket&& sent) {
                     const auto in_flight = sent.in_flight;
@@ -47,28 +59,23 @@ namespace utils {
                             .msg = "failed to add sent packet. maybe already added",
                         };
                     }
-                    flags.sent_bytes += sent_bytes;
+                    flags.on_packet_sent(sent_bytes, space);
+                    pto.on_packet_sent(ack_eliciting);
+                    idle_timer.on_packet_sent(time_sent, ack_eliciting);
+                    pacer.on_packet_sent(cong, rtt, clock, time_sent, sent_bytes);
                     if (in_flight) {
                         cong.on_packet_sent(sent_bytes);
                         if (auto err = pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags)) {
                             return err;
                         }
                     }
-                    pto.on_packet_sent(ack_eliciting);
-                    idle_timer.on_packet_sent(time_sent, ack_eliciting);
-                    if (space == PacketNumberSpace::handshake) {
-                        flags.has_sent_handshake = true;
-                    }
                     return error::none;
                 }
 
                 error::Error on_packet_recived(PacketNumberSpace space, std::uint64_t recv_size) {
-                    if (space == PacketNumberSpace::handshake) {
-                        flags.has_recived_handshake = true;
-                    }
                     idle_timer.on_packet_recieved(clock.now());
                     auto was_limit = flags.is_at_anti_amplification_limit();
-                    flags.recv_bytes += recv_size;
+                    flags.on_packet_received(recv_size, space);
                     if (was_limit && flags.is_at_anti_amplification_limit()) {
                         auto err = pn_spaces.set_loss_detection_timer(loss_detect_timer, pto, clock, rtt, flags);
                         if (err) {
@@ -82,9 +89,7 @@ namespace utils {
                 }
 
                 error::Error on_ack_received(frame::ACKFrame<slib::vector>& ack, PacketNumberSpace space) {
-                    if (space == PacketNumberSpace::handshake) {
-                        flags.has_recived_handshake_ack = true;
-                    }
+                    flags.on_ack_received(space);
                     auto& pn_space = pn_spaces[space_to_index(space)];
                     auto largest_pn = packetnum::Value(ack.largest_ack.value);
                     if (pn_space.largest_acked_packet == packetnum::infinity) {
@@ -108,7 +113,7 @@ namespace utils {
                     // std::ranges::sort(acked_packets, std::greater{}, [](auto& a) { return a.packet_number; });
                     auto& largest = acked_packets[0];
                     if (largest.packet_number == largest_pn && incl_ack_eliciting) {
-                        if (!rtt.sample_rtt(clock, largest.time_sent, ack.ack_delay.value)) {
+                        if (!rtt.sample_rtt(clock, largest.time_sent, frame::decode_ack_delay(ack.ack_delay.value, rtt.ack_delay_exponent))) {
                             return QUICError{
                                 .msg = "sample_rtt calculation failed. maybe clock is broken",
                                 .frame_type = FrameType::ACK,
@@ -161,7 +166,10 @@ namespace utils {
                     idle_timer.handshake_confirmed = true;
                 }
 
-                void apply_transport_param(std::uint64_t peer_idle_timeout, std::uint64_t local_idle_timeout) {
+                void apply_transport_param(std::uint64_t peer_idle_timeout,
+                                           std::uint64_t local_idle_timeout,
+                                           std::uint64_t max_ack_delay,
+                                           std::uint64_t ack_delay_exponent) {
                     if (peer_idle_timeout == 0) {
                         idle_timer.idle_timeout = local_idle_timeout;
                     }
@@ -171,6 +179,9 @@ namespace utils {
                     else {
                         idle_timer.idle_timeout = min_(local_idle_timeout, peer_idle_timeout);
                     }
+                    idle_timer.idle_timeout = clock.to_clock_granurarity(idle_timer.idle_timeout);
+                    rtt.max_ack_delay = clock.to_clock_granurarity(max_ack_delay);
+                    rtt.ack_delay_exponent = ack_delay_exponent;
                 }
 
                 error::Error on_loss_detection_timeout() {
@@ -233,8 +244,8 @@ namespace utils {
 
                 void update_higest_recv_packet(packetnum::Value pn, PacketNumberSpace space) {
                     auto& high = pn_spaces[space_to_index(space)].largest_recv_packet;
-                    if (high < size_t(pn)) {
-                        high = size_t(pn);
+                    if (high < pn) {
+                        high = pn;
                     }
                 }
             };

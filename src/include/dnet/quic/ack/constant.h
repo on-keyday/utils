@@ -35,5 +35,8 @@ namespace utils {
             return a < b ? a : b;
         }
 
+        constexpr auto default_window_initial_factor = 10;
+        constexpr auto default_window_minimum_factor = 2;
+
     }  // namespace dnet::quic::ack
 }  // namespace utils

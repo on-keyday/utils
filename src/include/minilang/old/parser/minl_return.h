@@ -95,7 +95,7 @@ namespace utils {
                     if (not_must) {
                         auto tmp = p.seq.rptr;
                         space::consume_space(p.seq, false);
-                        if (helper::match_eol<false>(p.seq)) {
+                        if (space::parse_eol<false>(p.seq)) {
                             p.seq.rptr = tmp;
                             goto END;
                         }

@@ -344,7 +344,8 @@ namespace utils {
             bool maybe_drop_handshake() {
                 auto& data = crypto_data[level_to_index(EncryptionLevel::handshake)];
                 if (handshake_confirmed() &&
-                    (data.wsecret.is_installed() || data.rsecret.is_installed())) {
+                    (data.wsecret.is_installed() ||
+                     data.rsecret.is_installed())) {
                     data.wsecret.discard();
                     data.rsecret.discard();
                     return true;

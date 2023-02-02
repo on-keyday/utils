@@ -15,21 +15,6 @@
 namespace utils {
     namespace helper {
         namespace internal {
-            /*
-            SFINAE_BLOCK_TU_BEGIN(has_append, std::declval<T>().append(std::declval<const U>()))
-            constexpr static void invoke(T& target, const U& to_append) {
-                target.append(to_append);
-            }
-            SFINAE_BLOCK_TU_ELSE(has_append)
-            constexpr static void invoke(T& target, const U& to_append) {
-                auto seq = make_ref_seq(to_append);
-                while (!seq.eos()) {
-                    target.push_back(seq.current());
-                    seq.consume();
-                }
-            }
-            SFINAE_BLOCK_TU_END()
-            */
 
             template <class T, class U>
             concept has_append = requires(T t, U u) {

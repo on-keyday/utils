@@ -90,7 +90,7 @@ namespace utils {
                        id.seq_count() < limit.curused();
             }
 
-            error::Error update_limit(size_t new_limit) {
+            constexpr error::Error update_limit(size_t new_limit) {
                 if (new_limit >= size_t(1) << 60) {
                     return QUICError{
                         .msg = "MAX_STREAMS limit is over 2^60",

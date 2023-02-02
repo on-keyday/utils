@@ -169,7 +169,7 @@ namespace utils {
             std::uint16_t before[10], after[10];
             std::uint8_t ipv4mapped[4];
             bool v4map = false;
-            int v4mapindex = -1;
+            int v4mapindex;
             auto read = [&](auto& parsed) {
                 return number::parse_integer(seq, parsed, 16);
             };

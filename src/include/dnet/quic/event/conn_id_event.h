@@ -14,7 +14,7 @@
 
 namespace utils {
     namespace dnet::quic::event {
-        inline std::pair<Status, error::Error> send_conn_id(const packet::PacketSummary& packet, ACKWaitVec& vec, frame::fwriter& w, priority& prio, std::shared_ptr<void>& arg) {
+        inline std::pair<Status, error::Error> send_conn_id(const packet::PacketSummary& packet, ACKWaitVec& vec, frame::fwriter& w, std::shared_ptr<void>& arg) {
             if (packet.type != PacketType::OneRTT) {
                 return {Status::reorder, error::none};
             }

@@ -22,7 +22,7 @@ namespace utils {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
                 MINL_FUNC_LOG_OLD("comment")
                 auto line_comment = [&](auto& comment) {
-                    while (!seq.eos() && !helper::match_eol<true>(seq)) {
+                    while (!seq.eos() && !space::parse_eol<true>(seq)) {
                         comment.push_back(seq.current());
                         seq.consume();
                     }

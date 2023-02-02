@@ -9,7 +9,7 @@
 #include "../../include/wrap/iocommon.h"
 #include "../../include/wrap/cin.h"
 #include "../../include/helper/readutil.h"
-#include "../../include/utf/convert.h"
+#include "../../include/unicode/utf/convert.h"
 #include <cstdio>
 #include <iostream>
 #ifdef _WIN32
@@ -81,10 +81,10 @@ namespace utils {
                             }
                         }
                         else {
-                            if (utf::is_utf16_high_surrogate(c) && num - i > 0) {
+                            if (unicode::utf16::is_high_surrogate(c) && num - i > 0) {
                                 surrogatebuf[0] = c;
                             }
-                            else if (utf::is_utf16_low_surrogate(c)) {
+                            else if (unicode::utf16::is_low_surrogate(c)) {
                                 surrogatebuf[1] = c;
                                 wrap::cout_wrap() << surrogatebuf;
                                 surrogatebuf[0] = 0;

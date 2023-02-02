@@ -25,6 +25,7 @@ namespace utils {
             std::uint64_t sent_bytes = 0;
             bool ack_eliciting = false;
             bool in_flight = false;
+            bool is_mtu_probe = false;
             bool skiped = false;
             time::Time time_sent = time::invalid;
         };

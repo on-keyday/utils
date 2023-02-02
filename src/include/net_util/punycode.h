@@ -14,7 +14,7 @@
 #include "../helper/strutil.h"
 #include "../number/char_range.h"
 #include "../wrap/light/string.h"
-#include "../utf/view.h"
+#include "../unicode/utf/view.h"
 #include <limits>
 #include <cstring>
 #include "../view/slice.h"

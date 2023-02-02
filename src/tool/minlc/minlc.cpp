@@ -7,7 +7,7 @@
 
 #include "middle/parser.h"
 #include "middle/middle.h"
-#include <helper/line_pos.h>
+#include <space/line_pos.h>
 #include <file/file_view.h>
 #include <cmdline/option/optcontext.h>
 #include <wrap/argv.h>
@@ -19,14 +19,14 @@ namespace minlc {
         std::string w;
         srcptr->rptr = node->pos.begin;
         const auto len = node->pos.end - node->pos.begin;
-        utils::helper::write_src_loc(w, *srcptr, len);
+        utils::space::write_src_loc(w, *srcptr, len);
         printe(w);
     }
 
     void print_pos(size_t pos) {
         std::string w;
         srcptr->rptr = pos;
-        utils::helper::write_src_loc(w, *srcptr, 1);
+        utils::space::write_src_loc(w, *srcptr, 1);
         printe(w);
     }
 }  // namespace minlc

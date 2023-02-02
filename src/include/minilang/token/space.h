@@ -8,7 +8,8 @@
 // space - space and line
 #pragma once
 #include "token.h"
-#include "../../helper/space.h"
+#include "../../space/eol.h"
+#include "../../space/space.h"
 #include "../../helper/pushbacker.h"
 #include "../../helper/readutil.h"
 #include "tokendef.h"
@@ -20,7 +21,7 @@ namespace utils {
             return [](auto&& src) -> std::shared_ptr<Space> {
                 const auto trace = trace_log(src, "space");
                 size_t b = src.seq.rptr;
-                auto m = space::match_space<false>(src.seq, false);
+                auto m = space::parse_space<false>(src.seq, false);
                 if (m == 0) {
                     return nullptr;
                 }
@@ -45,7 +46,7 @@ namespace utils {
         }
 
         constexpr bool has_eol(auto& seq, bool& lf, bool& cr, const char*& line) {
-            auto len = helper::match_eol<false>(seq);
+            auto len = space::parse_eol<false>(seq);
             if (len == 0) {
                 return false;
             }

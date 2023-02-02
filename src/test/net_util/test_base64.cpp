@@ -30,7 +30,7 @@ constexpr auto be(auto input) {
 
 constexpr auto li(auto input) {
     utils::endian::Buf<decltype(input)> buf;
-    buf.write_li(input);
+    buf.write_le(input);
     return buf;
 }
 

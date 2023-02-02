@@ -9,14 +9,14 @@
 // line_pos - show line and pos
 #pragma once
 #include "../core/sequencer.h"
-#include "appender.h"
-#include "readutil.h"
+#include "../helper/appender.h"
 #include "../number/to_string.h"
 #include "../number/insert_space.h"
-#include "pushbacker.h"
+#include "../helper/pushbacker.h"
+#include "eol.h"
 
 namespace utils {
-    namespace helper {
+    namespace space {
 
         struct SrcLoc {
             size_t line;
@@ -25,7 +25,7 @@ namespace utils {
 
         template <class Out, class T>
         SrcLoc write_src_loc(Out& w, Sequencer<T>& seq, size_t poslen = 1, char posc = '^', const char* show_endof = " [EOF]") {
-            CountPushBacker<Out&> c{w};
+            helper::CountPushBacker<Out&> c{w};
             size_t line, pos;
             get_linepos(seq, line, pos);
             if (line + 1 < 1000) {
@@ -71,5 +71,5 @@ namespace utils {
             seq.rptr = bs;
             return SrcLoc{.line = line, .pos = pos};
         }
-    }  // namespace helper
+    }  // namespace space
 }  // namespace utils

@@ -9,45 +9,35 @@
 #pragma once
 #include "event.h"
 #include "../stream/impl/stream.h"
+#include "../stream/impl/conn.h"
 
 namespace utils {
     namespace dnet::quic::event {
         template <class Lock>
-        inline Status send_stream(PacketType, packetnum::Value pn, ACKWaitVec& vec, io::writer& w, priority& prio, std::shared_ptr<void>& arg) {
-            namespace impl = stream::impl;
-            auto ptr = static_cast<impl::SendUniStream<Lock>*>(arg.get());
-            auto final_state = ptr->detect_ack();
-            if (final_state == stream::SendState::data_recved) {
-                return Status::discard;
+        inline std::pair<Status, error::Error> send_streams(const packet::PacketSummary& packet, ACKWaitVec& wait, frame::fwriter& w, std::shared_ptr<void>& arg) {
+            if (packet.type != PacketType::OneRTT &&
+                packet.type != PacketType::ZeroRTT) {
+                return {Status::reorder, error::none};
             }
-            auto res = ptr->send(pn, vec, w);
+            namespace impl = stream::impl;
+            impl::Conn<Lock>* ptr = static_cast<impl::Conn<Lock>*>(arg.get());
+            auto res = ptr->send(w, wait);
             if (res == IOResult::invalid_data ||
                 res == IOResult::fatal) {
-                return Status::fatal;
+                return {Status::fatal, error::none};
             }
-            if (res == IOResult::not_in_io_state) {
-                return Status::discard;
-            }
-            return Status::reorder;
+            return {Status::reorder, error::none};
         }
 
         template <class Lock>
-        inline Status send_reset(PacketType, packetnum::Value pn, ACKWaitVec& vec, io::writer& w, priority& prio, std::shared_ptr<void>& arg) {
+        inline std::pair<Status, error::Error> recv_streams(const packet::PacketSummary& packet, frame::Frame& f, std::shared_ptr<void>& arg) {
             namespace impl = stream::impl;
-            auto ptr = static_cast<impl::SendUniStream<Lock>*>(arg.get());
-            auto final_state = ptr->detect_ack();
-            if (final_state == stream::SendState::reset_recved) {
-                return Status::discard;
+            impl::Conn<Lock>* conn = static_cast<impl::Conn<Lock>*>(arg.get());
+            auto [_, err] = conn->recv(f);
+            if (err) {
+                return {Status::fatal, std::move(err)};
             }
-            auto [res, state] = ptr->reset(pn, vec, w);
-            if (res == IOResult::invalid_data ||
-                res == IOResult::fatal) {
-                return Status::fatal;
-            }
-            if (res == IOResult::not_in_io_state) {
-                return Status::discard;
-            }
-            return Status::reorder;
+            return {Status::reorder, error::none};
         }
 
     }  // namespace dnet::quic::event

@@ -42,7 +42,7 @@ namespace utils {
             }
 
             // encode `input` as little endian into `this->data`
-            constexpr Buf& write_li(T input) {
+            constexpr Buf& write_le(T input) {
                 std::make_unsigned_t<decltype(input)> in = input;
                 for (size_t i = 0; i < sizeof(input); i++) {
                     data[i] = byte((in >> (i * bit_per_byte)) & 0xff);
@@ -57,7 +57,7 @@ namespace utils {
                 for (auto i = 0; i < sizeof(out); i++) {
                     out |= Out(data[i]) << ((sizeof(out) - 1 - i) * bit_per_byte);
                 }
-                output = out;
+                output = T(out);
                 return *this;
             }
 
@@ -75,7 +75,7 @@ namespace utils {
                 for (auto i = 0; i < sizeof(out); i++) {
                     out |= Out(data[i]) << (i * bit_per_byte);
                 }
-                output = out;
+                output = T(out);
                 return *this;
             }
 
@@ -149,7 +149,7 @@ namespace utils {
                 buf.write_be(input);
             }
             else {
-                buf.write_li(input);
+                buf.write_le(input);
             }
         }
 

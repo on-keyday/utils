@@ -116,12 +116,14 @@ namespace utils {
             return {nullptr, false};
         }
 
-        DLL ws2_32(L"ws2_32.dll", true, network_init, network_lookup);
-        DLL libssl(L"libssl.dll", false);
-        DLL libcrypto(L"libcrypto.dll", false);
+        DLL ws2_32{L"ws2_32.dll", true, network_init, network_lookup};
+        DLL kernel32{L"kernel32.dll", true, nullptr, kernel32_lookup};
+        DLL libssl{L"libssl.dll", false};
+        DLL libcrypto{L"libcrypto.dll", false};
 #else
-        DLL libssl("libssl.so", false);
-        DLL libcrypto("libcrypto.so", false);
+        DLL libanl{"libanl.so", false};
+        DLL libssl{"libssl.so", false};
+        DLL libcrypto{"libcrypto.so", false};
 #endif
 
     }  // namespace dnet::lazy

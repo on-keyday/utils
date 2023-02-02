@@ -56,7 +56,7 @@ namespace utils {
                             break;
                         }
                         std::shared_ptr<MinNode> typ, init;
-                        if (!p.seq.match("=") && !p.seq.eos() && !helper::match_eol<false>(p.seq)) {
+                        if (!p.seq.match("=") && !p.seq.eos() && !space::parse_eol<false>(p.seq)) {
                             typ = p.type(p);
                             if (!typ) {
                                 p.errc.say("expect ", expect, " type but not");

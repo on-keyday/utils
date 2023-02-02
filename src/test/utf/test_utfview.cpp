@@ -6,7 +6,7 @@
 */
 
 
-#include "../../include/utf/view.h"
+#include <unicode/utf/view.h>
 
 #include <string>
 
@@ -54,8 +54,7 @@ constexpr bool test_view_utf32_to_utf16() {
     char32_t test[] = U"𠮷野家abc";
     utils::utf::View<char32_t*, char16_t> view(test);
     utils::Sequencer<decltype(view)&> seq(view);
-    view[2];
-    return seq.match(u"𠮷野家abc");
+    return view[2] == u'野' && seq.match(u"𠮷野家abc");
 }
 
 void test_utfview() {

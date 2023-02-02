@@ -9,7 +9,7 @@
 // space - define what is space
 #pragma once
 
-#include <helper/space.h>
+#include <space/space.h>
 #include "token.h"
 
 namespace utils {
@@ -17,7 +17,7 @@ namespace utils {
 
         template <class T>
         constexpr bool read_space(Sequencer<T>& seq, char16_t& c, size_t& count) {
-            c = space::match_space(seq);
+            c = space::parse_space(seq);
             if (c == 0) {
                 return false;
             }

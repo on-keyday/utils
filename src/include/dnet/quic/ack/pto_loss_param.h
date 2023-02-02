@@ -16,13 +16,36 @@ namespace utils {
     namespace dnet::quic::ack {
 
         struct LossDetectFlags {
-            bool has_sent_handshake = false;
-            bool handshake_confirmed = false;
             bool is_server = false;
+
+            bool has_sent_handshake = false;
             bool has_recived_handshake = false;
             bool has_recived_handshake_ack = false;
+
+            bool handshake_confirmed = false;
+
             std::uint64_t sent_bytes = 0;
             std::uint64_t recv_bytes = 0;
+
+            void on_packet_sent(std::uint64_t size, PacketNumberSpace space) {
+                sent_bytes += size;
+                if (space == PacketNumberSpace::handshake) {
+                    has_sent_handshake = true;
+                }
+            }
+
+            void on_packet_received(std::uint64_t size, PacketNumberSpace space) {
+                recv_bytes += size;
+                if (space == PacketNumberSpace::handshake) {
+                    has_recived_handshake = true;
+                }
+            }
+
+            void on_ack_received(PacketNumberSpace space) {
+                if (space == PacketNumberSpace::handshake) {
+                    has_recived_handshake_ack = true;
+                }
+            }
 
             constexpr bool is_at_anti_amplification_limit() const {
                 if (peer_address_validated()) {
@@ -52,7 +75,7 @@ namespace utils {
             PacketNumberSpace pto_space = PacketNumberSpace::no_space;
 
             constexpr time::time_t probe_timeout_duration(time::Clock& clock, RTT& rtt) const {
-                return rtt.smoothed_rtt + max_(time::time_t(rtt.rttvar) << 2, clock.granularity) * (time::utime_t(1) << pto_count);
+                return rtt.smoothed_rtt + max_(time::time_t(rtt.rttvar) << 2, clock.to_clock_granurarity(1)) * (time::utime_t(1) << pto_count);
             }
 
             bool is_probe_required(PacketNumberSpace space) const {
@@ -111,7 +134,7 @@ namespace utils {
                 if (candidate < 0) {
                     return time::invalid;  // BUG overflow
                 }
-                return max_(candidate, clock.granularity);
+                return max_(candidate, clock.to_clock_granurarity(1));
             }
         };
     }  // namespace dnet::quic::ack

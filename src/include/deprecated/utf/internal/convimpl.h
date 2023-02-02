@@ -7,7 +7,7 @@
 
 #pragma once
 #include "../conv_method.h"
-#include "../../helper/append_charsize.h"
+#include "../../../helper/append_charsize.h"
 
 namespace utils {
     namespace utf {
@@ -15,10 +15,20 @@ namespace utils {
         constexpr std::uint16_t u16repchar = 0xFFFD;
 
         namespace internal {
-            template <class T, class U, size_t insize = 0, size_t outsize = 0>
+            template <class U, size_t val>
+            struct DecideOutLen {
+                static constexpr size_t size = val;
+            };
+
+            template <class U>
+            struct DecideOutLen<U, 0> {
+                static constexpr size_t size = helper::append_size_v<U>;
+            };
+
+            template <size_t insize = 0, size_t outsize = 0, class T, class U>
             constexpr UTFErr convert_impl2(Sequencer<T>& input, U& output, auto&& samesize_traits, auto&& fail_traits) {
                 constexpr auto in_size = insize == 0 ? sizeof(input.current()) : insize;
-                constexpr auto out_size = outsize == 0 ? helper::append_size_v<U> : outsize;
+                constexpr auto out_size = DecideOutLen<U, outsize>::size;
                 auto call_fail = [&](auto& ok) {
                     return fail_traits(ok, input, in_size, output, out_size);
                 };
@@ -126,7 +136,7 @@ namespace utils {
                         return UTFError::none;
                     }
                     if (std::uint32_t(input.current()) >= 0x110000) {
-                        return UTFError::out_of_range;
+                        return UTFError::utf32_out_of_range;
                     }
                     output.push_back(input.current());
                     return UTFError::none;
@@ -161,15 +171,15 @@ namespace utils {
 
             constexpr auto on_fail_replace() {
                 return [](UTFErr err, auto& input, size_t insize, auto& output, size_t outlen) -> UTFErr {
-                    if (err.is(UTFError::illformed_sequence)) {
+                    if (err.is(UTFError::utf16_invalid_surrogate) ||
+                        err.is(UTFError::utf8_illformed_sequence)) {
                         if (insize == 1) {
-                            auto len = expect_len(input.current());
+                            auto len = utf8_expect_len_from_first_byte(input.current());
                             input.consume(len);
                             write_repchar(output, outlen);
                         }
                         else if (insize == 2) {
-                            auto len = is_utf16_high_surrogate(input.current()) ? 2 : 1;
-                            input.consume(len);
+                            input.consume(2);
                             write_repchar(output, outlen);
                         }
                         return UTFError::none;

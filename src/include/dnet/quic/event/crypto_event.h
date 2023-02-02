@@ -13,7 +13,7 @@
 
 namespace utils {
     namespace dnet::quic::event {
-        inline std::pair<Status, error::Error> send_crypto(const packet::PacketSummary& packet, ACKWaitVec& vec, frame::fwriter& w, priority& prio, std::shared_ptr<void>& arg) {
+        inline std::pair<Status, error::Error> send_crypto(const packet::PacketSummary& packet, ACKWaitVec& vec, frame::fwriter& w, std::shared_ptr<void>& arg) {
             auto suite = static_cast<crypto::CryptoSuite*>(arg.get());
             if (suite->send(packet.type, packet.packet_number, vec, w) == IOResult::fatal) {
                 return {Status::fatal, error::none};

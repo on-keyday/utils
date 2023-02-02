@@ -42,7 +42,7 @@ namespace utils {
                         }
                         result *= radix;
                     }
-                    auto c = number_transform[in];
+                    auto c = number_transform[int(in)];
                     result += c;
                 }
             };
@@ -77,7 +77,7 @@ namespace utils {
                         minus_exp = in == '-';
                         return;
                     }
-                    auto c = number_transform[in];
+                    auto c = number_transform[int(in)];
                     if (!afterdot) {
                         result1 += c;
                         result1 *= radix;
@@ -187,7 +187,7 @@ namespace utils {
                         }
                     }
                 }
-                auto n = number_transform[e];
+                auto n = number_transform[int(e)];
                 if (n < 0 || n >= radix) {
                     if (config.ignore(e)) {
                         continue;

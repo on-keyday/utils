@@ -34,9 +34,15 @@ namespace utils {
             packetnum::Value packet_number = packetnum::infinity;
             constexpr static int skip_part = 4;
 
+            constexpr size_t payload_len() const noexcept {
+                if (src.size() < head_len) {
+                    return 0;
+                }
+                return src.size() - head_len;
+            }
+
             constexpr std::pair<CryptoPacketParsed, bool> parse(size_t sample_len, size_t tag_len) const noexcept {
                 CryptoPacketParsed parsed;
-
                 parsed.head = src.substr(0, head_len);
                 size_t payload_len = src.size() - head_len - tag_len;
                 parsed.protected_payload = src.substr(head_len, payload_len);

@@ -26,9 +26,9 @@ constexpr double test_parse_float() {
 }
 
 void test_number() {
-    constexpr bool result1 = test_is_number();
-    constexpr auto result2 = test_parse_integer();
-    constexpr auto result3 = test_parse_float();
+    [[maybe_unused]] constexpr bool result1 = test_is_number();
+    [[maybe_unused]] constexpr auto result2 = test_parse_integer();
+    [[maybe_unused]] constexpr auto result3 = test_parse_float();
 }
 
 int main() {

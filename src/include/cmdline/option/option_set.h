@@ -15,7 +15,7 @@
 #include "../../wrap/light/vector.h"
 #include "../../wrap/pair_iter.h"
 #include "optparser.h"
-#include "../../utf/convert.h"
+#include "../../unicode/utf/convert.h"
 #include "../../view/slice.h"
 
 #include <algorithm>

@@ -83,6 +83,8 @@ add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
 add_executable(dnetquic_frame "src/test/dnet/test_dnetquic_frame.cpp")
 add_executable(dnetquic_packet "src/test/dnet/test_dnetquic_packet.cpp")
 add_executable(dnetquic_stream "src/test/dnet/test_dnetquic_stream.cpp")
+add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
+add_executable(dnetquic_multi_thread "src/test/dnet/test_dnetquic_multi_thread.cpp")
 
 #[[
 add_executable(predefined "src/test/deprecated/tokenize/test_predefined.cpp")
@@ -223,10 +225,10 @@ target_sources(utnet
 )
 
 target_sources(dnet PRIVATE
-  "src/lib/dnet/sockdll.cpp"
+  "src/lib/dnet/dll/sockdll.cpp"
+  "src/lib/dnet/dll/ssldll.cpp"
   "src/lib/dnet/socket.cpp"
   "src/lib/dnet/addrinfo.cpp"
-  "src/lib/dnet/ssldll.cpp"
   "src/lib/dnet/tls.cpp"
   "src/lib/dnet/http2.cpp"
   "src/lib/dnet/heaps.cpp"
@@ -359,6 +361,7 @@ target_link_libraries(dnet_error dnet)
 target_link_libraries(dnet_stun dnet)
 target_link_libraries(dnetquic_frame utils dnet)
 target_link_libraries(dnetquic_stream utils dnet)
+target_link_libraries(dnetquic_multi_thread utils dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)

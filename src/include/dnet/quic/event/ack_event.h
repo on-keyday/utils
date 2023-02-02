@@ -15,7 +15,7 @@
 
 namespace utils {
     namespace dnet::quic::event {
-        inline std::pair<Status, error::Error> send_ack(const packet::PacketSummary& packet, ACKWaitVec&, frame::fwriter& w, priority& prio, std::shared_ptr<void>& arg) {
+        inline std::pair<Status, error::Error> send_ack(const packet::PacketSummary& packet, ACKWaitVec&, frame::fwriter& w, std::shared_ptr<void>& arg) {
             auto ackh = static_cast<ack::UnackedPacket*>(arg.get());
             ack::ACKRangeVec ackvec;
             if (!ackh->gen_ragnes_from_recved(ack::from_packet_type(packet.type), ackvec)) {
@@ -44,5 +44,6 @@ namespace utils {
             }
             return {Status::reorder, error::none};
         }
+
     }  // namespace dnet::quic::event
 }  // namespace utils

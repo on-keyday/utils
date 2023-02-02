@@ -27,7 +27,6 @@ namespace utils {
 
             constexpr char_type operator[](size_t index) const {
                 size_t ofs = stride <= 1 ? 1 : stride;
-                auto sz = buf.size();
                 auto idx = ofs * index;
                 auto ac = start + idx;
                 if (ac >= end || ac >= buf.size()) {
