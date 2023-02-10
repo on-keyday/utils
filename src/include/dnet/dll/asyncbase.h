@@ -17,6 +17,7 @@
 #include "../address.h"
 #include "../errcode.h"
 #include "../error.h"
+#include "../../thread/waker.h"
 
 namespace utils {
     namespace dnet {
@@ -39,6 +40,7 @@ namespace utils {
             std::atomic_bool lock;
             NetAddrPort addr;
             int flag;
+            view::rvec buf;
         };
 
         struct PlatformRWAsyncSuite {
@@ -51,13 +53,9 @@ namespace utils {
             PlatformAsyncSuite plt;
             std::uintptr_t sock = ~0;
             void (*cb)(AsyncSuite* s, size_t size, error::Error err) = nullptr;
-            void (*appcb)() = nullptr;
-            void* ctx = nullptr;
+            std::shared_ptr<thread::Waker> waker;
             std::atomic_uint32_t storng_ref;
             std::atomic_bool on_operation = false;
-            storage boxed;
-            // BoxByteLen boxed;
-            // ByteLen user;
             bool is_stream = false;
 
             void incr() {

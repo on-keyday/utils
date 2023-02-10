@@ -256,7 +256,7 @@ namespace utils {
                 else {
                     helper::append(str, "HTTP/1.1 ");
                 }
-                std::uint8_t codebuf[4] = "000";
+                char codebuf[4] = "000";
                 codebuf[0] += (status / 100);
                 codebuf[1] += (status % 100 / 10);
                 codebuf[2] += (status % 100 % 10);

@@ -7,8 +7,9 @@
 
 // crypto_log - QUIC tls log
 #pragma once
-#include "../../tls_head.h"
+#include "../../tls/tls_head.h"
 #include "format.h"
+#include"cert_log.h"
 
 namespace utils {
     namespace dnet::quic::log {
@@ -18,9 +19,9 @@ namespace utils {
     }
 #define CASE(T) else if constexpr (std::is_same_v<const T&, decltype(hs)>)
             io::reader r{src};
-            auto typefield = [](auto type) {
-                if (auto type = to_string(type)) {
-                    helper::appends(out, type);
+            auto typefield = [&](auto type) {
+                if (auto str = to_string(type)) {
+                    helper::appends(out, str);
                 }
                 else {
                     helper::append(out, "unknown(0x");
@@ -31,45 +32,105 @@ namespace utils {
             const auto numfield = fmt_numfield(out);
             const auto hexfield = fmt_hexfield(out);
             const auto datafield = fmt_datafield(out, omit_data, data_as_hex);
-            auto format_extension = [&](const tls::handshake::ext::Extension& ext, const auto& hs, bool err) {
-                typefield(ext.extension_type);
-                helper::append(" {");
-                SWITCH()
-                CASE(tls::handshake::ext::Extension) {
-                    datafield("opaque", ext.data());
-                }
-                CASE(tls::handshake::ext::QUICTransportParamExtension) {
-                    const tls::handshake::ext::QUICTransportParamExtension& q = hs;
-                    helper::append(" transport_parameters: [");
-                    q.params.iterate([&](quic::trsparam::TransportParameter param) {
-                        helper::append(out, " { id: ");
-                        typefield((quic::trsparam::DefinedID)param.id);
-                        helper::append(out, ",");
-                        numfield("length", param.length);
-                        hexfield("data", param.data);
-                        helper::append(out, "},");
+            const auto group = fmt_group(out);
+            const auto custom_key_value = fmt_key_value(out);
+            auto format_extension = [&](const tls::handshake::ext::Extension& ext,tls::handshake::HandshakeType ty,bool last_comma) {
+                tls::handshake::ext::parse(ext,ty,[&](const auto& hs,bool err){
+                    custom_key_value([&]{typefield(ext.extension_type);},[&]{
+                        group(nullptr, false,last_comma, [&] {
+                            SWITCH()
+                            CASE(tls::handshake::ext::Extension) {
+                                datafield("opaque", ext.data());
+                            }
+                            CASE(tls::handshake::ext::QUICTransportParamExtension) {
+                                const tls::handshake::ext::QUICTransportParamExtension& q = hs;
+                                group("transport_parameters", true, false, [&] {
+                                    q.params.iterate([&](quic::trsparam::TransportParameter param,bool last) {
+                                        group(nullptr, false, !last, [&] {
+                                            custom_key_value([&]{helper::append(out,"id");},[&]{ typefield((quic::trsparam::DefinedID)param.id);});
+                                            numfield("length", param.length);
+                                            hexfield("data", param.data.bytes(),false);
+                                        });
+                                        return true;
+                                    });
+                                });
+                            }
+                            CASE(tls::handshake::ext::ProtocolNameList) {
+                                const tls::handshake::ext::ProtocolNameList& q = hs;
+                                group("protocol_name_list", true, false, [&] {
+                                    q.protocol_name_list.iterate([&](tls::handshake::ext::ProtocolName name,bool last){
+                                        datafield(nullptr,name.data(),!last);
+                                        return true;
+                                    });
+                                });
+                            }
+                            return true;
+                        });
+                    },false);
+                    return true;
+                });
+            };
+            auto format_extensions=[&](tls::handshake::HandshakeType type,auto& exts){
+                group("extensions", true, false, [&] {
+                    exts.iterate([&](const tls::handshake::ext::Extension& ext,bool last) {
+                        format_extension(ext,type,!last);
+                        return true;
                     });
-                    helper::append("],");
-                }
-                CASE(tls::handshake::ext::ProtocolNameList) {
-                    const tls::handshake::ext::ProtocolNameList& q = hs;
-                    helper::append(" protocol_name_list: [");
-                    helper::append("],");
-                }
-                helper::append("} ");
+                });
             };
             while (tls::handshake::parse_one(r, [&](const auto& hs, bool err) {
                 if (err) {
                     helper::append(out, "error at parsing...\n");
-                    return false;
+                    return true;
                 }
                 typefield(hs.msg_type);
-                helper::append(out, " {");
-                SWITCH()
-                CASE(tls::handshake::ClientHello) {
-                    const tls::handshake::ClientHello& ch = hs;
-                }
-                helper::append(out, "} \n");
+                group(nullptr, false, false, [&] {
+                    numfield("length", hs.length);
+                    SWITCH()
+                    CASE(tls::handshake::ClientHello) {
+                        const tls::handshake::ClientHello& ch = hs;
+                        hexfield("random", ch.random);
+                        group("cipher_suites", true, true, [&] {
+                            const auto size = ch.cipher_suites.size();
+                            for (size_t i = 0; i < size; i++) {
+                                typefield(ch.cipher_suites[i]);
+                                helper::append(out, ",");
+                            }
+                        });
+                      format_extensions(ch.msg_type,ch.extensions);
+                    }
+                    CASE(tls::handshake::ServerHello) {
+                        const tls::handshake::ServerHello& sh = hs;
+                        hexfield("random", sh.random);
+                        custom_key_value([&]{helper::append(out,"cipher_suite");},[&]{ typefield(sh.cipher_suite);});
+                        format_extensions(sh.msg_type,sh.extensions);
+                    }
+                    CASE(tls::handshake::EncryptedExtensions){
+                        const tls::handshake::EncryptedExtensions& ee=hs;
+                        format_extensions(ee.msg_type,ee.extensions);
+                    }
+                    CASE(tls::handshake::Certificate){
+                        const tls::handshake::Certificate& cert=hs;
+                        hexfield("certificate_request_context",cert.certificate_request_context.data());
+                        group("certificate_list",true,false,[&]{
+                            cert.certificate_list.iterate([&](const tls::handshake::CertificateEntry& ent,bool last ){
+                                group(nullptr,false,!last,[&]{
+                                    custom_key_value([&]{helper::append(out,"cert_data");},[&]{
+                                        format_certificate(out,ent.cert_data.data(),omit_data,data_as_hex);
+                                    });
+                                    format_extensions(cert.msg_type,ent.extensions);
+                                });
+                                return true;
+                            });                  
+                        });
+                    }
+                    CASE(tls::handshake::Unknown){
+                        const tls::handshake::Unknown& ch=hs;
+                        datafield("raw_data",ch.raw_data,false);
+                    }
+                });
+                helper::append(out, "\n");
+                return true;
             })) {
             }
 #undef SWITCH

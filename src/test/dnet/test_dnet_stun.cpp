@@ -18,15 +18,15 @@ void test_dnet_stun_run(utils::io::writer& w, int af) {
     stun::StunContext ctx;
     SockAddr resolv;
     constexpr auto stun_sever = "stun.l.google.com";
-    auto wait = resolve_address(stun_sever, "19302", {.address_family = af, .socket_type = SOCK_DGRAM});
+    auto wait = resolve_address(stun_sever, "19302", sockattr_udp());
     auto addr = wait.wait();
     assert(!wait.failed());
     Socket sock;
     SockAddr server;
     while (addr.next()) {
-        sock = make_socket(af, SOCK_DGRAM, 0);
-        assert(sock);
         server = addr.sockaddr();
+        sock = make_socket(server.attr);
+        assert(sock);
         auto err = sock.connect(server.addr);
         if (!err || isSysBlock(err)) {
             break;

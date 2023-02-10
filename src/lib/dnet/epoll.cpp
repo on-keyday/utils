@@ -84,23 +84,14 @@ namespace utils {
             socdl.epoll_ctl_(get_epoll(), EPOLL_CTL_DEL, fd, nullptr);
         }
 
-        error::Error epollIOCommon(RWAsyncSuite* rw, AsyncSuite* suite, auto sock, const byte* data, size_t len, auto appcb, void* ctx, int flag, bool is_stream) {
+        error::Error epollIOCommon(RWAsyncSuite* rw, AsyncSuite* suite, std::uintptr_t sock, view::rvec buf, std::shared_ptr<thread::Waker>& waker, int flag, bool is_stream) {
             if (!register_fd(suite->sock, rw)) {
                 return Errno();
             }
             suite->sock = sock;
-            if (!data) {
-                suite->boxed = make_storage(len);
-            }
-            else {
-                suite->boxed = make_storage(view::rvec(data, len));
-            }
-            if (suite->boxed.null()) {
-                return error::memory_exhausted;
-            }
-            suite->appcb = reinterpret_cast<void (*)()>(appcb);
-            suite->ctx = ctx;
+            suite->waker = std::move(waker);
             suite->plt.flags = flag;
+            suite->plt.buf = buf;
             suite->is_stream = is_stream;
             return error::none;
         }
@@ -194,9 +185,17 @@ namespace utils {
             return {AsyncState::completed, error::none};
         }
 
-        error::Error Socket::read_async(size_t bufsize, void* fnctx, void (*cb)(void*, view::wvec data, bool full, error::Error err), int flag, bool is_stream) {
+        view::wvec get_wbuf(AsyncSuite* suite) {
+            view::rvec tmp = suite->plt.buf;
+            return view::wvec(const_cast<byte*>(tmp.data()), tmp.size());
+        }
+
+        error::Error Socket::read_async(view::wvec buf, std::shared_ptr<thread::Waker> waker, int flag, bool is_stream) {
+            if (buf.null()) {
+                return error::Error("buf MUST NOT be null", error::ErrorCategory::validationerr);
+            }
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = epollIOCommon(rw, suite, sock, nullptr, bufsize, cb, fnctx, flag, is_stream); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, buf, waker, flag, is_stream); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -205,7 +204,8 @@ namespace utils {
                     const auto s = decr_suite(suite);
                     check_epoll_mask(err);
                     size_t red = 0;
-                    auto res = socdl.recv_(suite->sock, suite->boxed.as_char(), suite->boxed.size(), 0);
+                    auto buf = get_wbuf(suite);
+                    auto res = socdl.recv_(suite->sock, buf.as_char(), buf.size(), 0);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
@@ -215,33 +215,43 @@ namespace utils {
                             set_epoll_or_errno(err, true);
                         }
                     }
-                    auto app = (void (*)(void*, view::wvec, bool, error::Error))suite->appcb;
+                    auto w = std::move(suite->waker);
+                    internal::WakerArg arg;
+                    arg.size = red;
+                    arg.err = std::move(err);
                     suite->on_operation = false;  // clear for reentrant
-                    app(suite->ctx, suite->boxed.substr(0, red), suite->boxed.size() == red, std::move(err));
+                    w->wakeup(&arg);
                 };
-                auto [n, err] = read(suite->boxed, flag, is_stream);
+                auto [n, err] = read(buf, flag, is_stream);
                 return handleStart(unlock, err, suite, [&, n = &n] {
-                    cb(fnctx, *n,
-                       suite->boxed.size() == n->size(), error::none);
+                    internal::WakerArg arg;
+                    arg.size = n->size();
+                    auto w = std::move(suite->waker);
+                    w->wakeup(&arg);
                 });
             });
         }
 
-        error::Error Socket::readfrom_async(size_t bufsize, void* fnctx, void (*cb)(void*, view::wvec data, bool truncated, error::Error err, NetAddrPort&& addr), int flag, bool is_stream) {
+        error::Error Socket::readfrom_async(view::wvec buf, std::shared_ptr<thread::Waker> waker, int flag, bool is_stream) {
+            if (buf.null()) {
+                return error::Error("buf MUST NOT be null", error::ErrorCategory::validationerr);
+            }
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (auto err = epollIOCommon(rw, suite, sock, nullptr, bufsize, cb, fnctx, flag, is_stream); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, buf, waker, flag, is_stream); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
                 suite->cb = [](AsyncSuite* suite, size_t, error::Error err) {
+                    const auto s = decr_suite(suite);
                     suite->cb = nullptr;
                     check_epoll_mask(err);
                     sockaddr_storage addr{};
                     socklen_t addrlen = sizeof(addr);
                     size_t red = 0;
                     auto saddr = reinterpret_cast<sockaddr*>(&addr);
+                    auto buf = get_wbuf(suite);
                     auto res = socdl.recvfrom_(
-                        suite->sock, suite->boxed.as_char(), suite->boxed.size(), suite->plt.flags,
+                        suite->sock, buf.as_char(), buf.size(), suite->plt.flags,
                         saddr, &addrlen);
                     if (res < 0) {
                         set_epoll_or_errno(err);
@@ -252,30 +262,31 @@ namespace utils {
                             set_epoll_or_errno(err, true);
                         }
                     }
-                    const auto s = helper::defer([&] {
-                        suite->decr();
-                    });
-                    auto app = reinterpret_cast<void (*)(void*, view::wvec data, bool truncated, error::Error err, NetAddrPort&& addr)>(suite->appcb);
+                    internal::WakerArg arg;
+                    arg.size = red;
+                    arg.err = std::move(err);
+                    arg.addr = sockaddr_to_NetAddrPort(saddr, addrlen);
+                    auto w = std::move(suite->waker);
                     suite->on_operation = false;
-                    auto sub = suite->boxed.substr(0, red);
-                    app(suite->ctx, sub,
-                        suite->boxed.size() == red, std::move(err), sockaddr_to_NetAddrPort(saddr, addrlen));
+                    w->wakeup(&arg);
                 };
-                auto [n, addr, err] = readfrom(suite->boxed, flag, is_stream);
+                auto [n, addr, err] = readfrom(buf, flag, is_stream);
                 return handleStart(unlock, err, suite, [&, n = &n, a = &addr] {
-                    cb(fnctx, *n,
-                       suite->boxed.size() == *n, error::none,
-                       std::move(*a));
+                    internal::WakerArg arg;
+                    arg.size = n->size();
+                    arg.addr = std::move(addr);
+                    auto w = std::move(suite->waker);
+                    w->wakeup(&arg);
                 });
             });
         }
 
-        error::Error Socket::write_async(view::rvec src, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
+        error::Error Socket::write_async(view::rvec buf, std::shared_ptr<thread::Waker> waker, int flag) {
+            if (buf.null()) {
+                return error::Error("buf MUST NOT be null", error::ErrorCategory::validationerr);
+            }
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (src.null()) {
-                    return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
-                }
-                if (auto err = epollIOCommon(rw, suite, sock, src.data(), src.size(), cb, fnctx, flag, false); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, buf, waker, flag, false); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -284,30 +295,37 @@ namespace utils {
                     const auto d = decr_suite(suite);
                     check_epoll_mask(err);
                     size_t red = 0;
-                    auto res = socdl.send_(suite->sock, suite->boxed.as_char(), suite->boxed.size(), suite->plt.flags);
+                    view::rvec buf = suite->plt.buf;
+                    auto res = socdl.send_(suite->sock, buf.as_char(), buf.size(), suite->plt.flags);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
                     else {
                         red = res;
                     }
-                    auto app = reinterpret_cast<void (*)(void*, size_t, error::Error)>(suite->appcb);
+                    internal::WakerArg arg;
+                    arg.size = red;
+                    arg.err = std::move(err);
+                    auto w = std::move(suite->waker);
                     suite->on_operation = false;
-                    app(suite->ctx, red, std::move(err));
+                    w->wakeup(&arg);
                 };
-                auto [n, err] = write(suite->boxed, flag);
+                auto [n, err] = write(buf, flag);
                 return handleStart(unlock, err, suite, [&, n = &n] {
-                    cb(fnctx, n->size(), error::none);
+                    internal::WakerArg arg;
+                    arg.size = buf.size() - n->size();
+                    auto w = std::move(suite->waker);
+                    w->wakeup(&arg);
                 });
             });
         }
 
-        error::Error Socket::writeto_async(view::rvec src, const NetAddrPort& addr, void* fnctx, void (*cb)(void*, size_t, error::Error err), int flag) {
+        error::Error Socket::writeto_async(view::rvec buf, const NetAddrPort& addr, std::shared_ptr<thread::Waker> waker, int flag) {
+            if (buf.null()) {
+                return error::Error("buf MUST NOT be null", error::ErrorCategory::validationerr);
+            }
             return startIO(async_ctx, true, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
-                if (src.null()) {
-                    return {AsyncState::failed, error::Error(invalid_argument, error::ErrorCategory::validationerr)};
-                }
-                if (auto err = epollIOCommon(rw, suite, sock, src.data(), src.size(), cb, fnctx, flag, false); err) {
+                if (auto err = epollIOCommon(rw, suite, sock, buf, waker, flag, false); err) {
                     return {AsyncState::failed, err};
                 }
                 auto unlock = lock(suite);
@@ -317,28 +335,37 @@ namespace utils {
                     check_epoll_mask(err);
                     size_t red = 0;
                     sockaddr_storage st;
+                    internal::WakerArg arg;
                     auto [addr, addrlen] = NetAddrPort_to_sockaddr(&st, suite->plt.addr);
-                    auto app = reinterpret_cast<void (*)(void*, size_t, error::Error)>(suite->appcb);
                     if (!addr) {
+                        arg.err = error::memory_exhausted;
+                        auto w = std::move(suite->waker);
                         // ??? detect error or library bug?
                         suite->on_operation = false;
-                        app(suite->ctx, 0, error::memory_exhausted);
+                        w->wakeup(&arg);
                         return;
                     }
-                    auto res = socdl.sendto_(suite->sock, suite->boxed.as_char(), suite->boxed.size(), suite->plt.flags, addr, addrlen);
+                    view::rvec buf = suite->plt.buf;
+                    auto res = socdl.sendto_(suite->sock, buf.as_char(), buf.size(), suite->plt.flags, addr, addrlen);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
                     else {
                         red = res;
                     }
+                    arg.err = std::move(err);
+                    arg.size = red;
+                    auto w = std::move(suite->waker);
                     suite->on_operation = false;
-                    app(suite->ctx, red, std::move(err));
+                    w->wakeup(&arg);
                 };
                 suite->plt.addr = addr;  // copy address
-                auto [n, err] = writeto(addr, suite->boxed, flag);
+                auto [n, err] = writeto(addr, buf, flag);
                 return handleStart(unlock, err, suite, [&, n = &n] {
-                    cb(fnctx, n->size(), error::none);
+                    internal::WakerArg arg;
+                    arg.size = buf.size() - n->size();
+                    auto w = std::move(suite->waker);
+                    w->wakeup(&arg);
                 });
             });
         }

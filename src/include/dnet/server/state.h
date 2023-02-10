@@ -21,6 +21,8 @@ namespace utils {
     namespace dnet {
         namespace server {
             struct Counter {
+                std::atomic_flag end_flag;
+
                 // maximum concurrent launched handler thread
                 std::atomic_uint32_t max_launched_handler_thread;
                 // current request handling handler thread
@@ -43,12 +45,18 @@ namespace utils {
                 std::atomic_uint64_t total_failed_async;
                 // total queued user defined operation
                 std::atomic_uint64_t total_queued;
+                // total launched thread count
+                std::atomic_uint64_t total_launched_handler_thread;
 
                 // limit maximum thread launchable
                 std::atomic_uint32_t max_handler_thread;
                 // recommended waiting handler thread count
                 std::atomic_uint32_t waiting_recommend;
-                std::atomic_flag end_flag;
+                // sleep for (millisecond)
+                std::atomic_uint64_t thread_sleep;
+                // max skip reducing chance
+                std::atomic_uint32_t reduce_skip;
+
                 // waiting_handler is count of request waiting handler thread
                 std::uint32_t waiting_handler() {
                     return current_handler_thread - current_handling_handler_thread;
@@ -61,6 +69,10 @@ namespace utils {
 
                 bool should_reduce() {
                     return waiting_handler() > waiting_recommend;
+                }
+
+                bool busy() const {
+                    return current_handling_handler_thread > waiting_recommend;
                 }
             };
 
@@ -85,9 +97,10 @@ namespace utils {
             };
 
             struct Queued {
-                void (*fn)(std::shared_ptr<void>&& ptr, StateContext&&);
-                std::shared_ptr<void> ptr;
+                std::shared_ptr<thread::Waker> runner;
             };
+
+            using ServerEntry = void (*)(void*, Client&&, StateContext);
 
             struct dnetserv_class_export State : std::enable_shared_from_this<State> {
                 using log_t = void (*)(log_level, const char* msg, Client&,
@@ -99,7 +112,7 @@ namespace utils {
                 thread::RecvChan<Client> recv;
                 thread::SendChan<Queued> enque;
                 thread::RecvChan<Queued> deque;
-                void (*handler)(void*, Client&&, StateContext);
+                ServerEntry handler;
                 void* ctx;
                 log_t log_evt = nullptr;
 
@@ -109,8 +122,8 @@ namespace utils {
                 friend struct StateContext;
 
                public:
-                State(void* c, void (*h)(void*, Client&&, StateContext))
-                    : handler(h), ctx(c) {
+                State(void* c, ServerEntry entry)
+                    : handler(entry), ctx(c) {
                     auto [w, r] = thread::make_chan<Client>();
                     send = w;
                     recv = r;
@@ -120,6 +133,7 @@ namespace utils {
                     count.waiting_recommend = 3;
                     count.max_handler_thread = 12;
                 }
+
                 void set_log(log_t ev) {
                     log_evt = ev;
                 }
@@ -136,6 +150,14 @@ namespace utils {
                 void set_max_and_active(size_t max_thread, size_t waiting_recommend) {
                     count.max_handler_thread = max_thread;
                     count.waiting_recommend = waiting_recommend;
+                }
+
+                void set_thread_sleep(std::uint64_t milli) {
+                    count.thread_sleep = milli;
+                }
+
+                void set_reduce_skip(std::uint32_t skip) {
+                    count.reduce_skip = skip;
                 }
 
                 void notify(bool end = true) {
@@ -170,28 +192,47 @@ namespace utils {
                 }
 
                private:
-                bool read_async(Socket& sock, auto fn, auto&& object, auto get_sock, auto add_data) {
+                // fn is void(Socket&& sock,auto&& context,StateContext&&)
+                // context.get_buffer() returns view::wvec for reading buffer
+                // context.add_data(view::rvec) appends application data
+                bool read_async(Socket& sock, auto fn, auto&& context) {
                     count.total_async_invocation++;
                     count.waiting_async_read++;
-                    if (auto err = sock.read_async(
-                            [th = shared_from_this(), fn](auto&& obj, error::Error err) {
-                                th->count.waiting_async_read--;
-                                Enter ent{th->count.current_handling_handler_thread};
-                                fn(std::move(obj), {th});
-                            },
-                            std::forward<decltype(object)>(object), get_sock, add_data)) {
+                    view::wvec buf = context.get_buffer();
+                    auto s = std::move(sock);
+                    auto callback = [fn, ctx = std::move(context), th = shared_from_this()](
+                                        Socket&& sock, view::wvec read, view::wvec buffer, error::Error err, void* arg) mutable {
+                        th->count.waiting_async_read--;
+                        Enter ent{th->count.current_handling_handler_thread};
+                        if (!err) {
+                            ctx.add_data(read);
+                            if (read.size() == buffer.size()) {
+                                bool red = false;
+                                sock.read_until_block(red, buffer, [&](view::rvec s) {
+                                    ctx.add_data(s);
+                                });
+                            }
+                        }
+                        fn(std::move(sock), std::move(ctx), {th}, std::move(err));
+                    };
+                    auto woken = [th = shared_from_this()](std::shared_ptr<thread::Waker> w) {
+                        th->enque_object(std::move(w));
+                    };
+                    auto [canceler, err] = s.read_async(buf, std::move(callback), false, woken);
+                    if (err) {
                         count.total_async_invocation--;
                         count.waiting_async_read--;
                         count.total_failed_async++;
+                        sock = std::move(s);  // get back
                         return false;
                     }
                     return true;
                 }
 
-                void enque_object(auto fn, auto&& obj) {
+                void enque_object(std::shared_ptr<thread::Waker>&& w) {
                     count.total_queued++;
                     count.current_enqued++;
-                    enque << Queued{fn, obj};
+                    enque << Queued{std::move(w)};
                 }
             };
 
@@ -203,11 +244,9 @@ namespace utils {
                     : s(s) {}
 
                public:
-                bool read_async(Socket& sock, auto fn, auto&& object, auto get_sock, auto add_data) {
+                bool read_async(Socket& sock, auto fn, auto&& context) {
                     return s->read_async(sock, std::forward<decltype(fn)>(fn),
-                                         std::forward<decltype(object)>(object),
-                                         std::forward<decltype(get_sock)>(get_sock),
-                                         std::forward<decltype(add_data)>(add_data));
+                                         std::forward<decltype(context)>(context));
                 }
 
                 void log(log_level level, const char* msg, Client& cl, const char* data = nullptr, size_t len = 0) {
@@ -221,22 +260,24 @@ namespace utils {
                     struct Internal {
                         std::decay_t<decltype(fn)> fn;
                         std::remove_cvref_t<decltype(obj)> obj;
+                        std::shared_ptr<State> st;
                     };
-                    glheap_allocator<Internal> gl;
-                    auto inobj = std::allocate_shared<Internal>(gl);
-                    inobj->fn = std::forward<decltype(fn)>(fn);
-                    inobj->obj = std::forward<decltype(obj)>(obj);
-                    auto f = [](std::shared_ptr<void>&& obj, StateContext&& st) {
-                        auto in = std::static_pointer_cast<Internal>(obj);
-                        in->fn(std::move(in->obj), std::move(st));
-                    };
-                    s->enque_object(f, std::move(inobj));
+                    auto inobj = std::allocate_shared<Internal>(
+                        glheap_allocator<Internal>{},
+                        std::forward<decltype(fn)>(fn),
+                        std::forward<decltype(obj)>(obj),
+                        std::as_const(s));
+                    auto w = thread::make_waker(std::move(inobj), [](const std::shared_ptr<thread::Waker>&, std::shared_ptr<void>& param, thread::WakerState s, void* arg) {
+                        if (s == thread::WakerState::running) {
+                            Internal* in = static_cast<Internal*>(param.get());
+                            in->fn(std::move(in->obj), StateContext{in->st});
+                        }
+                        return true;
+                    });
+                    w->wakeup();  // skip sleep state
+                    s->enque_object(std::move(w));
                 }
             };
-
-            inline dnet::Socket& get_client_sock(Client& s) {
-                return s.sock;
-            }
 
         }  // namespace server
     }      // namespace dnet

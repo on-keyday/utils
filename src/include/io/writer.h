@@ -21,13 +21,17 @@ namespace utils {
             constexpr basic_writer(view::basic_wvec<C, U> w)
                 : w(w) {}
 
-            constexpr void reset() {
-                index = 0;
+            constexpr void reset(size_t pos = 0) {
+                if (w.size() < pos) {
+                    index = w.size();
+                    return;
+                }
+                index = pos;
             }
 
-            constexpr void reset(view::basic_wvec<C, U> o) {
+            constexpr void reset(view::basic_wvec<C, U> o, size_t pos = 0) {
                 w = o;
-                index = 0;
+                reset(pos);
             }
 
             constexpr bool write(C data, size_t n) {

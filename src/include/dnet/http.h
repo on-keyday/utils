@@ -184,7 +184,7 @@ namespace utils {
             }
 
             // check_response make sure input contains full of response header
-            // if contains this function returns header size
+            // if input contains full header, this function returns header size
             // otherwise returns 0
             // begin_ok represents header is begin with HTTP/1.1 or HTTP/1.0 or not
             size_t check_response(bool* begin_ok = nullptr) {
@@ -276,7 +276,7 @@ namespace utils {
                     *info = body;
                 }
                 if (!peek) {
-                    input.shift(check.rptr);
+                    input.shift_front(check.rptr);
                 }
                 return check.rptr;
             }
@@ -359,7 +359,6 @@ namespace utils {
                 if (!beg) {
                     return 0;
                 }
-                flex_storage in;
                 if (len == 0) {
                     len = input.size();
                 }
@@ -369,10 +368,10 @@ namespace utils {
                     }
                 }
                 for (size_t i = 0; i < len; i++) {
-                    if (in[i] == '\r' || in[i] == '\n' || in[i] == '\t') {
+                    if (input[i] == '\r' || input[i] == '\n' || input[i] == '\t') {
                         continue;
                     }
-                    if (in[i] < 0x20 || in[i] > 0x7f) {
+                    if (input[i] < 0x20 || input[i] > 0x7f) {
                         return 0;
                     }
                 }

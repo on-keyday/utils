@@ -9,6 +9,7 @@
 #pragma once
 #include "../core/byte.h"
 #include "../net_util/ipaddr.h"
+#include "../helper/appender.h"
 #include "storage.h"
 
 namespace utils {
@@ -79,11 +80,13 @@ namespace utils {
                     fdata.~basic_storage_vec();
                 }
             }
-            NetAddr(const NetAddr& from) {
+            NetAddr(const NetAddr& from)
+                : fdata() {
                 copy(from);
             }
 
-            constexpr NetAddr(NetAddr&& from) {
+            constexpr NetAddr(NetAddr&& from)
+                : fdata() {
                 move(std::move(from));
             }
 
@@ -166,13 +169,18 @@ namespace utils {
             NetPort port;
 
             template <class Str>
-            void to_string(Str& str, bool detect_ipv4_mapped = false) {
+            constexpr void to_string(Str& str, bool detect_ipv4_mapped = false, bool ipv4mapped_as_ipv4 = false) const {
                 if (addr.type() == NetAddrType::ipv4) {
                     ipaddr::ipv4_to_string_with_port(str, addr.data(), port);
                 }
                 else if (addr.type() == NetAddrType::ipv6) {
-                    ipaddr::ipv6_to_string_with_port(str, addr.data(), port,
-                                                     (detect_ipv4_mapped && ipaddr::is_ipv4_mapped(addr.data())));
+                    auto is_v4_mapped = detect_ipv4_mapped && ipaddr::is_ipv4_mapped(addr.data());
+                    if (ipv4mapped_as_ipv4 && is_v4_mapped) {
+                        ipaddr::ipv4_to_string_with_port(str, addr.data() + 12, port);
+                    }
+                    else {
+                        ipaddr::ipv6_to_string_with_port(str, addr.data(), port, is_v4_mapped);
+                    }
                 }
                 else if (addr.type() == NetAddrType::unix_path) {
                     helper::append(str, (const char*)addr.data());
@@ -183,9 +191,9 @@ namespace utils {
             }
 
             template <class Str>
-            Str to_string(bool detect_ipv4_mapped = false) {
+            constexpr Str to_string(bool detect_ipv4_mapped = false, bool ipv4mapped_as_ipv4 = false) const {
                 Str str;
-                to_string(str, detect_ipv4_mapped);
+                to_string(str, detect_ipv4_mapped, ipv4mapped_as_ipv4);
                 return str;
             }
         };
@@ -195,6 +203,20 @@ namespace utils {
                                           byte i, byte j, byte k, byte l, byte m, byte n, byte o, byte p,
                                           std::uint16_t port);
 
+        inline NetAddrPort ipv6(std::uint16_t a, std::uint16_t b, std::uint16_t c, std::uint16_t d,
+                                std::uint16_t e, std::uint16_t f, std::uint16_t g, std::uint16_t h,
+                                std::uint16_t port) {
+            constexpr auto h_ = [](std::uint16_t b) {
+                return byte((b >> 8) & 0xff);
+            };
+            constexpr auto l_ = [](std::uint16_t b) {
+                return byte(b & 0xff);
+            };
+            return ipv6(h_(a), l_(a), h_(b), l_(b), h_(c), l_(c), h_(d), l_(d),
+                        h_(e), l_(e), h_(f), l_(f), h_(g), l_(g), h_(h), l_(h),
+                        port);
+        }
+
         inline NetAddrPort ipv4(const byte* addr, std::uint16_t port) {
             return ipv4(addr[0], addr[1], addr[2], addr[3], port);
         }
@@ -202,6 +224,10 @@ namespace utils {
         inline NetAddrPort ipv6(const byte* addr, std::uint16_t port) {
             return ipv6(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
                         addr[8], addr[9], addr[10], addr[11], addr[12], addr[13], addr[14], addr[15], port);
+        }
+
+        inline NetAddrPort ipv6(const std::uint16_t* addr, std::uint16_t port) {
+            return ipv6(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7], port);
         }
 
         std::pair<NetAddr, bool> toipv4(auto&& addr, std::uint16_t port) {
@@ -220,7 +246,7 @@ namespace utils {
             return {ipv4(d.first.addr), true};
         }
 
-        // SockAttr is basic attributes to make socket
+        // SockAttr is basic attributes to make socket or search address
         struct SockAttr {
             int address_family = 0;
             int socket_type = 0;

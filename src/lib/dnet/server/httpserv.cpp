@@ -21,19 +21,24 @@ namespace utils {
             Socket& get_request_sock(Requester& req) {
                 return req.client.sock;
             }
-            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as);
+            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, error::Error);
 
             void call_read_async(HTTPServ* serv, Requester& req, StateContext& as) {
-                auto fn = [=](Requester&& req, StateContext&& as) {
-                    http_handler_impl(serv, std::move(req), std::move(as));
+                auto fn = [=](Socket&& sock, Requester&& req, StateContext&& as, error::Error&& err) {
+                    req.client.sock = std::move(sock);  // restore
+                    http_handler_impl(serv, std::move(req), std::move(as), std::move(err));
                 };
-                if (!as.read_async(req.client.sock, fn, std::move(req), get_request_sock, add_http)) {
+                if (!as.read_async(req.client.sock, fn, std::move(req))) {
                     req.client.sock.shutdown();
                     as.log(debug, "failed to start read_async operation", req.client);
                 }
             }
 
-            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as) {
+            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, error::Error err) {
+                if (err) {
+                    as.log(debug, "error occured", req.client);
+                    return;  // discard
+                }
                 bool complete = false;
                 if (!req.http.strict_check_header(true, &complete)) {
                     req.client.sock.shutdown();
@@ -53,7 +58,7 @@ namespace utils {
                     return;
                 }
                 if (serv && serv->next) {
-                    req.internal__ = serv;
+                    req.internal_ = serv;
                     serv->next(serv->c, std::move(req), std::move(as));
                 }
             }
@@ -61,8 +66,8 @@ namespace utils {
             void start_handling(HTTPServ* serv, Requester&& req, StateContext&& s) {
                 char buf[1024];
                 bool red = false;
-                if (auto err = req.client.sock.read_until_block(red, buf, [&](size_t readsize) {
-                        req.http.add_input(buf, readsize);
+                if (auto err = req.client.sock.read_until_block(red, buf, [&](view::wvec r) {
+                        req.http.add_input(r, r.size());
                     })) {
                     s.log(debug, "connection closed at reading first data", req.client);
                     return;  // discard
@@ -71,7 +76,7 @@ namespace utils {
                     call_read_async(serv, req, s);
                     return;
                 }
-                http_handler_impl(serv, std::move(req), std::move(s));
+                http_handler_impl(serv, std::move(req), std::move(s), error::none);
             }
 
             dnetserv_dll_internal(void) http_handler(void* v, Client&& cl, StateContext s) {
@@ -86,7 +91,7 @@ namespace utils {
                 s.log(debug, "start keep-alive waiting", req.client);
                 req.http.clear_input();
                 req.http.clear_output();
-                auto serv = static_cast<HTTPServ*>(req.internal__);
+                auto serv = static_cast<HTTPServ*>(req.internal_);
                 start_handling(serv, std::move(req), std::move(s));
             }
         }  // namespace server

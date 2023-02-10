@@ -10,9 +10,11 @@
 #include <utility>
 #include <array>
 #include "../wrap/light/enum.h"
-#include "../endian/reader.h"
-#include "../endian/writer.h"
+// #include "../endian/reader.h"
+// #include "../endian/writer.h"
 #include "../helper/equal.h"
+#include "../io/number.h"
+#include "../io/expandable_writer.h"
 
 namespace utils {
     namespace hpack {
@@ -634,17 +636,17 @@ namespace utils {
             return true;
         }
 
-        template <std::uint32_t n, class T>
-        constexpr HpkErr decode_integer(endian::Reader<T>& se, size_t& sz, std::uint8_t& firstmask) {
+        template <std::uint32_t n>
+        constexpr HpkErr decode_integer(io::reader& r, size_t& size, std::uint8_t& firstmask) {
             static_assert(n > 0 && n <= 8, "invalid range");
             constexpr unsigned char msk = 0xff >> (8 - n);
             std::uint8_t tmp = 0;
-            if (!se.read(tmp)) {
+            if (!r.read(view::wvec(&tmp, 1))) {
                 return HpackError::internal;
             }
             firstmask = tmp & ~msk;
             tmp &= msk;
-            sz = tmp;
+            size = tmp;
             if (tmp < msk) {
                 return true;
             }
@@ -653,10 +655,10 @@ namespace utils {
                 return (size_t(0x1) << 63) >> ((sizeof(size_t) * 8 - 1) - x);
             };
             do {
-                if (!se.read(tmp)) {
+                if (!r.read(view::wvec(&tmp, 1))) {
                     return HpackError::internal;
                 }
-                sz += (tmp & 0x7f) * pow(m);
+                size += (tmp & 0x7f) * pow(m);
                 m += 7;
                 if (m > (sizeof(size_t) * 8 - 1)) {
                     return HpackError::too_large_number;
@@ -666,227 +668,64 @@ namespace utils {
         }
 
         template <size_t n, class T>
-        constexpr HpkErr encode_integer(endian::Writer<T>& se, size_t sz, std::uint8_t firstmask) {
+        constexpr HpkErr encode_integer(io::expand_writer<T>& w, size_t size, std::uint8_t firstmask) {
             static_assert(n > 0 && n <= 8, "invalid range");
             constexpr std::uint8_t msk = static_cast<std::uint8_t>(~0) >> (8 - n);
             if (firstmask & msk) {
                 return HpackError::invalid_mask;
             }
-            if (sz < static_cast<size_t>(msk)) {
-                se.write(std::uint8_t(firstmask | sz));
+            if (size < static_cast<size_t>(msk)) {
+                w.write(byte(firstmask | size), 1);
             }
             else {
-                se.write(std::uint8_t(firstmask | msk));
-                sz -= msk;
-                while (sz > 0x7f) {
-                    se.write(std::uint8_t((sz % 0x80) | 0x80));
-                    sz /= 0x80;
+                w.write(byte(firstmask | msk), 1);
+                size -= msk;
+                while (size > 0x7f) {
+                    w.write(byte((size % 0x80) | 0x80), 1);
+                    size /= 0x80;
                 }
-                se.write(std::uint8_t(sz));
+                w.write(byte(size), 1);
             }
             return true;
         }
 
         template <class T, class String>
-        constexpr void encode_string(endian::Writer<T>& se, const String& value) {
+        constexpr void encode_string(io::expand_writer<T>& w, const String& value) {
             if (value.size() > gethuffmanlen(value)) {
                 bitvec_writer<String> vec;
                 encode_huffman(vec, value);
-                encode_integer<7>(se, vec.data().size(), 0x80);
-                se.write_seq(vec.data());
+                encode_integer<7>(w, vec.data().size(), 0x80);
+                w.write(vec.data());
             }
             else {
-                encode_integer<7>(se, value.size(), 0);
-                se.write_seq(value);
+                encode_integer<7>(w, value.size(), 0);
+                w.write(value);
             }
         }
 
-        template <class In, class String>
-        HpkErr decode_string(String& str, endian::Reader<In>& se) {
-            size_t sz = 0;
-            unsigned char mask = 0;
-            auto err = decode_integer<7>(se, sz, mask);
+        template <class String>
+        HpkErr decode_string(String& str, io::reader& r) {
+            size_t size = 0;
+            byte mask = 0;
+            auto err = decode_integer<7>(r, size, mask);
             if (err != HpackError::none) {
                 return err;
             }
-            if (!se.template read_seq<std::uint8_t>(str, sz)) {
+            auto [d, ok] = r.read(size);
+            if (!ok) {
                 return HpackError::internal;
             }
             if (mask & 0x80) {
-                String decoded;
-                bitvec_reader r(str);
-                err = decode_huffman(decoded, r);
-                if (err != HpackError::none) {
-                    return err;
+                bitvec_reader r(d);
+                return decode_huffman(str, r);
+            }
+            else {
+                for (auto c : d) {
+                    str.push_back(c);
                 }
-                str = std::move(decoded);
             }
             return true;
         }
 
-        // old implementation
-        namespace internal {
-            template <class String>
-            struct [[deprecated]] HuffmanCoder {
-                using string_t = String;
-                using writer_t = bitvec_writer<String>;
-                using reader_t = bitvec_reader<String>;
-
-                constexpr static size_t gethuffmanlen(const string_t& str) {
-                    size_t ret = 0;
-                    for (auto& c : str) {
-                        ret += h2huffman[(unsigned char)c].size();
-                    }
-                    return (ret + 7) / 8;
-                }
-
-                static string_t encode(const string_t& in) {
-                    writer_t vec;
-                    for (auto c : in) {
-                        vec.append(h2huffman[(unsigned char)c]);
-                    }
-                    while (vec.size() % 8) {
-                        vec.push_back(true);
-                    }
-                    return vec.data();
-                }
-
-               private:
-                static HpkErr decode_achar(unsigned char& c, reader_t& r, const h2huffman_tree* t, const h2huffman_tree*& fin, std::uint32_t& allone) {
-                    for (;;) {
-                        if (!t) {
-                            return HpackError::invalid_value;
-                        }
-                        if (t->has_char()) {
-                            c = t->get_char();
-                            fin = t;
-                            return true;
-                        }
-                        bool f = r.get();
-                        if (!r.incremant()) {
-                            return HpackError::too_short_number;
-                        }
-                        const h2huffman_tree* next = t->get(f);
-                        allone = (allone && f) ? allone + 1 : 0;
-                        t = next;
-                    }
-                }
-
-               public:
-                static HpkErr decode(string_t& res, string_t& src) {
-                    reader_t r(src);
-                    auto tree = h2huffman_tree::tree();
-                    while (!r.eos()) {
-                        unsigned char c = 0;
-                        const h2huffman_tree* fin = nullptr;
-                        std::uint32_t allone = 1;
-                        auto tmp = decode_achar(c, r, tree, fin, allone);
-                        if (!tmp) {
-                            if (tmp == HpackError::too_short_number) {
-                                if (!r.eos() && allone - 1 > 7) {
-                                    return HpackError::too_large_number;
-                                }
-                                break;
-                            }
-                            return tmp;
-                        }
-                        if (fin->is_eos()) {
-                            return HpackError::invalid_value;
-                        }
-                        res.push_back(c);
-                    }
-                    return true;
-                }
-            };
-#define TRY(...) \
-    if (auto e = (__VA_ARGS__); !e) return e
-
-            template <class String>
-            struct [[deprecated]] IntegerCoder {
-                using string_t = String;
-
-                template <std::uint32_t n, class T>
-                static HpkErr decode(endian::Reader<T>& se, size_t& sz, std::uint8_t& firstmask) {
-                    static_assert(n > 0 && n <= 8, "invalid range");
-                    constexpr unsigned char msk = static_cast<std::uint8_t>(~0) >> (8 - n);
-                    std::uint8_t tmp = 0;
-
-                    TRY((bool)se.read(tmp));
-                    firstmask = tmp & ~msk;
-                    tmp &= msk;
-                    sz = tmp;
-                    if (tmp < msk) {
-                        return true;
-                    }
-                    size_t m = 0;
-                    constexpr auto pow = [](size_t x) -> size_t {
-                        return (size_t(0x1) << 63) >> ((sizeof(size_t) * 8 - 1) - x);
-                    };
-                    do {
-                        TRY((bool)se.read(tmp));
-                        sz += (tmp & 0x7f) * pow(m);
-                        m += 7;
-                        if (m > (sizeof(size_t) * 8 - 1)) {
-                            return HpackError::too_large_number;
-                        }
-                    } while (tmp & 0x80);
-                    return true;
-                }
-
-                template <std::uint32_t n, class T>
-                static HpkErr encode(endian::Writer<T>& se, size_t sz, std::uint8_t firstmask) {
-                    static_assert(n > 0 && n <= 8, "invalid range");
-                    constexpr std::uint8_t msk = static_cast<std::uint8_t>(~0) >> (8 - n);
-                    if (firstmask & msk) {
-                        return HpackError::invalid_mask;
-                    }
-                    if (sz < static_cast<size_t>(msk)) {
-                        se.write(std::uint8_t(firstmask | sz));
-                    }
-                    else {
-                        se.write(std::uint8_t(firstmask | msk));
-                        sz -= msk;
-                        while (sz > 0x7f) {
-                            se.write(std::uint8_t((sz % 0x80) | 0x80));
-                            sz /= 0x80;
-                        }
-                        se.write(std::uint8_t(sz));
-                    }
-                    return true;
-                }
-            };
-
-            template <class String>
-            struct [[deprecated]] HpackStringCoder {
-                using string_t = String;
-                template <class In>
-                static void encode(endian::Writer<In>& se, const string_t& value) {
-                    if (value.size() > HuffmanCoder<String>::gethuffmanlen(value)) {
-                        string_t enc = HuffmanCoder<String>::encode(value);
-                        IntegerCoder<In>::template encode<7>(se, enc.size(), 0x80);
-                        se.write_seq(enc);
-                    }
-                    else {
-                        IntegerCoder<In>::template encode<7>(se, value.size(), 0);
-                        se.write_seq(value);
-                    }
-                }
-
-                template <class In>
-                static HpkErr decode(string_t& str, endian::Reader<In>& se) {
-                    size_t sz = 0;
-                    unsigned char mask = 0;
-                    TRY(IntegerCoder<In>::template decode<7>(se, sz, mask));
-                    TRY(se.template read_seq<std::uint8_t>(str, sz));
-                    if (mask & 0x80) {
-                        string_t decoded;
-                        TRY(HuffmanCoder<String>::decode(decoded, str));
-                        str = std::move(decoded);
-                    }
-                    return true;
-                }
-            };
-#undef TRY
-        }  // namespace internal
-    }      // namespace hpack
+    }  // namespace hpack
 }  // namespace utils

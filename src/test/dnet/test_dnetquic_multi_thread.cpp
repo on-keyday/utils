@@ -14,8 +14,10 @@
 #include <dnet/plthead.h>
 #include <dnet/debug.h>
 #include <dnet/quic/log/frame_log.h>
+#include <dnet/quic/log/crypto_log.h>
 #include <testutil/alloc_hook.h>
 #include <wrap/cout.h>
+#include <dnet/quic/path/dplpmtud.h>
 using Context = utils::dnet::quic::context::Context<std::mutex>;
 using QCTX = std::shared_ptr<Context>;
 using namespace utils::dnet;
@@ -48,7 +50,11 @@ void log_packet(std::shared_ptr<void>&, utils::dnet::quic::packet::PacketSummary
     utils::dnet::quic::frame::parse_frames<slib::vector>(r, [](const auto& frame, bool) {
         std::string data;
         utils::dnet::quic::log::format_frame<slib::vector>(data, frame, false, false);
-        utils::wrap::cout_wrap() << data << "\n";
+        data += "\n";
+        if constexpr (std::is_same_v<const utils::dnet::quic::frame::CryptoFrame&, decltype(frame)>) {
+            utils::dnet::quic::log::format_crypto(data, frame.crypto_data, false, false);
+        }
+        utils::wrap::cout_wrap() << data;
     });
 }
 

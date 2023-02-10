@@ -322,6 +322,10 @@ namespace utils {
                 return *this;
             }
 
+            constexpr basic_expand_storage_vec& append(const U* ptr) {
+                return append(view::rvec(ptr));
+            }
+
             constexpr basic_expand_storage_vec& append(const C* ptr, size_t len) {
                 return append(view::rvec(ptr, len));
             }

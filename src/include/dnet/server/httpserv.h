@@ -20,10 +20,20 @@ namespace utils {
         namespace server {
             constexpr auto start_timing = "[hs]";
             struct Requester {
-                void* internal__;
+                void* internal_;
                 Client client;
                 HTTP http;
                 std::uintptr_t user_id;
+                dnet::flex_storage read_buf;
+
+                view::wvec get_buffer() {
+                    read_buf.resize(2000);
+                    return read_buf;
+                }
+
+                void add_data(view::rvec d) {
+                    http.add_input(d, d.size());
+                }
 
                 template <class Body = const char*>
                 bool respond(int status, auto&& header, Body&& body = "", size_t len = 0) {
@@ -87,27 +97,6 @@ namespace utils {
                 return true;  // HTTP/1.1 implicitly keep-alive
             }
 
-            constexpr auto http_add(HTTP& http) {
-                return [&](auto&&, const char* data, size_t len) {
-                    http.add_input(data, len);
-                };
-            }
-
-            constexpr auto http2_add(http2::HTTP2& http2) {
-                return [&](auto&&, const char* data, size_t len) {
-                    http2.provide_http2_data(data, len);
-                };
-            }
-
-            constexpr auto tls_add(TLS& tls, auto&& inner) {
-                return [&, inner](auto&&, const char* data, size_t len) {
-                    tls.provide_tls_data(data, len);
-                    char tmp[1024];
-                    while (tls.read(tmp, sizeof(tmp))) {
-                        inner(tmp, tls.readsize());
-                    }
-                };
-            }
         }  // namespace server
     }      // namespace dnet
 }  // namespace utils

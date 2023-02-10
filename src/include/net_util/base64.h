@@ -11,7 +11,6 @@
 
 #include "../core/sequencer.h"
 #include "../helper/pushbacker.h"
-#include "../endian/reader.h"
 #include "../endian/buf.h"
 
 namespace utils {

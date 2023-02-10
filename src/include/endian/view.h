@@ -9,7 +9,6 @@
 // view - endian view
 #pragma once
 
-#include "endian.h"
 #include "buf.h"
 #include "../core/buffer.h"
 

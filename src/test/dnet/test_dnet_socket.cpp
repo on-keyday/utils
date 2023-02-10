@@ -33,7 +33,7 @@ int main() {
     dnet::Socket sock;
     while (list.next()) {
         auto addr = list.sockaddr();
-        auto tmp = dnet::make_socket(addr.attr.protocol, addr.attr.socket_type, addr.attr.protocol);
+        auto tmp = dnet::make_socket(addr.attr);
         if (!tmp) {
             continue;
         }
@@ -91,5 +91,5 @@ int main() {
     }
     return 0;
     */
-    holder.sock.read_async([](auto&&...) {}, std::move(holder), [](auto& c) -> dnet::Socket& { return c.sock; }, [](auto&&...) {});
+    // holder.sock.read_async([](auto&&...) {}, std::move(holder), [](auto& c) -> dnet::Socket& { return c.sock; }, [](auto&&...) {});
 }

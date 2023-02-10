@@ -19,7 +19,7 @@ namespace utils {
             if (!ok) {
                 return false;
             }
-            endian::read_from(val, data, be, 0);
+            endian::read_from(val, data, be);
             return true;
         }
 

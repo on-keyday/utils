@@ -68,6 +68,9 @@ namespace utils {
                 naddr.addr = make_netaddr(NetAddrType::unix_path, view::rvec(p->sun_path, len));
                 naddr.port = {};
             }
+            else if (addr->sa_family == AF_UNSPEC) {
+                // nothing to do
+            }
             else {
                 auto opaque = reinterpret_cast<byte*>(addr);
                 naddr.addr = make_netaddr(NetAddrType::opaque, view::rvec(opaque, len));

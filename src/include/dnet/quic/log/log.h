@@ -12,6 +12,7 @@
 #include "../../error.h"
 #include "../packet/summary.h"
 #include "../frame/base.h"
+#include "../ack/pn_space.h"
 
 namespace utils {
     namespace dnet::quic::log {
@@ -20,6 +21,7 @@ namespace utils {
             void (*debug)(std::shared_ptr<void>&, const char*);
             void (*sending_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload);
             void (*recv_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload);
+            void (*pto_fire)(std::shared_ptr<void>&, ack::PacketNumberSpace);
         };
 
         struct Logger {
@@ -47,6 +49,12 @@ namespace utils {
             void recv_packet(packet::PacketSummary s, view::rvec payload) {
                 if (callbacks && callbacks->recv_packet) {
                     callbacks->recv_packet(ctx, s, payload);
+                }
+            }
+
+            void pto_fire(ack::PacketNumberSpace space) {
+                if (callbacks && callbacks->pto_fire) {
+                    callbacks->pto_fire(ctx, space);
                 }
             }
         };

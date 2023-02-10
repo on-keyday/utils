@@ -32,12 +32,46 @@ namespace utils {
             crypto = 1,
             conn_id = 2,
             streams = 3,
+            close = 4,
+            token = 5,
+            mtu = 6,
+            datagram = 7,
+
+            unspec,
         };
+
+        constexpr kind mapping(FrameType typ) {
+            if (is_ACK(typ)) {
+                return kind::ack;
+            }
+            if (typ == FrameType::CRYPTO || typ == FrameType::HANDSHAKE_DONE) {
+                return kind::crypto;
+            }
+            if (is_ConnRelated(typ) || is_BidiStreamOK(typ)) {
+                return kind::streams;
+            }
+            if (typ == FrameType::NEW_CONNECTION_ID || typ == FrameType::RETIRE_CONNECTION_ID) {
+                return kind::conn_id;
+            }
+            if (typ == FrameType::PATH_CHALLENGE || typ == FrameType::PATH_RESPONSE) {
+                return kind::mtu;
+            }
+            if (is_CONNECTION_CLOSE(typ)) {
+                return kind::close;
+            }
+            if (typ == FrameType::NEW_TOKEN) {
+                return kind::token;
+            }
+            if (is_DATAGRAM(typ)) {
+                return kind::datagram;
+            }
+            return kind::unspec;
+        }
 
         template <class Event>
         struct Events {
-            static constexpr size_t num_events = 4;
-            Event events[num_events];
+            static constexpr size_t num_events = 8;
+            Event events[num_events]{};
 
             Event& operator[](kind k) {
                 return events[int(k)];
@@ -84,18 +118,21 @@ namespace utils {
             }
 
             error::Error recv(const packet::PacketSummary& packet, frame::Frame& frame) {
-                for (auto& event : on_read) {
-                    if (!event.on_event) {
-                        continue;
-                    }
-                    auto arg = event.arg.lock();
-                    if (!arg) {
-                        continue;
-                    }
-                    auto [status, err] = event.on_event(packet, frame, arg);
-                    if (status == Status::fatal) {
-                        return err ? err : error::Error("unknown fatal error");
-                    }
+                const auto idx = mapping(frame.type.type_detail());
+                if (idx == kind::unspec) {
+                    return error::none;
+                }
+                auto& event = on_read[idx];
+                if (!event.on_event) {
+                    return error::none;
+                }
+                auto arg = event.arg.lock();
+                if (!arg) {
+                    return error::none;
+                }
+                auto [status, err] = event.on_event(packet, frame, arg);
+                if (status == Status::fatal) {
+                    return err ? err : error::Error("unknown fatal error");
                 }
                 return error::none;
             }

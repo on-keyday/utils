@@ -72,14 +72,6 @@ namespace utils {
             return error::Error(get_error(), error::ErrorCategory::syserr);
         }
 
-        error::Error Socket::connect(const raw_address* addr, size_t len) {
-            auto res = socdl.connect_(sock, reinterpret_cast<const ::sockaddr*>(addr), len);
-            if (res < 0) {
-                return Errno();
-            }
-            return error::none;
-        }
-
         error::Error Socket::connect(const NetAddrPort& addr) {
             sockaddr_storage st{};
             auto [a, len] = NetAddrPort_to_sockaddr(&st, addr);
@@ -156,15 +148,6 @@ namespace utils {
             return {data.substr(0, res), res == 0 && is_stream ? error::eof : error::none};
         }
 
-        /*
-        std::pair<size_t, error::Error> Socket::writeto(const raw_address* addr, int addrlen, const void* data, size_t len, int flag) {
-            auto res = socdl.sendto_(sock, static_cast<const char*>(data), int(len), flag, reinterpret_cast<const sockaddr*>(addr), int(addrlen));
-            if (res < 0) {
-                return {0, Errno()};
-            }
-            return {res, error::none};
-        }*/
-
         std::pair<view::rvec, error::Error> Socket::writeto(const NetAddrPort& addr, view::rvec data, int flag) {
             sockaddr_storage st;
             auto [addrptr, addrlen] = NetAddrPort_to_sockaddr(&st, addr);
@@ -178,20 +161,6 @@ namespace utils {
             }
             return {data.substr(res), error::none};
         }
-
-        /*
-        std::pair<size_t, error::Error> Socket::readfrom(raw_address* addr, int* addrlen, void* data, size_t len, int flag, bool is_stream) {
-            if (!addrlen) {
-                return {0, error::Error(invalid_addr, error::ErrorCategory::validationerr)};
-            }
-            socklen_t fromlen = *addrlen;
-            auto res = socdl.recvfrom_(sock, static_cast<char*>(data), len, flag, reinterpret_cast<sockaddr*>(addr), &fromlen);
-            if (res < 0) {
-                return {0, Errno()};
-            }
-            *addrlen = fromlen;
-            return {res, res == 0 && is_stream ? error::eof : error::none};
-        }*/
 
         std::tuple<view::wvec, NetAddrPort, error::Error> Socket::readfrom(view::wvec data, int flag, bool is_stream) {
             sockaddr_storage soct{};
@@ -217,14 +186,6 @@ namespace utils {
             return Socket(uptr);
         }
 
-        error::Error Socket::bind(const raw_address* addr, size_t len) {
-            auto res = socdl.bind_(sock, reinterpret_cast<const sockaddr*>(addr), len);
-            if (res != 0) {
-                return Errno();
-            }
-            return error::none;
-        }
-
         error::Error Socket::bind(const NetAddrPort& addr) {
             ::sockaddr_storage storage;
             auto [addr_ptr, len] = NetAddrPort_to_sockaddr(&storage, addr);
@@ -245,25 +206,6 @@ namespace utils {
             }
             return error::none;
         }
-
-        /*
-        error::Error Socket::accept(Socket& to, raw_address* addr, int* addrlen) {
-            if (to.sock != ~0) {
-                return error::Error(non_invalid_socket, error::ErrorCategory::validationerr);
-            }
-            if (!addrlen) {
-                return error::Error(invalid_addr, error::ErrorCategory::validationerr);
-            }
-            socklen_t len = *addrlen;
-            auto new_sock = socdl.accept_(sock, reinterpret_cast<sockaddr*>(addr), &len);
-            if (new_sock == -1) {
-                return Errno();
-            }
-            *addrlen = len;
-            set_nonblock(new_sock);
-            to = make_socket(std::uintptr_t(new_sock));
-            return error::none;
-        }*/
 
         std::tuple<Socket, NetAddrPort, error::Error> Socket::accept() {
             sockaddr_storage st{};
@@ -297,12 +239,12 @@ namespace utils {
             return result;
         }
 
-        dnet_dll_implement(Socket) make_socket(int address_family, int socket_mode, int protocol) {
+        dnet_dll_implement(Socket) make_socket(SockAttr attr) {
             if (!init_sockdl()) {
                 return make_socket(~0);
             }
 #ifdef _WIN32
-            auto sock = socdl.WSASocketW_(address_family, socket_mode, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+            auto sock = socdl.WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #else
             auto sock = socdl.socket_(address_family, socket_mode, protocol);
 #endif
@@ -313,7 +255,7 @@ namespace utils {
             return make_socket(sock);
         }
 
-        dnet_dll_implement(int) wait_event(std::uint32_t time) {
+        dnet_dll_implement(int) wait_io_event(std::uint32_t time) {
             return wait_event_plt(time);
         }
     }  // namespace dnet

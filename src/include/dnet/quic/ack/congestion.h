@@ -160,7 +160,9 @@ namespace utils {
                 for (auto& packet : packets) {
                     if (packet.in_flight) {
                         bytes_in_flight -= packet.sent_bytes;
-                        sent_time_of_last_loss = max_(sent_time_of_last_loss, packet.time_sent.value);
+                        if (!packet.is_mtu_probe) {  // MTU Probe packet loss MUST NOT affect congestion control
+                            sent_time_of_last_loss = max_(sent_time_of_last_loss, packet.time_sent.value);
+                        }
                     }
                     mark_as_lost(packet.waiters);
                 }

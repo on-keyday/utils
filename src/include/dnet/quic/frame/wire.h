@@ -9,7 +9,7 @@
 #include "datagram.h"
 #include "crypto.h"
 #include "stream_manage.h"
-#include "mtu.h"
+#include "path.h"
 #include "conn_manage.h"
 #include "ack.h"
 #include "conn_id.h"

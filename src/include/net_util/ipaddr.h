@@ -7,8 +7,10 @@
 
 // ipaddr - ip address encode/decode
 #pragma once
+#include "../core/byte.h"
 #include <cstdint>
 #include <number/parse.h>
+#include "../helper/appender.h"
 
 namespace utils {
     namespace ipaddr {
@@ -37,6 +39,18 @@ namespace utils {
                 write_byte(c);
                 out.push_back('.');
                 write_byte(d);
+            };
+        }
+
+        constexpr auto bit4_writer(auto& out) {
+            return [&](byte d) {
+                d = d & 0xf;
+                if (d < 0xa) {
+                    out.push_back(d + '0');
+                }
+                else {
+                    out.push_back(d - 0xa + 'a');
+                }
             };
         }
 
@@ -75,15 +89,7 @@ namespace utils {
                     }
                 }
             }
-            auto write_4bit = [&](auto b) {
-                std::uint8_t d = b & 0xf;
-                if (d < 0xa) {
-                    out.push_back(d + '0');
-                }
-                else {
-                    out.push_back(d - 0xa + 'a');
-                }
-            };
+            auto write_4bit = bit4_writer(out);
             auto write_16bit = [&](std::uint16_t b) {
                 auto b1 = (b >> 12) & 0xf;
                 auto b2 = (b >> 8) & 0xf;
@@ -129,15 +135,14 @@ namespace utils {
         }
 
         // parse_ipv4 parses text format ipv4 address
-        // because of internal parser implementation
-        // zero prefix may be allowed like below:
-        // 000127.0000.000.01
         template <class T>
         constexpr bool parse_ipv4(Sequencer<T>& seq, auto&& out, bool eof = true) {
             static_assert(sizeof(out[1]) == 1);
             auto read = [&](auto& parsed) {
                 std::uint8_t b = 0;
-                if (!number::parse_integer(seq, b, 10)) {
+                auto conf = number::NumConfig{number::default_num_ignore()};
+                conf.allow_zero_prefixed = false;
+                if (!number::parse_integer(seq, b, 10, conf)) {
                     return false;
                 }
                 parsed = b;
@@ -458,6 +463,96 @@ namespace utils {
                 buf.port = port;
             }
             return {buf, true};
+        }
+
+        template <class T>
+        constexpr bool parse_dns_ptr_ipv4(Sequencer<T>& seq, auto&& out, bool eof = true) {
+            byte data[4];
+            if (!parse_ipv4(seq, data, false)) {
+                return false;
+            }
+            if (!seq.seek_if(".in-addr.arpa")) {
+                return false;
+            }
+            if (eof && !seq.eos()) {
+                return false;
+            }
+            out[0] = data[3];
+            out[1] = data[2];
+            out[2] = data[1];
+            out[3] = data[0];
+            return true;
+        }
+
+        constexpr void ipv4_to_dns_ptr(auto&& out, auto&& addr) {
+            static_assert(sizeof(addr[1]) == 1);
+            byte data[4];
+            data[0] = addr[3];
+            data[1] = addr[2];
+            data[2] = addr[1];
+            data[3] = addr[0];
+            ipv4_to_string(out, data);
+            helper::append(out, ".in-addr.arpa");
+        }
+
+        template <class T>
+        constexpr bool parse_dns_ptr_ipv6(Sequencer<T>& seq, auto&& out, bool eof = false) {
+            constexpr auto to_num = [](byte d) {
+                if ('0' <= d && d <= '9') {
+                    return d - '0';
+                }
+                else if ('a' <= d && d <= 'f') {
+                    return d - 'a' + 0xa;
+                }
+                else {  // large letter
+                    return d - 'A' + 0xA;
+                }
+            };
+            for (size_t i = 0; i < 16; i++) {
+                if (i != 0) {
+                    if (!seq.consume_if('.')) {
+                        return false;
+                    }
+                }
+                auto c = seq.current();
+                if (!number::is_hex(c)) {
+                    return false;
+                }
+                byte first = to_num(c);
+                seq.consume();
+                if (!seq.consume_if('.')) {
+                    return false;
+                }
+                c = seq.current();
+                if (!number::is_hex(c)) {
+                    return false;
+                }
+                byte second = to_num(c);
+                // 2f -> f.2
+                out[15 - i] = byte((second << 4) | first);
+            }
+            if (!seq.seek_if(".ip6.arpa")) {
+                return false;
+            }
+            if (eof && !seq.eos()) {
+                return false;
+            }
+            return true;
+        }
+
+        constexpr void ipv4_to_dns_ptr(auto&& out, auto&& addr) {
+            static_assert(sizeof(addr[1]) == 1);
+            auto write_4bit = bit4_writer(out);
+            for (size_t i = 0; i < 16; i++) {
+                if (i != 0) {
+                    out.push_back('.');
+                }
+                byte d = addr[15 - i];
+                write_4bit(d & 0xf);
+                out.push_back('.');
+                write_4bit((d >> 4) & 0xf);
+            }
+            helper::append(out, ".ip6.arpa");
         }
 
     }  // namespace ipaddr

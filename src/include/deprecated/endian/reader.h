@@ -8,7 +8,6 @@
 
 // reader - read binary fallowing the endian rule
 #pragma once
-
 #include "endian.h"
 #include "../core/sequencer.h"
 #include <utility>
@@ -16,6 +15,7 @@
 
 namespace utils {
     namespace endian {
+
         template <class Buf>
         struct Reader {
             Sequencer<Buf> seq;
@@ -87,6 +87,6 @@ namespace utils {
             DEFINE_READ_SEQ(read_ntoh, seq_ntoh)
 
 #undef DEFINE_READ_SEQ
-        };  // namespace utils
-    }       // namespace endian
+        };
+    }  // namespace endian
 }  // namespace utils

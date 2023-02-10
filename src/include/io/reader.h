@@ -50,7 +50,7 @@ namespace utils {
                 }
             }
 
-            constexpr size_t offset() const noexcept {
+            [[nodiscard]] constexpr size_t offset() const noexcept {
                 return index;
             }
 

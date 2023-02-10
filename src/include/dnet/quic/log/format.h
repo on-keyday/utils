@@ -13,31 +13,38 @@
 namespace utils {
     namespace dnet::quic::log {
         auto fmt_numfield(auto& out) {
-            return [&](const char* name, std::uint64_t num, int radix = 10) {
+            return [&](const char* name, std::uint64_t num, int radix = 10, bool last_comma = true) {
                 helper::appends(out, " ", name, ": ");
                 if (radix == 16) {
                     helper::append(out, "0x");
                 }
                 number::to_string(out, num, radix);
-                helper::appends(out, ",");
+                helper::appends(out, last_comma ? "," : " ");
             };
         }
 
         auto fmt_hexfield(auto& out) {
-            return [&](const char* name, view::rvec data) {
-                helper::appends(out, " ", name, ": 0x");
+            return [&](const char* name, view::rvec data, bool last_comma = true) {
+                if (name) {
+                    helper::appends(out, " ", name, ":");
+                }
+                if (data.size() == 0) {
+                    helper::append(out, "(empty)");
+                    return;
+                }
+                helper::append(out, " 0x");
                 for (auto c : data) {
                     if (c < 0x10) {
                         out.push_back('0');
                     }
                     number::to_string(out, c, 16);
                 }
-                helper::appends(out, ",");
+                helper::appends(out, last_comma ? "," : " ");
             };
         }
 
         auto fmt_datafield(auto& out, bool omit_data, bool data_as_hex) {
-            return [=, &out](const char* name, view::rvec data) {
+            return [=, &out](const char* name, view::rvec data, bool last_comma = true) {
                 if (omit_data) {
                     return;
                 }
@@ -45,7 +52,10 @@ namespace utils {
                     fmt_hexfield(out)(name, data);
                     return;
                 }
-                helper::appends(out, " ", name, ": \"");
+                if (name) {
+                    helper::appends(out, " ", name, ":");
+                }
+                helper::append(out, " \"");
                 for (auto c : data) {
                     if (0x21 <= c && c <= 0x7E) {
                         if (c == '\\' || c == '"') {
@@ -61,7 +71,7 @@ namespace utils {
                         number::to_string(out, c, 16);
                     }
                 }
-                helper::append(out, "\",");
+                helper::appends(out, "\"", last_comma ? "," : " ");
             };
         }
         auto fmt_typefield(auto& out) {
@@ -88,13 +98,23 @@ namespace utils {
         }
 
         auto fmt_group(auto& out) {
-            return [&](const char* name, bool is_array, auto&& cb) {
+            return [&](const char* name, bool is_array, bool last_comma, auto&& cb) {
                 if (name) {
                     helper::appends(out, " ", name, ":");
                 }
                 helper::append(out, is_array ? " [" : " {");
                 cb();
-                helper::append(out, is_array ? "]," : "},");
+                helper::appends(out, is_array ? "]" : "}", last_comma ? "," : " ");
+            };
+        }
+
+        auto fmt_key_value(auto& out) {
+            return [&](auto&& key_cb, auto&& value_cb, bool last_comma = true) {
+                helper::append(out, " ");
+                key_cb();
+                helper::append(out, ": ");
+                value_cb();
+                helper::append(out, last_comma ? "," : " ");
             };
         }
     }  // namespace dnet::quic::log

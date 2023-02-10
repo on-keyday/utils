@@ -407,6 +407,7 @@ namespace utils {
         }
 
         dnet_dll_implement(WaitAddrInfo) get_self_server_address(view::rvec port, SockAttr attr) {
+            attr.flag |= AI_PASSIVE;
             return resolve_address({}, port, attr);
         }
 
@@ -420,6 +421,52 @@ namespace utils {
                 return {nullptr, (int)get_error()};
             }
             return resolve_address(host, port, attr);
+        }
+
+        dnet_dll_implement(SockAttr) sockattr_tcp(int ipver) {
+            switch (ipver) {
+                case 4:
+                    return SockAttr{
+                        .address_family = AF_INET,
+                        .socket_type = SOCK_STREAM,
+                        .protocol = IPPROTO_TCP,
+                    };
+                case 6:
+                    return SockAttr{
+                        .address_family = AF_INET6,
+                        .socket_type = SOCK_STREAM,
+                        .protocol = IPPROTO_TCP,
+                    };
+                default:
+                    return SockAttr{
+                        .address_family = AF_UNSPEC,
+                        .socket_type = SOCK_STREAM,
+                        .protocol = IPPROTO_TCP,
+                    };
+            }
+        }
+
+        dnet_dll_implement(SockAttr) sockattr_udp(int ipver) {
+            switch (ipver) {
+                case 4:
+                    return SockAttr{
+                        .address_family = AF_INET,
+                        .socket_type = SOCK_DGRAM,
+                        .protocol = IPPROTO_UDP,
+                    };
+                case 6:
+                    return SockAttr{
+                        .address_family = AF_INET6,
+                        .socket_type = SOCK_DGRAM,
+                        .protocol = IPPROTO_UDP,
+                    };
+                default:
+                    return SockAttr{
+                        .address_family = AF_UNSPEC,
+                        .socket_type = SOCK_DGRAM,
+                        .protocol = IPPROTO_UDP,
+                    };
+            }
         }
     }  // namespace dnet
 }  // namespace utils

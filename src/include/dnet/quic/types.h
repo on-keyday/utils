@@ -352,6 +352,11 @@ namespace utils {
 
         constexpr bool is_MTUProbe(FrameType type) {
             return type == FrameType::PADDING ||
+                   type == FrameType::PING;
+        }
+
+        constexpr bool is_PathProbe(FrameType type) {
+            return type == FrameType::PADDING ||
                    type == FrameType::NEW_CONNECTION_ID ||
                    type == FrameType::PATH_CHALLENGE ||
                    type == FrameType::PATH_RESPONSE;

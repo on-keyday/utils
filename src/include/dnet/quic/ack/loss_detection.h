@@ -38,8 +38,8 @@ namespace utils {
                     cong.init(max_udp_payload_size);
                 }
 
-                bool can_send() {
-                    return pacer.can_send(clock);
+                bool can_send(PacketNumberSpace space) {
+                    return pacer.can_send(clock) || pto.is_probe_required(space);
                 }
 
                 error::Error on_packet_sent(PacketNumberSpace space, SentPacket&& sent) {

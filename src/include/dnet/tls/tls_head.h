@@ -9,9 +9,9 @@
 // because this is made for QUIC crypto message parsing, parse only TLS1.3
 #pragma once
 #include <cstdint>
-#include "../core/byte.h"
-#include "../io/number.h"
-#include "quic/transport_parameter/transport_param.h"
+#include "../../core/byte.h"
+#include "../../io/number.h"
+#include "../quic/transport_parameter/transport_param.h"
 
 namespace utils {
     namespace dnet::tls {
@@ -116,11 +116,11 @@ namespace utils {
             }
 
             constexpr T operator[](size_t i) const {
-                const index = i * sizeof(T);
+                const auto index = i * sizeof(T);
                 if (index >= size()) {
                     return T{};
                 }
-                return endian::read_from<T>(data_, true, index);
+                return endian::read_from<T>(data_.data() + index, true);
             }
 
             constexpr view::rvec data() const {
@@ -141,7 +141,7 @@ namespace utils {
                     if (!element.parse(r)) {
                         return false;
                     }
-                    if (!cb(element)) {
+                    if (!cb(element, r.empty())) {
                         return false;
                     }
                 }
@@ -154,7 +154,7 @@ namespace utils {
                     return false;
                 }
                 data_ = tmp.data();
-                return iterate([](auto) { return true; });
+                return iterate([](auto...) { return true; });
             }
 
             constexpr view::rvec data() const noexcept {
@@ -539,9 +539,6 @@ namespace utils {
                     }
                 };
 
-                template <class Len, class T, size_t minlen, size_t maxlen>
-                using TLSFixedVec = TLSLargeVec<byte, byte, minlen, maxlen>;
-
                 struct UncompressedPointRepresentation {
                     const byte legacy_form = 4;
                     byte X[66];
@@ -683,14 +680,14 @@ namespace utils {
                     view::rvec data;
 
                    public:
-                    constexpr bool iterate(const auto&& cb) {
+                    constexpr bool iterate(auto&& cb) const {
                         io::reader r{data};
                         while (!r.empty()) {
                             quic::trsparam::TransportParameter param;
                             if (!param.parse(r)) {
                                 return false;
                             }
-                            if (!cb(param)) {
+                            if (!cb(param, r.empty())) {
                                 return false;
                             }
                         }
@@ -699,7 +696,7 @@ namespace utils {
 
                     constexpr bool parse(view::rvec in) {
                         data = in;
-                        return iterate([](auto) { return true; });
+                        return iterate([](auto...) { return true; });
                     }
                 };
 
@@ -709,11 +706,11 @@ namespace utils {
                         if (ext.extension_type != ExtensionType::quic_transport_parameters) {
                             return false;
                         }
-                        return params.parse(ext.extension_data);
+                        return params.parse(ext.extension_data.data());
                     }
                 };
 
-                constexpr bool parse(const Extension& ext, auto&& cb, HandshakeType hs) {
+                constexpr bool parse(const Extension& ext, HandshakeType hs, auto&& cb) {
 #define PARSE(Type)          \
     {                        \
         Type t;              \
@@ -759,6 +756,8 @@ namespace utils {
                                         return cb(retry, false);
                                     }
                                     PARSE(KeyShareServerHello)
+                                    default:
+                                        DEFAULT
                                 }
                             }
                         case ExtensionType::psk_key_exchange_modes:
@@ -779,6 +778,8 @@ namespace utils {
                                     PARSE(ClientPreSharedKeyExtension)
                                 case HandshakeType::server_hello:
                                     PARSE(ServerPreSharedKeyExtension)
+                                default:
+                                    DEFAULT
                             }
                         case ExtensionType::application_layer_protocol_negotiation:
                             PARSE(ProtocolNameList)
@@ -831,6 +832,7 @@ namespace utils {
             };
 
             enum class CipherSuite : std::uint16_t {
+                TLS_NULL_WITH_NULL_NULL = 0x0000,
                 TLS_AES_128_GCM_SHA256 = 0x1301,
                 TLS_AES_256_GCM_SHA384 = 0x1302,
                 TLS_CHACHA20_POLY1305_SHA256 = 0x1303,
@@ -843,6 +845,7 @@ namespace utils {
 #define MAP(code)           \
     case CipherSuite::code: \
         return #code;
+                    MAP(TLS_NULL_WITH_NULL_NULL)
                     MAP(TLS_AES_128_GCM_SHA256)
                     MAP(TLS_AES_256_GCM_SHA384)
                     MAP(TLS_CHACHA20_POLY1305_SHA256)
@@ -857,7 +860,7 @@ namespace utils {
             struct ClientHello : Handshake {
                 constexpr ClientHello()
                     : Handshake(client_hello) {}
-                const ProtocolVersion legacy_version = legacy_version; /* TLS v1.2 */
+                const ProtocolVersion legacy_version = tls::legacy_version; /* TLS v1.2 */
                 byte random[32];
                 NumVector<byte, 0, 32> legacy_session_id;
                 NumVector<CipherSuite, 2, 0xfffe> cipher_suites;
@@ -884,7 +887,7 @@ namespace utils {
             struct ServerHello : Handshake {
                 constexpr ServerHello()
                     : Handshake(server_hello) {}
-                const ProtocolVersion legacy_version = legacy_version; /* TLS v1.2 */
+                const ProtocolVersion legacy_version = tls::legacy_version; /* TLS v1.2 */
                 byte random[32];
                 NumVector<byte, 0, 32> legacy_session_id_echo;
                 CipherSuite cipher_suite;
@@ -993,15 +996,15 @@ namespace utils {
             struct Finished : Handshake {
                 constexpr Finished()
                     : Handshake(finished) {}
-                byte verify_data[32];
+                view::rvec verify_data;
 
-                constexpr bool parse(io::reader& r, std::uint32_t hash_len) noexcept {
+                constexpr bool parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
                     }
-                    return sub.read(view::wvec(verify_data, hash_len < 32 ? hash_len : 32)) &&
-                           sub.empty();
+                    verify_data = sub.remain();
+                    return true;
                 }
             };
 
@@ -1047,6 +1050,9 @@ namespace utils {
             };
 
             struct KeyUpdate : Handshake {
+                constexpr KeyUpdate()
+                    : Handshake(key_update) {}
+
                 KeyUpdateRequest request_update;
 
                 constexpr bool parse(io::reader& r) noexcept {
@@ -1092,16 +1098,17 @@ namespace utils {
                     PARSE(client_hello, ClientHello)
                     PARSE(server_hello, ServerHello)
                     PARSE(encrypted_extensions, EncryptedExtensions)
+                    PARSE(certificate, Certificate)
                     PARSE(certificate_request, CertificateRequest)
                     PARSE(certificate_verify, CertificateVerify)
                     PARSE(end_of_early_data, EndOfEarlyData)
                     PARSE(new_session_ticket, NewSessionTicket)
                     PARSE(key_update, KeyUpdate)
+                    PARSE(finished, Finished)
                     default: {
                         Unknown t;
                         t.parse(r);
-                        cb(t, true);
-                        return false;
+                        return cb(t, false);
                     }
                 }
 #undef PARSE

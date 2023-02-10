@@ -34,7 +34,8 @@ namespace utils {
 
             // encode `input` as big endian into `this->data`
             constexpr Buf& write_be(T input) {
-                std::make_unsigned_t<decltype(input)> in = input;
+                using U = std::make_unsigned_t<decltype(input)>;
+                U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
                     data[i] = byte((in >> ((sizeof(input) - 1 - i) * bit_per_byte)) & 0xff);
                 }
@@ -43,7 +44,8 @@ namespace utils {
 
             // encode `input` as little endian into `this->data`
             constexpr Buf& write_le(T input) {
-                std::make_unsigned_t<decltype(input)> in = input;
+                using U = std::make_unsigned_t<decltype(input)>;
+                U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
                     data[i] = byte((in >> (i * bit_per_byte)) & 0xff);
                 }
@@ -134,8 +136,8 @@ namespace utils {
         template <class T>
         inline T bswap_direct(T input) {
             T hold;
-            auto direct0 = (byte*)&hold;
-            auto direct1 = (byte*)&input;
+            auto direct0 = reinterpret_cast<byte*>(&hold);
+            const auto direct1 = reinterpret_cast<byte*>(&input);
             for (auto i = 0; i < sizeof(T); i++) {
                 direct0[i] = direct1[sizeof(T) - 1 - i];
             }
@@ -154,7 +156,7 @@ namespace utils {
         }
 
         template <class T>
-        constexpr void read_from(T& output, auto&& input, bool be, size_t offset = 0) {
+        constexpr void read_from(T& output, auto&& input, bool be) {
             Buf<T, decltype(input)> buf{input};
             if (be) {
                 buf.read_be(output);
@@ -165,9 +167,9 @@ namespace utils {
         }
 
         template <class T>
-        constexpr T read_from(auto&& input, bool be, size_t offset = 0) {
+        constexpr T read_from(auto&& input, bool be) {
             T output;
-            read_from(output, input, be, offset);
+            read_from(output, input, be);
             return output;
         }
 

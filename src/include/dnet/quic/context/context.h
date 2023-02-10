@@ -15,7 +15,7 @@
 #include "../event/ack_event.h"
 #include "../event/conn_id_event.h"
 #include "../event/stream_event.h"
-#include "../mtu/mtu.h"
+#include "../path/mtu.h"
 #include "../crypto/suite.h"
 #include "../crypto/crypto_tag.h"
 #include "../crypto/crypto.h"
@@ -44,7 +44,7 @@ namespace utils {
             ack::LossDetectionHandler ackh;
             ack::UnackedPacket unacked;
             conn::IDManager connIDs;
-            mtu::PathMTU mtu;
+            path::PathMTU mtu;
             error::Error conn_err;
             event::EventList list;
             std::shared_ptr<stream::impl::Conn<Lock>> streams;
@@ -147,6 +147,8 @@ namespace utils {
                         return false;
                     }
                     if (ackh.pto.is_probe_required(pn_space) && !w.full()) {
+                        logger.debug("PTO fire");
+                        logger.pto_fire(pn_space);
                         fw.write(frame::PingFrame{});
                     }
                     if (offset >= w.offset()) {
@@ -266,14 +268,14 @@ namespace utils {
                     }
                     return {{}, false};
                 }
-                if (!ackh.can_send()) {
-                    return {{}, true};
-                }
                 packet_creation_buffer.resize(mtu.current_datagram_size());
                 io::writer w{packet_creation_buffer};
-                const bool has_initial = crypto.write_installed(PacketType::Initial);
-                bool has_handshake = crypto.write_installed(PacketType::Handshake);
-                const bool has_onertt = crypto.write_installed(PacketType::OneRTT);
+                const bool has_initial = crypto.write_installed(PacketType::Initial) &&
+                                         ackh.can_send(ack::PacketNumberSpace::initial);
+                bool has_handshake = crypto.write_installed(PacketType::Handshake) &&
+                                     ackh.can_send(ack::PacketNumberSpace::handshake);
+                const bool has_onertt = crypto.write_installed(PacketType::OneRTT) &&
+                                        ackh.can_send(ack::PacketNumberSpace::application);
                 if (has_initial) {
                     packet::PacketSummary summary;
                     summary.type = PacketType::Initial;

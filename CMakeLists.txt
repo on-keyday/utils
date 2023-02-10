@@ -44,7 +44,6 @@ add_executable(core "src/test/core/test_core.cpp")
 add_executable(utfconvert "src/test/utf/test_utfconvert.cpp")
 add_executable(fallback "src/test/utf/test_fallback_sequence.cpp")
 add_executable(utfview "src/test/utf/test_utfview.cpp")
-add_executable(endian "src/test/endian/test_endian.cpp")
 add_executable(fileview "src/test/file/test_file_view.cpp")
 add_executable(cout "src/test/wrap/test_cout.cpp")
 add_executable(channel "src/test/thread/test_channel.cpp")
@@ -85,8 +84,10 @@ add_executable(dnetquic_packet "src/test/dnet/test_dnetquic_packet.cpp")
 add_executable(dnetquic_stream "src/test/dnet/test_dnetquic_stream.cpp")
 add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
 add_executable(dnetquic_multi_thread "src/test/dnet/test_dnetquic_multi_thread.cpp")
+add_executable(dnet_dns "src/test/dnet/test_dnet_dns.cpp")
 
 #[[
+add_executable(endian "src/test/endian/test_endian.cpp")
 add_executable(predefined "src/test/deprecated/tokenize/test_predefined.cpp")
 add_executable(tokenizer "src/test/deprecated/tokenize/test_tokenizer.cpp")
 add_executable(make_parser "src/test/deprecated/syntax/test_make_parser_clang_bug.cpp")
@@ -158,6 +159,7 @@ add_executable(vstack "src/tool/vstack/main.cpp"
 "src/tool/vstack/func.cpp"
 "src/tool/vstack/ssa.cpp"
 )
+add_executable(server "src/tool/server/server.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -171,7 +173,7 @@ endif()
 option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
 add_library(utils SHARED)
-add_library(utnet SHARED)
+# add_library(utnet SHARED)
 add_library(dnet SHARED)
 add_library(dnetserv SHARED)
 
@@ -190,14 +192,13 @@ target_sources(utils
   "src/lib/wrap/input.cpp"
   "src/lib/wrap/exepath.cpp"
   "src/lib/deprecated/syntax/default_syntaxc.cpp" # deprecated but dependency uses
+  "src/lib/async/worker.cpp"
 )
 
 # deprecated use dnet instead
+ #[[
 target_sources(utnet
   PRIVATE
-  "src/lib/async/worker.cpp"
-
-  #[[
   "src/lib/deprecated/net/core/init_net.cpp"
   "src/lib/deprecated/net/dns/dns.cpp"
   "src/lib/deprecated/net/tcp/tcp.cpp"
@@ -221,8 +222,8 @@ target_sources(utnet
   "src/lib/deprecated/cnet/http2.cpp"
   "src/lib/deprecated/cnet/mem_buffer.cpp"
   "src/lib/deprecated/cnet/mem_iface.cpp"
-  ]]
-)
+  
+)]]
 
 target_sources(dnet PRIVATE
   "src/lib/dnet/dll/sockdll.cpp"
@@ -312,7 +313,7 @@ target_link_libraries(expression utils)
 ]]
 
 
-target_link_libraries(worker utils utnet)
+target_link_libraries(worker utils)
 target_link_libraries(json utils)
 target_link_libraries(cin utils)
 target_link_libraries(to_json utils)
@@ -321,9 +322,9 @@ target_link_libraries(digitcount utils)
 target_link_libraries(optparse utils)
 target_link_libraries(optctx utils)
 target_link_libraries(subcmd utils)
-target_link_libraries(coroutine utils utnet)
-target_link_libraries(run_on_single_thread utils utnet)
-target_link_libraries(shared_context utils utnet)
+target_link_libraries(coroutine utils)
+target_link_libraries(run_on_single_thread utils)
+target_link_libraries(shared_context utils)
 target_link_libraries(taskpool2 utils)
 
 target_link_libraries(expand_iovec utils)
@@ -339,6 +340,7 @@ target_link_libraries(minlc utils)
 target_link_libraries(durl utils dnet)
 target_link_libraries(igen2 utils)
 target_link_libraries(vstack utils)
+target_link_libraries(server utils dnetserv)
 
 #[[ libquic
 target_link_libraries(quic_udp quic utils)
@@ -362,6 +364,7 @@ target_link_libraries(dnet_stun dnet)
 target_link_libraries(dnetquic_frame utils dnet)
 target_link_libraries(dnetquic_stream utils dnet)
 target_link_libraries(dnetquic_multi_thread utils dnet)
+target_link_libraries(dnet_dns dnet)
 
 # libdnetserv
 target_link_libraries(dnetserv dnet)
@@ -383,25 +386,33 @@ if(WIN32)
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "test/libutils.dll"
     )
     add_custom_command(
-      TARGET utnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "test/libutnet.dll"
-    )
-    add_custom_command(
       TARGET dnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnet.dll" "test/libdnet.dll"
     )
-    #[[
-    add_custom_command(
-      TARGET quic POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libquic.dll" "test/libquic.dll"
-    )]]
+   
     add_custom_command(
       TARGET utils POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"
     )
     add_custom_command(
-      TARGET utnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "tool/libutnet.dll"
+      TARGET dnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnet.dll" "tool/libdnet.dll"
     )
+    add_custom_command(
+      TARGET dnetserv POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnetserv.dll" "tool/libdnetserv.dll"
+    )
+
+    #[[
+    add_custom_command(
+      TARGET utnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "test/libutnet.dll"
+    )]]
+    #[[
+    add_custom_command(
+      TARGET quic POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libquic.dll" "test/libquic.dll"
+    )]]
+
   endif()
 endif()

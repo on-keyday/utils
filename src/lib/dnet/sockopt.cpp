@@ -13,18 +13,6 @@
 
 namespace utils {
     namespace dnet {
-        error::Error Socket::get_localaddr(raw_address* addr, int* addrlen) {
-            if (!addrlen) {
-                return error::Error(invalid_addr, error::ErrorCategory::validationerr);
-            }
-            socklen_t len = 0;
-            auto res = socdl.getsockname_(sock, reinterpret_cast<sockaddr*>(addr), &len);
-            if (res != 0) {
-                return Errno();
-            }
-            *addrlen = len;
-            return error::none;
-        }
 
         std::pair<NetAddrPort, error::Error> Socket::get_localaddr() {
             sockaddr_storage st{};
@@ -37,18 +25,6 @@ namespace utils {
             return {sockaddr_to_NetAddrPort(addr, len), error::none};
         }
 
-        error::Error Socket::get_remoteaddr(raw_address* addr, int* addrlen) {
-            if (!addrlen) {
-                return error::Error(invalid_addr, error::ErrorCategory::validationerr);
-            }
-            socklen_t len = 0;
-            auto res = socdl.getpeername_(sock, reinterpret_cast<sockaddr*>(addr), &len);
-            if (res != 0) {
-                return Errno();
-            }
-            *addrlen = len;
-            return error::none;
-        }
         std::pair<NetAddrPort, error::Error> Socket::get_remoteaddr() {
             sockaddr_storage st{};
             socklen_t len = sizeof(st);
@@ -192,29 +168,36 @@ namespace utils {
 #endif
         }
 
-        std::tuple<int, int, int, error::Error> Socket::get_af_type_protocol() {
+        std::pair<SockAttr, error::Error> Socket::get_sockattr() {
 #ifdef _WIN32
             WSAPROTOCOL_INFOW info{};
             auto err = get_option(SOL_SOCKET, SO_PROTOCOL_INFOW, info);
             if (err) {
-                return {-1, -1, -1, err};
+                return {{-1, -1, -1}, err};
             }
-            return {info.iAddressFamily, info.iSocketType, info.iProtocol, error::none};
+            return {
+                SockAttr{
+                    .address_family = info.iAddressFamily,
+                    .socket_type = info.iSocketType,
+                    .protocol = info.iProtocol,
+                },
+                error::none,
+            };
 #else
-            int af = -1, type = -1, proto = -1;
-            auto err = get_option(SOL_SOCKET, SO_DOMAIN, af);
+            SockAttr attr{-1, -1, -1};
+            auto err = get_option(SOL_SOCKET, SO_DOMAIN, attr.address_family);
             if (err) {
-                return {-1, -1, -1, err};
+                return {attr, err};
             }
-            err = get_option(SOL_SOCKET, SO_TYPE, type);
+            err = get_option(SOL_SOCKET, SO_TYPE, attr.socket_type);
             if (err) {
-                return {af, -1, -1, err};
+                return {attr, err};
             }
-            err = get_option(SOL_SOCKET, SO_PROTOCOL, proto);
+            err = get_option(SOL_SOCKET, SO_PROTOCOL, attr.protocol);
             if (err) {
-                return {af, type, -1, err};
+                return {attr, err};
             }
-            return {af, type, proto, error::none};
+            return {attr, error::none};
 #endif
         }
     }  // namespace dnet

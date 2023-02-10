@@ -52,6 +52,7 @@ namespace utils {
                 MAP(max_ack_delay)
                 MAP(disable_active_migration)
                 MAP(preferred_address)
+                MAP(active_connection_id_limit)
                 MAP(initial_src_connection_id)
                 MAP(retry_src_connection_id)
                 MAP(max_datagram_frame_size)

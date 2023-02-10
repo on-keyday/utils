@@ -20,30 +20,42 @@ namespace utils {
                 recv.set_blocking(false);
                 auto deq = state->deque;
                 deq.set_blocking(false);
-                Enter start(state->count.current_handler_thread);
-                std::uint32_t curcount = state->count.current_handler_thread;
-                auto to = curcount;
-                if (curcount) {
-                    curcount--;
-                }
-                state->count.max_launched_handler_thread.compare_exchange_strong(curcount, to);
+                auto decr_count = helper::defer([&] {
+                    state->count.current_handler_thread--;
+                });
+                std::uint32_t skip = 0;
                 while (!state->count.end_flag.test()) {
                     Client cl;
-                    wait_event(1);
+                    wait_io_event(1);
                     Queued q;
                     if (deq >> q) {
                         state->count.current_enqued--;
                         Enter active(state->count.current_handling_handler_thread);
-                        q.fn(std::move(q.ptr), StateContext{state});
+                        q.runner->run();
                     }
                     auto res = recv >> cl;
                     if (!res) {
                         if (state->count.should_reduce()) {
-                            return;  // reduce
+                            if (skip >= state->count.reduce_skip) {
+                                auto c_thread = state->count.current_handler_thread.load();
+                                if (state->count.current_handler_thread.compare_exchange_strong(c_thread, c_thread - 1)) {
+                                    decr_count.cancel();  // stop decrement
+                                    return;
+                                }
+                            }
+                            else {
+                                skip++;
+                            }
                         }
-                        std::this_thread::yield();
+                        if (state->count.thread_sleep == 0) {
+                            std::this_thread::yield();
+                        }
+                        else {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(state->count.thread_sleep));
+                        }
                         continue;
                     }
+                    skip = 0;
                     Enter active(state->count.current_handling_handler_thread);
                     if (state->handler) {
                         state->handler(state->ctx, std::move(cl), StateContext{state});
@@ -76,12 +88,12 @@ namespace utils {
                 auto deq = deque;
                 deq.set_blocking(false);
                 while (true) {
-                    wait_event(1);
+                    wait_io_event(1);
                     Queued q;
                     if (deq >> q) {
                         count.current_enqued--;
                         Enter active(count.current_handling_handler_thread);
-                        q.fn(std::move(q.ptr), StateContext{shared_from_this()});
+                        q.runner->run();
                     }
                     auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
                         count.total_accepted++;
@@ -106,7 +118,12 @@ namespace utils {
 
             void State::check_and_start() {
                 if (count.should_start()) {
-                    std::thread(handler_thread, shared_from_this()).detach();
+                    auto c_thread = count.current_handler_thread.load();
+                    if (count.current_handler_thread.compare_exchange_strong(c_thread, c_thread + 1)) {
+                        std::thread(handler_thread, shared_from_this()).detach();
+                        count.max_launched_handler_thread.compare_exchange_strong(c_thread, c_thread + 1);
+                        count.total_launched_handler_thread++;
+                    }
                 }
             }
 
