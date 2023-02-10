@@ -540,7 +540,7 @@ namespace utils {
             return true;
         }
 
-        constexpr void ipv4_to_dns_ptr(auto&& out, auto&& addr) {
+        constexpr void ipv6_to_dns_ptr(auto&& out, auto&& addr) {
             static_assert(sizeof(addr[1]) == 1);
             auto write_4bit = bit4_writer(out);
             for (size_t i = 0; i < 16; i++) {
