@@ -53,7 +53,7 @@ these note is based on OpenSSL license's advertising clause
 
 no documentation is here so you should read source code (yes I'm not kind)
 also no code uniformity among directories (yes, may be among codes in same directory too)
-API compatibility is often broken among each large commits.(yes, I throw stability away)
+API compatibility is often broken among each large commits. (yes, I throw stability away)
 
 # how to build
 1. install cmake (https://cmake.org/), ninja (https://ninja-build.org/) and clang (https://clang.llvm.org/) on your platform.
