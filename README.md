@@ -24,6 +24,9 @@ Somehow the note above sounds like a joke.
 + deprecated - dust box (Because I cannot determine mind throwing away the code, this is remaining yet.)
 + dnet - networking library (active developing)
   + socket wrapper
+    + because my main developing platform is windows, epoll developing is put off
+    + IOCP (stable)
+    + epoll (unstable or can't build )  
   + getaddrinfo wrapper
   + tls wrapper (OpenSSL/BoringSSL)
     + this wrapper can be built without OpenSSL/BroginSSL headers
