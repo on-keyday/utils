@@ -12,7 +12,7 @@ Now I have added these two note for dnet/tls/tls.h:
 + This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
 
 
-# what is included (2023/1/16)
+# what is included (2023/2/14)
 + async - fiber/ucontext based coroutine
 + bnf - bnf parser (stop developing)
 + cmdline - command line parser (stable)
