@@ -12,7 +12,7 @@ Now I have added these two note for src/include/dnet/tls/tls.h:
 + This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
 
 these note is based on OpenSSL license's advertising clause.
-But, this library not containing any code written by OpenSSL.
+But, this library doesn't contains any source code or binary written by OpenSSL.
 Somehow the note above sounds like a joke.
 
 
