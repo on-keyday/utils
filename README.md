@@ -5,6 +5,12 @@ you will be able to build from only these codes when deprecated is removed~~.
 deprecated directory is now out of build.
 I don't provide guarantee for your problem if you use these code.
 
+# warning
+Because I didn't know about OpenSSL license, this library was maybe at license violation.
+Now I have added these two note for dnet/tls/tls.h:
++ This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
++ This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
+
 
 # what is included (2023/1/16)
 + async - fiber/ucontext based coroutine
@@ -24,7 +30,7 @@ I don't provide guarantee for your problem if you use these code.
   + QUIC (active developing)
     + connection establishment and idle timeout.
     + have stream (not tested)
-+ endian - endian util (stable)
++ endian - endian util/IEEE float (stable)
 + escape - string escapes (stable)
 + file - file util (stable)
   + huffman.h is unstable
@@ -40,8 +46,9 @@ I don't provide guarantee for your problem if you use these code.
 + view - view helper (access like array, has operator[] and size())
   + iovec,expand_iovec - byte vector like std::string_view and std::string (reinventing the wheel)
 + io - byte reader/writer (based view/iovec)
-+ utf - utf converter (stable)
++ unicode/utf - utf converter (stable)
 + wrap - wrapper (argv/cout/cin/pair_iter) (stable)
++ yaml - YAML parser (incomplete)
 
 no documentation is here so you should read source code (yes I'm not kind)
 also no code uniformity among directories (yes, may be among codes in same directory too)
