@@ -11,7 +11,10 @@ Now I have added these two note for src/include/dnet/tls/tls.h:
 + This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
 + This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
 
-these note is based on OpenSSL license's advertising clause
+these note is based on OpenSSL license's advertising clause.
+But, this library not containing any code written by OpenSSL.
+Somehow the note above sounds like a joke.
+
 
 # what is included (2023/2/14)
 + async - fiber/ucontext based coroutine
