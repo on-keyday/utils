@@ -38,7 +38,7 @@ namespace utils {
             }
             // hook allocation for openssl
             // boringssl has no way to hook allocation dynamic
-            const auto mem_hook = l.lookup<decltype(ssl_import::open_ext::CRYPTO_set_mem_functions)>("CRYPTO_set_mem_functions");
+            const auto mem_hook = l.lookup<decltype(ssl_import::ls::open_ssl::crypto::CRYPTO_set_mem_functions)>("CRYPTO_set_mem_functions");
             if (!mem_hook) {
                 return true;
             }
