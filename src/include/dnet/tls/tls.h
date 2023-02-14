@@ -10,7 +10,7 @@
 // these two note is written
 // * This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
 // * This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
-// but unfortunately this library uses no source code or binary written by OpenSSL except only forward declarations
+// but unfortunately, this library uses no source code or binary written by OpenSSL except only forward declarations
 // forward declarations are copied by myself, sorted,and changed some details
 #pragma once
 #include "../dll/dllh.h"
