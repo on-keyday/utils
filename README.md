@@ -10,6 +10,7 @@ Because I didn't know about OpenSSL license, this library was maybe at license v
 Now I have added these two note for dnet/tls/tls.h:
 + This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
 + This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
+
 this note is based on OpenSSL license's advertising clause
 
 # what is included (2023/2/14)
