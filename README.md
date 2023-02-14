@@ -24,10 +24,12 @@ Somehow the note above sounds like a joke.
 + deprecated - dust box (Because I cannot determine mind throwing away the code, this is remaining yet.)
 + dnet - networking library (active developing)
   + socket wrapper
+  + getaddrinfo wrapper
   + tls wrapper (OpenSSL/BoringSSL)
     + this wrapper can be built without OpenSSL/BroginSSL headers
   + http
   + http2 (unstable)
+  + dns (tiny)
   + websocket
   + server util
   + stun (unstable)
