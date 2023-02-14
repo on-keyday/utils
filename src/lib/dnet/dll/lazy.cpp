@@ -5,18 +5,88 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-
-#include <dnet/dll/lazy.h>
+#include <dnet/dll/dllcpp.h>
+#include <dnet/dll/lazy/lazy.h>
 #include <dnet/plthead.h>
-#include <dnet/dll/lazysockdll.h>
+#include <dnet/dll/lazy/sockdll.h>
 #include <view/iovec.h>
-#include <dnet/dll/lazyssldll.h>
+#include <dnet/dll/lazy/ssldll.h>
+#include <dnet/dll/glheap.h>
+#include <helper/pushbacker.h>
+#include <helper/appender.h>
 
 namespace utils {
     namespace dnet::lazy {
         func_t DLLInit::lookup(const char* name) {
             return dll->lookup_platform(name);
         }
+        void (*call_fail)(const char* fn) = nullptr;
+        void set_call_fail_traits(void (*f)(const char* fn)) {
+            call_fail = f;
+        }
+        void call_fail_traits(const char* fn) {
+            auto f = call_fail;
+            if (f) {
+                f(fn);
+            }
+            abort();
+        }
+
+        bool libcrypto_init(utils::dnet::lazy::DLLInit l, bool on_load) {
+            if (!on_load) {
+                return true;
+            }
+            // hook allocation for openssl
+            // boringssl has no way to hook allocation dynamic
+            const auto mem_hook = l.lookup<decltype(ssl_import::open_ext::CRYPTO_set_mem_functions)>("CRYPTO_set_mem_functions");
+            if (!mem_hook) {
+                return true;
+            }
+            mem_hook(
+                [](size_t s, const char* file, int line) {
+                    return alloc_normal(
+                        s,
+                        alignof(std::max_align_t), DebugInfo{
+                                                       .size_known = true,
+                                                       .size = s,
+                                                       .align = alignof(std::max_align_t),
+                                                       .file = file,
+                                                       .line = line,
+                                                       .func = "OPENSSL_malloc",
+                                                   });
+                },
+                [](void* p, size_t s, const char* file, int line) {
+                    return realloc_normal(
+                        p, s,
+                        alignof(std::max_align_t), DebugInfo{
+                                                       .size_known = false,
+                                                       .size = s,
+                                                       .align = alignof(std::max_align_t),
+                                                       .file = file,
+                                                       .line = line,
+                                                       .func = "OPENSSL_realloc",
+                                                   });
+                },
+                [](void* p, const char* file, int line) {
+                    return free_normal(p, DebugInfo{
+                                              .size_known = false,
+                                              .size = 0,
+                                              .align = alignof(std::max_align_t),
+                                              .file = file,
+                                              .line = line,
+                                              .func = "OPENSSL_free",
+                                          });
+                });
+            return true;
+        }
+
+        void log_fn_load(const char* fn, bool ok) {
+            char buf[120]{};
+            helper::CharVecPushbacker<char> pb{buf, 119};
+            helper::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
+            OutputDebugStringA(buf);
+        }
+
 #ifdef _WIN32
         bool DLL::load_platform() {
             if (sys) {
@@ -33,6 +103,7 @@ namespace utils {
                 return;
             }
             FreeLibrary((HMODULE)target);
+            target = nullptr;
         }
 
         func_t DLL::lookup_platform(const char* func) {
@@ -63,7 +134,7 @@ namespace utils {
         std::pair<func_t, bool> network_lookup(DLLInit dll, const char* name) {
             auto get_fn = [&](GUID guid, auto fn_type) -> std::pair<func_t, bool> {
                 // in here, look up with lock is safe
-                auto tmp = socket_(AF_INET, SOCK_STREAM, 0);
+                auto tmp = WSASocketW_(AF_INET, SOCK_STREAM, 0, nullptr, 0, 0);
                 if (tmp == -1) {
                     return {func_t{}, true};
                 }
@@ -119,11 +190,11 @@ namespace utils {
         DLL ws2_32{L"ws2_32.dll", true, network_init, network_lookup};
         DLL kernel32{L"kernel32.dll", true, nullptr, kernel32_lookup};
         DLL libssl{L"libssl.dll", false};
-        DLL libcrypto{L"libcrypto.dll", false};
+        DLL libcrypto{L"libcrypto.dll", false, libcrypto_init};
 #else
         DLL libanl{"libanl.so", false};
         DLL libssl{"libssl.so", false};
-        DLL libcrypto{"libcrypto.so", false};
+        DLL libcrypto{"libcrypto.so", false, libcrypto_init};
 #endif
 
     }  // namespace dnet::lazy

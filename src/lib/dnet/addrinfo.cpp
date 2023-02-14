@@ -6,7 +6,7 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/dll/sockdll.h>
+#include <dnet/dll/lazy/sockdll.h>
 #include <dnet/addrinfo.h>
 #include <unicode/utf/convert.h>
 #include <number/array.h>
@@ -30,7 +30,7 @@ namespace utils {
 #ifdef _WIN32
         using raw_paddrinfo = PADDRINFOEXW;
         void free_addr(void* p) {
-            socdl.FreeAddrInfoExW_(raw_paddrinfo(p));
+            lazy::FreeAddrInfoExW_(raw_paddrinfo(p));
         }
         using Host = number::Array<wchar_t, 255, true>;
         using Port = number::Array<wchar_t, 20, true>;
@@ -38,7 +38,7 @@ namespace utils {
 #else
         using raw_paddrinfo = addrinfo*;
         void free_addr(void* p) {
-            socdl.freeaddrinfo_(raw_paddrinfo(p));
+            lazy::freeaddrinfo_(raw_paddrinfo(p));
         }
         using Host = number::Array<char, 255, true>;
         using Port = number::Array<char, 20, true>;
@@ -70,112 +70,6 @@ namespace utils {
             return addr;
         }
 
-        /*
-        const void* AddrInfo::sockaddr(SockAddr& info) const {
-            if (!select) {
-                return nullptr;
-            }
-            auto ptr = raw_paddrinfo(select);
-            info.af = ptr->ai_family;
-            info.type = ptr->ai_socktype;
-            info.proto = ptr->ai_protocol;
-            info.flag = ptr->ai_flags;
-            info.addr = reinterpret_cast<const raw_address*>(ptr->ai_addr);
-            info.addrlen = ptr->ai_addrlen;
-            return ptr->ai_addr;
-        }
-
-        NetAddrPort AddrInfo::netaddr() const {
-            if (!select) {
-                return {};
-            }
-            auto ptr = raw_paddrinfo(select);
-            return sockaddr_to_NetAddrPort(ptr->ai_addr, ptr->ai_addrlen);
-        }
-
-        bool string_from_sockaddr_impl(int af, const void* addr, size_t addrlen, void* text, size_t len, int* err, int* port) {
-            const char* ptr = nullptr;
-            char* dst = static_cast<char*>(text);
-            memset(text, 0, len);
-            auto set_err = [&](auto code) {
-                if (err) {
-                    *err = code;
-                }
-            };
-            auto pb = helper::CharVecPushbacker((byte*)text, len);
-            if (af == AF_INET) {
-                if (addrlen < sizeof(sockaddr_in)) {
-                    set_err(invalid_argument);
-                    return false;
-                }
-                auto p = static_cast<const sockaddr_in*>(addr);
-                if (port) {
-                    *port = netorder(p->sin_port);
-                }
-                ipaddr::ipv4_to_string(pb, (byte*)p);
-            }
-            else if (af == AF_INET6) {
-                if (addrlen < sizeof(sockaddr_in6)) {
-                    set_err(invalid_argument);
-                    return false;
-                }
-                auto p = static_cast<const sockaddr_in6*>(addr);
-                if (port) {
-                    *port = netorder(p->sin6_port);
-                }
-                auto ipv6 = (byte*)&p->sin6_addr;
-                if (ipaddr::is_ipv4_mapped(ipv6)) {
-                    ipaddr::ipv4_to_string(pb, ipv6 + 12);
-                }
-                else {
-                    ipaddr::ipv6_to_string(pb, ipv6);
-                }
-            }
-            else {
-                set_err(invalid_argument);
-                return false;
-            }
-            if (pb.overflow) {
-                set_err(invalid_addr);
-                return false;
-            }
-
-            // NOTE: remove ipv6 prefix for ipv4 mapped addresss
-            if (helper::contains(ptr, ".") && helper::starts_with(ptr, "::ffff:")) {
-                constexpr auto start_offset = 7;
-                auto tlen = strlen(ptr);
-                // thought experiment
-                // ::ffff:127.0.0.1----
-                // tlen = 16 len = 20 (need to remain) = 9 from offset 7
-                // tlen - 7 = 9 = (need to remain)
-                // after memmove
-                // 127.0.0.17.0.0.1----
-                // (need to clear) = 7 from offset 9
-                // after memset
-                // 127.0.0.1-----------
-                memmove(dst, dst + start_offset, len - start_offset);
-                memset(dst + tlen - start_offset, 0, start_offset);
-            }
-            return true;
-        }
-
-        dnet_dll_implement(bool) string_from_sockaddr(const void* addr, size_t addrlen, void* text, size_t len, int* port, int* err) {
-            if (!addr) {
-                return false;
-            }
-            auto sa = static_cast<const sockaddr*>(addr);
-            return string_from_sockaddr_impl(sa->sa_family, addr, addrlen, text, len, err, port);
-        }
-
-        bool AddrInfo::string(void* text, size_t len, int* port, int* err) const {
-            if (!select) {
-                return false;
-            }
-            auto info = static_cast<raw_paddrinfo>(select);
-            return string_from_sockaddr_impl(info->ai_family, info->ai_addr, info->ai_addrlen, text, len, err, port);
-        }
-        */
-
         struct WaitObject {
             raw_paddrinfo info;
 #ifdef _WIN32
@@ -183,10 +77,10 @@ namespace utils {
             HANDLE cancel;
             bool done_immediate = false;
             void plt_clean() {
-                socdl.GetAddrInfoExCancel_(&cancel);
+                lazy::GetAddrInfoExCancel_(&cancel);
             }
             int plt_cancel() {
-                return socdl.GetAddrInfoExCancel_(&cancel);
+                return lazy::GetAddrInfoExCancel_(&cancel);
             }
 #else
             addrinfo hint;
@@ -197,7 +91,7 @@ namespace utils {
             void plt_clean() {
                 int one = 0;
                 while (one < 100) {
-                    auto res = kerlib.gai_cancel_(&cb);
+                    auto res = lazy::gai_cancel_(&cb);
                     if (res == EAI_ALLDONE) {
                         if (cb.ar_result) {
                             free_addr(cb.ar_result);
@@ -212,7 +106,7 @@ namespace utils {
             }
 
             int plt_cancel() {
-                return kerlib.gai_cancel_(&cb);
+                return lazy::gai_cancel_(&cb);
             }
 #endif
             ~WaitObject() {
@@ -239,7 +133,7 @@ namespace utils {
                 sig = WaitForSingleObject(obj->ol.hEvent, time);
             }
             if (sig == WAIT_OBJECT_0) {
-                auto res = socdl.GetAddrInfoExOverlappedResult_(&obj->ol);
+                auto res = lazy::GetAddrInfoExOverlappedResult_(&obj->ol);
                 ResetEvent(obj->ol.hEvent);
                 CloseHandle(obj->ol.hEvent);
                 if (!obj->done_immediate && res != 0) {
@@ -280,7 +174,7 @@ namespace utils {
             obj->ol.hEvent = event;
             auto host_str = host ? host->c_str() : nullptr;
             auto port_str = port ? port->c_str() : nullptr;
-            auto res = socdl.GetAddrInfoExW_(host_str, port_str, 0, nullptr, &hint, &obj->info, &timeout, &obj->ol, nullptr, &obj->cancel);
+            auto res = lazy::GetAddrInfoExW_(host_str, port_str, 0, nullptr, &hint, &obj->info, &timeout, &obj->ol, nullptr, &obj->cancel);
             if (res != 0 && res != WSA_IO_PENDING) {
                 err = get_error();
                 return nullptr;
@@ -384,7 +278,7 @@ namespace utils {
         }
 
         dnet_dll_implement(WaitAddrInfo) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr) {
-            if (!init_sockdl()) {
+            if (!lazy::load_socket()) {
                 return {
                     nullptr,
                     libload_failed,
@@ -412,11 +306,11 @@ namespace utils {
         }
 
         dnet_dll_export(WaitAddrInfo) get_self_host_address(view::rvec port, SockAttr attr) {
-            if (!init_sockdl()) {
+            if (!lazy::load_socket()) {
                 return {nullptr, libload_failed};
             }
             char host[256]{0};
-            auto err = socdl.gethostname_(host, sizeof(host));
+            auto err = lazy::gethostname_(host, sizeof(host));
             if (err != 0) {
                 return {nullptr, (int)get_error()};
             }

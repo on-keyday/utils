@@ -7,7 +7,7 @@
 
 #pragma once
 #include "lazy.h"
-#include "../plthead.h"
+#include "../../plthead.h"
 
 namespace utils {
     namespace dnet::lazy {
@@ -15,12 +15,15 @@ namespace utils {
         extern DLL ws2_32;
         extern DLL kernel32;
 
-#define LAZY(func) inline Func<decltype(func)> func##_(ws2_32, #func);
+        inline bool load_socket() {
+            return ws2_32.load();
+        }
+
+#define LAZY(func) inline Func<decltype(func)> func##_{ws2_32, #func};
 #else
         extern DLL libanl;
 #define LAZY(func) inline decltype(func)* const func##_ = func;
 #endif
-        LAZY(socket)
         LAZY(send)
         LAZY(recv)
         LAZY(sendto)
@@ -63,6 +66,7 @@ namespace utils {
         LAZY(GetQueuedCompletionStatusEx)
         LAZY(SetFileCompletionNotificationModes)
 #else
+        LAZY(socket)
         LAZY(freeaddrinfo)
         LAZY(close)
         LAZY(ioctl)

@@ -17,11 +17,11 @@ namespace utils {
     namespace dnet::quic::event {
         inline std::pair<Status, error::Error> send_ack(const packet::PacketSummary& packet, ACKWaitVec&, frame::fwriter& w, std::shared_ptr<void>& arg) {
             auto ackh = static_cast<ack::UnackedPacket*>(arg.get());
-            ack::ACKRangeVec ackvec;
-            if (!ackh->gen_ragnes_from_recved(ack::from_packet_type(packet.type), ackvec)) {
+            ack::ACKRangeVec* ackvec = ackh->gen_ragnes_from_recved(ack::from_packet_type(packet.type));
+            if (!ackvec) {
                 return {Status::reorder, error::none};
             }
-            auto [ack, ok] = frame::convert_to_ACKFrame<slib::vector>(ackvec);
+            auto [ack, ok] = frame::convert_to_ACKFrame<slib::vector>(*ackvec);
             if (!ok) {
                 return {Status::fatal, error::Error("generate ack range failed. library bug!!")};
             }

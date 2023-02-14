@@ -6,7 +6,7 @@
 */
 
 #include <dnet/socket.h>
-#include <dnet/tls.h>
+#include <dnet/tls/tls.h>
 #include <dnet/addrinfo.h>
 #include <cstring>
 #include <cassert>
@@ -40,23 +40,22 @@ int main() {
         break;
     }
 #ifdef _WIN32
-    dnet::set_libcrypto("D:/quictls/boringssl/built/lib/crypto.dll");
-    dnet::set_libssl("D:/quictls/boringssl/built/lib/ssl.dll");
+    dnet::tls::set_libcrypto(dnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
+    dnet::tls::set_libssl(dnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
 #endif
-    dnet::TLS tls = dnet::create_tls();
+    auto config = dnet::tls::configure();
+    config.set_cacert_file("./test/net/cacert.pem");
+    dnet::tls::TLS tls = dnet::tls::create_tls(config);
     assert(tls);
-    tls.set_cacert_file("./test/net/cacert.pem");
-    tls.set_alpn("\x08http/1.1", 9);
+    tls.set_alpn("\x08http/1.1");
     tls.set_hostname("www.google.com");
-    auto res = tls.make_ssl();
-    assert(!res.is_error());
     char buf[1024 * 3];
     auto provider_loop = [&] {
-        if (tls.receive_tls_data(buf, sizeof(buf)).is_noerr()) {
-            sock.write(view::rvec(buf, tls.readsize()));
+        auto [read, err] = tls.receive_tls_data(buf);
+        if (!err) {
+            sock.write(read);
         }
         view::wvec v;
-        dnet::error::Error err;
         while (true) {
             std::tie(v, err) = sock.read(buf);
             if (!err) {
@@ -65,17 +64,21 @@ int main() {
             assert(dnet::isSysBlock(err));
             std::this_thread::yield();
         }
-        tls.provide_tls_data(buf, v.size());
+        tls.provide_tls_data(v);
     };
     while (auto err = tls.connect()) {
-        assert(dnet::isTLSBlock(err));
+        assert(dnet::tls::isTLSBlock(err));
         provider_loop();
     }
     constexpr auto data = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
-    tls.write(data, strlen(data));
+    tls.write(data);
     provider_loop();
-    while (auto err = tls.read(buf, sizeof(buf))) {
-        assert(dnet::isTLSBlock(err));
+    while (true) {
+        auto [red, err] = tls.read(buf);
+        if (!err) {
+            break;
+        }
+        assert(dnet::tls::isTLSBlock(err));
         provider_loop();
     }
 }

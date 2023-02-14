@@ -8,7 +8,7 @@
 // suite - crypto suite
 #pragma once
 #include "../../storage.h"
-#include "../../tls.h"
+#include "../../tls/tls.h"
 #include "../ack/ack_lost_record.h"
 #include "../frame/crypto.h"
 #include "../packet_number.h"
@@ -132,7 +132,7 @@ namespace utils {
 
         struct CryptoSuite {
             CryptoData crypto_data[4];
-            TLS tls;
+            tls::TLS tls;
             bool is_server = false;
             // TLS handshake completed
             bool handshake_complete = false;
@@ -196,7 +196,7 @@ namespace utils {
                 }
                 if (data.read_offset == frame.offset) {  // offset matched
                     auto stdata = frame.crypto_data;
-                    if (auto err = tls.provide_quic_data(level, stdata.data(), stdata.size())) {
+                    if (auto err = tls.provide_quic_data(level, stdata)) {
                         return err;
                     }
                     data.read_offset += stdata.size();
@@ -208,7 +208,7 @@ namespace utils {
                     while (data.recv_data.size() &&
                            data.read_offset == data.recv_data.back().offset) {
                         auto& src = data.recv_data.back();
-                        if (auto err = tls.provide_quic_data(level, src.fragment.data(), src.fragment.size())) {
+                        if (auto err = tls.provide_quic_data(level, src.fragment)) {
                             return err;
                         }
                         data.read_offset += src.fragment.size();
@@ -222,7 +222,7 @@ namespace utils {
                     else {
                         if (is_server) {
                             if (auto err = tls.accept(); err) {
-                                if (isTLSBlock(err)) {
+                                if (tls::isTLSBlock(err)) {
                                     return error::none;
                                 }
                                 return err;  // error
@@ -230,7 +230,7 @@ namespace utils {
                         }
                         else {
                             if (auto err = tls.connect(); err) {
-                                if (isTLSBlock(err)) {
+                                if (tls::isTLSBlock(err)) {
                                     return error::none;
                                 }
                                 return err;  // blocked or error

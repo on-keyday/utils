@@ -8,9 +8,8 @@
 
 #include <dnet/dll/dllcpp.h>
 #include <dnet/quic/crypto/crypto.h>
-#include <dnet/dll/ssldll.h>
 #include <helper/defer.h>
-#include <dnet/tls.h>
+#include <dnet/tls/tls.h>
 #include <dnet/quic/version.h>
 #include <dnet/quic/types.h>
 #include <dnet/quic/crypto/tls_suite.h>
@@ -29,18 +28,18 @@ namespace utils {
             static constexpr auto err_unknown = error::Error("unknown packet parser error. library bug!", error::ErrorCategory::dneterr);
             static constexpr auto err_decode_pn = error::Error("failed to decode packet number", error::ErrorCategory::quicerr);
 
-            tls::TLSSuite judge_cipher(const TLSCipher& cipher) {
-                if (cipher == TLSCipher{}) {
-                    return tls::TLSSuite::AES_128_GCM_SHA256;
+            tls::QUICCipherSuite judge_cipher(const tls::TLSCipher& cipher) {
+                if (cipher == tls::TLSCipher{}) {
+                    return tls::QUICCipherSuite::AES_128_GCM_SHA256;
                 }
                 return tls::to_suite(cipher.rfcname());
             }
 
             constexpr size_t sample_len = 16;
 
-            error::Error gen_masks(byte* masks, view::rvec hp_key, const TLSCipher& cipher, view::rvec sample) {
+            error::Error gen_masks(byte* masks, view::rvec hp_key, const tls::TLSCipher& cipher, view::rvec sample) {
                 auto suite = judge_cipher(cipher);
-                if (suite == tls::TLSSuite::Unsupported) {
+                if (suite == tls::QUICCipherSuite::Unsupported) {
                     return err_cipher_spec;
                 }
                 if (tls::is_AES_based(suite)) {
@@ -78,7 +77,7 @@ namespace utils {
                 *first_byte = PacketFlags{*first_byte}.protect(mask);
             }
 
-            error::Error protect_header(byte pnlen, view::rvec hp_key, const TLSCipher& cipher, packet::CryptoPacket& packet) {
+            error::Error protect_header(byte pnlen, view::rvec hp_key, const tls::TLSCipher& cipher, packet::CryptoPacket& packet) {
                 auto [encrypted, ok1] = packet.parse(sample_len, authentication_tag_length);
                 if (!ok1) {
                     return err_unknown;
@@ -99,7 +98,7 @@ namespace utils {
                 return error::none;
             }
 
-            std::pair<packetnum::WireVal, error::Error> unprotect_header(view::rvec hp_key, const TLSCipher& cipher, packet::CryptoPacket& packet) {
+            std::pair<packetnum::WireVal, error::Error> unprotect_header(view::rvec hp_key, const tls::TLSCipher& cipher, packet::CryptoPacket& packet) {
                 auto [encrypted, ok1] = packet.parse(sample_len, authentication_tag_length);
                 if (!ok1) {
                     return {{}, err_packet_format};
@@ -128,7 +127,7 @@ namespace utils {
                 return {wireval, error::none};
             }
 
-            dnet_dll_implement(error::Error) encrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet) {
+            dnet_dll_implement(error::Error) encrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet) {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
                 }
@@ -152,7 +151,7 @@ namespace utils {
                 return protect_header(pnlen, keys.hp(), cipher, packet);
             }
 
-            dnet_dll_implement(error::Error) decrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
+            dnet_dll_implement(error::Error) decrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
                 }

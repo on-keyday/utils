@@ -15,7 +15,7 @@
 namespace utils {
     namespace parser {
         namespace expr {
-            using PushBacker = helper::IPushBacker;
+            using PushBacker = helper::IPushBacker<>;
 
             struct ErrorStack {
                private:

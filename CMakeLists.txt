@@ -85,6 +85,7 @@ add_executable(dnetquic_stream "src/test/dnet/test_dnetquic_stream.cpp")
 add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
 add_executable(dnetquic_multi_thread "src/test/dnet/test_dnetquic_multi_thread.cpp")
 add_executable(dnet_dns "src/test/dnet/test_dnet_dns.cpp")
+add_executable(hpack "src/test/net_util/test_hpack.cpp")
 
 #[[
 add_executable(endian "src/test/endian/test_endian.cpp")
@@ -226,11 +227,14 @@ target_sources(utnet
 )]]
 
 target_sources(dnet PRIVATE
+#[[
   "src/lib/dnet/dll/sockdll.cpp"
   "src/lib/dnet/dll/ssldll.cpp"
+]]
   "src/lib/dnet/socket.cpp"
   "src/lib/dnet/addrinfo.cpp"
   "src/lib/dnet/tls.cpp"
+  "src/lib/dnet/tlsopt.cpp"
   "src/lib/dnet/http2.cpp"
   "src/lib/dnet/heaps.cpp"
   "src/lib/dnet/address.cpp"
@@ -241,6 +245,8 @@ target_sources(dnet PRIVATE
   "src/lib/dnet/quic/crypto/masks.cpp"
   "src/lib/dnet/quic/crypto/enc_packet.cpp"
   "src/lib/dnet/quic/crypto/cipher_payload.cpp"
+
+  "src/lib/dnet/dll/lazy.cpp"
 )
 
 target_sources(dnetserv PRIVATE

@@ -59,18 +59,19 @@ namespace utils {
             }
         };
 
+        template <class C = std::uint8_t>
         struct IPushBacker {
            private:
             void* ptr;
-            void (*push_back_)(void*, std::uint8_t);
+            void (*push_back_)(void*, C);
 
             template <class T>
-            static void push_back_fn(void* self, std::uint8_t c) {
+            static void push_back_fn(void* self, C c) {
                 static_cast<T*>(self)->push_back(c);
             }
 
            public:
-            using char_type = std::uint8_t;
+            using char_type = C;
 
             IPushBacker(const IPushBacker& b)
                 : ptr(b.ptr), push_back_(b.push_back_) {}
@@ -79,7 +80,7 @@ namespace utils {
             IPushBacker(T& pb)
                 : ptr(std::addressof(pb)), push_back_(push_back_fn<T>) {}
 
-            constexpr void push_back(std::uint8_t c) {
+            constexpr void push_back(C c) {
                 push_back_(ptr, c);
             }
         };

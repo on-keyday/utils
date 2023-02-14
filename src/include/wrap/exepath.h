@@ -12,7 +12,7 @@
 
 namespace utils {
     namespace wrap {
-        DLL void STDCALL get_exepath(helper::IPushBacker pb);
+        DLL void STDCALL get_exepath(helper::IPushBacker<> pb);
 
         template <class Out = wrap::string>
         Out get_exepath() {

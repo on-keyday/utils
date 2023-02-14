@@ -6,7 +6,7 @@
 */
 
 #include <dnet/dll/errno.h>
-#include <dnet/dll/sockdll.h>
+#include <dnet/dll/lazy/sockdll.h>
 #include <dnet/socket.h>
 #include <dnet/errcode.h>
 #include <atomic>
@@ -17,7 +17,7 @@ namespace utils {
     namespace dnet {
 
         int get_epoll() {
-            static auto epol = socdl.epoll_create1_(EPOLL_CLOEXEC);
+            static auto epol = lazy::epoll_create1_(EPOLL_CLOEXEC);
             return epol;
         }
 
@@ -25,7 +25,7 @@ namespace utils {
             int t = time;
             epoll_event ev[64]{};
             sigset_t set;
-            auto res = socdl.epoll_pwait_(get_epoll(), ev, 64, t, &set);
+            auto res = lazy::epoll_pwait_(get_epoll(), ev, 64, t, &set);
             if (res == -1) {
                 return 0;
             }
@@ -76,12 +76,12 @@ namespace utils {
             ev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLEXCLUSIVE;
             ev.data.ptr = ptr;
             set_error(0);
-            return socdl.epoll_ctl_(get_epoll(), EPOLL_CTL_ADD, fd, &ev) == 0 ||
+            return lazy::epoll_ctl_(get_epoll(), EPOLL_CTL_ADD, fd, &ev) == 0 ||
                    get_error() == EEXIST;
         }
 
         void remove_fd(std::uintptr_t fd) {
-            socdl.epoll_ctl_(get_epoll(), EPOLL_CTL_DEL, fd, nullptr);
+            lazy::epoll_ctl_(get_epoll(), EPOLL_CTL_DEL, fd, nullptr);
         }
 
         error::Error epollIOCommon(RWAsyncSuite* rw, AsyncSuite* suite, std::uintptr_t sock, view::rvec buf, std::shared_ptr<thread::Waker>& waker, int flag, bool is_stream) {
@@ -205,7 +205,7 @@ namespace utils {
                     check_epoll_mask(err);
                     size_t red = 0;
                     auto buf = get_wbuf(suite);
-                    auto res = socdl.recv_(suite->sock, buf.as_char(), buf.size(), 0);
+                    auto res = lazy::recv_(suite->sock, buf.as_char(), buf.size(), 0);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
@@ -250,7 +250,7 @@ namespace utils {
                     size_t red = 0;
                     auto saddr = reinterpret_cast<sockaddr*>(&addr);
                     auto buf = get_wbuf(suite);
-                    auto res = socdl.recvfrom_(
+                    auto res = lazy::recvfrom_(
                         suite->sock, buf.as_char(), buf.size(), suite->plt.flags,
                         saddr, &addrlen);
                     if (res < 0) {
@@ -296,7 +296,7 @@ namespace utils {
                     check_epoll_mask(err);
                     size_t red = 0;
                     view::rvec buf = suite->plt.buf;
-                    auto res = socdl.send_(suite->sock, buf.as_char(), buf.size(), suite->plt.flags);
+                    auto res = lazy::send_(suite->sock, buf.as_char(), buf.size(), suite->plt.flags);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }
@@ -346,7 +346,7 @@ namespace utils {
                         return;
                     }
                     view::rvec buf = suite->plt.buf;
-                    auto res = socdl.sendto_(suite->sock, buf.as_char(), buf.size(), suite->plt.flags, addr, addrlen);
+                    auto res = lazy::sendto_(suite->sock, buf.as_char(), buf.size(), suite->plt.flags, addr, addrlen);
                     if (res < 0) {
                         set_epoll_or_errno(err);
                     }

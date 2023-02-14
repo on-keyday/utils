@@ -17,17 +17,19 @@ namespace utils {
 
         struct UnackedPacket {
             slib::vector<packetnum::Value> unacked[3]{};
+            ACKRangeVec buffer;
 
-            constexpr bool gen_ragnes_from_recved(PacketNumberSpace space, auto&& ack_range) {
+            constexpr ACKRangeVec* gen_ragnes_from_recved(PacketNumberSpace space) {
+                buffer.clear();
                 auto& recved = unacked[space_to_index(space)];
                 const auto size = recved.size();
                 if (size == 0) {
-                    return false;
+                    return nullptr;
                 }
                 if (size == 1) {
                     auto res = recved[0].value;
-                    ack_range.push_back(frame::ACKRange{res, res});
-                    return true;
+                    buffer.push_back(frame::ACKRange{res, res});
+                    return &buffer;
                 }
                 std::sort(recved.begin(), recved.end(), std::greater<>{});
                 frame::ACKRange cur;
@@ -38,13 +40,13 @@ namespace utils {
                         cur.smallest = recved[i];
                     }
                     else {
-                        ack_range.push_back(std::move(cur));
+                        buffer.push_back(std::move(cur));
                         cur.largest = recved[i];
                         cur.smallest = cur.largest;
                     }
                 }
-                ack_range.push_back(std::move(cur));
-                return true;
+                buffer.push_back(std::move(cur));
+                return &buffer;
             }
 
             void clear(PacketNumberSpace space) {

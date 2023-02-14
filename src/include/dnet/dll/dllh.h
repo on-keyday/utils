@@ -8,10 +8,10 @@
 #pragma once
 #ifndef dnet_dll_export
 #ifdef _WIN32
-#define dnet_dll_export(type) __declspec(dllimport) type __stdcall
+#define dnet_dll_export(...) __declspec(dllimport) __VA_ARGS__ __stdcall
 #define dnet_class_export __declspec(dllimport)
 #else
-#define dnet_dll_export(type) type
+#define dnet_dll_export(type) __VA_ARGS__
 #define dnet_class_export
 #endif
 #endif

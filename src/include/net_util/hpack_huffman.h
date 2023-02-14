@@ -10,8 +10,6 @@
 #include <utility>
 #include <array>
 #include "../wrap/light/enum.h"
-// #include "../endian/reader.h"
-// #include "../endian/writer.h"
 #include "../helper/equal.h"
 #include "../io/number.h"
 #include "../io/expandable_writer.h"
@@ -184,7 +182,7 @@ namespace utils {
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1},
-             {0, 1, 0, 1, 0, 0},
+             {0, 1, 0, 1, 0, 0},  // 0x32
              {1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
              {1, 1, 1, 1, 1, 1, 1, 0, 0, 1},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0},
@@ -240,9 +238,9 @@ namespace utils {
              {1, 1, 1, 0, 0, 0, 0},
              {1, 1, 1, 0, 0, 0, 1},
              {1, 1, 1, 0, 0, 1, 0},
-             {1, 1, 1, 1, 1, 1, 0},
+             {1, 1, 1, 1, 1, 1, 0, 0},
              {1, 1, 1, 0, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 0},
+             {1, 1, 1, 1, 1, 1, 0, 1},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
@@ -278,58 +276,58 @@ namespace utils {
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},
-             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1},
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},                                               // 0xfe = 126
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  // 127
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0},                          // 128
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0},                    // 129
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1},                          // 130
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0},                          // 131
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1},                    // 132
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0},                    // 133
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1},                    // 134
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1},                 // 135
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0},                    // 136
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0},                 // 137
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1},                 // 138
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},                 // 139
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1},                 // 140
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0},                 // 141
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1},              // 142
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1},                 // 143
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0},              // 144
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1},              // 145
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1},                    // 146
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},                 // 147
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0},              // 148
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1},                 // 149
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0},                 // 150
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1},                 // 151
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0},                 // 152
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},                       // 153
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0},                    // 154
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1},                 // 155
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1},                    // 156
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0},                 // 157
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1},                 // 158
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1},              // 159
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0},                    // 160
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1},                       // 161
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1},                          // 162
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1},                    // 163
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},                    // 164
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0},                 // 165
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1},                 // 166
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0},                       // 167
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0},                 // 168
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1},                    // 169
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0},                    // 170
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},              // 171
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1},                       // 172
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1},                    // 173
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1},                 // 174
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0},                 // 175
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},                       // 176
+             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1},                       // 177
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0},
              {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1},
@@ -494,80 +492,123 @@ namespace utils {
             }
         };
 
-        struct h2huffman_tree {
+        struct huffman_tree {
            private:
-            h2huffman_tree* zero = nullptr;
-            h2huffman_tree* one = nullptr;
-            unsigned char c = 0;
-            bool has_c = false;
-            bool eos = false;
-            constexpr h2huffman_tree() {}
-            ~h2huffman_tree() noexcept {
-                delete zero;
-                delete one;
+            std::uint16_t zero = 0;
+            std::uint16_t one = 0;
+            friend struct huffman_tree_table_t;
+
+            // hpack huffman_tree_table_t index is smaller than 0x1ff = 511
+            static constexpr std::uint16_t flag_eos = 0x0400;
+            static constexpr std::uint16_t flag_char = 0x0800;
+
+            constexpr void set_char(byte c) {
+                zero |= flag_char;
+                one = c;
             }
 
-            static bool append(h2huffman_tree* tree, bool eos, unsigned char c, const bitvec_t& v, bitvec_t& res, size_t idx = 0) {
-                if (!tree) {
-                    return false;
-                }
-                if (v == res) {
-                    tree->c = c;
-                    tree->has_c = true;
-                    tree->eos = eos;
-                    if (tree->zero || tree->one) {
-                        throw "invalid hpack huffman";
-                    }
-                    return true;
-                }
-                res.push_back(v[idx]);
-                if (v[idx]) {
-                    if (!tree->one) {
-                        tree->one = new h2huffman_tree();
-                    }
-                    return append(tree->one, eos, c, v, res, idx + 1);
-                }
-                else {
-                    if (!tree->zero) {
-                        tree->zero = new h2huffman_tree();
-                    }
-                    return append(tree->zero, eos, c, v, res, idx + 1);
-                }
-            }
-
-            static h2huffman_tree* init_tree() {
-                static h2huffman_tree _tree = {};
-                for (auto i = 0; i < 256; i++) {
-                    bitvec_t res;
-                    append(&_tree, false, i, h2huffman[i], res);
-                }
-                bitvec_t res;
-                append(&_tree, true, 0, h2huffman[256], res);
-                return &_tree;
+            constexpr void set_eos() {
+                zero |= flag_eos;
             }
 
            public:
-            static const h2huffman_tree* tree() {
-                static h2huffman_tree* ret = init_tree();
-                return ret;
+            constexpr bool has_char() const {
+                return zero & flag_char;
             }
 
-            const h2huffman_tree* get(bool flag) const {
-                return flag ? one : zero;
+            constexpr bool is_eos() const {
+                return zero & flag_eos;
             }
 
-            bool has_char() const {
-                return has_c;
-            }
-
-            unsigned char get_char() const {
-                return c;
-            }
-
-            bool is_eos() const {
-                return eos;
+            constexpr byte get_char() const {
+                return one;
             }
         };
+
+        struct huffman_tree_table_t {
+           private:
+            constexpr static size_t table_size = 513;
+            huffman_tree table[table_size]{};
+
+            constexpr void check_throw(std::uint16_t one, std::uint16_t zero) {
+                if (one || zero) {
+                    throw "invalid";
+                }
+            }
+
+            constexpr void append(std::uint16_t& table_index, huffman_tree* tree, bool eos, byte c, const bitvec_t& v, bitvec_t& res, size_t idx = 0) {
+                if (!tree) {
+                    throw "unexpected";
+                }
+                if (v == res) {
+                    check_throw(tree->one, tree->zero);
+                    tree->set_char(c);
+                    if (eos) {
+                        tree->set_eos();
+                    }
+                    return;
+                }
+                res.push_back(v[idx]);
+                if (v[idx]) {
+                    if (tree->one == 0) {
+                        tree->one = table_index;
+                        table_index++;
+                    }
+                    return append(table_index, &table[tree->one], eos, c, v, res, idx + 1);
+                }
+                else {
+                    if (tree->zero == 0) {
+                        tree->zero = table_index;
+                        table_index++;
+                    }
+                    return append(table_index, &table[tree->zero], eos, c, v, res, idx + 1);
+                }
+            }
+
+            constexpr void init() {
+                huffman_tree& root = table[0];
+                std::uint16_t table_index = 1;
+                for (auto i = 32; i < 127; i++) {
+                    bitvec_t res;
+                    append(table_index, &root, false, i, h2huffman[i], res);
+                }
+                for (auto i = 0; i < 32; i++) {
+                    bitvec_t res;
+                    append(table_index, &root, false, i, h2huffman[i], res);
+                }
+                for (auto i = 127; i < 256; i++) {
+                    bitvec_t res;
+                    append(table_index, &root, false, i, h2huffman[i], res);
+                }
+                bitvec_t res;
+                append(table_index, &root, true, 0, h2huffman[256], res);
+            }
+
+           public:
+            constexpr huffman_tree_table_t() {
+                init();
+            }
+
+            constexpr const huffman_tree* root() const {
+                return &table[0];
+            }
+
+            constexpr const huffman_tree* next(const huffman_tree* current, bool bit) const {
+                if (!current) {
+                    return nullptr;
+                }
+                if (current->has_char() || current->is_eos()) {
+                    return nullptr;
+                }
+                std::uint16_t next_index = bit ? current->one : current->zero;
+                if (next_index == 0) {
+                    return nullptr;
+                }
+                return &table[next_index];
+            }
+        };
+
+        constexpr auto huffman_tree_table = huffman_tree_table_t{};
 
         template <class String>
         constexpr size_t gethuffmanlen(const String& str) {
@@ -589,37 +630,34 @@ namespace utils {
         }
 
         template <class T>
-        HpkErr decode_huffman_achar(unsigned char& c, bitvec_reader<T>& r,
-                                    const h2huffman_tree* t, const h2huffman_tree*& fin,
-                                    std::uint32_t& allone) {
+        constexpr HpkErr decode_huffman_achar(bitvec_reader<T>& r,
+                                              const huffman_tree*& fin,
+                                              std::uint32_t& allone) {
+            const huffman_tree* t = huffman_tree_table.root();
             for (;;) {
                 if (!t) {
                     return HpackError::invalid_value;
                 }
                 if (t->has_char()) {
-                    c = t->get_char();
                     fin = t;
-                    return true;
+                    return HpackError::none;
                 }
                 bool f = r.get();
                 if (!r.incremant()) {
                     return HpackError::too_short_number;
                 }
-                const h2huffman_tree* next = t->get(f);
                 allone = (allone && f) ? allone + 1 : 0;
-                t = next;
+                t = huffman_tree_table.next(t, f);
             }
         }
 
         template <class T, class Out>
-        HpkErr decode_huffman(Out& res, bitvec_reader<T>& r) {
-            auto tree = h2huffman_tree::tree();
+        constexpr HpkErr decode_huffman(Out& res, bitvec_reader<T>& r) {
             while (!r.eos()) {
-                unsigned char c = 0;
-                const h2huffman_tree* fin = nullptr;
+                const huffman_tree* fin = nullptr;
                 std::uint32_t allone = 1;
-                auto tmp = decode_huffman_achar(c, r, tree, fin, allone);
-                if (!tmp) {
+                auto tmp = decode_huffman_achar(r, fin, allone);
+                if (tmp != HpackError::none) {
                     if (tmp == HpackError::too_short_number) {
                         if (!r.eos() && allone - 1 > 7) {
                             return HpackError::too_large_number;
@@ -631,9 +669,9 @@ namespace utils {
                 if (fin->is_eos()) {
                     return HpackError::invalid_value;
                 }
-                res.push_back(c);
+                res.push_back(fin->get_char());
             }
-            return true;
+            return HpackError::none;
         }
 
         template <std::uint32_t n>
@@ -704,7 +742,7 @@ namespace utils {
         }
 
         template <class String>
-        HpkErr decode_string(String& str, io::reader& r) {
+        constexpr HpkErr decode_string(String& str, io::reader& r) {
             size_t size = 0;
             byte mask = 0;
             auto err = decode_integer<7>(r, size, mask);

@@ -6,8 +6,8 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/dll/ssldll.h>
-#include <dnet/tls.h>
+#include <dnet/dll/lazy/ssldll.h>
+#include <dnet/tls/tls.h>
 #include <dnet/quic/crypto/crypto.h>
 #include <helper/defer.h>
 #include <dnet/quic/version.h>
@@ -17,44 +17,31 @@ namespace utils {
     namespace dnet {
         namespace quic::crypto {
 
-            bool load_openssl_quic() {
-                static auto res = load_crypto() && ssldl.load_openssl_quic_ext();
-                return res;
-            }
-
             constexpr auto digest_SHA256 = "SHA256";
-
-            bool loading() {
-                if (!load_crypto()) {
-                    return false;
-                }
-                // loading
-                load_openssl_quic();
-                is_boringssl_crypto();
-                return true;
-            }
 
             bool HKDF_Extract_openssl(view::wvec initial,
                                       view::rvec secret, view::rvec salt) {
-                auto& c = ssldl;
-                auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
-                auto ctx = c.EVP_KDF_CTX_new_(kdf);
+                if (!lazy::crypto::ossl::sp::EVP_KDF_fetch_.find()) {
+                    return false;
+                }
+                auto kdf = lazy::crypto::ossl::sp::EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
+                auto ctx = lazy::crypto::ossl::sp::EVP_KDF_CTX_new_(kdf);
                 auto _ = helper::defer([&] {
-                    c.EVP_KDF_CTX_free_(ctx);
+                    lazy::crypto::ossl::sp::EVP_KDF_CTX_free_(ctx);
                 });
-                c.EVP_KDF_free_(kdf);
-                ssl_import::open_quic_ext::OSSL_PARAM params[5];
-                params[0] = c.OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXTRACT_ONLY"), 12);
-                params[1] = c.OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret.data()), secret.size());
-                params[2] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
+                lazy::crypto::ossl::sp::EVP_KDF_free_(kdf);
+                ssl_import::ls::open_ssl::crypto::OSSL_PARAM params[5];
+                params[0] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXTRACT_ONLY"), 12);
+                params[1] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret.data()), secret.size());
+                params[2] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
                 if (!salt.null()) {
-                    params[3] = c.OSSL_PARAM_construct_octet_string_("salt", const_cast<byte*>(salt.data()), salt.size());
-                    params[4] = c.OSSL_PARAM_construct_end_();
+                    params[3] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_octet_string_("salt", const_cast<byte*>(salt.data()), salt.size());
+                    params[4] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_end_();
                 }
                 else {
-                    params[3] = c.OSSL_PARAM_construct_end_();
+                    params[3] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_end_();
                 }
-                auto v = c.EVP_KDF_derive_(ctx, initial.data(), initial.size(), params);
+                auto v = lazy::crypto::ossl::sp::EVP_KDF_derive_(ctx, initial.data(), initial.size(), params);
                 if (v <= 0) {
                     return false;
                 }
@@ -63,35 +50,34 @@ namespace utils {
 
             dnet_dll_implement(bool) HKDF_Extract(view::wvec extracted,
                                                   view::rvec secret, view::rvec salt) {
-                if (!loading()) {
-                    return false;
-                }
-                if (!ssldl.HKDF_extract_) {
+                if (!lazy::crypto::bssl::sp::HKDF_extract_.find()) {
                     return HKDF_Extract_openssl(extracted, secret, salt);
                 }
                 size_t outlen = extracted.size();
-                return (bool)ssldl.HKDF_extract_(
+                return (bool)lazy::crypto::bssl::sp::HKDF_extract_(
                     extracted.data(), &outlen,
-                    ssldl.EVP_sha256_(), secret.data(), secret.size(),
+                    lazy::crypto::bssl::sp::EVP_sha256_(), secret.data(), secret.size(),
                     salt.data(), salt.size());
             }
 
             bool HKDF_Expand_openssl(view::wvec out, view::rvec secret, view::rvec label) {
-                auto& c = ssldl;
-                auto kdf = c.EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
-                auto ctx = c.EVP_KDF_CTX_new_(kdf);
+                if (!lazy::crypto::ossl::sp::EVP_KDF_fetch_.find()) {
+                    return false;
+                }
+                auto kdf = lazy::crypto::ossl::sp::EVP_KDF_fetch_(nullptr, "HKDF", nullptr);
+                auto ctx = lazy::crypto::ossl::sp::EVP_KDF_CTX_new_(kdf);
                 auto _ = helper::defer([&] {
-                    c.EVP_KDF_CTX_free_(ctx);
+                    lazy::crypto::ossl::sp::EVP_KDF_CTX_free_(ctx);
                 });
-                c.EVP_KDF_free_(kdf);
-                ssl_import::open_quic_ext::OSSL_PARAM params[5];
+                lazy::crypto::ossl::sp::EVP_KDF_free_(kdf);
+                ssl_import::ls::open_ssl::crypto::OSSL_PARAM params[5];
                 static_assert(sizeof(params[0]) == 40);
-                params[0] = c.OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXPAND_ONLY"), 11);
-                params[1] = c.OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret.data()), secret.size());
-                params[2] = c.OSSL_PARAM_construct_octet_string_("info", const_cast<byte*>(label.data()), label.size());
-                params[3] = c.OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
-                params[4] = c.OSSL_PARAM_construct_end_();
-                auto err = c.EVP_KDF_derive_(ctx, out.data(), out.size(), params);
+                params[0] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXPAND_ONLY"), 11);
+                params[1] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret.data()), secret.size());
+                params[2] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_octet_string_("info", const_cast<byte*>(label.data()), label.size());
+                params[3] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_utf8_string_("digest", const_cast<char*>(digest_SHA256), 6);
+                params[4] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_end_();
+                auto err = lazy::crypto::ossl::sp::EVP_KDF_derive_(ctx, out.data(), out.size(), params);
                 if (err <= 0) {
                     return false;
                 }
@@ -122,14 +108,12 @@ namespace utils {
                     return false;
                 }
                 auto label = w.written();
-                if (!loading()) {
-                    return false;
-                }
-                if (!ssldl.HKDF_expand_) {
+                if (!lazy::crypto::bssl::sp::HKDF_expand_.find()) {
                     return HKDF_Expand_openssl(output, secret, label);
                 }
-                return ssldl.HKDF_expand_(output.data(), output.size(), ssldl.EVP_sha256_(),
-                                          secret.data(), secret.size(), label.data(), label.size());
+                return lazy::crypto::bssl::sp::HKDF_expand_(
+                    output.data(), output.size(), lazy::crypto::bssl::sp::EVP_sha256_(),
+                    secret.data(), secret.size(), label.data(), label.size());
             }
 
             dnet_dll_implement(bool) make_initial_secret(view::wvec secret, std::uint32_t version, view::rvec clientConnID, bool enc_client) {
@@ -157,9 +141,9 @@ namespace utils {
                 return ok;
             }
 
-            dnet_dll_export(error::Error) make_keys_from_secret(Keys& keys, const TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
+            dnet_dll_export(error::Error) make_keys_from_secret(Keys& keys, const tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
                 auto suite = judge_cipher(cipher);
-                if (suite == tls::TLSSuite::Unsupported) {
+                if (suite == tls::QUICCipherSuite::Unsupported) {
                     return error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
                 }
                 auto hash_len = tls::hash_len(suite);

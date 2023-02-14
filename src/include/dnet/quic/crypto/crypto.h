@@ -16,8 +16,10 @@
 
 namespace utils {
     namespace dnet {
-        // forward cipher
-        struct TLSCipher;
+        namespace tls {
+            // forward cipher
+            struct TLSCipher;
+        }  // namespace tls
 
         namespace quic::crypto {
 
@@ -29,15 +31,15 @@ namespace utils {
             // encrypt_packet encrypts packet with specific cipher
             // cipher is got from TLS.get_cipher or is TLSCipher{}
             // key shpuld
-            dnet_dll_export(error::Error) encrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet);
+            dnet_dll_export(error::Error) encrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet);
 
             // decrypt_packet decrypts packet with specific cipher
             // cipher is got from TLS.get_cipher or is TLSCipher{}
-            dnet_dll_export(error::Error) decrypt_packet(const Keys& keys, const TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn);
+            dnet_dll_export(error::Error) decrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn);
 
             // cipher_payload encrypts/decrypts payload with specific cipher
             // info should be parsed by CryptoPacket.parse_pnknown()
-            dnet_dll_export(error::Error) cipher_payload(const TLSCipher& cipher, packet::CryptoPacketPnKnown& info, view::rvec key, view::rvec iv_nonce, bool enc);
+            dnet_dll_export(error::Error) cipher_payload(const tls::TLSCipher& cipher, packet::CryptoPacketPnKnown& info, view::rvec key, view::rvec iv_nonce, bool enc);
 
             dnet_dll_export(error::Error) generate_retry_integrity_tag(view::wvec tag, view::rvec pseduo_packet, std::uint32_t version);
 

@@ -82,10 +82,10 @@ namespace utils {
             use_nothing,
         };
 
-        dnet_dll_export(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker pb, std::uint64_t code));
+        dnet_dll_export(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code));
 
         namespace internal {
-            dnet_dll_export(void) invoke_categspec(helper::IPushBacker pb, ErrorCategory categ, std::uint64_t val);
+            dnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, ErrorCategory categ, std::uint64_t val);
             dnet_dll_export(NumErrMode) categspec_mode(ErrorCategory categ);
 
             constexpr void categ_spec_error(auto& out, ErrorCategory categ, std::uint64_t val) {
@@ -103,7 +103,7 @@ namespace utils {
 
             template <class T>
             concept has_error = requires(T t) {
-                                    { t.error(std::declval<helper::IPushBacker>()) };
+                                    { t.error(std::declval<helper::IPushBacker<>>()) };
                                 };
 
             template <class T>
@@ -149,7 +149,7 @@ namespace utils {
 
             struct Wrap {
                 void* ptr = nullptr;
-                std::uintptr_t (*error)(void*, helper::IPushBacker pb, WrapCtrlOrder, void* unwrap_s) = nullptr;
+                std::uintptr_t (*error)(void*, helper::IPushBacker<> pb, WrapCtrlOrder, void* unwrap_s) = nullptr;
                 bool (*cmp)(const void*, const void*) = nullptr;
                 constexpr Wrap() {}
 
@@ -171,7 +171,7 @@ namespace utils {
                     ptr = tmp;
                     std::get<0>(tmp->optional) = 1;
                     cmp = reinterpret_cast<bool (*)(const void*, const void*)>(cmpf);
-                    error = [](void* p, helper::IPushBacker pb, WrapCtrlOrder ord, void* unwrap_s) -> std::uintptr_t {
+                    error = [](void* p, helper::IPushBacker<> pb, WrapCtrlOrder ord, void* unwrap_s) -> std::uintptr_t {
                         auto f = decltype(tmp)(p);
                         if (ord == WrapCtrlOrder::ref) {
                             ++std::get<0>(f->optional);
@@ -246,12 +246,20 @@ namespace utils {
             };
         }  // namespace internal
 
-        // Error is golang like error interface
-        // object should implement void error(helper::IPushBacker)
-        // specialized to number,const char*,and char* (heap str)
-        // support Error copy by reference count of internal pointer
-        // also support Error unwrap() like golang errors.Unwrap()
-        // reflection like T* as() function also support
+        /* Error is golang like error interface
+           object should implement void error(helper::IPushBacker<>)
+           specialized to number,const char*,and char* (heap str)
+           support Error copy by reference count of internal pointer
+           also support Error unwrap() like golang errors.Unwrap()
+           reflection like T* as() function also support
+
+           user defined Error MUST implement
+           + void error(helper::IPushbacker<>)
+           user defined Error MAY implement
+           + error::Error unwrap()
+           + ErrorCategory category()
+           + std::uint64_t errnum()
+        */
         struct Error {
            private:
             internal::ErrType detail{};

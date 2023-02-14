@@ -59,11 +59,11 @@ namespace utils {
                     return true;
                 }
                 size_t len = 0;
-                auto data = crypto.tls.get_peer_quic_transport_params(&len);
-                if (!data) {
-                    return true;
+                auto data = crypto.tls.get_peer_quic_transport_params();
+                if (data.null()) {
+                    return true;  // nothing can do
                 }
-                io::reader r{view::rvec(data, len)};
+                io::reader r{data};
                 auto err = params.parse_peer(r, conf.is_server);
                 if (err) {
                     conn_err = std::move(err);
@@ -86,8 +86,9 @@ namespace utils {
                 return true;
             }
 
-            auto init_tls() {
-                return crypto.tls.make_quic(crypto::qtls_callback, &crypto);
+            bool init_tls(const tls::TLSConfig& conf) {
+                std::tie(crypto.tls, conn_err) = tls::create_quic_tls_with_error(conf, crypto::qtls_callback, &crypto);
+                return conn_err.is_noerr();
             }
 
             void init_write_events() {
@@ -215,7 +216,7 @@ namespace utils {
                     return error::Error("failed to render params");
                 }
                 auto p = w.written();
-                if (auto err = crypto.tls.set_quic_transport_params(p.data(), p.size())) {
+                if (auto err = crypto.tls.set_quic_transport_params(p)) {
                     return err;
                 }
                 return error::none;
@@ -253,7 +254,7 @@ namespace utils {
                     return false;
                 }
                 auto err = crypto.tls.connect();
-                if (!isTLSBlock(err)) {
+                if (!tls::isTLSBlock(err)) {
                     conn_err = std::move(err);
                     return false;
                 }

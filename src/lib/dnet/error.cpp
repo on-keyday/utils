@@ -13,7 +13,7 @@ namespace utils {
     namespace dnet::error {
         struct Defined {
             NumErrMode mode = NumErrMode::use_default;
-            void (*fn)(helper::IPushBacker pb, std::uint64_t code) = nullptr;
+            void (*fn)(helper::IPushBacker<> pb, std::uint64_t code) = nullptr;
         };
         struct Record {
             ErrorCategory categ = ErrorCategory::noerr;
@@ -52,7 +52,7 @@ namespace utils {
             }
         }
 
-        dnet_dll_implement(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker pb, std::uint64_t code)) {
+        dnet_dll_implement(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code)) {
             if (categ == ErrorCategory::noerr || !fn) {
                 return false;
             }
@@ -91,7 +91,7 @@ namespace utils {
                 return cb(Defined{});
             }
 
-            dnet_dll_export(void) invoke_categspec(helper::IPushBacker pb, ErrorCategory categ, std::uint64_t val) {
+            dnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, ErrorCategory categ, std::uint64_t val) {
                 fetch_categ(categ, [&](Defined def) {
                     if (def.fn) {
                         def.fn(pb, val);

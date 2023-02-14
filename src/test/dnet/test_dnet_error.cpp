@@ -13,7 +13,7 @@ int main() {
     assert(err.category() == dnet::error::ErrorCategory::syserr);
     struct LocalError {
         int val = 0;
-        void error(helper::IPushBacker pb) {
+        void error(helper::IPushBacker<> pb) {
             helper::append(pb, "local_error");
         }
 

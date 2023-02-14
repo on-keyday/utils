@@ -8,7 +8,6 @@
 
 #include <dnet/socket.h>
 #include <dnet/addrinfo.h>
-#include <dnet/dll/sockdll.h>
 #include <cassert>
 #include <string>
 #include <net_util/http/http_headers.h>
@@ -27,7 +26,7 @@ struct SockHolder {
 
 int main() {
     dnet::SockAddr addr{};
-    auto resolve = dnet::resolve_address("www.google.com", "http", {.socket_type = SOCK_STREAM});
+    auto resolve = dnet::resolve_address("www.google.com", "http", dnet::sockattr_tcp());
     auto list = resolve.wait();
     assert(!resolve.failed());
     dnet::Socket sock;

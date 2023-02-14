@@ -6,7 +6,7 @@
 */
 
 /*
-#include <dnet/tls.h>
+#include <dnet/tls/tls.h>
 #include <cassert>
 #include <dnet/quic/transport_parameter/transport_param.h>
 #include <string>
@@ -83,7 +83,7 @@ void test_dnetquic_initial() {
    tls.set_cacert_file(nullptr, "D:/MiniTools/QUIC_mock/goserver/keys/");
    tls.set_verify(dnet::SSL_VERIFY_PEER_);
    Test test;
-   auto res = tls.make_quic(quic_method, &test).is_noerr();
+   auto res = tls.setup_quic(quic_method, &test).is_noerr();
    assert(res);
    tls.set_alpn("\x02h3", 3);
    dnet::quic::trsparam::DefinedTransportParams params{};

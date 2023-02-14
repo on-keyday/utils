@@ -6,8 +6,8 @@
 */
 
 #include <dnet/dll/dllcpp.h>
+#include <dnet/dll/lazy/sockdll.h>
 #include <dnet/socket.h>
-#include <dnet/dll/sockdll.h>
 #include <dnet/dll/glheap.h>
 #include <dnet/errcode.h>
 #include <cstring>
@@ -19,21 +19,21 @@ namespace utils {
     namespace dnet {
 #ifdef _WIN32
         void sockclose(std::uintptr_t sock) {
-            socdl.closesocket_(sock);
+            lazy::closesocket_(sock);
         }
 
         void set_nonblock(std::uintptr_t sock, bool yes = true) {
             u_long nb = yes ? 1 : 0;
-            socdl.ioctlsocket_(sock, FIONBIO, &nb);
+            lazy::ioctlsocket_(sock, FIONBIO, &nb);
         }
 #else
         void sockclose(std::uintptr_t sock) {
-            socdl.close_(sock);
+            lazy::close_(sock);
         }
 
         void set_nonblock(std::uintptr_t sock, bool yes = true) {
             u_long nb = yes ? 1 : 0;
-            socdl.ioctl_(sock, FIONBIO, &nb);
+            lazy::ioctl_(sock, FIONBIO, &nb);
         }
 #endif
 
@@ -78,7 +78,7 @@ namespace utils {
             if (!a) {
                 return error::Error(not_supported, error::ErrorCategory::dneterr);
             }
-            auto res = socdl.connect_(sock, a, len);
+            auto res = lazy::connect_(sock, a, len);
             if (res < 0) {
                 return Errno();
             }
@@ -96,19 +96,19 @@ namespace utils {
             memcpy(&excset, &sets, sizeof(fd_set));
             int res = 0;
             if (read) {
-                res = socdl.select_(sock + 1, &xset, nullptr, &excset, &val);
+                res = lazy::select_(sock + 1, &xset, nullptr, &excset, &val);
             }
             else {
-                res = socdl.select_(sock + 1, nullptr, &xset, &excset, &val);
+                res = lazy::select_(sock + 1, nullptr, &xset, &excset, &val);
             }
             if (res == -1) {
                 return Errno();
             }
 #ifdef _WIN32
-            if (socdl.__WSAFDIsSet_(sock, &excset)) {
+            if (lazy::__WSAFDIsSet_(sock, &excset)) {
                 return Errno();
             }
-            if (socdl.__WSAFDIsSet_(sock, &xset)) {
+            if (lazy::__WSAFDIsSet_(sock, &xset)) {
                 return error::none;
             }
 #else
@@ -132,7 +132,7 @@ namespace utils {
 
         std::pair<view::rvec, error::Error> Socket::write(view::rvec data, int flag) {
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
-            auto res = socdl.send_(sock, sub.as_char(), sub.size(), flag);
+            auto res = lazy::send_(sock, sub.as_char(), sub.size(), flag);
             if (res < 0) {
                 return {data, Errno()};
             }
@@ -141,7 +141,7 @@ namespace utils {
 
         std::pair<view::wvec, error::Error> Socket::read(view::wvec data, int flag, bool is_stream) {
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
-            auto res = socdl.recv_(sock, sub.as_char(), sub.size(), flag);
+            auto res = lazy::recv_(sock, sub.as_char(), sub.size(), flag);
             if (res < 0) {
                 return {{}, Errno()};
             }
@@ -155,7 +155,7 @@ namespace utils {
                 return {data, error::Error(not_supported, error::ErrorCategory::validationerr)};
             }
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
-            auto res = socdl.sendto_(sock, sub.as_char(), sub.size(), flag, addrptr, addrlen);
+            auto res = lazy::sendto_(sock, sub.as_char(), sub.size(), flag, addrptr, addrlen);
             if (res < 0) {
                 return {data, Errno()};
             }
@@ -167,7 +167,7 @@ namespace utils {
             socklen_t fromlen = sizeof(soct);
             auto addr = reinterpret_cast<sockaddr*>(&soct);
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
-            auto res = socdl.recvfrom_(sock, sub.as_char(), sub.size(), flag, addr, &fromlen);
+            auto res = lazy::recvfrom_(sock, sub.as_char(), sub.size(), flag, addr, &fromlen);
             if (res < 0) {
                 return {{}, NetAddrPort{}, Errno()};
             }
@@ -175,7 +175,7 @@ namespace utils {
         }
 
         error::Error Socket::shutdown(int mode) {
-            auto res = socdl.shutdown_(sock, mode);
+            auto res = lazy::shutdown_(sock, mode);
             if (res != 0) {
                 return Errno();
             }
@@ -192,7 +192,7 @@ namespace utils {
             if (!addr_ptr) {
                 return error::Error(not_supported, error::ErrorCategory::validationerr);
             }
-            auto res = socdl.bind_(sock, addr_ptr, len);
+            auto res = lazy::bind_(sock, addr_ptr, len);
             if (res != 0) {
                 return Errno();
             }
@@ -200,7 +200,7 @@ namespace utils {
         }
 
         error::Error Socket::listen(int back) {
-            auto res = socdl.listen_(sock, back);
+            auto res = lazy::listen_(sock, back);
             if (res != 0) {
                 return Errno();
             }
@@ -211,7 +211,7 @@ namespace utils {
             sockaddr_storage st{};
             socklen_t addrlen = sizeof(st);
             auto ptr = reinterpret_cast<sockaddr*>(&st);
-            auto new_sock = socdl.accept_(sock, ptr, &addrlen);
+            auto new_sock = lazy::accept_(sock, ptr, &addrlen);
             if (new_sock == -1) {
                 return {Socket(), NetAddrPort(), Errno()};
             }
@@ -234,19 +234,14 @@ namespace utils {
             }
         }
 
-        bool init_sockdl() {
-            static auto result = socdl.load() && kerlib.load();
-            return result;
-        }
-
         dnet_dll_implement(Socket) make_socket(SockAttr attr) {
-            if (!init_sockdl()) {
+            if (!lazy::load_socket()) {
                 return make_socket(~0);
             }
 #ifdef _WIN32
-            auto sock = socdl.WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+            auto sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #else
-            auto sock = socdl.socket_(address_family, socket_mode, protocol);
+            auto sock = lazy::socket_(address_family, socket_mode, protocol);
 #endif
             if (sock == -1) {
                 return make_socket(~0);

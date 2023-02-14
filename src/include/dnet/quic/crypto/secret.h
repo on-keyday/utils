@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include "../../tls.h"
+#include "../../tls/tls.h"
 #include "../../storage.h"
 #include "keys.h"
 
@@ -17,12 +17,12 @@ namespace utils {
         struct Secret {
            private:
             storage secret_;
-            TLSCipher cipher_;
+            tls::TLSCipher cipher_;
             Keys keys_;
             bool exist_key = false;
 
            public:
-            void install(view::rvec new_secret, const TLSCipher& cipher) {
+            void install(view::rvec new_secret, const tls::TLSCipher& cipher) {
                 discard();
                 secret_ = make_storage(new_secret);
                 cipher_ = cipher;
@@ -33,7 +33,7 @@ namespace utils {
                 secret_.clear();
                 keys_.clear();
                 exist_key = false;
-                cipher_ = TLSCipher{};
+                cipher_ = tls::TLSCipher{};
             }
 
             constexpr bool is_installed() const {
@@ -53,7 +53,7 @@ namespace utils {
                 return {&keys_, error::none};
             }
 
-            const TLSCipher* cipher() const {
+            const tls::TLSCipher* cipher() const {
                 return &cipher_;
             }
 

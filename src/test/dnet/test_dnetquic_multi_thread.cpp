@@ -73,13 +73,13 @@ int main() {
     };
     utils::test::set_alloc_hook(true);
     utils::test::set_log_file("memuse.log");
-    set_libcrypto("D:/quictls/boringssl/built/lib/crypto.dll");
-    set_libssl("D:/quictls/boringssl/built/lib/ssl.dll");
+    tls::set_libcrypto(dnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
+    tls::set_libssl(dnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
     QCTX ctx = std::make_shared<Context>();
-    ctx->crypto.tls = create_tls();
-    ctx->crypto.tls.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
-    ctx->init_tls();
-    ctx->crypto.tls.set_alpn("\4test", 5);
+    auto config = tls::configure();
+    config.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
+    ctx->init_tls(config);
+    ctx->crypto.tls.set_alpn("\4test");
     ctx->connIDs.issuer.user_gen_random = [](std::shared_ptr<void>&, utils::view::wvec data) {
         std::random_device dev;
         std::uniform_int_distribution uni(0, 255);

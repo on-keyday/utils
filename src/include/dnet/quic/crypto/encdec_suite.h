@@ -8,18 +8,18 @@
 // encdec_suite - encryption/decryption suite
 #pragma once
 #include "keys.h"
-#include "../../tls.h"
+#include "../../tls/tls.h"
 
 namespace utils {
     namespace dnet::quic::crypto {
         struct EncryptSuite {
             const Keys* keys;
-            const TLSCipher* cipher;
+            const tls::TLSCipher* cipher;
         };
 
         struct DecryptSuite {
             const Keys* keys;
-            const TLSCipher* cipher;
+            const tls::TLSCipher* cipher;
             std::uint64_t largest_pn;
         };
 

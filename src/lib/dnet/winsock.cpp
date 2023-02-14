@@ -6,7 +6,7 @@
 */
 
 #include <dnet/dll/dllcpp.h>
-#include <dnet/dll/sockdll.h>
+#include <dnet/dll/lazy/sockdll.h>
 #include <dnet/socket.h>
 #include <dnet/errcode.h>
 #include <dnet/dll/errno.h>
@@ -17,11 +17,11 @@ namespace utils {
     namespace dnet {
 
         static auto init_iocp_handle() {
-            if (!kerlib.load()) {
+            if (!lazy::kernel32.load()) {
                 return (void*)nullptr;
             }
-            return kerlib.CreateIoCompletionPort_(INVALID_HANDLE_VALUE, NULL,
-                                                  0, 0);
+            return lazy::CreateIoCompletionPort_(INVALID_HANDLE_VALUE, NULL,
+                                                 0, 0);
         }
 
         static auto get_handle() {
@@ -35,7 +35,7 @@ namespace utils {
                 return false;
             }
             set_error(0);
-            if (kerlib.CreateIoCompletionPort_((HANDLE)handle, iocp, 0, 0) == nullptr) {
+            if (lazy::CreateIoCompletionPort_((HANDLE)handle, iocp, 0, 0) == nullptr) {
                 if (handle == ~0) {
                     return false;  // yes completely wrong
                 }
@@ -58,7 +58,7 @@ namespace utils {
             }
             OVERLAPPED_ENTRY ent[64];
             DWORD rem = 0;
-            auto res = kerlib.GetQueuedCompletionStatusEx_(iocp, ent, 64, &rem, time, false);
+            auto res = lazy::GetQueuedCompletionStatusEx_(iocp, ent, 64, &rem, time, false);
             if (!res) {
                 return 0;
             }
@@ -100,8 +100,8 @@ namespace utils {
         }
 
         error::Error Socket::set_skipnotify(bool skip_notif, bool skip_event) {
-            if (!kerlib.SetFileCompletionNotificationModes_) {
-                return error::Error(not_supported, error::ErrorCategory::dneterr);
+            if (!lazy::SetFileCompletionNotificationModes_.find()) {
+                return error::Error("SetFileCompletionNotificationModes are not supported in this platform", error::ErrorCategory::dneterr);
             }
             auto rw = getRWAsyncSuite(async_ctx);
             if (!rw) {
@@ -114,7 +114,7 @@ namespace utils {
             if (skip_notif) {
                 flag |= FILE_SKIP_COMPLETION_PORT_ON_SUCCESS;
             }
-            if (!kerlib.SetFileCompletionNotificationModes_((HANDLE)sock, flag)) {
+            if (!lazy::SetFileCompletionNotificationModes_((HANDLE)sock, flag)) {
                 return Errno();
             }
             if (skip_notif) {
@@ -153,7 +153,7 @@ namespace utils {
                     w->wakeup(&arg);
                 };
                 set_error(0);
-                socdl.WSARecv_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags, &suite->plt.ol, nullptr);
+                lazy::WSARecv_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
                     internal::WakerArg arg;
                     arg.size = suite->plt.read;
@@ -182,7 +182,7 @@ namespace utils {
                 };
                 auto addr = reinterpret_cast<sockaddr*>(&suite->plt.addr);
                 set_error(0);
-                socdl.WSARecvFrom_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags,
+                lazy::WSARecvFrom_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, &suite->plt.flags,
                                    addr, &suite->plt.addrlen, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
                     internal::WakerArg arg;
@@ -211,7 +211,7 @@ namespace utils {
                     w->wakeup(&arg);
                 };
                 set_error(0);
-                socdl.WSASend_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, suite->plt.flags, &suite->plt.ol, nullptr);
+                lazy::WSASend_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, suite->plt.flags, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
                     internal::WakerArg arg;
                     arg.size = suite->plt.read;
@@ -242,7 +242,7 @@ namespace utils {
                     return {AsyncState::failed, error::Error(not_supported, error::ErrorCategory::dneterr)};
                 }
                 set_error(0);
-                socdl.WSASendTo_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, suite->plt.flags, addr, addrlen, &suite->plt.ol, nullptr);
+                lazy::WSASendTo_(suite->sock, &suite->plt.buf, 1, &suite->plt.read, suite->plt.flags, addr, addrlen, &suite->plt.ol, nullptr);
                 return handleStart(rw, suite, [&] {
                     internal::WakerArg arg;
                     arg.size = suite->plt.read;
@@ -253,6 +253,9 @@ namespace utils {
         }
 
         error::Error Socket::connect_async(const NetAddrPort& addr, std::shared_ptr<thread::Waker> waker) {
+            if (!lazy::ConnectEx_.find()) {
+                return error::Error("ConnectEx is not supported", error::ErrorCategory::syserr);
+            }
             return startIO(async_ctx, false, [&](RWAsyncSuite* rw, AsyncSuite* suite) -> std::pair<AsyncState, error::Error> {
                 if (auto err = winIOCommon(sock, nullptr, 0, suite, waker, 0, false)) {
                     return {AsyncState::failed, err};
@@ -271,7 +274,7 @@ namespace utils {
                     return {AsyncState::failed, error::Error(not_supported, error::ErrorCategory::dneterr)};
                 }
                 set_error(0);
-                socdl.ConnectEx_(sock, ptr, len, nullptr, 0, nullptr, &suite->plt.ol);
+                lazy::ConnectEx_(sock, ptr, len, nullptr, 0, nullptr, &suite->plt.ol);
                 return handleStart(rw, suite, [&]() {
                     internal::WakerArg arg;
                     auto w = std::move(suite->waker);
@@ -295,7 +298,7 @@ namespace utils {
                 if (err) {
                     return {AsyncState::failed, err};
                 }
-                suite->plt.accept_sock = socdl.WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+                suite->plt.accept_sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
                 if (suite->plt.accept_sock == -1) {
                     return {AsyncState::failed, Errno()};
                 }
@@ -323,7 +326,7 @@ namespace utils {
             if (!s || !s->on_operation) {
                 return false;
             }
-            if (!kerlib.CancelIoEx_(HANDLE(this->sock), &s->plt.ol)) {
+            if (!lazy::CancelIoEx_(HANDLE(this->sock), &s->plt.ol)) {
                 if (get_error() != ERROR_NOT_FOUND) {
                     abort();  // no way to continue
                 }

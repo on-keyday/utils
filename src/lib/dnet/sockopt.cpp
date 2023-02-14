@@ -9,7 +9,7 @@
 #include <dnet/socket.h>
 #include <dnet/plthead.h>
 #include <dnet/dll/asyncbase.h>
-#include <dnet/dll/sockdll.h>
+#include <dnet/dll/lazy/sockdll.h>
 
 namespace utils {
     namespace dnet {
@@ -18,7 +18,7 @@ namespace utils {
             sockaddr_storage st{};
             socklen_t len = sizeof(st);
             auto addr = reinterpret_cast<sockaddr*>(&st);
-            auto res = socdl.getsockname_(sock, addr, &len);
+            auto res = lazy::getsockname_(sock, addr, &len);
             if (res != 0) {
                 return {{}, Errno()};
             }
@@ -29,7 +29,7 @@ namespace utils {
             sockaddr_storage st{};
             socklen_t len = sizeof(st);
             auto addr = reinterpret_cast<sockaddr*>(&st);
-            auto res = socdl.getpeername_(sock, addr, &len);
+            auto res = lazy::getpeername_(sock, addr, &len);
             if (res != 0) {
                 return {{}, Errno()};
             }
@@ -38,7 +38,7 @@ namespace utils {
 
         error::Error Socket::get_option(int layer, int opt, void* buf, size_t size) {
             socklen_t len = int(size);
-            auto res = socdl.getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
+            auto res = lazy::getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
             if (res != 0) {
                 return Errno();
             }
@@ -46,7 +46,7 @@ namespace utils {
         }
 
         error::Error Socket::set_option(int layer, int opt, const void* buf, size_t size) {
-            auto res = socdl.setsockopt_(sock, layer, opt, static_cast<const char*>(buf), int(size));
+            auto res = lazy::setsockopt_(sock, layer, opt, static_cast<const char*>(buf), int(size));
             if (res != 0) {
                 return Errno();
             }
@@ -158,7 +158,7 @@ namespace utils {
 #ifdef _WIN32
             std::int32_t flag = enable ? 1 : 0;
             DWORD ret = 0;
-            auto err = socdl.WSAIoctl_(sock, SIO_UDP_CONNRESET, &flag, sizeof(flag), nullptr, 0, &ret, nullptr, nullptr);
+            auto err = lazy::WSAIoctl_(sock, SIO_UDP_CONNRESET, &flag, sizeof(flag), nullptr, 0, &ret, nullptr, nullptr);
             if (err == SOCKET_ERROR) {
                 return Errno();
             }

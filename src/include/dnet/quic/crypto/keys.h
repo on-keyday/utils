@@ -14,7 +14,10 @@
 
 namespace utils {
     namespace dnet {
-        struct TLSCipher;
+        namespace tls {
+            struct TLSCipher;
+        }
+
         namespace quic::crypto {
 
             template <size_t size_>
@@ -127,7 +130,7 @@ namespace utils {
             // WARNING(on-keyday): clientOrigDstID must be dstID field value of client sent at first packet
             dnet_dll_export(bool) make_initial_secret(view::wvec secret, std::uint32_t version, view::rvec clientConnID, bool enc_client);
 
-            dnet_dll_export(error::Error) make_keys_from_secret(Keys& keys, const TLSCipher& cipher, std::uint32_t version, view::rvec secret);
+            dnet_dll_export(error::Error) make_keys_from_secret(Keys& keys, const dnet::tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret);
 
             dnet_dll_export(error::Error) make_updated_key(view::wvec new_secret, view::rvec secret, std::uint64_t version);
 

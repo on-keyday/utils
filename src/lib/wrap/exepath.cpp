@@ -20,7 +20,7 @@
 namespace utils {
     namespace wrap {
 #ifdef _WIN32
-        void STDCALL get_exepath(helper::IPushBacker pb) {
+        void STDCALL get_exepath(helper::IPushBacker<> pb) {
             {
                 wchar_t buf[1024]{};
                 auto len = GetModuleFileNameW(nullptr, buf, sizeof(buf));
@@ -42,7 +42,7 @@ namespace utils {
             utf::convert(path.c_str(), pb);
         }
 #else
-        void get_exepath(helper::IPushBacker pb) {
+        void get_exepath(helper::IPushBacker<> pb) {
             struct stat64 st;
             constexpr auto proc = "/proc/self/exe";
             if (lstat64(proc, &st) != 0) {

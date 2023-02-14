@@ -15,8 +15,6 @@
 #include <cstdint>
 #include <algorithm>
 #include "../wrap/light/enum.h"
-// #include "../endian/reader.h"
-// #include "../endian/writer.h"
 #include "../helper/equal.h"
 #include "hpack_huffman.h"
 
@@ -53,7 +51,7 @@ namespace utils {
         }
 
         template <class String, class Table, class Header>
-        HpkErr encode(String& dst, Table& table, Header& header, std::uint32_t maxtablesize, bool adddymap = false) {
+        constexpr HpkErr encode(String& dst, Table& table, Header& header, std::uint32_t maxtablesize, bool adddymap = false) {
             io::expand_writer<String&> w(dst);
             HpackError err = HpackError::none;
             for (auto&& h : header) {
@@ -107,7 +105,7 @@ namespace utils {
         }
 
         template <class String, class Table, class Header>
-        HpkErr decode(String& src, Table& table, Header& header, std::uint32_t& maxtablesize) {
+        constexpr HpkErr decode(String& src, Table& table, Header& header, std::uint32_t& maxtablesize) {
             auto update_table = [&]() -> bool {
                 size_t tablesize = calc_table_size(table);
                 while (tablesize > maxtablesize) {
