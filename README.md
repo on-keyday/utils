@@ -6,7 +6,7 @@ deprecated directory is now out of build.
 I don't provide guarantee for your problem if you use these code.
 
 # warning
-Because I didn't know about OpenSSL license, this library was maybe at license violation.
+Because I didn't know about OpenSSL license, this library was maybe at license violation. (commits before 2023/2/14)
 Now I have added these two note for dnet/tls/tls.h:
 + This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
 + This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
