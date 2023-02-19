@@ -7,7 +7,7 @@ I don't provide guarantee for your problem if you use code in this repository.
 
 # warning
 Because I didn't know about OpenSSL license, this library was maybe at license violation. (commits before 2023/2/14)
-Now I have added these two note for src/include/dnet/tls/tls.h:
+Now I have added these two note for src/include/fnet/tls/tls.h:
 + This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
 + This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
 
@@ -16,13 +16,13 @@ But, this library doesn't contains any source code or binary written by OpenSSL.
 Somehow the note above sounds like a joke.
 
 
-# what is included (2023/2/14)
+# what is included (2023/2/20)
 + async - fiber/ucontext based coroutine
 + bnf - bnf parser (stop developing)
 + cmdline - command line parser (stable)
 + core - Sequencer class (base of parsers)/define byte type (stable)
 + deprecated - dust box (Because I cannot determine mind throwing away the code, this is remaining yet.)
-+ dnet - networking library (active developing)
++ fnet - networking library (active developing)
   + socket wrapper
     + because my main developing platform is windows, epoll developing is put off
     + IOCP (stable)
@@ -38,6 +38,9 @@ Somehow the note above sounds like a joke.
   + stun (unstable)
   + QUIC (active developing)
     + connection establishment and idle timeout.
+    + handshake timeout (avoid dead lock)
+    + have path MTU discovery
+    + have Retry handling (incomplete)
     + have stream (not tested)
 + endian - endian util/IEEE float (stable)
 + escape - string escapes (stable)
