@@ -31,7 +31,7 @@ namespace utils {
                     return nullptr;
                 }
                 pass_log(src, "string");
-                auto str = std::make_shared_for_overwrite<String>();
+                auto str = std::make_shared<String>();
                 str->pos.begin = b;
                 str->pos.end = src.seq.rptr;
                 char pf[] = {prfix, 0};

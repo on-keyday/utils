@@ -30,7 +30,7 @@ namespace utils {
                     return nullptr;
                 }
                 pass_log(src, "number");
-                auto num = std::make_shared_for_overwrite<Number>();
+                auto num = std::make_shared<Number>();
                 num->token = std::move(tok);
                 num->num_str = num->token;
                 num->radix = radix;

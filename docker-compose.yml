@@ -15,9 +15,7 @@ services:
       - ./src:/usr/utilsdev/workspace/src:cached
       - ./build:/usr/utilsdev/workspace/build:cached
       - ./CMakeLists.txt:/usr/utilsdev/workspace/CMakeLists.txt:cached
-      - ./.vscode/settings.json:/usr/utilsdev/workspace/.vscode/settings.json:cached
-      - ./docker_vscode/tasks.json:/usr/utilsdev/workspace/.vscode/tasks.json:cached
-      - ./docker_vscode/launch.json:/usr/utilsdev/workspace/.vscode/launch.json:cached
+      - ./docker_vscode:/usr/utilsdev/workspace/.vscode:cached
       - ./shell:/usr/utilsdev/workspace/shell:cached
     cap_add:
       - SYS_PTRACE

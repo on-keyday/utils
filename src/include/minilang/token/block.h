@@ -18,7 +18,7 @@ namespace utils {
         constexpr auto yield_eof() {
             return [](auto&& src) -> std::shared_ptr<Eof> {
                 if (src.seq.eos()) {
-                    auto eof = std::make_shared_for_overwrite<Eof>();
+                    auto eof = std::make_shared<Eof>();
                     eof->pos.begin = src.seq.rptr;
                     eof->pos.end = src.seq.rptr;
                     return eof;
@@ -29,7 +29,7 @@ namespace utils {
 
         constexpr auto yield_bof() {
             return [](auto&& src) -> std::shared_ptr<Bof> {
-                auto bof = std::make_shared_for_overwrite<Bof>();
+                auto bof = std::make_shared<Bof>();
                 bof->pos.begin = src.seq.rptr;
                 bof->pos.end = src.seq.rptr;
                 return bof;
@@ -48,7 +48,7 @@ namespace utils {
                 Vec<std::shared_ptr<Token>> elements;
                 for (;;) {
                     if (std::shared_ptr<Token> fin = end(src)) {
-                        auto block = std::make_shared_for_overwrite<Block<Vec>>();
+                        auto block = std::make_shared<Block<Vec>>();
                         block->pos.begin = b;
                         block->pos.end = src.seq.rptr;
                         block->begin = std::move(tok);

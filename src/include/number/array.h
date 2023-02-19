@@ -19,6 +19,10 @@ namespace utils {
                 return buf[f];
             }
 
+            constexpr T& operator[](size_t f) {
+                return buf[f];
+            }
+
             constexpr size_t size() const {
                 return i;
             }
@@ -32,6 +36,10 @@ namespace utils {
             }
 
             constexpr const T* c_str() const {
+                return buf;
+            }
+
+            constexpr const T* data() const {
                 return buf;
             }
 

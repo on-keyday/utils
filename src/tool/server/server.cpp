@@ -8,21 +8,21 @@
 
 #include <cmdline/template/parse_and_err.h>
 #include <wrap/cout.h>
-#include <dnet/server/state.h>
-#include <dnet/server/httpserv.h>
+#include <fnet/server/state.h>
+#include <fnet/server/httpserv.h>
 #include <wrap/cin.h>
 #include <thread>
 #include <json/to_string.h>
 #include <json/json_export.h>
-#include <dnet/server/format_state.h>
+#include <fnet/server/format_state.h>
 #include <mutex>
 #include <helper/pushbacker.h>
 
 struct Flags : utils::cmdline::templ::HelpOption {};
-namespace serv = utils::dnet::server;
+namespace serv = utils::fnet::server;
 auto& cout = utils::wrap::cout_wrap();
 
-void http_serve(void*, utils::dnet::server::Requester req, utils::dnet::server::StateContext s) {
+void http_serve(void*, utils::fnet::server::Requester req, utils::fnet::server::StateContext s) {
     std::map<std::string, std::string> h;
     const auto keep_alive = serv::has_keep_alive<std::string>(req.http, h);
     h.clear();
@@ -69,7 +69,7 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
     s->set_reduce_skip(10);
     if (!serv::prepare_listeners(
-            "8091", [&](auto&&, utils::dnet::Socket& prep) {
+            "8091", [&](auto&&, utils::fnet::Socket& prep) {
                 s->add_accept_thread(std::move(prep));
             },
             2, 10000)) {
@@ -102,7 +102,7 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
         }
         if (str.back() == '\n') {
             str.pop_back();
-            if (str == L"status") {
+            if (str == utils::utf::convert<utils::wrap::path_string>("status")) {
                 utils::json::JSON js;
                 cout << serv::format_state<std::string>(servstate, js);
             }

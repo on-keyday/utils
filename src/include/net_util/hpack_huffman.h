@@ -413,7 +413,7 @@ namespace utils {
             using string_t = String;
 
            private:
-            string_t buf;
+            string_t buf{};
             size_t idx = 0;
             size_t pos = 0;
 

@@ -46,7 +46,7 @@ namespace utils {
                     return nullptr;
                 }
                 pass_log(src, "ident");
-                auto id = std::make_shared_for_overwrite<Ident>();
+                auto id = std::make_shared<Ident>();
                 id->token = std::move(tok);
                 id->pos.begin = b;
                 id->pos.end = src.seq.rptr;

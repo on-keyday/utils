@@ -173,7 +173,7 @@ namespace utils {
 
         template <class Alloc>
         inline std::shared_ptr<Waker> allocate_waker(Alloc&& al, std::shared_ptr<void> param, WakerCallback cb) {
-            auto w = std::allocate_shared_for_overwrite<Waker>(std::forward<decltype(al)>(al));
+            auto w = std::allocate_shared<Waker>(std::forward<decltype(al)>(al));
             w->cb = cb;
             w->data = std::move(param);
             w->state.store(WakerState::sleep);

@@ -37,7 +37,7 @@ namespace utils {
                 }
                 size_t e = src.seq.rptr;
                 pass_log(src, "brackets");
-                auto tri = std::make_shared_for_overwrite<Brackets>();
+                auto tri = std::make_shared<Brackets>();
                 tri->pos.begin = b;
                 tri->pos.end = e;
                 tri->callee = std::move(prev);
@@ -66,7 +66,7 @@ namespace utils {
                         src.err = true;
                         return nullptr;
                     }
-                    auto tri = std::make_shared_for_overwrite<BinTree>();
+                    auto tri = std::make_shared<BinTree>();
                     tri->pos.begin = b;
                     tri->pos.end = src.seq.rptr;
                     tri->right = std::move(tok);

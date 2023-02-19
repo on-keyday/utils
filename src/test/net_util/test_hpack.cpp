@@ -7,30 +7,35 @@
 
 #include <net_util/hpack_huffman.h>
 #include <string>
-#include <dnet/quic/crypto/keys.h>
+#include <fnet/quic/crypto/keys.h>
+#include <number/array.h>
+#include <view/expand_iovec.h>
+#include <memory>
+using string = utils::number::Array<char, 100>;
+using rvec = utils::view::basic_rvec<char, utils::byte>;
 
 constexpr bool encode_decode(const char* base) {
-    std::string str = base;
-    utils::hpack::bitvec_writer<std::string> w;
-    utils::hpack::encode_huffman(w, str);
+    auto in = rvec(base);
+    utils::hpack::bitvec_writer<string> w{};
+    utils::hpack::encode_huffman(w, in);
     auto encoded = w.data();
-    std::string val;
-    utils::hpack::bitvec_reader<std::string&> d{encoded};
-    return utils::hpack::decode_huffman(val, d) && val == str;
+    utils::hpack::bitvec_reader<string&> d{encoded};
+    string val;
+    return utils::hpack::decode_huffman(val, d) && val == in;
 }
 
 template <size_t s>
-constexpr bool decode(utils::dnet::quic::crypto::Key<s> data, const char* expect) {
+constexpr bool decode(utils::fnet::quic::crypto::Key<s> data, const char* expect) {
     auto v = utils::view::wvec(data.key);
     utils::hpack::bitvec_reader<utils::view::wvec> d{v};
-    std::string val;
-    return utils::hpack::decode_huffman(val, d) && val == expect;
+    string val;
+    return utils::hpack::decode_huffman(val, d) && val == rvec(expect);
 }
 
 int main() {
     static_assert(encode_decode("object identifier z"));
     static_assert(encode_decode("\x32\x44\xff"));
     encode_decode("object identifierz");
-    static_assert(decode(utils::dnet::quic::crypto::make_key_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"),
+    static_assert(decode(utils::fnet::quic::crypto::make_key_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"),
                          "Mon, 21 Oct 2013 20:13:21 GMT"));
 }

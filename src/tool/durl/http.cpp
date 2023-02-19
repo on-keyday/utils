@@ -6,16 +6,16 @@
 */
 
 #include "durl.h"
-#include <dnet/socket.h>
-#include <dnet/addrinfo.h>
-#include <dnet/plthead.h>
+#include <fnet/socket.h>
+#include <fnet/addrinfo.h>
+#include <fnet/plthead.h>
 #include <thread>
 
 namespace durl {
-    namespace dnet = utils::dnet;
+    namespace fnet = utils::fnet;
     struct AddrWait {
         URIToJSON uri;
-        dnet::WaitAddrInfo wait;
+        fnet::WaitAddrInfo wait;
     };
 
     std::atomic_uint32_t reqcounter;
@@ -30,10 +30,10 @@ namespace durl {
         URI uri;
     };
 
-    void wait_connect(Request req, dnet::AddrInfo& info, dnet::Socket& conn) {
+    void wait_connect(Request req, fnet::AddrInfo& info, fnet::Socket& conn) {
         while (true) {
             if (auto err = conn.wait_writable(0, 1000)) {
-                if (!dnet::isSysBlock(err)) {
+                if (!fnet::isSysBlock(err)) {
                     request_message(req.uri, "failed to connect to ", info.sockaddr().addr.to_string<std::string>(), ". last error is ", err.error<std::string>());
                     return;
                 }
@@ -44,17 +44,17 @@ namespace durl {
     }
 
     // on thread
-    void resolved(Request& req, dnet::AddrInfo& info) {
-        dnet::error::Error lasterr;
+    void resolved(Request& req, fnet::AddrInfo& info) {
+        fnet::error::Error lasterr;
         while (info.next()) {
             auto addr = info.sockaddr();
-            auto sock = dnet::make_socket(addr.attr);
+            auto sock = fnet::make_socket(addr.attr);
             if (!sock) {
-                lasterr = dnet::error::Error("make_socket failed");
+                lasterr = fnet::error::Error("make_socket failed");
                 continue;
             }
             auto err = sock.connect(addr.addr);
-            if (err && !dnet::isSysBlock(err)) {
+            if (err && !fnet::isSysBlock(err)) {
                 lasterr = std::move(err);
                 continue;
             }
@@ -83,44 +83,28 @@ namespace durl {
                 uri.port = "443";
             }
         }
-        dnet::SockAddr addr{};
-        auto wait = dnet::resolve_address(uri.hostname, uri.port, {.socket_type = SOCK_STREAM});
-        int err = 0;
-        if (wait.failed(&err)) {
-            request_message(uri, "resolve address failed at code ", err);
-            reqcounter--;
-            return;
-        }
-        dnet::AddrInfo info;
-        if (wait.wait(info, 1)) {
-            std::thread(
-                [](dnet::AddrInfo info, Request req) {
-                    resolved(req, info);
-                },
-                std::move(info), std::move(req))
-                .detach();
-            return;
-        }
-        if (wait.failed(&err)) {
-            request_message(uri, "resolve address failed at code ", err);
+        fnet::SockAddr addr{};
+        auto [wait, err] = fnet::resolve_address(uri.hostname, uri.port, {.socket_type = SOCK_STREAM});
+        if (err) {
+            request_message(uri, "resolve address failed: ", err.error<std::string>());
             reqcounter--;
             return;
         }
         std::thread(
-            [=](dnet::WaitAddrInfo wait, Request req) {
-                dnet::AddrInfo info;
+            [=](fnet::WaitAddrInfo wait, Request req) {
+                fnet::AddrInfo info;
                 while (true) {
-                    if (wait.wait(info, 1)) {
-                        resolved(req, info);
-                        return;
-                    }
-                    int err = 0;
-                    if (wait.failed(&err)) {
-                        request_message(req.uri, "resolve address failed at code ", err);
+                    if (auto err = wait.wait(info, 1)) {
+                        if (err == fnet::error::block) {
+                            continue;
+                        }
+                        request_message(req.uri, "resolve address failed ", err.error<std::string>());
                         reqcounter--;
                         return;
                     }
+                    break;
                 }
+                resolved(req, info);
             },
             std::move(wait), std::move(req))
             .detach();

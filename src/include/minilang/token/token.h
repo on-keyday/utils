@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include "../../helper/defer.h"
+#include <functional>
 
 namespace utils {
     namespace minilang::token {
@@ -240,8 +241,7 @@ namespace utils {
 }  // namespace utils
 
 namespace std {
-    template <class T>
-    struct hash;
+
     template <>
     struct hash<utils::minilang::token::Pos> {
         constexpr size_t operator()(utils::minilang::token::Pos pos) const {

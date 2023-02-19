@@ -29,7 +29,7 @@ namespace utils {
                     src.err = true;
                     return nullptr;
                 }
-                auto ur = std::make_shared_for_overwrite<UnaryTree>();
+                auto ur = std::make_shared<UnaryTree>();
                 ur->pos.begin = b;
                 ur->pos.end = src.seq.rptr;
                 ur->symbol = std::move(symbol);
@@ -51,7 +51,7 @@ namespace utils {
                         src.err = true;
                         return nullptr;
                     }
-                    auto ur = std::make_shared_for_overwrite<UnaryTree>();
+                    auto ur = std::make_shared<UnaryTree>();
                     ur->pos.begin = b;
                     ur->pos.end = src.seq.rptr;
                     ur->symbol = std::move(symbol);
@@ -115,7 +115,7 @@ namespace utils {
                     src.err = true;
                     return nullptr;
                 }
-                auto tree = std::make_shared_for_overwrite<BinTree>();
+                auto tree = std::make_shared<BinTree>();
                 tree->pos.begin = b;
                 tree->pos.end = src.seq.rptr;
                 tree->left = std::move(prev);
@@ -150,7 +150,7 @@ namespace utils {
                     src.err = true;
                     return nullptr;
                 }
-                auto tree = std::make_shared_for_overwrite<BinTree>();
+                auto tree = std::make_shared<BinTree>();
                 tree->pos.begin = b;
                 tree->pos.end = src.seq.rptr;
                 tree->left = std::move(prev);

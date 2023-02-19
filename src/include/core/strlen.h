@@ -8,6 +8,7 @@
 // strlen - constexpr strlen
 #pragma once
 #include <cassert>
+#include <cstddef>
 
 namespace utils {
     template <class C>

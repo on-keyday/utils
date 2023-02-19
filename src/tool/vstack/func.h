@@ -41,7 +41,7 @@ namespace vstack {
             if (!fn_key) {
                 return nullptr;
             }
-            auto fn = std::make_shared_for_overwrite<Func>();
+            auto fn = std::make_shared<Func>();
             fn->fn_keyword = std::move(fn_key);
             src.next = nullptr;
             src.ctx.is_def = true;

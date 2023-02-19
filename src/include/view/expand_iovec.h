@@ -7,6 +7,7 @@
 
 // expand_iovec - expanded io vector
 #pragma once
+#include "../core/byte.h"
 #include "iovec.h"
 #include <memory>
 
@@ -18,16 +19,16 @@ namespace utils {
                 dyn,
             };
 
-            template <size_t size_>
+            template <class C,size_t size_>
             struct native_array {
-                byte data[size_]{};
+                C data[size_]{};
             };
 
             template <class Alloc, class C, class U>
             struct basic_sso_storage {
                private:
                 union {
-                    native_array<sizeof(basic_wvec<C, U>)> sta{};
+                    native_array<C,sizeof(basic_wvec<C, U>)> sta{};
                     basic_wvec<C, U> dyn;
                 };
                 sso_state state = sso_state::sta;
@@ -323,11 +324,25 @@ namespace utils {
             }
 
             constexpr basic_expand_storage_vec& append(const U* ptr) {
-                return append(view::rvec(ptr));
+                struct {
+                    const U* p=nullptr;
+                    size_t size_=0;
+                    constexpr U operator[](size_t i) const{
+                        return p[i];
+                    }
+                    constexpr size_t size() const {
+                        return size_;
+                    }
+                }l{ptr,utils::strlen(ptr)};
+                return append(l);
+            }
+
+            constexpr basic_expand_storage_vec& append(const C* ptr){
+                return append(basic_rvec<C,U>(ptr));
             }
 
             constexpr basic_expand_storage_vec& append(const C* ptr, size_t len) {
-                return append(view::rvec(ptr, len));
+                return append(basic_rvec<C,U>(ptr, len));
             }
 
             constexpr int compare(const basic_expand_storage_vec& in) {

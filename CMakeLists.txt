@@ -29,7 +29,7 @@ else()
   link_directories("/lib/llvm-12/lib")
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fcoroutines-ts -fsanitize=address -fsanitize=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fcoroutines-ts -fsanitize=address -fsanitize=undefined -Wunused-variable")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "-nostdinc++ -nodefaultlibs -isystem /lib/llvm-12/include/c++/v1 -fuse-ld=lld")
@@ -68,23 +68,23 @@ add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
 add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
 add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
 add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
-add_executable(dnet_socket "src/test/dnet/test_dnet_socket.cpp")
-add_executable(dnet_tls "src/test/dnet/test_dnet_tls.cpp")
-add_executable(dnet_http "src/test/dnet/test_dnet_http.cpp")
-add_executable(dnet_http2 "src/test/dnet/test_dnet_http2.cpp")
+add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
+add_executable(fnet_tls "src/test/fnet/test_fnet_tls.cpp")
+add_executable(fnet_http "src/test/fnet/test_fnet_http.cpp")
+add_executable(fnet_http2 "src/test/fnet/test_fnet_http2.cpp")
 add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
-add_executable(dnetquic_initial "src/test/dnet/test_dnetquic_initial.cpp")
-add_executable(dnetquic_context "src/test/dnet/test_dnetquic_context.cpp")
-add_executable(dnet_error "src/test/dnet/test_dnet_error.cpp")
+add_executable(fnetquic_initial "src/test/fnet/test_fnetquic_initial.cpp")
+add_executable(fnetquic_context "src/test/fnet/test_fnetquic_context.cpp")
+add_executable(fnet_error "src/test/fnet/test_fnet_error.cpp")
 add_executable(ipparse "src/test/net_util/test_ipparse.cpp")
-add_executable(dnet_stun "src/test/dnet/test_dnet_stun.cpp")
+add_executable(fnet_stun "src/test/fnet/test_fnet_stun.cpp")
 add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
-add_executable(dnetquic_frame "src/test/dnet/test_dnetquic_frame.cpp")
-add_executable(dnetquic_packet "src/test/dnet/test_dnetquic_packet.cpp")
-add_executable(dnetquic_stream "src/test/dnet/test_dnetquic_stream.cpp")
+add_executable(fnetquic_frame "src/test/fnet/test_fnetquic_frame.cpp")
+add_executable(fnetquic_packet "src/test/fnet/test_fnetquic_packet.cpp")
+add_executable(fnetquic_stream "src/test/fnet/test_fnetquic_stream.cpp")
 add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
-add_executable(dnetquic_multi_thread "src/test/dnet/test_dnetquic_multi_thread.cpp")
-add_executable(dnet_dns "src/test/dnet/test_dnet_dns.cpp")
+add_executable(fnetquic_multi_thread "src/test/fnet/test_fnetquic_multi_thread.cpp")
+add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 add_executable(hpack "src/test/net_util/test_hpack.cpp")
 
 #[[
@@ -175,8 +175,8 @@ option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
 add_library(utils SHARED)
 # add_library(utnet SHARED)
-add_library(dnet SHARED)
-add_library(dnetserv SHARED)
+add_library(fnet SHARED)
+add_library(fnetserv SHARED)
 
 target_sources(utils
   PRIVATE
@@ -196,7 +196,7 @@ target_sources(utils
   "src/lib/async/worker.cpp"
 )
 
-# deprecated use dnet instead
+# deprecated use fnet instead
  #[[
 target_sources(utnet
   PRIVATE
@@ -226,43 +226,43 @@ target_sources(utnet
   
 )]]
 
-target_sources(dnet PRIVATE
+target_sources(fnet PRIVATE
 #[[
-  "src/lib/dnet/dll/sockdll.cpp"
-  "src/lib/dnet/dll/ssldll.cpp"
+  "src/lib/fnet/dll/sockdll.cpp"
+  "src/lib/fnet/dll/ssldll.cpp"
 ]]
-  "src/lib/dnet/socket.cpp"
-  "src/lib/dnet/addrinfo.cpp"
-  "src/lib/dnet/tls.cpp"
-  "src/lib/dnet/tlsopt.cpp"
-  "src/lib/dnet/http2.cpp"
-  "src/lib/dnet/heaps.cpp"
-  "src/lib/dnet/address.cpp"
-  "src/lib/dnet/sockopt.cpp"
-  "src/lib/dnet/error.cpp"
-  "src/lib/dnet/quic/crypto/quic_tls.cpp"
-  "src/lib/dnet/quic/crypto/enc_keys.cpp"
-  "src/lib/dnet/quic/crypto/masks.cpp"
-  "src/lib/dnet/quic/crypto/enc_packet.cpp"
-  "src/lib/dnet/quic/crypto/cipher_payload.cpp"
+  "src/lib/fnet/socket.cpp"
+  "src/lib/fnet/addrinfo.cpp"
+  "src/lib/fnet/tls.cpp"
+  "src/lib/fnet/tlsopt.cpp"
+  "src/lib/fnet/http2.cpp"
+  "src/lib/fnet/heaps.cpp"
+  "src/lib/fnet/address.cpp"
+  "src/lib/fnet/sockopt.cpp"
+  "src/lib/fnet/error.cpp"
+  "src/lib/fnet/quic/crypto/quic_tls.cpp"
+  "src/lib/fnet/quic/crypto/enc_keys.cpp"
+  "src/lib/fnet/quic/crypto/masks.cpp"
+  "src/lib/fnet/quic/crypto/enc_packet.cpp"
+  "src/lib/fnet/quic/crypto/cipher_payload.cpp"
 
-  "src/lib/dnet/dll/lazy.cpp"
+  "src/lib/fnet/dll/lazy.cpp"
 )
 
-target_sources(dnetserv PRIVATE
-  "src/lib/dnet/server/state.cpp"
-  "src/lib/dnet/server/httpserv.cpp"
+target_sources(fnetserv PRIVATE
+  "src/lib/fnet/server/state.cpp"
+  "src/lib/fnet/server/httpserv.cpp"
 )
 
 if(WIN32)
-  target_sources(dnet PRIVATE
-    "src/lib/dnet/winsock.cpp"
+  target_sources(fnet PRIVATE
+    "src/lib/fnet/winsock.cpp"
   )
 else()
-  target_sources(dnet PRIVATE
-    "src/lib/dnet/epoll.cpp"
+  target_sources(fnet PRIVATE
+    "src/lib/fnet/epoll.cpp"
   )
-  target_compile_definitions(dnet PRIVATE _DEBUG=1)
+  target_compile_definitions(fnet PRIVATE _DEBUG=1)
 endif()
 
 #[[ libquic
@@ -343,10 +343,10 @@ target_link_libraries(binred utils)
 target_link_libraries(pscmpl utils)
 target_link_libraries(minilang utils)
 target_link_libraries(minlc utils)
-target_link_libraries(durl utils dnet)
+target_link_libraries(durl utils fnet)
 target_link_libraries(igen2 utils)
 target_link_libraries(vstack utils)
-target_link_libraries(server utils dnetserv)
+target_link_libraries(server utils fnetserv)
 
 #[[ libquic
 target_link_libraries(quic_udp quic utils)
@@ -358,30 +358,30 @@ target_link_libraries(quic_crypto quic)
 target_link_libraries(quic_init_conn quic)
 ]]
 
-# libdnet
-target_link_libraries(dnet_socket dnet)
-target_link_libraries(dnet_tls dnet)
-target_link_libraries(dnet_http dnet utils)
-target_link_libraries(dnet_http2 dnet)
-target_link_libraries(dnetquic_initial dnet)
-target_link_libraries(dnetquic_context dnet)
-target_link_libraries(dnet_error dnet)
-target_link_libraries(dnet_stun dnet)
-target_link_libraries(dnetquic_frame utils dnet)
-target_link_libraries(dnetquic_stream utils dnet)
-target_link_libraries(dnetquic_multi_thread utils dnet)
-target_link_libraries(dnet_dns dnet)
+# libfnet
+target_link_libraries(fnet_socket fnet)
+target_link_libraries(fnet_tls fnet)
+target_link_libraries(fnet_http fnet utils)
+target_link_libraries(fnet_http2 fnet)
+target_link_libraries(fnetquic_initial fnet)
+target_link_libraries(fnetquic_context fnet)
+target_link_libraries(fnet_error fnet)
+target_link_libraries(fnet_stun fnet)
+target_link_libraries(fnetquic_frame utils fnet)
+target_link_libraries(fnetquic_stream utils fnet)
+target_link_libraries(fnetquic_multi_thread utils fnet)
+target_link_libraries(fnet_dns fnet)
 
-# libdnetserv
-target_link_libraries(dnetserv dnet)
+# libfnetserv
+target_link_libraries(fnetserv fnet)
 #[[
 if(WIN32)
   # target_link_libraries(io_completion_port ws2_32)
-  # target_link_libraries(utnet libssl libcrypto ws2_32 dnet)
+  # target_link_libraries(utnet libssl libcrypto ws2_32 fnet)
   # target_link_libraries(quic ws2_32)
 else()
   # target_link_libraries(utils libssl.so libcrypto.so)
-  # target_link_libraries(utnet dnet)
+  # target_link_libraries(utnet fnet)
   # target_link_libraries(asynctcp2 Threads::Threads)
 endif()]]
 
@@ -392,8 +392,8 @@ if(WIN32)
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "test/libutils.dll"
     )
     add_custom_command(
-      TARGET dnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnet.dll" "test/libdnet.dll"
+      TARGET fnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnet.dll" "test/libfnet.dll"
     )
    
     add_custom_command(
@@ -401,12 +401,12 @@ if(WIN32)
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"
     )
     add_custom_command(
-      TARGET dnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnet.dll" "tool/libdnet.dll"
+      TARGET fnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnet.dll" "tool/libfnet.dll"
     )
     add_custom_command(
-      TARGET dnetserv POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libdnetserv.dll" "tool/libdnetserv.dll"
+      TARGET fnetserv POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnetserv.dll" "tool/libfnetserv.dll"
     )
 
     #[[

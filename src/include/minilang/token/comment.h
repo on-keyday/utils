@@ -31,7 +31,7 @@ namespace utils {
                 }
                 src.seq.seek_if(eol);
                 pass_log(src, "line_comment");
-                auto cm = std::make_shared_for_overwrite<Comment>();
+                auto cm = std::make_shared<Comment>();
                 cm->detail = std::move(tok);
                 helper::appends(cm->token, begin, cm->detail, eol);
                 cm->pos.begin = b;
@@ -61,7 +61,7 @@ namespace utils {
                         count--;
                         if (count == 0) {
                             pass_log(src, "block_comment");
-                            auto cm = std::make_shared_for_overwrite<Comment>();
+                            auto cm = std::make_shared<Comment>();
                             cm->detail = std::move(tok);
                             helper::appends(cm->token, begin, cm->detail, end);
                             cm->pos.begin = b;

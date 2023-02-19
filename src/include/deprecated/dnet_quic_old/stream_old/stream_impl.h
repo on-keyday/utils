@@ -45,7 +45,7 @@ namespace utils {
                 }
 
                 std::shared_ptr<StreamFragment> send_packet(StreamFragment frag) {
-                    auto ptr = std::allocate_shared_for_overwrite<StreamFragment>(glheap_allocator<StreamFragment>{});
+                    auto ptr = std::allocate_shared<StreamFragment>(glheap_allocator<StreamFragment>{});
                     *ptr = frag;
                     fragment.push_back(std::as_const(ptr));
                     return ptr;

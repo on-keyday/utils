@@ -14,14 +14,14 @@ RUN sed -i 's@archive.ubuntu.com@ftp.jaist.ac.jp/pub/Linux@g' /etc/apt/sources.l
 RUN apt-get update && \
     apt-get install -y \
     libunwind-dev\
-    python3-lldb-14
+    python3-lldb-15
 
 RUN apt-get update && \
     apt-get  install -y\
-    clang-14\
-    libc++-14-dev\
-    lldb-14\
-    liblldb-14-dev\
+    clang-15\
+    libc++-15-dev\
+    lldb-15\
+    liblldb-15-dev\
     lld\
     g++-11
 
@@ -40,11 +40,11 @@ RUN apt-get install -y \
     net-tools\
     iputils-ping
 
-RUN ln -s /lib/llvm-14/bin/clang++ /bin/clang++
-RUN ln -s /lib/llvm-14/bin/clang /bin/clang
-RUN ln -s /bin/lldb-14 /bin/lldb
-RUN ln -s /lib/llvm-14/lib/libc++abi.so.1.0 /lib/llvm-14/lib/libc++abi.so
-RUN ln -s /usr/bin/lldb-server-14 /usr/bin/lldb-server-14.0.0
+RUN ln -s /lib/llvm-15/bin/clang++ /bin/clang++
+RUN ln -s /lib/llvm-15/bin/clang /bin/clang
+RUN ln -s /bin/lldb-15 /bin/lldb
+RUN ln -s /lib/llvm-15/lib/libc++abi.so.1.0 /lib/llvm-15/lib/libc++abi.so
+RUN ln -s /usr/bin/lldb-server-15 /usr/bin/lldb-server-15.0.6
 RUN ln -s /bin/g++-11 /bin/g++
 RUN unlink /usr/bin/ld
 RUN ln -s /lib/llvm-14/bin/lld /usr/bin/ld

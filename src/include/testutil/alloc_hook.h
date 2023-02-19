@@ -9,10 +9,10 @@
 // alloc_hook - allocator hook
 #pragma once
 #include "../platform/windows/dllexport_header.h"
+#include <cstddef>
 
 namespace utils {
     namespace test {
-#if defined(_DEBUG) && defined(_WIN32)
         enum class HookType {
             alloc,
             realloc,
@@ -25,11 +25,23 @@ namespace utils {
             size_t time;
             HookType type;
         };
+
+#if defined(_DEBUG) && defined(_WIN32)
+
         using Hooker = void (*)(HookInfo info);
         DLL extern Hooker log_hooker;
         DLL bool STDCALL set_log_file(const char* file);
         DLL void STDCALL set_alloc_hook(bool on);
 #else
+
+        struct fake_assign {
+            constexpr const fake_assign& operator=(auto&& a) const {
+                return *this;
+            }
+        };
+
+        constexpr fake_assign log_hooker;
+
         inline bool set_log_file(const char* file) {
             return false;
         }

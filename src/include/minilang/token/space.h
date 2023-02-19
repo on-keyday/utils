@@ -35,7 +35,7 @@ namespace utils {
                     count++;
                 }
                 pass_log(src, "space");
-                auto sp = std::make_shared_for_overwrite<Space>();
+                auto sp = std::make_shared<Space>();
                 sp->token = std::move(tok);
                 sp->space = m;
                 sp->pos.begin = b;
@@ -83,7 +83,7 @@ namespace utils {
                     count++;
                 }
                 pass_log(src, "line");
-                auto ln = std::make_shared_for_overwrite<Line>();
+                auto ln = std::make_shared<Line>();
                 ln->token = std::move(tok);
                 ln->pos.begin = b;
                 ln->pos.end = src.seq.rptr;
