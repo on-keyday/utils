@@ -26,7 +26,7 @@ Somehow the note above sounds like a joke.
   + socket wrapper
     + because my main developing platform is windows, epoll developing is put off
     + IOCP (stable)
-    + epoll (unstable or can't build )  
+    + epoll (may can build)  
   + getaddrinfo wrapper
   + tls wrapper (OpenSSL/BoringSSL)
     + this wrapper can be built without OpenSSL/BroginSSL headers
