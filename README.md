@@ -42,8 +42,8 @@ Somehow the note above sounds like a joke.
     + immediate close
     + handshake timeout (avoid dead lock)
     + have path MTU discovery
-    + have Retry handling (working)
-    + have stream (working)
+    + have Retry handling 
+    + have stream
 + endian - endian util/IEEE float (stable)
 + escape - string escapes (stable)
 + file - file util (stable)
