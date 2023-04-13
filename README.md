@@ -16,10 +16,11 @@ But, this library doesn't contains any source code or binary written by OpenSSL.
 Somehow the note above sounds like a joke.
 
 
-# what is included (2023/2/20)
+# what is included (2023/4/14)
 + async - fiber/ucontext based coroutine
 + bnf - bnf parser (stop developing)
 + cmdline - command line parser (stable)
++ comb2 - parser combinator library (developing)
 + core - Sequencer class (base of parsers)/define byte type (stable)
 + deprecated - dust box (Because I cannot determine mind throwing away the code, this is remaining yet.)
 + fnet - networking library (active developing)
@@ -36,20 +37,21 @@ Somehow the note above sounds like a joke.
   + websocket
   + server util
   + stun (unstable)
-  + QUIC (active developing)
+  + QUIC (active developing) (see also src/test/test_fnetquic_multi_thread.cpp)
     + connection establishment and idle timeout.
+    + immediate close
     + handshake timeout (avoid dead lock)
     + have path MTU discovery
-    + have Retry handling (incomplete)
-    + have stream (not tested)
+    + have Retry handling (working)
+    + have stream (working)
 + endian - endian util/IEEE float (stable)
 + escape - string escapes (stable)
 + file - file util (stable)
-  + huffman.h is unstable
+  + gzip - gzip decoder (no encoder)
 + helper - implementation helper library
   + I think this is actual 'utility' library
 + json - JSON parser/renderer (stable)
-+ minilang - lambda combination based mini programing language parser (stable/developing)
++ minilang - lambda combination based mini programing language parser (stable/future deprecated)
 + net_util - network utility (base64/punycode/hpack/URI/URLencoding/cookie/date/sha1/ipaddress etc...) (stable)
 + number - number parser/renderer (stable)
 + platform - plarform dependent (deprecated but because code using this is too many,remaining)
