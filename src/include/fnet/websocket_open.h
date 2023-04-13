@@ -134,7 +134,7 @@ namespace utils {
                 bool accept = false;
                 bool upgrade = false;
                 bool connection = false;
-                net::h1header::StatusCode code;
+                http::header::StatusCode code;
                 auto res = http.read_response<TmpString>(code, header, &body, true, helper::nop, helper::nop, [&](auto&& key, auto&& value) {
                     if (helper::equal(key, "Sec-WebSocket-Accept", helper::ignore_case())) {
                         accept = helper::equal(value, compare_sec_key);

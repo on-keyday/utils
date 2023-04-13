@@ -1,0 +1,41 @@
+/*
+    utils - utility library
+    Copyright (c) 2021-2023 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+
+fn entry(){
+    for{} // never return
+}
+
+let _start = (0x2000).<int64>.<unsafe.Pointer>.<fn()>;
+assert(_start==entry);
+_start();
+
+_start.<int>;
+
+/*
+type T struct {
+    a: int
+    b: java.Int
+    d,l: javascript.Int;
+}
+
+obj.<struct{a: int,b: java.Int,a,d,l: javascript.Int;}>
+*/
+
+fn init(s :*self.T) {
+    s.a=0;
+    s.b=0;
+    s.d=0;
+    s.l=0;
+}
+
+fn call(s :*self.T) -> int {
+    (s.a+s.b)*s.l/s.d
+}
+
+let obj: T;
+obj.call()

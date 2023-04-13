@@ -33,10 +33,14 @@ namespace utils {
             constexpr auto out_size = internal::DecideOutLen<U, outsize>::size;
             if constexpr (in_size == out_size) {
                 if (same_size_as_copy) {
+                    if (input.eos()) {
+                        return UTFError::utf_no_input;
+                    }
                     auto d = input.current();
                     if (!unicode::internal::output(output, &d, 1)) {
                         return UTFError::utf_output_limit;
                     }
+                    input.consume();
                     return UTFError::none;
                 }
             }

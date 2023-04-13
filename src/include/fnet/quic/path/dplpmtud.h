@@ -144,6 +144,7 @@ namespace utils {
                         }
                     }
                     else if (wait->is_ack()) {
+                        ack::put_ack_wait(std::move(wait));
                         current_payload_size = bin_search.get_next();  // current
                         bin_search.on_ack();
                     }
@@ -156,12 +157,7 @@ namespace utils {
                     state = State::search_complete;
                     return {0, false};  // already done
                 }
-                if (wait) {
-                    wait->wait();
-                }
-                else {
-                    wait = ack::make_ack_wait();
-                }
+                wait = ack::make_ack_wait();
                 observer_vec.push_back(wait);
                 const auto next_step = bin_search.get_next();
                 return {next_step, true};

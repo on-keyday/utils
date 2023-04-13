@@ -110,14 +110,9 @@ namespace utils {
                 return QUICError{.msg = "unexpected frame type. expect MAX_STREAMS(bidi/uni) or MAX_DATA"};
             }
 
-            constexpr IOResult update_max_data(auto&& decide_new_limit) {
-                auto [res, ok] = decide_new_limit(std::as_const(state.conn.recv));
-                if (!ok) {
-                    return IOResult::cancel;
-                }
-                // ignore result
-                state.conn.update_recv_limit(res);
-                return IOResult::ok;
+            constexpr bool update_max_data(auto&& decide_new_limit) {
+                auto new_limit = decide_new_limit(std::as_const(state.conn.recv));
+                return state.conn.update_recv_limit(new_limit);
             }
 
             constexpr IOResult send_max_data(frame::fwriter& w) {
@@ -140,22 +135,14 @@ namespace utils {
                 return send_max_data(w);
             }
 
-            constexpr IOResult update_max_uni_streams(auto&& decide_new_limit) {
-                auto [new_limit, ok] = decide_new_limit(std::as_const(state.uni_acceptor.limit));
-                if (!ok) {
-                    return IOResult::cancel;
-                }
-                state.uni_acceptor.update_limit(new_limit);
-                return IOResult::ok;
+            constexpr bool update_max_uni_streams(auto&& decide_new_limit) {
+                auto new_limit = decide_new_limit(std::as_const(state.uni_acceptor.limit));
+                return state.uni_acceptor.update_limit(new_limit);
             }
 
-            constexpr IOResult update_max_bidi_streams(auto&& decide_new_limit) {
-                auto [new_limit, ok] = decide_new_limit(std::as_const(state.bidi_acceptor.limit));
-                if (!ok) {
-                    return IOResult::cancel;
-                }
-                state.bidi_acceptor.update_limit(new_limit);
-                return IOResult::ok;
+            constexpr bool update_max_bidi_streams(auto&& decide_new_limit) {
+                auto new_limit = decide_new_limit(std::as_const(state.bidi_acceptor.limit));
+                return state.bidi_acceptor.update_limit(new_limit);
             }
 
             constexpr IOResult send_max_uni_streams(frame::fwriter& w) {

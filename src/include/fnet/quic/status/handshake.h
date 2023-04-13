@@ -26,6 +26,11 @@ namespace utils {
                 flag_handshake_confirmed = 0x10,
                 flag_handshake_complete = 0x20,
                 flag_retry_received = 0x40,
+                flag_has_received_packet = 0x80,
+                flag_retry_required = 0x100,
+                flag_retry_sent = 0x200,
+
+                flag_started = 0x400,
             } flag;
 
             friend constexpr HandshakeFlag& operator|=(HandshakeFlag& f, HandshakeFlag flag) noexcept {
@@ -41,6 +46,10 @@ namespace utils {
                 recv_bytes = 0;
             }
 
+            constexpr bool has_received_packet() const {
+                return flag & flag_has_received_packet;
+            }
+
             constexpr void on_packet_sent(PacketNumberSpace space, std::uint64_t size) {
                 sent_bytes += size;
                 if (space == PacketNumberSpace::handshake) {
@@ -48,8 +57,12 @@ namespace utils {
                 }
             }
 
-            constexpr void on_packet_received(PacketNumberSpace space, std::uint64_t size) {
+            constexpr void on_datagram_received(std::uint64_t size) {
                 recv_bytes += size;
+            }
+
+            constexpr void on_packet_decrypted(PacketNumberSpace space) {
+                flag |= flag_has_received_packet;
                 if (space == PacketNumberSpace::handshake) {
                     flag |= flag_has_received_handshake;
                 }
@@ -120,6 +133,30 @@ namespace utils {
                     return true;
                 }
                 return handshake_packet_ack_is_received() || handshake_confirmed();
+            }
+
+            constexpr bool request_retry() {
+                if (!is_server()) {
+                    return false;
+                }
+                flag |= flag_retry_required;
+                return true;
+            }
+
+            constexpr bool retry_required() const {
+                return flag & flag_retry_required;
+            }
+
+            constexpr void on_retry_sent() {
+                flag |= flag_retry_sent;
+            }
+
+            constexpr void on_handshake_start() {
+                flag |= flag_started;
+            }
+
+            constexpr bool handshake_started() const {
+                return flag & flag_started;
             }
         };
 

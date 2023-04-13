@@ -25,6 +25,9 @@ namespace utils {
                 }
                 return user_gen_random(arg, random);
             }
+            constexpr bool valid() const {
+                return user_gen_random != nullptr;
+            }
         };
     }  // namespace fnet::quic::connid
 }  // namespace utils

@@ -79,19 +79,19 @@ namespace utils {
 
             struct QUICError {
                 const char* msg = nullptr;
-                const char* rfc_ref = nullptr;
-                const char* rfc_comment = nullptr;
                 TransportError transport_error = TransportError::INTERNAL_ERROR;
                 PacketType packet_type = PacketType::Unknown;
                 FrameType frame_type = FrameType::PADDING;
                 error::Error base;
+                bool is_app = false;
+                bool by_peer = false;
+
                 void error(auto&& pb) {
-                    helper::appends(pb, "quic: ", msg);
-                    if (rfc_ref) {
-                        helper::appends(pb, "rfc=", rfc_ref);
-                    }
-                    if (rfc_comment) {
-                        helper::appends(pb, "rfc_comment=", rfc_comment);
+                    helper::appends(pb,
+                                    "quic", is_app ? "(app)" : "", ": ",
+                                    msg);
+                    if (by_peer) {
+                        helper::append(pb, " by peer");
                     }
                     if (transport_error != TransportError::NO_ERROR) {
                         helper::append(pb, " transport_error=");

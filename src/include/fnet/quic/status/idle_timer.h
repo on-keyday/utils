@@ -50,7 +50,7 @@ namespace utils {
                 return base + timeout <= now;
             }
 
-            constexpr void on_packet_recieved(time::Time now) {
+            constexpr void on_packet_decrypted(time::Time now) {
                 last_recv_time = now;
                 first_ack_eliciting_packet_after_idle_sent_time = time::invalid;
             }

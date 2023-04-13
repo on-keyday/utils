@@ -13,7 +13,6 @@
 namespace utils {
     namespace fnet::quic::stream {
         struct StreamIDAcceptor {
-            size_t max_closed = 0;
             Limiter limit;
             const StreamType type{};
             Direction dir = Direction::unknown;
@@ -94,8 +93,6 @@ namespace utils {
             constexpr error::Error update_limit(size_t new_limit) {
                 if (new_limit >= size_t(1) << 60) {
                     return QUICError{
-                        .msg = "MAX_STREAMS limit is over 2^60",
-                        .rfc_ref = "RFC9000 4.6 Controlling Concurrency",
                         .transport_error = TransportError::FRAME_ENCODING_ERROR,
                         .frame_type = type == StreamType::bidi ? FrameType::MAX_STREAMS_BIDI : FrameType::MAX_STREAMS_UNI,
                     };

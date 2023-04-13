@@ -116,6 +116,11 @@ namespace utils {
                 if (l.size_ != r.size_) {
                     return false;
                 }
+                if (!std::is_constant_evaluated()) {
+                    if (l.data_ == r.data_) {
+                        return true;
+                    }
+                }
                 for (size_t i = 0; i < l.size_; i++) {
                     if (l[i] != r[i]) {
                         return false;

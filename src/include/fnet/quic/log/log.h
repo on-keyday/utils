@@ -24,6 +24,8 @@ namespace utils {
             void (*recv_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool) = nullptr;
             void (*pto_fire)(std::shared_ptr<void>&, status::PacketNumberSpace) = nullptr;
             void (*loss_timer_state)(std::shared_ptr<void>&, const status::LossTimer&, time::Time now) = nullptr;
+            void (*mtu_probe)(std::shared_ptr<void>&, std::uint64_t probe) = nullptr;
+            void (*rtt_state)(std::shared_ptr<void>&, const status::RTT& rtt, time::Time now) = nullptr;
         };
 
         struct Logger {
@@ -63,6 +65,18 @@ namespace utils {
             void loss_timer_state(const status::LossTimer& loss, time::Time now) {
                 if (callbacks && callbacks->loss_timer_state) {
                     callbacks->loss_timer_state(ctx, loss, now);
+                }
+            }
+
+            void rtt_state(const status::RTT& rtt, time::Time now) {
+                if (callbacks && callbacks->rtt_state) {
+                    callbacks->rtt_state(ctx, rtt, now);
+                }
+            }
+
+            void mtu_probe(std::uint64_t packet_size) {
+                if (callbacks && callbacks->mtu_probe) {
+                    callbacks->mtu_probe(ctx, packet_size);
                 }
             }
         };

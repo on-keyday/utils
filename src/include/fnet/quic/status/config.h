@@ -29,6 +29,12 @@ namespace utils {
             time::Clock clock;
 
             std::uint64_t persistent_congestion_threshold = default_persistent_congestion_threshold;
+
+            // milliseconds
+            time::utime_t ping_duration = 0;
+
+            // works on server mode
+            bool retry_required = false;
         };
 
         // include duplicated with transport parameter

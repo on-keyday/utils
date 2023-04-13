@@ -78,6 +78,13 @@ namespace utils {
                 probe_required = 0;
                 pto_count = 0;
             }
+
+            constexpr void on_retry_received(const InternalConfig& config, RTT& rtt, time::Time first_sent_time) {
+                if (pto_count == 0) {
+                    rtt.sample_rtt(config, first_sent_time, 0);
+                }
+                pto_count = 0;
+            }
         };
 
     }  // namespace fnet::quic::status

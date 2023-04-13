@@ -103,28 +103,28 @@ namespace utils {
 
             template <class T>
             concept has_error = requires(T t) {
-                                    { t.error(std::declval<helper::IPushBacker<>>()) };
-                                };
+                { t.error(std::declval<helper::IPushBacker<>>()) };
+            };
 
             template <class T>
             concept has_category = requires(T t) {
-                                       { t.category() } -> std::same_as<ErrorCategory>;
-                                   };
+                { t.category() } -> std::same_as<ErrorCategory>;
+            };
 
             template <class T>
             concept has_errnum = requires(T t) {
-                                     { t.errnum() } -> std::convertible_to<std::uint64_t>;
-                                 };
+                { t.errnum() } -> std::convertible_to<std::uint64_t>;
+            };
 
             template <class T>
             concept has_equal = requires(const T& t) {
-                                    { t == t } -> std::convertible_to<bool>;
-                                };
+                { t == t } -> std::convertible_to<bool>;
+            };
 
             template <class T>
             concept has_unwrap = requires(T t) {
-                                     { t.unwrap() } -> std::same_as<Error>;
-                                 };
+                { t.unwrap() } -> std::same_as<Error>;
+            };
 
             enum class WrapCtrlOrder {
                 call,
@@ -147,6 +147,12 @@ namespace utils {
                 };
             }
 
+            template <class Obj>
+            struct WrapManage {
+                Obj fn;
+                std::atomic_uint32_t ref = 1;
+            };
+
             struct Wrap {
                 void* ptr = nullptr;
                 std::uintptr_t (*error)(void*, helper::IPushBacker<> pb, WrapCtrlOrder, void* unwrap_s) = nullptr;
@@ -161,24 +167,26 @@ namespace utils {
                     auto del = [](void* p) {
                         free_normal(p, DNET_DEBUG_MEMORY_LOCINFO(false, 0, 0));
                     };
-                    auto tmp = helper::wrapfn_ptr<std::atomic_uint32_t>(
-                        std::forward<decltype(t)>(t),
-                        alloc, del);
+                    auto tmp = alloc(sizeof(WrapManage<std::decay_t<T>>), alignof(WrapManage<std::decay_t<T>>));
                     if (!tmp) {
                         return;
                     }
-                    auto cmpf = +eqfn<std::decay_t<decltype(*tmp)>>();
+                    auto d = helper::defer([&] {
+                        del(tmp);
+                    });
+                    auto obj = new (tmp) WrapManage<std::decay_t<T>>{std::forward<T>(t)};
+                    auto cmpf = +eqfn<std::decay_t<decltype(*obj)>>();
                     ptr = tmp;
-                    std::get<0>(tmp->optional) = 1;
+                    d.cancel();
                     cmp = reinterpret_cast<bool (*)(const void*, const void*)>(cmpf);
                     error = [](void* p, helper::IPushBacker<> pb, WrapCtrlOrder ord, void* unwrap_s) -> std::uintptr_t {
-                        auto f = decltype(tmp)(p);
+                        WrapManage<std::decay_t<T>>* f = static_cast<WrapManage<std::decay_t<T>>*>(p);
                         if (ord == WrapCtrlOrder::ref) {
-                            ++std::get<0>(f->optional);
+                            ++f->ref;
                             return 0;
                         }
                         if (ord == WrapCtrlOrder::del) {
-                            if (--std::get<0>(f->optional) == 0) {
+                            if (--f->ref == 0) {
                                 delete_with_global_heap(f, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*f)), alignof(decltype(*f))));
                             }
                             return 0;
@@ -248,7 +256,7 @@ namespace utils {
 
         /* Error is golang like error interface
            object should implement void error(helper::IPushBacker<>)
-           specialized to number,const char*,and char* (heap str)
+           specialized to number and const char*
            support Error copy by reference count of internal pointer
            also support Error unwrap() like golang errors.Unwrap()
            reflection like T* as() function also support
@@ -506,7 +514,7 @@ namespace utils {
             template <class T>
             T* as() const {
                 if (type_ == ErrorType::wrap) {
-                    using WrapT = helper::WrapPtr<T, std::atomic_uint32_t>;
+                    using WrapT = internal::WrapManage<T>;
                     auto cmpf = reinterpret_cast<bool (*)(const void*, const void*)>(+internal::eqfn<WrapT>());
                     if (detail.w.cmp == cmpf) {
                         helper::NopPushBacker nop;

@@ -47,11 +47,11 @@ namespace utils {
         }  // namespace internal
 
         bool validate_h2header(auto&& h) {
-            constexpr auto h2key = net::h1header::http2_key_validator();
-            constexpr auto valid = net::h1header::default_validator();
+            constexpr auto h2key = http::header::http2_key_validator();
+            constexpr auto valid = http::header::default_validator();
             for (auto&& kv : h) {
                 if (h2key(kv)) {
-                    if (!net::h1header::is_valid_value(get<1>(kv))) {
+                    if (!http::header::is_valid_value(get<1>(kv))) {
                         return false;
                     }
                 }

@@ -34,7 +34,7 @@ namespace utils {
                 auto write_comma = [&](bool& first) {
                     if (first) {
                         if (line) {
-                            out.write_line();
+                            out.write_ln();
                             out.indent(1);
                         }
                         first = false;
@@ -42,7 +42,7 @@ namespace utils {
                     else {
                         out.write_raw(",");
                         if (line) {
-                            out.write_line();
+                            out.write_ln();
                             out.indent(1);
                         }
                     }
@@ -53,7 +53,7 @@ namespace utils {
                 auto write_tail = [&](bool& first) {
                     if (!first) {
                         if (line) {
-                            out.write_line();
+                            out.write_ln();
                         }
                     }
                 };
@@ -159,7 +159,7 @@ namespace utils {
         JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
             auto e = internal::to_string_detail(json, out, flag);
             if (e && any(flag & FmtFlag::last_line)) {
-                out.write_line();
+                out.write_ln();
             }
             return e;
         }

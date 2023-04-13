@@ -20,7 +20,7 @@ namespace utils {
             view::rvec srcID;
             view::rvec token;
             packetnum::Value packet_number;
-            bool key = false;
+            bool key_bit = false;
             bool spin = false;
         };
 

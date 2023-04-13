@@ -45,9 +45,10 @@ namespace utils {
                     return IOResult::no_data;
                 }
                 if (wait) {
-                    if (wait->is_ack() || !wait->is_lost()) {
+                    if (!wait->is_ack() && !wait->is_lost()) {
                         return IOResult::ok;
                     }
+                    ack::put_ack_wait(std::move(wait));
                 }
                 if (w.remain().size() < 9) {
                     return IOResult::no_capacity;
@@ -57,12 +58,7 @@ namespace utils {
                 if (!w.write(ch)) {
                     return IOResult::fatal;
                 }
-                if (wait) {
-                    wait->wait();
-                }
-                else {
-                    wait = ack::make_ack_wait();
-                }
+                wait = ack::make_ack_wait();
                 observer_vec.push_back(wait);
                 return IOResult::ok;
             }
@@ -82,7 +78,7 @@ namespace utils {
                         .frame_type = FrameType::PATH_RESPONSE,
                     };
                 }
-                wait = nullptr;
+                ack::put_ack_wait(std::move(wait));
                 verify_required = false;
                 return error::none;
             }

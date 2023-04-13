@@ -27,6 +27,7 @@ namespace utils {
             static constexpr auto err_too_short_payload = error::Error("not enough payload length. least 20 byte required", error::ErrorCategory::cryptoerr);
             static constexpr auto err_unknown = error::Error("unknown packet parser error. library bug!", error::ErrorCategory::fneterr);
             static constexpr auto err_decode_pn = error::Error("failed to decode packet number", error::ErrorCategory::quicerr);
+            static constexpr auto err_header_not_decrypted = error::Error("header is not decyrpted. call decrypt_header() before call decrypt_payload()", error::ErrorCategory::quicerr);
 
             tls::QUICCipherSuite judge_cipher(const tls::TLSCipher& cipher) {
                 if (cipher == tls::TLSCipher{}) {
@@ -127,7 +128,7 @@ namespace utils {
                 return {wireval, error::none};
             }
 
-            fnet_dll_implement(error::Error) encrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet) {
+            fnet_dll_implement(error::Error) encrypt_packet(const KeyIV& keyiv, const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet) {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
                 }
@@ -142,16 +143,16 @@ namespace utils {
                 }
                 // make nonce from iv and packet number
                 byte nonce[32]{0};
-                make_nonce(keys.iv(), nonce, packet.packet_number);
+                make_nonce(keyiv.iv(), nonce, packet.packet_number);
                 // encrypt payload
-                if (auto err = cipher_payload(cipher, parsed, keys.key(), view::rvec(nonce, keys.iv().size()), true)) {
+                if (auto err = cipher_payload(cipher, parsed, keyiv.key(), view::rvec(nonce, keyiv.iv().size()), true)) {
                     return err;
                 }
                 // apply header protection
-                return protect_header(pnlen, keys.hp(), cipher, packet);
+                return protect_header(pnlen, hp.hp(), cipher, packet);
             }
 
-            fnet_dll_implement(error::Error) decrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
+            fnet_dll_export(error::Error) decrypt_header(const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
                 }
@@ -159,24 +160,38 @@ namespace utils {
                     return err_too_short_payload;
                 }
                 // apply header unprotection
-                auto [pn_wire, err] = unprotect_header(keys.hp(), cipher, packet);
+                auto [pn_wire, err] = unprotect_header(hp.hp(), cipher, packet);
                 if (err) {
                     return err;
                 }
-                auto [pnknown, ok] = packet.parse_pnknown(pn_wire.len, authentication_tag_length);
-                if (!ok) {
-                    return err_unknown;
-                }
+                bool ok;
                 // decode packet number
                 std::tie(packet.packet_number, ok) = packetnum::decode(pn_wire, largest_pn);
                 if (!ok) {
                     return err_decode_pn;
                 }
+                return error::none;
+            }
+
+            fnet_dll_implement(error::Error) decrypt_payload(const KeyIV& keyiv, const tls::TLSCipher& cipher, packet::CryptoPacket& packet) {
+                if (packet.head_len < 1 || packet.src.size() < 1) {
+                    return err_packet_format;
+                }
+                if (packet.payload_len() < 20) {
+                    return err_too_short_payload;
+                }
+                if (packet.packet_number == packetnum::infinity) {
+                    return err_header_not_decrypted;
+                }
+                auto [pnknown, ok] = packet.parse_pnknown(PacketFlags{packet.src[0]}.packet_number_length(), authentication_tag_length);
+                if (!ok) {
+                    return err_unknown;
+                }
                 // make nonce from iv and packet number
                 byte nonce[32]{0};
-                make_nonce(keys.iv(), nonce, packet.packet_number);
+                make_nonce(keyiv.iv(), nonce, packet.packet_number);
                 // decrypt payload
-                return cipher_payload(cipher, pnknown, keys.key(), view::rvec(nonce, keys.iv().size()), false);
+                return cipher_payload(cipher, pnknown, keyiv.key(), view::rvec(nonce, keyiv.iv().size()), false);
             }
 
             fnet_dll_export(error::Error) generate_retry_integrity_tag(view::wvec tag, view::rvec pseduo_packet, std::uint32_t version) {
@@ -189,8 +204,8 @@ namespace utils {
                     auto key = quic_v1_retry_integrity_tag_key;
                     auto nonce = quic_v1_retry_integrity_tag_nonce;
                     return cipher_payload({}, info,
-                                          quic_v1_retry_integrity_tag_key.key,
-                                          quic_v1_retry_integrity_tag_nonce.key, true);
+                                          quic_v1_retry_integrity_tag_key.material,
+                                          quic_v1_retry_integrity_tag_nonce.material, true);
                 }
                 return error::Error("unknown QUIC version", error::ErrorCategory::quicerr);
             }

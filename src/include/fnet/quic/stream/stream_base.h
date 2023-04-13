@@ -20,6 +20,7 @@ namespace utils {
         struct StreamWriteData {
             view::rvec src;
             std::uint64_t discarded_offset = 0;
+            // OFFSET of stream
             std::uint64_t written_offset = 0;
             bool fin = false;
             bool fin_written = false;
@@ -31,8 +32,11 @@ namespace utils {
             }
 
             constexpr bool update(std::uint64_t new_discard, view::rvec new_src, bool is_fin) {
-                if (fin ||
+                if (
+                    // finish sending
+                    fin ||
                     src.size() + discarded_offset > new_src.size() + new_discard ||
+                    // check whether data before new_discard offset is already sent
                     new_discard > written_offset) {
                     return false;
                 }
@@ -73,11 +77,11 @@ namespace utils {
             if (remain_data_size == 0 && !data.should_fin()) {
                 return {IOResult::no_data, 0};  // nothing to write
             }
-            const auto stream_flow_limit = state.limit.avail_size();
+            const auto stream_flow_limit = state.sendable_size();
             // decide stream payload size temporary
             const auto payload_limit = remain_data_size < stream_flow_limit ? remain_data_size : stream_flow_limit;
             if (payload_limit == 0 && !data.should_fin()) {
-                return {IOResult::block_by_stream, state.limit.curlimit()};  // blocked by stream flow control limit
+                return {IOResult::block_by_stream, state.send_limit()};  // blocked by stream flow control limit
             }
 
             bool ok = true, block = false;
@@ -156,14 +160,14 @@ namespace utils {
             // settings by peer
             constexpr void set_initial(const InitialLimits& ini, Direction self) {
                 if (id.type() == StreamType::uni) {
-                    state.limit.update_limit(ini.uni_stream_data_limit);
+                    state.update_send_limit(ini.uni_stream_data_limit);
                 }
                 else if (id.type() == StreamType::bidi) {
                     if (id.dir() == self) {
-                        state.limit.update_limit(ini.bidi_stream_data_remote_limit);
+                        state.update_send_limit(ini.bidi_stream_data_remote_limit);
                     }
                     else {
-                        state.limit.update_limit(ini.bidi_stream_data_local_limit);
+                        state.update_send_limit(ini.bidi_stream_data_local_limit);
                     }
                 }
             }
@@ -178,14 +182,14 @@ namespace utils {
                 if (id != frame.streamID) {
                     return false;
                 }
-                return state.limit.update_limit(frame.max_stream_data);
+                return state.update_send_limit(frame.max_stream_data);
             }
 
             constexpr IOResult send_reset(frame::fwriter& w) noexcept {
                 frame::ResetStreamFrame reset;
                 reset.streamID = id.id;
-                reset.application_protocol_error_code = state.error_code;
-                reset.final_size = state.limit.curused();
+                reset.application_protocol_error_code = state.get_error_code();
+                reset.final_size = state.sent_bytes();
                 if (w.remain().size() < reset.len()) {
                     return IOResult::no_capacity;  // unable to write
                 }
@@ -196,20 +200,20 @@ namespace utils {
             }
 
             constexpr IOResult send_reset_if_stop_required(frame::fwriter& w) noexcept {
-                if (state.require_reset) {
+                if (state.is_reset_required()) {
                     return send_reset(w);
                 }
                 return IOResult::not_in_io_state;
             }
 
             constexpr IOResult send_retransmit_reset(frame::fwriter& w) {
-                if (state.state != SendState::reset_sent) {
+                if (!state.can_retransmit_reset()) {
                     return IOResult::not_in_io_state;
                 }
                 frame::ResetStreamFrame reset;
                 reset.streamID = id.id;
-                reset.application_protocol_error_code = state.error_code;
-                reset.final_size = state.limit.curused();
+                reset.application_protocol_error_code = state.get_error_code();
+                reset.final_size = state.sent_bytes();
                 if (w.remain().size() < reset.len()) {
                     return IOResult::no_capacity;  // unable to write
                 }
@@ -251,6 +255,11 @@ namespace utils {
                         return IOResult::invalid_data;
                     }
                     if (offset + fragment.size() != data.written_offset) {
+                        return IOResult::invalid_data;
+                    }
+                }
+                else {
+                    if (offset + fragment.size() > data.written_offset) {
                         return IOResult::invalid_data;
                     }
                 }
@@ -298,12 +307,12 @@ namespace utils {
             StreamID id, RecvUniStreamState& state,
             auto&& deliver_data) {
             if (frame.streamID != id) {
-                return {IOResult::id_mismatch, error::none};  // library bug
+                return {IOResult::id_mismatch, error::Error("unexpected streamID on StreamFrame. library bug!!")};  // library bug
             }
             if (!state.can_recv()) {
                 return {IOResult::not_in_io_state, error::none};  // ignore frame
             }
-            std::uint64_t prev_used = state.limit.curused();
+            std::uint64_t prev_used = state.recv_bytes();
             if (!state.recv(frame.offset + frame.stream_data.size())) {
                 return {IOResult::block_by_stream,
                         QUICError{
@@ -312,7 +321,7 @@ namespace utils {
                             .frame_type = frame.type.type_detail(),
                         }};
             }
-            std::uint64_t cur_used = state.limit.curused();
+            std::uint64_t cur_used = state.recv_bytes();
             if (cur_used - prev_used) {  // new usage exists
                 // update connection limit usage
                 if (!conn.use_recv_credit(cur_used - prev_used)) {
@@ -332,7 +341,7 @@ namespace utils {
             frag.offset = frame.offset;
             frag.fragment = frame.stream_data;
             frag.fin = frame.type.STREAM_fin();
-            if (error::Error err = deliver_data(frag)) {
+            if (error::Error err = deliver_data(frag, cur_used)) {
                 // delivery error
                 return {
                     IOResult::fatal,
@@ -355,14 +364,14 @@ namespace utils {
             // settings by local
             constexpr void set_initial(const InitialLimits& ini, Direction self) {
                 if (id.type() == StreamType::uni) {
-                    state.limit.update_limit(ini.uni_stream_data_limit);
+                    state.set_recv_limit(ini.uni_stream_data_limit);
                 }
                 else if (id.type() == StreamType::bidi) {
                     if (id.dir() == self) {
-                        state.limit.update_limit(ini.bidi_stream_data_local_limit);
+                        state.set_recv_limit(ini.bidi_stream_data_local_limit);
                     }
                     else {
-                        state.limit.update_limit(ini.bidi_stream_data_remote_limit);
+                        state.set_recv_limit(ini.bidi_stream_data_remote_limit);
                     }
                 }
             }
@@ -372,14 +381,11 @@ namespace utils {
                 return recv_impl(frame, conn, id, state, deliver_data);
             }
 
-            constexpr IOResult update_recv_limit(auto&& decide_new_limit) {
-                std::pair<std::uint64_t, bool> new_limit = decide_new_limit(std::as_const(state.limit));
-                if (!new_limit.second) {
-                    return IOResult::cancel;  // cancel update
-                }
+            constexpr bool update_recv_limit(auto&& decide_new_limit) {
+                std::uint64_t new_limit = decide_new_limit(state.get_recv_limiter());
                 // update limit (ignore result)
-                state.update_recv_limit(new_limit.first);
-                return IOResult::ok;
+                state.update_recv_limit(new_limit);
+                return true;
             }
 
             constexpr IOResult send_max_stream_data(frame::fwriter& w) {
@@ -389,7 +395,7 @@ namespace utils {
                 // decide new limit by user callback
                 frame::MaxStreamDataFrame frame;
                 frame.streamID = id.id;
-                frame.max_stream_data = state.limit.curlimit();
+                frame.max_stream_data = state.recv_limit();
                 // check capcacity
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
@@ -398,12 +404,12 @@ namespace utils {
                 if (!w.write(frame)) {
                     return IOResult::fatal;
                 }
-                state.should_send_limit_update = false;  // clear primary send flag
+                state.max_stream_data_sent();  // clear primary send flag
                 return IOResult::ok;
             }
 
             constexpr IOResult send_max_stream_data_if_updated(frame::fwriter& w) {
-                if (!state.should_send_limit_update) {
+                if (!state.require_send_limit_update()) {
                     return IOResult::not_in_io_state;
                 }
                 return send_max_stream_data(w);
@@ -413,10 +419,10 @@ namespace utils {
             constexpr std::pair<IOResult, error::Error> recv_reset(ConnectionBase<ConnLock>& conn, const frame::ResetStreamFrame& reset) {
                 // check id
                 if (id != reset.streamID) {
-                    return {IOResult::id_mismatch, error::none};
+                    return {IOResult::id_mismatch, error::Error("unexpected stream id on ResetFrame. library bug!!")};  // libary bug!!
                 }
 
-                auto prev_used = state.limit.curused();
+                auto prev_used = state.recv_bytes();
                 // update state
                 if (!state.reset(reset.final_size, reset.application_protocol_error_code)) {
                     return {IOResult::block_by_stream,
@@ -426,7 +432,7 @@ namespace utils {
                                 .frame_type = FrameType::RESET_STREAM,
                             }};
                 }
-                auto cur_used = state.limit.curused();
+                auto cur_used = state.recv_bytes();
                 if (cur_used - prev_used) {  // new usage exists
                     if (!conn.use_recv_credit(cur_used - prev_used)) {
                         return {
@@ -446,12 +452,12 @@ namespace utils {
             }
 
             constexpr IOResult send_stop_sending(frame::fwriter& w) {
-                if (!state.stop_required || !state.can_stop_sending()) {
+                if (!state.is_stop_required() || !state.can_stop_sending()) {
                     return IOResult::not_in_io_state;
                 }
                 frame::StopSendingFrame frame;
                 frame.streamID = id.id;
-                frame.application_protocol_error_code = state.error_code;
+                frame.application_protocol_error_code = state.get_error_code();
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
                 }
@@ -466,7 +472,7 @@ namespace utils {
                 byte data[63];
                 io::writer w{data};
                 conn.state.conn.send.update_limit(1000);
-                base.state.limit.update_limit(1000);
+                base.state.update_send_limit(1000);
                 base.id = 1;
                 byte src[11000]{};
                 base.data.src = src;

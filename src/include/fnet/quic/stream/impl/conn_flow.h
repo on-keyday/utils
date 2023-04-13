@@ -20,16 +20,19 @@ namespace utils {
             std::shared_ptr<ack::ACKLostRecord> max_uni_streams;
             std::shared_ptr<ack::ACKLostRecord> max_bidi_streams;
 
-            IOResult update_max_data(auto&& decide_new_limit) {
+            // don't get lock by yourself
+            bool update_max_data(auto&& decide_new_limit) {
                 const auto locked = base.accept_uni_lock();
                 return base.update_max_data(decide_new_limit);
             }
 
+            // don't get lock by yourself
             IOResult update_max_uni_streams(auto&& decide_new_limit) {
                 const auto locked = base.accept_uni_lock();
                 return base.update_max_uni_streams(decide_new_limit);
             }
 
+            // don't get lock by yourself
             IOResult update_max_bidi_streams(auto&& decide_new_limit) {
                 const auto locked = base.accept_bidi_lock();
                 return base.update_max_bidi_streams(decide_new_limit);
@@ -49,12 +52,12 @@ namespace utils {
                             return res;
                         }
                         else if (res == IOResult::ok) {
-                            rec->wait();
+                            rec = ack::make_ack_wait();
                             observer_vec.push_back(rec);
                         }
                     }
                     if (rec->is_ack()) {
-                        rec = nullptr;
+                        ack::put_ack_wait(std::move(rec));
                     }
                 }
                 return IOResult::ok;

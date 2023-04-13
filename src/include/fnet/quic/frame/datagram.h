@@ -8,6 +8,7 @@
 // datagram - DATAGRAM frame
 #pragma once
 #include "base.h"
+#include "calc_data.h"
 
 namespace utils {
     namespace fnet::quic::frame {
@@ -61,6 +62,22 @@ namespace utils {
             }
         };
 
+        constexpr std::pair<DatagramFrame, bool> make_fit_size_Datagram(std::uint64_t to_fit, view::rvec src) {
+            DatagramFrame dgram;
+            dgram.type = FrameType::DATAGRAM;
+            dgram.datagram_data = src;
+            const auto no_len = dgram.len();
+            if (no_len == to_fit) {
+                return {dgram, true};
+            }
+            dgram.type = FrameType::DATAGRAM_LEN;
+            const auto with_len = dgram.len();
+            if (with_len <= to_fit) {
+                return {dgram, true};
+            }
+            return {{}, false};
+        }
+
         namespace test {
             constexpr bool check_dgram() {
                 DatagramFrame frame;
@@ -79,6 +96,46 @@ namespace utils {
                 });
                 return ok1 && ok2;
             }
+
+            constexpr bool check_make_dgram() {
+                byte buf[] = "test";
+                auto [dgram, ok] = make_fit_size_Datagram(3, view::rvec(buf, 4));
+                if (ok) {
+                    return false;
+                }
+                std::tie(dgram, ok) = make_fit_size_Datagram(5, view::rvec(buf, 4));
+                if (!ok) {
+                    return false;
+                }
+                if (dgram.type.type_detail() != FrameType::DATAGRAM) {
+                    return false;
+                }
+                std::tie(dgram, ok) = make_fit_size_Datagram(6, view::rvec(buf, 4));
+                if (!ok) {
+                    return false;
+                }
+                if (dgram.type.type_detail() != FrameType::DATAGRAM_LEN) {
+                    return false;
+                }
+                std::tie(dgram, ok) = make_fit_size_Datagram(6, view::rvec(buf, 64));
+                if (ok) {
+                    return false;
+                }
+                std::tie(dgram, ok) = make_fit_size_Datagram(66, view::rvec(buf, 64));
+                if (ok) {
+                    return false;
+                }
+                std::tie(dgram, ok) = make_fit_size_Datagram(67, view::rvec(buf, 64));
+                if (!ok) {
+                    return false;
+                }
+                if (dgram.type.type_detail() != FrameType::DATAGRAM_LEN) {
+                    return false;
+                }
+                return true;
+            }
+
+            static_assert(check_make_dgram());
 
         }  // namespace test
     }      // namespace fnet::quic::frame

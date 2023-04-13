@@ -19,7 +19,7 @@ struct SockHolder {
     // fnet::Socket::completion_recv_t comp;
     bool end;
     std::string str;
-    utils::net::h1header::StatusCode code;
+    utils::http::header::StatusCode code;
     std::string body;
     std::multimap<std::string, std::string> header;
 };
@@ -77,7 +77,7 @@ int main() {
         if (len == bufmax) {
             read();
         }
-        utils::net::h1header::read_response<std::string>(h->str, h->code, h->header, h->body, [&](auto& seq, size_t expect, bool end_call) {
+        utils::http::header::read_response<std::string>(h->str, h->code, h->header, h->body, [&](auto& seq, size_t expect, bool end_call) {
             read();
             return true;
         });

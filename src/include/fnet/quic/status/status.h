@@ -36,6 +36,8 @@ namespace utils {
             LossTimer loss;
             PTOStatus pto;
             TokenBudgetPacer<Alg> pacer;
+            time::Timer close_timer;
+            time::Timer ping_timer;
 
             PacketNumberIssuer pn_issuers[3];
             PacketNumberAcceptor pn_acceptors[3];
@@ -127,7 +129,7 @@ namespace utils {
             }
 
             constexpr void set_loss_detection_timer() {
-                loss.set_loss_detection_timer(config, pto, rtt, hs, pn_issuers);
+                loss.set_loss_detection_timer(config, pto, rtt, hs, pn_issuers, ping_timer);
             }
 
             constexpr void process_ecn(PacketNumberIssuer& issuer, ECNCounts& ecn, time::Time time_sent) {
@@ -153,6 +155,8 @@ namespace utils {
                 idle.reset();
                 pto.reset();
                 pacer.reset();
+                close_timer.cancel();
+                ping_timer.cancel();
                 creation_time = config.clock.now();
             }
 
@@ -212,16 +216,20 @@ namespace utils {
                 return res;
             }
 
-            // on_packet_received should be called when encrypted packet is decrypted and parsed
-            // TODO(on-keyday): RFC9000 says this function should be called even if parse failed
-            constexpr void on_packet_received(PacketNumberSpace space, std::uint64_t recv_bytes) {
-                const auto now = config.clock.now();
-                idle.on_packet_recieved(now);
+            // on_datagram_received should be called when datagram receieved for this connection
+            constexpr void on_datagram_received(std::uint64_t recv_bytes) {
                 const auto was_limit = hs.is_at_anti_amplification_limit();
-                hs.on_packet_received(space, recv_bytes);
+                hs.on_datagram_received(recv_bytes);
                 if (was_limit && hs.is_at_anti_amplification_limit()) {
-                    loss.set_loss_detection_timer(config, pto, rtt, hs, pn_issuers);
+                    set_loss_detection_timer();
                 }
+            }
+
+            // on_packet_decrypted should be called when encrypted packet is decrypted and parsed
+            constexpr void on_packet_decrypted(PacketNumberSpace space) {
+                hs.on_packet_decrypted(space);
+                const auto now = config.clock.now();
+                idle.on_packet_decrypted(now);
             }
 
             // on_packet_processed should be called when packet payload is processed completely
@@ -379,8 +387,20 @@ namespace utils {
                 set_loss_detection_timer();
             }
 
-            constexpr void on_retry_received() {
+            // lost_sent_packet should be void(auto&& apply_remove)
+            // apply_remove is void(time::Time time_sent)
+            constexpr void on_retry_received(auto&& lost_sent_packet) {
                 hs.on_retry_received();
+                time::Time first_sent_time = time::invalid;
+                lost_sent_packet([&](time::Time time_sent) {
+                    if (!first_sent_time.valid()) {
+                        first_sent_time = time_sent;
+                    }
+                });
+                pto.on_retry_received(config, rtt, first_sent_time);
+                loss.on_retry_received();
+                pn_issuers[space_to_index(PacketNumberSpace::initial)].on_retry_received();
+                pn_issuers[space_to_index(PacketNumberSpace::application)].on_retry_received();
             }
 
             // packet number issuer/consumer
@@ -428,6 +448,29 @@ namespace utils {
                 return cong.should_send_any_packet();
             }
 
+            constexpr void set_close_timer() {
+                const auto close_until = pto.probe_timeout_duration(config, rtt);
+                close_timer.set_deadline(close_until);
+            }
+
+            constexpr bool close_timeout() const {
+                return close_timer.timeout(config.clock);
+            }
+
+            constexpr bool should_send_ping() const {
+                return loss.current_state() == LossTimerState::no_timer &&
+                       ping_timer.timeout(config.clock);
+            }
+
+            // for program consistency
+            constexpr void on_handshake_start() {
+                hs.on_handshake_start();
+            }
+
+            constexpr bool handshake_started() const {
+                return hs.handshake_started();
+            }
+
             // exports
 
             constexpr time::Time now() const {
@@ -444,6 +487,10 @@ namespace utils {
 
             constexpr const HandshakeStatus& handshake_status() const {
                 return hs;
+            }
+
+            constexpr const RTT& rtt_status() const {
+                return rtt;
             }
 
             constexpr const PTOStatus& pto_status() const {

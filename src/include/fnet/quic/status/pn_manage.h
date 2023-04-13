@@ -94,6 +94,13 @@ namespace utils {
             constexpr time::Time last_ack_eliciting_packet_sent_time() const {
                 return last_ack_eliciting_packet_sent_time_;
             }
+
+            constexpr void on_retry_received() {
+                last_ack_eliciting_packet_sent_time_ = 0;
+                ack_eliciting_in_flight_sent_packet_count = 0;
+                highest_sent = -1;
+                largest_acked_packet = -1;
+            }
         };
 
         struct PacketNumberAcceptor {

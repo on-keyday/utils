@@ -25,11 +25,17 @@ namespace utils {
             std::is_same_v<T, ZeroRTTPacketPlain>;
 
         template <class T>
+        constexpr bool is_CryptoLongPacketCipher_v =
+            std::is_same_v<T, InitialPacketCipher> ||
+            std::is_same_v<T, HandshakePacketCipher> ||
+            std::is_same_v<T, ZeroRTTPacketCipher>;
+
+        template <class T>
         constexpr bool is_LongPacket_v =
             is_CryptoLongPacketPlain_v<T> || std::is_same_v<T, RetryPacket>;
 
         template <class T>
-        constexpr bool is_CryptoPacket_v =
+        constexpr bool is_CryptoPacketPlain_v =
             is_CryptoLongPacketPlain_v<T> || std::is_same_v<T, OneRTTPacketPlain>;
     }  // namespace fnet::quic::packet
 }  // namespace utils

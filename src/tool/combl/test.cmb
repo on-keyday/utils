@@ -1,0 +1,27 @@
+/*
+    utils - utility library
+    Copyright (c) 2021-2023 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+let tmp = 34;
+let _start = fn(){
+   __builtin_suspend()
+   main()
+}
+
+let text = "hello world!\n"
+
+fn main()->int {
+   __builtin_suspend()
+   return (tmp * 2 + 8)/ 2
+}
+
+_start()
+
+fn panic(text :string) {
+   __builtin_exit(0-1)
+}
+
+panic("abort instruction")

@@ -7,6 +7,7 @@
 
 #pragma once
 #include "../../storage.h"
+#include "../frame/token.h"
 
 namespace utils {
     namespace fnet::quic::token {
@@ -23,6 +24,10 @@ namespace utils {
             constexpr view::rvec get_token() const {
                 return token;
             }
+
+            void reset() {
+                token = {};
+            }
         };
 
         struct Token {
@@ -37,8 +42,10 @@ namespace utils {
            private:
             std::shared_ptr<void> obj;
             Token (*find_token)(void*);
+            void (*store_token)(Token, void*);
 
            public:
+            void store() {}
         };
     }  // namespace fnet::quic::token
 }  // namespace utils

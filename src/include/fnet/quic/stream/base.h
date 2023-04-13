@@ -20,7 +20,7 @@ namespace utils {
            public:
             constexpr Limiter() = default;
             constexpr std::uint64_t avail_size() const {
-                return limit - used;
+                return limit > used ? limit - used : 0;
             }
 
             constexpr bool on_limit(std::uint64_t s) const {
@@ -63,14 +63,6 @@ namespace utils {
             constexpr std::uint64_t curused() const {
                 return used;
             }
-
-            bool unuse(std::uint64_t l) {
-                if (used < l) {
-                    return false;
-                }
-                used -= l;
-                return true;
-            }
         };
 
         enum class SendState {
@@ -83,11 +75,31 @@ namespace utils {
         };
 
         struct SendUniStreamState {
+           private:
             Limiter limit;
             std::uint64_t error_code = 0;
             SendState state = SendState::ready;
-            bool require_reset = false;
+            bool reset_required = false;
 
+           public:
+            constexpr std::uint64_t sendable_size() const noexcept {
+                return limit.avail_size();
+            }
+
+            constexpr std::uint64_t send_limit() const noexcept {
+                return limit.curlimit();
+            }
+
+            constexpr std::uint64_t sent_bytes() const noexcept {
+                return limit.curused();
+            }
+
+            constexpr bool update_send_limit(std::uint64_t credit) noexcept {
+                return limit.update_limit(credit);
+            }
+
+            // is_terminal_state reports whether stream is terminal state (not to retransmit)
+            // state==SendState::data_recved || state==SendState::reset_recved
             constexpr bool is_terminal_state() const noexcept {
                 return state == SendState::data_recved ||
                        state == SendState::reset_recved;
@@ -103,6 +115,20 @@ namespace utils {
                        state == SendState::data_sent;
             }
 
+            constexpr bool can_reset() const noexcept {
+                return state == SendState::ready ||
+                       state == SendState::send ||
+                       state == SendState::data_sent;
+            }
+
+            constexpr bool can_retransmit_reset() const noexcept {
+                return state == SendState::reset_sent;
+            }
+
+            constexpr bool is_data_sent() const noexcept {
+                return state == SendState::data_sent;
+            }
+
             constexpr bool reset() noexcept {
                 if (state == SendState::reset_sent ||
                     state == SendState::data_recved ||
@@ -110,6 +136,7 @@ namespace utils {
                     return false;
                 }
                 state = SendState::reset_sent;
+                reset_required = false;
                 return true;
             }
 
@@ -149,19 +176,27 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool set_error_code(std::uint64_t code) {
+            constexpr bool set_error_code(std::uint64_t code) noexcept {
                 if (state == SendState::reset_sent ||
                     state == SendState::data_recved ||
                     state == SendState::reset_recved) {
                     return false;
                 }
                 error_code = code;
-                require_reset = true;
+                reset_required = true;
                 return true;
             }
 
             constexpr void recv_stop_sending(std::uint64_t code) {
                 set_error_code(code);
+            }
+
+            constexpr bool is_reset_required() const noexcept {
+                return reset_required;
+            }
+
+            constexpr std::uint64_t get_error_code() const noexcept {
+                return error_code;
             }
         };
 
@@ -178,15 +213,42 @@ namespace utils {
         };
 
         struct RecvUniStreamState {
+           private:
             Limiter limit;
             std::uint64_t error_code = 0;
             RecvState state = RecvState::pre_recv;
             bool stop_required = false;
             bool should_send_limit_update = false;
 
-            bool update_recv_limit(std::uint64_t new_limit) {
+           public:
+            constexpr Limiter get_recv_limiter() const noexcept {
+                return limit;
+            }
+
+            constexpr bool update_recv_limit(std::uint64_t new_limit) noexcept {
                 should_send_limit_update = limit.update_limit(new_limit) || should_send_limit_update;
                 return should_send_limit_update;
+            }
+
+            // set_recv_limit sets limit but not set triger of MaxStreamData
+            constexpr bool set_recv_limit(std::uint64_t new_limit) noexcept {
+                return limit.update_limit(new_limit);
+            }
+
+            constexpr std::uint64_t recv_limit() const noexcept {
+                return limit.curlimit();
+            }
+
+            constexpr std::uint64_t recv_bytes() const noexcept {
+                return limit.curused();
+            }
+
+            constexpr bool require_send_limit_update() const noexcept {
+                return should_send_limit_update;
+            }
+
+            constexpr bool is_stop_required() const noexcept {
+                return stop_required;
             }
 
             // state is RecvState::pre_recv or RecvState::recv
@@ -227,6 +289,10 @@ namespace utils {
                 return true;
             }
 
+            constexpr bool is_pre_recv() const noexcept {
+                return state == RecvState::pre_recv;
+            }
+
             // state is RecvState::reset_recved || RecvState::size_known
             constexpr bool is_size_known() const noexcept {
                 return state == RecvState::reset_recved ||
@@ -263,6 +329,10 @@ namespace utils {
                 return true;
             }
 
+            constexpr void max_stream_data_sent() noexcept {
+                should_send_limit_update = false;
+            }
+
             constexpr bool reset_read() noexcept {
                 if (state != RecvState::reset_recved) {
                     return false;
@@ -287,6 +357,23 @@ namespace utils {
                 }
                 state = RecvState::data_read;
                 return true;
+            }
+
+            // report whether state is terminal state
+            constexpr bool is_terminal_state() const noexcept {
+                return state == RecvState::data_read ||
+                       state == RecvState::reset_read;
+            }
+
+            // report whether all data or reset has been recieved
+            constexpr bool is_recv_all_state() const noexcept {
+                return state == RecvState::data_recved ||
+                       state == RecvState::reset_recved ||
+                       is_terminal_state();
+            }
+
+            constexpr std::uint64_t get_error_code() const noexcept {
+                return error_code;
             }
         };
 

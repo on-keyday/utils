@@ -48,7 +48,12 @@ namespace utils {
             }
         };
 
-        std::shared_ptr<ACKLostRecord> make_ack_wait() {
+        // TODO(on-keyday): memory pool?
+        inline void put_ack_wait(std::shared_ptr<ACKLostRecord>&& discard) {
+            auto _ = std::move(discard);
+        }
+
+        inline std::shared_ptr<ACKLostRecord> make_ack_wait() {
             return std::allocate_shared<ACKLostRecord>(glheap_allocator<ACKLostRecord>{});
         }
 

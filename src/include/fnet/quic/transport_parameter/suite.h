@@ -28,9 +28,6 @@ namespace utils {
                     if (is_defined(id) && !is_defined_both_set_allowed(id)) {
                         return QUICError{
                             .msg = "client sent not allowed transport_parameter",
-                            .rfc_ref = "rfc9000 18.2 Transport Parameter Definitions",
-                            .rfc_comment =
-                                "A client MUST NOT include any server-only transport parameter: original_destination_connection_id, preferred_address, retry_source_connection_id, or stateless_reset_token. A server MUST treat receipt of any of these transport parameters as a connection error of type TRANSPORT_PARAMETER_ERROR.",
                             .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
                         };
                     }
@@ -47,15 +44,11 @@ namespace utils {
                     if (checker && checker->detect) {
                         return QUICError{
                             .msg = "duplicate set of transport_parameter detected",
-                            .rfc_ref = "rfc9000 7.4 Transport Parameters",
-                            .rfc_comment = " An endpoint SHOULD treat receipt of duplicate transport parameters as a connection error of type TRANSPORT_PARAMETER_ERROR.",
                             .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
                         };
                     }
                     return QUICError{
                         .msg = "invalid transport parameter format",
-                        .rfc_ref = "rfc9000 7.4 Transport Parameters",
-                        .rfc_comment = "An endpoint MUST treat receipt of a transport parameter with an invalid value as a connection error of type TRANSPORT_PARAMETER_ERROR.",
                         .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
                     };
                 }
@@ -63,8 +56,6 @@ namespace utils {
                     if (auto err = trsparam::to_string(trsparam::validate_transport_param(params))) {
                         return QUICError{
                             .msg = "TransportParameter contract is not satisfied",
-                            .rfc_ref = "rfc9000 7.4 Transport Parameters",
-                            .rfc_comment = "An endpoint MUST treat receipt of a transport parameter with an invalid value as a connection error of type TRANSPORT_PARAMETER_ERROR.",
                             .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
                             .base = error::Error(err),
                         };

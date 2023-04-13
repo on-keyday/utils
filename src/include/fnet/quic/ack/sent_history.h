@@ -36,7 +36,7 @@ namespace utils {
                 auto& sent_packet = sent_packets[space_to_index(space)];
                 for (auto i = begin; i < end; i++) {
                     auto [_, ok] = sent_packet.try_emplace(
-                        packetnum::Value(sent.packet_number),
+                        packetnum::Value(i),
                         SentPacket{
                             .skiped = true,
                             .time_sent = sent.time_sent,
@@ -168,14 +168,32 @@ namespace utils {
             template <class Alg>
             void on_packet_number_space_discarded(status::Status<Alg>& status, status::PacketNumberSpace space) {
                 status.on_packet_number_space_discard(space, [&](auto& apply_remove) {
-                    for (auto r : sent_packets[space_to_index(space)]) {
+                    for (auto& r : sent_packets[space_to_index(space)]) {
                         apply_remove(r.second.sent_bytes, r.second.status);
+                        mark_as_lost(r.second.waiters);
                     }
+                    sent_packets[space_to_index(space)].clear();
                 });
             }
 
             template <class Alg>
-            void on_retry_received() {
+            void on_retry_received(status::Status<Alg>& status) {
+                status.on_retry_received([&](auto&& apply_remove) {
+                    auto& initial = sent_packets[space_to_index(status::PacketNumberSpace::initial)];
+                    for (auto& r : initial) {
+                        if (r.second.skiped) {
+                            continue;
+                        }
+                        apply_remove(r.second.time_sent);
+                        mark_as_lost(r.second.waiters);
+                    }
+                    initial.clear();
+                    auto& app = sent_packets[space_to_index(status::PacketNumberSpace::application)];
+                    for (auto& r : app) {
+                        mark_as_lost(r.second.waiters);
+                    }
+                    app.clear();
+                });
             }
         };
 

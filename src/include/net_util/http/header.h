@@ -18,8 +18,8 @@
 #include "../../space/eol.h"
 
 namespace utils {
-    namespace net {
-        namespace h1header {
+    namespace http {
+        namespace header {
             struct StatusCode {
                 std::uint16_t code = 0;
                 void append(auto& v) {
@@ -295,6 +295,6 @@ namespace utils {
                     seq.consume();
                 }
             }
-        }  // namespace h1header
-    }      // namespace net
+        }  // namespace header
+    }      // namespace http
 }  // namespace utils

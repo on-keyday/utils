@@ -126,19 +126,62 @@ namespace utils {
                 if (version == version_1) {
                     // see RFC 9001 Section 5.2
                     // https://tex2e.github.io/rfc-translater/html/rfc9001.html
-                    ok = HKDF_Extract(extract, clientConnID, quic_v1_initial_salt.key);
+                    ok = HKDF_Extract(extract, clientConnID, quic_v1_initial_salt.material);
                 }
                 if (!ok) {
                     return false;
                 }
                 byte src[100];
                 if (enc_client) {
-                    ok = HKDF_Expand_label(src, secret, extract, client_in.key);
+                    ok = HKDF_Expand_label(src, secret, extract, client_in.material);
                 }
                 else {
-                    ok = HKDF_Expand_label(src, secret, extract, server_in.key);
+                    ok = HKDF_Expand_label(src, secret, extract, server_in.material);
                 }
                 return ok;
+            }
+
+            fnet_dll_export(error::Error) make_key_and_iv(KeyIV& keys, const fnet::tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
+                auto suite = judge_cipher(cipher);
+                if (suite == tls::QUICCipherSuite::Unsupported) {
+                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
+                }
+                auto hash_len = tls::hash_len(suite);
+                if (hash_len != 16 && hash_len != 32) {
+                    return error::Error("key: invalid hash length. expect 16 or 32.", error::ErrorCategory::validationerr);
+                }
+                keys.hash_len = hash_len;
+                byte tmp[100];
+                if (version == version_1) {
+                    auto ok = HKDF_Expand_label(tmp, keys.key(), secret, quic_key.material) &&
+                              HKDF_Expand_label(tmp, keys.iv(), secret, quic_iv.material);
+                    if (!ok) {
+                        return error::Error("key: failed to generate encryption key");
+                    }
+                    return error::none;
+                }
+                return error::Error("key: unknown QUIC version", error::ErrorCategory::quicerr);
+            }
+
+            fnet_dll_export(error::Error) make_hp(HP& hp, const fnet::tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
+                auto suite = judge_cipher(cipher);
+                if (suite == tls::QUICCipherSuite::Unsupported) {
+                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
+                }
+                auto hash_len = tls::hash_len(suite);
+                if (hash_len != 16 && hash_len != 32) {
+                    return error::Error("key: invalid hash length. expect 16 or 32.", error::ErrorCategory::validationerr);
+                }
+                hp.hash_len = hash_len;
+                byte tmp[100];
+                if (version == version_1) {
+                    auto ok = HKDF_Expand_label(tmp, hp.hp(), secret, quic_hp.material);
+                    if (!ok) {
+                        return error::Error("key: failed to generate encryption key");
+                    }
+                    return error::none;
+                }
+                return error::Error("key: unknown QUIC version", error::ErrorCategory::quicerr);
             }
 
             fnet_dll_export(error::Error) make_keys_from_secret(Keys& keys, const tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
@@ -153,9 +196,9 @@ namespace utils {
                 keys.hash_len = hash_len;
                 byte tmp[100];
                 if (version == version_1) {
-                    auto ok = HKDF_Expand_label(tmp, keys.key(), secret, quic_key.key) &&
-                              HKDF_Expand_label(tmp, keys.iv(), secret, quic_iv.key) &&
-                              HKDF_Expand_label(tmp, keys.hp(), secret, quic_hp.key);
+                    auto ok = HKDF_Expand_label(tmp, keys.key(), secret, quic_key.material) &&
+                              HKDF_Expand_label(tmp, keys.iv(), secret, quic_iv.material) &&
+                              HKDF_Expand_label(tmp, keys.hp(), secret, quic_hp.material);
                     if (!ok) {
                         return error::Error("key: failed to generate encryption key");
                     }
@@ -170,7 +213,7 @@ namespace utils {
                 }
                 if (version == version_1) {
                     byte tmp[100];
-                    if (!HKDF_Expand_label(tmp, new_secret, secret, quic_ku.key)) {
+                    if (!HKDF_Expand_label(tmp, new_secret, secret, quic_ku.material)) {
                         return error::Error("key: failed to generate encryption key");
                     }
                     return error::none;

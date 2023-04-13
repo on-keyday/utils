@@ -85,7 +85,7 @@ namespace utils {
         // this is required for HTTP.body_read
         // and also can get value by HTTP.read_response or HTTP.read_request
         struct HTTPBodyInfo {
-            net::h1body::BodyType type = net::h1body::BodyType::no_info;
+            http::body::BodyType type = http::body::BodyType::no_info;
             size_t expect = 0;
         };
 
@@ -102,7 +102,7 @@ namespace utils {
            public:
             template <class Body = const char*>
             bool write_request(auto&& method, auto&& path, auto&& header, Body&& body = "", size_t blen = 0) {
-                namespace h = net::h1header;
+                namespace h = http::header;
                 if (!h::render_request(output, method, path, header, h::default_validator())) {
                     return false;
                 }
@@ -112,9 +112,9 @@ namespace utils {
 
             template <class Body = const char*>
             bool write_response(auto&& status, auto&& header, Body&& body = "", size_t blen = 0, const char* reason = nullptr, bool http_1_0 = false) {
-                namespace h = net::h1header;
+                namespace h = http::header;
                 if (!reason) {
-                    reason = net::h1value::reason_phrase(status, true);
+                    reason = http::value::reason_phrase(status, true);
                 }
                 if (!h::render_response(output, status, reason, header, h::default_validator(), false, helper::no_check(), http_1_0 ? 0 : 1)) {
                     return false;
@@ -128,7 +128,7 @@ namespace utils {
             }
 
             void write_chunked_data(auto&& data, size_t len) {
-                namespace h = net::h1body;
+                namespace h = http::body;
                 h::render_chuncked_data(output, view::SizedView(data, len));
             }
 
@@ -188,7 +188,7 @@ namespace utils {
             // otherwise returns 0
             // begin_ok represents header is begin with HTTP/1.1 or HTTP/1.0 or not
             size_t check_response(bool* begin_ok = nullptr) {
-                namespace h = net::h1header;
+                namespace h = http::header;
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 auto begcheck = [&](auto& seq) {
                     auto begin_check = seq.seek_if("HTTP/1.1") || seq.seek_if("HTTP/1.0");
@@ -206,11 +206,11 @@ namespace utils {
             // otherwise returns 0
             // if validate_method is true this function checks header begin with known http method
             size_t check_request(bool* begin_ok = nullptr, bool validate_method = true) {
-                namespace h = net::h1header;
+                namespace h = http::header;
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 auto begcheck = [&](auto& seq) {
                     if (validate_method) {
-                        for (auto meth : net::h1value::methods) {
+                        for (auto meth : http::value::methods) {
                             auto rptr = seq.rptr;
                             if (seq.seek_if(meth) && seq.consume_if(' ')) {
                                 goto OK;
@@ -235,10 +235,10 @@ namespace utils {
                       class Preview = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
             size_t read_response(auto&& status, auto&& header, HTTPBodyInfo* info, bool peek = false, Reason&& reason = helper::nop, Version&& version = helper::nop,
                                  Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
-                namespace h = net::h1header;
+                namespace h = http::header;
                 HTTPBodyInfo body{};
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                auto body_check = net::h1body::bodyinfo_preview(body.type, body.expect);
+                auto body_check = http::body::bodyinfo_preview(body.type, body.expect);
                 if (!h::parse_response<TmpString>(
                         check, version, status, reason, header, [&](auto&& key, auto&& value) {
                             body_check(key, value);
@@ -260,10 +260,10 @@ namespace utils {
                       class Preview = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
             size_t read_request(auto&& method, auto&& path, auto&& header, HTTPBodyInfo* info, bool peek = false, Version&& version = helper::nop,
                                 Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
-                namespace h = net::h1header;
+                namespace h = http::header;
                 HTTPBodyInfo body{};
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                auto body_check = net::h1body::bodyinfo_preview(body.type, body.expect);
+                auto body_check = http::body::bodyinfo_preview(body.type, body.expect);
                 if (!h::parse_request<TmpString>(
                         check, method, path, version, header, [&](auto&& key, auto&& value) {
                             body_check(key, value);
@@ -284,14 +284,14 @@ namespace utils {
             template <class Version = decltype(helper::nop)&>
             bool peek_request_line(auto&& method, auto&& path, Version&& version = helper::nop) {
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                namespace h = net::h1header;
+                namespace h = http::header;
                 return h::parse_request_line(check, method, path, version);
             }
 
             template <class Reason = decltype(helper::nop)&, class Version = decltype(helper::nop)&>
             bool peek_status_line(auto&& status, Reason&& reason = helper::nop, Version&& version = helper::nop) {
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                namespace h = net::h1header;
+                namespace h = http::header;
                 return h::parse_status_line(check, version, status, reason);
             }
 
@@ -304,7 +304,7 @@ namespace utils {
                 if (peek <= 0 && read_from != 0) {
                     return false;  // TODO(on-keyday): read only body?
                 }
-                namespace h = net::h1body;
+                namespace h = http::body;
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 check.rptr = read_from;
                 auto res = h::read_body(buf, check, info.expect, info.type);

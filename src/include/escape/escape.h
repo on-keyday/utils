@@ -20,12 +20,12 @@
 
 namespace utils {
     namespace escape {
-
+        // priority utf > hex > oct
         enum class EscapeFlag {
             none = 0,
-            utf = 0x1,
-            oct = 0x2,
-            hex = 0x4,
+            utf = 0x1,  // \u0000
+            oct = 0x2,  // \000
+            hex = 0x4,  // \x00
         };
 
         DEFINE_ENUM_FLAGOP(EscapeFlag)
@@ -141,6 +141,9 @@ namespace utils {
                         }
                         if (!done && any(flag & EscapeFlag::hex)) {
                             helper::append(out, "\\x");
+                            if (c < 0x10) {
+                                out.push_back('0');
+                            }
                             if (auto e = number::to_string(out, c, 16); !e) {
                                 return e;
                             }

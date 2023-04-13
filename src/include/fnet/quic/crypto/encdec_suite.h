@@ -12,15 +12,17 @@
 
 namespace utils {
     namespace fnet::quic::crypto {
-        struct EncryptSuite {
-            const Keys* keys;
-            const tls::TLSCipher* cipher;
+        enum class KeyPhase {
+            none,
+            one,
+            zero,
         };
 
-        struct DecryptSuite {
-            const Keys* keys;
-            const tls::TLSCipher* cipher;
-            std::uint64_t largest_pn;
+        struct EncDecSuite {
+            const HP* hp = nullptr;
+            const KeyIV* keyiv = nullptr;
+            const tls::TLSCipher* cipher = nullptr;
+            KeyPhase pharse = KeyPhase::none;
         };
 
     }  // namespace fnet::quic::crypto

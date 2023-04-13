@@ -10,8 +10,8 @@
 #pragma once
 
 namespace utils {
-    namespace net {
-        namespace h1value {
+    namespace http {
+        namespace value {
             constexpr const char* reason_phrase(unsigned short status, bool dav = false) {
                 switch (status) {
                     case 100:
@@ -158,6 +158,6 @@ namespace utils {
                 "CONNECT",
                 "PRI",  // http2 preface
             };
-        }  // namespace h1value
-    }      // namespace net
+        }  // namespace value
+    }      // namespace http
 }  // namespace utils

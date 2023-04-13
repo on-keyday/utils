@@ -361,5 +361,46 @@ namespace utils {
             return TransportParamError::none;
         }
 
+        constexpr bool write_session_ticket_format(io::writer& w, const DefinedTransportParams& params) {
+            auto mk = [&](DefinedID id, std::uint64_t val) {
+                return make_transport_param(id, val).render(w);
+            };
+#define MK(v) mk(DefinedID::v, params.v)
+            return MK(initial_max_stream_data_bidi_local) &&
+                   MK(initial_max_stream_data_bidi_remote) &&
+                   MK(initial_max_stream_data_uni) &&
+                   MK(initial_max_data) &&
+                   MK(initial_max_streams_bidi) &&
+                   MK(initial_max_streams_uni) &&
+                   MK(active_connection_id_limit);
+#undef MK
+        }
+
+        constexpr bool read_session_ticket_format(io::reader& w, DefinedTransportParams& params) {
+            auto mk = [&](DefinedID id, std::uint64_t& val) {
+                TransportParameter param;
+                if (!param.parse(w)) {
+                    return false;
+                }
+                if (param.id != id) {
+                    return false;
+                }
+                if (!param.data.as_qvarint()) {
+                    return false;
+                }
+                val = param.data.qvarint();
+                return true;
+            };
+#define MK(v) mk(DefinedID::v, params.v)
+            return MK(initial_max_stream_data_bidi_local) &&
+                   MK(initial_max_stream_data_bidi_remote) &&
+                   MK(initial_max_stream_data_uni) &&
+                   MK(initial_max_data) &&
+                   MK(initial_max_streams_bidi) &&
+                   MK(initial_max_streams_uni) &&
+                   MK(active_connection_id_limit);
+#undef MK
+        }
+
     }  // namespace fnet::quic::trsparam
 }  // namespace utils

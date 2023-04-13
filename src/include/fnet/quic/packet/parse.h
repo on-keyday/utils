@@ -126,16 +126,20 @@ namespace utils {
         // crypto_cb is bool(PacketType,Packet,CryptoPacket)
         // plain_cb is bool(PacketType,Packet,view::wvec src)
         // err_cb is bool(PacketType,Packet,view::wvec src,bool err,bool valid_type)
-        constexpr auto with_crypto_parse(auto&& crypto_cb, auto&& plain_cb, auto&& err_cb) {
+        constexpr auto with_crypto_parse(auto&& crypto_cb, auto&& plain_cb, auto&& err_cb, auto&& check_connID) {
             return [=](PacketType type, auto&& packet, view::wvec src, bool err, bool valid_type) -> bool {
                 using P = std::decay_t<decltype(packet)>;
                 if (!valid_type || err) {
                     return err_cb(type, packet, src, err, valid_type);
                 }
+
                 if constexpr (std::is_same_v<P, InitialPacketCipher> ||
                               std::is_same_v<P, HandshakePacketCipher> ||
                               std::is_same_v<P, ZeroRTTPacketCipher> ||
                               std::is_same_v<P, OneRTTPacketCipher>) {
+                    if (!check_connID(packet)) {
+                        return true;  // ignore packet
+                    }
                     CryptoPacket crp;
                     crp.src = src;
                     crp.head_len = packet.head_len();
@@ -186,22 +190,31 @@ namespace utils {
         constexpr PacketSummary summarize(auto&& packet, packetnum::Value pn = packetnum::infinity) noexcept {
             using T = std::decay_t<decltype(packet)>;
             PacketSummary summary;
-            if constexpr (is_CryptoLongPacketPlain_v<T>) {
+            if constexpr (is_CryptoLongPacketPlain_v<T> ||
+                          is_CryptoLongPacketCipher_v<T>) {
                 summary.type = T::get_packet_type();
                 summary.version = packet.version;
                 summary.dstID = packet.dstID;
                 summary.srcID = packet.srcID;
-                if constexpr (std::is_same_v<T, InitialPacketPlain>) {
+                if constexpr (std::is_same_v<T, InitialPacketPlain> ||
+                              std::is_same_v<T, InitialPacketCipher>) {
                     summary.token = packet.token;
                 }
                 summary.packet_number = pn;
             }
-            else if constexpr (std::is_same_v<T, OneRTTPacketPlain>) {
+            else if constexpr (std::is_same_v<T, OneRTTPacketPlain> ||
+                               std::is_same_v<T, OneRTTPacketCipher>) {
                 summary.type = PacketType::OneRTT;
                 summary.dstID = packet.dstID;
                 summary.packet_number = pn;
                 summary.spin = packet.flags.spin_bit();
-                summary.key = packet.flags.key_phase();
+                summary.key_bit = packet.flags.key_phase();
+            }
+            else if constexpr (std::is_same_v<T, RetryPacket>) {
+                summary.type = PacketType::Retry;
+                summary.dstID = packet.dstID;
+                summary.srcID = packet.srcID;
+                summary.token = packet.retry_token;
             }
             else {
                 static_assert(std::is_same_v<T, OneRTTPacketPlain>, "in the future, summarize retry,version_negotioan,stateless_reset");

@@ -88,7 +88,7 @@ window.addEventListener("load",action);
 )a";
                 uri::URI<Render> url;
                 uri::parse(url, path);
-                auto phrase = utf::convert<Render>(net::h1value::reason_phrase(code));
+                auto phrase = utf::convert<Render>(http::value::reason_phrase(code));
                 auto data = std::format(text, url.path, utf::convert<Render>(method), code, phrase);
                 return utf::convert<To>(data);
             }

@@ -63,7 +63,7 @@ void test_fnetquic_context() {
     utils::byte buf[3000];
     while (true) {
         std::tie(data, val) = ctx->create_udp_payload();
-        if (!val && utils::fnet::quic::context::is_timeout(ctx->conn_err)) {
+        if (!val && ctx->is_closed()) {
             break;
         }
         assert(val);

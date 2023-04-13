@@ -25,8 +25,8 @@ constexpr bool encode_decode(const char* base) {
 }
 
 template <size_t s>
-constexpr bool decode(utils::fnet::quic::crypto::Key<s> data, const char* expect) {
-    auto v = utils::view::wvec(data.key);
+constexpr bool decode(utils::fnet::quic::crypto::KeyMaterial<s> data, const char* expect) {
+    auto v = utils::view::wvec(data.material);
     utils::hpack::bitvec_reader<utils::view::wvec> d{v};
     string val;
     return utils::hpack::decode_huffman(val, d) && val == rvec(expect);
@@ -36,6 +36,6 @@ int main() {
     static_assert(encode_decode("object identifier z"));
     static_assert(encode_decode("\x32\x44\xff"));
     encode_decode("object identifierz");
-    static_assert(decode(utils::fnet::quic::crypto::make_key_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"),
+    static_assert(decode(utils::fnet::quic::crypto::make_material_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"),
                          "Mon, 21 Oct 2013 20:13:21 GMT"));
 }

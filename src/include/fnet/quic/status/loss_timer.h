@@ -10,6 +10,7 @@
 #include "pto.h"
 #include "handshake.h"
 #include "rtt.h"
+#include "pn_manage.h"
 
 namespace utils {
     namespace fnet::quic::status {
@@ -146,19 +147,31 @@ namespace utils {
                 reset_loss_time(space);
             }
 
+            constexpr void on_retry_received() {
+                reset();
+            }
+
             constexpr void set_loss_detection_timer(const InternalConfig& config, const PTOStatus& pto, const RTT& rtt,
-                                                    const HandshakeStatus& hs, const PacketNumberIssuer (&issuers)[3]) {
+                                                    const HandshakeStatus& hs, const PacketNumberIssuer (&issuers)[3],
+                                                    time::Timer& ping_timer) {
+                auto set_ping = [&] {
+                    if (config.ping_duration != 0) {
+                        ping_timer.set_timeout(config.clock, config.ping_duration);
+                    }
+                };
                 auto [earliest_loss_time, space_1] = get_loss_time_and_space();
                 if (earliest_loss_time != 0) {
                     timer.set_deadline(earliest_loss_time);
                     state = LossTimerState::wait_for_loss;
                     timer_space = space_1;
+                    ping_timer.cancel();
                     return;
                 }
                 if (hs.is_at_anti_amplification_limit()) {
                     timer.cancel();
                     state = LossTimerState::at_anti_amplification_limit;
                     timer_space = PacketNumberSpace::no_space;
+                    ping_timer.cancel();
                     return;
                 }
                 if (no_ack_eliciting_in_flight(issuers) &&
@@ -166,6 +179,7 @@ namespace utils {
                     timer.cancel();
                     state = LossTimerState::no_timer;
                     timer_space = PacketNumberSpace::no_space;
+                    set_ping();
                     return;
                 }
                 auto [timeout, space_2] = get_pto_and_space(config, hs, pto, rtt, issuers);
@@ -173,6 +187,7 @@ namespace utils {
                     timer.cancel();
                     state = LossTimerState::no_timer;
                     timer_space = PacketNumberSpace::no_space;
+                    set_ping();
                     return;
                 }
                 timer.set_deadline(timeout);

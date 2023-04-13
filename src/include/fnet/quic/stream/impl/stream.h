@@ -15,40 +15,24 @@
 #include "../../ack/ack_lost_record.h"
 #include "../../../../helper/condincr.h"
 #include <algorithm>
+#include "../../resend/fragments.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
-        struct SentFragment {
-            std::uint64_t offset = 0;
-            flex_storage fragment;
-            std::shared_ptr<ack::ACKLostRecord> wait;
-            bool fin = false;
-        };
 
         template <class Lock>
         struct SendUniStream {
            private:
-            using List = slib::list<SentFragment>;
-
             SendUniStreamBase<Lock> uni;
             std::weak_ptr<ConnFlowControl<Lock>> conn;
-            List fragments;
+
             flex_storage src;
             std::shared_ptr<ack::ACKLostRecord> reset_wait;
-
-            static bool save_new_fragment(auto& fragment_store, Fragment frag, auto&& observer_vec) {
-                SentFragment& it = fragment_store.emplace_back(SentFragment{});
-                it.offset = frag.offset;
-                it.fin = frag.fin;
-                it.fragment = frag.fragment;
-                it.wait = ack::make_ack_wait();
-                observer_vec.push_back(it.wait);
-                return true;
-            }
+            resend::Retransmiter<resend::StreamFragment> frags;
 
             // move state to data_recved if condition satisfied
             void maybe_send_done() {
-                if (uni.state.state == SendState::data_sent && fragments.size() == 0) {
+                if (uni.state.is_data_sent() && frags.remain() == 0) {
                     uni.all_send_done();
                 }
             }
@@ -58,47 +42,38 @@ namespace utils {
                 if (!uni.state.can_retransmit()) {
                     return IOResult::not_in_io_state;
                 }
-                List retransmit_list;
-                bool least_one = false;
-                for (auto it = fragments.begin(); it != fragments.end();) {
-                    if (it->wait->is_ack()) {
-                        it = fragments.erase(it);  // remove acked fragments
-                        continue;
+                auto res = frags.retransmit(observer_vec, [&](resend::StreamFragment& frag, auto&& save_new) {
+                    bool should_remove = false;
+                    auto save_retransmit = [&](Fragment sent, Fragment remain, bool has_remain) {
+                        save_new(resend::StreamFragment{
+                            .offset = sent.offset,
+                            .data = sent.fragment,
+                            .fin = sent.fin,
+                        });
+                        if (has_remain) {
+                            frag.data = flex_storage(remain.fragment);
+                            frag.offset = remain.offset;
+                            frag.fin = remain.fin;
+                            // wait next chance to send
+                        }
+                        else {
+                            should_remove = true;
+                        }
+                        return true;
+                    };
+                    auto res = uni.send_retransmit_stream(w, frag.offset, frag.data, frag.fin, save_retransmit);
+                    if (res == IOResult::fatal || res == IOResult::invalid_data) {
+                        return res;  // fatal error
                     }
-                    if (it->wait->is_lost()) {
-                        bool removed = false;
-                        auto save_retransmit = [&](Fragment sent, Fragment remain, bool has_remain) {
-                            if (!save_new_fragment(retransmit_list, sent, observer_vec)) {
-                                return false;
-                            }
-                            if (has_remain) {
-                                it->fragment = flex_storage(remain.fragment);
-                                it->offset = remain.offset;
-                                it->fin = remain.fin;
-                                // wait next chance to send
-                            }
-                            else {
-                                it = fragments.erase(it);  // all is moved to new fragment
-                                removed = true;
-                            }
-                            return true;
-                        };
-                        auto res = uni.send_retransmit_stream(w, it->offset, it->fragment, it->fin, save_retransmit);
-                        if (res == IOResult::fatal || res == IOResult::invalid_data) {
-                            return res;  // fatal error
-                        }
-                        if (res == IOResult::ok) {
-                            least_one = true;
-                        }
-                        if (removed) {
-                            continue;
-                        }
+                    if (should_remove) {
+                        return IOResult::ok;  // remove fragment
                     }
-                    it++;
+                    return IOResult::not_in_io_state;  // don't delete
+                });
+                if (res == IOResult::ok) {
+                    maybe_send_done();
                 }
-                fragments.splice(fragments.end(), std::move(retransmit_list));
-                maybe_send_done();
-                return least_one ? IOResult::ok : IOResult::no_data;
+                return res;
             }
 
             IOResult send_stream_unlocked(frame::fwriter& w, auto&& observer_vec) {
@@ -115,7 +90,12 @@ namespace utils {
                 }
                 // send STREAM frame
                 std::tie(res, blocked_size) = uni.send_stream(c->base, w, [&](Fragment frag) {
-                    return save_new_fragment(fragments, frag, observer_vec);
+                    frags.sent(observer_vec, resend::StreamFragment{
+                                                 .offset = frag.offset,
+                                                 .data = frag.fragment,
+                                                 .fin = frag.fin,
+                                             });
+                    return true;
                 });
                 if (res == IOResult::block_by_stream) {
                     res = send_stream_blocked(w, uni.id, blocked_size);
@@ -131,12 +111,13 @@ namespace utils {
             IOResult send_reset_unlocked(frame::fwriter& w, auto&& observer_vec) {
                 if (reset_wait) {
                     if (reset_wait->is_ack()) {
+                        ack::put_ack_wait(std::move(reset_wait));
                         return uni.reset_done();
                     }
                     if (reset_wait->is_lost()) {
                         auto res = uni.send_retransmit_reset(w);
                         if (res == IOResult::ok) {
-                            reset_wait->wait();
+                            reset_wait = ack::make_ack_wait();
                             observer_vec.push_back(reset_wait);
                         }
                         return res;
@@ -188,17 +169,7 @@ namespace utils {
                     }
                     return IOResult::no_data;
                 }
-                bool should_be_active = false;
-                for (auto it = fragments.begin(); it != fragments.end();) {
-                    if (it->wait->is_ack()) {
-                        it = fragments.erase(it);
-                        continue;
-                    }
-                    if (it->wait->is_lost()) {
-                        should_be_active = true;
-                    }
-                    it++;
-                }
+                bool should_be_active = frags.detect_ack_and_lost() != 0;
                 maybe_send_done();
                 if (uni.state.is_terminal_state()) {
                     return IOResult::not_in_io_state;
@@ -221,9 +192,9 @@ namespace utils {
                 uni.recv_stop_sending(frame);
             }
 
-            void recv_max_stream_data(const frame::MaxStreamDataFrame& frame) {
+            bool recv_max_stream_data(const frame::MaxStreamDataFrame& frame) {
                 const auto locked = uni.lock();
-                uni.recv_max_stream_data(frame);
+                return uni.recv_max_stream_data(frame);
             }
 
             // general handling
@@ -263,6 +234,11 @@ namespace utils {
                 return uni.id;
             }
 
+            constexpr std::uint64_t get_error_code() const {
+                const auto locked = uni.lock();
+                return uni.state.get_error_code();
+            }
+
             // add send data
             IOResult add_data(view::rvec data, bool fin) {
                 const auto locked = uni.lock();
@@ -278,18 +254,60 @@ namespace utils {
                 const auto locked = uni.lock();
                 return uni.request_reset(code);
             }
+
+            // check whether provided data completely transmited
+            bool data_transmited() {
+                const auto locked = uni.lock();
+                return uni.data.remain() == 0 && fragments.size() == 0;
+            }
+
+            // check whetehr stream closed
+            bool is_closed() {
+                const auto locked = uni.lock();
+                return conn.expired() || uni.state.is_terminal_state();
+            }
+
+            // report whether stream is removable from conn
+            // called by connections remove methods
+            bool is_removable() {
+                return is_closed();
+            }
+        };
+
+        // returns (all_recved,err)
+        using SaveFragmentCallback = std::pair<bool, error::Error> (*)(std::shared_ptr<void>& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv_bytes, std::uint64_t err_code);
+
+        struct FragmentSaver {
+           private:
+            std::shared_ptr<void> arg;
+            SaveFragmentCallback callback = nullptr;
+
+           public:
+            void set(std::shared_ptr<void>&& a, SaveFragmentCallback cb) {
+                if (cb) {
+                    arg = std::move(a);
+                    callback = cb;
+                }
+                else {
+                    arg = nullptr;
+                    callback = nullptr;
+                }
+            }
+
+            std::pair<bool, error::Error> save(StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t error_code) {
+                if (callback) {
+                    return callback(arg, id, type, frag, total_recv, error_code);
+                }
+                return {false, error::none};
+            }
         };
 
         template <class Lock>
         struct RecvUniStream {
-            // returns (all_recved,err)
-            using SaveFragment = std::pair<bool, error::Error> (*)(std::shared_ptr<void>& arg, Fragment frag);
-
            private:
             RecvUniStreamBase<Lock> uni;
             std::weak_ptr<ConnFlowControl<Lock>> conn;
-            std::shared_ptr<void> arg;
-            SaveFragment save_fragment = nullptr;
+            FragmentSaver saver;
             std::shared_ptr<ack::ACKLostRecord> max_data_wait;
             std::shared_ptr<ack::ACKLostRecord> stop_sending_wait;
 
@@ -299,11 +317,12 @@ namespace utils {
                         if (auto res = uni.send_stop_sending(w); res != IOResult::ok) {
                             return res;
                         }
-                        stop_sending_wait->wait();
+                        stop_sending_wait = ack::make_ack_wait();
                         observer_vec.push_back(stop_sending_wait);
                         return IOResult::ok;
                     }
                     if (stop_sending_wait->is_ack()) {
+                        ack::put_ack_wait(std::move(stop_sending_wait));
                         return IOResult::ok;
                     }
                 }
@@ -339,11 +358,11 @@ namespace utils {
                             }
                             return res;
                         }
-                        max_data_wait->wait();
+                        max_data_wait = ack::make_ack_wait();
                         observer_vec.push_back(max_data_wait);
                     }
                     else if (max_data_wait->is_ack()) {
-                        max_data_wait = nullptr;
+                        ack::put_ack_wait(std::move(max_data_wait));
                     }
                 }
                 return IOResult::ok;
@@ -374,17 +393,15 @@ namespace utils {
                 if (!c) {
                     return error::eof;  // no way to handle
                 }
-                auto [_, err] = uni.recv_stream(c->base, frame, [&](Fragment frag) -> error::Error {
-                    if (save_fragment) {
-                        auto [all_done, err] = save_fragment(arg, frag);
-                        if (err) {
-                            return err;
-                        }
-                        if (all_done) {
-                            // if all_done returns in illegal state
-                            // this function doesn't change state to RecvState::recved
-                            uni.state.recved();
-                        }
+                auto [_, err] = uni.recv_stream(c->base, frame, [&](Fragment frag, std::uint64_t recv_bytes) -> error::Error {
+                    auto [all_done, err] = saver.save(uni.id, frame.type.type_detail(), frag, recv_bytes, 0);
+                    if (err) {
+                        return err;
+                    }
+                    if (all_done) {
+                        // if all_done returns in illegal state
+                        // this function doesn't change state to RecvState::data_recved
+                        uni.state.recved();
                     }
                     return error::none;
                 });
@@ -398,7 +415,11 @@ namespace utils {
                     return error::eof;
                 }
                 auto [_, err] = uni.recv_reset(c->base, frame);
-                return err;
+                if (err) {
+                    return err;
+                }
+                auto [tmp2, err2] = saver.save(uni.id, FrameType::RESET_STREAM, {.offset = uni.state.recv_bytes(), .fin = true}, uni.state.recv_bytes(), uni.state.get_error_code());
+                return err2;
             }
 
             IOResult send_stop_sending(frame::fwriter& w, auto&& observer_vec) {
@@ -443,8 +464,16 @@ namespace utils {
                 return uni.id;
             }
 
-            // update recv limit for
-            IOResult update_recv_limit(auto&& decide_new_limit) {
+            constexpr std::uint64_t get_error_code() const {
+                const auto locked = uni.lock();
+                return uni.state.get_error_code();
+            }
+
+            // update recv limit
+            // decide_new_limit is std::uint64_t(Limiter current)
+            // if decide_new_limit returns number larger than current.curlimit(),
+            // window will be increased
+            bool update_recv_limit(auto&& decide_new_limit) {
                 const auto locked = uni.lock();
                 return uni.update_recv_limit(decide_new_limit);
             }
@@ -456,11 +485,10 @@ namespace utils {
             }
 
             // set receiver user callback
-            bool set_receiver(SaveFragment save, std::shared_ptr<void> arg) {
+            bool set_receiver(std::shared_ptr<void> arg, SaveFragmentCallback save) {
                 const auto locked = uni.lock();
-                if (uni.state.state == RecvState::pre_recv) {
-                    save_fragment = save;
-                    this->arg = std::move(arg);
+                if (uni.state.is_pre_recv()) {
+                    saver.set(std::move(arg), save);
                     return true;
                 }
                 return false;
@@ -476,6 +504,22 @@ namespace utils {
             bool user_read_reset() {
                 const auto locked = uni.lock();
                 return uni.state.reset_read();
+            }
+
+            // check whetehr stream closed
+            bool is_closed() {
+                const auto locked = uni.lock();
+                return conn.expired() || uni.state.is_terminal_state();
+            }
+
+            // report whether stream is removable from conn
+            // called by connections remove methods
+            bool is_removable() {
+                const auto locked = uni.lock();
+                return conn.expired() ||
+                       // when all data has been received,
+                       // this stream is removable even if user does not read any data
+                       uni.state.is_recv_all_state();
             }
         };
 
@@ -512,6 +556,14 @@ namespace utils {
             BidiStream(StreamID id,
                        std::shared_ptr<ConnFlowControl<Lock>> conn)
                 : sender(id, conn), receiver(id, conn) {}
+
+            bool is_closed() {
+                return sender.is_closed() && receiver.is_closed();
+            }
+
+            bool is_removable() {
+                return sender.is_removable() && receiver.is_removable();
+            }
         };
     }  // namespace fnet::quic::stream::impl
 }  // namespace utils

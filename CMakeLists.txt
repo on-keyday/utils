@@ -8,16 +8,15 @@ include_directories("src/include")
 
 set(CMAKE_CXX_STANDARD 20)
 
+
 if(WIN32)
-  include_directories("$ENV{OPENSSL_INCLUDE}")
-  link_directories("$ENV{OPENSSL_LINK}")
 
   if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /source-charset:utf-8")
   endif()
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options("-fcoroutines-ts")
+    # add_compile_options("-fcoroutines-ts")
   endif()
 else()
   # find_package(OPENSSL REQUIRED)
@@ -37,9 +36,18 @@ else()
   endif()
 endif()
 
+# finding dependency
 find_package(Threads REQUIRED)
+find_package(LLVM CONFIG) # optional
+
+if(LLVM_FOUND)
+include_directories(${LLVM_INCLUDE_DIRS})
+endif()
+
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "test")
+
+# tests(utils)
 add_executable(core "src/test/core/test_core.cpp")
 add_executable(utfconvert "src/test/utf/test_utfconvert.cpp")
 add_executable(fallback "src/test/utf/test_fallback_sequence.cpp")
@@ -68,99 +76,62 @@ add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
 add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
 add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
 add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
+add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
+add_executable(ipparse "src/test/net_util/test_ipparse.cpp")
+add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
+add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
+add_executable(hpack "src/test/net_util/test_hpack.cpp")
+add_executable(comb "src/test/minilang/test_comb.cpp")
+add_executable(huffman "src/test/file/test_huffman.cpp")
+add_executable(deflate "src/test/file/test_deflate.cpp")
+add_executable(comb2 "src/test/comb2/test_comb2.cpp")
+
+# tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
 add_executable(fnet_tls "src/test/fnet/test_fnet_tls.cpp")
 add_executable(fnet_http "src/test/fnet/test_fnet_http.cpp")
 add_executable(fnet_http2 "src/test/fnet/test_fnet_http2.cpp")
-add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
 add_executable(fnetquic_initial "src/test/fnet/test_fnetquic_initial.cpp")
 add_executable(fnetquic_context "src/test/fnet/test_fnetquic_context.cpp")
 add_executable(fnet_error "src/test/fnet/test_fnet_error.cpp")
-add_executable(ipparse "src/test/net_util/test_ipparse.cpp")
 add_executable(fnet_stun "src/test/fnet/test_fnet_stun.cpp")
-add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
 add_executable(fnetquic_frame "src/test/fnet/test_fnetquic_frame.cpp")
 add_executable(fnetquic_packet "src/test/fnet/test_fnetquic_packet.cpp")
 add_executable(fnetquic_stream "src/test/fnet/test_fnetquic_stream.cpp")
-add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
 add_executable(fnetquic_multi_thread "src/test/fnet/test_fnetquic_multi_thread.cpp")
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
-add_executable(hpack "src/test/net_util/test_hpack.cpp")
 
-#[[
-add_executable(endian "src/test/endian/test_endian.cpp")
-add_executable(predefined "src/test/deprecated/tokenize/test_predefined.cpp")
-add_executable(tokenizer "src/test/deprecated/tokenize/test_tokenizer.cpp")
-add_executable(make_parser "src/test/deprecated/syntax/test_make_parser_clang_bug.cpp")
-add_executable(syntaxc "src/test/deprecated/syntax/test_syntaxc.cpp")
-add_executable(netcore "src/test/deprecated/net/test_netcore.cpp")
-add_executable(urlparse "src/test/deprecated/net/test_urlparse.cpp")
-add_executable(base64 "src/test/deprecated/net/test_base64.cpp")
-add_executable(urlencode "src/test/deprecated/net/test_urlencode.cpp")
-add_executable(sha1 "src/test/deprecated/net/test_sha1.cpp")
-add_executable(punycode "src/test/deprecated/net/test_punycode.cpp")
-add_executable(http1 "src/test/deprecated/net/test_http1.cpp")
-add_executable(dispatcher "src/test/deprecated/syntax/test_dispatcher.cpp")
-add_executable(tree "src/test/deprecated/syntax/test_tree.cpp")
-add_executable(parser "src/test/deprecated/parser/test_parser.cpp")
-add_executable(asyncdns "src/test/deprecated/net/async/test_asyncdns.cpp")
-add_executable(asynctcp "src/test/deprecated/net/async/test_asynctcp.cpp")
-add_executable(http2frame "src/test/deprecated/net/test_http2frame.cpp")
-add_executable(asynctcp2 "src/test/deprecated/net/async/test_asynctcp2.cpp")
-add_executable(http2base "src/test/deprecated/net/async/test_http2base.cpp")
-add_executable(http2protocol "src/test/deprecated/net/async/test_http2protocol.cpp")
-add_executable(cnettcp "src/test/deprecated/cnet/test_cnettcp.cpp")
-add_executable(cnetserver "src/test/deprecated/cnet/test_cnetserver.cpp")
-add_executable(expression "src/test/deprecated/parser/test_expression.cpp")
-add_executable(cnethttp2 "src/test/deprecated/cnet/test_cnethttp2.cpp")
-add_executable(cnetmem "src/test/deprecated/cnet/test_cnetmem.cpp")
-add_executable(base_iface "src/test/deprecated/iface/test_base_iface.cpp")
-add_executable(guessurl "src/test/deprecated/net/test_guessurl.cpp")
-add_executable(container_iface "src/test/deprecated/iface/test_container.cpp")
-add_executable(token_stream "src/test/deprecated/parser/stream/test_token_stream.cpp")
-add_executable(quic_varint "src/test/deprecated/quic/test_quic_varint.cpp")
-add_executable(quic_udp "src/test/deprecated/quic/test_quic_udp.cpp")
-add_executable(quic_shared_ptr "src/test/deprecated/quic/test_quic_shared_ptr.cpp")
-add_executable(quic_event "src/test/deprecated/quic/test_quic_event.cpp")
-add_executable(quic_frame "src/test/deprecated/quic/test_quic_frame.cpp")
-add_executable(quic_crypto "src/test/deprecated/quic/test_quic_crypto.cpp")
-add_executable(quic_hash_map "src/test/deprecated/quic/test_quic_hash_map.cpp")
-add_executable(quic_init_conn "src/test/deprecated/quic/test_quic_init_conn.cpp")
-add_executable(externaltask "src/test/async/test_externaltask.cpp")
-]]
+
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
+# tools
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
   "src/tool/ifacegen/read_interface.cpp"
   "src/tool/ifacegen/generate_interface.cpp")
 add_executable(binred "src/tool/binred/binred.cpp"
   "src/tool/binred/read_fmt.cpp"
   "src/tool/binred/generate_cpp.cpp")
-add_executable(pscmpl "src/tool/pscmpl/pscmpl.cpp"
-  "src/tool/pscmpl/compile.cpp")
 add_executable(minilang "src/tool/minilang/minilang.cpp"
   "src/tool/minilang/minilang_runtime.cpp"
   "src/tool/minilang/minilang_llvm.cpp"
   "src/tool/minilang/minilang_stream.cpp"
   "src/tool/minilang/main.cpp")
-add_executable(minlc "src/tool/minlc/minlc.cpp"
-  "src/tool/minlc/middle/middle.cpp"
-  "src/tool/minlc/middle/resolve.cpp"
-  "src/tool/minlc/middle/type.cpp"
-  "src/tool/minlc/backend/llvm/module.cpp"
-)
 add_executable(durl "src/tool/durl/main.cpp"
   "src/tool/durl/uri.cpp"
   "src/tool/durl/http.cpp"
 )
-add_executable(igen2 "src/tool/igen2/main.cpp")
-add_executable(vstack "src/tool/vstack/main.cpp"
-"src/tool/vstack/write.cpp"
-"src/tool/vstack/resolve.cpp"
-"src/tool/vstack/func.cpp"
-"src/tool/vstack/ssa.cpp"
-)
 add_executable(server "src/tool/server/server.cpp")
+add_executable(combl "src/tool/combl/combl.cpp"
+"src/tool/combl/traverse.cpp"
+"src/tool/combl/ipret.cpp")
+add_executable(binp "src/tool/binp/main.cpp"
+"src/tool/binp/collect.cpp"
+"src/tool/binp/gen.cpp")
+
+if(LLVM_FOUND)
+target_sources(combl PRIVATE "src/tool/combl/compile.cpp")
+endif()
+
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -173,11 +144,12 @@ endif()
 
 option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 
+# libraries
 add_library(utils SHARED)
-# add_library(utnet SHARED)
 add_library(fnet SHARED)
 add_library(fnetserv SHARED)
 
+# libutils
 target_sources(utils
   PRIVATE
   "src/lib/file/platform.cpp"
@@ -196,41 +168,10 @@ target_sources(utils
   "src/lib/async/worker.cpp"
 )
 
-# deprecated use fnet instead
- #[[
-target_sources(utnet
-  PRIVATE
-  "src/lib/deprecated/net/core/init_net.cpp"
-  "src/lib/deprecated/net/dns/dns.cpp"
-  "src/lib/deprecated/net/tcp/tcp.cpp"
-  "src/lib/deprecated/net/ssl/ssl_common.cpp"
-  "src/lib/deprecated/net/ssl/ssl_conn.cpp"
-  "src/lib/deprecated/net/http/http1.cpp"
-  "src/lib/deprecated/net/async/async_dns.cpp"
-  "src/lib/deprecated/net/async/common_pool.cpp"
-  "src/lib/deprecated/net/async/async_tcp.cpp"
-  "src/lib/deprecated/net/ssl/ssl_async.cpp"
-  "src/lib/deprecated/net/http2/conn.cpp"
-  "src/lib/deprecated/net/http2/stream_update.cpp"
-  "src/lib/deprecated/net/http2/stream_make.cpp"
-  "src/lib/deprecated/net/http2/stream_context.cpp"
-  "src/lib/deprecated/net/http2/request.cpp"
-  "src/lib/deprecated/net/http2/request_methods.cpp"
-  "src/lib/deprecated/cnet/cnet.cpp"
-  "src/lib/deprecated/cnet/tcp.cpp"
-  "src/lib/deprecated/cnet/ssl.cpp"
-  "src/lib/deprecated/cnet/tcp_server.cpp"
-  "src/lib/deprecated/cnet/http2.cpp"
-  "src/lib/deprecated/cnet/mem_buffer.cpp"
-  "src/lib/deprecated/cnet/mem_iface.cpp"
-  
-)]]
 
+# libfnet
 target_sources(fnet PRIVATE
-#[[
-  "src/lib/fnet/dll/sockdll.cpp"
-  "src/lib/fnet/dll/ssldll.cpp"
-]]
+  "src/lib/fnet/dll/lazy.cpp"
   "src/lib/fnet/socket.cpp"
   "src/lib/fnet/addrinfo.cpp"
   "src/lib/fnet/tls.cpp"
@@ -245,14 +186,9 @@ target_sources(fnet PRIVATE
   "src/lib/fnet/quic/crypto/masks.cpp"
   "src/lib/fnet/quic/crypto/enc_packet.cpp"
   "src/lib/fnet/quic/crypto/cipher_payload.cpp"
-
-  "src/lib/fnet/dll/lazy.cpp"
 )
 
-target_sources(fnetserv PRIVATE
-  "src/lib/fnet/server/state.cpp"
-  "src/lib/fnet/server/httpserv.cpp"
-)
+
 
 if(WIN32)
   target_sources(fnet PRIVATE
@@ -265,60 +201,18 @@ else()
   target_compile_definitions(fnet PRIVATE _DEBUG=1)
 endif()
 
-#[[ libquic
-add_library(quic SHARED)
-
-target_sources(quic
-  PRIVATE
-  "src/lib/deprecated/quic/core/core.cpp"
-  "src/lib/deprecated/quic/io/udp_wait.cpp"
-  "src/lib/deprecated/quic/io/udp.cpp"
-  "src/lib/deprecated/quic/mem/stdalloc.cpp"
-  "src/lib/deprecated/quic/mem/stdbpool.cpp"
-  "src/lib/deprecated/quic/core/external_func.cpp"
-  "src/lib/deprecated/quic/crypto/hkdf.cpp"
-  "src/lib/deprecated/quic/crypto/initial.cpp"
-  "src/lib/deprecated/quic/crypto/crypto_frames.cpp"
-  "src/lib/deprecated/quic/core/capi.cpp"
-  "src/lib/deprecated/quic/conn/conn.cpp"
-  "src/lib/deprecated/quic/flow/init.cpp"
+# fnetserv
+target_sources(fnetserv PRIVATE
+  "src/lib/fnet/server/state.cpp"
+  "src/lib/fnet/server/httpserv.cpp"
 )
-]]
 
-if(WIN32)
-  # target_sources(quic PRIVATE "src/lib/quic/core/dll.rc")
-endif()
 
-# endif()
+
+# test (utils)
 target_link_libraries(fileview utils)
 target_link_libraries(cout utils)
 target_link_libraries(channel utils Threads::Threads)
-#[[ deprecated
-target_link_libraries(tokenizer utils)
-target_link_libraries(make_parser utils)
-target_link_libraries(syntaxc utils)
-target_link_libraries(netcore utils utnet)
-target_link_libraries(http1 utils utnet Threads::Threads)
-target_link_libraries(dispatcher utils)
-target_link_libraries(tree utils)
-target_link_libraries(parser utils)
-target_link_libraries(asyncdns utils utnet)
-target_link_libraries(asynctcp utils utnet)
-target_link_libraries(asynctcp2 utils utnet)
-target_link_libraries(http2base utils utnet)
-target_link_libraries(http2protocol utils utnet)
-target_link_libraries(cnettcp utils utnet)
-target_link_libraries(cnetserver utils utnet)
-target_link_libraries(cnethttp2 utils utnet)
-target_link_libraries(cnetmem utils utnet)
-target_link_libraries(container_iface utils utnet)
-target_link_libraries(io_completion_port utils utnet)
-target_link_libraries(externaltask utils utnet)
-target_compile_options(parser PRIVATE "-ftemplate-backtrace-limit=0")
-target_link_libraries(expression utils)
-]]
-
-
 target_link_libraries(worker utils)
 target_link_libraries(json utils)
 target_link_libraries(cin utils)
@@ -332,33 +226,12 @@ target_link_libraries(coroutine utils)
 target_link_libraries(run_on_single_thread utils)
 target_link_libraries(shared_context utils)
 target_link_libraries(taskpool2 utils)
-
 target_link_libraries(expand_iovec utils)
+target_link_libraries(comb utils)
+target_link_libraries(huffman utils)
+target_link_libraries(deflate utils)
 
-
-
-
-target_link_libraries(ifacegen utils)
-target_link_libraries(binred utils)
-target_link_libraries(pscmpl utils)
-target_link_libraries(minilang utils)
-target_link_libraries(minlc utils)
-target_link_libraries(durl utils fnet)
-target_link_libraries(igen2 utils)
-target_link_libraries(vstack utils)
-target_link_libraries(server utils fnetserv)
-
-#[[ libquic
-target_link_libraries(quic_udp quic utils)
-target_link_libraries(quic_shared_ptr quic)
-target_link_libraries(quic_event quic)
-target_link_libraries(quic_frame quic)
-target_link_libraries(quic_hash_map quic)
-target_link_libraries(quic_crypto quic)
-target_link_libraries(quic_init_conn quic)
-]]
-
-# libfnet
+# test(libfnet)
 target_link_libraries(fnet_socket fnet)
 target_link_libraries(fnet_tls fnet)
 target_link_libraries(fnet_http fnet utils)
@@ -372,18 +245,28 @@ target_link_libraries(fnetquic_stream utils fnet)
 target_link_libraries(fnetquic_multi_thread utils fnet)
 target_link_libraries(fnet_dns fnet)
 
-# libfnetserv
+# test(libfnetserv)
 target_link_libraries(fnetserv fnet)
-#[[
-if(WIN32)
-  # target_link_libraries(io_completion_port ws2_32)
-  # target_link_libraries(utnet libssl libcrypto ws2_32 fnet)
-  # target_link_libraries(quic ws2_32)
+
+# tools
+target_link_libraries(ifacegen utils)
+target_link_libraries(binred utils)
+target_link_libraries(minilang utils)
+target_link_libraries(durl utils fnet)
+target_link_libraries(server utils fnetserv)
+target_link_libraries(combl utils)
+target_compile_options(combl PRIVATE "-fconstexpr-steps=2147483647")
+target_link_libraries(binp utils)
+
+if(LLVM_FOUND)
+message(STATUS "LLVM found")
+llvm_map_components_to_libnames(llvm_libs support core irreader)
+target_link_libraries(combl ${llvm_libs})
 else()
-  # target_link_libraries(utils libssl.so libcrypto.so)
-  # target_link_libraries(utnet fnet)
-  # target_link_libraries(asynctcp2 Threads::Threads)
-endif()]]
+message(STATUS "LLVM not found")
+endif()
+
+
 
 if(WIN32)
   if(UTILS_BUILD_SHARED_LIBS)
@@ -408,17 +291,6 @@ if(WIN32)
       TARGET fnetserv POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnetserv.dll" "tool/libfnetserv.dll"
     )
-
-    #[[
-    add_custom_command(
-      TARGET utnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutnet.dll" "test/libutnet.dll"
-    )]]
-    #[[
-    add_custom_command(
-      TARGET quic POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libquic.dll" "test/libquic.dll"
-    )]]
 
   endif()
 endif()

@@ -12,6 +12,7 @@
 #include "../../../std/hash_map.h"
 #include "../../../std/list.h"
 #include "../../hash_fn.h"
+#include <atomic>
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -43,6 +44,7 @@ namespace utils {
             slib::hash_map<StreamID, std::shared_ptr<BidiStream<Lock>>> send_bidi;
             slib::hash_map<StreamID, std::shared_ptr<RecvUniStream<Lock>>> recv_uni;
             slib::hash_map<StreamID, std::shared_ptr<BidiStream<Lock>>> recv_bidi;
+            std::atomic_bool remove_auto = false;
 
             std::shared_ptr<void> unisendarg;
             std::shared_ptr<void> bidisendarg;
@@ -64,6 +66,10 @@ namespace utils {
            public:
             Conn(Direction self) {
                 control.base.state.set_dir(self);
+            }
+
+            void set_auto_remove(bool is_auto) {
+                remove_auto = is_auto;
             }
 
             bool is_flow_control_limited() {
@@ -139,6 +145,7 @@ namespace utils {
                 open_uni_stream = cb;
             }
 
+            // cb is  (std::shared_ptr<void> &arg, std::shared_ptr<utils::fnet::quic::stream::impl::RecvUniStream<Lock>> stream)
             void set_accept_uni(std::shared_ptr<void> arg, UniAcceptCB cb) {
                 const auto lock = control.base.accept_uni_lock();
                 unirecvarg = std::move(arg);
@@ -183,6 +190,49 @@ namespace utils {
                     return it->second;
                 }
                 return nullptr;
+            }
+
+           private:
+            IOResult remove_impl(StreamID id, auto&& locked, auto& streams) {
+                auto found = streams.find(id);
+                if (found == streams.end()) {
+                    return IOResult::no_data;  // already deleted
+                }
+                if (!found->second->is_removable()) {
+                    return IOResult::not_in_io_state;  // should not delete yet
+                }
+                if (!streams.erase(id)) {
+                    return IOResult::fatal;  // BUG!!
+                }
+                return IOResult::ok;
+            }
+
+           public:
+            // remove removes stream from manager
+            // return values are:
+            // ok - successfuly removed
+            // fatal - bug
+            // invalid_data - invalid stream id
+            // no_data - already deleted
+            // not_in_io_state - stream is not closed yet
+            IOResult remove(StreamID id) {
+                if (id.dir() == local_dir()) {
+                    if (id.type() == StreamType::bidi) {
+                        return remove_impl(id, control.base.open_bidi_lock(), send_bidi);
+                    }
+                    else if (id.type() == StreamType::uni) {
+                        return remove_impl(id, control.base.open_uni_lock(), send_uni);
+                    }
+                }
+                else if (id.dir() == peer_dir()) {
+                    if (id.type() == StreamType::bidi) {
+                        return remove_impl(id, control.base.accept_bidi_lock(), recv_bidi);
+                    }
+                    else if (id.type() == StreamType::uni) {
+                        return remove_impl(id, control.base.accept_uni_lock(), recv_uni);
+                    }
+                }
+                return IOResult::invalid_data;
             }
 
            private:
@@ -232,37 +282,58 @@ namespace utils {
                 if (err) {
                     return err;
                 }
+                auto maybe_remove = [&](auto&& s) -> error::Error {
+                    if (remove_auto && s->is_removable()) {
+                        if (auto fat = remove(id); fat == IOResult::fatal) {
+                            return error::Error("unexpected error on removing stream");
+                        }
+                    }
+                    return error::none;
+                };
                 if (local) {
                     if (bidi) {
                         auto bs = find_local_bidi(id);
                         if (!bs) {
-                            return QUICError{.msg = "no local_bidi stream object exists. library bug!!"};
+                            // already deleted. ignore frame
+                            return error::none;
                         }
-                        return bs->recv(frame);
+                        if (auto err = bs->recv(frame)) {
+                            return err;
+                        }
+                        return maybe_remove(bs);
                     }
                     else {
                         auto us = find_send_uni(id);
                         if (!us) {
-                            return QUICError{.msg = "no send_uni stream object exists. library bug!!"};
+                            // already deleted. ignore frame
+                            return error::none;
                         }
                         us->recv(frame);
-                        return error::none;
+                        return maybe_remove(us);
                     }
                 }
                 else {
                     if (bidi) {
                         auto bs = find_remote_bidi(id);
                         if (!bs) {
-                            return QUICError{.msg = "no remote_bidi stream object exists. library bug!!"};
+                            // already deleted. ignore frame
+                            return error::none;
                         }
-                        return bs->recv(frame);
+                        if (auto err = bs->recv(frame)) {
+                            return err;
+                        }
+                        return maybe_remove(bs);
                     }
                     else {
                         auto us = find_recv_uni(id);
                         if (!us) {
-                            return QUICError{.msg = "no recv_uni stream object exists. library bug!!"};
+                            // already deleted. ignore frame
+                            return error::none;
                         }
-                        return us->recv(frame);
+                        if (auto err = us->recv(frame)) {
+                            return err;
+                        }
+                        return maybe_remove(us);
                     }
                 }
             }
@@ -284,27 +355,41 @@ namespace utils {
             // not concern about priority or evenity
             // should implement send_schedule for your application purpose
             IOResult default_send_schedule(frame::fwriter& fw, auto&& observer_vec) {
-                if (auto res = control.send(fw, observer_vec); res == IOResult::fatal) {
-                    return res;
-                }
                 IOResult r = IOResult::ok;
+                auto maybe_remove = [&](auto& it, auto& m) {
+                    if (remove_auto && it->second->is_removable()) {
+                        it = m.erase(it);
+                        return true;
+                    }
+                    return false;
+                };
                 auto do_send = [&](const auto& lock, auto& m) {
-                    for (auto& [id, s] : m) {
+                    for (auto it = m.begin(); it != m.end();) {
+                        auto& s = it->second;
                         auto [res, fin] = s->send(fw, observer_vec);
                         if (res == IOResult::fatal || res == IOResult::invalid_data) {
                             r = res;
                             return true;
                         }
+                        if (maybe_remove(it, m)) {
+                            continue;
+                        }
+                        it++;
                     }
                     return false;
                 };
                 auto do_send_r = [&](const auto& lock, auto& m) {
-                    for (auto& [id, s] : m) {
+                    for (auto it = m.begin(); it != m.end();) {
+                        auto& s = it->second;
                         auto res = s->send(fw, observer_vec);
                         if (res == IOResult::fatal || res == IOResult::invalid_data) {
                             r = res;
                             return true;
                         }
+                        if (maybe_remove(it, m)) {
+                            continue;
+                        }
+                        it++;
                     }
                     return false;
                 };
@@ -317,6 +402,9 @@ namespace utils {
 
            public:
             IOResult send(frame::fwriter& fw, auto&& observer_vec) {
+                if (auto res = control.send(fw, observer_vec); res == IOResult::fatal) {
+                    return res;
+                }
                 if (send_schedule) {
                     return send_schedule(SendeSchedArg{
                                              .unisendarg = unisendarg,
@@ -328,6 +416,20 @@ namespace utils {
                                          fw, observer_vec);
                 }
                 return default_send_schedule(fw, observer_vec);
+            }
+
+            // update is std::pair<std::uint64_t/*new_limit*/,bool/*should_update*/>(Limiter)
+            bool update_max_uni_streams(auto&& update) {
+                return control.update_max_uni_streams(update);
+            }
+            // update is std::pair<std::uint64_t/*new_limit*/,bool/*should_update*/>(Limiter)
+            bool update_max_bidi_streams(auto&& update) {
+                return control.update_max_uni_streams(update);
+            }
+
+            // update is std::pair<std::uint64_t/*new_limit*/,bool/*should_update*/>(Limiter)
+            bool update_max_data(auto&& update) {
+                return control.update_max_data(update);
             }
         };
 

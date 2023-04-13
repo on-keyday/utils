@@ -18,7 +18,7 @@ namespace utils {
     namespace fnet::quic::context {
 
         struct Config {
-            std::uint32_t version = version_1;
+            Version version = version_1;
             bool server = false;
             tls::TLSConfig tls_config;
             status::Config internal_parameters;
@@ -26,6 +26,7 @@ namespace utils {
             trsparam::DefinedTransportParams transport_parameters;
             log::Logger logger;
             connid::Random random;
+            byte connIDLen = 8;
         };
 
     }  // namespace fnet::quic::context

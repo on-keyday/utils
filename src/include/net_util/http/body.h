@@ -18,8 +18,8 @@
 #include "../../view/sized.h"
 
 namespace utils {
-    namespace net {
-        namespace h1body {
+    namespace http {
+        namespace body {
             enum class BodyType {
                 no_info,
                 chuncked,
@@ -86,13 +86,13 @@ namespace utils {
                 return [&](auto& key, auto& value) {
                     if (helper::equal(key, "transfer-encoding", helper::ignore_case()) &&
                         helper::contains(value, "chunked")) {
-                        type = h1body::BodyType::chuncked;
+                        type = body::BodyType::chuncked;
                     }
-                    else if (type == h1body::BodyType::no_info &&
+                    else if (type == body::BodyType::no_info &&
                              helper::equal(key, "content-length", helper::ignore_case())) {
                         auto seq = make_ref_seq(value);
                         number::parse_integer(seq, expect);
-                        type = h1body::BodyType::content_length;
+                        type = body::BodyType::content_length;
                     }
                 };
             }
@@ -104,6 +104,6 @@ namespace utils {
                 helper::append(buf, view::SizedView(data, len));
                 helper::append(buf, "\r\n");
             }
-        }  // namespace h1body
-    }      // namespace net
+        }  // namespace body
+    }      // namespace http
 }  // namespace utils

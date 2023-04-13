@@ -18,22 +18,125 @@
 #include <wrap/cout.h>
 #include <fnet/quic/path/dplpmtud.h>
 #include <format>
+#include <thread/channel.h>
+#include <fnet/quic/stream/impl/recv_stream.h>
+#include <format>
+#include <fnet/http.h>
+#include <fstream>
+#include <file/gzip/gzip.h>
 using Context = utils::fnet::quic::context::Context<std::mutex>;
 using Config = utils::fnet::quic::context::Config;
 using QCTX = std::shared_ptr<Context>;
 using namespace utils::fnet;
+using SendStream = std::shared_ptr<quic::stream::impl::SendUniStream<std::mutex>>;
+using RecvStream = std::shared_ptr<quic::stream::impl::RecvUniStream<std::mutex>>;
+using Reader = quic::stream::impl::RecvSorted<std::mutex>;
 
-void thread(QCTX ctx) {
+struct Recvs {
+    RecvStream s;
+    std::shared_ptr<Reader> r;
+};
+
+using SendChan = utils::thread::SendChan<Recvs>;
+using RecvChan = utils::thread::RecvChan<Recvs>;
+
+std::atomic_uint ref = 0;
+
+void thread(QCTX ctx, RecvChan c, int i) {
+    auto decref = utils::helper::defer([&] {
+        ref--;
+    });
+    const auto def = utils::helper::defer([&] {
+        utils::wrap::cout_wrap() << utils::wrap::packln("thread ", i, " finished");
+    });
+
+    auto streams = ctx->get_streams();
+    SendStream uni;
     while (true) {
-        auto uni = ctx->streams->open_uni();
+        if (ctx->is_closed()) {
+            return;
+        }
+        uni = streams->open_uni();
         if (!uni) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
-        uni->add_data(utils::view::rvec("hello world"), true);
         break;
     }
-    constexpr auto k = utils::fnet::quic::crypto::make_key_from_bintext("040000b800093a805e1901820000a33d58b31fca95ec541ca0962e576116497101db810facc68c15d127241584483cb0d695a1ac53a41386346531571f4875747b15801be665888564ab81d5c5c1f66ba5d0f24022f8609fe4df43017dd843098a209a2d03bdc9d42c58eb3fbb2375a448c8267a0887bf6832754b470c470d26d0604b9a6ad864ea3096168a0bfed687b2efc4035c4b7bd75688ac18e4c815dbff703b46841e9a82447414378c8a5475c8a10008002a0004ffffffff");
+    uni->add_data(std::format("GET /n0566gy/{} HTTP/1.1\r\nHost: ncode.syosetu.com\r\n", i + 1), false);
+    uni->add_data("Accept-Encoding: gzip\r\n", false);
+    uni->add_data("\r\n", true);
+    while (!uni->is_closed()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (ctx->is_closed()) {
+            return;
+        }
+    }
+    if (ctx->is_closed()) {
+        return;
+    }
+    auto sent_id = uni->id();
+    utils::wrap::cout_wrap() << utils::wrap::packln("uni stream sent: ", i, "->", sent_id);
+    auto res = streams->remove(uni->id());
+    assert(res == utils::fnet::quic::IOResult::ok);
+    Recvs runi;
+    while (!runi.s) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        c >> runi;
+    }
+    while (!runi.s->is_removable()) {
+        runi.s->update_recv_limit([](quic::stream::Limiter limit) {
+            if (limit.avail_size() < 10000) {
+                return limit.curlimit() + 10000;
+            }
+            return limit.curlimit();  // not update
+        });
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    res = streams->remove(runi.s->id());
+    decref.execute();
+    assert(res == utils::fnet::quic::IOResult::ok);
+    utils::fnet::HTTP http;
+    utils::http::header::StatusCode code;
+    std::unordered_multimap<std::string, std::string> resp;
+    utils::fnet::HTTPBodyInfo info;
+    auto& h = runi.r->sorted.front().data;
+    http.add_input(h, h.size());
+    runi.r->sorted.pop_front();
+    http.read_response<std::string>(code, resp, &info);
+    std::string text;
+    bool inval = false;
+    while (!http.read_body(text, info, 0, 0, &inval)) {
+        if (inval) {
+            break;
+        }
+        auto& h = runi.r->sorted.front();
+        http.add_input(h.data, h.data.size());
+        runi.r->sorted.pop_front();
+    }
+    http.write_response(code, resp);
+    const char* data;
+    size_t size;
+    http.borrow_output(data, size);
+
+    utils::wrap::cout_wrap() << utils::view::CharVec(data, size);
+
+    {
+        std::ofstream of(std::format("./ignore/dump{}.gz", i), std::ios_base::out | std::ios_base::binary);
+        of << text;
+    }
+    {
+        std::ofstream of(std::format("./ignore/dump{}.html", i), std::ios_base::out | std::ios_base::binary);
+        utils::file::gzip::GZipHeader gh;
+        std::string dec;
+        utils::io::bit_reader<std::string&> in{text};
+        utils::io::reader tmpr{utils::view::rvec(text).substr(0, text.size() - 4)};
+        std::uint32_t reserve = 0;
+        utils::io::read_num(tmpr, reserve, false);
+        dec.reserve(reserve);
+        utils::file::gzip::decode_gzip(dec, gh, in);
+        of << dec;
+    }
 }
 
 void log_packet(std::shared_ptr<void>&, utils::fnet::quic::packet::PacketSummary su, utils::view::rvec payload, bool is_send) {
@@ -57,9 +160,9 @@ void log_packet(std::shared_ptr<void>&, utils::fnet::quic::packet::PacketSummary
     }
     utils::wrap::cout_wrap() << res << "\n";
     utils::io::reader r{payload};
-    utils::fnet::quic::frame::parse_frames<slib::vector>(r, [](const auto& frame, bool) {
+    utils::fnet::quic::frame::parse_frames<slib::vector>(r, [&](const auto& frame, bool) {
         std::string data;
-        utils::fnet::quic::log::format_frame<slib::vector>(data, frame, false, false);
+        utils::fnet::quic::log::format_frame<slib::vector>(data, frame, true, false);
         data += "\n";
         if constexpr (std::is_same_v<const utils::fnet::quic::frame::CryptoFrame&, decltype(frame)>) {
             utils::fnet::quic::log::format_crypto(data, frame.crypto_data, false, false);
@@ -85,12 +188,17 @@ void record_timer(std::shared_ptr<void>&, const utils::fnet::quic::status::LossT
         }
     }
 }
+void rtt_event(std::shared_ptr<void>&, const utils::fnet::quic::status::RTT& rtt, utils::fnet::quic::time::Time now) {
+    utils::wrap::cout_wrap() << utils::wrap::packln("current rtt: ", rtt.smoothed_rtt(), "ms (σ:", rtt.rttvar(), "ms)", " latest rtt: ", rtt.latest_rtt(), "ms");
+}
 
 utils::fnet::quic::log::LogCallbacks cbs{
     .debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
     .sending_packet = log_packet,
     .recv_packet = log_packet,
     .loss_timer_state = record_timer,
+    .mtu_probe = [](std::shared_ptr<void>&, std::uint64_t size) { utils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
+    .rtt_state = rtt_event,
 };
 
 int main() {
@@ -128,11 +236,22 @@ int main() {
         },
     };
     config.internal_parameters.handshake_idle_timeout = 10000;
-    config.logger.callbacks = &cbs;
+    config.transport_parameters.initial_max_streams_uni = 100;
+    config.transport_parameters.initial_max_data = 1000000;
+    config.transport_parameters.initial_max_stream_data_uni = 100000;
+    // config.logger.callbacks = &cbs;
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();
     assert(val);
 
+    auto streams = ctx->get_streams();
+    auto [w, r] = utils::thread::make_chan<Recvs>();
+    streams->set_accept_uni(std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {}), [](std::shared_ptr<void>& p, RecvStream s) {
+        auto w2 = static_cast<SendChan*>(p.get());
+        auto data = std::make_shared<Reader>();
+        s->set_receiver(data, quic::stream::impl::recv_handler<std::mutex>);
+        *w2 << Recvs{std::move(s), std::move(data)};
+    });
     auto wait = resolve_address("localhost", "8090", sockattr_udp());
     assert(!wait.second);
     auto [info, err] = wait.first.wait();
@@ -149,16 +268,21 @@ int main() {
         break;
     }
     assert(sock);
-    std::thread(thread, std::as_const(ctx)).detach();
+    constexpr auto tasks = 12;
+    for (auto i = 0; i < tasks; i++) {
+        ref++;
+        std::thread(thread, std::as_const(ctx), r, i).detach();
+    }
     utils::view::rvec data;
     utils::byte buf[3000];
     while (true) {
         std::tie(data, val) = ctx->create_udp_payload();
-        if (!val && utils::fnet::quic::context::is_timeout(ctx->conn_err)) {
+        if (!val && ctx->is_closed()) {
+            utils::wrap::cout_wrap() << utils::wrap::packln(ctx->get_conn_error().error<std::string>());
             break;
         }
         if (!val) {
-            utils::wrap::cout_wrap() << ctx->conn_err.error<std::string>() << "\n";
+            utils::wrap::cout_wrap() << ctx->get_conn_error().error<std::string>() << "\n";
             assert(val);
         }
         if (data.size()) {
@@ -170,8 +294,25 @@ int main() {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
                 break;
             }
-            assert(!err);
-            ctx->parse_udp_payload(d);
+            if (err) {
+                break;
+            }
+            if (!ctx->parse_udp_payload(d)) {
+                break;
+            }
         }
+        if (ref == 0) {
+            ctx->request_close(quic::QUICError{
+                .msg = "task completed",
+                .transport_error = quic::TransportError::NO_ERROR,
+            });
+        }
+        streams->update_max_data([](quic::stream::Limiter limit) {
+            if (limit.avail_size() < 10000) {
+                return limit.curlimit() + 50000;
+            }
+            return limit.curlimit();
+        });
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }

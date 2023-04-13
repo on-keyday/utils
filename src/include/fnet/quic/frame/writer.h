@@ -8,6 +8,7 @@
 // writer - frame writer
 #pragma once
 #include "../packet/summary.h"
+#include "typeonly.h"
 
 namespace utils {
     namespace fnet::quic::frame {
@@ -29,5 +30,15 @@ namespace utils {
                 return true;
             }
         };
+
+        void add_padding_for_encryption(frame::fwriter& fw, packetnum::WireVal wire, size_t auth_tag) {
+            // least 4 byte needed for sample skip size
+            // see https://datatracker.ietf.org/doc/html/rfc9001#section-5.4.2
+            if (fw.w.written().size() + wire.len < auth_tag) {
+                fw.write(frame::PaddingFrame{});  // apply one
+                fw.w.write(0, auth_tag - fw.w.written().size() - wire.len);
+            }
+        }
+
     }  // namespace fnet::quic::frame
 }  // namespace utils

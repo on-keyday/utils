@@ -13,37 +13,32 @@ namespace utils {
     namespace fnet::quic::crypto {
 
         inline int qtls_callback(CryptoSuite* suite, MethodArgs args) {
-            auto set_wsecret = [&](CryptoData& data) {
-                data.wsecret.install(view::rvec(args.write_secret, args.secret_len), args.cipher);
+            auto set_wsecret = [&] {
+                return suite->secrets.install_wsecret(args.level, view::rvec(args.write_secret, args.secret_len), args.cipher);
             };
-            auto set_rsecret = [&](CryptoData& data) {
-                data.rsecret.install(view::rvec(args.read_secret, args.secret_len), args.cipher);
+            auto set_rsecret = [&] {
+                return suite->secrets.install_rsecret(args.level, view::rvec(args.read_secret, args.secret_len), args.cipher);
             };
+
             switch (args.type) {
                 case ArgType::flush:
                     return 1;
                 case ArgType::alert:
-                    suite->alert_code = args.alert;
-                    suite->alert = true;
+                    suite->handshaker.set_alert(args.alert);
                     return 1;
                 case ArgType::handshake_data: {
-                    auto& data = suite->crypto_data[level_to_index(args.level)];
-                    data.write_data.append(view::rvec(args.data, args.len));
-                    return 1;
+                    return suite->handshaker.add_handshake_data(args.level, view::rvec(args.data, args.len)) ? 1 : 0;
                 }
                 case ArgType::secret: {
-                    auto& data = suite->crypto_data[level_to_index(args.level)];
-                    set_rsecret(data);
-                    set_wsecret(data);
-                    return 1;
+                    return set_rsecret() && set_wsecret()
+                               ? 1
+                               : 0;
                 }
                 case ArgType::wsecret: {
-                    set_wsecret(suite->crypto_data[level_to_index(args.level)]);
-                    return 1;
+                    return set_wsecret() ? 1 : 0;
                 }
                 case ArgType::rsecret: {
-                    set_rsecret(suite->crypto_data[level_to_index(args.level)]);
-                    return 1;
+                    return set_rsecret() ? 1 : 0;
                 }
                 default:
                     return 0;

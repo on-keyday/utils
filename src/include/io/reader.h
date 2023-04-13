@@ -101,7 +101,7 @@ namespace utils {
                 return peek;
             }
 
-            constexpr byte top() const noexcept {
+            constexpr C top() const noexcept {
                 return empty() ? 0 : remain().data()[0];
             }
         };

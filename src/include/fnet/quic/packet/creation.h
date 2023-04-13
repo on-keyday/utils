@@ -72,7 +72,7 @@ namespace utils {
             else if (summary.type == PacketType::OneRTT) {
                 OneRTTPacketPlain plain;
                 plain.dstID = summary.dstID;
-                if (!plain.render_in_place(w, summary.version, wire, summary.key, with_padding, auth_tag_len, 0, summary.spin)) {
+                if (!plain.render_in_place(w, summary.version, wire, summary.key_bit, with_padding, auth_tag_len, 0, summary.spin)) {
                     return {{}, false};
                 }
                 return get_crypto_packet();

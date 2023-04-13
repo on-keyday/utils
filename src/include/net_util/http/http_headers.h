@@ -12,8 +12,8 @@
 #include "body.h"
 
 namespace utils {
-    namespace net {
-        namespace h1header {
+    namespace http {
+        namespace header {
             template <class T, class Callback, class BeginCheck>
             size_t guess_and_read_raw_header(Sequencer<T>& seq, Callback&& callback, BeginCheck&& check) {
                 while (seq.size() == 0) {
@@ -42,14 +42,14 @@ namespace utils {
             }
 
             template <class T, class Body, class Callback>
-            bool read_body_with_info(Sequencer<T>& seq, Body& body, h1body::BodyType btype, size_t expect, Callback&& callback) {
-                if (btype == h1body::BodyType::no_info) {
+            bool read_body_with_info(Sequencer<T>& seq, Body& body, body::BodyType btype, size_t expect, Callback&& callback) {
+                if (btype == body::BodyType::no_info) {
                     if (!callback(seq, 0, true)) {
                         return false;
                     }
                 }
                 while (true) {
-                    auto s = h1body::read_body(body, seq, expect, btype);
+                    auto s = body::read_body(body, seq, expect, btype);
                     if (s == -1) {
                         return false;
                     }
@@ -70,8 +70,8 @@ namespace utils {
                     return false;
                 }
                 size_t expect = 0;
-                h1body::BodyType btype = h1body::BodyType::no_info;
-                if (!h1header::parse_request<TmpBuffer>(seq, method, path, helper::nop, h, h1body::bodyinfo_preview(btype, expect))) {
+                body::BodyType btype = body::BodyType::no_info;
+                if (!header::parse_request<TmpBuffer>(seq, method, path, helper::nop, h, body::bodyinfo_preview(btype, expect))) {
                     return false;
                 }
                 if (!read_body_with_info(seq, body, btype, expect, callback)) {
@@ -88,8 +88,8 @@ namespace utils {
                     return false;
                 }
                 size_t expect = 0;
-                h1body::BodyType btype = h1body::BodyType::no_info;
-                if (!h1header::parse_response<TmpBuffer>(seq, helper::nop, status, helper::nop, h, h1body::bodyinfo_preview(btype, expect))) {
+                body::BodyType btype = body::BodyType::no_info;
+                if (!header::parse_response<TmpBuffer>(seq, helper::nop, status, helper::nop, h, body::bodyinfo_preview(btype, expect))) {
                     return false;
                 }
                 if (!read_body_with_info(seq, body, btype, expect, callback)) {
@@ -97,6 +97,6 @@ namespace utils {
                 }
                 return true;
             }
-        }  // namespace h1header
-    }      // namespace net
+        }  // namespace header
+    }      // namespace http
 }  // namespace utils

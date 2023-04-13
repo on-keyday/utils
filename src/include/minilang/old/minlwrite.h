@@ -83,7 +83,7 @@ namespace utils {
                             }
                             cur = cur->next;
                         }
-                        w.write(")");
+                        w.write_line(")");
                     }
                 }
             }

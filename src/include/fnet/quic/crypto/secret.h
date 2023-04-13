@@ -12,16 +12,27 @@
 
 namespace utils {
     namespace fnet::quic::crypto {
-        constexpr auto err_not_installed = error::Error("NOT_INSTALLED");
+        constexpr auto err_not_installed = error::Error("secret is not installed");
 
         struct Secret {
            private:
             storage secret_;
             tls::TLSCipher cipher_;
-            Keys keys_;
-            bool exist_key = false;
+            KeyIV keyiv_;
 
            public:
+            Secret& operator=(Secret&& s) {
+                if (this == &s) {
+                    return *this;
+                }
+                secret_ = std::move(s.secret_);
+                cipher_ = s.cipher_;
+                s.cipher_ = {};
+                keyiv_ = s.keyiv_;
+                s.keyiv_.clear();
+                return *this;
+            }
+
             void install(view::rvec new_secret, const tls::TLSCipher& cipher) {
                 discard();
                 secret_ = make_storage(new_secret);
@@ -31,8 +42,7 @@ namespace utils {
             void discard() {
                 secret_.force_fill(0);
                 secret_.clear();
-                keys_.clear();
-                exist_key = false;
+                keyiv_.clear();
                 cipher_ = tls::TLSCipher{};
             }
 
@@ -40,21 +50,50 @@ namespace utils {
                 return !secret_.null();
             }
 
-            std::pair<const Keys*, error::Error> keys(std::uint32_t version) {
+            constexpr bool is_used() const {
+                return keyiv_.hash_len != 0;
+            }
+
+            std::pair<const KeyIV*, error::Error> keyiv(std::uint32_t version) {
                 if (!is_installed()) {
                     return {nullptr, err_not_installed};
                 }
-                if (!exist_key) {
-                    if (auto err = make_keys_from_secret(keys_, cipher_, version, secret_)) {
+                if (keyiv_.hash_len == 0) {
+                    if (auto err = make_key_and_iv(keyiv_, cipher_, version, secret_)) {
                         return {nullptr, err};
                     }
-                    exist_key = true;
                 }
-                return {&keys_, error::none};
+                return {&keyiv_, error::none};
+            }
+
+            error::Error hp(HP& hp_, std::uint32_t version) const {
+                if (!is_installed()) {
+                    return err_not_installed;
+                }
+                return make_hp(hp_, cipher_, version, secret_);
+            }
+
+            error::Error hp_if_zero(HP& hp_, std::uint32_t version) const {
+                if (hp_.hash_len == 0) {
+                    return hp(hp_, version);
+                }
+                return error::none;
             }
 
             const tls::TLSCipher* cipher() const {
                 return &cipher_;
+            }
+
+            std::pair<view::rvec, error::Error> update(view::wvec out, std::uint32_t version) const {
+                if (!is_installed()) {
+                    return {{}, err_not_installed};
+                }
+                out = out.substr(0, secret_.size());
+                auto err = make_updated_key(out, secret_, version);
+                if (err) {
+                    return {{}, std::move(err)};
+                }
+                return {out, error::none};
             }
 
             ~Secret() {

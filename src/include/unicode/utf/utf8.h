@@ -74,7 +74,12 @@ namespace utils::unicode::utf8 {
     }
 
     constexpr bool is_second_later_byte(auto b) noexcept {
-        return 0x80 <= b && b <= 0xBF;
+        if constexpr (sizeof(b) != 1) {
+            return 0x80 <= b && b <= 0xBF;
+        }
+        else {
+            return 0x80 <= byte(b) && byte(b) <= 0xBF;
+        }
     }
 
     constexpr bool valid_range(size_t len, auto one, auto two) noexcept {

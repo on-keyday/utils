@@ -28,14 +28,19 @@ namespace utils {
             fnet_dll_export(bool) HKDF_Extract(view::wvec extracted, view::rvec secret, view::rvec salt);
             fnet_dll_export(bool) HKDF_Expand_label(view::wvec tmp, view::wvec output, view::rvec secret, view::rvec quic_label);
 
-            // encrypt_packet encrypts packet with specific cipher
+            // encrypt_packet encrypts packet (both header and payload) with specific cipher
             // cipher is got from TLS.get_cipher or is TLSCipher{}
-            // key shpuld
-            fnet_dll_export(error::Error) encrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet);
+            fnet_dll_export(error::Error) encrypt_packet(const KeyIV& keyiv, const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet);
 
-            // decrypt_packet decrypts packet with specific cipher
+            // decrypt_header decrypts packet header with specific cipher
             // cipher is got from TLS.get_cipher or is TLSCipher{}
-            fnet_dll_export(error::Error) decrypt_packet(const Keys& keys, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn);
+            // to decrypt payload, call decrypt_payload after call this
+            fnet_dll_export(error::Error) decrypt_header(const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn);
+
+            // decrypt_payload decrypts packet payload with specific cipher
+            // cipher is got from TLS.get_cipher or is TLSCipher{}
+            // packet MUST be parsed by decrypt_header
+            fnet_dll_export(error::Error) decrypt_payload(const KeyIV& keyiv, const tls::TLSCipher& cipher, packet::CryptoPacket& packet);
 
             // cipher_payload encrypts/decrypts payload with specific cipher
             // info should be parsed by CryptoPacket.parse_pnknown()

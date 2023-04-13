@@ -11,6 +11,7 @@
 #include <fnet/debug.h>
 #include <cassert>
 #include <fnet/quic/frame/parse.h>
+#include <fnet/quic/stream/impl/recv_stream.h>
 
 namespace test {
     namespace stream = utils::fnet::quic::stream;
@@ -81,6 +82,9 @@ int main() {
     assert(ok == IOResult::ok && locals.size() == 1);
     RecvQ q;
     conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<std::mutex>> d) {
+        auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
+        d->receiver.set_receiver(recv,
+                                 utils::fnet::quic::stream::impl::recv_handler<std::mutex>);
         static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
     });
 

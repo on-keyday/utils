@@ -5,6 +5,5 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include <yaml/lexer/basic.h>
 
 int main() {}
