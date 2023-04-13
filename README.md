@@ -69,7 +69,7 @@ API compatibility is often broken among each large commits. (yes, I throw stabil
 # how to build
 1. install cmake (https://cmake.org/), ninja (https://ninja-build.org/) and clang (https://clang.llvm.org/) on your platform.
 2. run `. build` (on linux) or `build.bat` (on windows)
-3. `libutils`,`libdnet`,`libdnetserv` will be built on `lib/`, test program (it's too presumptuous to explain as test) will be built on `test/`, tool will be built on `tool/`
+3. `libutils`,`libfnet`,`libfnetserv` will be built on `lib/`, test program (it's too presumptuous to explain as test) will be built on `test/`, tool will be built on `tool/`
 
 # std version
 C++20
