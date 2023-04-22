@@ -11,16 +11,17 @@
 #include "../ioresult.h"
 #include "../ack/ack_lost_record.h"
 #include "../transport_error.h"
+#include "../../std/deque.h"
 
 namespace utils {
     namespace fnet::quic::path {
-        template <template <class...> class Que>
+
         struct PathVerifier {
            private:
             std::uint64_t send_data = 0;
             bool verify_required = false;
             std::shared_ptr<ack::ACKLostRecord> wait;
-            Que<std::uint64_t> recv_data;
+            slib::deque<std::uint64_t> recv_data;
 
            public:
             constexpr void recv_path_challange(const frame::PathChallengeFrame& resp) noexcept {

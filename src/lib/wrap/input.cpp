@@ -52,7 +52,9 @@ static bool read_record(wrap::path_string& buf, INPUT_RECORD& rec, bool& zero_in
                 }
                 else {
                     wchar_t r[]{C, 0};
-                    cout << r;
+                    if (!ctrl_key || C != 3) {  // skip ctrl-C
+                        cout << r;
+                    }
                 }
             }
             if (C == '\r') {

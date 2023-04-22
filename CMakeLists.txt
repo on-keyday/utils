@@ -85,6 +85,7 @@ add_executable(comb "src/test/minilang/test_comb.cpp")
 add_executable(huffman "src/test/file/test_huffman.cpp")
 add_executable(deflate "src/test/file/test_deflate.cpp")
 add_executable(comb2 "src/test/comb2/test_comb2.cpp")
+add_executable(reflect "src/test/reflect/test_reflect.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")

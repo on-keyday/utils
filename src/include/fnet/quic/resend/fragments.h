@@ -26,10 +26,6 @@ namespace utils {
             flex_storage data;
         };
 
-        struct DatagramFragment {
-            storage data;
-        };
-
         template <class T>
         struct Resend {
             T frag;
@@ -78,7 +74,7 @@ namespace utils {
             // IOResult::fatal or IOResult::invalid_data - fatal error
             // IOResult::no_capacity - break without deletion
             // IOResult::not_in_io_state - continue without deletion
-            // otherwise - continue with deletion
+            // otherwise(IOResult::ok) - continue with deletion
             // this returns IOResult::ok if succeeded
             // if otherwise is returned, fatal error
             IOResult retransmit(auto&& observer, auto&& send) {

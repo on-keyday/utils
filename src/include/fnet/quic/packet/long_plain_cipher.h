@@ -106,8 +106,7 @@ namespace utils {
         };
 
         // not implement render on ~Cipher class
-        // because Cipher can't know packet number
-        // this design
+        // because ~Cipher can't know packet number and its length
         template <class Partial>
         struct LongPacketCipherBase : Partial {
             view::rvec protected_payload;

@@ -13,6 +13,7 @@
 #include <memory>
 using string = utils::number::Array<char, 100>;
 using rvec = utils::view::basic_rvec<char, utils::byte>;
+#include <net_util/hpack_huffman_table.h>
 
 constexpr bool encode_decode(const char* base) {
     auto in = rvec(base);

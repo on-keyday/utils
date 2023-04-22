@@ -46,8 +46,9 @@ void thread(QCTX ctx, RecvChan c, int i) {
     auto decref = utils::helper::defer([&] {
         ref--;
     });
+    size_t data_size = 0;
     const auto def = utils::helper::defer([&] {
-        utils::wrap::cout_wrap() << utils::wrap::packln("thread ", i, " finished");
+        utils::wrap::cout_wrap() << utils::wrap::packln("thread ", i, " finished recv:", data_size);
     });
 
     auto streams = ctx->get_streams();
@@ -63,7 +64,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
         }
         break;
     }
-    uni->add_data(std::format("GET /n0566gy/{} HTTP/1.1\r\nHost: ncode.syosetu.com\r\n", i + 1), false);
+    uni->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
     uni->add_data("Accept-Encoding: gzip\r\n", false);
     uni->add_data("\r\n", true);
     while (!uni->is_closed()) {
@@ -84,41 +85,47 @@ void thread(QCTX ctx, RecvChan c, int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         c >> runi;
     }
-    while (!runi.s->is_removable()) {
+    utils::fnet::HTTP http;
+    while (true) {
         runi.s->update_recv_limit([](quic::stream::Limiter limit) {
             if (limit.avail_size() < 10000) {
                 return limit.curlimit() + 10000;
             }
             return limit.curlimit();  // not update
         });
+        utils::byte data[1200];
+        bool is_eos = false;
+        while (true) {
+            auto [red, eos] = runi.r->read(data);
+            is_eos = eos;
+            if (red.size() == 0) {
+                break;
+            }
+            http.add_input(red, red.size());
+            if (eos) {
+                break;
+            }
+        }
+        if (is_eos) {
+            break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     res = streams->remove(runi.s->id());
     decref.execute();
     assert(res == utils::fnet::quic::IOResult::ok);
-    utils::fnet::HTTP http;
     utils::http::header::StatusCode code;
     std::unordered_multimap<std::string, std::string> resp;
     utils::fnet::HTTPBodyInfo info;
-    auto& h = runi.r->sorted.front().data;
-    http.add_input(h, h.size());
-    runi.r->sorted.pop_front();
     http.read_response<std::string>(code, resp, &info);
     std::string text;
     bool inval = false;
-    while (!http.read_body(text, info, 0, 0, &inval)) {
-        if (inval) {
-            break;
-        }
-        auto& h = runi.r->sorted.front();
-        http.add_input(h.data, h.data.size());
-        runi.r->sorted.pop_front();
-    }
+    auto v = http.read_body(text, info, 0, 0, &inval);
+    assert(v);
     http.write_response(code, resp);
     const char* data;
     size_t size;
     http.borrow_output(data, size);
-
     utils::wrap::cout_wrap() << utils::view::CharVec(data, size);
 
     {
@@ -135,6 +142,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
         utils::io::read_num(tmpr, reserve, false);
         dec.reserve(reserve);
         utils::file::gzip::decode_gzip(dec, gh, in);
+        data_size = dec.size();
         of << dec;
     }
 }
@@ -239,6 +247,7 @@ int main() {
     config.transport_parameters.initial_max_streams_uni = 100;
     config.transport_parameters.initial_max_data = 1000000;
     config.transport_parameters.initial_max_stream_data_uni = 100000;
+    config.internal_parameters.ping_duration = 15000;
     // config.logger.callbacks = &cbs;
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();

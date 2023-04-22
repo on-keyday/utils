@@ -17,6 +17,8 @@
 #include "../transport_error.h"
 #include "../version.h"
 #include "../packet/stateless_reset.h"
+#include "../frame/writer.h"
+#include "exporter.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -45,7 +47,7 @@ namespace utils {
         constexpr byte null_stateless_reset[16]{};
 
         struct IDWait {
-            ConnID id;
+            std::int64_t seq = -1;
             std::int64_t retire_proior_to = 0;
             std::shared_ptr<ack::ACKLostRecord> wait;
         };
@@ -137,15 +139,17 @@ namespace utils {
             slib::list<IDWait> waitlist;
             bool use_zero_length = false;
             std::uint64_t max_active_conn_id = default_max_active_conn_id;
+            Exporter exporter;
 
            public:
-            void reset(bool use_zero_length) {
+            void reset(bool use_zero_length, Exporter&& exp) {
                 srcids.clear();
                 waitlist.clear();
                 max_active_conn_id = default_max_active_conn_id;
                 issued_seq = -1;
                 most_min_seq = -1;
                 use_zero_length = use_zero_length;
+                exporter = std::move(exp);
             }
 
             void on_transport_parameter_received(std::uint64_t active_conn_id) {
@@ -185,17 +189,18 @@ namespace utils {
                 }
                 new_issued = std::move(id);
                 if (enque_wait) {
-                    waitlist.push_back({new_issued.to_ConnID()});
+                    waitlist.push_back({new_issued.seq});
                 }
+                exporter.add(new_issued.id);
                 return new_issued.to_ConnID();
             }
 
             bool send(frame::fwriter& fw, auto&& observer_vec) {
-                auto do_send = [&](IDWait& it) {
+                auto do_send = [&](IDWait& it, ConnID id) {
                     frame::NewConnectionIDFrame new_conn;
-                    new_conn.sequence_number = it.id.seq;
-                    new_conn.connectionID = it.id.id;
-                    view::copy(new_conn.stateless_reset_token, it.id.stateless_reset_token);
+                    new_conn.sequence_number = id.seq;
+                    new_conn.connectionID = id.id;
+                    view::copy(new_conn.stateless_reset_token, id.stateless_reset_token);
                     new_conn.retire_proior_to = it.retire_proior_to;
                     if (fw.remain().size() < new_conn.len()) {
                         return true;  // wait next chance
@@ -215,18 +220,23 @@ namespace utils {
                             continue;
                         }
                         else if (it->wait->is_lost()) {
-                            it->id = choose(it->id.seq);
-                            if (it->id.seq == -1) {
+                            auto id = choose(it->seq);
+                            if (id.seq == -1) {
                                 it = waitlist.erase(it);  // already retired
                                 continue;
                             }
-                            if (!do_send(*it)) {
+                            if (!do_send(*it, id)) {
                                 return false;
                             }
                         }
                     }
                     else {
-                        if (!do_send(*it)) {
+                        auto id = choose(it->seq);
+                        if (id.seq == -1) {
+                            it = waitlist.erase(it);  // already retired
+                            continue;
+                        }
+                        if (!do_send(*it, id)) {
                             return false;
                         }
                     }
@@ -261,6 +271,7 @@ namespace utils {
                         .frame_type = FrameType::RETIRE_CONNECTION_ID,
                     };
                 }
+                exporter.retire(to_retire.id);
                 if (!srcids.erase(retire.sequence_number)) {
                     return QUICError{.msg = "failed to delete connection id. library bug!!"};
                 }

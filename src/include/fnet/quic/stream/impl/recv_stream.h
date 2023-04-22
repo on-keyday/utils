@@ -16,15 +16,16 @@ namespace utils {
 
         template <class Locker>
         struct RecvSorted {
+            StreamID id;
+
+           private:
             Locker locker;
             slib::list<resend::StreamFragment> sorted;
             bool done = false;
             bool fin = false;
             bool rst = false;
             std::uint64_t read_pos = 0;
-            StreamID id;
 
-           private:
             auto pack_new(Fragment frag) {
                 resend::StreamFragment save;
                 save.data = frag.fragment;
@@ -114,6 +115,9 @@ namespace utils {
                 if (done || rst) {
                     return {true, error::none};
                 }
+                if (frag.offset < read_pos) {
+                    return {true, error::none};  // ignore
+                }
                 for (auto it = sorted.begin(); it != sorted.end(); it++) {
                     if (it->offset <= frag.offset) {
                         auto cp = it;
@@ -143,13 +147,61 @@ namespace utils {
                         continue;
                     }
                 }
-                sorted.push_back(pack_new(frag));
+                if (sorted.size() && frag.offset < sorted.front().offset) {
+                    sorted.push_front(pack_new(frag));
+                }
+                else {
+                    sorted.push_back(pack_new(frag));
+                }
                 return {check_done(), error::none};
             }
 
             void reset() {
                 const auto unlock = lock();
                 rst = true;
+            }
+
+           private:
+            void check_offset() {
+                if (sorted.size() > 1) {
+                    auto next = ++sorted.begin();
+                    assert(sorted.begin()->offset < next->offset);
+                }
+            }
+
+           public:
+            // returns (data,eos)
+            std::pair<view::wvec, bool> read(view::wvec data) {
+                const auto unlock = lock();
+                if (rst) {
+                    return {{}, true};
+                }
+                size_t i = 0;
+                auto sub = data;
+                while (sorted.size() != 0 && i < data.size()) {
+                    auto& tgt = sorted.front();
+                    if (tgt.offset != read_pos) {
+                        check_offset();
+                        break;
+                    }
+                    if (sorted.front().data.size() > sub.size()) {
+                        view::copy(sub, tgt.data);
+                        auto new_size = tgt.data.size() - sub.size();
+                        view::shift(tgt.data, 0, sub.size(), new_size);
+                        tgt.data.resize(new_size);
+                        tgt.offset += sub.size();
+                        check_offset();
+                        read_pos += sub.size();
+                        i += sub.size();
+                        break;
+                    }
+                    view::copy(sub, tgt.data);
+                    read_pos += tgt.data.size();
+                    sub = sub.substr(tgt.data.size());
+                    i += tgt.data.size();
+                    sorted.pop_front();
+                }
+                return {data.substr(0, i), sorted.size() == 0 && done};
             }
         };
 

@@ -18,7 +18,13 @@
 #include <mutex>
 #include <helper/pushbacker.h>
 
-struct Flags : utils::cmdline::templ::HelpOption {};
+struct Flags : utils::cmdline::templ::HelpOption {
+    std::string port = "8091";
+    void bind(utils::cmdline::option::Context& ctx) {
+        bind_help(ctx);
+        ctx.VarString(&port, "port", "port number (default:8091)", "PORT");
+    }
+};
 namespace serv = utils::fnet::server;
 auto& cout = utils::wrap::cout_wrap();
 
@@ -26,8 +32,13 @@ void http_serve(void*, utils::fnet::server::Requester req, utils::fnet::server::
     std::map<std::string, std::string> h;
     const auto keep_alive = serv::has_keep_alive<std::string>(req.http, h);
     h.clear();
-    h["Connection"] = "keep-alive";
-    req.respond_flush(serv::http_ok, h, "hello world", 11);
+    if (keep_alive) {
+        h["Connection"] = "keep-alive";
+    }
+    else {
+        h["Connection"] = "close";
+    }
+    req.respond_flush(serv::http_ok, h, "hello world\n", 12);
     if (keep_alive) {
         serv::handle_keep_alive(std::move(req), std::move(s));
     }
@@ -69,14 +80,14 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
     s->set_reduce_skip(10);
     if (!serv::prepare_listeners(
-            "8091", [&](auto&&, utils::fnet::Socket& prep) {
+            flag.port.c_str(), [&](auto&&, utils::fnet::Socket& prep) {
                 s->add_accept_thread(std::move(prep));
             },
             2, 10000)) {
         utils::wrap::cout_wrap() << "failed to create server";
         return -1;
     }
-    utils::wrap::cout_wrap() << "running server\n";
+    utils::wrap::cout_wrap() << "running server on port " << flag.port << " \n";
     utils::wrap::path_string str;
     std::thread(log_thread).detach();
     auto& servstate = s->state();

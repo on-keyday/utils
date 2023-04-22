@@ -37,6 +37,11 @@ namespace utils {
                 ack_eliciting_in_flight_sent_packet_count = 0;
             }
 
+            constexpr void on_connection_migration() {
+                largest_acked_packet = -1;
+                highest_sent = -1;
+            }
+
             constexpr packetnum::Value next_packet_number() const {
                 return issue_packet_number;
             }

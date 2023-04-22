@@ -98,7 +98,7 @@ namespace utils {
         }
 
         template <size_t size, class Fn = Direct>
-        constexpr bool make_canonical_code(auto(&base)[size], std::uint16_t N, Fn map = Direct{}) {
+        constexpr bool make_canonical_code(auto (&base)[size], std::uint16_t N, Fn map = Direct{}) {
             return make_canonical_code<size>(base + 0, N, map);
         }
 
@@ -122,10 +122,10 @@ namespace utils {
 
         struct DecodeTree {
            private:
-            static constexpr std::uint32_t mask_zero = 0x00000fff;
-            static constexpr std::uint32_t mask_one = 0x00fff000;
+            static constexpr std::uint32_t mask_zero = 0x00007fff;
+            static constexpr std::uint32_t mask_one = 0x3fff8000;
             static constexpr std::uint32_t flag_value = 0x80000000;
-            static constexpr std::uint32_t mask_shift = 12;
+            static constexpr std::uint32_t mask_shift = 15;
             std::uint32_t data = 0;
 
             static_assert((mask_one >> mask_shift) == mask_zero);
@@ -254,8 +254,7 @@ namespace utils {
                         if (elm.value_set()) {
                             return false;
                         }
-                        elm.set_value(code.literal);
-                        return true;
+                        return elm.set_value(code.literal);
                     }
                     if (code.index(i)) {
                         cur = elm.one();

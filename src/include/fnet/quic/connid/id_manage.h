@@ -14,6 +14,7 @@
 #include "../stream/fragment.h"
 #include "../ioresult.h"
 #include "../frame/writer.h"
+#include "exporter.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -26,10 +27,10 @@ namespace utils {
             InitialRetry iniret;
 
            public:
-            void reset(bool use_zero, Random&& rand) {
+            void reset(bool use_zero, Random&& rand, Exporter&& exporter) {
                 random = std::move(rand);
                 acceptor.reset();
-                issuer.reset(use_zero);
+                issuer.reset(use_zero, std::move(exporter));
             }
 
             view::rvec get_initial() {

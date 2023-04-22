@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 
 #include "../wrap/light/char.h"
+#include <utility>
 
 namespace utils {
     namespace file {
@@ -34,6 +35,22 @@ namespace utils {
                 long maplen = 0;
 #endif
                 stat_type stat = {0};
+                constexpr ReadFileInfo() = default;
+                constexpr ReadFileInfo& operator=(ReadFileInfo&& in) {
+                    if (this == &in) {
+                        return *this;
+                    }
+                    file = std::exchange(in.file, nullptr);
+                    fd = std::exchange(in.fd, -1);
+                    mapptr = std::exchange(in.mapptr, nullptr);
+#ifdef _WIN32
+                    maphandle = std::exchange(in.maphandle, nullptr);
+#else
+                    maplen = std::exhcange(in.maplen, 0);
+#endif
+                    stat = std::exchange(in.stat, stat_type{});
+                    return *this;
+                }
                 bool open(const wrap::path_char* filename);
                 void close();
                 bool is_open() const;

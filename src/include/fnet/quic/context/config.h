@@ -11,8 +11,11 @@
 #include "../../tls/config.h"
 #include "../log/log.h"
 #include "../connid/random.h"
+#include "../connid/exporter.h"
 #include "../transport_parameter/defined_param.h"
 #include "../path/config.h"
+#include "../dgram/config.h"
+#include "../token/token.h"
 
 namespace utils {
     namespace fnet::quic::context {
@@ -27,6 +30,9 @@ namespace utils {
             log::Logger logger;
             connid::Random random;
             byte connIDLen = 8;
+            connid::Exporter exporter;
+            datagram::Config datagram_parameters;
+            token::ZeroRTTStorage zero_rtt;
         };
 
     }  // namespace fnet::quic::context

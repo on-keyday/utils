@@ -27,6 +27,7 @@
 #include "../../std/deque.h"
 #include "../token/token.h"
 #include "../close/close.h"
+#include "../dgram/datagram.h"
 #include "config.h"
 #include <atomic>
 
@@ -53,8 +54,10 @@ namespace utils {
         constexpr auto err_handshake_timeout = error::Error("HANDSHAKE_TIMEOUT");
 
         // Context is QUIC connection context suite
-        //
-        template <class Lock, class CongestionAlgorithm = status::NewReno>
+        // this handles single connection both client and server
+        template <class Lock,
+                  class CongestionAlgorithm = status::NewReno,
+                  class DatagramDrop = datagram::DatagrmDropNull>
         struct Context {
            private:
             Version version = version_negotiation;
@@ -65,12 +68,14 @@ namespace utils {
             ack::UnackedPackets unacked;
             connid::IDManager connIDs;
             token::RetryToken retry_token;
+            token::ZeroRTTTokenManager zero_rtt_token;
             path::MTU mtu;
-            path::PathVerifier<slib::deque> path_verifyer;
+            path::PathVerifier path_verifyer;
             std::shared_ptr<stream::impl::Conn<Lock>> streams;
             close::Closer closer;
             std::atomic<close::CloseReason> closed;
-            Lock close_lock;
+            datagram::DatagramManager<Lock, DatagramDrop> datagrams;
+            Lock close_locker;
 
             log::Logger logger;
 
@@ -79,19 +84,26 @@ namespace utils {
             bool transport_param_read = false;
             byte src_connID_len = 0;
 
-            void set_quic_runtime_error(auto&& err) {
-                close_lock.lock();
-                const auto d = helper::defer([&] {
-                    close_lock.unlock();
+            void reset_internal() {
+                packet_creation_buffer.resize(0);
+                transport_param_read = false;
+                src_connID_len = 0;
+            }
+
+            auto close_lock() {
+                close_locker.lock();
+                return helper::defer([&] {
+                    close_locker.unlock();
                 });
+            }
+
+            void set_quic_runtime_error(auto&& err) {
+                const auto d = close_lock();
                 closer.on_error(std::move(err), close::ErrorType::runtime);
             }
 
             void recv_close(const frame::ConnectionCloseFrame& conn_close) {
-                close_lock.lock();
-                const auto d = helper::defer([&] {
-                    close_lock.unlock();
-                });
+                const auto d = close_lock();
                 if (closer.recv(conn_close)) {
                     closed.store(close::CloseReason::close_by_remote);  // remote close
                 }
@@ -149,6 +161,7 @@ namespace utils {
                 auto by_peer = trsparam::to_initial_limits(peer);
                 auto by_local = trsparam::to_initial_limits(local);
                 streams->apply_initial_limits(by_local, by_peer);
+                datagrams.on_transport_parameter(peer.max_datagram_frame_size);
                 transport_param_read = true;
                 logger.debug("apply transport parameter");
                 return true;
@@ -163,6 +176,15 @@ namespace utils {
             }
 
             // writer methods
+            bool write_path_probe_frames(const packet::PacketSummary& summary, ack::ACKWaiters& waiters, frame::fwriter& fw) {
+                if (path_verifyer.path_verification_required()) {
+                    // currently path verification is required
+                    // can send only
+                    if (auto err = path_verifyer.send_path_challange(fw, waiters); err == IOResult::fatal) {
+                        return wrap_io(err);
+                    }
+                }
+            }
 
             // write_frames calls each send() call of frame generator
             bool write_frames(const packet::PacketSummary& summary, ack::ACKWaiters& waiters, frame::fwriter& fw) {
@@ -174,12 +196,6 @@ namespace utils {
                     });
                     return false;
                 };
-                if (summary.type != PacketType::ZeroRTT) {
-                    if (auto err = unacked.send(fw, pn_space)) {
-                        set_quic_runtime_error(std::move(err));
-                        return false;
-                    }
-                }
                 if (status.is_probe_required(pn_space) || status.should_send_any_packet()) {
                     logger.pto_fire(pn_space);
                     fw.write(frame::PingFrame{});
@@ -187,11 +203,11 @@ namespace utils {
                 if (status.should_send_ping()) {
                     fw.write(frame::PingFrame{});
                 }
-                if (path_verifyer.path_verification_required()) {
-                    // currently path verification is required
-                    // can send only
-                    if (auto err = path_verifyer.send_path_challange(fw, waiters); err == IOResult::fatal) {
-                        return wrap_io(err);
+
+                if (summary.type != PacketType::ZeroRTT) {
+                    if (auto err = unacked.send(fw, pn_space)) {
+                        set_quic_runtime_error(std::move(err));
+                        return false;
                     }
                 }
                 if (auto err = crypto.send(summary.type, summary.packet_number, waiters, fw);
@@ -206,10 +222,13 @@ namespace utils {
                 }
                 if (summary.type == PacketType::ZeroRTT ||
                     summary.type == PacketType::OneRTT) {
-                    if (auto err = streams->send(fw, waiters); err == IOResult::fatal) {
+                    if (auto err = connIDs.send(fw, waiters); err == IOResult::fatal) {
                         return wrap_io(err);
                     }
-                    if (auto err = connIDs.send(fw, waiters); err == IOResult::fatal) {
+                    if (auto err = datagrams.send(summary.packet_number, fw, waiters); err == IOResult::fatal) {
+                        return wrap_io(err);
+                    }
+                    if (auto err = streams->send(fw, waiters); err == IOResult::fatal) {
                         return wrap_io(err);
                     }
                 }
@@ -381,7 +400,15 @@ namespace utils {
                 summary.type = PacketType::Initial;
                 summary.srcID = connIDs.pick_up_srcID();
                 summary.dstID = connIDs.pick_up_dstID(status.is_server());
-                summary.token = retry_token.get_token();
+                if (status.has_received_retry()) {
+                    summary.token = retry_token.get_token();
+                }
+                else {
+                    auto ztoken = zero_rtt_token.find();
+                    if (!ztoken.token.null()) {
+                        summary.token = ztoken.token;
+                    }
+                }
                 if (!write_packet(w, summary, mode, waiters)) {
                     return false;
                 }
@@ -416,6 +443,7 @@ namespace utils {
                 return true;
             }
 
+            // write_zerortt generates 0-RTT packet
             bool write_zerortt(io::writer& w, WriteMode mode, ack::ACKWaiters& waiters) {
                 if (status.is_server()) {
                     return true;
@@ -439,6 +467,10 @@ namespace utils {
                                      status.can_send(status::PacketNumberSpace::handshake);
                 const bool has_onertt = crypto.write_installed(PacketType::OneRTT) &&
                                         status.can_send(status::PacketNumberSpace::application);
+                const bool has_zerortt = !status.is_server() &&
+                                         crypto.write_installed(PacketType::ZeroRTT) &&
+                                         status.can_send(status::PacketNumberSpace::application) &&
+                                         !has_handshake && !has_onertt;
                 const auto to_mode = [&](bool b) {
                     if (on_close) {
                         return b ? WriteMode::use_all_buffer | WriteMode::conn_close : WriteMode::conn_close;
@@ -449,7 +481,12 @@ namespace utils {
                 };
                 ack::ACKWaiters waiters;
                 if (has_initial) {
-                    if (!write_initial(w, to_mode(!has_handshake && !has_onertt), waiters)) {
+                    if (!write_initial(w, to_mode(!has_handshake && !has_zerortt && !has_onertt), waiters)) {
+                        return {{}, false};
+                    }
+                }
+                if (has_zerortt) {
+                    if (!write_zerortt(w, to_mode(!has_zerortt), waiters)) {
                         return {{}, false};
                     }
                 }
@@ -501,10 +538,7 @@ namespace utils {
             }
 
             std::pair<view::rvec, bool> create_connection_close_packet() {
-                close_lock.lock();
-                const auto d = helper::defer([&] {
-                    close_lock.unlock();
-                });
+                const auto d = close_lock();
                 if (!closer.has_error()) {
                     return {{}, true};  // nothing to do
                 }
@@ -540,7 +574,7 @@ namespace utils {
                 packet_creation_buffer.resize(1200);
                 io::writer w{packet_creation_buffer};
                 if (!params.render_local(w, status.is_server())) {
-                    set_quic_runtime_error(error::Error("failed to render params"));
+                    set_quic_runtime_error(error::Error("failed to render transport params"));
                     return false;
                 }
                 auto p = w.written();
@@ -580,9 +614,13 @@ namespace utils {
             }
 
             bool handle_frame(const packet::PacketSummary& summary, const frame::Frame& frame) {
+                if (frame.type.type() == FrameType::PADDING ||
+                    frame.type.type() == FrameType::PING) {
+                    return true;
+                }
                 if (auto ack = frame::cast<frame::ACKFrame<slib::vector>>(&frame)) {
-                    ack::RemovedPackets rem;
-                    auto err = ackh.on_ack_received(status, status::from_packet_type(summary.type), rem, nullptr, *ack, [&] {
+                    ack::RemovedPackets removed_packets;
+                    auto err = ackh.on_ack_received(status, status::from_packet_type(summary.type), removed_packets, nullptr, *ack, [&] {
                         stream::impl::Conn<Lock>* ptr = streams.get();
                         return ptr->is_flow_control_limited();
                     });
@@ -619,6 +657,14 @@ namespace utils {
                     }
                     return true;
                 }
+                if (frame.type.type() == FrameType::DATAGRAM) {
+                    auto err = datagrams.recv(summary.packet_number, static_cast<const frame::DatagramFrame&>(frame));
+                    if (err) {
+                        set_quic_runtime_error(std::move(err));
+                        return false;
+                    }
+                    return true;
+                }
                 if (frame.type.type_detail() == FrameType::NEW_CONNECTION_ID ||
                     frame.type.type_detail() == FrameType::RETIRE_CONNECTION_ID) {
                     auto err = connIDs.recv(summary, frame);
@@ -641,9 +687,21 @@ namespace utils {
                     recv_close(static_cast<const frame::ConnectionCloseFrame&>(frame));
                     return true;
                 }
-                // TODO(on-keyday): now skip implementing
-                // DATAGRAN and NEW_TOKEN
-                return true;
+                if (frame.type.type() == FrameType::NEW_TOKEN) {
+                    if (status.is_server()) {
+                        set_quic_runtime_error(QUICError{
+                            .msg = "NewTokenFrame from client",
+                            .transport_error = TransportError::PROTOCOL_VIOLATION,
+                            .frame_type = FrameType::NEW_TOKEN,
+                        });
+                        return false;
+                    }
+                    auto token = static_cast<const frame::NewTokenFrame&>(frame).token;
+                    zero_rtt_token.store(token::Token{.token = token});
+                    return true;
+                }
+                set_quic_runtime_error(error::Error("unexpected frame type!"));
+                return false;
             }
 
             bool handle_on_initial(packet::PacketSummary summary) {
@@ -810,13 +868,20 @@ namespace utils {
             }
 
             // thread safe call
+            close::CloseReason close_reason() const {
+                return closed;
+            }
+
+            // thread unsafe call
+            bool request_path_verification(std::uint64_t data) {
+                return path_verifyer.request_path_verification(data);
+            }
+
+            // thread safe call
             // if err is QUICError, use detail of it
             // otherwise wrap error
             void request_close(error::Error err) {
-                close_lock.lock();
-                const auto d = helper::defer([&] {
-                    close_lock.unlock();
-                });
+                const auto d = close_lock();
                 if (closer.has_error()) {
                     return;  // already set
                 }
@@ -837,15 +902,19 @@ namespace utils {
                 closer.on_error(std::move(err), close::ErrorType::app);
             }
 
+            // thread unsafe call
             const error::Error& get_conn_error() const {
                 return closer.get_error();
             }
 
+            // thread unsafe call
             auto get_streams() const {
                 return streams;
             }
 
-            bool init(Config&& config) {
+            // thread unsafe call
+            bool init(Config&& config, CongestionAlgorithm&& alg = CongestionAlgorithm{}, DatagramDrop&& dgdrop = DatagramDrop{}) {
+                reset_internal();
                 closer.reset();
                 error::Error tmp_err;
                 tls::TLS tls;
@@ -864,13 +933,15 @@ namespace utils {
                 internal.ack_delay_exponent = config.transport_parameters.ack_delay_exponent;
                 internal.idle_timeout = config.transport_parameters.max_idle_timeout;
                 mtu.reset(config.path_parameters);
-                status.reset(internal, {}, config.server, mtu.current_datagram_size());
+                status.reset(internal, std::move(alg), config.server, mtu.current_datagram_size());
                 params.local = std::move(config.transport_parameters);
                 params.local_box.boxing(params.local);
                 src_connID_len = config.connIDLen;
-                connIDs.reset(config.connIDLen == 0, std::move(config.random));
+                connIDs.reset(config.connIDLen == 0, std::move(config.random), std::move(config.exporter));
                 logger = std::move(config.logger);
                 retry_token.reset();
+                zero_rtt_token.reset(std::move(config.zero_rtt));
+                datagrams.reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(dgdrop));
                 if (!status.now().valid()) {
                     set_quic_runtime_error(QUICError{
                         .msg = "clock.now() returns invalid time. clock must be set",
@@ -881,6 +952,7 @@ namespace utils {
                 return true;
             }
 
+            // thread unsafe call
             bool connect_start() {
                 if (status.handshake_started()) {
                     return false;
@@ -919,6 +991,7 @@ namespace utils {
                 return true;
             }
 
+            // thread unsafe call
             bool accept_start() {
                 if (status.handshake_started()) {
                     return false;
@@ -935,6 +1008,7 @@ namespace utils {
                 return true;
             }
 
+            // thread unsafe call
             // returns (payload,idle)
             std::pair<view::rvec, bool> create_udp_payload() {
                 if (closer.has_error()) {
@@ -961,6 +1035,7 @@ namespace utils {
                 return {packet, true};
             }
 
+            // thread unsafe call
             bool parse_udp_payload(view::wvec data) {
                 if (!closer.sent_packet().null()) {
                     closer.on_recv_after_close_sent();

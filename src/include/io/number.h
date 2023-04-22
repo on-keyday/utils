@@ -64,6 +64,59 @@ namespace utils {
             return true;
         }
 
+        template <class T, class C, class U>
+        constexpr bool read_aligned_num(basic_reader<C, U>& r, T& v, size_t align, bool be = true) {
+            if (align == 0) {
+                return false;
+            }
+            const auto offset = r.offset();
+            auto ptr = [&] {
+                return std::uintptr_t(r.remain().data());
+            };
+            while (!r.empty() && ptr() % align) {
+                r.offset(1);
+            }
+            if (r.empty()) {
+                r.reset(offset);
+                return false;
+            }
+            auto res = read_num(r, v, be);
+            if (!res) {
+                r.reset(offset);
+                return false;
+            }
+            return true;
+        }
+
+        template <class T, class C, class U>
+        constexpr bool write_aligned_num(basic_writer<C, U>& w, T v, size_t align, bool be = true, bool fill = false, byte fill_byte = 0) {
+            if (align == 0) {
+                return false;
+            }
+            const auto offset = w.offset();
+            auto ptr = [&] {
+                return std::uintptr_t(w.remain().data());
+            };
+            while (!w.empty() && ptr() % align) {
+                if (fill) {
+                    w.write(fill_byte, 1);
+                }
+                else {
+                    w.offset(1);
+                }
+            }
+            if (w.empty()) {
+                w.reset(offset);
+                return false;
+            }
+            auto res = write_num(w, v, be);
+            if (!res) {
+                w.reset(offset);
+                return false;
+            }
+            return true;
+        }
+
         namespace test {
             constexpr bool check_uint24() {
                 byte data[3];

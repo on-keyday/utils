@@ -42,6 +42,13 @@ namespace utils {
                 return true;
             }
 
+            constexpr void on_connection_migrate() {
+                latest_rtt_ = 0;
+                min_rtt = 0;
+                smoothed_rtt_ = 0;
+                rttvar_ = 0;
+            }
+
             // ack_delay MUST be config.clock.granurarity
             constexpr bool sample_rtt(const InternalConfig& config, time::Time time_sent, time::utime_t ack_delay) {
                 auto rtt = config.clock.now() - time_sent;

@@ -7,7 +7,6 @@
 
 #pragma once
 #include "../../storage.h"
-#include "../frame/token.h"
 
 namespace utils {
     namespace fnet::quic::token {
@@ -38,14 +37,52 @@ namespace utils {
             storage token;
         };
 
+        struct ZeroRTTStorage {
+            std::shared_ptr<void> obj;
+            TokenStorage (*find_token)(void*, view::rvec key) = nullptr;
+            void (*store_token)(void*, view::rvec key, Token token)=nullptr;
+
+            void store(view::rvec key, Token token) const {
+                if (store_token != nullptr) {
+                    store_token(obj.get(), key, token);
+                }
+            }
+
+            TokenStorage find(view::rvec key) const {
+                if (find_token == nullptr) {
+                    return {};
+                }
+                return find_token(obj.get(), key);
+            }
+        };
+
         struct ZeroRTTTokenManager {
            private:
-            std::shared_ptr<void> obj;
-            Token (*find_token)(void*);
-            void (*store_token)(Token, void*);
+            ZeroRTTStorage importer;
+            storage key;
+            storage found_cache;
 
            public:
-            void store() {}
+            void reset(ZeroRTTStorage&& in) {
+                importer = std::move(in);
+                found_cache = {};
+            }
+
+            void store(Token token) const {
+                importer.store(key, token);
+            }
+
+            Token find() {
+                if (!found_cache.null()) {
+                    return Token{.token = found_cache};
+                }
+                auto s = importer.find(key);
+                if (s.token.null()) {
+                    return {};
+                }
+                found_cache = std::move(s.token);
+                return Token{.token = found_cache};
+            }
         };
     }  // namespace fnet::quic::token
 }  // namespace utils

@@ -194,6 +194,10 @@ namespace utils {
             constexpr bool should_send_any_packet() const {
                 return should_send_any;
             }
+
+            constexpr void on_connection_migration(const InternalConfig& config, const PayloadSize& psize) {
+                congestion_window = config.window_initial_factor * psize.current_max_payload_size();
+            }
         };
 
         static_assert(sizeof(Congestion<NullAlgorithm>));

@@ -74,11 +74,10 @@ namespace utils {
                 bool close = false;
                 if (!http.read_request<TmpString>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {
                         if (helper::equal(key, "Connection", helper::ignore_case())) {
-                            if (helper::contains(value, "close")) {
+                            if (helper::contains(value, "close", helper::ignore_case())) {
                                 close = true;
                             }
-                            if (helper::contains(value, "keep-alive") ||
-                                helper::contains(value, "Keep-Alive")) {
+                            if (helper::contains(value, "keep-alive", helper::ignore_case())) {
                                 keep_alive = true;
                             }
                         }

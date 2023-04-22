@@ -136,8 +136,6 @@ namespace utils {
         };
 
         struct DynHuffmanHeader {
-            std::uint16_t code_count = 0;
-            std::uint16_t dist_count = 0;
             huffman::DecodeTable code;
             huffman::DecodeTable dist;
         };
@@ -257,8 +255,6 @@ namespace utils {
             if (!head.code.has_table()) {
                 return DeflateError::dynamic_huffman_dist_code;
             }
-            head.code_count = codeh.index;
-            head.dist_count = disth.index;
             return DeflateError::none;
         }
 
