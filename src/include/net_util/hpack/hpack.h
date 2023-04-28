@@ -14,9 +14,8 @@
 #include <array>
 #include <cstdint>
 #include <algorithm>
-#include "../wrap/light/enum.h"
-#include "../helper/equal.h"
-#include "hpack_huffman.h"
+#include "hpack_encode.h"
+#include "hpack_header.h"
 
 namespace utils {
     namespace hpack {
@@ -123,7 +122,6 @@ namespace utils {
             HpackError err = HpackError::none;
             while (!r.empty()) {
                 const unsigned char mask = r.top();
-                unsigned char tmp = 0;
                 String key, value;
                 auto read_two_literal = [&]() -> HpkErr {
                     auto err = decode_string(key, r);
@@ -156,7 +154,7 @@ namespace utils {
                 };
                 if (mask & 0x80) {
                     size_t index = 0;
-                    err = decode_integer<7>(r, index, tmp);
+                    err = decode_integer<7>(r, index);
                     if (err != HpackError::none) {
                         return err;
                     }
@@ -178,7 +176,7 @@ namespace utils {
                 }
                 else if (mask & 0x40) {
                     size_t code = 0;
-                    err = decode_integer<6>(r, code, tmp);
+                    err = decode_integer<6>(r, code);
                     if (err != HpackError::none) {
                         return err;
                     }
@@ -199,7 +197,7 @@ namespace utils {
                 else if (mask & 0x20) {  // dynamic table size change
                     // unimplemented
                     size_t code = 0;
-                    err = decode_integer<5>(r, code, tmp);
+                    err = decode_integer<5>(r, code);
                     if (err != HpackError::none) {
                         return err;
                     }
@@ -213,7 +211,7 @@ namespace utils {
                 }
                 else {
                     size_t code = 0;
-                    err = decode_integer<4>(r, code, tmp);
+                    err = decode_integer<4>(r, code);
                     if (err != HpackError::none) {
                         return err;
                     }

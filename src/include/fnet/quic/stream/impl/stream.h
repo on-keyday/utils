@@ -141,7 +141,7 @@ namespace utils {
             }
 
             // called when initial limits updated
-            void apply_initial_limits() {
+            void apply_peer_initial_limits() {
                 const auto locked = uni.lock();
                 auto c = conn.lock();
                 if (!c) {
@@ -239,14 +239,35 @@ namespace utils {
                 return uni.state.get_error_code();
             }
 
+           private:
+            bool discard_written_data(view::rvec data, bool fin) {
+                auto written = uni.data.written_offset;
+                src.shift_front(written);
+                src.append(data);
+                if (fin) {
+                    src.shrink_to_fit();
+                }
+                return uni.update_data(written, src, fin);
+            }
+
+           public:
             // add send data
-            IOResult add_data(view::rvec data, bool fin) {
+            // if discard_written is true, discard written data from runtime buffer
+            IOResult add_data(view::rvec data, bool fin, bool discard_written = false) {
                 const auto locked = uni.lock();
                 if (uni.data.fin) {
+                    if (discard_written) {
+                        if (!discard_written_data({}, true)) {
+                            return IOResult::fatal;
+                        }
+                    }
                     return IOResult::cancel;
                 }
+                if (discard_written) {
+                    return discard_written_data(data, fin) ? IOResult::ok : IOResult::fatal;  // must success
+                }
                 src.append(data);
-                return uni.update_data(0, src, fin) ? IOResult::ok : IOResult::fatal;  // must success
+                return uni.update_data(uni.data.discarded_offset, src, fin) ? IOResult::ok : IOResult::fatal;  // must success
             }
 
             // request cancelation
@@ -375,7 +396,7 @@ namespace utils {
                 uni.set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
             }
 
-            void apply_initial_limits() {
+            void apply_local_initial_limits() {
                 const auto locked = uni.lock();
                 auto c = conn.lock();
                 if (!c) {
@@ -548,9 +569,12 @@ namespace utils {
                 return receiver.recv(frame);
             }
 
-            void apply_initial_limits() {
-                sender.apply_initial_limits();
-                receiver.apply_initial_limits();
+            void apply_peer_initial_limits() {
+                sender.apply_peer_initial_limits();
+            }
+
+            void apply_local_initial_limits() {
+                receiver.apply_local_initial_limits();
             }
 
             BidiStream(StreamID id,

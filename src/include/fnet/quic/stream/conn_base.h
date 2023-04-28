@@ -41,6 +41,18 @@ namespace utils {
                 }
             }
 
+            // don't lock by yourself
+            void set_local_initial_limits(const InitialLimits& local) {
+                const auto lock = do_multi_lock(recv_locker, accept_bidi_locker, accept_uni_locker);
+                state.set_recv_initial_limit(local);
+            }
+
+            // don't lock by yourself
+            void set_peer_initial_limits(const InitialLimits& peer) {
+                const auto lock = do_multi_lock(send_locker, open_bidi_locker, open_uni_locker);
+                state.set_send_initial_limit(peer);
+            }
+
             auto recv_lock() {
                 return do_lock(recv_locker);
             }

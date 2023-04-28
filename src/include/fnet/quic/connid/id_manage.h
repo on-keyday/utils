@@ -14,7 +14,7 @@
 #include "../stream/fragment.h"
 #include "../ioresult.h"
 #include "../frame/writer.h"
-#include "exporter.h"
+#include "config.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -27,10 +27,10 @@ namespace utils {
             InitialRetry iniret;
 
            public:
-            void reset(bool use_zero, Random&& rand, Exporter&& exporter) {
-                random = std::move(rand);
-                acceptor.reset();
-                issuer.reset(use_zero, std::move(exporter));
+            void reset(Config&& config) {
+                random = std::move(config.random);
+                acceptor.reset(config.packet_per_id, config.max_packet_per_id, config.change_mode);
+                issuer.reset(std::move(config.exporter), config.connid_len, config.concurrent_limit);
             }
 
             view::rvec get_initial() {
@@ -41,8 +41,12 @@ namespace utils {
                 return iniret.get_retry();
             }
 
-            view::rvec pick_up_dstID(bool is_server) const {
-                return acceptor.pick_up_id(is_server ? nullptr : &iniret);
+            std::pair<view::rvec, error::Error> pick_up_dstID(bool is_server, bool handshake_complete, std::uint64_t local_max_conn_id) {
+                auto err = acceptor.maybe_update_id(random, handshake_complete, local_max_conn_id);
+                if (err) {
+                    return {{}, std::move(err)};
+                }
+                return {acceptor.pick_up_id(is_server ? nullptr : &iniret), error::none};
             }
 
             view::rvec pick_up_srcID() {
@@ -73,16 +77,20 @@ namespace utils {
                 return iniret.gen_initial(false, len, random);
             }
 
-            ConnID issue(byte len, bool enque_wait) {
-                return issuer.issue(len, random, enque_wait);
+            std::pair<ConnID, error::Error> issue(bool enque_wait) {
+                return issuer.issue(random, enque_wait);
+            }
+
+            error::Error issue_to_max() {
+                return issuer.issue_ids_to_max_connid_limit(random);
             }
 
             error::Error recv_new_connection_id(Version version, const frame::NewConnectionIDFrame& c) {
-                return acceptor.recv(version, c);
+                return acceptor.recv(version, random, c);
             }
 
             error::Error recv_retire_connection_id(view::rvec recv_dest_id, const frame::RetireConnectionIDFrame& c) {
-                return issuer.retire(recv_dest_id, c);
+                return issuer.retire(random, recv_dest_id, c);
             }
 
             error::Error recv(packet::PacketSummary summary, const frame::Frame& f) {
@@ -116,7 +124,7 @@ namespace utils {
                     return error::none;
                 }
                 byte stateless_reset_token[16]{};
-                return acceptor.accept(version, 0, 0, id, stateless_reset_token);
+                return acceptor.accept(version, random, 0, 0, id, stateless_reset_token);
             }
 
             void on_initial_stateless_reset_token_received(const StatelessResetToken& stateless_reset_token) {
@@ -124,11 +132,15 @@ namespace utils {
             }
 
             error::Error on_preferred_address_received(Version version, view::rvec id, const StatelessResetToken& stateless_reset_token) {
-                return acceptor.on_preferred_address_received(version, id, stateless_reset_token);
+                return acceptor.on_preferred_address_received(version, random, id, stateless_reset_token);
             }
 
             bool on_retry_received(view::rvec id) {
                 return iniret.recv_retry(false, id);
+            }
+
+            void on_packet_sent() {
+                acceptor.on_packet_sent();
             }
 
             bool has_dstID(view::rvec id) {

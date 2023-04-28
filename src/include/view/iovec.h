@@ -25,8 +25,8 @@ namespace utils {
 
             template <class T>
             concept is_not_const_data = requires(T t) {
-                                            { std::data(t) } -> non_const_ptr;
-                                        };
+                { std::data(t) } -> non_const_ptr;
+            };
         }  // namespace internal
 
         template <class C, class U>
@@ -358,6 +358,35 @@ namespace utils {
             }
             return ret;
         }
+
+        constexpr auto default_hash_mask = 0x8f2cf39d98390b;
+
+        template <class C, class U, class F>
+        constexpr auto make_hash_fn(F&& f) {
+            return [=](view::basic_rvec<C, U> data, std::uint64_t* s = nullptr, std::uint64_t mask = default_hash_mask) {
+                std::uint64_t tmp = 0;
+                if (!s) {
+                    s = &tmp;
+                }
+                for (auto b : data) {
+                    *s = f(*s, b, mask);
+                }
+                return *s;
+            };
+        }
+
+        constexpr auto hash = make_hash_fn<byte, char>([](std::uint64_t s, byte b, std::uint64_t mask) {
+            constexpr auto u64_max = ~std::uint64_t(0);
+            auto add = (s << 1);
+            if (std::is_constant_evaluated()) {
+                if (add > u64_max - b) {
+                    byte rem = byte(u64_max - add);
+                    add = 0;
+                    b -= rem;
+                }
+            }
+            return (add + b) ^ mask;
+        });
 
         namespace test {
             constexpr bool test_shift() {

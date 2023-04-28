@@ -43,6 +43,19 @@ namespace utils {
                 return buf;
             }
 
+            constexpr T* data() {
+                return buf;
+            }
+
+            constexpr void resize(size_t n) {
+                if (n >= capacity()) {
+                    i = capacity();
+                }
+                else {
+                    i = n;
+                }
+            }
+
             constexpr size_t capacity() const {
                 return strmode ? size_ - 1 : size_;
             }

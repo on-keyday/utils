@@ -12,21 +12,21 @@
 namespace utils {
     namespace io {
 
-        template <class T>
-        struct bit_writer {
+        template <class T, class C, class U>
+        struct basic_bit_writer {
            private:
             byte bits = 0;
             byte index = 0;
-            expand_writer<T> target;
+            basic_expand_writer<T, C, U> target;
             bool from_lsb = false;
 
            public:
-            constexpr bit_writer(auto&& v)
+            constexpr basic_bit_writer(auto&& v)
                 : target(std::forward<decltype(v)>(v)) {}
 
-            constexpr bit_writer() = default;
+            constexpr basic_bit_writer() = default;
 
-            constexpr io::expand_writer<T>& get_base() {
+            constexpr io::basic_expand_writer<T, C, U>& get_base() {
                 return target;
             }
 
@@ -72,22 +72,26 @@ namespace utils {
             constexpr byte get_index() const {
                 return index;
             }
+
+            constexpr bool is_aligned() const {
+                return index % 8 == 0;
+            }
         };
 
-        template <class T>
-        struct bit_reader {
+        template <class T, class C, class U>
+        struct basic_bit_reader {
            private:
             byte index = 0;
-            io::expand_reader<T> target;
+            io::basic_expand_reader<T, C, U> target;
             bool from_lsb = false;
 
            public:
-            constexpr bit_reader(auto&& v)
+            constexpr basic_bit_reader(auto&& v)
                 : target(std::forward<decltype(v)>(v)) {}
 
-            constexpr bit_reader() = default;
+            constexpr basic_bit_reader() = default;
 
-            constexpr io::expand_reader<T>& get_base() {
+            constexpr io::basic_expand_reader<T, C, U>& get_base() {
                 return target;
             }
 
@@ -165,7 +169,17 @@ namespace utils {
             constexpr byte get_index() const {
                 return index;
             }
+
+            constexpr bool is_aligned() const {
+                return index % 8 == 0;
+            }
         };
+
+        template <class T>
+        using bit_reader = basic_bit_reader<T, byte, char>;
+
+        template <class T>
+        using bit_writer = basic_bit_writer<T, byte, char>;
 
     }  // namespace io
 }  // namespace utils

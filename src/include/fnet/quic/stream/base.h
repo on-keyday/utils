@@ -79,7 +79,13 @@ namespace utils {
             Limiter limit;
             std::uint64_t error_code = 0;
             SendState state = SendState::ready;
-            bool reset_required = false;
+            enum : byte {
+                flag_none = 0x0,
+                flag_reset_by_peer = 0x1,
+                flag_reset_by_local = 0x2,
+                flag_reset_sent = 0x4,
+            };
+            byte reset_flags = flag_none;
 
            public:
             constexpr std::uint64_t sendable_size() const noexcept {
@@ -136,7 +142,7 @@ namespace utils {
                     return false;
                 }
                 state = SendState::reset_sent;
-                reset_required = false;
+                reset_flags |= flag_reset_sent;
                 return true;
             }
 
@@ -176,23 +182,31 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool set_error_code(std::uint64_t code) noexcept {
+           private:
+            constexpr bool set_error_code_impl(std::uint64_t code, bool by_peer = false) noexcept {
                 if (state == SendState::reset_sent ||
                     state == SendState::data_recved ||
                     state == SendState::reset_recved) {
                     return false;
                 }
                 error_code = code;
-                reset_required = true;
+                reset_flags |= by_peer ? flag_reset_by_peer : flag_reset_by_local;
                 return true;
             }
 
+           public:
+            constexpr bool set_error_code(std::uint64_t code) noexcept {
+                return set_error_code_impl(code, false);
+            }
+
             constexpr void recv_stop_sending(std::uint64_t code) {
-                set_error_code(code);
+                set_error_code_impl(code, true);
             }
 
             constexpr bool is_reset_required() const noexcept {
-                return reset_required;
+                return !(reset_flags & flag_reset_sent) &&
+                       ((reset_flags & flag_reset_by_local) ||
+                        (reset_flags & flag_reset_by_peer));
             }
 
             constexpr std::uint64_t get_error_code() const noexcept {

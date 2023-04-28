@@ -23,14 +23,14 @@ void test_fnetquic_context() {
     config.tls_config = tls::configure();
     config.tls_config.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
     config.tls_config.set_alpn("\x02h3");
-    config.random = {nullptr, [](std::shared_ptr<void>&, utils::view::wvec data) {
-                         std::random_device dev;
-                         std::uniform_int_distribution uni(0, 255);
-                         for (auto& d : data) {
-                             d = uni(dev);
-                         }
-                         return true;
-                     }};
+    config.connid_parameters.random = {nullptr, [](std::shared_ptr<void>&, utils::view::wvec data) {
+                                           std::random_device dev;
+                                           std::uniform_int_distribution uni(0, 255);
+                                           for (auto& d : data) {
+                                               d = uni(dev);
+                                           }
+                                           return true;
+                                       }};
     config.internal_parameters.clock = quic::time::Clock{nullptr, 1, [](void*) {
                                                              return quic::time::Time(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
                                                          }};

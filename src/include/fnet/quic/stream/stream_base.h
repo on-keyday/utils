@@ -33,16 +33,17 @@ namespace utils {
 
             constexpr bool update(std::uint64_t new_discard, view::rvec new_src, bool is_fin) {
                 if (
-                    // finish sending
-                    fin ||
-                    src.size() + discarded_offset > new_src.size() + new_discard ||
+                    // if finish sending,size mismatch is an error
+                    (fin ? (src.size() + discarded_offset != new_src.size() + new_discard)
+                         // otherwise smaller size is an error
+                         : (src.size() + discarded_offset > new_src.size() + new_discard)) ||
                     // check whether data before new_discard offset is already sent
                     new_discard > written_offset) {
                     return false;
                 }
                 src = new_src;
                 discarded_offset = new_discard;
-                fin = is_fin;
+                fin = fin || is_fin;
                 return true;
             }
 

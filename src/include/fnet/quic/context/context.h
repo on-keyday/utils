@@ -157,11 +157,13 @@ namespace utils {
                     mtu.on_transport_parameter_received(peer.max_udp_payload_size);
                 }
                 status.on_transport_parameter_received(peer.max_idle_timeout, peer.max_ack_delay, peer.ack_delay_exponent);
-                auto& local = params.local;
                 auto by_peer = trsparam::to_initial_limits(peer);
-                auto by_local = trsparam::to_initial_limits(local);
-                streams->apply_initial_limits(by_local, by_peer);
+                streams->apply_peer_initial_limits(by_peer);
                 datagrams.on_transport_parameter(peer.max_datagram_frame_size);
+                if (auto err = connIDs.issue_to_max()) {
+                    set_quic_runtime_error(std::move(err));
+                    return false;
+                }
                 transport_param_read = true;
                 logger.debug("apply transport parameter");
                 return true;
@@ -205,7 +207,7 @@ namespace utils {
                 }
 
                 if (summary.type != PacketType::ZeroRTT) {
-                    if (auto err = unacked.send(fw, pn_space)) {
+                    if (auto err = unacked.send(fw, pn_space, status.status_config())) {
                         set_quic_runtime_error(std::move(err));
                         return false;
                     }
@@ -389,8 +391,19 @@ namespace utils {
                 }
 
                 status.consume_packet_number(pn_space);
+                connIDs.on_packet_sent();
                 w = copy;  // restore
 
+                return true;
+            }
+
+            bool pickup_dstID(view::rvec& dstID) {
+                auto [id, err] = connIDs.pick_up_dstID(status.is_server(), status.handshake_status().handshake_complete(), params.local.active_connection_id_limit);
+                if (err) {
+                    set_quic_runtime_error(std::move(err));
+                    return false;
+                }
+                dstID = id;
                 return true;
             }
 
@@ -399,7 +412,9 @@ namespace utils {
                 packet::PacketSummary summary;
                 summary.type = PacketType::Initial;
                 summary.srcID = connIDs.pick_up_srcID();
-                summary.dstID = connIDs.pick_up_dstID(status.is_server());
+                if (!pickup_dstID(summary.dstID)) {
+                    return false;
+                }
                 if (status.has_received_retry()) {
                     summary.token = retry_token.get_token();
                 }
@@ -421,7 +436,9 @@ namespace utils {
                 packet::PacketSummary summary;
                 summary.type = PacketType::Handshake;
                 summary.srcID = connIDs.pick_up_srcID();
-                summary.dstID = connIDs.pick_up_dstID(status.is_server());
+                if (!pickup_dstID(summary.dstID)) {
+                    return false;
+                }
                 if (!write_packet(w, summary, mode, waiters)) {
                     return false;
                 }
@@ -436,7 +453,9 @@ namespace utils {
             bool write_onertt(io::writer& w, WriteMode mode, ack::ACKWaiters& waiters) {
                 packet::PacketSummary summary;
                 summary.type = PacketType::OneRTT;
-                summary.dstID = connIDs.pick_up_dstID(status.is_server());
+                if (!pickup_dstID(summary.dstID)) {
+                    return false;
+                }
                 if (!write_packet(w, summary, mode, waiters)) {
                     return false;
                 }
@@ -451,7 +470,9 @@ namespace utils {
                 packet::PacketSummary summary;
                 summary.type = PacketType::ZeroRTT;
                 summary.srcID = connIDs.pick_up_srcID();
-                summary.dstID = connIDs.pick_up_dstID(status.is_server());
+                if (!pickup_dstID(summary.dstID)) {
+                    return false;
+                }
                 if (!write_packet(w, summary, mode, waiters)) {
                     return false;
                 }
@@ -713,8 +734,7 @@ namespace utils {
                         }
                         if (status.is_server()) {
                             if (!connIDs.local_using_zero_length()) {
-                                if (auto id = connIDs.issue(src_connID_len, false); id.seq == -1) {
-                                    set_quic_runtime_error(error::Error("failed to generate connection ID"));
+                                if (!issue_seq0_connid()) {
                                     return false;
                                 }
                             }
@@ -817,7 +837,7 @@ namespace utils {
                 if (summary.type == PacketType::OneRTT && crypto.maybe_drop_handshake()) {
                     on_handshake_confirmed();
                 }
-                unacked.on_packet_processed(pn_space, summary.packet_number, pstatus.is_ack_eliciting);
+                unacked.on_packet_processed(pn_space, summary.packet_number, pstatus.is_ack_eliciting, status.status_config());
                 status.on_packet_processed(pn_space, summary.packet_number);
                 logger.loss_timer_state(status.loss_timer(), status.now());
                 return true;
@@ -858,6 +878,19 @@ namespace utils {
                 connIDs.on_retry_received(retry.srcID);
                 retry_token.on_retry_received(retry.retry_token);
                 crypto.install_initial_secret(version, retry.srcID);
+                return true;
+            }
+
+            bool issue_seq0_connid() {
+                auto [issued, err] = connIDs.issue(false);
+                if (err) {
+                    set_quic_runtime_error(std::move(err));
+                    return false;
+                }
+                if (issued.seq != 0) {
+                    set_quic_runtime_error(error::Error("failed to issue connection ID with sequence number 0. library bug!!"));
+                    return false;
+                }
                 return true;
             }
 
@@ -914,8 +947,13 @@ namespace utils {
 
             // thread unsafe call
             bool init(Config&& config, CongestionAlgorithm&& alg = CongestionAlgorithm{}, DatagramDrop&& dgdrop = DatagramDrop{}) {
+                // reset internal parameters
                 reset_internal();
                 closer.reset();
+
+                version = config.version;
+
+                // setup TLS
                 error::Error tmp_err;
                 tls::TLS tls;
                 std::tie(tls, tmp_err) = tls::create_quic_tls_with_error(config.tls_config, crypto::qtls_callback, &crypto);
@@ -923,31 +961,47 @@ namespace utils {
                     set_quic_runtime_error(std::move(tmp_err));
                     return false;
                 }
-                version = config.version;
                 crypto.reset(std::move(tls), config.server);
-                streams = stream::impl::make_conn<Lock>(config.server
-                                                            ? stream::Direction::server
-                                                            : stream::Direction::client);
+
+                // initialize connection status
                 status::InternalConfig internal;
                 static_cast<status::Config&>(internal) = config.internal_parameters;
-                internal.ack_delay_exponent = config.transport_parameters.ack_delay_exponent;
+                internal.local_ack_delay_exponent = config.transport_parameters.ack_delay_exponent;
                 internal.idle_timeout = config.transport_parameters.max_idle_timeout;
+                internal.local_max_ack_delay = config.transport_parameters.max_ack_delay;
                 mtu.reset(config.path_parameters);
                 status.reset(internal, std::move(alg), config.server, mtu.current_datagram_size());
-                params.local = std::move(config.transport_parameters);
-                params.local_box.boxing(params.local);
-                src_connID_len = config.connIDLen;
-                connIDs.reset(config.connIDLen == 0, std::move(config.random), std::move(config.exporter));
-                logger = std::move(config.logger);
-                retry_token.reset();
-                zero_rtt_token.reset(std::move(config.zero_rtt));
-                datagrams.reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(dgdrop));
                 if (!status.now().valid()) {
                     set_quic_runtime_error(QUICError{
                         .msg = "clock.now() returns invalid time. clock must be set",
                     });
                     return false;
                 }
+
+                // set transport parameters
+                params.local = std::move(config.transport_parameters);
+                params.local_box.boxing(params.local);
+                auto local = trsparam::to_initial_limits(params.local);
+
+                // create streams
+                streams = stream::impl::make_conn<Lock>(config.server
+                                                            ? stream::Direction::server
+                                                            : stream::Direction::client);
+                streams->apply_local_initial_limits(local);
+
+                // setup connection IDs manager
+                src_connID_len = config.connid_parameters.connid_len;
+                connIDs.reset(std::move(config.connid_parameters));
+                logger = std::move(config.logger);
+
+                // setup token storage
+                retry_token.reset();
+                zero_rtt_token.reset(std::move(config.zero_rtt));
+
+                // setup datagram handler
+                datagrams.reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(dgdrop));
+
+                // finalize initialization
                 closed.store(close::CloseReason::not_closed);
                 return true;
             }
@@ -961,13 +1015,12 @@ namespace utils {
                     return false;
                 }
                 status.on_handshake_start();
-                if (src_connID_len != 0) {
-                    auto issued = connIDs.issue(src_connID_len, false);
-                    if (issued.seq != 0) {
-                        set_quic_runtime_error(error::Error("failed to issue connection ID with sequence number 0. library bug!!"));
+                if (!connIDs.local_using_zero_length()) {
+                    if (!issue_seq0_connid()) {
                         return false;
                     }
-                    params.set_local(trsparam::make_transport_param(trsparam::DefinedID::initial_src_connection_id, issued.id));
+                    auto id = connIDs.choose_srcID(0);
+                    params.set_local(trsparam::make_transport_param(trsparam::DefinedID::initial_src_connection_id, id.id));
                 }
                 else {
                     params.set_local(trsparam::make_transport_param(trsparam::DefinedID::initial_src_connection_id, {}));
@@ -977,7 +1030,7 @@ namespace utils {
                     set_quic_runtime_error(error::Error("failed to generate client destination connection ID. library bug!!"));
                     return false;
                 }
-                if (!crypto.install_initial_secret(version, connIDs.pick_up_dstID(false))) {
+                if (!crypto.install_initial_secret(version, connIDs.get_initial())) {
                     return false;
                 }
                 if (!set_transport_parameter()) {
@@ -1036,6 +1089,7 @@ namespace utils {
             }
 
             // thread unsafe call
+            // returns (should_send)
             bool parse_udp_payload(view::wvec data) {
                 if (!closer.sent_packet().null()) {
                     closer.on_recv_after_close_sent();
@@ -1076,11 +1130,15 @@ namespace utils {
                 };
                 auto plain_err = [&](PacketType type, auto&& packet, view::wvec src, bool err, bool valid_type) {
                     logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure"));
-                    return false;
+                    return true;  // ignore error
                 };
-                return crypto::parse_with_decrypt<slib::vector>(
+                auto ok = crypto::parse_with_decrypt<slib::vector>(
                     data, crypto::authentication_tag_length, is_stateless_reset, get_dstID_len,
                     crypto_cb, decrypt_suite, plain_cb, decrypt_err, plain_err, check_connID_cb);
+                if (!ok) {
+                    return true;
+                }
+                return unacked.should_send_ack(status.status_config());
             }
         };
     }  // namespace fnet::quic::context

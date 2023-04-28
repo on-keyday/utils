@@ -24,6 +24,7 @@
 #include <fnet/http.h>
 #include <fstream>
 #include <file/gzip/gzip.h>
+#include <testutil/timer.h>
 using Context = utils::fnet::quic::context::Context<std::mutex>;
 using Config = utils::fnet::quic::context::Config;
 using QCTX = std::shared_ptr<Context>;
@@ -64,9 +65,12 @@ void thread(QCTX ctx, RecvChan c, int i) {
         }
         break;
     }
-    uni->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
-    uni->add_data("Accept-Encoding: gzip\r\n", false);
-    uni->add_data("\r\n", true);
+    auto res = uni->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
+    assert(res == utils::fnet::quic::IOResult::ok);
+    res = uni->add_data("Accept-Encoding: gzip\r\n", false);
+    assert(res == utils::fnet::quic::IOResult::ok);
+    res = uni->add_data("\r\n", true, true);
+    assert(res == utils::fnet::quic::IOResult::ok);
     while (!uni->is_closed()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         if (ctx->is_closed()) {
@@ -78,7 +82,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
     }
     auto sent_id = uni->id();
     utils::wrap::cout_wrap() << utils::wrap::packln("uni stream sent: ", i, "->", sent_id);
-    auto res = streams->remove(uni->id());
+    res = streams->remove(uni->id());
     assert(res == utils::fnet::quic::IOResult::ok);
     Recvs runi;
     while (!runi.s) {
@@ -93,10 +97,10 @@ void thread(QCTX ctx, RecvChan c, int i) {
             }
             return limit.curlimit();  // not update
         });
-        utils::byte data[1200];
+
         bool is_eos = false;
         while (true) {
-            auto [red, eos] = runi.r->read(data);
+            auto [red, eos] = runi.r->read_direct();
             is_eos = eos;
             if (red.size() == 0) {
                 break;
@@ -109,10 +113,11 @@ void thread(QCTX ctx, RecvChan c, int i) {
         if (is_eos) {
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     res = streams->remove(runi.s->id());
-    decref.execute();
+    // decref.execute();
+
     assert(res == utils::fnet::quic::IOResult::ok);
     utils::http::header::StatusCode code;
     std::unordered_multimap<std::string, std::string> resp;
@@ -201,12 +206,13 @@ void rtt_event(std::shared_ptr<void>&, const utils::fnet::quic::status::RTT& rtt
 }
 
 utils::fnet::quic::log::LogCallbacks cbs{
-    .debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
-    .sending_packet = log_packet,
-    .recv_packet = log_packet,
-    .loss_timer_state = record_timer,
-    .mtu_probe = [](std::shared_ptr<void>&, std::uint64_t size) { utils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
-    .rtt_state = rtt_event,
+    //.drop_packet = [](std::shared_ptr<void>&, utils::fnet::quic::PacketType, utils::fnet::quic::packetnum::Value, utils::fnet::error::Error err) { utils::wrap::cout_wrap() << utils::wrap::packln("drop packet: ", err.error<std::string>()); },
+    //.debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
+    //.sending_packet = log_packet,
+    //.recv_packet = log_packet,
+    //.loss_timer_state = record_timer,
+    //.mtu_probe = [](std::shared_ptr<void>&, std::uint64_t size) { utils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
+    // .rtt_state = rtt_event,
 };
 
 int main() {
@@ -227,7 +233,7 @@ int main() {
     config.tls_config = tls::configure();
     config.tls_config.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
     config.tls_config.set_alpn("\4test");
-    config.random = utils::fnet::quic::connid::Random{
+    config.connid_parameters.random = utils::fnet::quic::connid::Random{
         nullptr, [](std::shared_ptr<void>&, utils::view::wvec data) {
             std::random_device dev;
             std::uniform_int_distribution uni(0, 255);
@@ -248,7 +254,8 @@ int main() {
     config.transport_parameters.initial_max_data = 1000000;
     config.transport_parameters.initial_max_stream_data_uni = 100000;
     config.internal_parameters.ping_duration = 15000;
-    // config.logger.callbacks = &cbs;
+    config.internal_parameters.use_ack_delay = false;
+    config.logger.callbacks = &cbs;
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();
     assert(val);
@@ -258,7 +265,7 @@ int main() {
     streams->set_accept_uni(std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {}), [](std::shared_ptr<void>& p, RecvStream s) {
         auto w2 = static_cast<SendChan*>(p.get());
         auto data = std::make_shared<Reader>();
-        s->set_receiver(data, quic::stream::impl::recv_handler<std::mutex>);
+        s->set_receiver(data, quic::stream::impl::reader_recv_handler<std::mutex>);
         *w2 << Recvs{std::move(s), std::move(data)};
     });
     auto wait = resolve_address("localhost", "8090", sockattr_udp());
@@ -277,13 +284,14 @@ int main() {
         break;
     }
     assert(sock);
-    constexpr auto tasks = 12;
+    constexpr auto tasks = 11;
     for (auto i = 0; i < tasks; i++) {
         ref++;
         std::thread(thread, std::as_const(ctx), r, i).detach();
     }
     utils::view::rvec data;
     utils::byte buf[3000];
+    utils::test::Timer timer;
     while (true) {
         std::tie(data, val) = ctx->create_udp_payload();
         if (!val && ctx->is_closed()) {
@@ -306,7 +314,7 @@ int main() {
             if (err) {
                 break;
             }
-            if (!ctx->parse_udp_payload(d)) {
+            if (ctx->parse_udp_payload(d)) {
                 break;
             }
         }
@@ -324,4 +332,5 @@ int main() {
         });
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    utils::wrap::cout_wrap() << timer.delta();
 }

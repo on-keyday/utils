@@ -81,18 +81,30 @@ namespace utils {
                 return res;
             }
 
-            // called when initial limits updated
-            void apply_initial_limits(const InitialLimits& local, const InitialLimits& peer) {
-                control.base.set_initial_limits(local, peer);
+                  // called when initial limits updated
+            void apply_local_initial_limits(const InitialLimits& local) {
+                control.base.set_local_initial_limits(local);
                 auto apply = [&](const auto& lock, auto& m) {
                     for (auto& [id, s] : m) {
-                        s->apply_initial_limits();
+                        s->apply_local_initial_limits();
+                    }
+                };
+                apply(control.base.open_bidi_lock(), send_bidi);
+                apply(control.base.accept_bidi_lock(), recv_bidi);
+                apply(control.base.accept_uni_lock(), recv_uni);
+            }
+
+            // called when initial limits updated
+            void apply_peer_initial_limits(const InitialLimits& peer) {
+                control.base.set_peer_initial_limits(peer);
+                auto apply = [&](const auto& lock, auto& m) {
+                    for (auto& [id, s] : m) {
+                        s->apply_peer_initial_limits();
                     }
                 };
                 apply(control.base.open_bidi_lock(), send_bidi);
                 apply(control.base.open_uni_lock(), send_uni);
                 apply(control.base.accept_bidi_lock(), recv_bidi);
-                apply(control.base.accept_uni_lock(), recv_uni);
             }
 
             std::shared_ptr<SendUniStream<Lock>> open_uni() {

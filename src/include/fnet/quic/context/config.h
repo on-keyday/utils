@@ -10,8 +10,7 @@
 #include "../version.h"
 #include "../../tls/config.h"
 #include "../log/log.h"
-#include "../connid/random.h"
-#include "../connid/exporter.h"
+#include "../connid/config.h"
 #include "../transport_parameter/defined_param.h"
 #include "../path/config.h"
 #include "../dgram/config.h"
@@ -28,9 +27,7 @@ namespace utils {
             path::Config path_parameters;
             trsparam::DefinedTransportParams transport_parameters;
             log::Logger logger;
-            connid::Random random;
-            byte connIDLen = 8;
-            connid::Exporter exporter;
+            connid::Config connid_parameters;
             datagram::Config datagram_parameters;
             token::ZeroRTTStorage zero_rtt;
         };

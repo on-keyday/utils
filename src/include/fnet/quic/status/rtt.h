@@ -20,7 +20,7 @@ namespace utils {
             time::time_t min_rtt = 0;
             time::time_t smoothed_rtt_ = -1;
             time::time_t rttvar_ = -1;
-            time::time_t max_ack_delay_ = time::invalid;
+            time::time_t peer_max_ack_delay_ = time::invalid;
             time::Time first_ack_sample_ = 0;
 
            public:
@@ -37,7 +37,7 @@ namespace utils {
                 min_rtt = 0;
                 smoothed_rtt_ = config.clock.to_clock_granurarity(config.initial_rtt);
                 rttvar_ = smoothed_rtt_ >> 1;  // smoothed_rtt / 2
-                max_ack_delay_ = time::invalid;
+                peer_max_ack_delay_ = time::invalid;
                 first_ack_sample_ = 0;
                 return true;
             }
@@ -63,8 +63,8 @@ namespace utils {
                     first_ack_sample_ = config.clock.now();
                 }
                 else {
-                    if (max_ack_delay_ >= 0) {
-                        ack_delay = min_(ack_delay, time::utime_t(max_ack_delay_));
+                    if (peer_max_ack_delay_ >= 0) {
+                        ack_delay = min_(ack_delay, time::utime_t(peer_max_ack_delay_));
                     }
                     auto adjusted_rtt = latest_rtt_;
                     if (latest_rtt_ >= min_rtt + ack_delay) {
@@ -92,11 +92,11 @@ namespace utils {
             }
 
             constexpr void apply_max_ack_delay(std::uint64_t time) {
-                max_ack_delay_ = time;
+                peer_max_ack_delay_ = time;
             }
 
             constexpr time::time_t max_ack_delay() const {
-                return max_ack_delay_;
+                return peer_max_ack_delay_;
             }
         };
 

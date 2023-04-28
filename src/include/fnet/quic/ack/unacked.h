@@ -22,6 +22,8 @@ namespace utils {
            private:
             slib::vector<packetnum::Value> unacked_packets[3]{};
             ACKRangeVec buffer;
+            time::Time last_recv = time::invalid;
+            time::Timer ack_delay;
 
             constexpr bool generate_ragnes_from_received(status::PacketNumberSpace space) {
                 buffer.clear();
@@ -56,21 +58,46 @@ namespace utils {
            public:
             void on_ack_sent(status::PacketNumberSpace space) {
                 unacked_packets[space_to_index(space)].clear();
+                ack_delay.cancel();
+                last_recv = time::invalid;
             }
 
-            void on_packet_processed(status::PacketNumberSpace space, packetnum::Value val, bool is_ack_eliciting) {
+            size_t ack_eliciting_packet_since_last_ack() const {
+                return unacked_packets[0].size() +
+                       unacked_packets[1].size() +
+                       unacked_packets[2].size();
+            }
+
+            void on_packet_processed(status::PacketNumberSpace space, packetnum::Value val, bool is_ack_eliciting,
+                                     const status::InternalConfig& config) {
                 if (is_ack_eliciting) {
                     unacked_packets[space_to_index(space)].push_back(val);
+                    if (space == status::PacketNumberSpace::application &&
+                        ack_delay.not_working() && ack_eliciting_packet_since_last_ack() < config.delay_ack_packet_count) {
+                        last_recv = config.clock.now();
+                        auto delay = last_recv + config.clock.to_clock_granurarity(config.local_max_ack_delay);
+                        ack_delay.set_deadline(delay);
+                    }
                 }
             }
 
-            error::Error send(frame::fwriter& w, status::PacketNumberSpace space) {
+            bool should_send_ack(const status::InternalConfig& config) const {
+                return config.use_ack_delay &&
+                       (ack_delay.timeout(config.clock) ||
+                        ack_eliciting_packet_since_last_ack() >= config.delay_ack_packet_count);
+            }
+
+            error::Error send(frame::fwriter& w, status::PacketNumberSpace space, const status::InternalConfig& config) {
                 if (!generate_ragnes_from_received(space)) {
                     return error::none;
                 }
                 auto [ack, ok] = frame::convert_to_ACKFrame<slib::vector>(buffer);
                 if (!ok) {
                     return error::Error("generate ack range failed. library bug!!");
+                }
+                if (space == status::PacketNumberSpace::application && !ack_delay.not_working()) {
+                    auto delay = config.clock.now() - last_recv;
+                    ack.ack_delay = frame::encode_ack_delay(delay, config.local_ack_delay_exponent);
                 }
                 if (w.remain().size() < ack.len()) {
                     return error::none;  // wait next chance

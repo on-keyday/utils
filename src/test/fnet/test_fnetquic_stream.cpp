@@ -67,9 +67,11 @@ int main() {
     auto peer = test::gen_peer_limits();
     auto local = test::gen_local_limits();
     auto conn_local = test::impl::make_conn<std::mutex>(test::stream::Direction::client);
-    conn_local->apply_initial_limits(local, peer);
+    conn_local->apply_peer_initial_limits(peer);
+    conn_local->apply_local_initial_limits(local);
     auto conn_peer = test::impl::make_conn<std::mutex>(test::stream::Direction::server);
-    conn_peer->apply_initial_limits(peer, local);
+    conn_peer->apply_local_initial_limits(peer);
+    conn_peer->apply_peer_initial_limits(local);
     auto stream_1 = conn_local->open_bidi();
     assert(stream_1 && stream_1->sender.id() == 2);
     stream_1->sender.add_data("Hello peer!", false);
@@ -84,7 +86,7 @@ int main() {
     conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<std::mutex>> d) {
         auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
         d->receiver.set_receiver(recv,
-                                 utils::fnet::quic::stream::impl::recv_handler<std::mutex>);
+                                 utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex>);
         static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
     });
 

@@ -154,6 +154,7 @@ namespace utils {
                         }
                         std::tie(suite.keyiv, err) = next_wsecret.keyiv(version);
                         phase = key_phase + 1;
+                        break;
                     default:
                         return {{}, error::Error("invalid key mode for encryption suite")};
                 }
@@ -192,6 +193,7 @@ namespace utils {
                         }
                         std::tie(suite.keyiv, err) = next_rsecret.keyiv(version);
                         phase = key_phase + 1;
+                        break;
                     default:
                         return {{}, error::Error("invalid key mode for encryption suite")};
                 }

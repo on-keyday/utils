@@ -10,6 +10,11 @@
 
 namespace utils {
     namespace io {
+        template <class T>
+        concept has_resize = requires(T t) {
+            { t.resize(size_t{}) };
+        };
+
         template <class T, class C, class U>
         struct basic_expand_writer {
            private:
@@ -27,9 +32,12 @@ namespace utils {
                 return w;
             }
 
+            // resize if buf.resize is enabled
             constexpr void resize(size_t size) {
-                buf.resize(size);
-                w.reset(buf, w.offset());
+                if constexpr (has_resize<T>) {
+                    buf.resize(size);
+                    w.reset(buf, w.offset());
+                }
             }
 
             constexpr void expand(size_t delta) {

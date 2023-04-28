@@ -6,14 +6,14 @@
 */
 
 #pragma once
-#include "../file/gzip/huffman.h"
-#include "../io/reader.h"
-#include "../io/term.h"
-#include "../number/parse.h"
+#include "../../file/gzip/huffman.h"
+#include "../../io/reader.h"
+#include "../../io/term.h"
+#include "../../number/parse.h"
 
 namespace utils {
     namespace hpack {
-        namespace internal {
+        namespace huffman {
             // see https://datatracker.ietf.org/doc/html/rfc7541
             // Appendix B.  Huffman Code
             constexpr byte rfc_text[] = R"(
@@ -276,7 +276,7 @@ namespace utils {
    EOS (256)  |11111111|11111111|11111111|111111      3fffffff  [30]
 )";
 
-            constexpr bool read_line(io::reader& r, file::gzip::huffman::Code& result) {
+            constexpr bool read_table_line(io::reader& r, file::gzip::huffman::Code& result) {
                 auto [line, ok1] = io::read_terminated(r, '\n');
                 if (!ok1) {
                     return false;
@@ -327,7 +327,7 @@ namespace utils {
                 r.offset(1);
                 size_t i = 0;
                 for (; !r.empty(); i++) {
-                    if (!read_line(r, l.codes[i])) {
+                    if (!read_table_line(r, l.codes[i])) {
                         throw "";
                     }
                 }
@@ -364,7 +364,7 @@ namespace utils {
                     size_t i = 0;
                     for (; !r.empty(); i++) {
                         file::gzip::huffman::Code code;
-                        if (!read_line(r, code)) {
+                        if (!read_table_line(r, code)) {
                             return i;
                         }
                     }
@@ -375,6 +375,6 @@ namespace utils {
 
                 static_assert(i == 257);
             }  // namespace test
-        }      // namespace internal
+        }      // namespace huffman
     }          // namespace hpack
 }  // namespace utils

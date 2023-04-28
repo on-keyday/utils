@@ -15,7 +15,7 @@
 #include <fnet/dll/glheap.h>
 #include <fnet/http2/h2frame.h>
 #include <fnet/http2/h2state.h>
-#include <net_util/hpack.h>
+#include <net_util/hpack/hpack.h>
 #include <functional>
 #include <string_view>
 #include <optional>

@@ -23,6 +23,8 @@ namespace utils {
 
             std::uint64_t packet_order_threshold = default_packet_threshold;
             Ratio time_threshold = default_time_threshold;
+            std::uint64_t delay_ack_packet_count = 2;
+            bool use_ack_delay = true;
 
             Ratio pacer_N = default_pacer_N;
 
@@ -41,7 +43,9 @@ namespace utils {
         struct InternalConfig : Config {
             // milliseconds
             time::utime_t idle_timeout = 0;
-            std::uint64_t ack_delay_exponent = default_ack_delay_exponent;
+            std::uint64_t local_ack_delay_exponent = default_ack_delay_exponent;
+            // milliseconds
+            std::uint64_t local_max_ack_delay = 0;
         };
 
         struct PayloadSize {

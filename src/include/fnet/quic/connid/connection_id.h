@@ -19,6 +19,7 @@
 #include "../packet/stateless_reset.h"
 #include "../frame/writer.h"
 #include "exporter.h"
+#include "config.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -137,18 +138,20 @@ namespace utils {
             std::int64_t most_min_seq = -1;
             slib::hash_map<std::int64_t, IDStorage> srcids;
             slib::list<IDWait> waitlist;
-            bool use_zero_length = false;
             std::uint64_t max_active_conn_id = default_max_active_conn_id;
+            byte connID_len = 0;
+            byte concurrent_limit = 0;
             Exporter exporter;
 
            public:
-            void reset(bool use_zero_length, Exporter&& exp) {
+            void reset(Exporter&& exp, byte conn_id_len, byte conc_limit) {
                 srcids.clear();
                 waitlist.clear();
                 max_active_conn_id = default_max_active_conn_id;
                 issued_seq = -1;
                 most_min_seq = -1;
-                use_zero_length = use_zero_length;
+                connID_len = conn_id_len;
+                concurrent_limit = conc_limit;
                 exporter = std::move(exp);
             }
 
@@ -157,26 +160,29 @@ namespace utils {
             }
 
             constexpr bool is_using_zero_length() const {
-                return use_zero_length;
+                return connID_len == 0;
             }
 
-            ConnID issue(size_t len, Random& random, bool enque_wait) {
-                if (use_zero_length) {
-                    return {};
+            std::pair<ConnID, error::Error> issue(Random& random, bool enque_wait) {
+                if (connID_len == 0) {
+                    return {{}, error::Error("using zero length")};
                 }
-                if (len == 0 || !random.valid()) {
-                    return {};
+                if (!random.valid()) {
+                    return {{}, error::Error("invalid random")};
+                }
+                if (srcids.size() >= max_active_conn_id) {
+                    return {{}, error::Error("id generation limit")};
                 }
                 IDStorage id;
-                id.id = make_storage(len);
+                id.id = make_storage(connID_len);
                 if (id.id.null()) {
-                    return {};
+                    return {{}, error::memory_exhausted};
                 }
                 if (!random.gen_random(id.id)) {
-                    return {};
+                    return {{}, error::Error("gen_random failed")};
                 }
                 if (!random.gen_random(id.stateless_reset_token)) {
-                    return {};
+                    return {{}, error::Error("gen_random failed")};
                 }
                 id.seq = issued_seq + 1;
                 auto& new_issued = srcids[id.seq];
@@ -192,7 +198,7 @@ namespace utils {
                     waitlist.push_back({new_issued.seq});
                 }
                 exporter.add(new_issued.id);
-                return new_issued.to_ConnID();
+                return {new_issued.to_ConnID(), error::none};
             }
 
             bool send(frame::fwriter& fw, auto&& observer_vec) {
@@ -245,8 +251,8 @@ namespace utils {
                 return true;
             }
 
-            error::Error retire(view::rvec recv_dest_id, const frame::RetireConnectionIDFrame& retire) {
-                if (use_zero_length) {
+            error::Error retire(Random& random, view::rvec recv_dest_id, const frame::RetireConnectionIDFrame& retire) {
+                if (is_using_zero_length()) {
                     return QUICError{
                         .msg = "recv RetireConnectionID frame when using zero length connection ID",
                         .transport_error = TransportError::CONNECTION_ID_LIMIT_ERROR,
@@ -274,6 +280,11 @@ namespace utils {
                 exporter.retire(to_retire.id);
                 if (!srcids.erase(retire.sequence_number)) {
                     return QUICError{.msg = "failed to delete connection id. library bug!!"};
+                }
+                if (to_retire.seq != 0) {
+                    if (auto [_, err] = issue(random, true); err) {
+                        return err;
+                    }
                 }
                 if (most_min_seq == retire.sequence_number) {
                     most_min_seq = -1;
@@ -311,7 +322,7 @@ namespace utils {
 
             auto get_onertt_dstID_len_callback() {
                 return [this](io::reader r, size_t* len) {
-                    if (use_zero_length) {
+                    if (this->is_using_zero_length()) {
                         *len = 0;
                         return true;
                     }
@@ -326,6 +337,17 @@ namespace utils {
                     return false;
                 };
             }
+
+            error::Error issue_ids_to_max_connid_limit(Random& random) {
+                auto to_issue = max_active_conn_id < concurrent_limit ? max_active_conn_id : concurrent_limit;
+                for (auto i = srcids.size(); i < to_issue; i++) {
+                    auto [_, err] = issue(random, true);
+                    if (err) {
+                        return err;
+                    }
+                }
+                return error::none;
+            }
         };
 
         struct RetireWait {
@@ -335,13 +357,18 @@ namespace utils {
 
         struct IDAcceptor {
            private:
+            ConnIDChangeMode change_mode = ConnIDChangeMode::none;
             bool use_zero_length = false;
+            std::uint32_t max_packet_per_id = 0;
             slib::hash_map<std::int64_t, IDStorage> dstids;
             slib::list<RetireWait> waitlist;
 
             std::int64_t highest_accepted = -1;
             std::int64_t active_connid = -1;
             std::int64_t highest_retired = -1;
+
+            std::uint32_t packet_count_since_id_changed = 0;
+            std::uint32_t packet_per_id = 0;
 
             void retire_under(std::int64_t border) {
                 if (border <= highest_retired) {
@@ -353,34 +380,63 @@ namespace utils {
                 highest_retired = border - 1;
             }
 
-            void update_active() {
+            error::Error update_active(Random& rand) {
+                if (dstids.size() < 2 && active_connid != -1) {
+                    return error::none;
+                }
+                if (active_connid != -1) {
+                    if (!retire(active_connid)) {
+                        return QUICError{
+                            .msg = "failed to retire active connection id. unexpected error.",
+                        };
+                    }
+                }
                 for (std::int64_t i = active_connid + 1; i <= highest_accepted; i++) {
                     if (auto selected = choose(i); selected.seq == i) {
                         active_connid = i;
-                        break;
+                        packet_count_since_id_changed = 0;
+                        if (change_mode == ConnIDChangeMode::random) {
+                            byte d[4]{};
+                            rand.gen_random(d);
+                            io::reader r{d};
+                            std::uint32_t v = 0;
+                            io::read_num(r, v);
+                            packet_per_id = v % max_packet_per_id;
+                        }
+                        return error::none;
                     }
                 }
+                return QUICError{
+                    .msg = "no connection id available",
+                };
             }
 
            public:
-            void reset() {
+            void reset(std::uint32_t p_per_id, std::uint32_t max_p_per_id, ConnIDChangeMode mode) {
                 dstids.clear();
                 waitlist.clear();
                 highest_accepted = -1;
                 active_connid = -1;
                 highest_retired = -1;
                 use_zero_length = false;
+                packet_count_since_id_changed = 0;
+                packet_per_id = p_per_id;
+                max_packet_per_id = max_p_per_id;
+                if (change_mode == ConnIDChangeMode::random && max_p_per_id == 0) {
+                    max_p_per_id = 10000;
+                }
+                change_mode = mode;
             }
 
-            error::Error recv(Version version, const frame::NewConnectionIDFrame& new_conn) {
-                return accept(version, new_conn.sequence_number, new_conn.retire_proior_to, new_conn.connectionID, new_conn.stateless_reset_token);
+            error::Error recv(Version version, Random& rand, const frame::NewConnectionIDFrame& new_conn) {
+                return accept(version, rand, new_conn.sequence_number, new_conn.retire_proior_to, new_conn.connectionID, new_conn.stateless_reset_token);
             }
 
             void on_zero_length_acception() {
                 use_zero_length = true;
             }
 
-            error::Error accept(Version version, std::int64_t sequence_number, std::int64_t retire_proior_to, view::rvec connectionID, const StatelessResetToken& stateless_reset_token) {
+            error::Error accept(Version version, Random& rand, std::int64_t sequence_number, std::int64_t retire_proior_to, view::rvec connectionID, const StatelessResetToken& stateless_reset_token) {
                 if (use_zero_length) {
                     return QUICError{
                         .msg = "recv NewConnectionID frame when using zero length connection ID",
@@ -439,7 +495,9 @@ namespace utils {
                     highest_accepted = id.seq;
                 }
                 if (active_connid < retire_proior_to) {
-                    update_active();
+                    if (auto err = update_active(rand)) {
+                        return err;
+                    }
                 }
                 return error::none;
             }
@@ -460,14 +518,27 @@ namespace utils {
             }
 
            public:
+            error::Error maybe_update_id(Random& rand, bool handshake_complete, std::uint64_t local_max_active_conn) {
+                if (!handshake_complete) {
+                    return error::none;
+                }
+                if (dstids.size() && active_connid == 0 ||
+                    (change_mode != ConnIDChangeMode::none &&
+                     dstids.size() << 1 >= local_max_active_conn &&
+                     packet_count_since_id_changed >= packet_per_id)) {
+                    return update_active(rand);
+                }
+                return error::none;
+            }
+
             void on_initial_stateless_reset_token_received(const StatelessResetToken& token) {
                 if (auto dir = direct_choose(0)) {
                     view::copy(dir->stateless_reset_token, token);
                 }
             }
 
-            error::Error on_preferred_address_received(Version version, view::rvec connectionID, const StatelessResetToken& token) {
-                return accept(version, 1, -1, connectionID, token);
+            error::Error on_preferred_address_received(Version version, Random& rand, view::rvec connectionID, const StatelessResetToken& token) {
+                return accept(version, rand, 1, -1, connectionID, token);
             }
 
             bool initial_conn_id_accepted() const {
@@ -556,6 +627,10 @@ namespace utils {
 
             constexpr bool is_using_zero_length() const {
                 return use_zero_length;
+            }
+
+            constexpr void on_packet_sent() {
+                packet_count_since_id_changed++;
             }
         };
 

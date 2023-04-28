@@ -169,10 +169,7 @@ namespace utils {
                 }
             }
 
-           public:
-            // returns (data,eos)
-            std::pair<view::wvec, bool> read(view::wvec data) {
-                const auto unlock = lock();
+            std::pair<view::wvec, bool> read_impl(view::wvec data) {
                 if (rst) {
                     return {{}, true};
                 }
@@ -203,10 +200,62 @@ namespace utils {
                 }
                 return {data.substr(0, i), sorted.size() == 0 && done};
             }
+
+           public:
+            // returns (data,eos)
+            std::pair<view::wvec, bool> read(view::wvec data, bool use_try_lock = false) {
+                if (use_try_lock) {
+                    if (!locker.try_lock()) {
+                        return {{}, false};
+                    }
+                    auto unlock = helper::defer([&] {
+                        locker.unlock();
+                    });
+                    return read_impl(data);
+                }
+                else {
+                    auto unlock = lock();
+                    return read_impl(data);
+                }
+            }
+
+           private:
+            std::pair<flex_storage, bool> read_direct_impl() {
+                if (rst) {
+                    return {{}, true};
+                }
+                if (sorted.size() == 0) {
+                    return {{}, done};
+                }
+                if (sorted.front().offset != read_pos) {
+                    return {{}, done};
+                }
+                auto data = std::move(sorted.front());
+                read_pos += data.data.size();
+                sorted.pop_front();
+                return {std::move(data.data), sorted.size() == 0 && done};
+            }
+
+           public:
+            std::pair<flex_storage, bool> read_direct(bool use_try_lock = false) {
+                if (use_try_lock) {
+                    if (!locker.try_lock()) {
+                        return {{}, false};
+                    }
+                    auto unlock = helper::defer([&] {
+                        locker.unlock();
+                    });
+                    return read_direct_impl();
+                }
+                else {
+                    auto unlock = lock();
+                    return read_direct_impl();
+                }
+            }
         };
 
         template <class Locker>
-        inline std::pair<bool, error::Error> recv_handler(std::shared_ptr<void>& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
+        inline std::pair<bool, error::Error> reader_recv_handler(std::shared_ptr<void>& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
             if (!arg) {
                 return {false, error::Error("unexpected arg")};
             }
