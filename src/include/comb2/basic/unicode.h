@@ -63,6 +63,10 @@ namespace utils::comb2 {
                 }
                 return Status::match;
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect unicode literal ", literal, " but not");
+            }
         };
 
         template <class Lit>
@@ -115,6 +119,10 @@ namespace utils::comb2 {
                 }
                 return Status::not_match;
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect one of unicode ", literal, " but not");
+            }
         };
 
         template <class LitA, class LitB>
@@ -142,6 +150,10 @@ namespace utils::comb2 {
                 }
                 return Status::match;
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect unicode range [", lita, "-", litb, "] but not");
+            }
         };
 
         struct UnicodeAnyLiteral {
@@ -158,6 +170,10 @@ namespace utils::comb2 {
                     return Status::not_match;
                 }
                 return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect any unicode character but not");
             }
         };
     }  // namespace types

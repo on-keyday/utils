@@ -11,6 +11,7 @@
 #include "../internal/opti.h"
 #include "../internal/context_fn.h"
 #include "../../core/sequencer.h"
+#include "../cbtype.h"
 
 namespace utils::comb2 {
     namespace types {
@@ -26,6 +27,11 @@ namespace utils::comb2 {
                 }
                 return this->useB()(seq, ctx, r);
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+                ctxs::context_call_must_match_error(ctx, this->useB(), rec);
+            }
         };
 
         template <class A, class B>
@@ -33,29 +39,34 @@ namespace utils::comb2 {
             using opti::MaybeEmptyAB<A, B>::MaybeEmptyAB;
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                ctxs::context_branch(ctx);
+                ctxs::context_logic_entry(ctx, CallbackType::branch_entry);
                 const auto ptr = seq.rptr;
                 Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
                     return res;
                 }
                 if (res == Status::match) {
-                    ctxs::context_commit(ctx);
+                    ctxs::context_logic_result(ctx, CallbackType::branch_result, Status::match);
                     return Status::match;
                 }
-                ctxs::context_rollback(ctx);
-                ctxs::context_branch(ctx);
+                ctxs::context_logic_result(ctx, CallbackType::branch_other, Status::not_match);
+                ctxs::context_logic_entry(ctx, CallbackType::branch_other);
                 seq.rptr = ptr;
                 const auto res2 = this->useB()(seq, ctx, r);
                 if (res2 == Status::fatal) {
                     return res2;
                 }
                 if (res2 == Status::match) {
-                    ctxs::context_commit(ctx);
+                    ctxs::context_logic_result(ctx, CallbackType::branch_result, Status::match);
                     return Status::match;
                 }
-                ctxs::context_rollback(ctx);
+                ctxs::context_logic_result(ctx, CallbackType::branch_result, Status::not_match);
                 return Status::not_match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+                ctxs::context_call_must_match_error(ctx, this->useB(), rec);
             }
         };
 
@@ -65,20 +76,21 @@ namespace utils::comb2 {
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                ctxs::context_optional(ctx);
+                ctxs::context_logic_entry(ctx, CallbackType::optional_entry);
                 const auto ptr = seq.rptr;
                 const Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
                     return res;
                 }
-                if (res == Status::match) {
-                    ctxs::context_commit(ctx);
-                }
-                else {
-                    ctxs::context_rollback(ctx);
+                ctxs::context_logic_result(ctx, CallbackType::optional_result, res);
+                if (res == Status::not_match) {
                     seq.rptr = ptr;
                 }
                 return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
 
@@ -89,7 +101,7 @@ namespace utils::comb2 {
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                ctxs::context_repeat(ctx);
+                ctxs::context_logic_entry(ctx, CallbackType::repeat_entry);
                 bool first = true;
                 for (;;) {
                     const auto ptr = seq.rptr;
@@ -106,16 +118,16 @@ namespace utils::comb2 {
                         ctxs::context_error(ctx, "detect infinity loop at ", seq.rptr);
                         return Status::fatal;
                     }
-                    ctxs::context_step(ctx);
+                    ctxs::context_logic_result(ctx, CallbackType::repeat_step, Status::match);
+                    ctxs::context_logic_entry(ctx, CallbackType::repeat_step);
                     first = false;
                 }
-                if (first) {
-                    ctxs::context_rollback(ctx);
-                }
-                else {
-                    ctxs::context_commit(ctx);
-                }
+                ctxs::context_logic_result(ctx, CallbackType::repeat_result, first ? Status::not_match : Status::match);
                 return first ? Status::not_match : Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
 
@@ -132,7 +144,7 @@ namespace utils::comb2 {
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                ctxs::context_repeat(ctx);
+                ctxs::context_logic_entry(ctx, CallbackType::repeat_entry);
                 size_t i = 0;
                 for (; i < max_; i++) {
                     const auto ptr = seq.rptr;
@@ -149,15 +161,14 @@ namespace utils::comb2 {
                         ctxs::context_error(ctx, "detect infinity loop at ", seq.rptr);
                         return Status::fatal;
                     }
-                    ctxs::context_step(ctx);
+                    ctxs::context_logic_entry(ctx, CallbackType::repeat_step);
                 }
-                if (i < min_) {
-                    ctxs::context_rollback(ctx);
-                }
-                else {
-                    ctxs::context_commit(ctx);
-                }
+                ctxs::context_logic_result(ctx, CallbackType::repeat_result, i < min_ ? Status::not_match : Status::match);
                 return i < min_ ? Status::not_match : Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
 
@@ -165,16 +176,20 @@ namespace utils::comb2 {
         struct MustMatch : opti::MaybeEmptyA<A> {
             using opti::MaybeEmptyA<A>::MaybeEmptyA;
             template <class T, class Ctx, class Rec>
-            constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                const Status res = this->useA()(seq, ctx, r);
+            constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& rec) const {
+                const Status res = this->useA()(seq, ctx, rec);
                 if (res == Status::fatal) {
                     return res;
                 }
                 if (res == Status::not_match) {
-                    ctxs::context_error(ctx, "not matched on must match");
+                    ctxs::context_call_must_match_error(ctx, this->useA(), rec);
                     return Status::fatal;
                 }
                 return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
     }  // namespace types

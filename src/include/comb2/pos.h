@@ -12,5 +12,9 @@ namespace utils::comb2 {
     struct Pos {
         std::size_t begin = 0;
         std::size_t end = 0;
+
+        constexpr size_t len() const {
+            return end - begin;
+        }
     };
 }  // namespace utils::comb2

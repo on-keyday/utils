@@ -9,27 +9,37 @@
 #include "../internal/opti.h"
 #include "../../core/sequencer.h"
 #include "../status.h"
+#include "../internal/context_fn.h"
 
 namespace utils::comb2 {
     namespace types {
 
-        template <class A>
-        struct Proxy : opti::MaybeEmptyA<A> {
-            using opti::MaybeEmptyA<A>::MaybeEmptyA;
+        struct MustMatchErrorFn {
+            constexpr void operator()(auto&& ctx, auto&& rec) const {}
+        };
+
+        template <class A, class B>
+        struct Proxy : opti::MaybeEmptyAB<A, B> {
+            using opti::MaybeEmptyAB<A, B>::MaybeEmptyAB;
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
                 return this->useA()(seq, ctx, r);
+            }
+
+            constexpr auto must_match_error(auto&& ctx, auto&& rec) const {
+                this->useB()(ctx, rec);
             }
         };
 
     }  // namespace types
 
     namespace ops {
-        template <class Fn>
-        constexpr auto proxy(Fn&& fn) {
-            return types::Proxy<std::decay_t<Fn>>{
+        template <class Fn, class MustMatchError = types::MustMatchErrorFn>
+        constexpr auto proxy(Fn&& fn, MustMatchError&& err = MustMatchError()) {
+            return types::Proxy<std::decay_t<Fn>, std::decay_t<MustMatchError>>{
                 std::forward<Fn>(fn),
+                std::forward<MustMatchError>(err),
             };
         }
         /*
@@ -43,6 +53,8 @@ namespace utils::comb2 {
         }()
         */
 
-#define method_proxy(method) proxy([](auto&& seq, auto&& ctx, auto&& rec) -> Status { return rec.method(seq, ctx, rec); })
+#define method_proxy(method)                                                                                      \
+    proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::utils::comb2::Status { return rec.method(seq, ctx, rec); }, \
+          [](auto&& ctx, auto&& rec) { ::utils::comb2::ctxs::context_call_must_match_error(ctx, rec.method, rec); })
     }  // namespace ops
 }  // namespace utils::comb2

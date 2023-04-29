@@ -7,6 +7,7 @@
 
 #pragma once
 #include "../pos.h"
+#include "../cbtype.h"
 
 namespace utils::comb2 {
     namespace ctxs {
@@ -16,7 +17,7 @@ namespace utils::comb2 {
                     };
 #define CALL_IF(method, ...)                                                            \
     if constexpr (has_##method<decltype(ctx) __VA_OPT__(, decltype(__VA_ARGS__)...)>) { \
-        ctx.repeat();                                                                   \
+        ctx.method(__VA_ARGS__);                                                        \
     }
 
 #define DEF(method, ...)                          \
@@ -24,41 +25,60 @@ namespace utils::comb2 {
     constexpr auto context_##method(auto&& ctx) { \
         CALL_IF(method);                          \
     }
-        DEF(repeat);
 
-        DEF(step);
+        HAS(logic_entry);
 
-        DEF(branch);
+        constexpr auto context_logic_entry(auto&& ctx, CallbackType type) {
+            if constexpr (has_logic_entry<decltype(ctx), CallbackType>) {
+                ctx.logic_entry(type);
+            }
+        }
 
-        DEF(optional);
+        HAS(logic_result)
 
-        DEF(commit);
-
-        DEF(rollback);
+        constexpr auto context_logic_result(auto&& ctx, CallbackType type, Status status) {
+            if constexpr (has_logic_result<decltype(ctx), CallbackType, Status>) {
+                ctx.logic_result(type, status);
+            }
+        }
 
         HAS(error)
 
         constexpr auto context_error(auto&& ctx, auto&&... arg) {
-            CALL_IF(error, arg);
-        }
-
-        DEF(peek);
-
-        HAS(end_string)
-
-        constexpr auto context_end_string(auto&& ctx, auto&& tag, auto&& seq, Pos pos) {
-            if constexpr (has_end_string<decltype(ctx), decltype(tag), decltype(seq), Pos>) {
-                ctx.end_string(tag, seq, pos);
+            if constexpr (has_error<decltype(ctx), decltype(arg)...>) {
+                ctx.error(arg...);
             }
         }
 
-        DEF(begin_string);
+        HAS(end_string)
 
-        HAS(group)
+        constexpr auto context_end_string(auto&& ctx, Status res, auto&& tag, auto&& seq, Pos pos) {
+            if constexpr (has_end_string<decltype(ctx), Status, decltype(tag), decltype(seq), Pos>) {
+                ctx.end_string(res, tag, seq, pos);
+            }
+        }
 
-        constexpr auto context_group(auto&& ctx, auto&& tag) {
-            if constexpr (has_group<decltype(ctx), decltype(tag)>) {
-                ctx.group(tag);
+        HAS(begin_string);
+
+        constexpr auto context_begin_string(auto&& ctx, auto&& tag) {
+            if constexpr (has_begin_string<decltype(ctx), decltype(tag)>) {
+                ctx.begin_string(tag);
+            }
+        }
+
+        HAS(begin_group)
+
+        constexpr auto context_begin_group(auto&& ctx, auto&& tag) {
+            if constexpr (has_begin_group<decltype(ctx), decltype(tag)>) {
+                ctx.begin_group(tag);
+            }
+        }
+
+        HAS(end_group)
+
+        constexpr auto context_end_group(auto&& ctx, Status res, auto&& tag, Pos pos) {
+            if constexpr (has_end_group<decltype(ctx), decltype(tag), Pos>) {
+                ctx.end_group(res, tag, pos);
             }
         }
 
@@ -84,14 +104,14 @@ namespace utils::comb2 {
             }
         }
 
-        template <class T>
-        concept impl_required =
-            has_repeat<T> &&
-            has_step<T> &&
-            has_optional<T> &&
-            has_branch<T> &&
-            has_commit<T> &&
-            has_rollback<T>;
+        HAS(must_match_error)
+
+        constexpr auto context_call_must_match_error(auto&& ctx, auto&& target, auto&& rec) {
+            if constexpr (has_must_match_error<decltype(target), decltype(ctx), decltype(rec)>) {
+                target.must_match_error(ctx, rec);
+            }
+        }
+
     }  // namespace ctxs
 #undef HAS
 #undef CALL_IF

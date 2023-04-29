@@ -20,7 +20,7 @@ namespace utils::comb2 {
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                ctxs::context_peek(ctx);
+                ctxs::context_logic_entry(ctx, CallbackType::peek_begin);
                 const auto ptr = seq.rptr;
                 Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
@@ -28,8 +28,13 @@ namespace utils::comb2 {
                     return res;
                 }
                 seq.rptr = ptr;
-                ctxs::context_rollback(ctx);
+                ctxs::context_logic_result(ctx, CallbackType::peek_end, res);
                 return res;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "peek and expect so but fail");
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
 
@@ -39,7 +44,7 @@ namespace utils::comb2 {
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
-                ctxs::context_peek(ctx);
+                ctxs::context_logic_entry(ctx, CallbackType::peek_begin);
                 const auto ptr = seq.rptr;
                 Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
@@ -47,8 +52,13 @@ namespace utils::comb2 {
                     return res;
                 }
                 seq.rptr = ptr;
-                ctxs::context_rollback(ctx);
+                ctxs::context_logic_result(ctx, CallbackType::peek_end, res);
                 return res == Status::match ? Status::not_match : Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "peek and expect NOT so but fail");
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
     }  // namespace types

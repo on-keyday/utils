@@ -9,6 +9,7 @@
 #include "../internal/opti.h"
 #include "../status.h"
 #include "../../core/sequencer.h"
+#include "../internal/context_fn.h"
 #include <ranges>
 
 namespace utils::comb2 {
@@ -30,6 +31,10 @@ namespace utils::comb2 {
                     }
                 }
                 return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect literal `", literal, "` but not");
             }
         };
 
@@ -71,6 +76,10 @@ namespace utils::comb2 {
                     return Status::not_match;
                 }
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect oneof `", literal, "` but not");
+            }
         };
 
         template <class LitA, class LitB>
@@ -86,6 +95,10 @@ namespace utils::comb2 {
                 seq.consume();
                 return Status::match;
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect range [", lita, "-", litb, "] but not");
+            }
         };
 
         // match to end of sequence
@@ -97,6 +110,10 @@ namespace utils::comb2 {
                 }
                 return Status::match;
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect EOF but not");
+            }
         };
 
         // match to begin of sequence
@@ -107,6 +124,10 @@ namespace utils::comb2 {
                     return Status::not_match;
                 }
                 return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect BOF but not");
             }
         };
 
@@ -121,12 +142,20 @@ namespace utils::comb2 {
                 }
                 return Status::match;
             }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect BOL but not");
+            }
         };
 
         struct Null {
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
                 return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect null but not");
             }
         };
     }  // namespace types

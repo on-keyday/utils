@@ -22,19 +22,20 @@ namespace utils::comb2 {
 
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx& ctx, Rec&& r) const {
-                ctxs::context_group(ctx, tag);
-                const auto ptr = seq.rptr;
+                ctxs::context_begin_group(ctx, tag);
+                const auto begin = seq.rptr;
                 const Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
                     return res;
                 }
-                if (res == Status::match) {
-                    ctxs::context_commit(ctx);
-                }
-                else {
-                    ctxs::context_rollback(ctx);
-                }
+                const auto end = seq.rptr;
+                ctxs::context_end_group(ctx, res, tag, Pos{.begin = begin, .end = end});
                 return res;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error("not match to group. tag: ", tag);
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
 
@@ -49,13 +50,19 @@ namespace utils::comb2 {
             template <class T, class Ctx, class Rec>
             constexpr Status operator()(Sequencer<T>& seq, Ctx& ctx, Rec&& r) const {
                 const auto begin = seq.rptr;
+                ctxs::context_begin_string(ctx, tag);
                 const Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
                     return res;
                 }
                 const auto end = seq.rptr;
-                ctxs::context_end_string(ctx, tag, seq, Pos{begin, end});
+                ctxs::context_end_string(ctx, res, tag, seq, Pos{begin, end});
                 return res;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error("not match to string. tag: ", tag);
+                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
             }
         };
     }  // namespace types
