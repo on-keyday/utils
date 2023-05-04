@@ -77,7 +77,7 @@ namespace utils::comb2 {
         HAS(end_group)
 
         constexpr auto context_end_group(auto&& ctx, Status res, auto&& tag, Pos pos) {
-            if constexpr (has_end_group<decltype(ctx), decltype(tag), Pos>) {
+            if constexpr (has_end_group<decltype(ctx), Status, decltype(tag), Pos>) {
                 ctx.end_group(res, tag, pos);
             }
         }
@@ -106,7 +106,7 @@ namespace utils::comb2 {
 
         HAS(must_match_error)
 
-        constexpr auto context_call_must_match_error(auto&& ctx, auto&& target, auto&& rec) {
+        constexpr void context_call_must_match_error(auto&& ctx, auto&& target, auto&& rec) {
             if constexpr (has_must_match_error<decltype(target), decltype(ctx), decltype(rec)>) {
                 target.must_match_error(ctx, rec);
             }

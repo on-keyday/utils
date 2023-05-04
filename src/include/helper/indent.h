@@ -65,7 +65,7 @@ namespace utils {
 
            public:
             CodeWriter(const char* indent = "    ")
-                : w(String{}, "    ") {}
+                : w(String{}, indent) {}
 
             const String& out() const {
                 return w.t;
@@ -150,6 +150,10 @@ namespace utils {
             void line() {
                 w.write_ln();
                 should_indent = true;
+            }
+
+            void should_write_indent(bool s) {
+                should_indent = s;
             }
 
             [[nodiscard]] auto indent_scope(std::uint32_t i = 1) {

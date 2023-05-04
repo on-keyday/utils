@@ -153,6 +153,7 @@ namespace utils::comb2 {
                         return res;
                     }
                     if (res == Status::not_match) {
+                        ctxs::context_logic_result(ctx, CallbackType::repeat_step, Status::not_match);
                         seq.rptr = ptr;
                         break;
                     }

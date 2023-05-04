@@ -16,5 +16,11 @@ namespace utils::comb2 {
         constexpr size_t len() const {
             return end - begin;
         }
+
+        constexpr bool npos() const {
+            return begin == ~0 && end == ~0;
+        }
     };
+
+    constexpr auto npos = Pos{~size_t(0), ~size_t(0)};
 }  // namespace utils::comb2

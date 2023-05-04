@@ -30,7 +30,7 @@ namespace utils {
         struct Token : Node {
             Token()
                 : Node(false) {}
-            std::string ident;
+            std::string token;
         };
 
         // Ident or Group, which is derived from Element, must have const char* tag
@@ -41,7 +41,7 @@ namespace utils {
                 if constexpr (std::is_same_v<decltype(v), tree::Ident<const char *> &>) {
                     auto id = std::make_shared<Token>();
                     id->tag = v.tag;
-                    id->ident = v.ident;
+                    id->token = v.ident;
                     id->pos = v.pos;
                     current->children.push_back(std::move(id));
                 }
