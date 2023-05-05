@@ -9,43 +9,60 @@
 #include "../../io/number.h"
 #include "../../io/ex_number.h"
 #include "unicodedata.h"
+#include "../../io/ex_term.h"
 
 namespace utils {
     namespace unicode::data::bin {
 
-        constexpr int enable_version = 4;
+        constexpr int enable_version = 5;
 
-        bool write_string(auto& w, auto&& str) {
-            if (str.size() > 0xff) {
-                return false;
+        bool write_string(auto& w, auto&& str, int version) {
+            if (version < 5) {
+                if (str.size() > 0xff) {
+                    return false;
+                }
+                return w.write(byte(str.size()), 1) &&
+                       w.write(view::rvec(str));
             }
-            return w.write(byte(str.size()), 1) &&
-                   w.write(view::rvec(str));
+            return io::write_terminated(w, view::rvec(str));
         }
 
-        inline bool read_string(auto& r, std::string& str) {
-            byte len = 0;
-            if (!r.read(view::wvec(&len, 1))) {
-                return false;
+        inline bool read_string(auto& r, auto& str, int version) {
+            view::rvec data;
+            if (version < 5) {
+                byte len = 0;
+                if (!r.read(view::wvec(&len, 1))) {
+                    return false;
+                }
+                if (!r.read(data, len)) {
+                    return false;
+                }
             }
-            auto [data, ok] = r.read(len);
-            if (!ok) {
-                return false;
+            else {
+                if (!io::read_terminated(r, data)) {
+                    return false;
+                }
             }
-            str.assign(data.as_char(), data.size());
+            if constexpr (std::is_same_v<decltype(str), std::decay_t<decltype(data)>&>) {
+                str = data;
+            }
+            else {
+                str.assign(data.as_char(), data.size());
+            }
             return true;
         }
 
-        inline bool serialize_codeinfo(auto& w, const CodeInfo& info, std::string& block, int version = enable_version) {
+        template <class String>
+        inline bool serialize_codeinfo(auto& w, const CodeInfo<String>& info, String& block, int version = enable_version) {
             if (version > enable_version) {
                 return false;
             }
             if (!io::write_num(w, info.codepoint) ||
-                !write_string(w, info.name) ||
-                !write_string(w, info.category) ||
+                !write_string(w, info.name, version) ||
+                !write_string(w, info.category, version) ||
                 !io::write_num(w, info.ccc) ||
-                !write_string(w, info.bidiclass) ||
-                !write_string(w, info.decomposition.command)) {
+                !write_string(w, info.bidiclass, version) ||
+                !write_string(w, info.decomposition.command, version)) {
                 return false;
             }
             // for compatibility use this value
@@ -86,7 +103,7 @@ namespace utils {
                 }
                 if (version == 0) {
                     std::string str = info.numeric.to_string();
-                    if (!write_string(w, str)) {
+                    if (!write_string(w, str, version)) {
                         return false;
                     }
                 }
@@ -154,13 +171,26 @@ namespace utils {
                 }
             }
             if (version >= 2) {
-                if (!write_string(w, info.east_asian_width)) {
+                if (!write_string(w, info.east_asian_width, version)) {
                     return false;
                 }
             }
             if (version >= 4) {
                 if (block != info.block) {
-                    if (!write_string(w, info.block)) {
+                    if (!write_string(w, info.block, version)) {
+                        return false;
+                    }
+                }
+            }
+            if (version >= 5) {
+                if (info.emoji_data.size() > 0xff) {
+                    return false;
+                }
+                if (!w.write(byte(info.emoji_data.size()), 1)) {
+                    return false;
+                }
+                for (auto& emoji_data : info.emoji_data) {
+                    if (!write_string(w, emoji_data, version)) {
                         return false;
                     }
                 }
@@ -168,16 +198,17 @@ namespace utils {
             return true;
         }
 
-        inline bool read_codeinfo(auto& r, CodeInfo& info, std::string& block, int version = enable_version) {
+        template <class String>
+        inline bool read_codeinfo(auto& r, CodeInfo<String>& info, String& block, int version = enable_version) {
             if (version > enable_version) {
                 return false;
             }
             if (!io::read_num(r, info.codepoint) ||
-                !read_string(r, info.name) ||
-                !read_string(r, info.category) ||
+                !read_string(r, info.name, version) ||
+                !read_string(r, info.category, version) ||
                 !io::read_num(r, info.ccc) ||
-                !read_string(r, info.bidiclass) ||
-                !read_string(r, info.decomposition.command)) {
+                !read_string(r, info.bidiclass, version) ||
+                !read_string(r, info.decomposition.command, version)) {
                 return false;
             }
             auto [size_, ok] = r.read(1);
@@ -222,7 +253,7 @@ namespace utils {
                 info.numeric.v2 = v2;
                 if (version == 0) {
                     std::string str;
-                    if (!read_string(r, str)) {
+                    if (!read_string(r, str, version)) {
                         return false;
                     }
                     auto seq = make_ref_seq(str);
@@ -297,7 +328,7 @@ namespace utils {
                 }
             }
             if (version >= 2) {
-                if (!read_string(r, info.east_asian_width)) {
+                if (!read_string(r, info.east_asian_width, version)) {
                     return false;
                 }
             }
@@ -307,18 +338,30 @@ namespace utils {
             if (version >= 4) {
                 if (info.numeric.flag & flags::has_block_name) {
                     info.numeric.flag &= ~flags::has_block_name;
-                    block.clear();
-                    if (!read_string(r, block)) {
+                    if (!read_string(r, block, version)) {
                         return false;
                     }
                 }
                 info.block = block;
             }
+            if (version >= 5) {
+                byte len = 0;
+                if (!r.read(view::wvec(&len, 1))) {
+                    return false;
+                }
+                for (auto i = 0; i < len; i++) {
+                    String emoji;
+                    if (!read_string(r, emoji, version)) {
+                        return false;
+                    }
+                    info.emoji_data.push_back(std::move(emoji));
+                }
+            }
             return true;
         }
 
-        template <class T, class C, class U>
-        inline bool serialize_unicodedata(io::basic_expand_writer<T, C, U>& w, UnicodeData& data, int version = enable_version) {
+        template <class T, class C, class U, class String>
+        inline bool serialize_unicodedata(io::basic_expand_writer<T, C, U>& w, const UnicodeData<String>& data, int version = enable_version) {
             auto write_version = [&] {
                 return w.write('U', 1) &&
                        w.write('D', 1) &&
@@ -334,10 +377,11 @@ namespace utils {
                 case 2:
                 case 3:
                 case 4:
+                case 5:
                     write_version();
                     break;
             }
-            std::string block = "";
+            String block;
             for (auto& d : data.codes) {
                 if (!serialize_codeinfo(w, d.second, block, version)) {
                     return false;
@@ -346,8 +390,8 @@ namespace utils {
             return true;
         }
 
-        template <class C, class U>
-        bool deserialize_unicodedata(io::basic_reader<C, U>& r, UnicodeData& data) {
+        template <class C, class U, class String>
+        bool deserialize_unicodedata(io::basic_reader<C, U>& r, UnicodeData<String>& data) {
             int version = 0;
             auto seq = make_ref_seq(r.remain());
             if (seq.seek_if("UDv1")) {
@@ -362,13 +406,19 @@ namespace utils {
             else if (seq.seek_if("UDv4")) {
                 version = 4;
             }
+            else if (seq.seek_if("UDv5")) {
+                version = 5;
+            }
+            else if (seq.seek_if("UDv")) {
+                return false;
+            }
             if (version != 0) {
                 r.offset(4);
             }
-            CodeInfo* prev = nullptr;
-            std::string block;
+            CodeInfo<String>* prev = nullptr;
+            String block;
             while (!r.empty()) {
-                CodeInfo info;
+                CodeInfo<String> info;
                 if (!read_codeinfo(r, info, block, version)) {
                     return false;
                 }

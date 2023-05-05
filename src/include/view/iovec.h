@@ -138,10 +138,10 @@ namespace utils {
                     }
                 }
                 if (i == min_) {
-                    return size_ == r.size_ ? 0 : size_ < r.size_ ? 1
-                                                                  : -1;
+                    return size_ == r.size_ ? 0 : size_ < r.size_ ? -1
+                                                                  : 1;
                 }
-                return data_[i] < r.data_[i] ? 1 : -1;
+                return data_[i] < r.data_[i] ? -1 : 1;
             }
 
             constexpr friend std::strong_ordering operator<=>(const basic_rvec& l, const basic_rvec& r) {

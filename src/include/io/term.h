@@ -54,7 +54,7 @@ namespace utils {
         template <class C, class U, class V = C>
         constexpr bool read_terminated(basic_reader<C, U>& r, view::basic_rvec<C, U>& res, V term = C(0), bool consume_term = true) {
             bool ok = false;
-            std::tie(res, ok) = read_terminated(r, consume_term);
+            std::tie(res, ok) = read_terminated(r,term, consume_term);
             return ok;
         }
 
@@ -70,7 +70,7 @@ namespace utils {
 
         template <class C, class U>
         constexpr bool write_terminated(basic_writer<C, U>& w, view::basic_rvec<C, U> data, C term = 0) {
-            if (has_null(data)) {
+            if (has_term(data)) {
                 return false;
             }
             return w.write(data) &&

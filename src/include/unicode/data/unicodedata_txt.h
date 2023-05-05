@@ -56,8 +56,8 @@ namespace utils {
                 return ParseError::none;
             }
 
-            template <class T>
-            ParseError parse_decomposition(Sequencer<T>& seq, Decomposition& res) {
+            template <class T, class String>
+            ParseError parse_decomposition(Sequencer<T>& seq, Decomposition<String>& res) {
                 if (seq.seek_if(";")) {
                     return ParseError::none;
                 }
@@ -115,8 +115,8 @@ namespace utils {
                 return ParseError::none;
             }
 
-            template <class T>
-            ParseError parse_numeric(Sequencer<T>& seq, CodeInfo& info) {
+            template <class T, class String>
+            ParseError parse_numeric(Sequencer<T>& seq, CodeInfo<String>& info) {
                 if (!seq.match(";")) {
                     if (!number::parse_integer(seq, info.numeric.v1, 10)) {
                         return ParseError::parse_dec;
@@ -152,8 +152,8 @@ namespace utils {
                 return helper::read_until(out, seq, ";");
             }
 
-            template <class T>
-            ParseError parse_codepoint(Sequencer<T>& seq, CodeInfo& info) {
+            template <class T, class String>
+            ParseError parse_codepoint(Sequencer<T>& seq, CodeInfo<String>& info) {
                 if (!number::parse_integer(seq, info.codepoint, 16)) {
                     return ParseError::parse_hex;
                 }
@@ -206,11 +206,11 @@ namespace utils {
 
         }  // namespace internal
 
-        template <class T>
-        ParseError parse_unicodedata_text(Sequencer<T>& seq, UnicodeData& ret) {
-            CodeInfo* prev = nullptr;
+        template <class T, class String>
+        ParseError parse_unicodedata_text(Sequencer<T>& seq, UnicodeData<String>& ret) {
+            CodeInfo<String>* prev = nullptr;
             while (!seq.eos()) {
-                CodeInfo info;
+                CodeInfo<String> info;
                 if (auto err = internal::parse_codepoint(seq, info); err != ParseError::none) {
                     return err;
                 }
@@ -219,81 +219,129 @@ namespace utils {
             return ParseError::none;
         }
 
-        template <class T>
-        ParseError parse_blocks_text(Sequencer<T>& seq, UnicodeData& data) {
+        namespace internal {
+
+            bool skip_line(auto& seq) {
+                helper::read_whilef(helper::nop, seq, [](auto c) { return c != '\r' && c != '\n'; });
+                return space::parse_eol(seq);
+            }
+
+            ParseError read_range(std::uint32_t& begin, std::uint32_t& end, auto& seq, bool must) {
+                if (!number::parse_integer(seq, begin, 16)) {
+                    return ParseError::parse_hex;
+                }
+                if (!seq.seek_if("..")) {
+                    if (must) {
+                        return ParseError::expect_two_dot;
+                    }
+                    end = begin;
+                    return ParseError::none;
+                }
+                if (!number::parse_integer(seq, end, 16)) {
+                    return ParseError::parse_hex;
+                }
+                return ParseError::none;
+            }
+        }  // namespace internal
+
+        template <class T, class String>
+        ParseError parse_blocks_text(Sequencer<T>& seq, UnicodeData<String>& data) {
             while (!seq.eos()) {
                 if (seq.current() == '#' || !number::is_hex(seq.current())) {
-                    helper::read_whilef(helper::nop, seq, [](auto c) { return c != '\r' && c != '\n'; });
-                    if (!space::parse_eol(seq)) {
-                        return ParseError::expect_eol;
+                    if (!internal::skip_line(seq)) {
+                        return ParseError::unexpected_eof;
                     }
                     continue;
                 }
                 std::uint32_t begin, end;
                 std::string block_name;
-                if (!number::parse_integer(seq, begin, 16)) {
-                    return ParseError::parse_hex;
-                }
-                if (!seq.seek_if("..")) {
-                    return ParseError::expect_two_dot;
-                }
-                if (!number::parse_integer(seq, end, 16)) {
-                    return ParseError::parse_hex;
+                if (auto err = internal::read_range(begin, end, seq, true); err != ParseError::none) {
+                    return err;
                 }
                 if (!seq.seek_if("; ")) {
                     return ParseError::expect_semicolon;
                 }
-                helper::read_whilef(block_name, seq, [](auto c) { return c != '\r' && c != '\n'; });
-                if (!space::parse_eol(seq)) {
-                    return ParseError::expect_eol;
+                if (!helper::read_whilef(block_name, seq, [](auto c) { return c != '\r' && c != '\n'; })) {
+                    return ParseError::unexpected_eof;
+                }
+                if (!internal::skip_line(seq)) {
+                    return ParseError::unexpected_eof;
                 }
                 for (auto i = begin; i <= end; i++) {
                     if (auto found = data.codes.find(i); found != data.codes.end()) {
-                        CodeInfo& info = (*found).second;
+                        CodeInfo<String>& info = (*found).second;
                         info.block = block_name;
+                        data.blocks.emplace(block_name, &info);
                     }
                 }
             }
             return ParseError::none;
         }
 
-        template <class T>
-        ParseError parse_east_asian_width_text(Sequencer<T>& seq, UnicodeData& data) {
+        template <class T, class String>
+        ParseError parse_east_asian_width_text(Sequencer<T>& seq, UnicodeData<String>& data) {
             while (!seq.eos()) {
                 if (seq.current() == '#' || !number::is_hex(seq.current())) {
-                    helper::read_whilef(helper::nop, seq, [](auto c) { return c != '\r' && c != '\n'; });
-                    if (!space::parse_eol(seq)) {
-                        return ParseError::expect_eol;
+                    if (!internal::skip_line(seq)) {
+                        return ParseError::unexpected_eof;
                     }
                     continue;
                 }
                 std::uint32_t begin, end;
                 std::string width;
-                if (!number::parse_integer(seq, begin, 16)) {
-                    return ParseError::parse_hex;
-                }
-                if (seq.seek_if("..")) {
-                    if (!number::parse_integer(seq, end, 16)) {
-                        return ParseError::parse_hex;
-                    }
-                }
-                else {
-                    end = begin;
+                if (auto err = internal::read_range(begin, end, seq, false); err != ParseError::none) {
+                    return err;
                 }
                 if (!seq.seek_if(";")) {
                     return ParseError::expect_semicolon;
                 }
-                if (!helper::read_until(width, seq, ' ')) {
+                if (!helper::read_until(width, seq, " ")) {
                     return ParseError::unexpected_eof;
                 }
-                helper::read_whilef(helper::nop, seq, [](auto c) { return c != '\r' && c != '\n'; });
-                if (!space::parse_eol(seq)) {
-                    return ParseError::expect_eol;
+                if (!internal::skip_line(seq)) {
+                    return ParseError::unexpected_eof;
                 }
                 for (auto i = begin; i <= end; i++) {
                     if (auto found = data.codes.find(i); found != data.codes.end()) {
-                        CodeInfo& info = (*found).second;
+                        CodeInfo<String>& info = (*found).second;
                         info.east_asian_width = width;
+                    }
+                }
+            }
+            return ParseError::none;
+        }
+
+        template <class T, class String>
+        ParseError parse_emoji_data_text(Sequencer<T>& seq, UnicodeData<String>& data) {
+            while (!seq.eos()) {
+                if (seq.current() == '#' || !number::is_hex(seq.current())) {
+                    if (!internal::skip_line(seq)) {
+                        return ParseError::unexpected_eof;
+                    }
+                    continue;
+                }
+                std::uint32_t begin, end;
+                std::string emoji;
+                if (auto err = internal::read_range(begin, end, seq, false); err != ParseError::none) {
+                    return err;
+                }
+                helper::read_until<false>(helper::nop, seq, ";");
+                if (!seq.seek_if("; ")) {
+                    return ParseError::expect_semicolon;
+                }
+                if (!helper::read_whilef(emoji, seq, [](auto c) { return c != ' ' && c != '#'; })) {
+                    return ParseError::unexpected_eof;
+                }
+                if (!internal::skip_line(seq)) {
+                    return ParseError::unexpected_eof;
+                }
+                for (auto i = begin; i <= end; i++) {
+                    if (auto found = data.codes.find(i); found != data.codes.end()) {
+                        CodeInfo<String>& info = (*found).second;
+                        if (emoji == "") {
+                            ;
+                        }
+                        info.emoji_data.push_back(emoji);
                     }
                 }
             }

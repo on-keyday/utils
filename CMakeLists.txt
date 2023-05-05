@@ -131,6 +131,7 @@ add_executable(combl "src/tool/combl/combl.cpp"
 add_executable(binp "src/tool/binp/main.cpp"
 "src/tool/binp/collect.cpp"
 "src/tool/binp/gen.cpp")
+add_executable(unidump "src/tool/unidump/main.cpp")
 
 if(LLVM_FOUND)
 target_sources(combl PRIVATE "src/tool/combl/compile.cpp")
@@ -263,6 +264,7 @@ target_link_libraries(server utils fnetserv)
 target_link_libraries(combl utils)
 target_compile_options(combl PRIVATE "-fconstexpr-steps=2147483647")
 target_link_libraries(binp utils)
+target_link_libraries(unidump utils)
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")

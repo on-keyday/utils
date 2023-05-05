@@ -12,11 +12,13 @@
 #include "../../number/to_string.h"
 #include <map>
 #include <vector>
+#include "../../helper/strutil.h"
 
 namespace utils {
     namespace unicode::data {
+        template <class String = std::string>
         struct Decomposition {
-            std::string command;
+            String command;
             std::u32string to;
         };
         namespace flags {
@@ -97,43 +99,64 @@ namespace utils {
             byte flag = 0;
         };
 
+        template <class String = std::string>
         struct CodeInfo {
             char32_t codepoint;
-            std::string name;
-            std::string block;
-            std::string category;
+            String name;
+            String block;
+            String category;
             unsigned int ccc = 0;  // Canonical_Combining_Class
-            std::string bidiclass;
-            std::string east_asian_width;
-            Decomposition decomposition;
+            String bidiclass;
+            String east_asian_width;
+            Decomposition<String> decomposition;
             Numeric numeric;
             bool mirrored = false;
             CaseMap casemap;
+            std::vector<String> emoji_data;
             CodeInfo* range = nullptr;
         };
 
+        template <class String = std::string>
         struct CodeRange {
-            CodeInfo* begin = nullptr;
-            CodeInfo* end = nullptr;
+            CodeInfo<String>* begin = nullptr;
+            CodeInfo<String>* end = nullptr;
         };
 
+        template <class String = std::string>
         struct UnicodeData {
-            std::map<char32_t, CodeInfo> codes;
-            std::multimap<std::string, CodeInfo*> names;
-            std::multimap<std::string, CodeInfo*> categorys;
-            std::vector<CodeRange> ranges;
-            std::multimap<std::u32string, CodeInfo*> composition;
+            std::map<char32_t, CodeInfo<String>> codes;
+            std::multimap<String, CodeInfo<String>*> names;
+            std::multimap<String, CodeInfo<String>*> categorys;
+            std::vector<CodeRange<String>> ranges;
+            std::multimap<std::u32string, CodeInfo<String>*> composition;
+            std::multimap<String, CodeInfo<String>*> blocks;
+
+            const CodeInfo<String>* lookup(char32_t code) const {
+                auto found = codes.find(code);
+                if (found != codes.end()) {
+                    return &found->second;
+                }
+                for (const CodeRange<String>& range : ranges) {
+                    const CodeInfo<String>* begin = range.begin;
+                    const CodeInfo<String>* end = range.end;
+                    if (begin->codepoint <= code && code <= end->codepoint) {
+                        return begin;
+                    }
+                }
+                return nullptr;
+            }
         };
 
         namespace internal {
-            inline void set_codepoint_info(CodeInfo& info, UnicodeData& ret, CodeInfo*& prev) {
+            template <class String>
+            inline void set_codepoint_info(CodeInfo<String>& info, UnicodeData<String>& ret, CodeInfo<String>*& prev) {
                 auto& point = ret.codes[info.codepoint];
                 ret.names.emplace(info.name, &point);
                 ret.categorys.emplace(info.category, &point);
                 if (prev) {
                     if (info.codepoint != prev->codepoint + 1 && info.name.back() == '>' &&
                         prev->name.back() == '>' && !prev->range) {
-                        ret.ranges.push_back(CodeRange{prev, &point});
+                        ret.ranges.push_back(CodeRange<String>{prev, &point});
                         info.range = prev;
                         prev->range = &point;
                     }
@@ -141,22 +164,27 @@ namespace utils {
                 if (info.decomposition.to.size()) {
                     ret.composition.emplace(info.decomposition.to, &point);
                 }
+                if (info.block.size()) {
+                    ret.blocks.emplace(info.block, &point);
+                }
                 point = std::move(info);
                 prev = &point;
             }
 
-            inline void guess_east_asian_width(CodeInfo& info) {
+            template <class String>
+            inline void guess_east_asian_width(CodeInfo<String>& info) {
                 if (info.decomposition.command == "<wide>") {
                     info.east_asian_width = "F";
                 }
                 else if (info.decomposition.command == "<narrow>") {
                     info.east_asian_width = "H";
                 }
-                else if (info.name.find("CJK") != ~0 || info.name.find("HIRAGANA") != ~0 ||
-                         info.name.find("KATAKANA") != ~0) {
+                else if (helper::contains(info.name, "CJK") ||
+                         helper::contains(info.name, "HIRAGANA") ||
+                         helper::contains(info.name, "KATAKANA")) {
                     info.east_asian_width = "W";
                 }
-                else if (info.name.find("GREEK") != ~0) {
+                else if (helper::contains(info.name, "GREEK")) {
                     info.east_asian_width = "A";
                 }
                 else {
