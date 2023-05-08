@@ -46,7 +46,7 @@ namespace utils {
 #ifdef _WIN32
                     maphandle = std::exchange(in.maphandle, nullptr);
 #else
-                    maplen = std::exhcange(in.maplen, 0);
+                    maplen = std::exchange(in.maplen, 0);
 #endif
                     stat = std::exchange(in.stat, stat_type{});
                     return *this;

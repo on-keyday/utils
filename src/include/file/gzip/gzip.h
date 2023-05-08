@@ -30,7 +30,7 @@ namespace utils::file::gzip {
         fat = 0,
         amiga = 1,
         vms = 2,
-        unix = 3,
+        unix_ = 3,
         vm_cms = 4,
         atari = 5,
         hpfs = 6,

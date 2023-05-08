@@ -38,8 +38,9 @@ endif()
 
 # finding dependency
 find_package(Threads REQUIRED)
+if(WIN32)
 find_package(LLVM CONFIG) # optional
-
+endif()
 if(LLVM_FOUND)
 include_directories(${LLVM_INCLUDE_DIRS})
 endif()
@@ -89,6 +90,7 @@ add_executable(reflect "src/test/reflect/test_reflect.cpp")
 add_executable(qpack "src/test/net_util/test_qpack.cpp")
 add_executable(span "src/test/view/test_span.cpp")
 add_executable(unicode_data "src/test/unicode/test_unicode_data.cpp")
+add_executable(fiber_coro "src/test/coro/test_fiber_coro.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
@@ -125,9 +127,11 @@ add_executable(durl "src/tool/durl/main.cpp"
   "src/tool/durl/http.cpp"
 )
 add_executable(server "src/tool/server/server.cpp")
+if(LLVM_FOUND)
 add_executable(combl "src/tool/combl/combl.cpp"
 "src/tool/combl/traverse.cpp"
 "src/tool/combl/ipret.cpp")
+endif()
 add_executable(binp "src/tool/binp/main.cpp"
 "src/tool/binp/collect.cpp"
 "src/tool/binp/gen.cpp")
@@ -153,6 +157,7 @@ option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
 add_library(utils SHARED)
 add_library(fnet SHARED)
 add_library(fnetserv SHARED)
+add_library(coro SHARED)
 
 # libutils
 target_sources(utils
@@ -212,6 +217,10 @@ target_sources(fnetserv PRIVATE
   "src/lib/fnet/server/httpserv.cpp"
 )
 
+target_sources(coro PRIVATE 
+  "src/lib/coro/coro_win.cpp"
+)
+
 
 
 # test (utils)
@@ -255,14 +264,19 @@ target_link_libraries(fnet_dns fnet)
 # test(libfnetserv)
 target_link_libraries(fnetserv fnet)
 
+# test(libcoro)
+target_link_libraries(fiber_coro coro fnet)
+
 # tools
 target_link_libraries(ifacegen utils)
 target_link_libraries(binred utils)
 target_link_libraries(minilang utils)
 target_link_libraries(durl utils fnet)
 target_link_libraries(server utils fnetserv)
+if(LLVM_FOUND)
 target_link_libraries(combl utils)
 target_compile_options(combl PRIVATE "-fconstexpr-steps=2147483647")
+endif()
 target_link_libraries(binp utils)
 target_link_libraries(unidump utils)
 
@@ -285,6 +299,10 @@ if(WIN32)
     add_custom_command(
       TARGET fnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnet.dll" "test/libfnet.dll"
+    )
+    add_custom_command(
+      TARGET coro POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libcoro.dll" "test/libcoro.dll"
     )
    
     add_custom_command(

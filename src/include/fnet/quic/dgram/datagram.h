@@ -40,7 +40,7 @@ namespace utils {
         };
 
         struct DatagramDropRetransmit {
-            resend::Retransmiter<SendDatagram> retransmit;
+            resend::Retransmiter<SendDatagram, slib::list> retransmit;
             std::shared_ptr<void> arg;
             void (*notify_drop_cb)(std::shared_ptr<void>&, storage&, packetnum::Value) = nullptr;
 

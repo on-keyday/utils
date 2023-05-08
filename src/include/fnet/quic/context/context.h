@@ -55,11 +55,13 @@ namespace utils {
 
         // Context is QUIC connection context suite
         // this handles single connection both client and server
-        template <class Lock,
-                  class CongestionAlgorithm = status::NewReno,
-                  class DatagramDrop = datagram::DatagrmDropNull>
+        template <class TypeConfig>
         struct Context {
            private:
+            using CongestionAlgorithm = typename TypeConfig::congestion_algorithm;
+            using Lock = typename TypeConfig::context_lock;
+            using DatagramDrop = typename TypeConfig::datagram_drop;
+            using StreamTypeConfig = typename TypeConfig::stream_type_config;
             Version version = version_negotiation;
             status::Status<CongestionAlgorithm> status;
             trsparam::TransportParameters params;
@@ -71,7 +73,7 @@ namespace utils {
             token::ZeroRTTTokenManager zero_rtt_token;
             path::MTU mtu;
             path::PathVerifier path_verifyer;
-            std::shared_ptr<stream::impl::Conn<Lock>> streams;
+            std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams;
             close::Closer closer;
             std::atomic<close::CloseReason> closed;
             datagram::DatagramManager<Lock, DatagramDrop> datagrams;
@@ -183,7 +185,11 @@ namespace utils {
                     // currently path verification is required
                     // can send only
                     if (auto err = path_verifyer.send_path_challange(fw, waiters); err == IOResult::fatal) {
-                        return wrap_io(err);
+                        set_quic_runtime_error(QUICError{
+                            .msg = to_string(err),
+                            .frame_type = fw.prev_type,
+                        });
+                        return false;
                     }
                 }
             }
@@ -642,7 +648,7 @@ namespace utils {
                 if (auto ack = frame::cast<frame::ACKFrame<slib::vector>>(&frame)) {
                     ack::RemovedPackets removed_packets;
                     auto err = ackh.on_ack_received(status, status::from_packet_type(summary.type), removed_packets, nullptr, *ack, [&] {
-                        stream::impl::Conn<Lock>* ptr = streams.get();
+                        stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
                         return ptr->is_flow_control_limited();
                     });
                     if (err) {
@@ -669,7 +675,7 @@ namespace utils {
                 }
                 if (is_ConnRelated(frame.type.type_detail()) ||
                     is_BidiStreamOK(frame.type.type_detail())) {
-                    stream::impl::Conn<Lock>* ptr = streams.get();
+                    stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
                     error::Error tmp_err;
                     std::tie(std::ignore, tmp_err) = ptr->recv(frame);
                     if (tmp_err) {
@@ -984,9 +990,9 @@ namespace utils {
                 auto local = trsparam::to_initial_limits(params.local);
 
                 // create streams
-                streams = stream::impl::make_conn<Lock>(config.server
-                                                            ? stream::Direction::server
-                                                            : stream::Direction::client);
+                streams = stream::impl::make_conn<StreamTypeConfig>(config.server
+                                                                        ? stream::Direction::server
+                                                                        : stream::Direction::client);
                 streams->apply_local_initial_limits(local);
 
                 // setup connection IDs manager

@@ -78,12 +78,12 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class Lock = LiteLock>
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class TypeConfig = LiteLock>
         struct ChanBuffer {
            private:
             Que<T> que;
             size_t limit = ~0;
-            Lock lock_;
+            TypeConfig lock_;
             std::atomic_flag closed;
             LiteLock read_blocking;
             LiteLock write_blocking;
@@ -254,10 +254,10 @@ namespace utils {
             mustnot,
         };
 
-        template <class T, template <class...> class Que, class Handler, class Lock>
+        template <class T, template <class...> class Que, class Handler, class TypeConfig>
         struct ChanBase {
            protected:
-            using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que, Handler, Lock>>;
+            using buffer_t = wrap::shared_ptr<ChanBuffer<T, Que, Handler, TypeConfig>>;
             buffer_t buffer;
             BlockLevel blocking = BlockLevel::normal;
 
@@ -307,9 +307,9 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class Lock = LiteLock>
-        struct RecvChan : ChanBase<T, Que, Handler, Lock> {
-            using ChanBase<T, Que, Handler, Lock>::ChanBase;
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class TypeConfig = LiteLock>
+        struct RecvChan : ChanBase<T, Que, Handler, TypeConfig> {
+            using ChanBase<T, Que, Handler, TypeConfig>::ChanBase;
 
             ChanState operator>>(T& t) {
                 if (!this->buffer) {
@@ -327,9 +327,9 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class Lock = LiteLock>
-        struct SendChan : ChanBase<T, Que, Handler, Lock> {
-            using ChanBase<T, Que, Handler, Lock>::ChanBase;
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class TypeConfig = LiteLock>
+        struct SendChan : ChanBase<T, Que, Handler, TypeConfig> {
+            using ChanBase<T, Que, Handler, TypeConfig>::ChanBase;
 
             ChanState operator<<(T&& t) {
                 if (!this->buffer) {
@@ -347,10 +347,10 @@ namespace utils {
             }
         };
 
-        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class Lock = LiteLock>
-        std::pair<SendChan<T, Que, Handler, Lock>, RecvChan<T, Que, Handler, Lock>> make_chan(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new) {
-            auto buffer = wrap::make_shared<ChanBuffer<T, Que, Handler, Lock>>(limit, policy);
-            return {SendChan<T, Que, Handler, Lock>(buffer), RecvChan<T, Que, Handler, Lock>(buffer)};
+        template <class T, template <class...> class Que = wrap::queue, class Handler = ContainerHandler, class TypeConfig = LiteLock>
+        std::pair<SendChan<T, Que, Handler, TypeConfig>, RecvChan<T, Que, Handler, TypeConfig>> make_chan(size_t limit = ~0, ChanDisposePolicy policy = ChanDisposePolicy::dispose_new) {
+            auto buffer = wrap::make_shared<ChanBuffer<T, Que, Handler, TypeConfig>>(limit, policy);
+            return {SendChan<T, Que, Handler, TypeConfig>(buffer), RecvChan<T, Que, Handler, TypeConfig>(buffer)};
         }
 
     }  // namespace thread

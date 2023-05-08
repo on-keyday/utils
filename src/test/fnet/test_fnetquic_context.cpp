@@ -13,12 +13,13 @@
 #include <fnet/plthead.h>
 #include <fnet/addrinfo.h>
 #include <thread>
+#include <fnet/quic/quic.h>
 using namespace utils::fnet;
 
 void test_fnetquic_context() {
     tls::set_libcrypto(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
     tls::set_libssl(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
-    auto ctx = std::make_shared<quic::context::Context<std::mutex>>();
+    auto ctx = std::make_shared<quic::context::Context<quic::use::DefaultTypeConfig>>();
     quic::context::Config config;
     config.tls_config = tls::configure();
     config.tls_config.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");

@@ -15,6 +15,7 @@
 #include "../path/config.h"
 #include "../dgram/config.h"
 #include "../token/token.h"
+#include "../stream/config.h"
 
 namespace utils {
     namespace fnet::quic::context {
@@ -30,6 +31,17 @@ namespace utils {
             connid::Config connid_parameters;
             datagram::Config datagram_parameters;
             token::ZeroRTTStorage zero_rtt;
+        };
+
+        template <class CtxLock,
+                  class StreamTypeConfig = stream::TypeConfig<CtxLock>,
+                  class CongestionAlgorithm = status::NewReno,
+                  class DatagramDrop = datagram::DatagrmDropNull>
+        struct TypeConfig {
+            using context_lock = CtxLock;
+            using stream_type_config = StreamTypeConfig;
+            using congestion_algorithm = CongestionAlgorithm;
+            using datagram_drop = DatagramDrop;
         };
 
     }  // namespace fnet::quic::context

@@ -87,7 +87,6 @@ namespace utils {
                 next_codes[len] = code;
             }
             for (auto i = 0; i < N; i++) {
-                const auto symbol = mp(i).literal;
                 const auto length = mp(i).bits;
                 if (length != 0) {
                     mp(i).code = next_codes[length];

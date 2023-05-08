@@ -11,7 +11,7 @@
 #include <fnet/quic/frame/dynframe.h>
 #include <fnet/heap.h>
 #include <fnet/quic/frame/parse.h>
-#include <fnet/quic/stream/stream_base.h>
+#include <fnet/quic/stream/core/stream_base.h>
 #include <fnet/quic/stream/impl/stream.h>
 #include <fnet/debug.h>
 

@@ -457,9 +457,12 @@ namespace utils {
         }
 
         // FrameType::MAX_DATA or FrameType::MAX_STREAMS(UNI/BIDI)
+        // or FrameType::DATA_BLOCKED or FrameType::STREAMS_BLOCKED
         constexpr bool is_ConnRelated(FrameType type) noexcept {
             return type == FrameType::MAX_DATA ||
-                   is_MAX_STREAMS(type);
+                   is_MAX_STREAMS(type)||
+                   type==FrameType::DATA_BLOCKED||
+                   is_STREAMS_BLOCKED(type);
         }
 
         struct FrameFlags {

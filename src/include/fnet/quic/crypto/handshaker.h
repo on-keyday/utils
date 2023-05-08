@@ -29,7 +29,7 @@ namespace utils {
 
             flex_storage write_data;
             size_t write_offset = 0;
-            resend::Retransmiter<resend::CryptoFragment> frags;
+            resend::Retransmiter<resend::CryptoFragment, slib::list> frags;
 
             IOResult send_retransmit(auto&& observer_vec, frame::fwriter& w) {
                 return frags.retransmit(observer_vec, [&](resend::CryptoFragment& frag, auto&& save_new) {

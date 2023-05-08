@@ -7,8 +7,8 @@
 
 #pragma once
 #include "base.h"
-#include "initial_limits.h"
-#include "stream_id.h"
+#include "../initial_limits.h"
+#include "../stream_id.h"
 
 namespace utils {
     namespace fnet::quic::stream {

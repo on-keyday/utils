@@ -6,8 +6,8 @@
 */
 
 #pragma once
-#include "../packet_number.h"
-#include "../varint.h"
+#include "../../packet_number.h"
+#include "../../varint.h"
 
 namespace utils {
     namespace fnet::quic::stream {
@@ -412,12 +412,12 @@ namespace utils {
             }
 
             constexpr bool do_try_locks(auto& cur, auto&... rem) {
-                auto d = helper::defer([&] {
-                    cur.unlock();
-                });
                 if (!cur.try_lock()) {
                     return false;
                 }
+                auto d = helper::defer([&] {
+                    cur.unlock();
+                });
                 if (!do_try_locks(rem...)) {
                     return false;
                 }

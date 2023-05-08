@@ -421,10 +421,10 @@ namespace utils {
                 use_zero_length = false;
                 packet_count_since_id_changed = 0;
                 packet_per_id = p_per_id;
-                max_packet_per_id = max_p_per_id;
                 if (change_mode == ConnIDChangeMode::random && max_p_per_id == 0) {
                     max_p_per_id = 10000;
                 }
+                max_packet_per_id = max_p_per_id;
                 change_mode = mode;
             }
 

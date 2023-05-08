@@ -60,7 +60,7 @@ int main() {
             blocks.emplace(code.second.block);
         }
         if (code.second.emoji_data.size()) {
-            if (std::ranges::find(code.second.emoji_data, "Emoji") != code.second.emoji_data.end()) {
+            if (std::find(code.second.emoji_data.begin(), code.second.emoji_data.end(), "Emoji") != code.second.emoji_data.end()) {
                 emojis.push_back(&code.second);
             }
             else {

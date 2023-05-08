@@ -17,24 +17,22 @@
 #include <testutil/alloc_hook.h>
 #include <wrap/cout.h>
 #include <fnet/quic/path/dplpmtud.h>
+#if __has_include(<format>)
 #include <format>
+#endif
 #include <thread/channel.h>
 #include <fnet/quic/stream/impl/recv_stream.h>
-#include <format>
 #include <fnet/http.h>
 #include <fstream>
 #include <file/gzip/gzip.h>
 #include <testutil/timer.h>
-using Context = utils::fnet::quic::context::Context<std::mutex>;
-using Config = utils::fnet::quic::context::Config;
+#include <fnet/quic/quic.h>
+using namespace utils::fnet::quic::use;
 using QCTX = std::shared_ptr<Context>;
 using namespace utils::fnet;
-using SendStream = std::shared_ptr<quic::stream::impl::SendUniStream<std::mutex>>;
-using RecvStream = std::shared_ptr<quic::stream::impl::RecvUniStream<std::mutex>>;
-using Reader = quic::stream::impl::RecvSorted<std::mutex>;
 
 struct Recvs {
-    RecvStream s;
+    std::shared_ptr<RecvStream> s;
     std::shared_ptr<Reader> r;
 };
 
@@ -53,7 +51,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
     });
 
     auto streams = ctx->get_streams();
-    SendStream uni;
+    std::shared_ptr<SendStream> uni;
     while (true) {
         if (ctx->is_closed()) {
             return;
@@ -65,7 +63,12 @@ void thread(QCTX ctx, RecvChan c, int i) {
         }
         break;
     }
+#if __has_include(<format>)
     auto res = uni->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
+#else
+    std::string req = "GET /search?q=" + utils::number::to_string<std::string>(i + 1) + " HTTP/1.1\r\nHost: www.google.com\r\n";
+    auto res = uni->add_data(req, false);
+#endif
     assert(res == utils::fnet::quic::IOResult::ok);
     res = uni->add_data("Accept-Encoding: gzip\r\n", false);
     assert(res == utils::fnet::quic::IOResult::ok);
@@ -229,40 +232,17 @@ int main() {
     tls::set_libssl(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
 #endif
     QCTX ctx = std::make_shared<Context>();
-    Config config;
-    config.tls_config = tls::configure();
-    config.tls_config.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
-    config.tls_config.set_alpn("\4test");
-    config.connid_parameters.random = utils::fnet::quic::connid::Random{
-        nullptr, [](std::shared_ptr<void>&, utils::view::wvec data) {
-            std::random_device dev;
-            std::uniform_int_distribution uni(0, 255);
-            for (auto& d : data) {
-                d = uni(dev);
-            }
-            return true;
-        }};
-    config.internal_parameters.clock = quic::time::Clock{
-        nullptr,
-        1,
-        [](void*) {
-            return quic::time::Time(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-        },
-    };
-    config.internal_parameters.handshake_idle_timeout = 10000;
-    config.transport_parameters.initial_max_streams_uni = 100;
-    config.transport_parameters.initial_max_data = 1000000;
-    config.transport_parameters.initial_max_stream_data_uni = 100000;
-    config.internal_parameters.ping_duration = 15000;
-    config.internal_parameters.use_ack_delay = false;
-    config.logger.callbacks = &cbs;
+    tls::TLSConfig conf = tls::configure();
+    conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
+    conf.set_alpn("\4test");
+    auto config = utils::fnet::quic::context::use_default(std::move(conf));
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();
     assert(val);
 
     auto streams = ctx->get_streams();
     auto [w, r] = utils::thread::make_chan<Recvs>();
-    streams->set_accept_uni(std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {}), [](std::shared_ptr<void>& p, RecvStream s) {
+    streams->set_accept_uni(std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {}), [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
         auto w2 = static_cast<SendChan*>(p.get());
         auto data = std::make_shared<Reader>();
         s->set_receiver(data, quic::stream::impl::reader_recv_handler<std::mutex>);
@@ -332,5 +312,5 @@ int main() {
         });
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    utils::wrap::cout_wrap() << timer.delta();
+    utils::wrap::cout_wrap() << timer.delta().count();
 }

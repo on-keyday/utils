@@ -171,7 +171,6 @@ namespace utils {
             auto dec = helper::defer([&] {
                 r->decr();
             });
-            bool expect = false;
             if (r->on_operation.exchange(true)) {
                 return error::Error(read_mode
                                         ? "async read operation incompleted"

@@ -201,8 +201,6 @@ namespace utils {
                     info.auth_tag = tag;
                     info.head = pseduo_packet;
                     info.protected_payload = view::wvec(&tmp, 0);
-                    auto key = quic_v1_retry_integrity_tag_key;
-                    auto nonce = quic_v1_retry_integrity_tag_nonce;
                     return cipher_payload({}, info,
                                           quic_v1_retry_integrity_tag_key.material,
                                           quic_v1_retry_integrity_tag_nonce.material, true);

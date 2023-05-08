@@ -170,7 +170,6 @@ namespace utils {
         template <class T>
         constexpr bool parse_ipv6(Sequencer<T>& seq, auto&& out, bool eof = true, bool enable_v4mapped = true) {
             static_assert(sizeof(out[1]) == 1);
-            size_t max_parsed = 0;
             std::uint16_t before[10], after[10];
             std::uint8_t ipv4mapped[4];
             bool v4map = false;

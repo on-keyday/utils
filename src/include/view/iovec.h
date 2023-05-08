@@ -312,7 +312,7 @@ namespace utils {
         constexpr auto make_shift_fn() {
             return [](basic_wvec<C, U> range, size_t to, size_t from, size_t len) {
                 const auto size = range.size();
-                if (to >= size || from >= size) {
+                if (to >= size || from > size) {
                     return false;
                 }
                 if (size - to < len || size - from < len) {

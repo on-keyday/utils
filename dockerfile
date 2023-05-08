@@ -39,6 +39,9 @@ RUN apt-get install -y \
     seq-gen\
     net-tools\
     iputils-ping
+RUN apt-get update && \
+    apt-get install -y\
+    zlib1g
 
 RUN ln -s /lib/llvm-15/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-15/bin/clang /bin/clang

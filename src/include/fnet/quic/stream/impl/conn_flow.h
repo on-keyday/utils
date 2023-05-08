@@ -7,15 +7,15 @@
 
 // conn_flow - connection flow controler implementaion
 #pragma once
-#include "../conn_base.h"
+#include "../core/conn_base.h"
 #include "../../ack/ack_lost_record.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
 
-        template <class Lock>
+        template <class TypeConfig>
         struct ConnFlowControl {
-            ConnectionBase<Lock> base;
+            ConnectionBase<TypeConfig> base;
             std::shared_ptr<ack::ACKLostRecord> max_data;
             std::shared_ptr<ack::ACKLostRecord> max_uni_streams;
             std::shared_ptr<ack::ACKLostRecord> max_bidi_streams;

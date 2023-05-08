@@ -211,7 +211,7 @@ namespace utils {
                 auto begcheck = [&](auto& seq) {
                     if (validate_method) {
                         for (auto meth : http::value::methods) {
-                            auto rptr = seq.rptr;
+                            // auto rptr = seq.rptr;
                             if (seq.seek_if(meth) && seq.consume_if(' ')) {
                                 goto OK;
                             }

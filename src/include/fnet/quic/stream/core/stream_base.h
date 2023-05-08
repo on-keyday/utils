@@ -8,11 +8,12 @@
 // stream - stream object
 #pragma once
 #include "conn_base.h"
-#include "../frame/stream_manage.h"
-#include "fragment.h"
-#include "../ioresult.h"
-#include "../frame/writer.h"
-#include "stream_id.h"
+#include "../../frame/stream_manage.h"
+#include "../fragment.h"
+#include "../../ioresult.h"
+#include "../../frame/writer.h"
+#include "../stream_id.h"
+#include "../config.h"
 
 namespace utils {
     namespace fnet::quic::stream {
@@ -61,9 +62,9 @@ namespace utils {
         };
 
         // returns (result,blocked_limit_if_blocked)
-        template <class Lock>
+        template <class TypeConfig>
         constexpr std::pair<IOResult, std::uint64_t> send_impl(
-            frame::fwriter& w, ConnectionBase<Lock>& conn, StreamID id,
+            frame::fwriter& w, ConnectionBase<TypeConfig>& conn, StreamID id,
             SendUniStreamState& state, StreamWriteData& data, auto&& save_fragment) {
             if (!state.can_send()) {
                 return {IOResult::not_in_io_state, 0};  // cannot sendable on this state
@@ -138,12 +139,16 @@ namespace utils {
             return {IOResult::ok, 0};
         }
 
-        template <class Lock>
+        template <class TypeConfig>
         struct SendUniStreamBase {
+            using Lock = typename TypeConfig::send_stream_lock;
             Lock locker;
-            StreamID id = invalid_id;
+            const StreamID id = invalid_id;
             SendUniStreamState state;
             StreamWriteData data;
+
+            constexpr SendUniStreamBase(StreamID id)
+                : id(id) {}
 
             constexpr auto lock() {
                 return do_lock(locker);
@@ -302,9 +307,9 @@ namespace utils {
         }
 
         // returns (result,err_if_fatal)
-        template <class Lock>
+        template <class TypeConfig>
         constexpr std::pair<IOResult, error::Error> recv_impl(
-            const frame::StreamFrame& frame, ConnectionBase<Lock>& conn,
+            const frame::StreamFrame& frame, ConnectionBase<TypeConfig>& conn,
             StreamID id, RecvUniStreamState& state,
             auto&& deliver_data) {
             if (frame.streamID != id) {
@@ -352,11 +357,15 @@ namespace utils {
             return {IOResult::ok, error::none};
         }
 
-        template <class Lock>
+        template <class TypeConfig>
         struct RecvUniStreamBase {
+            using Lock = typename TypeConfig::recv_stream_lock;
             Lock locker;
-            StreamID id;
+            const StreamID id;
             RecvUniStreamState state;
+
+            constexpr RecvUniStreamBase(StreamID id)
+                : id(id) {}
 
             constexpr auto lock() {
                 return do_lock(locker);
@@ -468,13 +477,13 @@ namespace utils {
 
         namespace test {
             constexpr bool check_stream_send() {
-                SendUniStreamBase<EmptyLock> base;
-                ConnectionBase<EmptyLock> conn;
+                using Config = TypeConfig<EmptyLock>;
+                SendUniStreamBase<Config> base{1};
+                ConnectionBase<Config> conn;
                 byte data[63];
                 io::writer w{data};
                 conn.state.conn.send.update_limit(1000);
                 base.state.update_send_limit(1000);
-                base.id = 1;
                 byte src[11000]{};
                 base.data.src = src;
                 frame::fwriter fw{w};

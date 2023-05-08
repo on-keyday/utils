@@ -16,7 +16,6 @@
 namespace test {
     namespace stream = utils::fnet::quic::stream;
     namespace impl = utils::fnet::quic::stream::impl;
-
     stream::InitialLimits gen_local_limits() {
         stream::InitialLimits limits;
         limits.bidi_stream_data_local_limit = 1000;
@@ -42,7 +41,7 @@ namespace test {
 }  // namespace test
 
 struct RecvQ {
-    utils::fnet::slib::list<std::shared_ptr<test::impl::BidiStream<std::mutex>>> que;
+    utils::fnet::slib::list<std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>>> que;
 
     auto accept() {
         auto res = std::move(que.front());
@@ -66,10 +65,10 @@ int main() {
     using IOResult = utils::fnet::quic::IOResult;
     auto peer = test::gen_peer_limits();
     auto local = test::gen_local_limits();
-    auto conn_local = test::impl::make_conn<std::mutex>(test::stream::Direction::client);
+    auto conn_local = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Direction::client);
     conn_local->apply_peer_initial_limits(peer);
     conn_local->apply_local_initial_limits(local);
-    auto conn_peer = test::impl::make_conn<std::mutex>(test::stream::Direction::server);
+    auto conn_peer = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Direction::server);
     conn_peer->apply_local_initial_limits(peer);
     conn_peer->apply_peer_initial_limits(local);
     auto stream_1 = conn_local->open_bidi();
@@ -83,7 +82,7 @@ int main() {
     IOResult ok = conn_local->send(fw, locals);
     assert(ok == IOResult::ok && locals.size() == 1);
     RecvQ q;
-    conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<std::mutex>> d) {
+    conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
         auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
         d->receiver.set_receiver(recv,
                                  utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex>);

@@ -24,7 +24,7 @@ namespace utils {
             std::uint64_t packet_order_threshold = default_packet_threshold;
             Ratio time_threshold = default_time_threshold;
             std::uint64_t delay_ack_packet_count = 2;
-            bool use_ack_delay = true;
+            bool use_ack_delay = false;
 
             Ratio pacer_N = default_pacer_N;
 

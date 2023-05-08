@@ -286,7 +286,7 @@ namespace utils {
             template <class O, class Allocator>
             struct derived_allocator : base {
                 O obj;
-                using R = std::allocator_traits<Allocator>::template rebind<derived_allocator>;
+                using R = typename std::allocator_traits<Allocator>::template rebind<derived_allocator>;
                 R alloc;
 
                 constexpr derived_allocator(auto&& in, auto&& al)
@@ -371,7 +371,7 @@ namespace utils {
             template <class V, class Alloc, std::enable_if_t<internal::is_match_to<V, T*>, int> = 0>
             constexpr vspan(V&& t, const Alloc& alloc) noexcept {
                 using derived = derived_allocator<std::decay_t<V>, Alloc>;
-                using bound_alloc = std::allocator_traits<Alloc>::template rebind<derived>;
+                using bound_alloc = typename std::allocator_traits<Alloc>::template rebind<derived>;
                 bound_alloc copy{alloc};
                 auto v = copy.allocate(1);
                 auto tmp = helper::defer([&] {

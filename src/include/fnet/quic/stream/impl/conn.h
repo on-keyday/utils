@@ -24,42 +24,57 @@ namespace utils {
             }
         }  // namespace internal
 
+        template <class TypeConfig>
         struct SendeSchedArg {
-            std::shared_ptr<void> unisendarg;
-            std::shared_ptr<void> bidisendarg;
-            std::shared_ptr<void> unirecvarg;
-            std::shared_ptr<void> bidirecvarg;
+            using UniOpenArg = typename TypeConfig::callback_arg::open_uni;
+            using UniAcceptArg = typename TypeConfig::callback_arg::accept_uni;
+            using BidiOpenArg = typename TypeConfig::callback_arg::open_bidi;
+            using BidiAcceptArg = typename TypeConfig::callback_arg::accept_bidi;
+
+            UniOpenArg uniopenarg;
+            UniAcceptArg bidiopenarg;
+            BidiOpenArg uniacceptarg;
+            BidiAcceptArg bidiacceptarg;
         };
 
-        template <class Lock>
-        struct Conn : std::enable_shared_from_this<Conn<Lock>> {
-            using UniOpenCB = void (*)(std::shared_ptr<void>& arg, std::shared_ptr<SendUniStream<Lock>> stream);
-            using UniAcceptCB = void (*)(std::shared_ptr<void>& arg, std::shared_ptr<RecvUniStream<Lock>> stream);
-            using BidiCB = void (*)(std::shared_ptr<void>& arg, std::shared_ptr<BidiStream<Lock>> stream);
-            using SendCB = IOResult (*)(SendeSchedArg, frame::fwriter& w, ack::ACKCollector observer_vec);
+        template <class TypeConfig>
+        struct Conn : std::enable_shared_from_this<Conn<TypeConfig>> {
+            using UniOpenArg = typename TypeConfig::callback_arg::open_uni;
+            using UniAcceptArg = typename TypeConfig::callback_arg::accept_uni;
+            using BidiOpenArg = typename TypeConfig::callback_arg::open_bidi;
+            using BidiAcceptArg = typename TypeConfig::callback_arg::accept_bidi;
+
+            using UniOpenCB = void (*)(UniOpenArg& arg, std::shared_ptr<SendUniStream<TypeConfig>> stream);
+            using UniAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<RecvUniStream<TypeConfig>> stream);
+            using BidiOpenCB = void (*)(UniOpenArg& arg, std::shared_ptr<BidiStream<TypeConfig>> stream);
+            using BidiAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<BidiStream<TypeConfig>> stream);
+            using SendCB = IOResult (*)(SendeSchedArg<TypeConfig>, frame::fwriter& w, ack::ACKCollector observer_vec);
 
            private:
-            ConnFlowControl<Lock> control;
-            slib::hash_map<StreamID, std::shared_ptr<SendUniStream<Lock>>> send_uni;
-            slib::hash_map<StreamID, std::shared_ptr<BidiStream<Lock>>> send_bidi;
-            slib::hash_map<StreamID, std::shared_ptr<RecvUniStream<Lock>>> recv_uni;
-            slib::hash_map<StreamID, std::shared_ptr<BidiStream<Lock>>> recv_bidi;
+            template <class K, class V>
+            using stream_map = TypeConfig::template stream_map<K, V>;
+
+            ConnFlowControl<TypeConfig> control;
+            stream_map<StreamID, std::shared_ptr<SendUniStream<TypeConfig>>> send_uni;
+            stream_map<StreamID, std::shared_ptr<BidiStream<TypeConfig>>> send_bidi;
+            stream_map<StreamID, std::shared_ptr<RecvUniStream<TypeConfig>>> recv_uni;
+            stream_map<StreamID, std::shared_ptr<BidiStream<TypeConfig>>> recv_bidi;
             std::atomic_bool remove_auto = false;
 
-            std::shared_ptr<void> unisendarg;
-            std::shared_ptr<void> bidisendarg;
+            UniOpenArg uniopenarg;
+            BidiOpenArg bidiopenarg;
             UniOpenCB open_uni_stream = nullptr;
-            BidiCB open_bidi_stream = nullptr;
+            BidiOpenCB open_bidi_stream = nullptr;
 
-            std::shared_ptr<void> unirecvarg;
-            std::shared_ptr<void> bidirecvarg;
+            UniAcceptArg uniacceptarg;
+            BidiAcceptArg bidiacceptarg;
             UniAcceptCB accept_uni_stream = nullptr;
-            BidiCB accept_bidi_stream = nullptr;
+            BidiOpenCB accept_bidi_stream = nullptr;
 
             SendCB send_schedule = nullptr;
 
             auto borrow_control() {
-                return std::shared_ptr<ConnFlowControl<Lock>>(
+                return std::shared_ptr<ConnFlowControl<TypeConfig>>(
                     this->shared_from_this(), &control);
             }
 
@@ -81,7 +96,7 @@ namespace utils {
                 return res;
             }
 
-                  // called when initial limits updated
+            // called when initial limits updated
             void apply_local_initial_limits(const InitialLimits& local) {
                 control.base.set_local_initial_limits(local);
                 auto apply = [&](const auto& lock, auto& m) {
@@ -107,60 +122,59 @@ namespace utils {
                 apply(control.base.accept_bidi_lock(), recv_bidi);
             }
 
-            std::shared_ptr<SendUniStream<Lock>> open_uni() {
-                std::shared_ptr<SendUniStream<Lock>> s;
+            std::shared_ptr<SendUniStream<TypeConfig>> open_uni() {
+                std::shared_ptr<SendUniStream<TypeConfig>> s;
                 control.base.open_uni([&](StreamID id, bool blocked) {
                     if (blocked) {
                         return;
                     }
-                    s = internal::make_ptr<SendUniStream<Lock>>(id, borrow_control());
+                    s = internal::make_ptr<SendUniStream<TypeConfig>>(id, borrow_control());
                     send_uni.emplace(id, s);
                     if (open_uni_stream) {
-                        open_uni_stream(unisendarg, s);
+                        open_uni_stream(uniopenarg, s);
                     }
                 });
                 return s;
             }
 
-            std::shared_ptr<BidiStream<Lock>> open_bidi() {
-                std::shared_ptr<BidiStream<Lock>> s;
+            std::shared_ptr<BidiStream<TypeConfig>> open_bidi() {
+                std::shared_ptr<BidiStream<TypeConfig>> s;
                 control.base.open_bidi([&](StreamID id, bool blocked) {
                     if (blocked) {
                         return;
                     }
-                    s = std::allocate_shared<BidiStream<Lock>>(
-                        glheap_allocator<BidiStream<Lock>>{},
+                    s = std::allocate_shared<BidiStream<TypeConfig>>(
+                        glheap_allocator<BidiStream<TypeConfig>>{},
                         id, borrow_control());
                     send_bidi.emplace(id, s);
                     if (open_bidi_stream) {
-                        open_bidi_stream(bidisendarg, s);
+                        open_bidi_stream(bidiopenarg, s);
                     }
                 });
                 return s;
             }
 
-            void set_open_bidi(std::shared_ptr<void> arg, BidiCB cb) {
+            void set_open_bidi(BidiOpenArg arg, BidiOpenCB cb) {
                 const auto lock = control.base.open_bidi_lock();
-                bidisendarg = std::move(arg);
+                bidiopenarg = std::move(arg);
                 open_bidi_stream = cb;
             }
 
-            void set_accept_bidi(std::shared_ptr<void> arg, BidiCB cb) {
+            void set_accept_bidi(BidiAcceptArg arg, BidiOpenCB cb) {
                 const auto lock = control.base.accept_bidi_lock();
-                bidirecvarg = std::move(arg);
+                bidiacceptarg = std::move(arg);
                 accept_bidi_stream = cb;
             }
 
-            void set_open_uni(std::shared_ptr<void> arg, UniOpenCB cb) {
+            void set_open_uni(UniOpenArg arg, UniOpenCB cb) {
                 const auto lock = control.base.open_uni_lock();
-                unisendarg = std::move(arg);
+                uniopenarg = std::move(arg);
                 open_uni_stream = cb;
             }
 
-            // cb is  (std::shared_ptr<void> &arg, std::shared_ptr<utils::fnet::quic::stream::impl::RecvUniStream<Lock>> stream)
-            void set_accept_uni(std::shared_ptr<void> arg, UniAcceptCB cb) {
+            void set_accept_uni(UniAcceptArg arg, UniAcceptCB cb) {
                 const auto lock = control.base.accept_uni_lock();
-                unirecvarg = std::move(arg);
+                uniacceptarg = std::move(arg);
                 accept_uni_stream = cb;
             }
 
@@ -172,7 +186,7 @@ namespace utils {
                 return control.base.state.peer_dir();
             }
 
-            std::shared_ptr<BidiStream<Lock>> find_local_bidi(StreamID id) {
+            std::shared_ptr<BidiStream<TypeConfig>> find_local_bidi(StreamID id) {
                 const auto locked = control.base.open_bidi_lock();
                 if (auto it = send_bidi.find(id); it != send_bidi.end()) {
                     return it->second;
@@ -180,7 +194,7 @@ namespace utils {
                 return nullptr;
             }
 
-            std::shared_ptr<BidiStream<Lock>> find_remote_bidi(StreamID id) {
+            std::shared_ptr<BidiStream<TypeConfig>> find_remote_bidi(StreamID id) {
                 const auto locked = control.base.accept_bidi_lock();
                 if (auto it = recv_bidi.find(id); it != recv_bidi.end()) {
                     return it->second;
@@ -188,7 +202,7 @@ namespace utils {
                 return nullptr;
             }
 
-            std::shared_ptr<SendUniStream<Lock>> find_send_uni(StreamID id) {
+            std::shared_ptr<SendUniStream<TypeConfig>> find_send_uni(StreamID id) {
                 const auto locked = control.base.open_uni_lock();
                 if (auto it = send_uni.find(id); it != send_uni.end()) {
                     return it->second;
@@ -196,7 +210,7 @@ namespace utils {
                 return nullptr;
             }
 
-            std::shared_ptr<RecvUniStream<Lock>> find_recv_uni(StreamID id) {
+            std::shared_ptr<RecvUniStream<TypeConfig>> find_recv_uni(StreamID id) {
                 const auto locked = control.base.accept_uni_lock();
                 if (auto it = recv_uni.find(id); it != recv_uni.end()) {
                     return it->second;
@@ -264,25 +278,25 @@ namespace utils {
                         return;  // any way fail
                     }
                     if (id.type() == StreamType::bidi) {
-                        auto s = internal::make_ptr<BidiStream<Lock>>(id, borrow_control());
+                        auto s = internal::make_ptr<BidiStream<TypeConfig>>(id, borrow_control());
                         auto [_, ok] = recv_bidi.try_emplace(id, s);
                         if (!ok) {
                             oerr = error::Error("unexpected cration failure on bidi stream!");
                             return;
                         }
                         if (accept_bidi_stream) {
-                            accept_bidi_stream(bidirecvarg, std::move(s));
+                            accept_bidi_stream(bidiacceptarg, std::move(s));
                         }
                     }
                     else {
-                        auto s = internal::make_ptr<RecvUniStream<Lock>>(id, borrow_control());
+                        auto s = internal::make_ptr<RecvUniStream<TypeConfig>>(id, borrow_control());
                         auto [_, ok] = recv_uni.try_emplace(id, s);
                         if (!ok) {
                             oerr = error::Error("unexpected creation failure on uni stream!");
                             return;
                         }
                         if (accept_uni_stream) {
-                            accept_uni_stream(unirecvarg, std::move(s));
+                            accept_uni_stream(uniacceptarg, std::move(s));
                         }
                     }
                 });
@@ -418,11 +432,11 @@ namespace utils {
                     return res;
                 }
                 if (send_schedule) {
-                    return send_schedule(SendeSchedArg{
-                                             .unisendarg = unisendarg,
-                                             .bidisendarg = bidisendarg,
-                                             .unirecvarg = unirecvarg,
-                                             .bidirecvarg = bidirecvarg,
+                    return send_schedule(SendeSchedArg<TypeConfig>{
+                                             .uniopenarg = uniopenarg,
+                                             .bidiopenarg = bidiopenarg,
+                                             .uniacceptarg = uniacceptarg,
+                                             .bidiacceptarg = bidiacceptarg,
 
                                          },
                                          fw, observer_vec);
@@ -445,9 +459,9 @@ namespace utils {
             }
         };
 
-        template <class Lock>
-        std::shared_ptr<Conn<Lock>> make_conn(Direction self) {
-            return internal::make_ptr<Conn<Lock>>(self);
+        template <class TypeConfig>
+        std::shared_ptr<Conn<TypeConfig>> make_conn(Direction self) {
+            return internal::make_ptr<Conn<TypeConfig>>(self);
         }
     }  // namespace fnet::quic::stream::impl
 }  // namespace utils

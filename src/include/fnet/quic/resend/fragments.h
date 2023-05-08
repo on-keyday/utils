@@ -32,10 +32,10 @@ namespace utils {
             std::shared_ptr<ack::ACKLostRecord> wait;
         };
 
-        template <class Fragment>
+        template <class Fragment, template <class...> class List>
         struct Retransmiter {
            private:
-            slib::list<Resend<Fragment>> fragments;
+            List<Resend<Fragment>> fragments;
 
             static void save_new_frag(auto&& fragset, Fragment&& frag, auto&& observer) {
                 Resend<Fragment> data;
@@ -78,7 +78,7 @@ namespace utils {
             // this returns IOResult::ok if succeeded
             // if otherwise is returned, fatal error
             IOResult retransmit(auto&& observer, auto&& send) {
-                slib::list<Resend<Fragment>> tmpfrags;
+                List<Resend<Fragment>> tmpfrags;
                 for (auto it = fragments.begin(); it != fragments.end();) {
                     if (it->wait->is_ack()) {
                         ack::put_ack_wait(std::move(it->wait));

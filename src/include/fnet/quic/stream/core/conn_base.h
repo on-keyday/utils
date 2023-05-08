@@ -6,20 +6,21 @@
 */
 
 #pragma once
-#include "../../error.h"
-#include "../transport_error.h"
+#include "../../../error.h"
+#include "../../transport_error.h"
 #include "issue_accept.h"
-#include "../../../helper/defer.h"
-#include "../frame/conn_manage.h"
-#include "fragment.h"
-#include "../ioresult.h"
-#include "../frame/writer.h"
+#include <helper/defer.h>
+#include "../../frame/conn_manage.h"
+#include "../fragment.h"
+#include "../../ioresult.h"
+#include "../../frame/writer.h"
 
 namespace utils {
     namespace fnet::quic::stream {
 
-        template <class Lock = EmptyLock>
+        template <class TypeConfig>
         struct ConnectionBase {
+            using Lock = typename TypeConfig::conn_lock;
             StreamsState state;
             Lock send_locker;
             Lock recv_locker;
@@ -117,6 +118,10 @@ namespace utils {
                 }
                 if (frame.type.type_detail() == FrameType::MAX_DATA) {
                     recv_max_data(static_cast<const frame::MaxDataFrame&>(frame));
+                    return error::none;
+                }
+                if (frame.type.type_detail() == FrameType::DATA_BLOCKED ||
+                    is_STREAMS_BLOCKED(frame.type.type_detail())) {
                     return error::none;
                 }
                 return QUICError{.msg = "unexpected frame type. expect MAX_STREAMS(bidi/uni) or MAX_DATA"};
