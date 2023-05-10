@@ -20,15 +20,15 @@
 namespace utils {
     namespace fnet::quic::stream::impl {
 
-        template <class TypeConfig>
+        template <class TypeConfigs>
         struct SendUniStream {
            private:
-            SendUniStreamBase<TypeConfig> uni;
-            std::weak_ptr<ConnFlowControl<TypeConfig>> conn;
+            SendUniStreamBase<TypeConfigs> uni;
+            std::weak_ptr<ConnFlowControl<TypeConfigs>> conn;
 
             flex_storage src;
             std::shared_ptr<ack::ACKLostRecord> reset_wait;
-            resend::Retransmiter<resend::StreamFragment, TypeConfig::template retransmit_que> frags;
+            resend::Retransmiter<resend::StreamFragment, TypeConfigs::template retransmit_que> frags;
 
             // move state to data_recved if condition satisfied
             void maybe_send_done() {
@@ -134,7 +134,7 @@ namespace utils {
             }
 
            public:
-            SendUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TypeConfig>> c)
+            SendUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TypeConfigs>> c)
                 : uni(id) {
                 conn = c;
                 uni.set_initial(c->base.state.send_ini_limit, c->base.state.local_dir());
@@ -299,21 +299,23 @@ namespace utils {
         };
 
         // returns (all_recved,err)
-        using SaveFragmentCallback = std::pair<bool, error::Error> (*)(std::shared_ptr<void>& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv_bytes, std::uint64_t err_code);
+        template <class Arg>
+        using SaveFragmentCallback = std::pair<bool, error::Error> (*)(Arg& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv_bytes, std::uint64_t err_code);
 
+        template <class Arg>
         struct FragmentSaver {
            private:
-            std::shared_ptr<void> arg;
-            SaveFragmentCallback callback = nullptr;
+            Arg arg;
+            SaveFragmentCallback<Arg> callback = nullptr;
 
            public:
-            void set(std::shared_ptr<void>&& a, SaveFragmentCallback cb) {
+            void set(Arg&& a, SaveFragmentCallback<Arg> cb) {
                 if (cb) {
                     arg = std::move(a);
                     callback = cb;
                 }
                 else {
-                    arg = nullptr;
+                    arg = Arg{};
                     callback = nullptr;
                 }
             }
@@ -326,12 +328,13 @@ namespace utils {
             }
         };
 
-        template <class TypeConfig>
+        template <class TypeConfigs>
         struct RecvUniStream {
            private:
-            RecvUniStreamBase<TypeConfig> uni;
-            std::weak_ptr<ConnFlowControl<TypeConfig>> conn;
-            FragmentSaver saver;
+            RecvUniStreamBase<TypeConfigs> uni;
+            std::weak_ptr<ConnFlowControl<TypeConfigs>> conn;
+            using RecvArg = typename TypeConfigs::callback_arg::recv;
+            FragmentSaver<RecvArg> saver;
             std::shared_ptr<ack::ACKLostRecord> max_data_wait;
             std::shared_ptr<ack::ACKLostRecord> stop_sending_wait;
 
@@ -393,7 +396,7 @@ namespace utils {
             }
 
            public:
-            RecvUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TypeConfig>> c)
+            RecvUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TypeConfigs>> c)
                 : uni(id) {
                 conn = c;
                 uni.set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
@@ -509,7 +512,7 @@ namespace utils {
             }
 
             // set receiver user callback
-            bool set_receiver(std::shared_ptr<void> arg, SaveFragmentCallback save) {
+            bool set_receiver(std::shared_ptr<void> arg, SaveFragmentCallback<RecvArg> save) {
                 const auto locked = uni.lock();
                 if (uni.state.is_pre_recv()) {
                     saver.set(std::move(arg), save);
@@ -547,10 +550,10 @@ namespace utils {
             }
         };
 
-        template <class TypeConfig>
+        template <class TypeConfigs>
         struct BidiStream {
-            SendUniStream<TypeConfig> sender;
-            RecvUniStream<TypeConfig> receiver;
+            SendUniStream<TypeConfigs> sender;
+            RecvUniStream<TypeConfigs> receiver;
 
             // general handling
             // called by QUIC runtime system
@@ -581,7 +584,7 @@ namespace utils {
             }
 
             BidiStream(StreamID id,
-                       std::shared_ptr<ConnFlowControl<TypeConfig>> conn)
+                       std::shared_ptr<ConnFlowControl<TypeConfigs>> conn)
                 : sender(id, conn), receiver(id, conn) {}
 
             bool is_closed() {

@@ -79,6 +79,8 @@ namespace utils {
                     if (cmp != frag.fragment) {
                         auto sub = frag.fragment.substr(0, 30);
                         auto found = std::string_view(it.data.as_char(), it.data.size()).find(sub.as_char(), 0, sub.size());
+                        (void)sub;
+                        (void)found;
                         return {false, fragment_error(type)};
                     }
                     fin = fin || frag.fin;
@@ -254,12 +256,13 @@ namespace utils {
             }
         };
 
-        template <class Locker>
-        inline std::pair<bool, error::Error> reader_recv_handler(std::shared_ptr<void>& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
+        // arg must be ptrlike
+        template <class Locker, class TypeConfigs>
+        inline std::pair<bool, error::Error> reader_recv_handler(typename TypeConfigs::callback_arg::recv& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
             if (!arg) {
                 return {false, error::Error("unexpected arg")};
             }
-            auto s = static_cast<RecvSorted<Locker>*>(arg.get());
+            auto s = static_cast<RecvSorted<Locker>*>(std::to_address(arg));
             if (!s->id.valid()) {
                 s->id = id;
             }

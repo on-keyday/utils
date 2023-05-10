@@ -42,6 +42,10 @@ namespace utils {
             using stream_type_config = StreamTypeConfig;
             using congestion_algorithm = CongestionAlgorithm;
             using datagram_drop = DatagramDrop;
+            struct user_defined_types_config {
+                congestion_algorithm algorithm;
+                datagram_drop dgram_drop;
+            };
         };
 
     }  // namespace fnet::quic::context

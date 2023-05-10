@@ -17,8 +17,9 @@
 #include <testutil/alloc_hook.h>
 #include <wrap/cout.h>
 #include <fnet/quic/path/dplpmtud.h>
-#if __has_include(<format>)
+#ifdef _WIN32
 #include <format>
+#define HAS_FORMAT
 #endif
 #include <thread/channel.h>
 #include <fnet/quic/stream/impl/recv_stream.h>
@@ -27,7 +28,7 @@
 #include <file/gzip/gzip.h>
 #include <testutil/timer.h>
 #include <fnet/quic/quic.h>
-using namespace utils::fnet::quic::use;
+using namespace utils::fnet::quic::use::smartptr;
 using QCTX = std::shared_ptr<Context>;
 using namespace utils::fnet;
 
@@ -63,7 +64,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
         }
         break;
     }
-#if __has_include(<format>)
+#ifdef HAS_FORMAT
     auto res = uni->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
 #else
     std::string req = "GET /search?q=" + utils::number::to_string<std::string>(i + 1) + " HTTP/1.1\r\nHost: www.google.com\r\n";
@@ -136,12 +137,13 @@ void thread(QCTX ctx, RecvChan c, int i) {
     http.borrow_output(data, size);
     utils::wrap::cout_wrap() << utils::view::CharVec(data, size);
 
+    auto path = "./ignore/dump" + utils::number::to_string<std::string>(i) + ".";
     {
-        std::ofstream of(std::format("./ignore/dump{}.gz", i), std::ios_base::out | std::ios_base::binary);
+        std::ofstream of(path + "gz", std::ios_base::out | std::ios_base::binary);
         of << text;
     }
     {
-        std::ofstream of(std::format("./ignore/dump{}.html", i), std::ios_base::out | std::ios_base::binary);
+        std::ofstream of(path + "html", std::ios_base::out | std::ios_base::binary);
         utils::file::gzip::GZipHeader gh;
         std::string dec;
         utils::io::bit_reader<std::string&> in{text};
@@ -190,7 +192,12 @@ utils::fnet::quic::status::LossTimerState prev_state = utils::fnet::quic::status
 utils::fnet::quic::time::Time prev_deadline = {};
 void record_timer(std::shared_ptr<void>&, const utils::fnet::quic::status::LossTimer& timer, utils::fnet::quic::time::Time now) {
     auto print = [&] {
+#ifdef HAS_FORMAT
+        // #warning "what?"
         utils::wrap::cout_wrap() << std::format("loss timer: {} {} until deadline {}ms\n", to_string(timer.current_space()), to_string(prev_state), prev_deadline.value - now.value);
+#else
+        utils::wrap::cout_wrap() << "loss timer: " << to_string(timer.current_space()) << " " << to_string(prev_state) << " until deadline " << (prev_deadline.value - now.value) << "ms\n";
+#endif
     };
     if (timer.current_state() != prev_state ||
         timer.deadline() != prev_deadline) {
@@ -244,8 +251,7 @@ int main() {
     auto [w, r] = utils::thread::make_chan<Recvs>();
     streams->set_accept_uni(std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {}), [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
         auto w2 = static_cast<SendChan*>(p.get());
-        auto data = std::make_shared<Reader>();
-        s->set_receiver(data, quic::stream::impl::reader_recv_handler<std::mutex>);
+        auto data = set_stream_reader(*s);
         *w2 << Recvs{std::move(s), std::move(data)};
     });
     auto wait = resolve_address("localhost", "8090", sockattr_udp());

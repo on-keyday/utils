@@ -13,14 +13,14 @@
 
 namespace utils {
     namespace dnet::quic::event {
-        template <class TypeConfig>
+        template <class TypeConfigs>
         inline std::pair<Status, error::Error> send_streams(const packet::PacketSummary& packet, ACKWaitVec& wait, frame::fwriter& w, std::shared_ptr<void>& arg) {
             if (packet.type != PacketType::OneRTT &&
                 packet.type != PacketType::ZeroRTT) {
                 return {Status::reorder, error::none};
             }
             namespace impl = stream::impl;
-            impl::Conn<Lock>* ptr = static_cast<impl::Conn<TypeConfig>*>(arg.get());
+            impl::Conn<Lock>* ptr = static_cast<impl::Conn<TypeConfigs>*>(arg.get());
             auto res = ptr->send(w, wait);
             if (res == IOResult::invalid_data ||
                 res == IOResult::fatal) {
@@ -29,10 +29,10 @@ namespace utils {
             return {Status::reorder, error::none};
         }
 
-        template <class TypeConfig>
+        template <class TypeConfigs>
         inline std::pair<Status, error::Error> recv_streams(const packet::PacketSummary& packet, frame::Frame& f, std::shared_ptr<void>& arg) {
             namespace impl = stream::impl;
-            impl::Conn<Lock>* conn = static_cast<impl::Conn<TypeConfig>*>(arg.get());
+            impl::Conn<Lock>* conn = static_cast<impl::Conn<TypeConfigs>*>(arg.get());
             auto [_, err] = conn->recv(f);
             if (err) {
                 return {Status::fatal, std::move(err)};

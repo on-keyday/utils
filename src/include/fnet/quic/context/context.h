@@ -55,13 +55,16 @@ namespace utils {
 
         // Context is QUIC connection context suite
         // this handles single connection both client and server
-        template <class TypeConfig>
+        template <class TypeConfigs>
         struct Context {
+            using UserDefinedTypesConfig = typename TypeConfigs::user_defined_types_config;
+
            private:
-            using CongestionAlgorithm = typename TypeConfig::congestion_algorithm;
-            using Lock = typename TypeConfig::context_lock;
-            using DatagramDrop = typename TypeConfig::datagram_drop;
-            using StreamTypeConfig = typename TypeConfig::stream_type_config;
+            using CongestionAlgorithm = typename TypeConfigs::congestion_algorithm;
+            using Lock = typename TypeConfigs::context_lock;
+            using DatagramDrop = typename TypeConfigs::datagram_drop;
+            using StreamTypeConfig = typename TypeConfigs::stream_type_config;
+
             Version version = version_negotiation;
             status::Status<CongestionAlgorithm> status;
             trsparam::TransportParameters params;
@@ -263,6 +266,7 @@ namespace utils {
                     }
                     else {
                         frame::add_padding_for_encryption(fw, wire, crypto::sample_skip_size);
+                        auto able_to_padding = w.remain();
                     }
                     pstatus = fw.status;
                     logger.sending_packet(summary, w.written());  // logging
@@ -924,10 +928,13 @@ namespace utils {
                 if (closer.has_error()) {
                     return;  // already set
                 }
-                auto qerr = err.as<QUICError>();
-                if (qerr) {
+
+                if (auto qerr = err.as<QUICError>()) {
                     qerr->is_app = true;
                     qerr->by_peer = false;
+                }
+                else if (auto aerr = err.as<AppError>()) {
+                    // nothing to do
                 }
                 else {
                     auto q = QUICError{
@@ -952,7 +959,7 @@ namespace utils {
             }
 
             // thread unsafe call
-            bool init(Config&& config, CongestionAlgorithm&& alg = CongestionAlgorithm{}, DatagramDrop&& dgdrop = DatagramDrop{}) {
+            bool init(Config&& config, UserDefinedTypesConfig&& udconfig = {}) {
                 // reset internal parameters
                 reset_internal();
                 closer.reset();
@@ -976,7 +983,7 @@ namespace utils {
                 internal.idle_timeout = config.transport_parameters.max_idle_timeout;
                 internal.local_max_ack_delay = config.transport_parameters.max_ack_delay;
                 mtu.reset(config.path_parameters);
-                status.reset(internal, std::move(alg), config.server, mtu.current_datagram_size());
+                status.reset(internal, std::move(udconfig.algorithm), config.server, mtu.current_datagram_size());
                 if (!status.now().valid()) {
                     set_quic_runtime_error(QUICError{
                         .msg = "clock.now() returns invalid time. clock must be set",
@@ -1005,7 +1012,7 @@ namespace utils {
                 zero_rtt_token.reset(std::move(config.zero_rtt));
 
                 // setup datagram handler
-                datagrams.reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(dgdrop));
+                datagrams.reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
 
                 // finalize initialization
                 closed.store(close::CloseReason::not_closed);

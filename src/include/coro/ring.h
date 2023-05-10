@@ -134,10 +134,10 @@ namespace utils {
 
         }  // namespace test
 
-        template <class TypeConfig, class T>
+        template <class TypeConfigs, class T>
         struct LockedRingQue {
            private:
-            TypeConfig l;
+            TypeConfigs l;
             RingQue<T> list;
 
             auto lock() {

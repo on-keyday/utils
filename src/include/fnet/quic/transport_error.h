@@ -93,20 +93,26 @@ namespace utils {
                     if (by_peer) {
                         helper::append(pb, " by peer");
                     }
-                    if (transport_error != TransportError::NO_ERROR) {
-                        helper::append(pb, " transport_error=");
-                        if (auto msg = errmsg(transport_error)) {
-                            helper::append(pb, msg);
-                            if (is_CRYPTO_ERROR(transport_error)) {
-                                helper::append(pb, "(");
-                                number::to_string(pb, int(transport_error) & 0xFF, 16);
+                    if (is_app) {
+                        helper::append(pb, "code=");
+                        number::to_string(pb, std::uint64_t(transport_error));
+                    }
+                    else {
+                        if (transport_error != TransportError::NO_ERROR) {
+                            helper::append(pb, " transport_error=");
+                            if (auto msg = errmsg(transport_error)) {
+                                helper::append(pb, msg);
+                                if (is_CRYPTO_ERROR(transport_error)) {
+                                    helper::append(pb, "(");
+                                    number::to_string(pb, std::uint64_t(transport_error) & 0xFF, 16);
+                                    helper::append(pb, ")");
+                                }
+                            }
+                            else {
+                                helper::append(pb, "TransportError(");
+                                number::to_string(pb, int(transport_error));
                                 helper::append(pb, ")");
                             }
-                        }
-                        else {
-                            helper::append(pb, "TransportError(");
-                            number::to_string(pb, int(transport_error));
-                            helper::append(pb, ")");
                         }
                     }
                     if (frame_type != FrameType::PADDING) {
@@ -158,6 +164,17 @@ namespace utils {
 
                 std::uint64_t errnum() const {
                     return (std::uint64_t)transport_error;
+                }
+            };
+
+            struct AppError {
+                std::uint64_t error_code = 0;
+                error::Error msg;
+                void error(auto&& pb) {
+                    helper::appends(pb, "quic(app): ");
+                    msg.error(pb);
+                    helper::append(pb, "code=");
+                    number::to_string(pb, error_code);
                 }
             };
         }  // namespace quic

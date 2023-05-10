@@ -94,6 +94,15 @@ namespace utils {
                     }
                     return fw.write(cclose);
                 }
+                auto aerr = conn_err.as<AppError>();
+                if (aerr) {
+                    flex_storage fxst;
+                    conn_err.error(fxst);
+                    cclose.type = FrameType::CONNECTION_CLOSE_APP;
+                    cclose.error_code = aerr->error_code;
+                    cclose.reason_phrase = fxst;
+                    return fw.write(cclose);
+                }
                 flex_storage fxst;
                 conn_err.error(fxst);
                 cclose.reason_phrase = fxst;

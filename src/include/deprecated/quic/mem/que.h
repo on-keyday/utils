@@ -22,14 +22,14 @@ namespace utils {
                 void unlock() {}
             };
 
-            template <class T, class TypeConfig = std::recursive_mutex>
+            template <class T, class TypeConfigs = std::recursive_mutex>
             struct VecQue {
                 T* vec = nullptr;
                 tsize cap = 0;
                 tsize len = 0;
                 allocate::Alloc* a = nullptr;
 
-                TypeConfig m;
+                TypeConfigs m;
 
                 auto lock_callback(auto&& callback) {
                     std::scoped_lock l{m};
@@ -151,12 +151,12 @@ namespace utils {
                 }
             }
 
-            template <class T, class TypeConfig>
+            template <class T, class TypeConfigs>
             struct StockNode {
                 LinkNode<T>* stock_begin = nullptr;
                 LinkNode<T>* stock_end = nullptr;
                 allocate::Alloc* a = nullptr;
-                TypeConfig locker;
+                TypeConfigs locker;
 
                 void lock() {
                     locker.lock();
@@ -205,9 +205,9 @@ namespace utils {
                 }
             };
 
-            template <class T, class TypeConfig>
+            template <class T, class TypeConfigs>
             struct SharedStock {
-                StockNode<T, TypeConfig>* shared;
+                StockNode<T, TypeConfigs>* shared;
 
                 allocate::Alloc* get_alloc() {
                     return shared->get_alloc();

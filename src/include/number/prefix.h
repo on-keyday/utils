@@ -43,8 +43,8 @@ namespace utils {
             return 0;
         }
 
-        template <class T, class Result, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr read_prefixed_number(Sequencer<T>& seq, Result& result, int* prefix = nullptr, bool* is_float = nullptr, TypeConfig config = {}) {
+        template <class T, class Result, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr read_prefixed_number(Sequencer<T>& seq, Result& result, int* prefix = nullptr, bool* is_float = nullptr, TypeConfigs config = {}) {
             int radix = 10;
             if (auto v = has_prefix(seq)) {
                 radix = v;
@@ -56,8 +56,8 @@ namespace utils {
             return read_number(result, seq, radix, is_float, config);
         }
 
-        template <class T, class Int, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr, TypeConfig config = TypeConfig{}) {
+        template <class T, class Int, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr prefix_integer(Sequencer<T>& seq, Int& res, int* pradix = nullptr, TypeConfigs config = TypeConfigs{}) {
             int radix = 10;
             bool minus = false;
             if (seq.consume_if('+')) {
@@ -85,8 +85,8 @@ namespace utils {
             return true;
         }
 
-        template <class T, class Int, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, TypeConfig config = TypeConfig{}) {
+        template <class T, class Int, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr prefix_integer(T&& input, Int& res, int* pradix = nullptr, TypeConfigs config = TypeConfigs{}) {
             auto seq = make_ref_seq(input);
             seq.rptr = config.offset;
             if (auto err = prefix_integer(seq, res, pradix); !err) {

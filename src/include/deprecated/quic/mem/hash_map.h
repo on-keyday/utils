@@ -38,7 +38,7 @@ namespace utils {
                 }
             };
 
-            template <class Key, class Value, class TypeConfig = std::recursive_mutex, class Hash = std::hash<Key>, class KeyEq = equal_t>
+            template <class Key, class Value, class TypeConfigs = std::recursive_mutex, class Hash = std::hash<Key>, class KeyEq = equal_t>
             struct HashMap {
                private:
                 Hash hash;
@@ -49,7 +49,7 @@ namespace utils {
                 using KV = KeyValue<Key, Value>;
                 StockNode<KV, EmptyLock> stock;
                 tsize total = 0;
-                TypeConfig m;
+                TypeConfigs m;
 
                 node_t& index(auto&& key) {
                     const hash_t khash = hash(key);

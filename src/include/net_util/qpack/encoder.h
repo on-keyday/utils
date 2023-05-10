@@ -72,7 +72,7 @@ namespace utils {
             std::uint64_t capacity = 0;
         };
 
-        template <class T>
+        template <class Table, class T>
         constexpr QpackError render_capacity(io::expand_writer<T>& w, std::uint64_t capacity) {
             if (auto err = hpack::encode_integer<5>(w, capacity, match(Instruction::dyn_table_capacity)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
@@ -88,11 +88,11 @@ namespace utils {
             return QpackError::none;
         }
 
-        template <class T, class Table>
-        constexpr QpackError render_insertion(Context<Table>& table, io::expand_writer<T>& w, Field& ins) {
-            auto dup = table.get_duplicated(ins);
-            if (dup >= 0) {
-                return render_duplicate(w, dup);
+        template <class T, class TypeConfig>
+        constexpr QpackError render_insertion(fields::FieldEncodeContext<TypeConfig>& ctx, io::expand_writer<T>& w, Field& ins) {
+            fields::Reference ref = ctx.find_ref(ins.head, ins.value);
+            if (ref.head_value != fields::no_ref) {
+                return render_duplicate(w, ref.head_value);
             }
             auto& refs = header::internal::header_hash_table.table[header::internal::header_hash_index(ins.head)];
             std::int64_t name_ref = -1;
@@ -109,7 +109,7 @@ namespace utils {
                 }
             }
             if (name_ref == -1) {
-                name_ref = table.get_index(ins.head);
+                name_ref = std::int64_t(ref.head);
             }
             if (name_ref >= 0) {
                 if (auto err = hpack::encode_integer<6>(w, name_ref, match(Instruction::insert_with_name_ref) | is_static); err != hpack::HpackError::none) {
@@ -127,8 +127,8 @@ namespace utils {
             return QpackError::none;
         }
 
-        template <class StringT, class Table, class C, class U>
-        constexpr QpackError parse_instruction(Context<Table>& table, io::basic_reader<C, U>& r) {
+        template <class StringT, class TypeConfig, class C, class U>
+        constexpr QpackError parse_instruction(fields::FieldDecodeContext<TypeConfig>& ctx, io::basic_reader<C, U>& r) {
             if (r.empty()) {
                 return QpackError::input_length;
             }
@@ -141,10 +141,9 @@ namespace utils {
                     if (auto err = hpack::decode_integer<5>(r, capacity); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    if (capacity > table.max_capacity) {
+                    if (!ctx.update_capacity(capacity)) {
                         return QpackError::large_capacity;
                     }
-                    table.capacity = capacity;
                 }
                 case Instruction::insert_with_name_ref: {
                     std::uint64_t name_index = 0;
@@ -161,20 +160,17 @@ namespace utils {
                         head = view::basic_rvec<C, U>(header::predefined_headers<C>.table[name_index].first);
                     }
                     else {
-                        if (!table.isdr.is_valid_relatvie_index(name_index)) {
-                            return QpackError::invalid_dynamic_table_relative_ref;
-                        }
-                        field_t h = table.table.get_field(name_index);
-                        if (h.first.null()) {
+                        auto h = ctx.find_ref(ctx.to_abs(name_index));
+                        if (!h) {
                             return QpackError::no_entry_for_index;
                         }
-                        head = h.first;
+                        head = h->first;
                     }
                     StringT value;
                     if (auto err = hpack::decode_string(value, r); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    table.insert(StringT(head), std::move(value));
+                    ctx.add_field(head, std::move(value));
                 }
                 case Instruction::insert_with_literal_name: {
                     StringT head, value;
@@ -184,21 +180,18 @@ namespace utils {
                     if (auto err = hpack::decode_string(value, r); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    table.insert(std::move(head), std::move(value));
+                    ctx.add_field(std::move(head), std::move(value));
                 }
                 case Instruction::duplicate: {
                     std::uint64_t index = 0;
                     if (auto err = hpack::decode_integer<5>(r, index); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    if (!table.isdr.is_valid_relatvie_index(index)) {
-                        return QpackError::invalid_dynamic_table_relative_ref;
-                    }
-                    field_t h = table.table.get_field(index);
-                    if (h.first.null()) {
+                    auto h = ctx.find_ref(ctx.to_abs(index));
+                    if (!h) {
                         return QpackError::no_entry_for_index;
                     }
-                    table.insert(StringT(h.first), StringT(h.second));
+                    ctx.add_field(h->first, h->second);
                 }
             }
             return QpackError::none;

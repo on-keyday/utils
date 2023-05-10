@@ -10,11 +10,12 @@
 #include <fnet/socket.h>
 #include <fnet/addrinfo.h>
 #include <mutex>
-#if __has_include(<format>)
+#ifdef _WIN32
 #include <format>
+#define HAS_FORMAT
 #endif
 #include <thread>
-using namespace utils::fnet::quic::use;
+using namespace utils::fnet::quic::use::rawptr;
 struct Recvs {
     std::shared_ptr<Reader> r;
     std::shared_ptr<RecvStream> s;
@@ -83,7 +84,7 @@ void request(utils::coro::C* c, void* p) {
             continue;
         }
         auto id = stream->id();
-#if __has_include(<format>)
+#ifdef HAS_FORMAT
         stream->add_data(std::format("GET /search?q=Q{} HTTP/1.1\r\nHost: www.google.com\r\n", n), false);
 #else
         std::string data;
@@ -108,9 +109,9 @@ void request(utils::coro::C* c, void* p) {
 void conn(utils::coro::C* c, std::shared_ptr<Context>& ctx, utils::fnet::Socket& sock, utils::fnet::NetAddrPort& addr) {
     auto s = ctx->get_streams();
     // s->set_auto_remove(true);
-    s->set_accept_uni(std::shared_ptr<utils::coro::C>(c, [](auto) {}), [](std::shared_ptr<void>& c, std::shared_ptr<RecvStream> in) {
+    s->set_accept_uni(c, [](void*& c, std::shared_ptr<RecvStream> in) {
         auto s = set_stream_reader(*in);
-        auto l = static_cast<utils::coro::C*>(c.get());
+        auto l = static_cast<utils::coro::C*>(c);
         auto r = new Recvs();
         r->r = std::move(s);
         r->s = in;

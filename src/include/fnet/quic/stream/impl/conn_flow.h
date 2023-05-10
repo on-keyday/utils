@@ -13,9 +13,9 @@
 namespace utils {
     namespace fnet::quic::stream::impl {
 
-        template <class TypeConfig>
+        template <class TypeConfigs>
         struct ConnFlowControl {
-            ConnectionBase<TypeConfig> base;
+            ConnectionBase<TypeConfigs> base;
             std::shared_ptr<ack::ACKLostRecord> max_data;
             std::shared_ptr<ack::ACKLostRecord> max_uni_streams;
             std::shared_ptr<ack::ACKLostRecord> max_bidi_streams;

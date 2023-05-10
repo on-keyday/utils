@@ -138,8 +138,8 @@ namespace utils {
             static constexpr bool allow_zero_prefixed = true;
         };
 
-        template <class Result, class T, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr, TypeConfig&& config = TypeConfig{}) {
+        template <class Result, class T, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr, TypeConfigs&& config = TypeConfigs{}) {
             if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }
@@ -217,8 +217,8 @@ namespace utils {
             return true;
         }
 
-        template <class String, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr is_number(String&& v, int radix = 10, bool* is_float = nullptr, TypeConfig&& config = TypeConfig{}) {
+        template <class String, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr is_number(String&& v, int radix = 10, bool* is_float = nullptr, TypeConfigs&& config = TypeConfigs{}) {
             Sequencer<buffer_t<String&>> seq(v);
             seq.seek(config.offset);
             auto e = read_number(helper::nop, seq, radix, is_float, config);
@@ -233,8 +233,8 @@ namespace utils {
             return true;
         }
 
-        template <class String, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr is_float_number(String&& v, int radix = 10, TypeConfig&& config = TypeConfig{}) {
+        template <class String, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr is_float_number(String&& v, int radix = 10, TypeConfigs&& config = TypeConfigs{}) {
             if (radix != 10 && radix != 16) {
                 return false;
             }
@@ -246,13 +246,13 @@ namespace utils {
             return is_float;
         }
 
-        template <class String, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr is_integer(String&& v, int radix = 10, TypeConfig&& config = TypeConfig{}) {
+        template <class String, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr is_integer(String&& v, int radix = 10, TypeConfigs&& config = TypeConfigs{}) {
             return is_number(v, radix, nullptr, config);
         }
 
-        template <class T, class U, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10, TypeConfig&& config = TypeConfig{}) {
+        template <class T, class U, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10, TypeConfigs&& config = TypeConfigs{}) {
             internal::PushBackParserInt<U> parser;
             parser.radix = radix;
             bool minus = false;
@@ -277,8 +277,8 @@ namespace utils {
             return true;
         }
 
-        template <class String, class T, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr parse_integer(String&& v, T& result, int radix = 10, TypeConfig config = TypeConfig{}) {
+        template <class String, class T, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr parse_integer(String&& v, T& result, int radix = 10, TypeConfigs config = TypeConfigs{}) {
             Sequencer<buffer_t<String&>> seq(v);
             seq.seek(config.offset);
             T tmpres = 0;
@@ -296,8 +296,8 @@ namespace utils {
         }
 
         // experimental
-        template <class T, class U, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr parse_float(Sequencer<T>& seq, U& result, int radix = 10, TypeConfig config = TypeConfig{}) {
+        template <class T, class U, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr parse_float(Sequencer<T>& seq, U& result, int radix = 10, TypeConfigs config = TypeConfigs{}) {
             static_assert(std::is_floating_point_v<U>, "expect floating point type");
             if (radix != 10 && radix != 16) {
                 return NumError::invalid;
@@ -330,8 +330,8 @@ namespace utils {
             return true;
         }
 
-        template <class String, class T, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr parse_float(String&& v, T& result, int radix = 10, TypeConfig config = TypeConfig{}) {
+        template <class String, class T, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr parse_float(String&& v, T& result, int radix = 10, TypeConfigs config = TypeConfigs{}) {
             Sequencer<buffer_t<String&>> seq(v);
             seq.seek(config.offset);
             T tmpres = 0;
@@ -348,8 +348,8 @@ namespace utils {
             return true;
         }
 
-        template <size_t limit, class In, class T, class TypeConfig = internal::ReadConfig>
-        constexpr NumErr read_limited_int(Sequencer<In>& seq, T& t, int radix = 10, bool must = false, TypeConfig config = TypeConfig{}) {
+        template <size_t limit, class In, class T, class TypeConfigs = internal::ReadConfig>
+        constexpr NumErr read_limited_int(Sequencer<In>& seq, T& t, int radix = 10, bool must = false, TypeConfigs config = TypeConfigs{}) {
             char num[limit + 1] = {0};
             size_t count = 0;
             while (!seq.eos() && is_radix_char(seq.current(), radix) && count < limit) {
