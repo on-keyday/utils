@@ -22,6 +22,7 @@ namespace utils {
             too_short_number,
             internal,
             input_length,
+            output_length,
             invalid_mask,
             invalid_value,
             not_exists,
@@ -33,16 +34,30 @@ namespace utils {
         template <class String>
         constexpr size_t gethuffmanlen(const String& str) {
             size_t ret = 0;
-            for (auto& c : str) {
-                ret += huffman::codes.codes[byte(c)].bits;
+            size_t size = 0;
+            if constexpr (std::is_pointer_v<std::decay_t<decltype(str)>>) {
+                size = utils::strlen(str);
+            }
+            else {
+                size = str.size();
+            }
+            for (size_t i = 0; i < size; i++) {
+                ret += huffman::codes.codes[byte(str[i])].bits;
             }
             return (ret + 7) / 8;
         }
 
         template <class T, class String, class C, class U>
         constexpr void encode_huffman(io::basic_bit_writer<T, C, U>& vec, const String& in) {
-            for (auto c : in) {
-                huffman::codes.codes[byte(c)].write(vec);
+            size_t size = 0;
+            if constexpr (std::is_pointer_v<std::decay_t<decltype(in)>>) {
+                size = utils::strlen(in);
+            }
+            else {
+                size = in.size();
+            }
+            for (size_t i = 0; i < size; i++) {
+                huffman::codes.codes[byte(in[i])].write(vec);
             }
             while (!vec.is_aligned()) {
                 vec.push_back(true);
@@ -150,22 +165,43 @@ namespace utils {
             return true;
         }
 
-        template <size_t prefixed = 7, class T, class String, class C, class U>
-        constexpr void encode_string(io::basic_expand_writer<T, C, U>& w, const String& value, C common_prefix = 0, C flag_huffman = 0x80) {
-            if (auto huflen = gethuffmanlen(value); value.size() > huflen) {
-                encode_integer<prefixed>(w, huflen, common_prefix | flag_huffman);
-                w.expand(huflen);
-                io::basic_bit_writer<view::basic_wvec<C, U>, C, U> vec{w.remain()};
-                encode_huffman(vec, value);
+        template <size_t prefixed = 7, class T, class String, class C, class U, class F1 = C, class F2 = C>
+        constexpr HpkErr encode_string(io::basic_expand_writer<T, C, U>& w, const String& value, F1 common_prefix = 0, F2 flag_huffman = 0x80) {
+            size_t size = 0;
+            if constexpr (std::is_pointer_v<std::decay_t<decltype(value)>>) {
+                size = utils::strlen(value);
             }
             else {
-                encode_integer<prefixed>(w, value.size(), common_prefix);
-                w.write(value);
+                size = value.size();
+            }
+            if (auto huflen = gethuffmanlen(value); size > huflen) {
+                auto err = encode_integer<prefixed>(w, huflen, common_prefix | flag_huffman);
+                if (err != HpackError::none) {
+                    return err;
+                }
+                w.expand(huflen);
+                if (w.remain().size() != huflen) {
+                    return HpackError::output_length;
+                }
+                io::basic_bit_writer<view::basic_wvec<C, U>, C, U> vec{w.remain()};
+                encode_huffman(vec, value);
+                w.offset(huflen);
+                return HpackError::none;
+            }
+            else {
+                auto err = encode_integer<prefixed>(w, size, common_prefix);
+                if (err != HpackError::none) {
+                    return err;
+                }
+                if (!w.write(value)) {
+                    return HpackError::output_length;
+                }
+                return HpackError::none;
             }
         }
 
-        template <size_t prefixed = 7, class String, class C, class U>
-        constexpr HpkErr decode_string(String& str, io::basic_reader<C, U>& r, C flag_huffman = 0x80, C* first_mask = nullptr) {
+        template <size_t prefixed = 7, class String, class C, class U, class F1 = C>
+        constexpr HpkErr decode_string(String& str, io::basic_reader<C, U>& r, F1 flag_huffman = 0x80, C* first_mask = nullptr) {
             size_t size = 0;
             byte mask = 0;
             if (!first_mask) {

@@ -12,6 +12,7 @@ namespace utils {
         enum class QpackError {
             none,
             input_length,
+            output_length,
             undefined_instruction,
             encoding_error,
             unexpected_error,
@@ -30,7 +31,7 @@ namespace utils {
             no_entry_exists,
             dynamic_ref_exists,
             negative_base,
-            hol_by_insertion,
+            head_of_blocking,
         };
     }
 }  // namespace utils

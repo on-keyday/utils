@@ -26,6 +26,19 @@ namespace utils {
         struct SectionPrefix {
             std::uint64_t required_insert_count = 0;
             std::uint64_t base = 0;
+
+            constexpr std::uint64_t encode_delta_base() const {
+                if (required_insert_count <= base) {
+                    return base - required_insert_count;
+                }
+                else {
+                    return required_insert_count - 1 - base;
+                }
+            }
+
+            constexpr bool sign() const {
+                return required_insert_count > base;
+            }
         };
 
         struct EncodedSectionPrefix {
@@ -38,7 +51,7 @@ namespace utils {
                     return internal::convert_hpack_error(err);
                 }
                 byte first_bit = 0;
-                if (auto err = hpack::decode_integer<7>(r, delta_base, &first_bit)) {
+                if (auto err = hpack::decode_integer<7>(r, delta_base, &first_bit); err != hpack::HpackError::none) {
                     return internal::convert_hpack_error(err);
                 }
                 sign = first_bit & 0x80;
@@ -82,6 +95,23 @@ namespace utils {
                         return QpackError::negative_base;
                     }
                     prefix.base = prefix.required_insert_count - delta_base - 1;
+                }
+                return QpackError::none;
+            }
+
+            constexpr void encode(SectionPrefix prefix, std::uint64_t max_capacity) {
+                encoded_insert_count = encode_required_insert_count(prefix.required_insert_count, max_capacity);
+                sign = prefix.sign();
+                delta_base = prefix.encode_delta_base();
+            }
+
+            template <class T>
+            constexpr QpackError render(io::expand_writer<T>& w) const {
+                if (auto err = hpack::encode_integer<8>(w, encoded_insert_count, 0); err != hpack::HpackError::none) {
+                    return internal::convert_hpack_error(err);
+                }
+                if (auto err = hpack::encode_integer<7>(w, delta_base, sign ? 0x80 : 0); err != hpack::HpackError::none) {
+                    return internal::convert_hpack_error(err);
                 }
                 return QpackError::none;
             }
@@ -152,156 +182,97 @@ namespace utils {
         }
 
         template <class T>
-        constexpr QpackError render_field_line_static(io::expand_writer<T>& w, Field field) {
-            auto& tb = header::internal::field_hash_table.table[header::internal::field_hash_index(field.head, field.value)];
-            for (auto& e : tb) {
-                if (e == 0) {
-                    break;
-                }
-                auto index = e - 1;
-                auto kv = header::predefined_headers<>.table[index];
-                if (kv.first == field.head && kv.second == field.value) {
-                    if (auto err = hpack::encode_integer<6>(w, index, match(FieldType::index) | 0x40); err != hpack::HpackError::none) {
-                        return internal::convert_hpack_error(err);
-                    }
-                    return QpackError::none;
-                }
-            }
-            auto& hd = header::internal::header_hash_table.table[header::internal::header_hash_index(field.head)];
-            for (auto& e : hd) {
-                if (e == 0) {
-                    break;
-                }
-                auto index = e - 1;
-                auto kv = header::predefined_headers<>.table[index];
-                if (kv.first == field.head) {
-                    if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::literal_with_name_ref) | 0x20); err != hpack::HpackError::none) {
-                        return internal::convert_hpack_error(err);
-                    }
-                    if (auto err = hpack::encode_string(w, field.value); err != hpack::HpackError::none) {
-                        return internal::convert_hpack_error(err);
-                    }
-                    return QpackError::none;
-                }
-            }
-            return QpackError::no_entry_exists;
-        }
-
-        template <class T>
-        constexpr QpackError render_field_line_literal(io::expand_writer<T>& w, Field field) {
-            if (auto err = hpack::encode_string<3>(w, field.head, match(FieldType::literal_with_literal_name), 0x08); err != hpack::HpackError::none) {
-                return internal::convert_hpack_error(err);
-            }
-            if (auto err = hpack::encode_string(w, field.value); err != hpack::HpackError::none) {
+        constexpr QpackError render_field_line_index(io::expand_writer<T>& w, std::uint64_t index, bool is_static) {
+            if (auto err = hpack::encode_integer<6>(w, index, match(FieldType::index) | (is_static ? 0x40 : 0)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
             return QpackError::none;
         }
 
-        // returns (error,used_reference)
-        template <class TypeConfig, class T>
-        constexpr std::pair<QpackError, std::uint64_t> render_field_line_dynamic(const fields::FieldEncodeContext<TypeConfig>& ctx, const SectionPrefix& prefix, io::expand_writer<T>& w, Field field) {
-            Reference ref = ctx.find_ref(field.head, field.value);
-            if (ref.head_value != no_ref) {
-                auto src_index = ref.head_value;
-                // large............small
-                // |n-1|n-2|n-3|...|d
-                //         |0  |...|n-d-3
-                if (src_index <= prefix.base) {
-                    auto index = prefix.base - src_index;
-                    if (auto err = hpack::encode_integer<6>(w, index, match(FieldType::index)); err != hpack::HpackError::none) {
-                        return {internal::convert_hpack_error(err), no_ref};
-                    }
-                }
-                // large............small
-                // |n-1|n-2|n-3|...|d
-                // |1  |0  |
-                else {
-                    auto index = src_index - prefix.base - 1;
-                    if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::post_base_index)); err != hpack::HpackError::none) {
-                        return {internal::convert_hpack_error(err), no_ref};
-                    }
-                }
-                return {QpackError::none, ref.head_value};
+        template <class T>
+        constexpr QpackError render_field_line_post_base_index(io::expand_writer<T>& w, std::uint64_t index) {
+            if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::post_base_index)); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
             }
-            if (ref.head != no_ref) {
-                auto src_index = ref.head;
-                // large............small
-                // |n-1|n-2|n-3|...|d
-                //         |0  |...|n-d-3
-                if (src_index <= prefix.base) {
-                    auto index = prefix.base - src_index;
-                    if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::literal_with_name_ref)); err != hpack::HpackError::none) {
-                        return {internal::convert_hpack_error(err), no_ref};
-                    }
-                    if (auto err = hpack::encode_string(w, field.value); err != hpack::HpackError::none) {
-                        return {internal::convert_hpack_error(err), no_ref};
-                    }
-                }
-                // large............small
-                // |n-1|n-2|n-3|...|d
-                // |1  |0  |
-                else {
-                    auto index = src_index - prefix.base;
-                    if (auto err = hpack::encode_integer<3>(w, index, match(FieldType::literal_with_post_base_name_ref)); err != hpack::HpackError::none) {
-                        return {internal::convert_hpack_error(err), no_ref};
-                    }
-                    if (auto err = hpack::encode_string(w, field.value); err != hpack::HpackError::none) {
-                        return {internal::convert_hpack_error(err), no_ref};
-                    }
-                }
-                return {QpackError::none, ref.head};
-            }
-            return {QpackError::no_entry_exists, no_ref};
+            return QpackError::none;
         }
 
-        enum class FieldMode {
-            static_only,
-            dynamic_insert,
-            dynamic_no_insert,
-            dynamic_no_drop,
-        };
-
-        template <class TypeConfig, class T>
-        constexpr QpackError render_field_line(StreamID id, fields::FieldEncodeContext<TypeConfig>& ctx, const SectionPrefix& prefix, io::expand_writer<T>& w, Field field, FieldMode mode) {
-            auto err = render_field_line_static(w, field);
-            if (err == QpackError::none) {
-                return QpackError::none;
+        template <class T>
+        constexpr QpackError render_field_line_index_literal(io::expand_writer<T>& w, std::uint64_t index, bool is_static, auto&& value, bool must_forward_as_literal = false) {
+            if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::literal_with_name_ref) | (is_static ? 0x10 : 0) | (must_forward_as_literal ? 0x20 : 0)); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
             }
-            if (err != QpackError::no_entry_exists) {
-                return err;
+            if (auto err = hpack::encode_string(w, value); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
             }
-            if (mode == FieldMode::static_only) {
-                return render_field_line_literal(w, field);
-            }
-            auto [err2, index] = render_field_line_dynamic(ctx, prefix, w, field);
-            if (err == QpackError::none) {
-                return ctx.add_ref(index, id);
-            }
-            if (err != QpackError::no_entry_exists) {
-                return err;
-            }
-            if (mode == FieldMode::dynamic_no_insert) {
-                return render_field_line_literal(w, field);
-            }
-            index = ctx.add_field(field.head, field.value);
-            if (index == no_ref) {
-                if (mode != FieldMode::dynamic_no_drop) {
-                    if (auto err = ctx.drop_field(); err != QpackError::dynamic_ref_exists) {
-                        index = ctx.add_field(field.head, field.value);
-                    }
-                }
-                if (index == no_ref) {
-                    return render_field_line_literal(w, field);
-                }
-            }
-            std::tie(err, index) = render_field_line_dynamic(ctx, prefix, w, field);
-            if (err != QpackError::none) {
-                return err
-            }
-            return ctx.add_ref(index, id);
+            return QpackError::none;
         }
 
+        template <class T>
+        constexpr QpackError render_field_line_post_base_index_literal(io::expand_writer<T>& w, std::uint64_t index, auto&& value, bool must_forward_as_literal = false) {
+            if (auto err = hpack::encode_integer<3>(w, index, match(FieldType::literal_with_post_base_name_ref) | (must_forward_as_literal ? 0x08 : 0)); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
+            }
+            if (auto err = hpack::encode_string(w, value); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
+            }
+            return QpackError::none;
+        }
+
+        template <class T>
+        constexpr QpackError render_field_line_literal(io::expand_writer<T>& w, auto&& head, auto&& value, bool must_forward_as_literal = false) {
+            if (auto err = hpack::encode_string<3>(w, head, match(FieldType::literal_with_literal_name) | (must_forward_as_literal ? 0x10 : 0), 0x08);
+                err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
+            }
+            if (auto err = hpack::encode_string(w, value); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
+            }
+            return QpackError::none;
+        }
+
+        template <class T>
+        constexpr QpackError render_field_line_dynamic_index(const SectionPrefix& prefix, io::expand_writer<T>& w, std::uint64_t abs_index) {
+            auto src_index = abs_index;
+            // large............small
+            // |n-1|n-2|n-3|...|d
+            //         |0  |...|n-d-3
+            if (src_index <= prefix.base) {
+                auto index = prefix.base - src_index;
+                return render_field_line_index(w, index, false);
+            }
+            // large............small
+            // |n-1|n-2|n-3|...|d
+            // |1  |0  |
+            else {
+                auto index = src_index - prefix.base - 1;
+                return render_field_line_post_base_index(w, index);
+            }
+        }
+
+        template <class T>
+        constexpr QpackError render_field_line_dynamic_index_literal(const SectionPrefix& prefix, io::expand_writer<T>& w, std::uint64_t abs_index, auto&& value, bool must_forward_as_literal = false) {
+            auto src_index = abs_index;
+            // large............small
+            // |n-1|n-2|n-3|...|d
+            //         |0  |...|n-d-3
+            if (src_index <= prefix.base) {
+                auto index = prefix.base - src_index;
+                return render_field_line_index_literal(w, index, false, value, must_forward_as_literal);
+            }
+            // large............small
+            // |n-1|n-2|n-3|...|d
+            // |1  |0  |
+            else {
+                auto index = src_index - prefix.base - 1;
+                return render_field_line_post_base_index_literal(w, index, value, must_forward_as_literal);
+            }
+        }
+
+        // field has member functions
+        // + field.set_value(string)
+        // + field.set_header(string)
+        // + field.set_forward_mobe(bool as_literal)
         template <class TypeConfig, class C, class U, class Field>
         constexpr QpackError parse_field_line(FieldDecodeContext<TypeConfig>& ctx, SectionPrefix& prefix, io::basic_reader<C, U>& r, Field& field) {
             if (r.empty()) {
@@ -320,10 +291,10 @@ namespace utils {
                     }
                 }
                 else {
-                    if (prefix.base > index + 1) {
+                    if (prefix.base < index) {
                         return QpackError::invalid_index;
                     }
-                    auto h = ctx.find_ref(prefix.base - 1 - index);
+                    auto h = ctx.find_ref(prefix.base - index);
                     if (!h) {
                         return QpackError::no_entry_for_index;
                     }
@@ -335,7 +306,7 @@ namespace utils {
                 return QpackError::none;
             };
             auto fetch_post_index_field = [&](std::uint64_t index, bool only_header) {
-                auto h = ctx.find_ref(prefix.base + index);
+                auto h = ctx.find_ref(prefix.base + 1 + index);
                 if (!h) {
                     return QpackError::no_entry_for_index;
                 }
@@ -373,7 +344,7 @@ namespace utils {
                     if (auto err = hpack::decode_integer<4>(r, index, &mask); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    is_static = mask & 0x20;
+                    is_static = mask & 0x10;
                     if (auto err = fetch_index_field(index, is_static, true); err != qpack::QpackError::none) {
                         return err;
                     }
@@ -390,7 +361,7 @@ namespace utils {
                     if (auto err = hpack::decode_integer<3>(r, index, &mask); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    (void)mask;
+                    field.set_forward_mode(bool(mask & 0x08));
                     if (auto err = fetch_post_index_field(index, true); err != qpack::QpackError::none) {
                         return err;
                     }
@@ -408,12 +379,12 @@ namespace utils {
                     if (auto err = hpack::decode_string<3>(head, r, 0x08, &mask); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    (void)mask;
+                    field.set_forward_mode(bool(mask & 0x10));
                     auto value = field.get_string();
                     if (auto err = hpack::decode_string(value, r); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    field.set_value(std::move(head));
+                    field.set_header(std::move(head));
                     field.set_value(std::move(value));
                     return QpackError::none;
                 }

@@ -27,6 +27,8 @@ namespace utils {
 
         using Reader = stream::impl::RecvSorted<std::mutex>;
 
+        using FlowLimiter = stream::Limiter;
+
         template <class TypeConfigs, class Lock = typename TypeConfigs::recv_stream_lock>
         std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TypeConfigs>& r) {
             auto read = std::allocate_shared<stream::impl::RecvSorted<Lock>>(glheap_allocator<stream::impl::RecvSorted<Lock>>{});

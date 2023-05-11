@@ -6,6 +6,8 @@
 */
 
 #include <net_util/qpack/qpack_header.h>
+#include <net_util/qpack/qpack.h>
+#include <net_util/qpack/typeconfig.h>
 #include <wrap/cout.h>
 
 int main() {
@@ -36,4 +38,24 @@ int main() {
     };
     print(utils::qpack::header::internal::field_hash_table);
     print(utils::qpack::header::internal::header_hash_table);
+
+    utils::qpack::Context<utils::qpack::TypeConfig<>> ctx;
+    utils::io::expand_writer<std::string> w;
+    ctx.enc.set_max_capacity(2000);
+    ctx.update_capacity(2000);
+    ctx.write_header(0, w, [&](auto&& add_entry, auto&& add_field) {
+        add_field(":status", "200");
+        add_field("x-object", "undefined", utils::qpack::FieldPolicy::force_literal);
+        add_entry("cookie", "I want to eat cookie");
+        add_field("cookie", "I want to eat cookie", utils::qpack::FieldPolicy::proior_dynamic);
+        add_field("purpose", "sightseeing");
+    });
+
+    utils::io::reader r{ctx.enc_stream.written()};
+    ctx.dec.set_max_capacity(2000);
+    ctx.read_encoder_stream(r);
+    r.reset(w.written());
+    ctx.read_header(0, r, [](auto&& field) {
+        utils::wrap::cout_wrap() << field.head << ": " << field.value << "\n";
+    });
 }

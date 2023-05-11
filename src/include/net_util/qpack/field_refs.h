@@ -9,6 +9,7 @@
 #pragma once
 #include "../../fnet/quic/stream/stream_id.h"
 #include "../../fnet/quic/hash_fn.h"
+#include "../../helper/equal.h"
 #include "error.h"
 
 namespace utils {
@@ -54,8 +55,17 @@ namespace utils {
                 }
             };
 
+            constexpr auto size_of(auto&& v) {
+                if constexpr (std::is_pointer_v<std::decay_t<decltype(v)>>) {
+                    return utils::strlen(v);
+                }
+                else {
+                    return v.size();
+                }
+            }
+
             constexpr std::uint64_t calc_field_usage(auto&& head, auto&& value) {
-                return head.size() + value.size() + 32;
+                return size_of(head) + size_of(value) + 32;
             }
 
             constexpr std::uint64_t no_ref = ~0;
@@ -81,7 +91,7 @@ namespace utils {
                 template <class K, class V>
                 using RefMap = typename TypeConfig::template ref_map<K, V>;
                 template <class V>
-                using Vec = typename TypeConfig::template vec<T>;
+                using Vec = typename TypeConfig::template vec<V>;
                 template <class V>
                 using FieldQue = typename TypeConfig::template field_que<V>;
                 using String = typename TypeConfig::string;
@@ -100,6 +110,11 @@ namespace utils {
                 constexpr std::uint64_t get_inserted() const {
                     return track.isdr.get_inserted();
                 }
+
+                constexpr std::uint64_t get_dropped() const {
+                    return track.isdr.get_dropped();
+                }
+
                 constexpr std::uint64_t get_max_capacity() const {
                     return track.max_capacity;
                 }
@@ -123,11 +138,11 @@ namespace utils {
                 // if insertion is blocked (HOL-blocking),
                 // returns no_ref
                 constexpr std::uint64_t add_field(auto&& head, auto&& value) {
-                    auto add = calc_usage(head, value);
-                    if (track.usage + add <= track.capacity) {
+                    auto add = calc_field_usage(head, value);
+                    if (track.usage + add > track.capacity) {
                         return no_ref;
                     }
-                    enc_que.push_back(std::pair<String, String>{
+                    enc_table.push_back(std::pair<String, String>{
                         std::forward<decltype(head)>(head),
                         std::forward<decltype(value)>(value),
                     });
@@ -156,6 +171,15 @@ namespace utils {
                         i++;
                     }
                     return ref;
+                }
+
+                constexpr std::pair<String, String>* find_ref(std::uint64_t abs_index) {
+                    auto [index, ok] = track.isdr.abs_to_rel(abs_index);
+                    if (!ok) {
+                        return nullptr;
+                    }
+                    assert(index < enc_table.size());
+                    return &enc_table[index];
                 }
 
                 // add_ref adds reference to entries
@@ -222,7 +246,7 @@ namespace utils {
                         return QpackError::dynamic_ref_exists;
                     }
                     auto& rem = enc_table.front();
-                    track.usage -= calc_usage(get<0>(rem), get<1>(rem));
+                    track.usage -= calc_field_usage(get<0>(rem), get<1>(rem));
                     enc_table.pop_front();
                     ref_count.erase(to_drop);
                     track.isdr.drop(1);
@@ -241,6 +265,18 @@ namespace utils {
 
                 Track track;
 
+                void drop_usage() {
+                    while (track.usage > track.capacity) {
+                        assert(dec_que.size());
+                        auto& field = dec_que.front();
+                        auto fu = calc_field_usage(get<0>(field), get<1>(field));
+                        assert(track.usage >= fu);
+                        track.usage -= fu;
+                        dec_que.pop_front();
+                        track.isdr.drop(1);
+                    }
+                }
+
                public:
                 constexpr void set_max_capacity(std::uint64_t capa) {
                     track.max_capacity = capa;
@@ -250,11 +286,16 @@ namespace utils {
                     return track.max_capacity;
                 }
 
+                constexpr std::uint64_t get_inserted() const {
+                    return track.isdr.get_inserted();
+                }
+
                 constexpr bool update_capacity(std::uint64_t capa) {
                     if (capa > track.max_capacity) {
                         return false;
                     }
-                    track.max_capacity = capa;
+                    track.capacity = capa;
+                    drop_usage();
                     return true;
                 }
 
@@ -268,16 +309,8 @@ namespace utils {
                         std::forward<decltype(value)>(value),
                     });
                     track.usage += field_usage;
-                    isdr.insert(1);
-                    while (track.usage > track.capacity) {
-                        assert(dec_que.size());
-                        auto& field = dec_que.front();
-                        auto fu = calc_field_usage(get<0>(field), get<1>(field));
-                        assert(track.usage >= fu);
-                        track.usage -= fu;
-                        dec_que.pop_front();
-                        track.isdr.drop(1);
-                    }
+                    track.isdr.insert(1);
+                    drop_usage();
                     return QpackError::none;
                 }
 
@@ -312,6 +345,41 @@ namespace utils {
                     return true;
                 }
             };
+
+            constexpr std::uint64_t find_static_ref(auto&& head) {
+                auto& hd = header::internal::header_hash_table.table[header::internal::header_hash_index(head)];
+                for (auto& e : hd) {
+                    if (e == 0) {
+                        break;
+                    }
+                    auto index = e - 1;
+                    auto kv = header::predefined_headers<>.table[index];
+                    if (helper::equal(kv.first, head)) {
+                        return index;
+                    }
+                }
+                return no_ref;
+            }
+
+            constexpr Reference find_static_ref(auto&& head, auto&& value) {
+                Reference ref;
+                auto& tb = header::internal::field_hash_table.table[header::internal::field_hash_index(head, value)];
+                for (auto& e : tb) {
+                    if (e == 0) {
+                        break;
+                    }
+                    auto index = e - 1;
+                    auto kv = header::predefined_headers<>.table[index];
+                    if (helper::equal(kv.first, head) &&
+                        helper::equal(kv.second, value)) {
+                        ref.head = index;
+                        ref.head_value = index;
+                        return ref;
+                    }
+                }
+                ref.head = find_static_ref(head);
+                return ref;
+            }
         }  // namespace fields
     }      // namespace qpack
 }  // namespace utils

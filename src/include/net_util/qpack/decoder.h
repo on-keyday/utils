@@ -70,7 +70,7 @@ namespace utils {
                     return QpackError::none;
                 }
                 case Instruction::stream_cancel: {
-                    if (auto err = hpack::decode_integer<6>(w, value, match(Instruction::stream_cancel)); err != hpack::HpackError::none) {
+                    if (auto err = hpack::encode_integer<6>(w, value, match(Instruction::stream_cancel)); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
                     return QpackError::none;
@@ -92,7 +92,6 @@ namespace utils {
             if (r.empty()) {
                 return QpackError::input_length;
             }
-            using field_t = std::pair<view::basic_rvec<C, U>, view::basic_rvec<C, U>>;
             switch (get_istr(r.top())) {
                 default:
                     return QpackError::undefined_instruction;

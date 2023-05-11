@@ -9,6 +9,7 @@
 #include "../hpack/hpack_encode.h"
 #include "qpack_header.h"
 #include "common.h"
+#include "../../helper/appender.h"
 
 namespace utils {
     namespace qpack::encoder {
@@ -72,7 +73,7 @@ namespace utils {
             std::uint64_t capacity = 0;
         };
 
-        template <class Table, class T>
+        template <class T>
         constexpr QpackError render_capacity(io::expand_writer<T>& w, std::uint64_t capacity) {
             if (auto err = hpack::encode_integer<5>(w, capacity, match(Instruction::dyn_table_capacity)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
@@ -88,50 +89,43 @@ namespace utils {
             return QpackError::none;
         }
 
-        template <class T, class TypeConfig>
-        constexpr QpackError render_insertion(fields::FieldEncodeContext<TypeConfig>& ctx, io::expand_writer<T>& w, Field& ins) {
-            fields::Reference ref = ctx.find_ref(ins.head, ins.value);
-            if (ref.head_value != fields::no_ref) {
-                return render_duplicate(w, ref.head_value);
+        template <class T>
+        constexpr QpackError render_insert_index_literal(io::expand_writer<T>& w, std::uint64_t index, bool is_static, auto&& value) {
+            if (auto err = hpack::encode_integer<6>(w, index, match(Instruction::insert_with_name_ref) | (is_static ? 0x40 : 0)); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
             }
-            auto& refs = header::internal::header_hash_table.table[header::internal::header_hash_index(ins.head)];
-            std::int64_t name_ref = -1;
-            byte is_static = 0;
-            for (auto ref : refs) {
-                if (ref == 0) {
-                    break;
-                }
-                auto& field = header::predefined_headers<char>.table[ref - 1];
-                if (ins.head == field.first) {
-                    name_ref = ref - 1;
-                    is_static = 0x40;
-                    break;
-                }
-            }
-            if (name_ref == -1) {
-                name_ref = std::int64_t(ref.head);
-            }
-            if (name_ref >= 0) {
-                if (auto err = hpack::encode_integer<6>(w, name_ref, match(Instruction::insert_with_name_ref) | is_static); err != hpack::HpackError::none) {
-                    return internal::convert_hpack_error(err);
-                }
-            }
-            else {
-                if (auto err = hpack::encode_string<5>(w, ins.head, match(Instruction::insert_with_literal_name), 0x20); err != hpack::HpackError::none) {
-                    return internal::convert_hpack_error(err);
-                }
-            }
-            if (auto err = hpack::encode_string<7>(w, ins.value); err != hpack::HpackError::none) {
+            if (auto err = hpack::encode_string<7>(w, value); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
             return QpackError::none;
         }
 
-        template <class StringT, class TypeConfig, class C, class U>
+        template <class T>
+        constexpr QpackError render_insert_literal(io::expand_writer<T>& w, auto&& head, auto&& value) {
+            if (auto err = hpack::encode_string<5>(w, head, match(Instruction::insert_with_literal_name), 0x20); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
+            }
+            if (auto err = hpack::encode_string<7>(w, value); err != hpack::HpackError::none) {
+                return internal::convert_hpack_error(err);
+            }
+            return QpackError::none;
+        }
+
+        constexpr void assign_to(auto& v, auto&& d) {
+            if constexpr (std::is_assignable_v<decltype(v), decltype(std::forward<decltype(d)>(d))>) {
+                v = std::forward<decltype(d)>(d);
+            }
+            else {
+                helper::append(v, d);
+            }
+        }
+
+        template <class TypeConfig, class C, class U>
         constexpr QpackError parse_instruction(fields::FieldDecodeContext<TypeConfig>& ctx, io::basic_reader<C, U>& r) {
             if (r.empty()) {
                 return QpackError::input_length;
             }
+            using String = typename TypeConfig::string;
             using field_t = std::pair<view::basic_rvec<C, U>, view::basic_rvec<C, U>>;
             switch (get_istr(r.top())) {
                 default:
@@ -144,6 +138,7 @@ namespace utils {
                     if (!ctx.update_capacity(capacity)) {
                         return QpackError::large_capacity;
                     }
+                    return QpackError::none;
                 }
                 case Instruction::insert_with_name_ref: {
                     std::uint64_t name_index = 0;
@@ -166,14 +161,17 @@ namespace utils {
                         }
                         head = h->first;
                     }
-                    StringT value;
+                    String value;
                     if (auto err = hpack::decode_string(value, r); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
-                    ctx.add_field(head, std::move(value));
+                    String head2;
+                    assign_to(head2, std::move(head));
+                    ctx.add_field(std::move(head2), std::move(value));
+                    return QpackError::none;
                 }
                 case Instruction::insert_with_literal_name: {
-                    StringT head, value;
+                    String head, value;
                     if (auto err = hpack::decode_string<5>(head, r, 0x20); err != hpack::HpackError::none) {
                         return internal::convert_hpack_error(err);
                     }
@@ -181,6 +179,7 @@ namespace utils {
                         return internal::convert_hpack_error(err);
                     }
                     ctx.add_field(std::move(head), std::move(value));
+                    return QpackError::none;
                 }
                 case Instruction::duplicate: {
                     std::uint64_t index = 0;
@@ -192,9 +191,9 @@ namespace utils {
                         return QpackError::no_entry_for_index;
                     }
                     ctx.add_field(h->first, h->second);
+                    return QpackError::none;
                 }
             }
-            return QpackError::none;
         }
 
     }  // namespace qpack::encoder
