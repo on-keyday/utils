@@ -10,6 +10,7 @@
 
 namespace utils {
     namespace fnet::quic::stream {
+        // initiated by
         enum class Direction {
             client,
             server,

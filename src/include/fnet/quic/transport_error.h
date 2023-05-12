@@ -176,6 +176,10 @@ namespace utils {
                     helper::append(pb, "code=");
                     number::to_string(pb, error_code);
                 }
+
+                void set_error_code(auto&& code) {
+                    error_code = std::uint64_t(code);
+                }
             };
         }  // namespace quic
     }      // namespace fnet

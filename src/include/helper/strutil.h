@@ -74,8 +74,8 @@ namespace utils {
             return target != ~0 && target < bef;
         }
 
-        template <bool no_zero = false, class String, class Validate>
-        bool is_valid(String&& str, Validate&& validate) {
+        template <class String, class Validate>
+        bool is_valid(String&& str, bool allow_empty, Validate&& validate) {
             auto seq = make_ref_seq(str);
             bool first = true;
             while (!seq.eos()) {
@@ -85,7 +85,7 @@ namespace utils {
                 seq.consume();
                 first = false;
             }
-            if constexpr (no_zero) {
+            if (!allow_empty) {
                 return first == false;
             }
             return true;

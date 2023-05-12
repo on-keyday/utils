@@ -16,7 +16,7 @@
 #include "../config.h"
 
 namespace utils {
-    namespace fnet::quic::stream {
+    namespace fnet::quic::stream::core {
 
         struct StreamWriteData {
             view::rvec src;
@@ -504,5 +504,5 @@ namespace utils {
             static_assert(check_stream_send());
         }  // namespace test
 
-    }  // namespace fnet::quic::stream
+    }  // namespace fnet::quic::stream::core
 }  // namespace utils

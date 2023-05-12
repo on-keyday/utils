@@ -20,7 +20,6 @@ namespace utils {
             small_capacity,
             large_field,
             invalid_static_table_ref,
-            invalid_dynamic_table_relative_ref,
             invalid_dynamic_table_abs_ref,
             no_entry_for_index,
             invalid_increment,

@@ -23,7 +23,7 @@ namespace utils {
         template <class TypeConfigs>
         struct SendUniStream {
            private:
-            SendUniStreamBase<TypeConfigs> uni;
+            core::SendUniStreamBase<TypeConfigs> uni;
             std::weak_ptr<ConnFlowControl<TypeConfigs>> conn;
 
             flex_storage src;
@@ -98,11 +98,11 @@ namespace utils {
                     return true;
                 });
                 if (res == IOResult::block_by_stream) {
-                    res = send_stream_blocked(w, uni.id, blocked_size);
+                    res = core::send_stream_blocked(w, uni.id, blocked_size);
                     return res == IOResult::ok ? IOResult::block_by_stream : res;
                 }
                 if (res == IOResult::block_by_conn) {
-                    res = send_conn_blocked(w, blocked_size);
+                    res = core::send_conn_blocked(w, blocked_size);
                     return res == IOResult::ok ? IOResult::block_by_conn : res;
                 }
                 return res;
@@ -240,13 +240,13 @@ namespace utils {
             }
 
            private:
-            bool discard_written_data(view::rvec data, bool fin) {
+            bool discard_written_data_impl(bool fin, auto&&... data) {
                 auto written = uni.data.written_offset;
                 auto discarded = uni.data.discarded_offset;
                 if (written - discarded) {
                     src.shift_front(written - discarded);
                 }
-                src.append(data);
+                (..., src.append(data));
                 if (fin) {
                     src.shrink_to_fit();
                 }
@@ -254,23 +254,39 @@ namespace utils {
             }
 
            public:
-            // add send data
-            // if discard_written is true, discard written data from runtime buffer
-            IOResult add_data(view::rvec data, bool fin, bool discard_written = false) {
+            // discard_written_data discards written stream data from runtime buffer
+            bool discard_written_data() {
+                const auto locked = uni.lock();
+                return discard_written_data_impl({}, uni.data.fin);
+            }
+
+            // add_multi_data adds multiple data
+            // this is better performance than multiple call of add_data because of reduction of lock.
+            // see also description of add_data to know about parameters
+            IOResult add_multi_data(bool fin, bool discard_written, auto&&... data) {
                 const auto locked = uni.lock();
                 if (uni.data.fin) {
                     if (discard_written) {
-                        if (!discard_written_data({}, true)) {
+                        if (!discard_written_data_impl(true)) {
                             return IOResult::fatal;
                         }
                     }
                     return IOResult::cancel;
                 }
                 if (discard_written) {
-                    return discard_written_data(data, fin) ? IOResult::ok : IOResult::fatal;  // must success
+                    return discard_written_data_impl(fin, data...) ? IOResult::ok : IOResult::fatal;  // must success
                 }
-                src.append(data);
+                (..., src.append(data));
                 return uni.update_data(uni.data.discarded_offset, src, fin) ? IOResult::ok : IOResult::fatal;  // must success
+            }
+
+            // add send data
+            // if fin is true, FIN flag is set and later call of this returns IOResult::cancel
+            // if discard_written is true, discard written data from runtime buffer
+            // you can call this with discard_written = true to discard buffer even if fin is set
+            // but use discard_written_data() instead to discard only.
+            IOResult add_data(view::rvec data, bool fin = false, bool discard_written = false) {
+                return add_multi_data(fin, discard_written, data);
             }
 
             // request cancelation
@@ -295,6 +311,17 @@ namespace utils {
             // called by connections remove methods
             bool is_removable() {
                 return is_closed();
+            }
+
+            // is_fin reports whether fin flag is set
+            bool is_fin() {
+                const auto locked = uni.lock();
+                return uni.data.fin;
+            }
+
+            core::Limiter current_flow_limit() {
+                const auto locked = uni.lcok();
+                return uni.state.get_send_limiter();
             }
         };
 
@@ -331,7 +358,7 @@ namespace utils {
         template <class TypeConfigs>
         struct RecvUniStream {
            private:
-            RecvUniStreamBase<TypeConfigs> uni;
+            core::RecvUniStreamBase<TypeConfigs> uni;
             std::weak_ptr<ConnFlowControl<TypeConfigs>> conn;
             using RecvArg = typename TypeConfigs::callback_arg::recv;
             FragmentSaver<RecvArg> saver;
@@ -512,13 +539,18 @@ namespace utils {
             }
 
             // set receiver user callback
-            bool set_receiver(std::shared_ptr<void> arg, SaveFragmentCallback<RecvArg> save) {
+            bool set_receiver(RecvArg arg, SaveFragmentCallback<RecvArg> save) {
                 const auto locked = uni.lock();
                 if (uni.state.is_pre_recv()) {
                     saver.set(std::move(arg), save);
                     return true;
                 }
                 return false;
+            }
+
+            RecvArg get_receiver() {
+                const auto locked = uni.lock();
+                return std::as_const(saver.arg);
             }
 
             // notify application user read all data
@@ -559,6 +591,7 @@ namespace utils {
             // called by QUIC runtime system
 
             // returns (result,finished)
+            // called by quic runtime
             std::pair<IOResult, bool> send(frame::fwriter& w, auto&& observer_vec) {
                 auto res = receiver.send(w, observer_vec);
                 if (res == IOResult::fatal || res == IOResult::invalid_data) {
@@ -568,6 +601,7 @@ namespace utils {
             }
 
             // do recv for each sender or receiver
+            // called by quic runtime
             error::Error recv(const frame::Frame& frame) {
                 if (sender.recv(frame)) {
                     return error::none;
@@ -586,6 +620,10 @@ namespace utils {
             BidiStream(StreamID id,
                        std::shared_ptr<ConnFlowControl<TypeConfigs>> conn)
                 : sender(id, conn), receiver(id, conn) {}
+
+            constexpr StreamID id() const {
+                return sender.id();
+            }
 
             bool is_closed() {
                 return sender.is_closed() && receiver.is_closed();

@@ -63,7 +63,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
         if (eof) {
             break;
         }
-        s->s->update_recv_limit([](utils::fnet::quic::stream::Limiter lim) {
+        s->s->update_recv_limit([](FlowLimiter lim) {
             if (lim.avail_size() < 5000) {
                 return lim.curlimit() + 10000;
             }
@@ -133,7 +133,7 @@ void conn(utils::coro::C* c, std::shared_ptr<Context>& ctx, utils::fnet::Socket&
         if (recv.size()) {
             ctx->parse_udp_payload(recv);
         }
-        s->update_max_data([](utils::fnet::quic::stream::Limiter v) {
+        s->update_max_data([](FlowLimiter v) {
             if (v.avail_size() < 5000) {
                 return v.curlimit() + 10000;
             }

@@ -35,5 +35,5 @@ int main() {
     DataBlockedFrame data;
     make_and_parse(data);
     auto val = test::check_stream_range();
-    val = utils::fnet::quic::stream::test::check_stream_send();
+    val = utils::fnet::quic::stream::core::test::check_stream_send();
 }

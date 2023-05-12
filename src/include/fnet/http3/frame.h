@@ -49,6 +49,19 @@ namespace utils {
             }
         };
 
+        using FrameHeaderArea = byte[16];
+
+        view::wvec get_header(FrameHeaderArea& area, Type type, std::uint64_t length) {
+            frame::FrameHeader head;
+            head.type = std::uint64_t(type);
+            head.length = length;
+            io::writer w{area};
+            if (!head.render(w)) {
+                return {};
+            }
+            return w.written();
+        }
+
         struct Data : FrameHeader {
             view::rvec data;
             constexpr bool parse(io::reader& r) {

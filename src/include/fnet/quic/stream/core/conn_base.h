@@ -16,7 +16,7 @@
 #include "../../frame/writer.h"
 
 namespace utils {
-    namespace fnet::quic::stream {
+    namespace fnet::quic::stream::core {
 
         template <class TypeConfigs>
         struct ConnectionBase {
@@ -372,5 +372,5 @@ namespace utils {
             return w.write(blocked) ? IOResult::ok : IOResult::fatal;
         }
 
-    }  // namespace fnet::quic::stream
+    }  // namespace fnet::quic::stream::core
 }  // namespace utils

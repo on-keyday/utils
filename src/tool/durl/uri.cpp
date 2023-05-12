@@ -54,7 +54,7 @@ namespace durl {
     }
 
     bool is_ascii(auto& str) {
-        return utils::helper::is_valid(str, utils::number::is_ascii_non_control<std::uint8_t>);
+        return utils::helper::is_valid(str, true, utils::number::is_ascii_non_control<std::uint8_t>);
     }
 
     int uri_parse_impl(std::vector<URIToJSON>& urls, subcmd::RunCommand& cmd, URIOption& opt) {

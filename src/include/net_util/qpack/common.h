@@ -25,6 +25,8 @@ namespace utils {
                 switch (err) {
                     case hpack::HpackError::input_length:
                         return QpackError::input_length;
+                    case hpack::HpackError::output_length:
+                        return QpackError::output_length;
                     case hpack::HpackError::too_large_number:
                     case hpack::HpackError::too_short_number:
                         return QpackError::encoding_error;

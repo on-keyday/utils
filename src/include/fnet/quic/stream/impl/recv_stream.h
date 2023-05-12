@@ -10,6 +10,7 @@
 #include "../fragment.h"
 #include "../../../error.h"
 #include "../../transport_error.h"
+#include "../stream_id.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {

@@ -47,7 +47,7 @@ int main() {
         add_field(":status", "200");
         add_field("x-object", "undefined", utils::qpack::FieldPolicy::force_literal);
         add_entry("cookie", "I want to eat cookie");
-        add_field("cookie", "I want to eat cookie", utils::qpack::FieldPolicy::proior_dynamic);
+        add_field("cookie", "I want to eat cookie", utils::qpack::FieldPolicy::prior_dynamic);
         add_field("purpose", "sightseeing");
     });
 

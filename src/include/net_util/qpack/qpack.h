@@ -10,16 +10,17 @@
 #include "decoder.h"
 #include "field_line.h"
 #include "../../wrap/light/enum.h"
+#include "../http/header.h"
 
 namespace utils {
     namespace qpack {
         enum class FieldPolicy {
-            proior_static = 0x01,
-            proior_dynamic = 0x02,
-            proior_index = 0x03,
+            prior_static = 0x01,
+            prior_dynamic = 0x02,
+            prior_index = 0x03,
             force_literal = 0x04,
 
-            proior_mask = 0xff,
+            prior_mask = 0xff,
 
             maybe_insert = 0x100,
             must_forward_as_literal = 0x200,
@@ -201,11 +202,11 @@ namespace utils {
                     }
                     return QpackError::no_entry_exists;
                 };
-                auto proior = FieldPolicy::proior_mask & policy;
+                auto proior = FieldPolicy::prior_mask & policy;
                 switch (proior) {
                     default:
                         return QpackError::undefined_instruction;
-                    case FieldPolicy::proior_static: {
+                    case FieldPolicy::prior_static: {
                         auto err = write_static();
                         if (err != QpackError::no_entry_exists) {
                             return err;
@@ -216,7 +217,7 @@ namespace utils {
                         }
                         break;
                     }
-                    case FieldPolicy::proior_dynamic: {
+                    case FieldPolicy::prior_dynamic: {
                         auto err = write_dynamic();
                         if (err != QpackError::no_entry_exists) {
                             return err;
@@ -227,7 +228,7 @@ namespace utils {
                         }
                         break;
                     }
-                    case FieldPolicy::proior_index: {
+                    case FieldPolicy::prior_index: {
                         s_refs = fields::find_static_ref(key, value);
                         if (s_refs.head_value != fields::no_ref) {
                             return fields::render_field_line_index(w, s_refs.head_value, true);
@@ -329,13 +330,16 @@ namespace utils {
                 return fields::render_field_line_literal(w, key, value, any(policy & FieldPolicy::must_forward_as_literal));
             }
 
+            // write should be void(add_entry,add_field)
+            // add_entry is bool(header,value)
+            // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
             template <class T, class H>
             QpackError write_header(StreamID id, io::expand_writer<T>& w, H&& write) {
                 fields::SectionPrefix prefix;
                 prefix.base = enc.get_inserted();
                 io::expand_writer<typename TypeConfig::string> tw;
                 QpackError err = QpackError::none;
-                auto add_field = [&](auto&& head, auto&& value, FieldPolicy policy = FieldPolicy::proior_static) {
+                auto add_field = [&](auto&& head, auto&& value, FieldPolicy policy = FieldPolicy::prior_static) {
                     if (err != QpackError::none) {
                         return false;
                     }
@@ -398,5 +402,25 @@ namespace utils {
                 return decoder::render_instruction(dec, dec_stream, decoder::Instruction::section_ack, id);
             }
         };
+
+        auto http3_field_validate_wrapper(auto& field) {
+            return [&](auto&& h, auto&& v, FieldPolicy policy = FieldPolicy::prior_static) {
+                if (!(http::header::is_valid_key(h, true) || http::header::is_http2_pseduo(h)) ||
+                    !http::header::is_valid_value(v, true)) {
+                    return false;
+                }
+                return field(h, v, policy);
+            };
+        }
+
+        auto http3_entry_validate_wrapper(auto& entry) {
+            return [&](auto&& h, auto&& v) {
+                if (!(http::header::is_valid_key(h, true) || http::header::is_http2_pseduo(h)) ||
+                    !http::header::is_valid_value(v, true)) {
+                    return false;
+                }
+                return entry(h, v);
+            };
+        }
     }  // namespace qpack
 }  // namespace utils

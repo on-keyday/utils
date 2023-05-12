@@ -95,7 +95,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
     }
     utils::fnet::HTTP http;
     while (true) {
-        runi.s->update_recv_limit([](quic::stream::Limiter limit) {
+        runi.s->update_recv_limit([](FlowLimiter limit) {
             if (limit.avail_size() < 10000) {
                 return limit.curlimit() + 10000;
             }
@@ -310,7 +310,7 @@ int main() {
                 .transport_error = quic::TransportError::NO_ERROR,
             });
         }
-        streams->update_max_data([](quic::stream::Limiter limit) {
+        streams->update_max_data([](FlowLimiter limit) {
             if (limit.avail_size() < 10000) {
                 return limit.curlimit() + 50000;
             }

@@ -10,7 +10,7 @@
 #include "../../varint.h"
 
 namespace utils {
-    namespace fnet::quic::stream {
+    namespace fnet::quic::stream::core {
 
         struct Limiter {
            private:
@@ -88,6 +88,10 @@ namespace utils {
             byte reset_flags = flag_none;
 
            public:
+            constexpr Limiter get_send_limiter() const noexcept {
+                return limit;
+            }
+
             constexpr std::uint64_t sendable_size() const noexcept {
                 return limit.avail_size();
             }
@@ -448,5 +452,5 @@ namespace utils {
             });
         }
 
-    }  // namespace fnet::quic::stream
+    }  // namespace fnet::quic::stream::core
 }  // namespace utils

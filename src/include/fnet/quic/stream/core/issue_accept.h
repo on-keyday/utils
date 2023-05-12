@@ -11,7 +11,7 @@
 #include "../stream_id.h"
 
 namespace utils {
-    namespace fnet::quic::stream {
+    namespace fnet::quic::stream::core {
         struct StreamIDAcceptor {
             Limiter limit;
             const StreamType type{};
@@ -157,5 +157,5 @@ namespace utils {
                 conn.recv.update_limit(lim.conn_data_limit);
             }
         };
-    }  // namespace fnet::quic::stream
+    }  // namespace fnet::quic::stream::core
 }  // namespace utils

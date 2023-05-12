@@ -169,8 +169,8 @@ namespace utils {
             }
 
             template <class String>
-            constexpr bool is_valid_key(String&& header) {
-                return helper::is_valid<true>(header, [](auto&& c) {
+            constexpr bool is_valid_key(String&& header, bool allow_empty = false) {
+                return helper::is_valid(header,allow_empty, [](auto&& c) {
                     if (!number::is_in_visible_range(c)) {
                         return false;
                     }
@@ -182,8 +182,8 @@ namespace utils {
             }
 
             template <class String>
-            constexpr bool is_valid_value(String&& header) {
-                return helper::is_valid<true>(header, [](auto&& c) {
+            constexpr bool is_valid_value(String&& header, bool allow_empty = false) {
+                return helper::is_valid(header, allow_empty, [](auto&& c) {
                     return number::is_in_visible_range(c) || c == ' ' || c == '\t';
                 });
             }
@@ -194,13 +194,17 @@ namespace utils {
                 };
             }
 
+            constexpr bool is_http2_pseduo(auto&& key) {
+                return helper::equal(key, ":path") ||
+                       helper::equal(key, ":authority") ||
+                       helper::equal(key, ":status") ||
+                       helper::equal(key, ":scheme") ||
+                       helper::equal(key, ":method");
+            }
+
             constexpr auto http2_key_validator() {
                 return [](auto&& kv) {
-                    return helper::equal(get<0>(kv), ":path") ||
-                           helper::equal(get<0>(kv), ":authority") ||
-                           helper::equal(get<0>(kv), ":status") ||
-                           helper::equal(get<0>(kv), ":scheme") ||
-                           helper::equal(get<0>(kv), ":method");
+                    return is_http2_pseduo(get<0>(kv));
                 };
             }
 
