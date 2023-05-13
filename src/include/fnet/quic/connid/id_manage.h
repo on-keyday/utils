@@ -19,11 +19,12 @@
 namespace utils {
     namespace fnet::quic::connid {
 
+        template <class TConfig>
         struct IDManager {
            private:
             Random random;
-            IDAcceptor acceptor;
-            IDIssuer issuer;
+            IDAcceptor<TConfig> acceptor;
+            IDIssuer<TConfig> issuer;
             InitialRetry iniret;
 
            public:

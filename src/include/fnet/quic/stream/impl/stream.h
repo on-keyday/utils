@@ -319,9 +319,9 @@ namespace utils {
                 return uni.data.fin;
             }
 
-            core::Limiter current_flow_limit() {
-                const auto locked = uni.lcok();
-                return uni.state.get_send_limiter();
+            auto access_flow_limit(auto&& access) {
+                const auto locked = uni.lock();
+                return access(uni.state.get_send_limiter());
             }
         };
 
@@ -548,7 +548,7 @@ namespace utils {
                 return false;
             }
 
-            RecvArg get_receiver() {
+            RecvArg get_receiver_arg() {
                 const auto locked = uni.lock();
                 return std::as_const(saver.arg);
             }

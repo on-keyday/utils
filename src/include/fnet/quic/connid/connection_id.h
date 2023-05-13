@@ -132,12 +132,17 @@ namespace utils {
             }
         };
 
+        template <class TConfig>
         struct IDIssuer {
            private:
+            template <class K, class V>
+            using ConnIDMap = typename TConfig::template connid_map<K, V>;
+            template <class V>
+            using WaitQue = typename TConfig::template wait_que<V>;
             std::int64_t issued_seq = -1;
             std::int64_t most_min_seq = -1;
-            slib::hash_map<std::int64_t, IDStorage> srcids;
-            slib::list<IDWait> waitlist;
+            ConnIDMap<std::int64_t, IDStorage> srcids;
+            WaitQue<IDWait> waitlist;
             std::uint64_t max_active_conn_id = default_max_active_conn_id;
             byte connID_len = 0;
             byte concurrent_limit = 0;
@@ -355,13 +360,19 @@ namespace utils {
             std::shared_ptr<ack::ACKLostRecord> wait;
         };
 
+        template <class TConfig>
         struct IDAcceptor {
            private:
+            template <class K, class V>
+            using ConnIDMap = typename TConfig::template connid_map<K, V>;
+            template <class V>
+            using WaitQue = typename TConfig::template wait_que<V>;
+
             ConnIDChangeMode change_mode = ConnIDChangeMode::none;
             bool use_zero_length = false;
             std::uint32_t max_packet_per_id = 0;
-            slib::hash_map<std::int64_t, IDStorage> dstids;
-            slib::list<RetireWait> waitlist;
+            ConnIDMap<std::int64_t, IDStorage> dstids;
+            WaitQue<RetireWait> waitlist;
 
             std::int64_t highest_accepted = -1;
             std::int64_t active_connid = -1;

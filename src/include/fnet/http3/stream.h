@@ -6,6 +6,7 @@
 */
 
 #include "../quic/stream/impl/stream.h"
+#include "../quic/stream/impl/recv_stream.h"
 #include "frame.h"
 #include "../../net_util/qpack/qpack.h"
 #include "error.h"
@@ -13,6 +14,75 @@
 
 namespace utils {
     namespace fnet::http3::stream {
+        enum class SettingID {
+            qpack_max_table_capacity = 0x01,
+            max_field_section_size = 0x06,
+            qpack_blocked_streams = 0x07,
+        };
+
+        struct KnownSettings {
+            std::uint64_t max_field_section_size = 0;
+        };
+
+        template <class Config>
+        struct ControlStream {
+            using QuicRecvStream = quic::stream::impl::RecvUniStream<typename Config::quic_config>;
+            using QuicSendStream = quic::stream::impl::SendUniStream<typename Config::quic_config>;
+            std::shared_ptr<QuicSendStream> send_control;
+            std::shared_ptr<QuicRecvStream> recv_control;
+
+           private:
+            bool write_push_frame(frame::Type type, std::uint32_t push_id) {
+                QuicSendStream* q = send_control.get();
+                if (q->id().dir() == quic::stream::Direction::server) {
+                    return false;
+                }
+                frame::FrameHeaderArea id_area;
+                io::writer w{id_area};
+                quic::varint::write(w, push_id);
+                frame::FrameHeaderArea area;
+                auto header = frame::get_header(area, type, quic::varint::len(push_id));
+                auto err = q->add_multi_data(false, true, header, w.written());
+                if (err != quic::IOResult::ok) {
+                    return false;
+                }
+                return true;
+            }
+
+           public:
+            bool write_max_push_id(std::uint32_t push_id) {
+                return write_push_frame(frame::Type::MAX_PUSH_ID, push_id);
+            }
+
+            bool write_cancel_push(std::uint32_t push_id) {
+                return write_push_frame(frame::Type::CANCEL_PUSH, push_id);
+            }
+
+            bool write_settings(auto&& write) {
+                QuicSendStream* q = send_control.get();
+                flex_storage buf;
+                write([&](std::uint64_t id, std::uint64_t data) {
+                    frame::FrameHeaderArea area;
+                    frame::Setting setting;
+                    setting.id = id;
+                    setting.value = data;
+                    io::writer w{area};
+                    if (!setting.render(w)) {
+                        return false;
+                    }
+                    buf.append(w.written());
+                    return true;
+                });
+                frame::FrameHeaderArea area;
+                auto header = frame::get_header(area, frame::Type::SETTINGS, buf.size());
+                auto err = q->add_multi_data(false, true, header, buf);
+                if (err != quic::IOResult::ok) {
+                    return false;
+                }
+                return true;
+            }
+        };
+
         template <class Config>
         struct Connection {
             qpack::Context<typename Config::qpack_config> table;
@@ -22,8 +92,7 @@ namespace utils {
             std::shared_ptr<QuicRecvStream> recv_encoder;
             std::shared_ptr<QuicSendStream> send_decoder;
             std::shared_ptr<QuicSendStream> send_encoder;
-            std::shared_ptr<QuicSendStream> send_control;
-            std::shared_ptr<QuicRecvStream> recv_control;
+
             using Lock = typename Config::conn_lock;
             Lock locker;
             quic::AppError app_err;
@@ -34,6 +103,12 @@ namespace utils {
                 return helpe::defer([&] {
                     locker.unlock();
                 });
+            }
+
+            template <class String>
+            bool read_field_section(quic::stream::StreamID id, io::reader& r, auto&& read) {
+                auto locked = lock();
+                table.read_header(id, r, read);
             }
 
             template <class String>
@@ -65,7 +140,7 @@ namespace utils {
            private:
             using QuicStream = quic::stream::impl::BidiStream<typename Config::quic_config>;
             std::shared_ptr<QuicStream> stream;
-            std::shared_ptr<Connection> conn;
+            std::shared_ptr<Connection<Config>> conn;
             using String = typename Config::qpack_config::string;
 
            public:
@@ -106,10 +181,7 @@ namespace utils {
                 return true;
             }
 
-            bool push_promise(std::uint64_t push_id, auto&& write) {
-                if (push_id >= quic::varint::border(8)) {
-                    return false;
-                }
+            bool write_push_promise(std::uint64_t push_id, auto&& write) {
                 QuicStream* q = stream.get();
                 if (q->id().dir() == quic::stream::Direction::client) {
                     return false;

@@ -8,13 +8,17 @@
 #pragma once
 #include "../../std/hash_map.h"
 #include "../hash_fn.h"
+#include "../../storage.h"
+#include "../context/context.h"
 
 namespace utils {
     namespace fnet::quic::server {
-        struct Closed {};
+        struct Closed {
+            storage packet;
+        };
 
         struct Server {
-            slib::hash_map<view::rvec, Closed> closed_conn;
+            slib::hash_map<flex_storage, Closed> closed_conn;
         };
     }  // namespace fnet::quic::server
 }  // namespace utils

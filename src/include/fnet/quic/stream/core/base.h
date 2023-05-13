@@ -219,8 +219,9 @@ namespace utils {
         };
 
         enum class RecvState {
-            // pre recv state (no data or no reset recved)
-            // this is same as recv semantics
+            // pre recv state (no data nor no reset received)
+            // this is almost same as recv semantics
+            // but in some case, different operation
             pre_recv,
             recv,
             size_known,

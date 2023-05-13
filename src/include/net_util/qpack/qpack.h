@@ -110,7 +110,7 @@ namespace utils {
             QpackError add_entry(auto&& head, auto&& value) {
                 fields::Reference s_refs = fields::find_static_ref(head, value);
                 if (s_refs.head_value != fields::no_ref) {
-                    // no need to add because
+                    // no need to add
                     // because static table has this entry
                     return QpackError::none;
                 }
@@ -171,9 +171,14 @@ namespace utils {
             }
 
             template <class T>
-            QpackError write_key_value(StreamID id, io::expand_writer<T>& w, const fields::SectionPrefix& prefix, auto&& key, auto&& value, FieldPolicy policy) {
+            QpackError write_key_value(StreamID id, io::expand_writer<T>& w, const fields::SectionPrefix& prefix, auto&& key, auto&& value, FieldPolicy policy, std::uint64_t* max_ref) {
                 fields::Reference s_refs;
                 fields::Reference d_refs;
+                auto set_max_ref = [&](std::uint64_t ref) {
+                    if (*max_ref == fields::no_ref || *max_ref < ref) {
+                        *max_ref = ref;
+                    }
+                };
                 auto write_static = [&] {
                     s_refs = fields::find_static_ref(key, value);
                     if (s_refs.head_value != fields::no_ref) {
@@ -191,6 +196,7 @@ namespace utils {
                         if (auto err = fields::render_field_line_dynamic_index(prefix, w, d_refs.head_value); err != QpackError::none) {
                             return err;
                         }
+                        set_max_ref(d_refs.head_value);
                         return enc.add_ref(d_refs.head_value, id);
                     }
                     if (d_refs.head != fields::no_ref &&
@@ -198,6 +204,7 @@ namespace utils {
                         if (auto err = fields::render_field_line_dynamic_index_literal(prefix, w, d_refs.head, value, any(policy & FieldPolicy::must_forward_as_literal)); err != QpackError::none) {
                             return err;
                         }
+                        set_max_ref(d_refs.head);
                         return enc.add_ref(d_refs.head, id);
                     }
                     return QpackError::no_entry_exists;
@@ -239,6 +246,7 @@ namespace utils {
                             if (auto err = fields::render_field_line_dynamic_index(prefix, w, d_refs.head_value); err != QpackError::none) {
                                 return err;
                             }
+                            set_max_ref(d_refs.head_value);
                             return enc.add_ref(d_refs.head_value, id);
                         }
                         if (s_refs.head != fields::no_ref) {
@@ -250,6 +258,7 @@ namespace utils {
                                 err != QpackError::none) {
                                 return err;
                             }
+                            set_max_ref(d_refs.head);
                             return enc.add_ref(d_refs.head, id);
                         }
                         break;
@@ -280,6 +289,7 @@ namespace utils {
                             if (auto err = fields::render_field_line_dynamic_index(prefix, w, new_ref); err != QpackError::none) {
                                 return err;
                             }
+                            set_max_ref(new_ref);
                             return enc.add_ref(new_ref, id);
                         });
                     if (err != QpackError::dynamic_ref_exists) {
@@ -304,6 +314,7 @@ namespace utils {
                             if (auto err = fields::render_field_line_dynamic_index(prefix, w, new_ref); err != QpackError::none) {
                                 return err;
                             }
+                            set_max_ref(new_ref);
                             return enc.add_ref(new_ref, id);
                         });
                     if (err != QpackError::dynamic_ref_exists) {
@@ -321,6 +332,7 @@ namespace utils {
                         if (auto err = fields::render_field_line_dynamic_index(prefix, w, new_ref); err != QpackError::none) {
                             return err;
                         }
+                        set_max_ref(new_ref);
                         return enc.add_ref(new_ref, id);
                     });
                 if (err != QpackError::dynamic_ref_exists) {
@@ -339,11 +351,12 @@ namespace utils {
                 prefix.base = enc.get_inserted();
                 io::expand_writer<typename TypeConfig::string> tw;
                 QpackError err = QpackError::none;
+                std::uint64_t max_ref = fields::no_ref;
                 auto add_field = [&](auto&& head, auto&& value, FieldPolicy policy = FieldPolicy::prior_static) {
                     if (err != QpackError::none) {
                         return false;
                     }
-                    err = write_key_value(id, tw, prefix, head, value, policy);
+                    err = write_key_value(id, tw, prefix, head, value, policy, &max_ref);
                     return err == QpackError::none;
                 };
                 auto add_encoder_entry = [&](auto&& head, auto&& value) {
@@ -364,7 +377,13 @@ namespace utils {
                 if (tw.written().size() == 0) {
                     return QpackError::output_length;
                 }
-                prefix.required_insert_count = enc.get_inserted();
+                if (max_ref == fields::no_ref) {
+                    prefix.base = 0;
+                    prefix.required_insert_count = 0;
+                }
+                else {
+                    prefix.required_insert_count = max_ref + 1;
+                }
                 fields::EncodedSectionPrefix enc_prefix;
                 enc_prefix.encode(prefix, enc.get_max_capacity());
                 err = enc_prefix.render(w);

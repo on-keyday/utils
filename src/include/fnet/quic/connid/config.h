@@ -9,6 +9,8 @@
 #include <cstdint>
 #include "exporter.h"
 #include "random.h"
+#include "../../std/hash_map.h"
+#include "../../std/list.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -26,6 +28,15 @@ namespace utils {
             Random random;
             byte connid_len = 4;
             byte concurrent_limit = 4;
+        };
+
+        template <template <class...> class ConnIDMap = slib::hash_map,
+                  template <class...> class WaitQue = slib::list>
+        struct TypeConfig {
+            template <class K, class V>
+            using connid_map = ConnIDMap<K, V>;
+            template <class V>
+            using wait_que = WaitQue<V>;
         };
     }  // namespace fnet::quic::connid
 }  // namespace utils

@@ -35,11 +35,13 @@ namespace utils {
 
         template <class CtxLock,
                   class StreamTypeConfig = stream::TypeConfig<CtxLock>,
+                  class ConnIDTypeConfig = connid::TypeConfig<>,
                   class CongestionAlgorithm = status::NewReno,
                   class DatagramDrop = datagram::DatagrmDropNull>
         struct TypeConfig {
             using context_lock = CtxLock;
             using stream_type_config = StreamTypeConfig;
+            using connid_type_config = ConnIDTypeConfig;
             using congestion_algorithm = CongestionAlgorithm;
             using datagram_drop = DatagramDrop;
             struct user_defined_types_config {

@@ -64,6 +64,7 @@ namespace utils {
             using Lock = typename TypeConfigs::context_lock;
             using DatagramDrop = typename TypeConfigs::datagram_drop;
             using StreamTypeConfig = typename TypeConfigs::stream_type_config;
+            using ConnIDTypeConfig = typename TypeConfigs::connid_type_config;
 
             Version version = version_negotiation;
             status::Status<CongestionAlgorithm> status;
@@ -71,7 +72,7 @@ namespace utils {
             crypto::CryptoSuite crypto;
             ack::SentPacketHistory ackh;
             ack::UnackedPackets unacked;
-            connid::IDManager connIDs;
+            connid::IDManager<ConnIDTypeConfig> connIDs;
             token::RetryToken retry_token;
             token::ZeroRTTTokenManager zero_rtt_token;
             path::MTU mtu;
