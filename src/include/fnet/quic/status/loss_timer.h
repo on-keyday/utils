@@ -128,7 +128,7 @@ namespace utils {
                 return timer.timeout(config.clock);
             }
 
-            constexpr time::Time deadline() const {
+            constexpr time::Time get_deadline() const {
                 return timer.get_deadline();
             }
 

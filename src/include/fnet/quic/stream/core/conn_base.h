@@ -18,9 +18,9 @@
 namespace utils {
     namespace fnet::quic::stream::core {
 
-        template <class TypeConfigs>
+        template <class TConfig>
         struct ConnectionBase {
-            using Lock = typename TypeConfigs::conn_lock;
+            using Lock = typename TConfig::conn_lock;
             StreamsState state;
             Lock send_locker;
             Lock recv_locker;

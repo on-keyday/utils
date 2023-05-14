@@ -13,7 +13,7 @@
 namespace utils {
     namespace fnet::quic::stream {
 
-        template <class T = std::shared_ptr<void>,class RecvT=T>
+        template <class T = std::shared_ptr<void>, class RecvT = T>
         struct UserCallbackArgType {
             using accept_uni = T;
             using accept_bidi = T;

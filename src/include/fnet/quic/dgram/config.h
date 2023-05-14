@@ -16,5 +16,11 @@ namespace utils {
             size_t recv_buf_limit = ~0;
         };
 
+        struct DatagrmDropNull {
+            void drop(auto& s, auto pn) {}
+            void detect() {}
+            void sent(auto&& observer, auto&& dgram) {}
+        };
+
     }  // namespace fnet::quic::datagram
 }  // namespace utils

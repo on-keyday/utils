@@ -20,33 +20,10 @@
 #include "../frame/writer.h"
 #include "exporter.h"
 #include "config.h"
+#include "storage.h"
 
 namespace utils {
     namespace fnet::quic::connid {
-        using StatelessResetToken = byte[16];
-
-        struct ConnID {
-            std::int64_t seq = -1;
-            view::rvec id;
-            view::rvec stateless_reset_token;
-        };
-
-        struct IDStorage {
-            std::int64_t seq = -1;
-            storage id;
-            StatelessResetToken stateless_reset_token;
-
-            ConnID to_ConnID() const {
-                return ConnID{
-                    .seq = seq,
-                    .id = id,
-                    .stateless_reset_token = stateless_reset_token,
-                };
-            }
-        };
-
-        constexpr byte null_stateless_reset[16]{};
-
         struct IDWait {
             std::int64_t seq = -1;
             std::int64_t retire_proior_to = 0;
@@ -160,12 +137,25 @@ namespace utils {
                 exporter = std::move(exp);
             }
 
+            // expose_close_ids expose connIDs to close
+            // after call this, IDIssuer is invalid
+            void expose_close_ids(auto&& ids) {
+                for (auto&& s : srcids) {
+                    IDStorage& s = s.second;
+                    ids.push_back(CloseID{.id = std::move(s.id), .token = s.stateless_reset_token});
+                }
+            }
+
             void on_transport_parameter_received(std::uint64_t active_conn_id) {
                 max_active_conn_id = active_conn_id;
             }
 
             constexpr bool is_using_zero_length() const {
                 return connID_len == 0;
+            }
+
+            constexpr byte get_connID_len() const {
+                return connID_len;
             }
 
             std::pair<ConnID, error::Error> issue(Random& random, bool enque_wait) {

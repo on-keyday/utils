@@ -31,23 +31,30 @@ namespace utils {
                 first_ack_eliciting_packet_after_idle_sent_time = time::invalid;
             }
 
-            constexpr bool timeout(const InternalConfig& config, const HandshakeStatus& hs) const {
+            constexpr time::Time get_deadline(const InternalConfig& config, const HandshakeStatus& hs) const {
                 if (!last_recv_time.valid() && !first_ack_eliciting_packet_after_idle_sent_time.valid()) {
-                    return false;
+                    return time::invalid;
                 }
                 const auto timeout = current_timeout(config, hs);
                 if (timeout == 0) {
-                    return false;
+                    return time::invalid;
                 }
-                const auto now = config.clock.now();
                 if (!last_recv_time.valid()) {
-                    return first_ack_eliciting_packet_after_idle_sent_time + timeout <= now;
+                    return first_ack_eliciting_packet_after_idle_sent_time + timeout;
                 }
                 if (!first_ack_eliciting_packet_after_idle_sent_time.valid()) {
-                    return last_recv_time + timeout <= now;
+                    return last_recv_time + timeout;
                 }
                 const auto base = min_(time::time_t(last_recv_time), time::time_t(first_ack_eliciting_packet_after_idle_sent_time));
-                return base + timeout <= now;
+                return base + timeout;
+            }
+
+            constexpr bool timeout(const InternalConfig& config, const HandshakeStatus& hs) const {
+                auto deadline = get_deadline(config, hs);
+                if (!deadline.valid()) {
+                    return false;
+                }
+                return deadline <= config.clock.now();
             }
 
             constexpr void on_packet_decrypted(time::Time now) {

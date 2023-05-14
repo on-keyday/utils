@@ -15,6 +15,7 @@
 #define HAS_FORMAT
 #endif
 #include <thread>
+#include <fnet/quic/server/server.h>
 using namespace utils::fnet::quic::use::rawptr;
 struct Recvs {
     std::shared_ptr<Reader> r;
@@ -102,7 +103,7 @@ void request(utils::coro::C* c, void* p) {
     th->req_count++;
     th->total_req++;
     c->add_coroutine(nullptr, [](utils::coro::C* c, void*) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     });
 }
 

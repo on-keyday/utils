@@ -200,9 +200,9 @@ void record_timer(std::shared_ptr<void>&, const utils::fnet::quic::status::LossT
 #endif
     };
     if (timer.current_state() != prev_state ||
-        timer.deadline() != prev_deadline) {
+        timer.get_deadline() != prev_deadline) {
         prev_state = timer.current_state();
-        prev_deadline = timer.deadline();
+        prev_deadline = timer.get_deadline();
         if (prev_state != utils::fnet::quic::status::LossTimerState::no_timer) {
             print();
         }
@@ -215,7 +215,7 @@ void rtt_event(std::shared_ptr<void>&, const utils::fnet::quic::status::RTT& rtt
     utils::wrap::cout_wrap() << utils::wrap::packln("current rtt: ", rtt.smoothed_rtt(), "ms (σ:", rtt.rttvar(), "ms)", " latest rtt: ", rtt.latest_rtt(), "ms");
 }
 
-utils::fnet::quic::log::LogCallbacks cbs{
+utils::fnet::quic::log::ConnLogCallbacks cbs{
     //.drop_packet = [](std::shared_ptr<void>&, utils::fnet::quic::PacketType, utils::fnet::quic::packetnum::Value, utils::fnet::error::Error err) { utils::wrap::cout_wrap() << utils::wrap::packln("drop packet: ", err.error<std::string>()); },
     //.debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
     //.sending_packet = log_packet,

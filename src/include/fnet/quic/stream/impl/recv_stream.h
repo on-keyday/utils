@@ -258,8 +258,8 @@ namespace utils {
         };
 
         // arg must be ptrlike
-        template <class Locker, class TypeConfigs>
-        inline std::pair<bool, error::Error> reader_recv_handler(typename TypeConfigs::callback_arg::recv& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
+        template <class Locker, class TConfig>
+        inline std::pair<bool, error::Error> reader_recv_handler(typename TConfig::callback_arg::recv& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
             if (!arg) {
                 return {false, error::Error("unexpected arg")};
             }

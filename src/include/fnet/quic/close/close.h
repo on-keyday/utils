@@ -10,6 +10,7 @@
 #include "../transport_error.h"
 #include "../frame/writer.h"
 #include "../frame/conn_manage.h"
+#include "../time.h"
 #include <atomic>
 
 namespace utils {
@@ -30,22 +31,91 @@ namespace utils {
             remote,
         };
 
+        namespace flags {
+            enum CloserFlags : byte {
+                flag_sent = 0x01,
+                flag_received = 0x02,
+                flag_should_send_again = 0x04,
+            };
+
+            struct CloseFlag {
+               private:
+                byte flag = 0;
+
+               public:
+                constexpr void reset() {
+                    flag = 0;
+                }
+
+                constexpr void set_sent() {
+                    flag |= flag_sent;
+                }
+
+                constexpr void set_received() {
+                    flag |= flag_received;
+                }
+
+                constexpr void set_should_send_again(bool f) {
+                    if (f) {
+                        flag |= flag_should_send_again;
+                    }
+                    else {
+                        flag &= ~flag_should_send_again;
+                    }
+                }
+
+                constexpr bool is_sent() const {
+                    return flag & flag_sent;
+                }
+
+                constexpr bool is_recevied() const {
+                    return flag & flag_received;
+                }
+
+                constexpr bool should_send_again() const {
+                    return flag & flag_should_send_again;
+                }
+            };
+        }  // namespace flags
+
+        struct ClosedContext {
+            storage payload;
+            time::Timer close_timeout;
+            flags::CloseFlag flag;
+            time::Clock clock;
+
+            std::pair<view::rvec, bool> create_udp_payload() {
+                if (close_timeout.timeout(clock)) {
+                    return {{}, false};
+                }
+                if (flag.is_sent() && flag.should_send_again()) {
+                    flag.set_should_send_again(false);
+                    return {payload, true};
+                }
+                return {{}, true};
+            }
+
+            bool parse_udp_payload(view::rvec) {
+                if (flag.is_sent()) {
+                    flag.set_should_send_again(true);
+                    return true;
+                }
+                return false;
+            }
+        };
+
         struct Closer {
            private:
             std::atomic<ErrorType> errtype;
             error::Error conn_err;
             storage close_data;
-            bool sent = false;
-            bool received = false;
-
-            bool should_send_again = false;
+            flags::CloseFlag flag;
 
            public:
             void reset() {
                 conn_err = error::none;
                 close_data.clear();
-                sent = false;
-                received = false;
+                flag.reset();
                 errtype.store(ErrorType::none);
             }
 
@@ -55,7 +125,7 @@ namespace utils {
             }
 
             view::rvec sent_packet() const {
-                if (!sent) {
+                if (!flag.is_sent()) {
                     return {};
                 }
                 return close_data;
@@ -80,7 +150,7 @@ namespace utils {
             }
 
             bool send(frame::fwriter& fw) {
-                if (received) {
+                if (flag.is_recevied()) {
                     return false;
                 }
                 frame::ConnectionCloseFrame cclose;
@@ -111,31 +181,31 @@ namespace utils {
             }
 
             void on_close_packet_sent(view::rvec close_packet) {
-                sent = true;
+                flag.set_sent();
                 close_data = make_storage(close_packet);
             }
 
             void on_close_retransmited() {
-                if (!sent) {
+                if (!flag.is_sent()) {
                     return;
                 }
-                should_send_again = false;
+                flag.set_should_send_again(false);
             }
 
             bool should_retransmit() const {
-                return sent && should_send_again;
+                return flag.is_sent() && flag.should_send_again();
             }
 
             void on_recv_after_close_sent() {
-                should_send_again = true;
+                flag.set_should_send_again(true);
             }
 
             // returns (accepted)
             bool recv(const frame::ConnectionCloseFrame& cclose) {
-                if (received || sent) {
+                if (flag.is_recevied() || flag.is_sent()) {
                     return false;  // ignore
                 }
-                received = true;
+                flag.set_received();
                 errtype.store(ErrorType::remote);
                 close_data = make_storage(cclose.len() + 1);
                 close_data.fill(0);
@@ -155,8 +225,25 @@ namespace utils {
             }
 
             bool close_by_peer() const {
-                return received;
+                return flag.is_recevied();
+            }
+
+            // expose_closed_context expose context required to close
+            // after call this, Closer become invalid
+            ClosedContext expose_closed_context(time::Clock clock, time::Time close_deadline) {
+                if (!flag.is_sent() && !flag.is_recevied()) {
+                    return {};
+                }
+                time::Timer t;
+                t.set_deadline(close_deadline);
+                return ClosedContext{
+                    .payload = flag.is_sent() ? std::move(close_data) : storage{},
+                    .close_timeout = t,
+                    .flag = flag,
+                    .clock = clock,
+                };
             }
         };
+
     }  // namespace fnet::quic::close
 }  // namespace utils

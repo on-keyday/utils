@@ -7,6 +7,7 @@
 
 #pragma once
 #include "../status/config.h"
+#include "../status/new_reno.h"
 #include "../version.h"
 #include "../../tls/config.h"
 #include "../log/log.h"
@@ -27,7 +28,7 @@ namespace utils {
             status::Config internal_parameters;
             path::Config path_parameters;
             trsparam::DefinedTransportParams transport_parameters;
-            log::Logger logger;
+            log::ConnLogger logger;
             connid::Config connid_parameters;
             datagram::Config datagram_parameters;
             token::ZeroRTTStorage zero_rtt;

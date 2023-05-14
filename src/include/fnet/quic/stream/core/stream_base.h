@@ -62,9 +62,9 @@ namespace utils {
         };
 
         // returns (result,blocked_limit_if_blocked)
-        template <class TypeConfigs>
+        template <class TConfig>
         constexpr std::pair<IOResult, std::uint64_t> send_impl(
-            frame::fwriter& w, ConnectionBase<TypeConfigs>& conn, StreamID id,
+            frame::fwriter& w, ConnectionBase<TConfig>& conn, StreamID id,
             SendUniStreamState& state, StreamWriteData& data, auto&& save_fragment) {
             if (!state.can_send()) {
                 return {IOResult::not_in_io_state, 0};  // cannot sendable on this state
@@ -139,9 +139,9 @@ namespace utils {
             return {IOResult::ok, 0};
         }
 
-        template <class TypeConfigs>
+        template <class TConfig>
         struct SendUniStreamBase {
-            using Lock = typename TypeConfigs::send_stream_lock;
+            using Lock = typename TConfig::send_stream_lock;
             Lock locker;
             const StreamID id = invalid_id;
             SendUniStreamState state;
@@ -307,9 +307,9 @@ namespace utils {
         }
 
         // returns (result,err_if_fatal)
-        template <class TypeConfigs>
+        template <class TConfig>
         constexpr std::pair<IOResult, error::Error> recv_impl(
-            const frame::StreamFrame& frame, ConnectionBase<TypeConfigs>& conn,
+            const frame::StreamFrame& frame, ConnectionBase<TConfig>& conn,
             StreamID id, RecvUniStreamState& state,
             auto&& deliver_data) {
             if (frame.streamID != id) {
@@ -357,9 +357,9 @@ namespace utils {
             return {IOResult::ok, error::none};
         }
 
-        template <class TypeConfigs>
+        template <class TConfig>
         struct RecvUniStreamBase {
-            using Lock = typename TypeConfigs::recv_stream_lock;
+            using Lock = typename TConfig::recv_stream_lock;
             Lock locker;
             const StreamID id;
             RecvUniStreamState state;

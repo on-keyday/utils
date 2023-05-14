@@ -30,6 +30,10 @@ namespace utils {
                 return timer.not_working() || timer.timeout(config.clock);
             }
 
+            constexpr time::Time get_deadline() const {
+                return timer.get_deadline();
+            }
+
             constexpr void on_packet_sent(const InternalConfig& config,
                                           const PayloadSize& payload_size,
                                           const Congestion<Alg>& cong,

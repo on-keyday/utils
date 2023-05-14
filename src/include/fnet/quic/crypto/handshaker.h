@@ -164,39 +164,48 @@ namespace utils {
 
         struct CryptoHandshakers {
            private:
-            bool server = false;
-            // TLS handshake completed
-            bool handshake_complete_ = false;
+            enum : byte {
+                flag_server = 0x1,
+                flag_handshake_complete = 0x2,
+                flag_handshake_done = 0x4,
+                flag_alert = 0x8,
+            };
+            byte flag = 0;
+
+            // bool server = false;
+            //  TLS handshake completed
+            // bool handshake_complete_ = false;
             // client: HANDSHAKE_DONE received
             // server: HANDSHAKE_DONE acked
             // not strictly same as handshake_confirmed
             // use handshake_confirmed() instead of this
-            bool handshake_done = false;
+            // bool handshake_done_ = false;
             tls::TLS tls;
             CryptoHandshaker initial, handshake, onertt;
 
             std::shared_ptr<ack::ACKLostRecord> wait_for_done;
 
             byte alert_code = 0;
-            bool alert = false;
+            // bool alert = false;
 
            public:
             constexpr void set_alert(byte code) {
                 alert_code = code;
-                alert = true;
+                flag |= flag_alert;
             }
 
             void reset(tls::TLS&& new_tls, bool is_server) {
                 tls = std::move(new_tls);
-                is_server = is_server;
-                handshake_done = false;
-                handshake_complete_ = false;
+                flag = is_server ? flag_server : 0;
+                // is_server = is_server;
+                // handshake_done_ = false;
+                // handshake_complete_ = false;
                 wait_for_done = nullptr;
                 initial.reset();
                 handshake.reset();
                 onertt.reset();
                 alert_code = 0;
-                alert = false;
+                // alert = false;
             }
 
             tls::TLS& get_tls() {
@@ -220,7 +229,7 @@ namespace utils {
             }
 
             IOResult send(PacketType type, auto&& observer_vec, frame::fwriter& w) {
-                if (server && handshake_complete_ && !handshake_done && type == PacketType::OneRTT) {
+                if (is_server() && handshake_complete() && !handshake_done() && type == PacketType::OneRTT) {
                     if (!wait_for_done || wait_for_done->is_lost()) {
                         if (w.remain().size() == 0) {
                             return IOResult::no_capacity;
@@ -234,7 +243,7 @@ namespace utils {
                     }
                     else if (wait_for_done->is_ack()) {
                         ack::put_ack_wait(std::move(wait_for_done));
-                        handshake_done = true;
+                        flag |= flag_handshake_done;
                     }
                 }
                 switch (type) {
@@ -250,25 +259,31 @@ namespace utils {
             }
 
             error::Error recv_handshake_done() {
-                if (server) {
+                if (is_server()) {
                     return QUICError{
                         .msg = "recv HANDSHAKE_DONE on server",
                         .transport_error = TransportError::PROTOCOL_VIOLATION,
                         .frame_type = FrameType::HANDSHAKE_DONE,
                     };
                 }
-                handshake_done = true;
+                flag |= flag_handshake_done;
                 return error::none;
             }
 
             error::Error recv_crypto(PacketType type, const frame::CryptoFrame& frame) {
+                bool hs_complete = handshake_complete();
+                const auto d = helper::defer([&] {
+                    if (hs_complete) {
+                        flag |= flag_handshake_complete;
+                    }
+                });
                 switch (type) {
                     case PacketType::Initial:
-                        return initial.recv_crypto(tls, EncryptionLevel::initial, server, handshake_complete_, frame);
+                        return initial.recv_crypto(tls, EncryptionLevel::initial, is_server(), hs_complete, frame);
                     case PacketType::Handshake:
-                        return handshake.recv_crypto(tls, EncryptionLevel::handshake, server, handshake_complete_, frame);
+                        return handshake.recv_crypto(tls, EncryptionLevel::handshake, is_server(), hs_complete, frame);
                     case PacketType::OneRTT:
-                        return onertt.recv_crypto(tls, EncryptionLevel::application, server, handshake_complete_, frame);
+                        return onertt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
                     default:
                         return error::Error("invalid packet type for crypto frame");
                 }
@@ -292,19 +307,30 @@ namespace utils {
                 return error::none;
             }
 
-            constexpr bool handshake_confirmed() const {
-                if (server) {
-                    return handshake_complete_;
-                }
-                return handshake_done;
-            }
-
             constexpr bool is_server() const {
-                return server;
+                return flag & flag_server;
             }
 
+            // TLS handshake completed
             constexpr bool handshake_complete() const {
-                return handshake_complete_;
+                return flag & flag_handshake_complete;
+            }
+
+            // client: HANDSHAKE_DONE received
+            // server: HANDSHAKE_DONE acked
+            // not strictly same as handshake_confirmed
+            // use handshake_confirmed() instead of this
+            constexpr bool handshake_done() const {
+                return flag & flag_handshake_done;
+            }
+
+            // QUIC handshake confirmed
+            // this means, peer address is validated
+            constexpr bool handshake_confirmed() const {
+                if (is_server()) {
+                    return handshake_complete();
+                }
+                return handshake_done();
             }
         };
     }  // namespace fnet::quic::crypto

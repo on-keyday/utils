@@ -17,8 +17,8 @@
 namespace utils {
     namespace minilang::token {
 
-        template <class TypeConfigs = number::internal::ReadConfig>
-        constexpr auto yield_number(int radix, bool allow_float, TypeConfigs&& conf = number::internal::ReadConfig{}) {
+        template <class Config = number::internal::ReadConfig>
+        constexpr auto yield_number(int radix, bool allow_float, Config&& conf = number::internal::ReadConfig{}) {
             return [=](auto&& src) -> std::shared_ptr<Number> {
                 auto trace = trace_log(src, "number");
                 std::string tok;
@@ -44,8 +44,8 @@ namespace utils {
             };
         }
 
-        template <class TypeConfigs = number::internal::ReadConfig>
-        constexpr auto yield_radix_number(bool allow_float, TypeConfigs&& conf = number::internal::ReadConfig{}) {
+        template <class Config = number::internal::ReadConfig>
+        constexpr auto yield_radix_number(bool allow_float, Config&& conf = number::internal::ReadConfig{}) {
             return [=](auto& src) -> std::shared_ptr<Number> {
                 auto radix = number::has_prefix(src.seq);
                 auto b = src.seq.rptr;

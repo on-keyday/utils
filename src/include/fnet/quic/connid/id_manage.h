@@ -34,6 +34,10 @@ namespace utils {
                 issuer.reset(std::move(config.exporter), config.connid_len, config.concurrent_limit);
             }
 
+            void expose_close_ids(auto&& ids) {
+                issuer.expose_close_ids(ids);
+            }
+
             view::rvec get_initial() {
                 return iniret.get_initial();
             }
@@ -74,8 +78,8 @@ namespace utils {
                 return acceptor.initial_conn_id_accepted();
             }
 
-            bool gen_initial_random(byte len = 8) {
-                return iniret.gen_initial(false, len, random);
+            bool gen_initial_random() {
+                return iniret.gen_initial(false, issuer.get_connID_len(), random);
             }
 
             std::pair<ConnID, error::Error> issue(bool enque_wait) {

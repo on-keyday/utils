@@ -108,6 +108,10 @@ namespace utils {
                 on_ack_sent(space);
                 return error::none;
             }
+
+            time::Time get_deadline() const {
+                return ack_delay.get_deadline();
+            }
         };
     }  // namespace fnet::quic::ack
 }  // namespace utils

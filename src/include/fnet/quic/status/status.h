@@ -504,6 +504,26 @@ namespace utils {
             constexpr const LossTimer& loss_timer() const {
                 return loss;
             }
+
+            constexpr time::Time get_earliest_deadline(time::Time ack_delayt) const {
+                auto losst = loss.get_deadline();
+                auto pingt = ping_timer.get_deadline();
+                auto closet = close_timer.get_deadline();
+                auto pacert = pacer.get_deadline();
+                auto idlet = idle.get_deadline(config, hs);
+                auto earliest = ack_delayt;
+                auto maybe_set = [&](time::Time t) {
+                    if (t.valid() && (!earliest.valid() || t < earliest)) {
+                        earliest = t;
+                    }
+                };
+                maybe_set(losst);
+                maybe_set(pingt);
+                maybe_set(closet);
+                maybe_set(pacert);
+                maybe_set(idlet);
+                return earliest;
+            }
         };
     }  // namespace fnet::quic::status
 }  // namespace utils

@@ -24,7 +24,6 @@
 #include "../frame/parse.h"
 #include "../stream/impl/conn.h"
 #include "../log/log.h"
-#include "../../std/deque.h"
 #include "../token/token.h"
 #include "../close/close.h"
 #include "../dgram/datagram.h"
@@ -55,17 +54,18 @@ namespace utils {
 
         // Context is QUIC connection context suite
         // this handles single connection both client and server
-        template <class TypeConfigs>
+        template <class TConfig>
         struct Context {
-            using UserDefinedTypesConfig = typename TypeConfigs::user_defined_types_config;
+            using UserDefinedTypesConfig = typename TConfig::user_defined_types_config;
 
            private:
-            using CongestionAlgorithm = typename TypeConfigs::congestion_algorithm;
-            using Lock = typename TypeConfigs::context_lock;
-            using DatagramDrop = typename TypeConfigs::datagram_drop;
-            using StreamTypeConfig = typename TypeConfigs::stream_type_config;
-            using ConnIDTypeConfig = typename TypeConfigs::connid_type_config;
+            using CongestionAlgorithm = typename TConfig::congestion_algorithm;
+            using Lock = typename TConfig::context_lock;
+            using DatagramDrop = typename TConfig::datagram_drop;
+            using StreamTypeConfig = typename TConfig::stream_type_config;
+            using ConnIDTypeConfig = typename TConfig::connid_type_config;
 
+            // QUIC runtime values
             Version version = version_negotiation;
             status::Status<CongestionAlgorithm> status;
             trsparam::TransportParameters params;
@@ -83,17 +83,20 @@ namespace utils {
             datagram::DatagramManager<Lock, DatagramDrop> datagrams;
             Lock close_locker;
 
-            log::Logger logger;
+            // log
+            log::ConnLogger logger;
+
+            // multiplexer object pointer
+            // this may refer object holded by multiplexer that refers this
+            std::weak_ptr<void> mux_ptr;
 
             // internal parameters
             flex_storage packet_creation_buffer;
             bool transport_param_read = false;
-            byte src_connID_len = 0;
 
             void reset_internal() {
                 packet_creation_buffer.resize(0);
                 transport_param_read = false;
-                src_connID_len = 0;
             }
 
             auto close_lock() {
@@ -231,12 +234,12 @@ namespace utils {
                         err == IOResult::fatal) {
                         return wrap_io(err);
                     }
-                }
-                if (summary.type == PacketType::ZeroRTT ||
-                    summary.type == PacketType::OneRTT) {
                     if (auto err = connIDs.send(fw, waiters); err == IOResult::fatal) {
                         return wrap_io(err);
                     }
+                }
+                if (summary.type == PacketType::ZeroRTT ||
+                    summary.type == PacketType::OneRTT) {
                     if (auto err = datagrams.send(summary.packet_number, fw, waiters); err == IOResult::fatal) {
                         return wrap_io(err);
                     }
@@ -959,6 +962,12 @@ namespace utils {
                 return streams;
             }
 
+            // get eariest timer deadline
+            // thread unsafe call
+            time::Time get_earliest_deadline() const {
+                return status.get_earliest_deadline(unacked.ack_delay.get_deadline());
+            }
+
             // thread unsafe call
             bool init(Config&& config, UserDefinedTypesConfig&& udconfig = {}) {
                 // reset internal parameters
@@ -1004,7 +1013,6 @@ namespace utils {
                 streams->apply_local_initial_limits(local);
 
                 // setup connection IDs manager
-                src_connID_len = config.connid_parameters.connid_len;
                 connIDs.reset(std::move(config.connid_parameters));
                 logger = std::move(config.logger);
 
@@ -1040,7 +1048,7 @@ namespace utils {
                     params.set_local(trsparam::make_transport_param(trsparam::DefinedID::initial_src_connection_id, {}));
                 }
 
-                if (!connIDs.gen_initial_random(src_connID_len)) {
+                if (!connIDs.gen_initial_random()) {
                     set_quic_runtime_error(error::Error("failed to generate client destination connection ID. library bug!!"));
                     return false;
                 }
@@ -1153,6 +1161,33 @@ namespace utils {
                     return true;
                 }
                 return unacked.should_send_ack(status.status_config());
+            }
+
+            // expose_closed_context expose context required to close
+            // after this returns true, Context become invalid
+            bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
+                const auto l = close_lock();
+                switch (closed.load()) {
+                    case close::CloseReason::not_closed:
+                    case close::CloseReason::idle_timeout:
+                    case close::CloseReason::handshake_timeout:
+                        return false;
+                    default:
+                        break;
+                }
+                ctx = closer.expose_closed_context(status.status_config().clock, status.close_timeout());
+                connIDs.expose_close_ids(ids);
+                return true;
+            }
+
+            // thread unsafe call
+            void set_mux_ptr(const std::shared_ptr<void>& m) {
+                mux_ptr = m;
+            }
+
+            // thread unsafe call
+            std::shared_ptr<void> get_mux_ptr() const {
+                return mux_ptr.lock();
             }
         };
     }  // namespace fnet::quic::context

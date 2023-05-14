@@ -29,10 +29,10 @@ namespace utils {
 
         using FlowLimiter = stream::core::Limiter;
 
-        template <class TypeConfigs, class Lock = typename TypeConfigs::recv_stream_lock>
-        std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TypeConfigs>& r) {
+        template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
+        std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r) {
             auto read = std::allocate_shared<stream::impl::RecvSorted<Lock>>(glheap_allocator<stream::impl::RecvSorted<Lock>>{});
-            r.set_receiver(read, stream::impl::reader_recv_handler<Lock, TypeConfigs>);
+            r.set_receiver(read, stream::impl::reader_recv_handler<Lock, TConfig>);
             return read;
         }
 

@@ -17,7 +17,7 @@
 
 namespace utils {
     namespace fnet::quic::log {
-        struct LogCallbacks {
+        struct ConnLogCallbacks {
             void (*drop_packet)(std::shared_ptr<void>&, PacketType, packetnum::Value, error::Error) = nullptr;
             void (*debug)(std::shared_ptr<void>&, const char*) = nullptr;
             void (*sending_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool) = nullptr;
@@ -28,9 +28,9 @@ namespace utils {
             void (*rtt_state)(std::shared_ptr<void>&, const status::RTT& rtt, time::Time now) = nullptr;
         };
 
-        struct Logger {
+        struct ConnLogger {
             std::shared_ptr<void> ctx;
-            const LogCallbacks* callbacks = nullptr;
+            const ConnLogCallbacks* callbacks = nullptr;
 
             void drop_packet(PacketType type, packetnum::Value val, error::Error err) {
                 if (callbacks && callbacks->drop_packet) {

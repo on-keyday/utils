@@ -20,15 +20,15 @@
 namespace utils {
     namespace fnet::quic::stream::impl {
 
-        template <class TypeConfigs>
+        template <class TConfig>
         struct SendUniStream {
            private:
-            core::SendUniStreamBase<TypeConfigs> uni;
-            std::weak_ptr<ConnFlowControl<TypeConfigs>> conn;
+            core::SendUniStreamBase<TConfig> uni;
+            std::weak_ptr<ConnFlowControl<TConfig>> conn;
 
             flex_storage src;
             std::shared_ptr<ack::ACKLostRecord> reset_wait;
-            resend::Retransmiter<resend::StreamFragment, TypeConfigs::template retransmit_que> frags;
+            resend::Retransmiter<resend::StreamFragment, TConfig::template retransmit_que> frags;
 
             // move state to data_recved if condition satisfied
             void maybe_send_done() {
@@ -134,7 +134,7 @@ namespace utils {
             }
 
            public:
-            SendUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TypeConfigs>> c)
+            SendUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TConfig>> c)
                 : uni(id) {
                 conn = c;
                 uni.set_initial(c->base.state.send_ini_limit, c->base.state.local_dir());
@@ -355,12 +355,12 @@ namespace utils {
             }
         };
 
-        template <class TypeConfigs>
+        template <class TConfig>
         struct RecvUniStream {
            private:
-            core::RecvUniStreamBase<TypeConfigs> uni;
-            std::weak_ptr<ConnFlowControl<TypeConfigs>> conn;
-            using RecvArg = typename TypeConfigs::callback_arg::recv;
+            core::RecvUniStreamBase<TConfig> uni;
+            std::weak_ptr<ConnFlowControl<TConfig>> conn;
+            using RecvArg = typename TConfig::callback_arg::recv;
             FragmentSaver<RecvArg> saver;
             std::shared_ptr<ack::ACKLostRecord> max_data_wait;
             std::shared_ptr<ack::ACKLostRecord> stop_sending_wait;
@@ -423,7 +423,7 @@ namespace utils {
             }
 
            public:
-            RecvUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TypeConfigs>> c)
+            RecvUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TConfig>> c)
                 : uni(id) {
                 conn = c;
                 uni.set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
@@ -582,10 +582,10 @@ namespace utils {
             }
         };
 
-        template <class TypeConfigs>
+        template <class TConfig>
         struct BidiStream {
-            SendUniStream<TypeConfigs> sender;
-            RecvUniStream<TypeConfigs> receiver;
+            SendUniStream<TConfig> sender;
+            RecvUniStream<TConfig> receiver;
 
             // general handling
             // called by QUIC runtime system
@@ -618,7 +618,7 @@ namespace utils {
             }
 
             BidiStream(StreamID id,
-                       std::shared_ptr<ConnFlowControl<TypeConfigs>> conn)
+                       std::shared_ptr<ConnFlowControl<TConfig>> conn)
                 : sender(id, conn), receiver(id, conn) {}
 
             constexpr StreamID id() const {

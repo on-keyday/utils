@@ -33,12 +33,6 @@ namespace utils {
             packetnum::Value packet_number;
         };
 
-        struct DatagrmDropNull {
-            void drop(storage& s, packetnum::Value pn) {}
-            void detect() {}
-            void sent(auto&& observer, SendDatagram&& dgram) {}
-        };
-
         struct DatagramDropRetransmit {
             resend::Retransmiter<SendDatagram, slib::list> retransmit;
             std::shared_ptr<void> arg;
