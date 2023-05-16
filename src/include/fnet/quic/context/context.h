@@ -493,9 +493,16 @@ namespace utils {
                 return true;
             }
 
-            std::pair<view::rvec, bool> create_encrypted_packet(bool on_close) {
-                packet_creation_buffer.resize(mtu.current_datagram_size());
-                io::writer w{packet_creation_buffer};
+            io::writer prepare_writer(flex_storage* external_buffer, std::uint64_t bufsize) {
+                if (!external_buffer) {
+                    external_buffer = &packet_creation_buffer;
+                }
+                external_buffer->resize(bufsize);
+                return io::writer{*external_buffer};
+            }
+
+            std::pair<view::rvec, bool> create_encrypted_packet(bool on_close, flex_storage* external_buffer) {
+                auto w = prepare_writer(external_buffer, mtu.current_datagram_size());
                 const bool has_initial = crypto.write_installed(PacketType::Initial) &&
                                          status.can_send(status::PacketNumberSpace::initial);
                 bool has_handshake = crypto.write_installed(PacketType::Handshake) &&
@@ -545,7 +552,7 @@ namespace utils {
                 return {w.written(), true};
             }
 
-            std::pair<view::rvec, bool> create_mtu_probe_packet() {
+            std::pair<view::rvec, bool> create_mtu_probe_packet(flex_storage* external_buffer) {
                 const bool has_onertt = crypto.write_installed(PacketType::OneRTT) &&
                                         status.can_send(status::PacketNumberSpace::application);
                 if (!has_onertt) {
@@ -556,8 +563,7 @@ namespace utils {
                 if (!required) {
                     return {{}, true};  // nothing to do too
                 }
-                packet_creation_buffer.resize(size);
-                io::writer w{packet_creation_buffer};
+                auto w = prepare_writer(external_buffer, size);
                 if (!write_onertt(w, WriteMode::mtu_probe, waiter)) {
                     return {{}, false};
                 }
@@ -572,7 +578,7 @@ namespace utils {
                 return {probe, true};
             }
 
-            std::pair<view::rvec, bool> create_connection_close_packet() {
+            std::pair<view::rvec, bool> create_connection_close_packet(flex_storage* external_buffer) {
                 const auto d = close_lock();
                 if (!closer.has_error()) {
                     return {{}, true};  // nothing to do
@@ -590,7 +596,7 @@ namespace utils {
                 if (closer.close_by_peer()) {
                     return {{}, false};  // close by peer
                 }
-                auto [packet, ok] = create_encrypted_packet(true);
+                auto [packet, ok] = create_encrypted_packet(true, external_buffer);
                 if (!ok) {
                     logger.debug("fatal error!! connection close packet creation failure");
                     return {{}, false};  // fatal error!!!!!
@@ -1085,27 +1091,27 @@ namespace utils {
 
             // thread unsafe call
             // returns (payload,idle)
-            std::pair<view::rvec, bool> create_udp_payload() {
+            std::pair<view::rvec, bool> create_udp_payload(flex_storage* external_buffer = nullptr) {
                 if (closer.has_error()) {
-                    return create_connection_close_packet();
+                    return create_connection_close_packet(external_buffer);
                 }
                 if (conn_timeout()) {
                     return {{}, false};
                 }
                 if (!maybe_loss_timeout()) {
                     // error on loss detection
-                    return create_connection_close_packet();
+                    return create_connection_close_packet(external_buffer);
                 }
-                auto [packet, ok] = create_encrypted_packet(false);
+                auto [packet, ok] = create_encrypted_packet(false, external_buffer);
                 if (!ok) {
-                    return create_connection_close_packet();
+                    return create_connection_close_packet(external_buffer);
                 }
                 if (packet.size()) {
                     return {packet, ok};
                 }
-                std::tie(packet, ok) = create_mtu_probe_packet();
+                std::tie(packet, ok) = create_mtu_probe_packet(external_buffer);
                 if (!ok) {
-                    return create_connection_close_packet();
+                    return create_connection_close_packet(external_buffer);
                 }
                 return {packet, true};
             }
@@ -1164,9 +1170,12 @@ namespace utils {
             }
 
             // expose_closed_context expose context required to close
-            // after this returns true, Context become invalid
+            // after call this, Context become invalid
+            // this returns true when ClosedContext is enabled otherwise false
+            // ids are always set
             bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
                 const auto l = close_lock();
+                connIDs.expose_close_ids(ids);
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
                     case close::CloseReason::idle_timeout:
@@ -1176,7 +1185,6 @@ namespace utils {
                         break;
                 }
                 ctx = closer.expose_closed_context(status.status_config().clock, status.close_timeout());
-                connIDs.expose_close_ids(ids);
                 return true;
             }
 

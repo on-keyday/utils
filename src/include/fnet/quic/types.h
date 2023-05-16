@@ -65,7 +65,7 @@ namespace utils {
         }
 
         // packe_type_to_mask returns packet number byte mask for type and version
-        // if succeeded returns mask else returns 0xff
+        // if succeeded returns mask else returns 0
         constexpr byte packet_type_to_mask(PacketType type, std::uint32_t version) {
             if (type == PacketType::OneRTT) {
                 return 0x40;
@@ -460,8 +460,8 @@ namespace utils {
         // or FrameType::DATA_BLOCKED or FrameType::STREAMS_BLOCKED
         constexpr bool is_ConnRelated(FrameType type) noexcept {
             return type == FrameType::MAX_DATA ||
-                   is_MAX_STREAMS(type)||
-                   type==FrameType::DATA_BLOCKED||
+                   is_MAX_STREAMS(type) ||
+                   type == FrameType::DATA_BLOCKED ||
                    is_STREAMS_BLOCKED(type);
         }
 
