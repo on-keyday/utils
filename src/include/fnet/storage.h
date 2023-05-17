@@ -32,6 +32,8 @@ namespace utils {
         inline storage make_storage(size_t size) {
             auto dst = (byte*)alloc_normal(size, alignof(byte), DNET_DEBUG_MEMORY_LOCINFO(true, size, alignof(byte)));
             if (!dst) {
+                // maybe throw
+                memory_exhausted_traits(DNET_DEBUG_MEMORY_LOCINFO(true, size, alignof(byte)));
                 return {};
             }
             return storage(dst, size);

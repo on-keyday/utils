@@ -33,7 +33,7 @@ namespace utils {
             }
 
             IOResult send(PacketType type, packetnum::Value pn, auto&& observer_vec, frame::fwriter& w) {
-                return handshaker.send(type, observer_vec, w);
+                return handshaker.send(type, w, observer_vec);
             }
 
             error::Error recv(PacketType type, const frame::Frame& frame) {
@@ -132,7 +132,7 @@ namespace utils {
                 return secrets.is_installed(type, false);
             }
 
-            // drop initial packet
+            // drop initial secret
             // client: on first write of handshake packet
             // server: on first read of handshake packet
             bool maybe_drop_initial() {
@@ -153,11 +153,28 @@ namespace utils {
                 return handshaker.handshake_complete();
             }
 
+            // drop handshake secret
+            // client/server: on handshake confirmed
             bool maybe_drop_handshake() {
                 if (handshake_confirmed() &&
                     (write_installed(PacketType::Handshake) ||
                      read_installed(PacketType::Handshake))) {
                     secrets.drop_handshake();
+                    return true;
+                }
+                return false;
+            }
+
+            // drop 0-RTT secret
+            // client: on write key of 1-RTT is installed
+            // server: on read key of 1-RTT is installed, or after a moment from 1-RTT read key installation.
+            bool maybe_drop_0rtt() {
+                if ((handshaker.is_server()
+                         ? read_installed(PacketType::OneRTT)
+                         : write_installed(PacketType::OneRTT)) &&
+                    (write_installed(PacketType::ZeroRTT) ||
+                     read_installed(PacketType::ZeroRTT))) {
+                    secrets.drop_0rtt();
                     return true;
                 }
                 return false;

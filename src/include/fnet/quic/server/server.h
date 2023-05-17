@@ -22,7 +22,8 @@ namespace utils {
             // returns (payload,idle)
             virtual std::pair<view::rvec, bool> create_packet(flex_storage& buf) = 0;
 
-            virtual void handle_packet(view::wvec payload) = 0;
+            // returns (should_send)
+            virtual bool handle_packet(view::wvec payload) = 0;
 
             virtual std::shared_ptr<Handler> next_handler() {
                 return nullptr;
@@ -38,8 +39,9 @@ namespace utils {
                 return ctx.create_udp_payload();
             }
 
-            void handle_packet(view::wvec payload) override {
+            bool handle_packet(view::wvec payload) override {
                 ctx.parse_udp_payload(payload);
+                return false;
             }
         };
 
@@ -71,20 +73,30 @@ namespace utils {
                 return v;
             }
 
-            void handle_packet(view::wvec payload) override {
+            bool handle_packet(view::wvec payload) override {
                 const auto d = lock();
                 if (discard) {
                     return;
                 }
                 ctx.parse_udp_payload(payload);
                 next_deadline = ctx.get_earliest_deadline();
+                return true;
             }
 
             std::shared_ptr<Handler> next_handler() override {
                 const auto d = lock();
-                closed = true;
-                ctx.expose_closed_context();
-                return nullptr;
+                if (!closed || discard) {
+                    return nullptr;
+                }
+                close::ClosedContext c;
+                slib::vector<connid::CloseID> ids;
+                ctx.expose_closed_context(c, ids);
+                discard = true;
+                auto next = std::allocate_shared<Closed>(glheap_allocator<Closed>{});
+                next->ids = std::move(ids);
+                next->ctx = std::move(c);
+                next->next_deadline = c.close_timeout;
+                return next;
             }
 
             static std::shared_ptr<Opened> create() {
@@ -98,10 +110,11 @@ namespace utils {
             storage src_conn_id;
             storage dst_conn_id;
             std::pair<view::rvec, bool> create_packet(flex_storage& buf) override {
-                return {{}, false};
+                return {{}, true};
             }
 
-            void handle_packet(view::wvec payload) override {
+            bool handle_packet(view::wvec payload) override {
+                return false;
             }
         };
 

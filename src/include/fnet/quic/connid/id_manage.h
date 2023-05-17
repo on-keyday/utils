@@ -7,14 +7,14 @@
 
 // id_manage - id management
 #pragma once
-#include "connection_id.h"
 #include "../frame/conn_manage.h"
 #include "../transport_error.h"
 #include "../ack/ack_lost_record.h"
-#include "../stream/fragment.h"
 #include "../ioresult.h"
 #include "../frame/writer.h"
 #include "config.h"
+#include "id_issuer.h"
+#include "id_acceptor.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -22,16 +22,17 @@ namespace utils {
         template <class TConfig>
         struct IDManager {
            private:
-            Random random;
+            CommonParam cparam;
             IDAcceptor<TConfig> acceptor;
             IDIssuer<TConfig> issuer;
             InitialRetry iniret;
 
            public:
-            void reset(Config&& config) {
-                random = std::move(config.random);
+            void reset(std::uint32_t version, Config&& config) {
+                cparam.random = std::move(config.random);
+                cparam.version = version;
                 acceptor.reset(config.packet_per_id, config.max_packet_per_id, config.change_mode);
-                issuer.reset(std::move(config.exporter), config.connid_len, config.concurrent_limit);
+                issuer.reset(std::move(config.exporter), std::move(config.generator), config.connid_len, config.concurrent_limit);
             }
 
             void expose_close_ids(auto&& ids) {
@@ -47,7 +48,7 @@ namespace utils {
             }
 
             std::pair<view::rvec, error::Error> pick_up_dstID(bool is_server, bool handshake_complete, std::uint64_t local_max_conn_id) {
-                auto err = acceptor.maybe_update_id(random, handshake_complete, local_max_conn_id);
+                auto err = acceptor.maybe_update_id(cparam, handshake_complete, local_max_conn_id);
                 if (err) {
                     return {{}, std::move(err)};
                 }
@@ -79,28 +80,28 @@ namespace utils {
             }
 
             bool gen_initial_random() {
-                return iniret.gen_initial(false, issuer.get_connID_len(), random);
+                return iniret.gen_initial(false, issuer.get_connID_len(), cparam.random);
             }
 
             std::pair<ConnID, error::Error> issue(bool enque_wait) {
-                return issuer.issue(random, enque_wait);
+                return issuer.issue(cparam, enque_wait);
             }
 
             error::Error issue_to_max() {
-                return issuer.issue_ids_to_max_connid_limit(random);
+                return issuer.issue_ids_to_max_connid_limit(cparam);
             }
 
-            error::Error recv_new_connection_id(Version version, const frame::NewConnectionIDFrame& c) {
-                return acceptor.recv(version, random, c);
+            error::Error recv_new_connection_id(const frame::NewConnectionIDFrame& c) {
+                return acceptor.recv(cparam, c);
             }
 
             error::Error recv_retire_connection_id(view::rvec recv_dest_id, const frame::RetireConnectionIDFrame& c) {
-                return issuer.retire(random, recv_dest_id, c);
+                return issuer.retire(cparam, recv_dest_id, c);
             }
 
             error::Error recv(packet::PacketSummary summary, const frame::Frame& f) {
                 if (f.type.type_detail() == FrameType::NEW_CONNECTION_ID) {
-                    return recv_new_connection_id(Version(summary.version), static_cast<const frame::NewConnectionIDFrame&>(f));
+                    return recv_new_connection_id(static_cast<const frame::NewConnectionIDFrame&>(f));
                 }
                 else if (f.type.type_detail() == FrameType::RETIRE_CONNECTION_ID) {
                     return recv_retire_connection_id(summary.dstID, static_cast<const frame::RetireConnectionIDFrame&>(f));
@@ -123,21 +124,21 @@ namespace utils {
                 return acceptor.stateless_reset_callback();
             }
 
-            error::Error on_initial_packet_received(Version version, view::rvec id) {
+            error::Error on_initial_packet_received(view::rvec id) {
                 if (id.size() == 0) {
                     acceptor.on_zero_length_acception();
                     return error::none;
                 }
                 byte stateless_reset_token[16]{};
-                return acceptor.accept(version, random, 0, 0, id, stateless_reset_token);
+                return acceptor.accept(cparam, 0, 0, id, stateless_reset_token);
             }
 
             void on_initial_stateless_reset_token_received(const StatelessResetToken& stateless_reset_token) {
                 acceptor.on_initial_stateless_reset_token_received(stateless_reset_token);
             }
 
-            error::Error on_preferred_address_received(Version version, view::rvec id, const StatelessResetToken& stateless_reset_token) {
-                return acceptor.on_preferred_address_received(version, random, id, stateless_reset_token);
+            error::Error on_preferred_address_received(view::rvec id, const StatelessResetToken& stateless_reset_token) {
+                return acceptor.on_preferred_address_received(cparam, id, stateless_reset_token);
             }
 
             bool on_retry_received(view::rvec id) {

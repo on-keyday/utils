@@ -16,6 +16,7 @@
 #endif
 #include <thread>
 #include <fnet/quic/server/server.h>
+#include <wrap/cout.h>
 using namespace utils::fnet::quic::use::rawptr;
 struct Recvs {
     std::shared_ptr<Reader> r;
@@ -64,9 +65,10 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
         if (eof) {
             break;
         }
-        s->s->update_recv_limit([](FlowLimiter lim) {
+        s->s->update_recv_limit([&](FlowLimiter lim) {
             if (lim.avail_size() < 5000) {
-                return lim.curlimit() + 10000;
+                utils::wrap::cout_wrap() << "update max stream data seq: " << s->s->id().seq_count() << "\n";
+                return lim.curlimit() + 100000;
             }
             return lim.curlimit();
         });
@@ -103,6 +105,7 @@ void request(utils::coro::C* c, void* p) {
     th->req_count++;
     th->total_req++;
     c->add_coroutine(nullptr, [](utils::coro::C* c, void*) {
+        utils::wrap::cout_wrap() << "sleeping\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     });
 }
@@ -134,9 +137,10 @@ void conn(utils::coro::C* c, std::shared_ptr<Context>& ctx, utils::fnet::Socket&
         if (recv.size()) {
             ctx->parse_udp_payload(recv);
         }
-        s->update_max_data([](FlowLimiter v) {
+        s->update_max_data([&](FlowLimiter v) {
             if (v.avail_size() < 5000) {
-                return v.curlimit() + 10000;
+                utils::wrap::cout_wrap() << "update max data\n";
+                return v.curlimit() + 100000;
             }
             return v.curlimit();
         });
@@ -169,7 +173,9 @@ int main() {
     auto conf = utils::fnet::tls::configure();
     conf.set_alpn("\x04test");
     conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
-    ctx->init(use_default(std::move(conf)));
+    auto def = use_default(std::move(conf));
+    def.internal_parameters.use_ack_delay = true;
+    ctx->init(std::move(def));
     auto streams = ctx->get_streams();
     ctx->connect_start();
     std::atomic<utils::coro::C*> ld = nullptr;

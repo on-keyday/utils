@@ -10,6 +10,7 @@
 #include "../../core/byte.h"
 #include <cstdint>
 #include <type_traits>
+#include "version.h"
 
 namespace utils {
     namespace fnet::quic {
@@ -91,10 +92,10 @@ namespace utils {
         }
 
         constexpr PacketType long_packet_type(byte typbit_1_to_3, std::uint32_t version) {
-            if (version == 0) {
+            if (version == version_negotiation) {
                 return PacketType::VersionNegotiation;
             }
-            if (version == 1) {
+            if (version == version_1) {
                 switch (typbit_1_to_3) {
                     case 0:
                         return PacketType::Initial;

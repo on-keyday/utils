@@ -457,6 +457,10 @@ namespace utils {
                 return close_timer.timeout(config.clock);
             }
 
+            constexpr time::Time get_close_deadline() const {
+                return close_timer.get_deadline();
+            }
+
             constexpr bool should_send_ping() const {
                 return loss.current_state() == LossTimerState::no_timer &&
                        ping_timer.timeout(config.clock);

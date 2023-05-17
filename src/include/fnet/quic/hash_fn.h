@@ -10,6 +10,7 @@
 #include <functional>
 #include "packet_number.h"
 #include "stream/stream_id.h"
+#include "../storage.h"
 #include <string_view>
 
 namespace std {
@@ -32,6 +33,13 @@ namespace std {
     struct hash<utils::view::rvec> {
         constexpr auto operator()(auto id) const noexcept {
             return std::hash<std::string_view>{}(std::string_view(id.as_char(), id.size()));
+        }
+    };
+
+    template <>
+    struct hash<utils::fnet::flex_storage> {
+        constexpr auto operator()(auto&& fx) const noexcept {
+            return std::hash<utils::view::rvec>{}(fx);
         }
     };
 }  // namespace std

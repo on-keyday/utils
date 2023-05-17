@@ -90,7 +90,7 @@ namespace utils {
                 write_data.append(data);
             }
 
-            IOResult send(auto&& observer_vec, frame::fwriter& w) {
+            IOResult send(frame::fwriter& w, auto&& observer_vec) {
                 if (auto res = send_retransmit(observer_vec, w);
                     res == IOResult::fatal) {
                     return res;
@@ -228,7 +228,7 @@ namespace utils {
                 }
             }
 
-            IOResult send(PacketType type, auto&& observer_vec, frame::fwriter& w) {
+            IOResult send(PacketType type, frame::fwriter& w, auto&& observer_vec) {
                 if (is_server() && handshake_complete() && !handshake_done() && type == PacketType::OneRTT) {
                     if (!wait_for_done || wait_for_done->is_lost()) {
                         if (w.remain().size() == 0) {
@@ -248,11 +248,11 @@ namespace utils {
                 }
                 switch (type) {
                     case PacketType::Initial:
-                        return initial.send(observer_vec, w);
+                        return initial.send(w, observer_vec);
                     case PacketType::Handshake:
-                        return handshake.send(observer_vec, w);
+                        return handshake.send(w, observer_vec);
                     case PacketType::OneRTT:
-                        return onertt.send(observer_vec, w);
+                        return onertt.send(w, observer_vec);
                     default:
                         return IOResult::invalid_data;
                 }

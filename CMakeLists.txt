@@ -126,7 +126,9 @@ add_executable(durl "src/tool/durl/main.cpp"
   "src/tool/durl/uri.cpp"
   "src/tool/durl/http.cpp"
 )
-add_executable(server "src/tool/server/server.cpp")
+add_executable(server "src/tool/server/server.cpp"
+  "src/tool/server/quic_server.cpp"
+)
 if(LLVM_FOUND)
 add_executable(combl "src/tool/combl/combl.cpp"
 "src/tool/combl/traverse.cpp"
@@ -265,7 +267,7 @@ target_link_libraries(fnet_dns fnet)
 target_link_libraries(fnetserv fnet)
 
 # test(libcoro)
-target_link_libraries(fiber_coro coro fnet)
+target_link_libraries(fiber_coro coro fnet utils)
 
 # tools
 target_link_libraries(ifacegen utils)

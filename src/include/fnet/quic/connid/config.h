@@ -7,8 +7,9 @@
 
 #pragma once
 #include <cstdint>
-#include "exporter.h"
-#include "random.h"
+#include "external/exporter.h"
+#include "external/random.h"
+#include "external/id_generator.h"
 #include "../../std/hash_map.h"
 #include "../../std/list.h"
 
@@ -24,7 +25,8 @@ namespace utils {
             ConnIDChangeMode change_mode = ConnIDChangeMode::random;
             std::uint32_t packet_per_id = 1000;
             std::uint32_t max_packet_per_id = 10000;
-            Exporter exporter;
+            ConnIDExporter exporter;
+            ConnIDGenerator generator{default_generator};
             Random random;
             byte connid_len = 4;
             byte concurrent_limit = 4;

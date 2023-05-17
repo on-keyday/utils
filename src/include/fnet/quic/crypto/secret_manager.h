@@ -178,6 +178,10 @@ namespace utils {
                 handshake.drop();
             }
 
+            void drop_0rtt() {
+                zerortt.drop();
+            }
+
             bool is_installed(PacketType type, bool w) const {
                 switch (type) {
                     case PacketType::Initial:

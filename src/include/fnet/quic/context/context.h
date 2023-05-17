@@ -161,7 +161,7 @@ namespace utils {
                     }
                     connIDs.on_initial_stateless_reset_token_received(peer.stateless_reset_token);
                     if (!peer.preferred_address.connectionID.null()) {
-                        connIDs.on_preferred_address_received(version, peer.preferred_address.connectionID, peer.preferred_address.stateless_reset_token);
+                        connIDs.on_preferred_address_received(peer.preferred_address.connectionID, peer.preferred_address.stateless_reset_token);
                     }
                     mtu.on_transport_parameter_received(peer.max_udp_payload_size);
                 }
@@ -502,6 +502,10 @@ namespace utils {
             }
 
             std::pair<view::rvec, bool> create_encrypted_packet(bool on_close, flex_storage* external_buffer) {
+                if (!status.is_server()) {
+                    // on client drop 0-RTT key if 1-RTT key is installed
+                    crypto.maybe_drop_0rtt();
+                }
                 auto w = prepare_writer(external_buffer, mtu.current_datagram_size());
                 const bool has_initial = crypto.write_installed(PacketType::Initial) &&
                                          status.can_send(status::PacketNumberSpace::initial);
@@ -512,7 +516,7 @@ namespace utils {
                 const bool has_zerortt = !status.is_server() &&
                                          crypto.write_installed(PacketType::ZeroRTT) &&
                                          status.can_send(status::PacketNumberSpace::application) &&
-                                         !has_handshake && !has_onertt;
+                                         !has_onertt;
                 const auto to_mode = [&](bool b) {
                     if (on_close) {
                         return b ? WriteMode::use_all_buffer | WriteMode::conn_close : WriteMode::conn_close;
@@ -521,6 +525,7 @@ namespace utils {
                         return b ? WriteMode::use_all_buffer : WriteMode::none;
                     }
                 };
+
                 ack::ACKWaiters waiters;
                 if (has_initial) {
                     if (!write_initial(w, to_mode(!has_handshake && !has_zerortt && !has_onertt), waiters)) {
@@ -748,7 +753,7 @@ namespace utils {
             bool handle_on_initial(packet::PacketSummary summary) {
                 if (summary.type == PacketType::Initial) {
                     if (!connIDs.initial_conn_id_accepted()) {
-                        if (auto err = connIDs.on_initial_packet_received(version, summary.srcID)) {
+                        if (auto err = connIDs.on_initial_packet_received(summary.srcID)) {
                             set_quic_runtime_error(std::move(err));
                             return false;
                         }
@@ -1019,7 +1024,7 @@ namespace utils {
                 streams->apply_local_initial_limits(local);
 
                 // setup connection IDs manager
-                connIDs.reset(std::move(config.connid_parameters));
+                connIDs.reset(config.version, std::move(config.connid_parameters));
                 logger = std::move(config.logger);
 
                 // setup token storage
@@ -1144,7 +1149,7 @@ namespace utils {
                 auto decrypt_suite = crypto.decrypt_callback(version, [&](PacketType type) {
                     return status.largest_received_packet_number(status::from_packet_type(type));
                 });
-                auto plain_cb = [this](PacketType, auto&& packet, view::wvec src) {
+                auto plain_cb = [this](PacketType type, auto&& packet, view::wvec src) {
                     if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, packet::RetryPacket>) {
                         return handle_retry_packet(packet);
                     }
@@ -1178,13 +1183,16 @@ namespace utils {
                 connIDs.expose_close_ids(ids);
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
+                        return false;
                     case close::CloseReason::idle_timeout:
                     case close::CloseReason::handshake_timeout:
+                        ctx.clock = status.status_config().clock;
+                        ctx.close_timeout = ctx.clock.now();
                         return false;
                     default:
                         break;
                 }
-                ctx = closer.expose_closed_context(status.status_config().clock, status.close_timeout());
+                ctx = closer.expose_closed_context(status.status_config().clock, status.get_close_deadline());
                 return true;
             }
 

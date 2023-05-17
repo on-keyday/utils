@@ -32,6 +32,7 @@ namespace utils {
                 },
             };
             config.internal_parameters.handshake_idle_timeout = 10000;
+            config.transport_parameters.max_idle_timeout = 30000;
             config.transport_parameters.initial_max_streams_uni = 100;
             config.transport_parameters.initial_max_streams_bidi = 100;
             config.transport_parameters.initial_max_data = 1000000;

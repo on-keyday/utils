@@ -1,0 +1,269 @@
+/*
+    utils - utility library
+    Copyright (c) 2021-2023 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include "external/exporter.h"
+#include "external/id_generator.h"
+#include "common_param.h"
+#include "storage.h"
+#include "../ack/ack_lost_record.h"
+#include "../frame/writer.h"
+#include "../frame/conn_id.h"
+#include "../transport_error.h"
+
+namespace utils {
+    namespace fnet::quic::connid {
+        struct IDWait {
+            std::int64_t seq = -1;
+            std::int64_t retire_proior_to = 0;
+            std::shared_ptr<ack::ACKLostRecord> wait;
+        };
+
+        constexpr auto default_max_active_conn_id = 2;
+
+        template <class TConfig>
+        struct IDIssuer {
+           private:
+            template <class K, class V>
+            using ConnIDMap = typename TConfig::template connid_map<K, V>;
+            template <class V>
+            using WaitQue = typename TConfig::template wait_que<V>;
+            std::int64_t issued_seq = -1;
+            std::int64_t current_seq = -1;
+            ConnIDMap<std::int64_t, IDStorage> srcids;
+            WaitQue<IDWait> waitlist;
+            std::uint64_t max_active_conn_id = default_max_active_conn_id;
+            byte connID_len = 0;
+            byte concurrent_limit = 0;
+            ConnIDExporter exporter;
+            ConnIDGenerator connid_gen;
+
+           public:
+            void reset(ConnIDExporter&& exp, ConnIDGenerator&& gen, byte conn_id_len, byte conc_limit) {
+                srcids.clear();
+                waitlist.clear();
+                max_active_conn_id = default_max_active_conn_id;
+                issued_seq = -1;
+                current_seq = -1;
+                connID_len = conn_id_len;
+                concurrent_limit = conc_limit;
+                exporter = std::move(exp);
+                connid_gen = std::move(gen);
+            }
+
+            // expose_close_ids expose connIDs to close
+            // after call this, IDIssuer is invalid
+            void expose_close_ids(auto&& ids) {
+                for (auto&& s : srcids) {
+                    IDStorage& s = s.second;
+                    ids.push_back(CloseID{.id = std::move(s.id), .token = s.stateless_reset_token});
+                }
+            }
+
+            void on_transport_parameter_received(std::uint64_t active_conn_id) {
+                max_active_conn_id = active_conn_id;
+            }
+
+            constexpr bool is_using_zero_length() const {
+                return connID_len == 0;
+            }
+
+            constexpr byte get_connID_len() const {
+                return connID_len;
+            }
+
+            std::pair<ConnID, error::Error> issue(CommonParam& cparam, bool enque_wait) {
+                if (connID_len == 0) {
+                    return {{}, error::Error("using zero length")};
+                }
+                if (!cparam.random.valid()) {
+                    return {{}, error::Error("invalid random")};
+                }
+                if (srcids.size() >= max_active_conn_id) {
+                    return {{}, error::Error("id generation limit")};
+                }
+                IDStorage id;
+                id.id = make_storage(connID_len);
+                auto err = connid_gen.generate(cparam.random, cparam.version, connID_len, id.id, id.stateless_reset_token);
+                if (err) {
+                    return {{}, err};
+                }
+                id.seq = issued_seq + 1;
+                IDStorage& new_issued = srcids[id.seq];
+                if (new_issued.seq != -1) {
+                    return {};  // library bug!!
+                }
+                issued_seq++;
+                if (issued_seq == 0) {
+                    current_seq = 0;
+                }
+                new_issued = std::move(id);
+                if (enque_wait) {
+                    waitlist.push_back({new_issued.seq});
+                }
+                exporter.add(new_issued.id, new_issued.stateless_reset_token);
+                return {new_issued.to_ConnID(), error::none};
+            }
+
+            bool send(frame::fwriter& fw, auto&& observer_vec) {
+                auto do_send = [&](IDWait& it, ConnID id) {
+                    frame::NewConnectionIDFrame new_conn;
+                    new_conn.sequence_number = id.seq;
+                    new_conn.connectionID = id.id;
+                    view::copy(new_conn.stateless_reset_token, id.stateless_reset_token);
+                    new_conn.retire_proior_to = it.retire_proior_to;
+                    if (fw.remain().size() < new_conn.len()) {
+                        return true;  // wait next chance
+                    }
+                    if (!fw.write(new_conn)) {
+                        return false;
+                    }
+                    it.wait = ack::make_ack_wait();
+                    observer_vec.push_back(it.wait);
+                    return true;
+                };
+                for (auto it = waitlist.begin(); it != waitlist.end();) {
+                    if (it->wait) {
+                        if (it->wait->is_ack()) {
+                            ack::put_ack_wait(std::move(it->wait));
+                            it = waitlist.erase(it);
+                            continue;
+                        }
+                        else if (it->wait->is_lost()) {
+                            auto id = choose(it->seq);
+                            if (id.seq == -1) {
+                                it = waitlist.erase(it);  // already retired
+                                continue;
+                            }
+                            if (!do_send(*it, id)) {
+                                return false;
+                            }
+                        }
+                    }
+                    else {
+                        auto id = choose(it->seq);
+                        if (id.seq == -1) {
+                            it = waitlist.erase(it);  // already retired
+                            continue;
+                        }
+                        if (!do_send(*it, id)) {
+                            return false;
+                        }
+                    }
+                    it++;
+                }
+                return true;
+            }
+
+            error::Error retire(CommonParam& cparam, view::rvec recv_dest_id, const frame::RetireConnectionIDFrame& retire) {
+                if (is_using_zero_length()) {
+                    return QUICError{
+                        .msg = "recv RetireConnectionID frame when using zero length connection ID",
+                        .transport_error = TransportError::CONNECTION_ID_LIMIT_ERROR,
+                        .frame_type = FrameType::RETIRE_CONNECTION_ID,
+                    };
+                }
+                if (retire.sequence_number > issued_seq) {
+                    return QUICError{
+                        .msg = "retiring connection id with sequence number not issued",
+                        .transport_error = TransportError::PROTOCOL_VIOLATION,
+                        .frame_type = FrameType::RETIRE_CONNECTION_ID,
+                    };
+                }
+                auto to_retire = choose(retire.sequence_number);
+                if (to_retire.seq == -1) {
+                    return error::none;  // already retired
+                }
+                if (to_retire.id == recv_dest_id) {
+                    return QUICError{
+                        .msg = "retireing connection id which was used for sending RetireConnectionID frame",
+                        .transport_error = TransportError::PROTOCOL_VIOLATION,
+                        .frame_type = FrameType::RETIRE_CONNECTION_ID,
+                    };
+                }
+                exporter.retire(to_retire.id, to_retire.stateless_reset_token);
+                if (!srcids.erase(retire.sequence_number)) {
+                    return QUICError{.msg = "failed to delete connection id. library bug!!"};
+                }
+                if (to_retire.seq != 0) {
+                    if (auto [_, err] = issue(cparam, true); err) {
+                        return err;
+                    }
+                }
+                if (current_seq == retire.sequence_number) {
+                    current_seq = -1;
+                    for (auto& s : srcids) {
+                        if (current_seq == -1 || s.second.seq < current_seq) {
+                            current_seq = s.second.seq;
+                        }
+                    }
+                    if (current_seq == -1) {
+                        return QUICError{
+                            .msg = "retire connection ID without new connection ID. maybe bug?",
+                            .transport_error = TransportError::PROTOCOL_VIOLATION,
+                            .frame_type = FrameType::RETIRE_CONNECTION_ID,
+                        };
+                    }
+                }
+                return error::none;
+            }
+
+            ConnID choose(std::int64_t sequence_number) {
+                if (auto found = srcids.find(sequence_number); found != srcids.end()) {
+                    return found->second.to_ConnID();
+                }
+                return {};
+            }
+
+            bool has_id(view::rvec cmp) const {
+                for (auto& id : srcids) {
+                    if (id.second.id == cmp) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            view::rvec pick_up_id() {
+                if (current_seq == -1) {
+                    return {};
+                }
+                return choose(current_seq).id;
+            }
+
+            auto get_onertt_dstID_len_callback() {
+                return [this](io::reader r, size_t* len) {
+                    if (this->is_using_zero_length()) {
+                        *len = 0;
+                        return true;
+                    }
+                    for (auto& id : srcids) {
+                        auto& target = id.second.id;
+                        auto cmp = r.remain().substr(0, target.size());
+                        if (cmp == target) {
+                            *len = target.size();
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+            }
+
+            error::Error issue_ids_to_max_connid_limit(CommonParam& cparam) {
+                auto to_issue = max_active_conn_id < concurrent_limit ? max_active_conn_id : concurrent_limit;
+                for (auto i = srcids.size(); i < to_issue; i++) {
+                    auto [_, err] = issue(cparam, true);
+                    if (err) {
+                        return err;
+                    }
+                }
+                return error::none;
+            }
+        };
+
+    }  // namespace fnet::quic::connid
+}  // namespace utils
