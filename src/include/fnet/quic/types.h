@@ -14,7 +14,7 @@
 
 namespace utils {
     namespace fnet::quic {
-        enum class PacketType {
+        enum class PacketType : byte {
             Initial,
             ZeroRTT,  // 0-RTT
             Handshake,

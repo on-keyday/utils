@@ -49,6 +49,11 @@ namespace ssl_import {
     constexpr auto EVP_CTRL_AEAD_SET_TAG_ = 0x11;
     constexpr auto X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS_ = 0x4;
 
+    constexpr auto SSL_TLSEXT_ERR_OK_ = 0;
+    constexpr auto SSL_TLSEXT_ERR_ALERT_WARNING_ = 1;
+    constexpr auto SSL_TLSEXT_ERR_ALERT_FATAL_ = 2;
+    constexpr auto SSL_TLSEXT_ERR_NOACK_ = 3;
+
     // platform requirement
     static_assert(sizeof(unsigned char) == sizeof(std::uint8_t));
 
@@ -93,6 +98,9 @@ namespace ssl_import {
             int SSL_set_ex_data(SSL* ssl, int idx, void* data);
             void* SSL_get_ex_data(const SSL* ssl, int idx);
 
+            int SSL_CTX_set_ex_data(SSL_CTX* ssl, int idx, void* data);
+            void* SSL_CTX_get_ex_data(const SSL_CTX* ssl, int idx);
+
             // for SSL_CTX*
             int SSL_CTX_use_certificate_chain_file(SSL_CTX* ctx, const char* file);
             int SSL_CTX_use_PrivateKey_file(SSL_CTX* ctx, const char* file, int type);
@@ -109,8 +117,13 @@ namespace ssl_import {
 
             void SSL_set_client_CA_list(SSL* ctx, STACK_OF(X509_NAME) * list);
 
+            // ALPN
             void SSL_get0_alpn_selected(const SSL* ssl, const unsigned char** data,
                                         unsigned int* len);
+            void SSL_CTX_set_alpn_select_cb(
+                SSL_CTX* ctx, int (*cb)(SSL* ssl, const uint8_t** out, uint8_t* out_len, const uint8_t* in, unsigned in_len, void* arg),
+                void* arg);
+
             long SSL_get_verify_result(const SSL* ssl);
 
             const SSL_CIPHER* SSL_get_current_cipher(const SSL* ssl);
@@ -126,6 +139,16 @@ namespace ssl_import {
             int SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t params_len);
             int SSL_process_quic_post_handshake(SSL* ssl);
             void SSL_get_peer_quic_transport_params(const SSL* ssl, const uint8_t** out_params, size_t* out_params_len);
+
+            // early data (0-RTT) support
+            int SSL_set_quic_early_data_context(SSL* ssl,
+                                                const uint8_t* context,
+                                                size_t context_len);
+            void SSL_set_early_data_enabled(SSL* ssl, int enabled);
+            void SSL_CTX_set_early_data_enabled(SSL_CTX* ctx, int enabled);
+            int SSL_early_data_accepted(const SSL* ssl);
+            void SSL_reset_early_data_reject(SSL* ssl);
+
         }  // namespace ssl
 
         namespace crypto {

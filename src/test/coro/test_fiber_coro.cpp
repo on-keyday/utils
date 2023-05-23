@@ -17,14 +17,19 @@
 #include <thread>
 #include <fnet/quic/server/server.h>
 #include <wrap/cout.h>
+#include <fnet/quic/ack/unacked.h>
 using namespace utils::fnet::quic::use::rawptr;
+namespace quic = utils::fnet::quic;
+using TConfig2 = quic::context::TypeConfig<std::mutex, DefaultStreamTypeConfig, quic::connid::TypeConfig<>, quic::status::NewReno, quic::ack::UnackedPackets>;
+// using ContextT = quic::context::Context<TConfig2>;
+using ContextT = Context;
 struct Recvs {
     std::shared_ptr<Reader> r;
     std::shared_ptr<RecvStream> s;
 };
 
 struct ThreadData {
-    std::shared_ptr<Context> ctx;
+    std::shared_ptr<ContextT> ctx;
     int req_count = 0;
     int done_count = 0;
     int total_req = 0;
@@ -42,7 +47,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
             th->transmit += r.size();
         }
         if (th->total_req == th->done_count) {
-            c->add_coroutine<Context>(th->ctx.get(), [](utils::coro::C* c, Context* ctx) {
+            c->add_coroutine<ContextT>(th->ctx.get(), [](utils::coro::C* c, ContextT* ctx) {
                 ctx->request_close(utils::fnet::quic::QUICError{
                     .msg = "request done",
                     .transport_error = utils::fnet::quic::TransportError::NO_ERROR,
@@ -88,7 +93,7 @@ void request(utils::coro::C* c, void* p) {
         }
         auto id = stream->id();
 #ifdef HAS_FORMAT
-        stream->add_data(std::format("GET /search?q=Q{} HTTP/1.1\r\nHost: www.google.com\r\n", n), false);
+        stream->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: google.com\r\n", n), false);
 #else
         std::string data;
         data = "GET /search?q=Q" + utils::number::to_string<std::string>(n) + " HTTP/1.1\r\nHost: www.google.com\r\n";
@@ -102,15 +107,16 @@ void request(utils::coro::C* c, void* p) {
         stream->add_data({}, true, true);
         break;
     }
+    utils::wrap::cout_wrap() << "request sent " << n << "\n";
     th->req_count++;
     th->total_req++;
     c->add_coroutine(nullptr, [](utils::coro::C* c, void*) {
         utils::wrap::cout_wrap() << "sleeping\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     });
 }
 
-void conn(utils::coro::C* c, std::shared_ptr<Context>& ctx, utils::fnet::Socket& sock, utils::fnet::NetAddrPort& addr) {
+void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket& sock, utils::fnet::NetAddrPort& addr) {
     auto s = ctx->get_streams();
     // s->set_auto_remove(true);
     s->set_accept_uni(c, [](void*& c, std::shared_ptr<RecvStream> in) {
@@ -125,7 +131,7 @@ void conn(utils::coro::C* c, std::shared_ptr<Context>& ctx, utils::fnet::Socket&
         }
     });
     while (true) {
-        auto [payload, idle] = ctx->create_udp_payload();
+        auto [payload, _, idle] = ctx->create_udp_payload();
         if (!idle) {
             break;
         }
@@ -169,7 +175,7 @@ int main() {
         break;
     }
     assert(sock);
-    auto ctx = std::make_shared<Context>();
+    auto ctx = std::make_shared<ContextT>();
     auto conf = utils::fnet::tls::configure();
     conf.set_alpn("\x04test");
     conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");

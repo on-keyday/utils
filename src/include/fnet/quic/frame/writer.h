@@ -26,7 +26,7 @@ namespace utils {
                 if (!frame.render(w)) {
                     return false;
                 }
-                status.apply(frame.get_type());
+                status.add_frame(frame.get_type());
                 return true;
             }
         };

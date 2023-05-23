@@ -94,7 +94,7 @@ namespace utils {
                         helper::append(pb, " by peer");
                     }
                     if (is_app) {
-                        helper::append(pb, "code=");
+                        helper::append(pb, " code=");
                         number::to_string(pb, std::uint64_t(transport_error));
                     }
                     else {

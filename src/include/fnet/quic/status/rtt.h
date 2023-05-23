@@ -42,11 +42,11 @@ namespace utils {
                 return true;
             }
 
-            constexpr void on_connection_migrate() {
+            constexpr void on_connection_migrate(const InternalConfig& config) {
                 latest_rtt_ = 0;
                 min_rtt = 0;
-                smoothed_rtt_ = 0;
-                rttvar_ = 0;
+                smoothed_rtt_ = config.clock.to_clock_granurarity(config.initial_rtt);
+                rttvar_ = smoothed_rtt_ >> 1;
             }
 
             // ack_delay MUST be config.clock.granurarity
@@ -96,7 +96,7 @@ namespace utils {
             }
 
             constexpr time::time_t max_ack_delay() const {
-                return peer_max_ack_delay_;
+                return peer_max_ack_delay_ <= 0 ? 0 : peer_max_ack_delay_;
             }
         };
 

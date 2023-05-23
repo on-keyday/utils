@@ -164,8 +164,7 @@ namespace utils {
         }
 
         // render ack directly from ACKRange
-        template <template <class...> class Vec>
-        constexpr bool render_ack_direct(io::writer& w, Vec<ACKRange>& ranges, std::uint64_t ack_delay, ECNCounts ecn = {}) {
+        constexpr bool render_ack_direct(io::writer& w, auto&& ranges, std::uint64_t ack_delay, ECNCounts ecn = {}) {
             if (!is_sorted_ack_ranges(ranges)) {
                 return false;
             }

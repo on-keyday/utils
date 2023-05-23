@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-// tls_head - tls parser
+// parse - tls parser
 // because this is made for QUIC crypto message parsing, parse only TLS1.3
 #pragma once
 #include <cstdint>

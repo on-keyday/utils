@@ -51,6 +51,7 @@ namespace utils {
 
             LAZY(SSL_get_verify_result)
             LAZY(SSL_get0_alpn_selected)
+            LAZY(SSL_CTX_set_alpn_select_cb)
 
             LAZY(SSL_get_current_cipher)
             LAZY(SSL_CIPHER_get_name)
@@ -81,6 +82,16 @@ namespace utils {
                     LAZY_BIND(libssl, ssl_import::ls::boring_ssl::ssl::SSL_error_description, SSL_error_description)
                 }  // namespace sp
             }      // namespace bssl
+
+            // early data support
+            LAZY(SSL_set_quic_early_data_context)
+            LAZY(SSL_set_early_data_enabled)
+            LAZY(SSL_CTX_set_early_data_enabled)
+            LAZY(SSL_early_data_accepted)
+            LAZY(SSL_reset_early_data_reject)
+
+            LAZY(SSL_CTX_get_ex_data)
+            LAZY(SSL_CTX_set_ex_data)
 #undef LAZY
         }  // namespace ssl
 

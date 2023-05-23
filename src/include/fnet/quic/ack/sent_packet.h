@@ -21,13 +21,12 @@ namespace utils {
 
         struct SentPacket {
             PacketType type = PacketType::Unknown;
+            packet::PacketStatus status;
             packetnum::Value packet_number;
             ACKWaiters waiters;
             std::uint64_t sent_bytes = 0;
-            packet::PacketStatus status;
-            bool is_mtu_probe = false;
-            bool skiped = false;
             time::Time time_sent = time::invalid;
+            packetnum::Value largest_ack = packetnum::infinity;
         };
 
         using RemovedPackets = slib::vector<SentPacket>;

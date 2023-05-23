@@ -23,11 +23,27 @@ struct ServerContext {
 
 void recv_packets(std::shared_ptr<ServerContext> ctx) {
     while (!ctx->end) {
+        utils::byte data[2000];
+        auto [payload, addr, err] = ctx->sock.readfrom(data);
+        if (err) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+        ctx->hm->parse_udp_payload(payload);
     }
 }
 
 void send_packets(std::shared_ptr<ServerContext> ctx) {
+    fnet::flex_storage buffer;
     while (!ctx->end) {
+        auto [data, exist] = ctx->hm->create_packet(buffer);
+        if (!exist) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+        if (data.size()) {
+            // ctx->sock.writeto(, data);
+        }
     }
 }
 

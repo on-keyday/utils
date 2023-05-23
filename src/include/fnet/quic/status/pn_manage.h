@@ -23,7 +23,7 @@ namespace utils {
             std::uint64_t ack_eliciting_in_flight_sent_packet_count = 0;
 
             constexpr void decrement_ack_eliciting_in_flight(packet::PacketStatus status) {
-                if (status.is_ack_eliciting && status.is_byte_counted) {
+                if (status.is_ack_eliciting() && status.is_byte_counted()) {
                     ack_eliciting_in_flight_sent_packet_count--;
                 }
             }
@@ -63,10 +63,10 @@ namespace utils {
                 }
                 const auto range_begin = highest_sent + 1;
                 highest_sent = pn.value;
-                if (status.is_ack_eliciting) {
+                if (status.is_ack_eliciting()) {
                     last_ack_eliciting_packet_sent_time_ = config.clock.now();
                 }
-                if (status.is_ack_eliciting && status.is_byte_counted) {
+                if (status.is_ack_eliciting() && status.is_byte_counted()) {
                     ack_eliciting_in_flight_sent_packet_count++;
                 }
                 return {range_begin, pn.value};
@@ -121,6 +121,24 @@ namespace utils {
 
             constexpr std::uint64_t largest_received_packet_number() const {
                 return largest_recv_packet;
+            }
+        };
+
+        struct SentAckTracker {
+           private:
+            std::uint64_t largest_onertt_acked_sent_ack = 0;
+
+           public:
+            constexpr std::uint64_t get_onertt_largest_acked_sent_ack() const {
+                return largest_onertt_acked_sent_ack;
+            }
+
+            constexpr void on_packet_acked(PacketNumberSpace space, packetnum::Value largest_sent_ack) {
+                if (space == PacketNumberSpace::application) {
+                    if (largest_sent_ack != packetnum::infinity) {
+                        largest_onertt_acked_sent_ack = max_(largest_onertt_acked_sent_ack, largest_sent_ack.value + 1);
+                    }
+                }
             }
         };
 

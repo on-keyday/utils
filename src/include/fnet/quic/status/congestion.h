@@ -93,7 +93,7 @@ namespace utils {
             }
 
             constexpr void on_packet_ack(const InternalConfig& config, const PayloadSize& payload_size, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status, auto&& is_flow_control_limited) {
-                if (!status.is_byte_counted) {
+                if (!status.is_byte_counted()) {
                     return;
                 }
                 bytes_in_flight -= sent_bytes;
@@ -113,12 +113,12 @@ namespace utils {
             }
 
             // on_packet_lost is called for each packet lost
-            constexpr void on_packet_lost(time::time_t& sent_time_of_last_loss, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status, bool is_mtu_probe) {
-                if (!status.is_ack_eliciting) {
+            constexpr void on_packet_lost(time::time_t& sent_time_of_last_loss, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status) {
+                if (!status.is_ack_eliciting()) {
                     return;
                 }
                 bytes_in_flight -= sent_bytes;
-                if (is_mtu_probe) {  // MTU Probe packet loss MUST NOT affect congestion control
+                if (status.is_mtu_probe()) {  // MTU Probe packet loss MUST NOT affect congestion control
                     return;
                 }
                 sent_time_of_last_loss = max_(sent_time_of_last_loss, time_sent.value);
@@ -186,7 +186,7 @@ namespace utils {
             }
 
             constexpr void on_packet_number_space_discard(std::uint64_t decrease, packet::PacketStatus status) {
-                if (status.is_byte_counted) {
+                if (status.is_byte_counted()) {
                     bytes_in_flight -= decrease;
                 }
             }

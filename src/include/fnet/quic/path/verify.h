@@ -12,23 +12,66 @@
 #include "../ack/ack_lost_record.h"
 #include "../transport_error.h"
 #include "../../std/deque.h"
+#include "../../std/set.h"
+#include "../../std/list.h"
+#include "../../std/hash_map.h"
+#include "../status/rtt.h"
+#include "../connid/external/random.h"
+#include "path.h"
 
 namespace utils {
     namespace fnet::quic::path {
 
+        struct PathProbeInfo {
+            PathID id = unknown_path;
+            time::Timer probe_timer;
+            std::uint64_t probe_data = 0;
+            std::shared_ptr<ack::ACKLostRecord> wait;
+            bool force_probe = false;
+        };
+
         struct PathVerifier {
            private:
-            std::uint64_t send_data = 0;
-            bool verify_required = false;
-            std::shared_ptr<ack::ACKLostRecord> wait;
             slib::deque<std::uint64_t> recv_data;
 
+            // PATH_CHALLANGE
+            slib::list<PathProbeInfo> probes;
+            std::uint64_t num_probe_to_send = 0;
+
+            slib::set<std::uint32_t> valid_path;
+            PathID active_path = original_path;
+            PathID migrate_path = original_path;
+
+            // using for packet creation time
+            PathID writing_path = original_path;
+
            public:
-            constexpr void recv_path_challange(const frame::PathChallengeFrame& resp) noexcept {
+            void reset(PathID hs_path) {
+                recv_data.clear();
+                valid_path.clear();
+                num_probe_to_send = 0;
+                migrate_path = hs_path;
+                active_path = hs_path;
+                writing_path = hs_path;
+            }
+
+            constexpr void set_writing_path_to_active_path() {
+                writing_path = active_path;
+            }
+
+            constexpr void set_writeing_path(PathID id) {
+                writing_path = id;
+            }
+
+            PathID get_writing_path() const {
+                return writing_path;
+            }
+
+            void recv_path_challange(const frame::PathChallengeFrame& resp) {
                 recv_data.push_back(resp.data);
             }
 
-            constexpr IOResult send_path_response(frame::fwriter& w) {
+            IOResult send_path_response(frame::fwriter& w) {
                 if (recv_data.size() == 0) {
                     return IOResult::no_data;
                 }
@@ -41,71 +84,150 @@ namespace utils {
                 return w.write(path) ? IOResult::ok : IOResult::fatal;
             }
 
-            constexpr IOResult send_path_challange(frame::fwriter& w, auto&& observer_vec) {
-                if (!verify_required) {
-                    return IOResult::no_data;
-                }
-                if (wait) {
-                    if (!wait->is_ack() && !wait->is_lost()) {
-                        return IOResult::ok;
+           private:
+            bool detect_dead_probe(PathProbeInfo& info, const time::Clock& clock) {
+                if (info.probe_timer.timeout(clock)) {
+                    if (!info.wait->is_ack() && !info.wait->is_lost()) {
+                        return false;
                     }
-                    ack::put_ack_wait(std::move(wait));
+                    return true;
                 }
-                if (w.remain().size() < 9) {
-                    return IOResult::no_capacity;
+                if (info.wait->is_lost()) {
+                    if (!valid_path.contains(info.id)) {
+                        if (!info.force_probe && valid_path.contains(info.id)) {
+                            return true;
+                        }
+                        // add new probe
+                        // old probe is alive until PATH_RESPONSE or timeout
+                        probes.push_back(PathProbeInfo{
+                            .id = info.id,
+                            .probe_timer = info.probe_timer,
+                        });
+                        num_probe_to_send++;  // increment
+                    }
                 }
-                frame::PathChallengeFrame ch;
-                ch.data = send_data;
-                if (!w.write(ch)) {
-                    return IOResult::fatal;
-                }
-                wait = ack::make_ack_wait();
-                observer_vec.push_back(wait);
-                return IOResult::ok;
+                // wait until PATH_RESPONSE or timeout
+                return false;
             }
 
-            constexpr error::Error recv_path_response(const frame::PathResponseFrame& resp) {
-                if (!verify_required) {
-                    return QUICError{
-                        .msg = "no PathChallange sent before but PathResponse recieved",
-                        .transport_error = TransportError::PROTOCOL_VIOLATION,
-                        .frame_type = FrameType::PATH_RESPONSE,
-                    };
+           public:
+            void detect_path_probe_timeout(const time::Clock& clock) {
+                for (auto it = probes.begin(); it != probes.end();) {
+                    if (it->wait) {
+                        if (detect_dead_probe(*it, clock)) {
+                            it = probes.erase(it);
+                            continue;
+                        }
+                        it++;
+                        continue;
+                    }
                 }
-                if (send_data != resp.data) {
-                    return QUICError{
-                        .msg = "PathResponse data is not matched to this sent",
-                        .transport_error = TransportError::PROTOCOL_VIOLATION,
-                        .frame_type = FrameType::PATH_RESPONSE,
-                    };
+            }
+
+            std::pair<IOResult, PathID> send_path_challange(frame::fwriter& w, auto&& observer_vec, connid::Random& random, time::Time probe_deadline, const time::Clock& clock) {
+                for (auto it = probes.begin(); it != probes.end();) {
+                    if (it->wait) {
+                        if (detect_dead_probe(*it, clock)) {
+                            it = probes.erase(it);
+                            continue;
+                        }
+                        it++;
+                        continue;
+                    }
+                    if (w.remain().size() < 9) {
+                        return {IOResult::no_capacity, unknown_path};
+                    }
+                    frame::PathChallengeFrame ch;
+                    byte data[8]{};
+                    if (!random.gen_random(data)) {
+                        return {IOResult::fatal, unknown_path};
+                    }
+                    io::reader r{data};
+                    io::read_num(r, it->probe_data);
+                    ch.data = it->probe_data;
+                    if (!w.write(ch)) {
+                        return {IOResult::fatal, unknown_path};
+                    }
+                    it->wait = ack::make_ack_wait();
+                    if (it->probe_timer.not_working()) {
+                        it->probe_timer.set_deadline(probe_deadline);
+                    }
+                    observer_vec.push_back(it->wait);
+                    num_probe_to_send--;  // decrement
+                    it++;
+                    // detect tail
+                    while (it != probes.end()) {
+                        if (it->wait) {
+                            if (detect_dead_probe(*it, clock)) {
+                                it = probes.erase(it);
+                                continue;
+                            }
+                        }
+                        it++;  // skip probing data
+                    }
+                    return {IOResult::ok, it->id};
                 }
-                ack::put_ack_wait(std::move(wait));
-                verify_required = false;
-                return error::none;
+                return {IOResult::no_data, unknown_path};  // no probe needed
             }
 
             constexpr error::Error recv(const frame::Frame& frame) {
-                if (frame.type.type() == FrameType::PATH_CHALLENGE) {
+                if (frame.type.type_detail() == FrameType::PATH_CHALLENGE) {
                     recv_path_challange(static_cast<const frame::PathChallengeFrame&>(frame));
                     return error::none;
                 }
-                else if (frame.type.type() == FrameType::PATH_RESPONSE) {
+                else if (frame.type.type_detail() == FrameType::PATH_RESPONSE) {
                     return recv_path_response(static_cast<const frame::PathResponseFrame&>(frame));
                 }
                 return error::none;
             }
 
-            constexpr bool request_path_verification(std::uint64_t data) {
-                if (verify_required) {
-                    return false;
-                }
-                send_data = data;
-                verify_required = true;
-                return true;
+            void request_path_validation(PathID id) {
+                probes.push_back(PathProbeInfo{.id = id});
+                num_probe_to_send++;  // increment
             }
 
-            constexpr bool path_verification_required() const {
-                return verify_required;
+            void maybe_peer_migrated_path(PathID id, bool is_non_probe_packet) {
+                if (id != active_path) {
+                    if (is_non_probe_packet) {
+                        migrate_path = id;  // migrated
+                    }
+                    if (valid_path.contains(id)) {
+                        if (is_non_probe_packet) {
+                            active_path = id;  // migrate complete
+                        }
+                        return;  // needless validation
+                    }
+                    request_path_validation(id);
+                }
+            }
+
+            error::Error recv_path_response(const frame::PathResponseFrame& f) {
+                for (auto it = probes.begin(); it != probes.end(); it++) {
+                    if (it->probe_data == f.data) {
+                        valid_path.emplace(it->id);
+                        if (it->id == migrate_path) {
+                            active_path = it->id;  // migration complete
+                        }
+                        probes.erase(it);
+                        return error::none;
+                    }
+                }
+                // TODO(on-keyday): when we implement recv packet handler,
+                //                  this does not detect sprious PATH_RESPONSE
+                //                  but currently, do
+                return QUICError{
+                    .msg = "PathResponse contains not issued data",
+                    .transport_error = TransportError::PROTOCOL_VIOLATION,
+                    .frame_type = FrameType::PATH_RESPONSE,
+                };
+            }
+
+            bool has_probe_to_send() const {
+                return num_probe_to_send != 0;
+            }
+
+            bool non_probe_is_allowed() const {
+                return migrate_path == active_path;
             }
         };
     }  // namespace fnet::quic::path

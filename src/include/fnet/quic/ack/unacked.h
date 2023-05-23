@@ -14,16 +14,23 @@
 #include "ack_waiters.h"
 #include "../frame/writer.h"
 #include <algorithm>
+#include "../time.h"
+#include "../status/config.h"
+#include "../../error.h"
+#include "../ioresult.h"
 
 namespace utils {
     namespace fnet::quic::ack {
 
+        // old implementation of RecvPacketHistory
+        // this will not ackowledge non-ackeliciting packet
         struct UnackedPackets {
            private:
             slib::vector<packetnum::Value> unacked_packets[3]{};
             ACKRangeVec buffer;
             time::Time last_recv = time::invalid;
             time::Timer ack_delay;
+            std::uint64_t ack_sent_count = 0;
 
             constexpr bool generate_ragnes_from_received(status::PacketNumberSpace space) {
                 buffer.clear();
@@ -56,10 +63,30 @@ namespace utils {
             }
 
            public:
+            void reset() {
+                for (auto& up : unacked_packets) {
+                    up.clear();
+                }
+                buffer.clear();
+                last_recv = time::invalid;
+                ack_delay.cancel();
+                ack_sent_count = 0;
+            }
+
+            constexpr bool is_duplicated(status::PacketNumberSpace, packetnum::Value pn) const {
+                return false;
+            }
+
+            constexpr void delete_onertt_under(packetnum::Value) {
+            }
+
+            constexpr void on_packet_number_space_discarded(status::PacketNumberSpace space) {}
+
             void on_ack_sent(status::PacketNumberSpace space) {
                 unacked_packets[space_to_index(space)].clear();
                 ack_delay.cancel();
                 last_recv = time::invalid;
+                ack_sent_count++;
             }
 
             size_t ack_eliciting_packet_since_last_ack() const {
@@ -82,36 +109,40 @@ namespace utils {
             }
 
             bool should_send_ack(const status::InternalConfig& config) const {
-                return config.use_ack_delay &&
+                return !config.use_ack_delay ||
                        (ack_delay.timeout(config.clock) ||
                         ack_eliciting_packet_since_last_ack() >= config.delay_ack_packet_count);
             }
 
-            error::Error send(frame::fwriter& w, status::PacketNumberSpace space, const status::InternalConfig& config) {
+            IOResult send(frame::fwriter& w, status::PacketNumberSpace space, const status::InternalConfig& config, packetnum::Value&) {
+                if (!should_send_ack(config)) {
+                    return IOResult::no_data;
+                }
                 if (!generate_ragnes_from_received(space)) {
-                    return error::none;
+                    return IOResult::ok;
                 }
                 auto [ack, ok] = frame::convert_to_ACKFrame<slib::vector>(buffer);
                 if (!ok) {
-                    return error::Error("generate ack range failed. library bug!!");
+                    return IOResult::fatal;
                 }
                 if (space == status::PacketNumberSpace::application && !ack_delay.not_working()) {
                     auto delay = config.clock.now() - last_recv;
                     ack.ack_delay = frame::encode_ack_delay(delay, config.local_ack_delay_exponent);
                 }
                 if (w.remain().size() < ack.len()) {
-                    return error::none;  // wait next chance
+                    return IOResult::no_capacity;  // wait next chance
                 }
                 if (!w.write(ack)) {
-                    return error::Error("failed to render ACKFrame");
+                    return IOResult::fatal;
                 }
                 on_ack_sent(space);
-                return error::none;
+                return IOResult::ok;
             }
 
             time::Time get_deadline() const {
                 return ack_delay.get_deadline();
             }
         };
+
     }  // namespace fnet::quic::ack
 }  // namespace utils

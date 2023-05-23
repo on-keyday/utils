@@ -9,11 +9,11 @@
 #include "external/exporter.h"
 #include "external/id_generator.h"
 #include "common_param.h"
-#include "storage.h"
 #include "../ack/ack_lost_record.h"
 #include "../frame/writer.h"
 #include "../frame/conn_id.h"
 #include "../transport_error.h"
+#include "../time.h"
 
 namespace utils {
     namespace fnet::quic::connid {
@@ -32,8 +32,8 @@ namespace utils {
             using ConnIDMap = typename TConfig::template connid_map<K, V>;
             template <class V>
             using WaitQue = typename TConfig::template wait_que<V>;
-            std::int64_t issued_seq = -1;
-            std::int64_t current_seq = -1;
+            std::int64_t issued_seq = invalid_seq;
+            SequenceNumber current_seq = invalid_seq;
             ConnIDMap<std::int64_t, IDStorage> srcids;
             WaitQue<IDWait> waitlist;
             std::uint64_t max_active_conn_id = default_max_active_conn_id;
@@ -41,14 +41,15 @@ namespace utils {
             byte concurrent_limit = 0;
             ConnIDExporter exporter;
             ConnIDGenerator connid_gen;
+            std::int64_t retire_proior_to_id = 0;
 
            public:
             void reset(ConnIDExporter&& exp, ConnIDGenerator&& gen, byte conn_id_len, byte conc_limit) {
                 srcids.clear();
                 waitlist.clear();
                 max_active_conn_id = default_max_active_conn_id;
-                issued_seq = -1;
-                current_seq = -1;
+                issued_seq = invalid_seq;
+                current_seq = invalid_seq;
                 connID_len = conn_id_len;
                 concurrent_limit = conc_limit;
                 exporter = std::move(exp);
@@ -83,8 +84,13 @@ namespace utils {
                 if (!cparam.random.valid()) {
                     return {{}, error::Error("invalid random")};
                 }
+                std::int64_t retire_proior_to = 0;
                 if (srcids.size() >= max_active_conn_id) {
-                    return {{}, error::Error("id generation limit")};
+                    if (retire_proior_to_id != current_seq) {
+                        return {{}, error::Error("id generation limit")};
+                    }
+                    retire_proior_to_id = current_seq + 1;
+                    retire_proior_to = current_seq;
                 }
                 IDStorage id;
                 id.id = make_storage(connID_len);
@@ -94,36 +100,38 @@ namespace utils {
                 }
                 id.seq = issued_seq + 1;
                 IDStorage& new_issued = srcids[id.seq];
-                if (new_issued.seq != -1) {
-                    return {};  // library bug!!
+                if (new_issued.seq.valid()) {
+                    // library bug!!
+                    return {{}, error::Error("invalid sequence id for new connection id. libary bug!!")};
                 }
                 issued_seq++;
                 if (issued_seq == 0) {
+                    // on initial issue, use connection ID with sequence number 0
                     current_seq = 0;
                 }
                 new_issued = std::move(id);
                 if (enque_wait) {
-                    waitlist.push_back({new_issued.seq});
+                    waitlist.push_back({new_issued.seq, retire_proior_to});
                 }
                 exporter.add(new_issued.id, new_issued.stateless_reset_token);
                 return {new_issued.to_ConnID(), error::none};
             }
 
             bool send(frame::fwriter& fw, auto&& observer_vec) {
-                auto do_send = [&](IDWait& it, ConnID id) {
+                auto do_send = [&](IDWait& id_wait, ConnID id) {
                     frame::NewConnectionIDFrame new_conn;
-                    new_conn.sequence_number = id.seq;
+                    new_conn.sequence_number = id.seq.seq;
                     new_conn.connectionID = id.id;
                     view::copy(new_conn.stateless_reset_token, id.stateless_reset_token);
-                    new_conn.retire_proior_to = it.retire_proior_to;
+                    new_conn.retire_proior_to = id_wait.retire_proior_to;
                     if (fw.remain().size() < new_conn.len()) {
                         return true;  // wait next chance
                     }
                     if (!fw.write(new_conn)) {
                         return false;
                     }
-                    it.wait = ack::make_ack_wait();
-                    observer_vec.push_back(it.wait);
+                    id_wait.wait = ack::make_ack_wait();
+                    observer_vec.push_back(id_wait.wait);
                     return true;
                 };
                 for (auto it = waitlist.begin(); it != waitlist.end();) {
@@ -135,7 +143,7 @@ namespace utils {
                         }
                         else if (it->wait->is_lost()) {
                             auto id = choose(it->seq);
-                            if (id.seq == -1) {
+                            if (!id.seq.valid()) {
                                 it = waitlist.erase(it);  // already retired
                                 continue;
                             }
@@ -146,7 +154,7 @@ namespace utils {
                     }
                     else {
                         auto id = choose(it->seq);
-                        if (id.seq == -1) {
+                        if (!id.seq.valid()) {
                             it = waitlist.erase(it);  // already retired
                             continue;
                         }
@@ -159,56 +167,71 @@ namespace utils {
                 return true;
             }
 
+           private:
+            error::Error update_current_id() {
+                current_seq = invalid_seq;
+                for (auto& s : srcids) {
+                    if (!current_seq.valid() || s.second.seq < current_seq) {
+                        current_seq = s.second.seq;
+                    }
+                }
+                if (!current_seq.valid()) {
+                    return QUICError{
+                        .msg = "retire connection ID without new connection ID. libary bug!",
+                        .transport_error = TransportError::PROTOCOL_VIOLATION,
+                        .frame_type = FrameType::RETIRE_CONNECTION_ID,
+                    };
+                }
+                return error::none;
+            }
+
+           public:
             error::Error retire(CommonParam& cparam, view::rvec recv_dest_id, const frame::RetireConnectionIDFrame& retire) {
                 if (is_using_zero_length()) {
                     return QUICError{
-                        .msg = "recv RetireConnectionID frame when using zero length connection ID",
+                        .msg = "Received RetireConnectionID frame while using zero-length connection ID",
                         .transport_error = TransportError::CONNECTION_ID_LIMIT_ERROR,
                         .frame_type = FrameType::RETIRE_CONNECTION_ID,
                     };
                 }
+
                 if (retire.sequence_number > issued_seq) {
                     return QUICError{
-                        .msg = "retiring connection id with sequence number not issued",
+                        .msg = "Retiring connection ID with a sequence number that was not issued",
                         .transport_error = TransportError::PROTOCOL_VIOLATION,
                         .frame_type = FrameType::RETIRE_CONNECTION_ID,
                     };
                 }
+
                 auto to_retire = choose(retire.sequence_number);
-                if (to_retire.seq == -1) {
-                    return error::none;  // already retired
+                if (!to_retire.seq.valid()) {
+                    return error::none;  // Already retired
                 }
+
                 if (to_retire.id == recv_dest_id) {
                     return QUICError{
-                        .msg = "retireing connection id which was used for sending RetireConnectionID frame",
+                        .msg = "Retiring connection ID that was used for sending the RetireConnectionID frame",
                         .transport_error = TransportError::PROTOCOL_VIOLATION,
                         .frame_type = FrameType::RETIRE_CONNECTION_ID,
                     };
                 }
+
                 exporter.retire(to_retire.id, to_retire.stateless_reset_token);
+
                 if (!srcids.erase(retire.sequence_number)) {
-                    return QUICError{.msg = "failed to delete connection id. library bug!!"};
+                    return QUICError{.msg = "Failed to delete connection ID. library bug!!"};
                 }
+
                 if (to_retire.seq != 0) {
                     if (auto [_, err] = issue(cparam, true); err) {
                         return err;
                     }
                 }
+
                 if (current_seq == retire.sequence_number) {
-                    current_seq = -1;
-                    for (auto& s : srcids) {
-                        if (current_seq == -1 || s.second.seq < current_seq) {
-                            current_seq = s.second.seq;
-                        }
-                    }
-                    if (current_seq == -1) {
-                        return QUICError{
-                            .msg = "retire connection ID without new connection ID. maybe bug?",
-                            .transport_error = TransportError::PROTOCOL_VIOLATION,
-                            .frame_type = FrameType::RETIRE_CONNECTION_ID,
-                        };
-                    }
+                    return update_current_id();
                 }
+
                 return error::none;
             }
 
@@ -229,7 +252,7 @@ namespace utils {
             }
 
             view::rvec pick_up_id() {
-                if (current_seq == -1) {
+                if (!current_seq.valid()) {
                     return {};
                 }
                 return choose(current_seq).id;

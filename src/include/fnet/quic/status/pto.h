@@ -16,6 +16,11 @@
 namespace utils {
     namespace fnet::quic::status {
 
+        time::time_t calc_probe_timeout_duration(time::time_t smoothed_rtt, time::time_t rttvar, const time::Clock& clock, std::uint64_t pto_exponent) {
+            return smoothed_rtt + max_(rttvar << 2,  // rttvar*4
+                                       clock.to_clock_granurarity(1) * pto_exponent);
+        }
+
         struct PTOStatus {
            private:
             std::uint64_t pto_count = 0;
@@ -34,10 +39,7 @@ namespace utils {
             }
 
             constexpr time::time_t probe_timeout_duration(const InternalConfig& config, const RTT& rtt) const {
-                return rtt.smoothed_rtt() + max_(
-                                                time::time_t(rtt.rttvar()) << 2,  // rtt.rttvar() * 4
-                                                config.clock.to_clock_granurarity(1)) *
-                                                pto_exponent();
+                return calc_probe_timeout_duration(rtt.smoothed_rtt(), rtt.rttvar(), config.clock, pto_exponent());
             }
 
             constexpr time::time_t probe_timeout_duration_with_max_ack_delay(const InternalConfig& config, const RTT& rtt) const {

@@ -8,7 +8,6 @@
 // connection_id - connection id manager
 #pragma once
 #include "common_param.h"
-#include "storage.h"
 #include "../ack/ack_lost_record.h"
 #include "config.h"
 #include "../transport_error.h"
@@ -111,6 +110,7 @@ namespace utils {
                 use_zero_length = true;
             }
 
+            // retire_proior_to means
             error::Error accept(CommonParam& cparam, std::int64_t sequence_number, std::int64_t retire_proior_to, view::rvec connectionID, const StatelessResetToken& stateless_reset_token) {
                 if (use_zero_length) {
                     return QUICError{
@@ -214,14 +214,14 @@ namespace utils {
             }
 
             bool initial_conn_id_accepted() const {
-                return use_zero_length || active_connid != -1;
+                return use_zero_length || active_connid.valid();
             }
 
             view::rvec pick_up_id(const InitialRetry* iniret) const {
                 if (use_zero_length) {
                     return {};
                 }
-                if (active_connid == -1) {
+                if (!active_connid.valid()) {
                     return iniret ? iniret->get_initial_or_retry() : view::rvec{};
                 }
                 return choose(active_connid).id;

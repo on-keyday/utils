@@ -34,11 +34,13 @@ namespace utils {
                     };
                 }
                 auto& sent_packet = sent_packets[space_to_index(space)];
+                packet::PacketStatus skip;
+                skip.set_skipped();
                 for (auto i = begin; i < end; i++) {
                     auto [_, ok] = sent_packet.try_emplace(
                         packetnum::Value(i),
                         SentPacket{
-                            .skiped = true,
+                            .status = skip,
                             .time_sent = sent.time_sent,
                         });
                     if (!ok) {
@@ -61,8 +63,8 @@ namespace utils {
                     auto& p = sent_packets[space_to_index(space)];
                     for (auto it = p.begin(); it != p.end();) {
                         SentPacket& sent = it->second;
-                        // is_lost = LostReason(packetnum::Value,std::uint64_t sent_bytes,time::Time time_sent,packet::PacketStatus,bool is_mtu_probe)
-                        if (auto res = is_lost(sent.packet_number, sent.sent_bytes, sent.time_sent, sent.status, sent.is_mtu_probe);
+                        // is_lost = LostReason(packetnum::Value,std::uint64_t sent_bytes,time::Time time_sent,packet::PacketStatus)
+                        if (auto res = is_lost(sent.packet_number, sent.sent_bytes, sent.time_sent, sent.status);
                             res != status::LostReason::not_lost) {
                             if (res == status::LostReason::invalid) {
                                 err = QUICError{
@@ -104,8 +106,8 @@ namespace utils {
                     for (auto it = p.begin(); it != p.end();) {
                         SentPacket& sent = it->second;
                         // is_ack = bool(packetnum::Value,std::uint64_t sent_bytes,time::Time time_sent,packet::PacketStatus)
-                        if (is_ack(sent.packet_number, sent.sent_bytes, sent.time_sent, sent.status)) {
-                            if (sent.skiped) {
+                        if (is_ack(sent.packet_number, sent.sent_bytes, sent.time_sent, sent.status, sent.largest_ack)) {
+                            if (sent.status.is_skipped()) {
                                 err = QUICError{
                                     .msg = "skipped packet number is acknoledged",
                                     .transport_error = TransportError::PROTOCOL_VIOLATION,
@@ -181,7 +183,7 @@ namespace utils {
                 status.on_retry_received([&](auto&& apply_remove) {
                     auto& initial = sent_packets[space_to_index(status::PacketNumberSpace::initial)];
                     for (auto& r : initial) {
-                        if (r.second.skiped) {
+                        if (r.second.status.is_skipped()) {
                             continue;
                         }
                         apply_remove(r.second.time_sent);

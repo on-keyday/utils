@@ -35,6 +35,10 @@ namespace utils {
                 issuer.reset(std::move(config.exporter), std::move(config.generator), config.connid_len, config.concurrent_limit);
             }
 
+            Random& random() {
+                return cparam.random;
+            }
+
             void expose_close_ids(auto&& ids) {
                 issuer.expose_close_ids(ids);
             }
@@ -109,9 +113,11 @@ namespace utils {
                 return error::none;
             }
 
-            IOResult send(frame::fwriter& w, auto&& observer_vec) {
-                if (!acceptor.send(w, observer_vec)) {
-                    return IOResult::fatal;
+            IOResult send(frame::fwriter& w, auto&& observer_vec, bool allow_retire) {
+                if (allow_retire) {
+                    if (!acceptor.send(w, observer_vec)) {
+                        return IOResult::fatal;
+                    }
                 }
                 return issuer.send(w, observer_vec) ? IOResult::ok : IOResult::fatal;
             }
@@ -129,8 +135,7 @@ namespace utils {
                     acceptor.on_zero_length_acception();
                     return error::none;
                 }
-                byte stateless_reset_token[16]{};
-                return acceptor.accept(cparam, 0, 0, id, stateless_reset_token);
+                return acceptor.accept(cparam, 0, 0, id, null_stateless_reset);
             }
 
             void on_initial_stateless_reset_token_received(const StatelessResetToken& stateless_reset_token) {

@@ -133,21 +133,18 @@ namespace utils {
                         }
                     }
                     else {
+                        error::Error err;
                         if (is_server) {
-                            if (auto err = tls.accept(); err) {
-                                if (tls::isTLSBlock(err)) {
-                                    return error::none;
-                                }
-                                return err;  // error
-                            }
+                            err = tls.accept();
                         }
                         else {
-                            if (auto err = tls.connect(); err) {
-                                if (tls::isTLSBlock(err)) {
-                                    return error::none;
-                                }
-                                return err;  // error
+                            err = tls.connect();
+                        }
+                        if (err) {
+                            if (tls::isTLSBlock(err)) {
+                                return error::none;
                             }
+                            return err;  // error
                         }
                         handshake_complete = true;
                     }
@@ -170,42 +167,36 @@ namespace utils {
                 flag_handshake_done = 0x4,
                 flag_alert = 0x8,
             };
-            byte flag = 0;
+            byte flags = 0;
 
-            // bool server = false;
-            //  TLS handshake completed
-            // bool handshake_complete_ = false;
-            // client: HANDSHAKE_DONE received
-            // server: HANDSHAKE_DONE acked
-            // not strictly same as handshake_confirmed
-            // use handshake_confirmed() instead of this
-            // bool handshake_done_ = false;
             tls::TLS tls;
             CryptoHandshaker initial, handshake, onertt;
 
             std::shared_ptr<ack::ACKLostRecord> wait_for_done;
 
             byte alert_code = 0;
-            // bool alert = false;
 
            public:
             constexpr void set_alert(byte code) {
                 alert_code = code;
-                flag |= flag_alert;
+                flags |= flag_alert;
+            }
+
+            constexpr const byte* get_alert() const {
+                if (flags & flag_alert) {
+                    return &alert_code;
+                }
+                return nullptr;
             }
 
             void reset(tls::TLS&& new_tls, bool is_server) {
                 tls = std::move(new_tls);
-                flag = is_server ? flag_server : 0;
-                // is_server = is_server;
-                // handshake_done_ = false;
-                // handshake_complete_ = false;
+                flags = is_server ? flag_server : 0;
                 wait_for_done = nullptr;
                 initial.reset();
                 handshake.reset();
                 onertt.reset();
                 alert_code = 0;
-                // alert = false;
             }
 
             tls::TLS& get_tls() {
@@ -243,7 +234,7 @@ namespace utils {
                     }
                     else if (wait_for_done->is_ack()) {
                         ack::put_ack_wait(std::move(wait_for_done));
-                        flag |= flag_handshake_done;
+                        flags |= flag_handshake_done;
                     }
                 }
                 switch (type) {
@@ -266,7 +257,7 @@ namespace utils {
                         .frame_type = FrameType::HANDSHAKE_DONE,
                     };
                 }
-                flag |= flag_handshake_done;
+                flags |= flag_handshake_done;
                 return error::none;
             }
 
@@ -274,19 +265,33 @@ namespace utils {
                 bool hs_complete = handshake_complete();
                 const auto d = helper::defer([&] {
                     if (hs_complete) {
-                        flag |= flag_handshake_complete;
+                        flags |= flag_handshake_complete;
                     }
                 });
+                error::Error err;
                 switch (type) {
                     case PacketType::Initial:
-                        return initial.recv_crypto(tls, EncryptionLevel::initial, is_server(), hs_complete, frame);
+                        err = initial.recv_crypto(tls, EncryptionLevel::initial, is_server(), hs_complete, frame);
+                        break;
                     case PacketType::Handshake:
-                        return handshake.recv_crypto(tls, EncryptionLevel::handshake, is_server(), hs_complete, frame);
+                        err = handshake.recv_crypto(tls, EncryptionLevel::handshake, is_server(), hs_complete, frame);
+                        break;
                     case PacketType::OneRTT:
-                        return onertt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
+                        err = onertt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
+                        break;
                     default:
                         return error::Error("invalid packet type for crypto frame");
                 }
+                if (err && (flags & flag_alert)) {
+                    err = QUICError{
+                        .msg = "error occurred while cryptographic handshake",
+                        .transport_error = to_CRYPTO_ERROR(alert_code),
+                        .packet_type = type,
+                        .frame_type = FrameType::CRYPTO,
+                        .base = std::move(err),
+                    };
+                }
+                return err;
             }
 
             error::Error recv(PacketType type, const frame::Frame& frame) {
@@ -308,12 +313,12 @@ namespace utils {
             }
 
             constexpr bool is_server() const {
-                return flag & flag_server;
+                return flags & flag_server;
             }
 
             // TLS handshake completed
             constexpr bool handshake_complete() const {
-                return flag & flag_handshake_complete;
+                return flags & flag_handshake_complete;
             }
 
             // client: HANDSHAKE_DONE received
@@ -321,7 +326,7 @@ namespace utils {
             // not strictly same as handshake_confirmed
             // use handshake_confirmed() instead of this
             constexpr bool handshake_done() const {
-                return flag & flag_handshake_done;
+                return flags & flag_handshake_done;
             }
 
             // QUIC handshake confirmed

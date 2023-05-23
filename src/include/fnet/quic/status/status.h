@@ -41,6 +41,7 @@ namespace utils {
 
             PacketNumberIssuer pn_issuers[3];
             PacketNumberAcceptor pn_acceptors[3];
+            SentAckTracker sent_ack_tracker;
 
             constexpr void on_pto_timeout() {
                 if (no_ack_eliciting_in_flight(pn_issuers) &&
@@ -90,7 +91,7 @@ namespace utils {
                 time::time_t sent_time_of_last_loss = 0;
                 bool call_lost_once = false;
                 bool call_cong_cb_once = false;
-                auto is_lost = [&](packetnum::Value pn, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status, bool is_mtu_probe) {
+                auto is_lost = [&](packetnum::Value pn, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status) {
                     if (call_cong_cb_once) {  // congestion_callback already called
                         return LostReason::invalid;
                     }
@@ -101,13 +102,13 @@ namespace utils {
                     const bool packet_order_threshold = pn + config.packet_order_threshold <= largest_ack;
                     if (time_threshold || packet_order_threshold) {  // maybe lost
                         issuer.on_packet_lost(status);
-                        cong.on_packet_lost(sent_time_of_last_loss, sent_bytes, time_sent, status, is_mtu_probe);
+                        cong.on_packet_lost(sent_time_of_last_loss, sent_bytes, time_sent, status);
                         call_lost_once = true;
                         return time_threshold
                                    ? LostReason::time_threshold
                                    : LostReason::packet_order_threshold;
                     }
-                    loss.update_loss_time(loss_space, time_sent);
+                    loss.update_loss_time(loss_space, time_sent + delay);
                     return LostReason::not_lost;
                 };
                 auto congestion_callback = [&](auto&& persistent_callback) {
@@ -205,9 +206,9 @@ namespace utils {
                     return {-1, -1};
                 }
                 hs.on_packet_sent(space, sent_bytes);
-                idle.on_packet_sent(time_sent, status.is_ack_eliciting);
-                pto.on_packet_sent(status.is_ack_eliciting);
-                if (status.is_byte_counted) {
+                idle.on_packet_sent(time_sent, status.is_ack_eliciting());
+                pto.on_packet_sent(status.is_ack_eliciting());
+                if (status.is_byte_counted()) {
                     cong.on_packet_sent(sent_bytes, time_sent);
                     pacer.on_packet_sent(config, payload_size, cong, rtt, time_sent, sent_bytes);
                     set_loss_detection_timer();
@@ -304,7 +305,7 @@ namespace utils {
                 std::uint64_t ack_count = 0;
                 std::uint64_t after_ack_count = 0;
                 int after_call_once = 0;
-                auto is_ack = [&](packetnum::Value pn, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status) {
+                auto is_ack = [&](packetnum::Value pn, std::uint64_t sent_bytes, time::Time time_sent, packet::PacketStatus status, packetnum::Value largest_sent_ack) {
                     if (pn < smallest_ack_pn ||
                         largest_ack_pn < pn) {
                         return false;
@@ -324,7 +325,8 @@ namespace utils {
                         }
                     }
                     issuer.on_packet_ack(status);
-                    has_ack_eliciting = has_ack_eliciting || status.is_ack_eliciting;
+                    sent_ack_tracker.on_packet_acked(space, largest_sent_ack);
+                    has_ack_eliciting = has_ack_eliciting || status.is_ack_eliciting();
                     if (largest_removed == packetnum::infinity || largest_removed < pn) {
                         largest_removed = pn;
                         largest_removed_sent_time = time_sent;
@@ -418,6 +420,10 @@ namespace utils {
                 return pn_acceptors[space_to_index(space)].largest_received_packet_number();
             }
 
+            constexpr packetnum::Value get_onertt_largest_acked_sent_ack() const noexcept {
+                return sent_ack_tracker.get_onertt_largest_acked_sent_ack();
+            }
+
             // timeouts
 
             constexpr bool is_handshake_timeout() const {
@@ -440,7 +446,7 @@ namespace utils {
                        cong.should_send_any_packet();
             }
 
-            constexpr bool is_probe_required(PacketNumberSpace space) const {
+            constexpr bool is_pto_probe_required(PacketNumberSpace space) const {
                 return pto.is_probe_required(space);
             }
 
@@ -475,6 +481,23 @@ namespace utils {
                 return hs.handshake_started();
             }
 
+            constexpr bool handshake_complete() const {
+                return hs.handshake_complete();
+            }
+
+            constexpr bool handshake_confirmed() const {
+                return hs.handshake_confirmed();
+            }
+
+            constexpr time::Time path_validation_deadline() const {
+                auto timeout_candidate = config.path_validation_timeout_factor * pto.probe_timeout_duration_with_max_ack_delay(config, rtt);
+                RTT initial_rtt;
+                initial_rtt.reset(config);
+                auto exponent = pto.pto_exponent();
+                auto initial_candidate = calc_probe_timeout_duration(initial_rtt.smoothed_rtt(), initial_rtt.rttvar(), config.clock, exponent);
+                return now() + max_(initial_candidate, timeout_candidate);
+            }
+
             // exports
 
             constexpr time::Time now() const {
@@ -503,6 +526,10 @@ namespace utils {
 
             constexpr const InternalConfig& status_config() const {
                 return config;
+            }
+
+            constexpr const time::Clock& clock() const {
+                return config.clock;
             }
 
             constexpr const LossTimer& loss_timer() const {

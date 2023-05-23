@@ -63,7 +63,7 @@ void test_fnetquic_context() {
     auto get_sock = [](Socket& sock) -> decltype(auto) { return sock; };
     utils::byte buf[3000];
     while (true) {
-        std::tie(data, val) = ctx->create_udp_payload();
+        std::tie(data, std::ignore, val) = ctx->create_udp_payload();
         if (!val && ctx->is_closed()) {
             break;
         }

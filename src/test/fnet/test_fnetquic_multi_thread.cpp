@@ -65,7 +65,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
         break;
     }
 #ifdef HAS_FORMAT
-    auto res = uni->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
+    auto res = uni->add_data(std::format("GET /get HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
 #else
     std::string req = "GET /search?q=" + utils::number::to_string<std::string>(i + 1) + " HTTP/1.1\r\nHost: www.google.com\r\n";
     auto res = uni->add_data(req, false);
@@ -216,13 +216,13 @@ void rtt_event(std::shared_ptr<void>&, const utils::fnet::quic::status::RTT& rtt
 }
 
 utils::fnet::quic::log::ConnLogCallbacks cbs{
-    //.drop_packet = [](std::shared_ptr<void>&, utils::fnet::quic::PacketType, utils::fnet::quic::packetnum::Value, utils::fnet::error::Error err) { utils::wrap::cout_wrap() << utils::wrap::packln("drop packet: ", err.error<std::string>()); },
-    //.debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
-    //.sending_packet = log_packet,
-    //.recv_packet = log_packet,
-    //.loss_timer_state = record_timer,
-    //.mtu_probe = [](std::shared_ptr<void>&, std::uint64_t size) { utils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
-    // .rtt_state = rtt_event,
+    .drop_packet = [](std::shared_ptr<void>&, utils::fnet::quic::PacketType, utils::fnet::quic::packetnum::Value, utils::fnet::error::Error err) { utils::wrap::cout_wrap() << utils::wrap::packln("drop packet: ", err.error<std::string>()); },
+    .debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
+    .sending_packet = log_packet,
+    .recv_packet = log_packet,
+    .loss_timer_state = record_timer,
+    .mtu_probe = [](std::shared_ptr<void>&, std::uint64_t size) { utils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
+    .rtt_state = rtt_event,
 };
 
 int main() {
@@ -243,6 +243,7 @@ int main() {
     conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
     conf.set_alpn("\4test");
     auto config = utils::fnet::quic::context::use_default(std::move(conf));
+    config.logger.callbacks = &cbs;
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();
     assert(val);
@@ -279,7 +280,7 @@ int main() {
     utils::byte buf[3000];
     utils::test::Timer timer;
     while (true) {
-        std::tie(data, val) = ctx->create_udp_payload();
+        std::tie(data, std::ignore, val) = ctx->create_udp_payload();
         if (!val && ctx->is_closed()) {
             utils::wrap::cout_wrap() << utils::wrap::packln(ctx->get_conn_error().error<std::string>());
             break;

@@ -11,8 +11,8 @@
 namespace utils {
     namespace fnet::quic::log {
         void format_certificate(auto& out, view::rvec data, bool omit_data, bool data_as_hex) {
-            x509::Certificate cert;
-            x509::TLV tlv;
+            x509::parser::Certificate cert;
+            asn1::TLV tlv;
             io::reader r{data};
             const auto datafield = fmt_datafield(out, omit_data, data_as_hex);
             const auto hexfield = fmt_hexfield(out);
@@ -28,7 +28,7 @@ namespace utils {
                     helper::append(out, ")");
                 }
             };
-            const auto oid_field = [&](x509::OID oid) {
+            const auto oid_field = [&](asn1::OID oid) {
                 std::uint64_t value[4];
                 size_t i = 0;
                 oid.iterate([&](std::uint64_t c, bool last) {
@@ -68,10 +68,10 @@ namespace utils {
                     }
                 }
             };
-            const auto format_names = [&](const char* name, x509::RDNSequence seq, bool last_comma) {
+            const auto format_names = [&](const char* name, x509::parser::RDNSequence seq, bool last_comma) {
                 group(name, false, last_comma, [&] {
-                    seq.iterate([&](x509::RelativeDistinguishedName rdn, bool last) {
-                        rdn.iterate([&](x509::AttributeTypeAndValue atv, bool) {
+                    seq.iterate([&](x509::parser::RelativeDistinguishedName rdn, bool last) {
+                        rdn.iterate([&](x509::parser::AttributeTypeAndValue atv, bool) {
                             custom([&] { oid_field(atv.type); }, [&] { datafield(nullptr, atv.value.data, false); }, !last);
                         });
                     });

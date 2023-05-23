@@ -7,7 +7,7 @@
 
 // crypto_log - QUIC tls log
 #pragma once
-#include "../../tls/tls_head.h"
+#include "../../tls/parse.h"
 #include "format.h"
 #include"cert_log.h"
 

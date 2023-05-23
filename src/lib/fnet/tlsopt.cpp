@@ -130,6 +130,12 @@ namespace utils {
             }
         }
 
+        struct SSLContextHolder {
+            ssl_import::SSL_CTX* ctx = nullptr;
+            void (*alpn_callback)(ALPNSelector& sel, void*) = nullptr;
+            void* alpn_callback_arg = nullptr;
+        };
+
         fnet_dll_implement(TLSConfig) configure() {
             TLSConfig conf;
             if (!load_ssl()) {
@@ -203,6 +209,38 @@ namespace utils {
             if (res != 0) {
                 return libError("SSL_CTX_set_alpn_protos", "failed to set ALPN", nullptr, res);
             }
+            return error::none;
+        }
+
+        error::Error TLSConfig::set_eraly_data_enabled(bool enable) {
+            CHECK_CTX(c);
+            lazy::ssl::SSL_CTX_set_early_data_enabled_(c, enable ? 1 : 0);
+            return error::none;
+        }
+
+        error::Error TLSConfig::set_alpn_select_callback(const ALPNCallback* cb) {
+            if (!cb) {
+                return error::Error("invalid argument");
+            }
+            CHECK_CTX(c)
+            lazy::ssl::SSL_CTX_set_alpn_select_cb_(
+                c, [](ssl_import::SSL* ssl, const uint8_t** out, uint8_t* out_len, const uint8_t* in, unsigned int in_len, void* arg) {
+                    ALPNSelector sel{in, in_len, out, out_len};
+                    auto cb = static_cast<const ALPNCallback*>(arg);
+                    if (!cb) {
+                        return ssl_import::SSL_TLSEXT_ERR_NOACK_;
+                    }
+                    if (cb->select(sel, cb->arg)) {
+                        if (*out) {
+                            return ssl_import::SSL_TLSEXT_ERR_OK_;
+                        }
+                        return ssl_import::SSL_TLSEXT_ERR_NOACK_;
+                    }
+                    else {
+                        return ssl_import::SSL_TLSEXT_ERR_ALERT_FATAL_;
+                    }
+                },
+                const_cast<ALPNCallback*>(cb));
             return error::none;
         }
 

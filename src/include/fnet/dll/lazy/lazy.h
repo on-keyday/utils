@@ -86,6 +86,7 @@ namespace utils {
         struct DLL;
 
         // dll initialization time function lookup
+        // this bypass hook set to DLL
         struct DLLInit {
            private:
             DLL* dll = nullptr;

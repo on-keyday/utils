@@ -11,6 +11,55 @@
 
 namespace utils {
     namespace fnet::quic::connid {
+
+        struct SequenceNumber {
+            std::int64_t seq = -1;
+
+            constexpr SequenceNumber() = default;
+
+            constexpr SequenceNumber(std::int64_t n)
+                : seq(n) {}
+
+            constexpr bool valid() const noexcept {
+                return seq >= 0;
+            }
+
+            constexpr operator std::int64_t() const noexcept {
+                return seq;
+            }
+        };
+
+        constexpr auto invalid_seq = SequenceNumber();
+
+        using StatelessResetToken = byte[16];
+
+        struct ConnID {
+            SequenceNumber seq = invalid_seq;
+            view::rvec id;
+            view::rvec stateless_reset_token;
+        };
+
+        struct IDStorage {
+            SequenceNumber seq = invalid_seq;
+            storage id;
+            StatelessResetToken stateless_reset_token;
+
+            ConnID to_ConnID() const {
+                return ConnID{
+                    .seq = seq,
+                    .id = id,
+                    .stateless_reset_token = stateless_reset_token,
+                };
+            }
+        };
+
+        constexpr StatelessResetToken null_stateless_reset{};
+
+        struct CloseID {
+            storage id;
+            StatelessResetToken token;
+        };
+
         // CommonParam is common parameters both Issuer and Acceptor
         struct CommonParam {
             Random random;
@@ -93,25 +142,6 @@ namespace utils {
                 }
             }
         };
-
-        struct SequenceNumber {
-            std::int64_t seq = -1;
-
-            constexpr SequenceNumber() = default;
-
-            constexpr SequenceNumber(std::int64_t n)
-                : seq(n) {}
-
-            constexpr bool valid() const noexcept {
-                return seq >= 0;
-            }
-
-            constexpr operator std::int64_t() const noexcept {
-                return seq;
-            }
-        };
-
-        constexpr auto invalid_seq = SequenceNumber();
 
     }  // namespace fnet::quic::connid
 }  // namespace utils

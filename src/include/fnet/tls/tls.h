@@ -69,18 +69,21 @@ namespace utils {
                     return opt != nullptr;
                 }
 
-                // error::Error set_cacert_file(const char* cacert, const char* dir = nullptr);
                 error::Error set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
                 error::Error set_client_cert_file(const char* cert);
                 error::Error set_cert_chain(const char* pubkey, const char* prvkey);
                 error::Error set_alpn(view::rvec alpn);
                 error::Error set_hostname(const char* hostname, bool verify = true);
+                error::Error set_eraly_data_enabled(bool enable);
+
+                bool get_early_data_accepted();
 
                 // quic extensions
                 error::Error provide_quic_data(quic::crypto::EncryptionLevel level, view::rvec data);
                 error::Error progress_quic();
                 error::Error set_quic_transport_params(view::rvec data);
                 view::rvec get_peer_quic_transport_params();
+                error::Error set_quic_eraly_data_context(view::rvec data);
 
                 // return (remain,err)
                 std::pair<view::rvec, error::Error> provide_tls_data(view::rvec data);
@@ -104,7 +107,6 @@ namespace utils {
                 error::Error verify_ok();
 
                 bool has_ssl() const;
-                bool has_sslctx() const;
 
                 bool get_alpn(const char** selected, unsigned int* len);
 

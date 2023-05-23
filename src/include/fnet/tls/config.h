@@ -10,6 +10,7 @@
 #include "../error.h"
 #include "../quic/crypto/enc_level.h"
 #include "../../helper/equal.h"
+#include "alpn.h"
 
 namespace utils {
     namespace fnet {
@@ -68,6 +69,11 @@ namespace utils {
         namespace tls {
             struct TLS;
 
+            struct ALPNCallback {
+                bool (*select)(ALPNSelector& selector, void*) = nullptr;
+                void* arg = nullptr;
+            };
+
             // TLSConfig is wrapper class of SSL_CTX
             struct fnet_class_export TLSConfig {
                private:
@@ -95,6 +101,13 @@ namespace utils {
                 error::Error set_client_cert_file(const char* cert);
                 error::Error set_alpn(view::rvec alpn);
                 error::Error set_cert_chain(const char* pubkey, const char* prvkey);
+                error::Error set_eraly_data_enabled(bool enable);
+                // if selector select protocol name and returns true,
+                // use it as negotiated protocol
+                // otherwise if returns true then alert warning
+                // if callback returns false then alert fatal error
+                // manage ALPNCallback yourself while connections alive
+                error::Error set_alpn_select_callback(const ALPNCallback* cb);
             };
 
             // configure() returns TLSConfig object initialized with SSL_CTX object

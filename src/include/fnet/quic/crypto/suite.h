@@ -20,9 +20,12 @@ namespace utils {
         };
 
         struct CryptoSuite {
+           private:
+            friend int qtls_callback(CryptoSuite* suite, MethodArgs args);
             CryptoHandshakers handshaker;
             SecretManager secrets;
 
+           public:
             tls::TLS& tls() {
                 return handshaker.get_tls();
             }

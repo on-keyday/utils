@@ -185,14 +185,14 @@ namespace utils {
                     if (summary.type == PacketType::ZeroRTT) {
                     }
                 }
-                if (d.size() < path::initial_udp_datagram_size_limit) {
+                if (d.size() < path::initial_udp_datagram_size) {
                     return;  // ignore smaller packet
                 }
             }
 
             void handle_packet(packet::PacketSummary summary, view::wvec d) {
-                auto found = handlers.find(summary.dstID);
-                if (found != handlers.end()) {
+                auto found = connid_maps.find(summary.dstID);
+                if (found != connid_maps.end()) {
                     return opening_packet(summary, d);
                 }
                 HandlerPtr& ptr = found->second;
@@ -205,11 +205,12 @@ namespace utils {
                 auto cb = [&](PacketType, auto& p, view::rvec src, bool err, bool valid_type) {
                     if constexpr (std::is_same_v<decltype(p), packet::Packet&> ||
                                   std::is_same_v<decltype(p), packet::LongPacketBase&> ||
-                                  std::is_same_v<decltype(p), packet::VersionNegotiationPacket<slib::vector>>) {
+                                  std::is_same_v<decltype(p), packet::VersionNegotiationPacket<slib::vector>&> ||
+                                  std::is_same_v<decltype(p), packet::StatelessReset&>) {
                         return false;
                     }
                     else {
-                        return handle_packet(p, d);
+                        return handle_packet(packet::summarize(p), d);
                     }
                 };
                 auto is_stateless_reset = [&](packet::StatelessReset& reset) {

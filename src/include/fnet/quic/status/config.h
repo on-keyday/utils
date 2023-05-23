@@ -35,8 +35,7 @@ namespace utils {
             // milliseconds
             time::utime_t ping_duration = 0;
 
-            // works on server mode
-            bool retry_required = false;
+            std::uint64_t path_validation_timeout_factor = 3;
         };
 
         // include duplicated with transport parameter

@@ -82,9 +82,9 @@ namespace utils {
 
         // this is for explaining
         constexpr std::uint64_t least_ip_packet_size = 1280;
-        constexpr std::uint64_t initial_udp_datagram_size_limit = 1200;
+        constexpr std::uint64_t initial_udp_datagram_size = 1200;
         constexpr bool path_rejects_quic(std::uint64_t datagram_limit) noexcept {
-            return datagram_limit < initial_udp_datagram_size_limit;
+            return datagram_limit < initial_udp_datagram_size;
         }
 
         struct MTU {
@@ -102,13 +102,13 @@ namespace utils {
             constexpr void reset(Config conf) {
                 config = conf;
                 if (path_rejects_quic(config.base_plpmtu)) {
-                    config.base_plpmtu = initial_udp_datagram_size_limit;
+                    config.base_plpmtu = initial_udp_datagram_size;
                 }
                 if (path_rejects_quic(config.min_plpmtu)) {
-                    config.min_plpmtu = initial_udp_datagram_size_limit;
+                    config.min_plpmtu = initial_udp_datagram_size;
                 }
                 if (path_rejects_quic(config.max_plpmtu)) {
-                    config.max_plpmtu = initial_udp_datagram_size_limit;
+                    config.max_plpmtu = initial_udp_datagram_size;
                 }
                 current_payload_size = conf.base_plpmtu;
                 state = State::disabled;

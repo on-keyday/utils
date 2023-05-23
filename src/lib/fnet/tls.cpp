@@ -20,6 +20,16 @@ namespace utils {
     }
 
     namespace fnet::tls {
+        constexpr error::Error errConfigNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
+        constexpr error::Error errNotInitialized = error::Error("TLS object is not initialized. use create_tls() for initialize object", error::ErrorCategory::validationerr);
+        constexpr error::Error errInvalid = error::Error("TLS object has invalid state. maybe library bug!!", error::ErrorCategory::validationerr);
+        constexpr error::Error errNoTLS = error::Error("TLS object is not initialized for TLS connection. maybe initialzed for QUIC connection", error::ErrorCategory::validationerr);
+        constexpr error::Error errNoQUIC = error::Error("TLS object is not initialized for QUIC connection. maybe initialized for TLS connection", error::ErrorCategory::validationerr);
+        constexpr error::Error errSSLNotInitialized = error::Error("TLS object is not set up for connection. call setup_ssl() or setup_quic() before", error::ErrorCategory::validationerr);
+        constexpr error::Error errAlready = error::Error("TLS object is already set up", error::ErrorCategory::sslerr);
+        constexpr error::Error errNotSupport = error::Error("not supported", error::ErrorCategory::fneterr);
+        constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
+
         fnet_dll_implement(bool) load_crypto() {
             return lazy::libcrypto.load();
         }
@@ -38,7 +48,6 @@ namespace utils {
 
         struct SSLContexts {
             ssl_import::SSL* ssl = nullptr;
-            // ssl_import::SSL_CTX* sslctx = nullptr;
             ssl_import::BIO* wbio = nullptr;
             void* user = nullptr;
             int (*quic_cb)(void* user, quic::crypto::MethodArgs) = nullptr;
@@ -56,7 +65,6 @@ namespace utils {
         TLS::~TLS() {
             delete_with_global_heap(static_cast<SSLContexts*>(opt), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
         }
-        constexpr auto errConfigNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
 
         fnet_dll_implement(std::pair<TLS, error::Error>) create_tls_with_error(const TLSConfig& conf) {
             if (!conf.ctx) {
@@ -146,59 +154,6 @@ namespace utils {
             return make_cipher(lazy::ssl::SSL_get_current_cipher_(ctx->ssl));
         }
 
-        /*
-        fnet_dll_implement(TLS) create_tls() {
-            if (!load_ssl()) {
-                return {};
-            }
-            auto ctx = lazy::ssl::SSL_CTX_new_(lazy::ssl::TLS_method_());
-            if (!ctx) {
-                return {};
-            }
-            auto d = helper::defer([&] {
-                lazy::ssl::SSL_CTX_free_(ctx);
-            });
-            auto tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
-            if (!tls) {
-                return {};
-            }
-            tls->sslctx = ctx;
-            d.cancel();
-            return {tls};
-        }
-
-        fnet_dll_export(TLS) create_tls_from(const TLS& tls) {
-            if (!load_ssl()) {
-                return {};
-            }
-            if (!tls.opt) {
-                return {};
-            }
-            auto ctx = static_cast<SSLContexts*>(tls.opt);
-            if (!ctx->sslctx) {
-                return {};
-            }
-            auto new_tls = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
-            if (!new_tls) {
-                return {};
-            }
-            if (!lazy::ssl::SSL_CTX_up_ref_(ctx->sslctx)) {
-                delete_with_global_heap(new_tls, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
-                return {};
-            }
-            new_tls->sslctx = ctx->sslctx;
-            return {new_tls};
-        }*/
-
-        constexpr error::Error errNotInitialized = error::Error("TLS object is not initialized. use create_tls() for initialize object", error::ErrorCategory::validationerr);
-        constexpr error::Error errInvalid = error::Error("TLS object has invalid state. maybe library bug!!", error::ErrorCategory::validationerr);
-        constexpr error::Error errNoTLS = error::Error("TLS object is not initialized for TLS connection. maybe initialzed for QUIC connection", error::ErrorCategory::validationerr);
-        constexpr error::Error errNoQUIC = error::Error("TLS object is not initialized for QUIC connection. maybe initialized for TLS connection", error::ErrorCategory::validationerr);
-        constexpr error::Error errSSLNotInitialized = error::Error("TLS object is not set up for connection. call setup_ssl() or setup_quic() before", error::ErrorCategory::validationerr);
-        constexpr error::Error errAlready = error::Error("TLS object is already set up", error::ErrorCategory::sslerr);
-        constexpr error::Error errNotSupport = error::Error("not supported", error::ErrorCategory::fneterr);
-        constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
-
 #define EXPAND_VA_ARG(...) __VA_ARGS__ __VA_OPT__(, )
 
 #define CHECK_CTX(ctx, ...)                                    \
@@ -243,15 +198,6 @@ namespace utils {
             return error::none;
         }
 
-        /*
-        error::Error TLS::set_cacert_file(const char* cacert, const char* dir) {
-            CHECK_CTX(c)
-            if (!lazy::ssl::SSL_CTX_load_verify_locations_(c->sslctx, cacert, dir)) {
-                return libError("SSL_CTX_load_verify_locations", "failed to load CA file or CA file directory");
-            }
-            return error::none;
-        }*/
-
         error::Error TLS::set_verify(int mode, int (*verify_callback)(int, void*)) {
             CHECK_TLS(c)
             lazy::ssl::SSL_set_verify_(c->ssl, mode,
@@ -285,75 +231,6 @@ namespace utils {
             return error::none;
         }
 
-        /*
-        error::Error TLS::setup_ssl() {
-            CHECK_CTX(c)
-            if (c->ssl) {
-                return errAlready;
-            }
-            auto ssl = lazy::ssl::SSL_new_(c->sslctx);
-            if (!ssl) {
-                // TODO(on-keyday): other reason exist?
-                return error::memory_exhausted;
-            }
-            auto r = helper::defer([&]() {
-                lazy::ssl::SSL_free_(ssl);
-            });
-            ssl_import::BIO *pass = nullptr, *hold = nullptr;
-            lazy::crypto::BIO_new_bio_pair_(&pass, 0, &hold, 0);
-            if (!pass || !hold) {
-                // TODO(on-keyday): other reason exist?
-                return error::memory_exhausted;
-            }
-            lazy::ssl::SSL_set_bio_(ssl, pass, pass);
-            c->ssl = ssl;
-            c->wbio = hold;
-            r.cancel();
-            return error::none;
-        }
-
-        int quic_callback(TLS& tls, const quic::crypto::MethodArgs& args) {
-            int res = 0;
-            [&]() -> error::Error {
-                auto opt = tls.opt;
-                CHECK_QUIC_CONN(c)
-                if (c->quic_cb) {
-                    res = c->quic_cb(c->user, args);
-                }
-                return error::none;
-            }();
-            return res;
-        }
-
-        error::Error TLS::setup_quic(int (*cb)(void*, quic::crypto::MethodArgs), void* user) {
-            CHECK_CTX(c)
-            if (c->ssl) {
-                return errAlready;
-            }
-            if (!cb) {
-                return error::Error("QUIC callback MUST not be nullptr", error::ErrorCategory::validationerr);
-            }
-            auto ssl = lazy::ssl::SSL_new_(c->sslctx);
-            if (!ssl) {
-                // TODO(on-keyday): other reason exist?
-                return error::memory_exhausted;
-            }
-            auto r = helper::defer([&] {
-                lazy::ssl::SSL_free_(ssl);
-            });
-            if (!lazy::ssl::SSL_set_ex_data_(ssl, ssl_import::ssl_appdata_index, this)) {
-                return libError("SSL_set_ex_data", "failed to set TLS object to OpenSSL/BoringSSL context", ssl, 0);
-            }
-            if (!quic::crypto::set_quic_method(ssl)) {
-                return error::Error("libssl doesn't have QUIC extension", error::ErrorCategory::fneterr);
-            }
-            c->ssl = ssl;
-            c->quic_cb = cb;
-            c->user = user;
-            r.cancel();
-            return error::none;
-        }*/
-
         error::Error TLS::set_hostname(const char* hostname, bool verify) {
             CHECK_TLS(c)
             auto common = [&]() -> error::Error {
@@ -379,6 +256,30 @@ namespace utils {
                 return common();
             }
             return errNotSupport;
+        }
+
+        error::Error TLS::set_eraly_data_enabled(bool enable) {
+            CHECK_TLS(c);
+            lazy::ssl::SSL_set_early_data_enabled_(c->ssl, enable ? 1 : 0);
+            return error::none;
+        }
+
+        bool TLS::get_early_data_accepted() {
+            bool res = false;
+            [&]() -> error::Error {
+                CHECK_TLS(c);
+                res = (bool)lazy::ssl::SSL_early_data_accepted_(c->ssl);
+                return error::none;
+            }();
+            return res;
+        }
+
+        error::Error TLS::set_quic_eraly_data_context(view::rvec data) {
+            CHECK_QUIC_CONN(c);
+            if (!lazy::ssl::SSL_set_quic_early_data_context_(c->ssl, data.data(), data.size())) {
+                return error::Error("set_erary_data_context failed");
+            }
+            return error::none;
         }
 
         std::pair<view::rvec, error::Error> TLS::provide_tls_data(view::rvec data) {
@@ -523,14 +424,6 @@ namespace utils {
             }
             return static_cast<SSLContexts*>(opt)->ssl != nullptr;
         }
-
-        /*
-        bool TLS::has_sslctx() const {
-            if (!opt) {
-                return false;
-            }
-            return static_cast<SSLContexts*>(opt)->sslctx != nullptr;
-        }*/
 
         error::Error TLS::verify_ok() {
             CHECK_TLS(c)
