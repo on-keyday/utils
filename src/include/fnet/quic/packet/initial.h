@@ -64,7 +64,7 @@ namespace utils {
         namespace test {
             constexpr auto check_initial() {
                 InitialPacketPlain plain;
-                byte tag[16] = "hello world! or";
+                // byte tag[16] = "hello world! or";
                 byte id[9] = "idididid";
                 byte payload[11]{};  // dummy
                 byte data[1210]{};

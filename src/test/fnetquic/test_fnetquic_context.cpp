@@ -54,13 +54,6 @@ void test_fnetquic_context() {
         addr = saddr.addr;
         break;
     }
-    auto fn = [&](Socket& insock, utils::view::rvec data, NetAddrPort addr, bool, error::Error err) {
-        assert(!err);
-        auto d = utils::view::wvec(const_cast<utils::byte*>(data.data()), data.size());
-        ctx->parse_udp_payload(d);
-        sock = std::move(insock);
-    };
-    auto get_sock = [](Socket& sock) -> decltype(auto) { return sock; };
     utils::byte buf[3000];
     while (true) {
         std::tie(data, std::ignore, val) = ctx->create_udp_payload();

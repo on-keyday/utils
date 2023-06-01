@@ -44,6 +44,12 @@ namespace utils {
                 resize(buf.size() + delta);
             }
 
+            constexpr void maybe_expand(size_t need) {
+                if (w.remain().size() < need) {
+                    expand(need - w.remain().size());
+                }
+            }
+
             constexpr bool write(C data, size_t n) {
                 if (w.remain().size() < n) {
                     expand(n);

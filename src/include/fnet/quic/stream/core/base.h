@@ -23,8 +23,18 @@ namespace utils {
                 return limit > used ? limit - used : 0;
             }
 
-            constexpr bool on_limit(std::uint64_t s) const {
-                return avail_size() < s;
+            constexpr bool on_limit(std::uint64_t delta) const {
+                return avail_size() < delta;
+            }
+
+            // use this for first time or transport parameter applying.
+            // use update_limit instead later time
+            constexpr bool set_limit(std::uint64_t new_limit) {
+                if (new_limit >= varint::border(8)) {
+                    return false;
+                }
+                limit = new_limit;
+                return true;
             }
 
             constexpr bool update_limit(std::uint64_t new_limit) {
@@ -108,11 +118,20 @@ namespace utils {
                 return limit.update_limit(credit);
             }
 
+            // set_send_limit is called first time call or transport applying
+            constexpr bool set_send_limit(std::uint64_t new_limit) noexcept {
+                return limit.set_limit(new_limit);
+            }
+
             // is_terminal_state reports whether stream is terminal state (not to retransmit)
             // state==SendState::data_recved || state==SendState::reset_recved
             constexpr bool is_terminal_state() const noexcept {
                 return state == SendState::data_recved ||
                        state == SendState::reset_recved;
+            }
+
+            constexpr bool is_ready() const noexcept {
+                return state == SendState::ready;
             }
 
             constexpr bool can_send() const noexcept {
@@ -249,9 +268,9 @@ namespace utils {
                 return should_send_limit_update;
             }
 
-            // set_recv_limit sets limit but not set triger of MaxStreamData
+            // set_recv_limit is called first time call or transport applying
             constexpr bool set_recv_limit(std::uint64_t new_limit) noexcept {
-                return limit.update_limit(new_limit);
+                return limit.set_limit(new_limit);
             }
 
             constexpr std::uint64_t recv_limit() const noexcept {

@@ -8,13 +8,15 @@
 #pragma once
 #include "../../std/hash_map.h"
 #include "../../std/list.h"
+#include "impl/send_buffer.h"
+#include "impl/recv_buffer.h"
 #include <memory>
 
 namespace utils {
     namespace fnet::quic::stream {
 
         template <class T = std::shared_ptr<void>, class RecvT = T>
-        struct UserCallbackArgType {
+        struct UserConnCallbackArgType {
             using accept_uni = T;
             using accept_bidi = T;
             using open_uni = T;
@@ -23,7 +25,7 @@ namespace utils {
         };
 
         template <class A, class B, class C, class D, class E>
-        struct UserCallbackArgType4 {
+        struct UserConnCallbackArgType5 {
             using accept_uni = A;
             using accept_bidi = B;
             using open_uni = C;
@@ -31,8 +33,15 @@ namespace utils {
             using recv = E;
         };
 
+        template <class SendBuf = impl::SendBuffer<>, class RecvBuf = impl::FragmentSaver<>>
+        struct UserStreamHandlerType {
+            using send_buf = SendBuf;
+            using recv_buf = RecvBuf;
+        };
+
         template <class ConnLock,
-                  class CallbackArgType = UserCallbackArgType<std::shared_ptr<void>>,
+                  class StreamHandler = UserStreamHandlerType<>,
+                  class ConnCBArgType = UserConnCallbackArgType<std::shared_ptr<void>>,
                   class SendStreamLock = ConnLock,
                   class RecvStreamLock = ConnLock,
                   template <class...> class RetransmitQue = slib::list,
@@ -46,7 +55,8 @@ namespace utils {
             template <class K, class V>
             using stream_map = StreamMap<K, V>;
 
-            using callback_arg = CallbackArgType;
+            using conn_cb_arg = ConnCBArgType;
+            using stream_handler = StreamHandler;
         };
 
     }  // namespace fnet::quic::stream

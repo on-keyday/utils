@@ -26,10 +26,10 @@ namespace utils {
 
         template <class TConfig>
         struct SendeSchedArg {
-            using UniOpenArg = typename TConfig::callback_arg::open_uni;
-            using UniAcceptArg = typename TConfig::callback_arg::accept_uni;
-            using BidiOpenArg = typename TConfig::callback_arg::open_bidi;
-            using BidiAcceptArg = typename TConfig::callback_arg::accept_bidi;
+            using UniOpenArg = typename TConfig::conn_cb_arg::open_uni;
+            using UniAcceptArg = typename TConfig::conn_cb_arg::accept_uni;
+            using BidiOpenArg = typename TConfig::conn_cb_arg::open_bidi;
+            using BidiAcceptArg = typename TConfig::conn_cb_arg::accept_bidi;
 
             UniOpenArg uniopenarg;
             UniAcceptArg bidiopenarg;
@@ -39,10 +39,10 @@ namespace utils {
 
         template <class TConfig>
         struct Conn : std::enable_shared_from_this<Conn<TConfig>> {
-            using UniOpenArg = typename TConfig::callback_arg::open_uni;
-            using UniAcceptArg = typename TConfig::callback_arg::accept_uni;
-            using BidiOpenArg = typename TConfig::callback_arg::open_bidi;
-            using BidiAcceptArg = typename TConfig::callback_arg::accept_bidi;
+            using UniOpenArg = typename TConfig::conn_cb_arg::open_uni;
+            using UniAcceptArg = typename TConfig::conn_cb_arg::accept_uni;
+            using BidiOpenArg = typename TConfig::conn_cb_arg::open_bidi;
+            using BidiAcceptArg = typename TConfig::conn_cb_arg::accept_bidi;
 
             using UniOpenCB = void (*)(UniOpenArg& arg, std::shared_ptr<SendUniStream<TConfig>> stream);
             using UniAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<RecvUniStream<TConfig>> stream);
@@ -444,16 +444,20 @@ namespace utils {
                 return default_send_schedule(fw, observer_vec);
             }
 
-            // update is std::pair<std::uint64_t/*new_limit*/,bool/*should_update*/>(Limiter)
+            // update is std::uint64_t/*new_limit*/(Limiter)
+            // return value less than current limit has no effect to update limit
             bool update_max_uni_streams(auto&& update) {
                 return control.update_max_uni_streams(update);
             }
-            // update is std::pair<std::uint64_t/*new_limit*/,bool/*should_update*/>(Limiter)
+
+            // update is std::uint64_t/*new_limit*/(Limiter)
+            // return value less than current limit has no effect to update limit
             bool update_max_bidi_streams(auto&& update) {
                 return control.update_max_uni_streams(update);
             }
 
-            // update is std::pair<std::uint64_t/*new_limit*/,bool/*should_update*/>(Limiter)
+            // update is std::uint64_t/*new_limit*/(Limiter)
+            // return value less than current limit has no effect to update limit
             bool update_max_data(auto&& update) {
                 return control.update_max_data(update);
             }

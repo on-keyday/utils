@@ -71,24 +71,25 @@ namespace utils {
             using ConnIDTypeConfig = typename TConfig::connid_type_config;
             using RecvPacketHistory = typename TConfig::recv_packet_history;
 
-            // QUIC runtime values
+            // QUIC runtime handlers
             Version version = version_negotiation;
             status::Status<CongestionAlgorithm> status;
             trsparam::TransportParameters params;
             crypto::CryptoSuite crypto;
             ack::SentPacketHistory ackh;
             ack::RecvHistoryInterface<RecvPacketHistory> unacked;
-
             connid::IDManager<ConnIDTypeConfig> connIDs;
             token::RetryToken retry_token;
             token::ZeroRTTTokenManager zero_rtt_token;
             path::MTU mtu;
             path::PathVerifier path_verifyer;
-            std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams;
             close::Closer closer;
             std::atomic<close::CloseReason> closed;
-            datagram::DatagramManager<Lock, DatagramDrop> datagrams;
             Lock close_locker;
+
+            // application data handlers
+            std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams;
+            std::shared_ptr<datagram::DatagramManager<Lock, DatagramDrop>> datagrams;
 
             // log
             log::ConnLogger logger;
@@ -176,7 +177,7 @@ namespace utils {
                 status.on_transport_parameter_received(peer.max_idle_timeout, peer.max_ack_delay, peer.ack_delay_exponent);
                 auto by_peer = trsparam::to_initial_limits(peer);
                 streams->apply_peer_initial_limits(by_peer);
-                datagrams.on_transport_parameter(peer.max_datagram_frame_size);
+                datagrams->on_transport_parameter(peer.max_datagram_frame_size);
                 if (auto err = connIDs.issue_to_max()) {
                     set_quic_runtime_error(std::move(err));
                     return false;
@@ -235,7 +236,7 @@ namespace utils {
                     if (auto err = connIDs.send(fw, waiters, summary.type == PacketType::OneRTT); err == IOResult::fatal) {
                         return wrap_io(err);
                     }
-                    if (auto err = datagrams.send(summary.packet_number, fw, waiters); err == IOResult::fatal) {
+                    if (auto err = datagrams->send(summary.packet_number, fw, waiters); err == IOResult::fatal) {
                         return wrap_io(err);
                     }
                     if (auto err = streams->send(fw, waiters); err == IOResult::fatal) {
@@ -800,7 +801,7 @@ namespace utils {
                     return true;
                 }
                 if (frame.type.type() == FrameType::DATAGRAM) {
-                    auto err = datagrams.recv(summary.packet_number, static_cast<const frame::DatagramFrame&>(frame));
+                    auto err = datagrams->recv(summary.packet_number, static_cast<const frame::DatagramFrame&>(frame));
                     if (err) {
                         set_quic_runtime_error(std::move(err));
                         return false;
@@ -869,15 +870,15 @@ namespace utils {
                 return true;
             }
 
-            bool check_connID(packet::PacketSummary& prev, packet::PacketSummary sum) {
+            bool check_connID(packet::PacketSummary& prev, packet::PacketSummary sum, view::rvec raw_packet) {
                 if (prev.type != PacketType::Unknown) {
                     if (sum.dstID != prev.dstID) {
-                        logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same dstID"));
+                        logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same dstID"), raw_packet, false);
                         return false;
                     }
                     if (sum.type != PacketType::OneRTT) {
                         if (sum.srcID != prev.srcID) {
-                            logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same srcID"));
+                            logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same srcID"), raw_packet, false);
                             return false;
                         }
                     }
@@ -888,12 +889,12 @@ namespace utils {
                             (sum.type != PacketType::Initial ||
                              connIDs.initial_conn_id_accepted())) {
                             if (!connIDs.has_dstID(sum.srcID)) {
-                                logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid srcID"));
+                                logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid srcID"), raw_packet, false);
                                 return false;
                             }
                         }
                         if (!connIDs.has_srcID(sum.dstID)) {
-                            logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid dstID"));
+                            logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid dstID"), raw_packet, false);
                             return false;
                         }
                     }
@@ -902,12 +903,12 @@ namespace utils {
                             connIDs.initial_conn_id_accepted()) {
                             if (sum.type != PacketType::OneRTT) {
                                 if (!connIDs.has_dstID(sum.srcID)) {
-                                    logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid srcID"));
+                                    logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid srcID"), raw_packet, false);
                                     return false;
                                 }
                             }
                             if (!connIDs.has_srcID(sum.dstID)) {
-                                logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid dstID"));
+                                logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid dstID"), raw_packet, false);
                                 return false;
                             }
                         }
@@ -965,17 +966,17 @@ namespace utils {
                 return true;
             }
 
-            bool handle_retry_packet(packet::RetryPacket retry) {
+            bool handle_retry_packet(packet::RetryPacket retry, view::rvec raw_packet) {
                 if (status.is_server()) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("received Retry packet at server"));
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("received Retry packet at server"), raw_packet, true);
                     return true;
                 }
                 if (status.handshake_status().has_received_packet()) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiveing packet"));
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiveing packet"), raw_packet, true);
                     return true;
                 }
                 if (status.has_received_retry()) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiveing Retry"));
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiveing Retry"), raw_packet, true);
                     return true;
                 }
                 packet::RetryPseduoPacket pseduo;
@@ -993,7 +994,7 @@ namespace utils {
                     return false;
                 }
                 if (view::rvec(retry.retry_integrity_tag) != output) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("retry integrity tags are not matched. maybe observer exists or packet broken"));
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("retry integrity tags are not matched. maybe observer exists or packet broken"), raw_packet, true);
                     return true;
                 }
                 ackh.on_retry_received(status);
@@ -1025,6 +1026,11 @@ namespace utils {
             // thread safe call
             close::CloseReason close_reason() const {
                 return closed;
+            }
+
+            // thread unsafe call
+            bool handshake_complete() const {
+                return status.handshake_complete();
             }
 
             // thread safe call
@@ -1065,6 +1071,11 @@ namespace utils {
                 return streams;
             }
 
+            // thread unsafe call
+            auto get_datagrams() const {
+                return datagrams;
+            }
+
             // get eariest timer deadline
             // thread unsafe call
             time::Time get_earliest_deadline() const {
@@ -1076,6 +1087,10 @@ namespace utils {
                 // reset internal parameters
                 reset_internal();
                 closer.reset();
+
+                // reset ack handler
+                ackh.reset();
+                unacked.reset();
 
                 version = config.version;
 
@@ -1124,7 +1139,9 @@ namespace utils {
                 zero_rtt_token.reset(std::move(config.zero_rtt));
 
                 // setup datagram handler
-                datagrams.reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
+                using DgramT = datagram::DatagramManager<Lock, DatagramDrop>;
+                datagrams = std::allocate_shared<DgramT>(glheap_allocator<DgramT>{});
+                datagrams->reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
 
                 // setup path validation status
                 path_verifyer.reset(path::original_path);
@@ -1246,15 +1263,15 @@ namespace utils {
                 auto crypto_cb = [&](packetnum::Value pn, auto&& packet, view::wvec raw_packet) {
                     packet::PacketSummary sum = packet::summarize(packet, pn);
                     if (unacked.is_duplicated(status::from_packet_type(sum.type), pn)) {
-                        logger.drop_packet(sum.type, pn, error::Error("duplicated packet"));
+                        logger.drop_packet(sum.type, pn, error::Error("duplicated packet"), raw_packet, true);
                         return true;  // ignore
                     }
                     return handle_single_packet(sum, packet.payload, path);
                 };
-                auto check_connID_cb = [&](auto&& packet) {
+                auto check_connID_cb = [&](auto&& packet, view::rvec raw_packet) {
                     packet::PacketSummary sum = packet::summarize(packet, packetnum::infinity);
                     bool first_time = prev.type == PacketType::Unknown;
-                    if (!check_connID(prev, sum)) {
+                    if (!check_connID(prev, sum, raw_packet)) {
                         return false;
                     }
                     if (first_time) {
@@ -1267,18 +1284,18 @@ namespace utils {
                 });
                 auto plain_cb = [this](PacketType type, auto&& packet, view::wvec src) {
                     if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, packet::RetryPacket>) {
-                        return handle_retry_packet(packet);
+                        return handle_retry_packet(packet, src);
                     }
                     return true;
                 };
                 auto decrypt_err = [&](PacketType type, auto&& packet, packet::CryptoPacket cp, error::Error err, bool is_decrypted) {
-                    logger.drop_packet(type, cp.packet_number, std::move(err));
+                    logger.drop_packet(type, cp.packet_number, std::move(err), cp.src, is_decrypted);
                     // decrypt failure doesn't make packet parse failure
                     // see https://tex2e.github.io/rfc-translater/html/rfc9000#12-2--Coalescing-Packets
                     return true;
                 };
                 auto plain_err = [&](PacketType type, auto&& packet, view::wvec src, bool err, bool valid_type) {
-                    logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure"));
+                    logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure"), src, !is_ProtectedPacket(type));
                     return true;  // ignore error
                 };
                 auto ok = crypto::parse_with_decrypt<slib::vector>(
@@ -1303,7 +1320,7 @@ namespace utils {
                     case close::CloseReason::idle_timeout:
                     case close::CloseReason::handshake_timeout:
                         ctx.clock = status.clock();
-                        ctx.close_timeout = ctx.clock.now();
+                        ctx.close_timeout.set_deadline( ctx.clock.now());
                         return false;
                     default:
                         break;

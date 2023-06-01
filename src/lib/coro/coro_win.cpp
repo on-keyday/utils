@@ -8,62 +8,16 @@
 #include <coro/coro_impl.h>
 #include <coro/coro.h>
 #include <windows.h>
-#include <mutex>
+#include <coro/coro_platform.h>
 
 namespace utils {
     namespace coro {
 
-        struct WinHandle {
+        struct WinHandle : Platform {
             bool was_a_fiber = false;
             void* main_fiber;
-            RingQue<C*> running;
-            RingQue<C*> idle;
-            std::mutex l;
-            C* current = nullptr;
-            Resource resource;
-            std::exception_ptr except;
-
-            bool alloc_que(size_t max_running, size_t max_idle) {
-                auto q = resource.alloc(sizeof(C*) * max_running);
-                if (!q) {
-                    return false;
-                }
-                new (q) C* [max_running] {};
-                running.set_que(static_cast<C**>(q), max_running);
-                q = resource.alloc(sizeof(C*) * max_idle);
-                if (!q) {
-                    return false;
-                }
-                new (q) C* [max_idle] {};
-                idle.set_que(static_cast<C**>(q), max_idle);
-                return true;
-            }
-
-            auto lock() {
-                l.lock();
-                return helper::defer([&] {
-                    l.unlock();
-                });
-            }
-
-            void fetch_tasks() {
-                auto l = lock();
-                while (!running.block()) {
-                    auto new_task = idle.pop();
-                    if (!new_task) {
-                        return;
-                    }
-                    running.push(std::move(new_task));
-                }
-            }
 
             ~WinHandle() {
-                if (auto got = running.set_que(nullptr, 0)) {
-                    resource.free(got);
-                }
-                if (auto got = idle.set_que(nullptr, 0)) {
-                    resource.free(got);
-                }
                 if (!main_fiber) {
                     return;
                 }

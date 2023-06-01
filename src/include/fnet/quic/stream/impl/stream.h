@@ -16,6 +16,7 @@
 #include "../../../../helper/condincr.h"
 #include <algorithm>
 #include "../../resend/fragments.h"
+#include "buf_interface.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -26,7 +27,11 @@ namespace utils {
             core::SendUniStreamBase<TConfig> uni;
             std::weak_ptr<ConnFlowControl<TConfig>> conn;
 
-            flex_storage src;
+            using SendBuffer = typename TConfig::stream_handler::send_buf;
+
+            // SendBuffer src;
+            SendBufInterface<SendBuffer> src;
+
             std::shared_ptr<ack::ACKLostRecord> reset_wait;
             resend::Retransmiter<resend::StreamFragment, TConfig::template retransmit_que> frags;
 
@@ -202,6 +207,7 @@ namespace utils {
 
             // returns (result,finished)
             std::pair<IOResult, bool> send(frame::fwriter& w, auto&& observer_vec) {
+                src.send_callback(this);
                 const auto lock = uni.lock();
                 if (uni.state.is_terminal_state()) {
                     return {IOResult::ok, true};
@@ -216,6 +222,9 @@ namespace utils {
             }
 
             bool recv(const frame::Frame& frame) {
+                const auto callback = helper::defer([&] {
+                    src.recv_callback(this);
+                });
                 if (frame.type.type_detail() == FrameType::STOP_SENDING) {
                     recv_stop_sending(static_cast<const frame::StopSendingFrame&>(frame));
                     return true;
@@ -257,7 +266,7 @@ namespace utils {
             // discard_written_data discards written stream data from runtime buffer
             bool discard_written_data() {
                 const auto locked = uni.lock();
-                return discard_written_data_impl({}, uni.data.fin);
+                return discard_written_data_impl(uni.data.fin);
             }
 
             // add_multi_data adds multiple data
@@ -287,6 +296,21 @@ namespace utils {
             // but use discard_written_data() instead to discard only.
             IOResult add_data(view::rvec data, bool fin = false, bool discard_written = false) {
                 return add_multi_data(fin, discard_written, data);
+            }
+
+            // set sender user level handler
+            bool set_sender(SendBuffer&& handler) {
+                const auto lock = uni.lock();
+                if (uni.state.is_ready()) {
+                    src.impl = std::move(handler);
+                    return true;
+                }
+                return false;
+            }
+
+            auto get_sender_ctx() {
+                const auto lock = uni.lock();
+                return src.get_specific();
             }
 
             // request cancelation
@@ -325,43 +349,14 @@ namespace utils {
             }
         };
 
-        // returns (all_recved,err)
-        template <class Arg>
-        using SaveFragmentCallback = std::pair<bool, error::Error> (*)(Arg& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv_bytes, std::uint64_t err_code);
-
-        template <class Arg>
-        struct FragmentSaver {
-           private:
-            Arg arg;
-            SaveFragmentCallback<Arg> callback = nullptr;
-
-           public:
-            void set(Arg&& a, SaveFragmentCallback<Arg> cb) {
-                if (cb) {
-                    arg = std::move(a);
-                    callback = cb;
-                }
-                else {
-                    arg = Arg{};
-                    callback = nullptr;
-                }
-            }
-
-            std::pair<bool, error::Error> save(StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t error_code) {
-                if (callback) {
-                    return callback(arg, id, type, frag, total_recv, error_code);
-                }
-                return {false, error::none};
-            }
-        };
-
         template <class TConfig>
         struct RecvUniStream {
            private:
             core::RecvUniStreamBase<TConfig> uni;
             std::weak_ptr<ConnFlowControl<TConfig>> conn;
-            using RecvArg = typename TConfig::callback_arg::recv;
-            FragmentSaver<RecvArg> saver;
+            using RecvBuffer = typename TConfig::stream_handler::recv_buf;
+            // RecvBuffer saver;
+            RecvBufInterface<RecvBuffer> saver;
             std::shared_ptr<ack::ACKLostRecord> max_data_wait;
             std::shared_ptr<ack::ACKLostRecord> stop_sending_wait;
 
@@ -472,7 +467,7 @@ namespace utils {
                 if (err) {
                     return err;
                 }
-                auto [tmp2, err2] = saver.save(uni.id, FrameType::RESET_STREAM, {.offset = uni.state.recv_bytes(), .fin = true}, uni.state.recv_bytes(), uni.state.get_error_code());
+                auto [tmp2, err2] = saver.save(uni.id, FrameType::RESET_STREAM, Fragment{.offset = uni.state.recv_bytes(), .fin = true}, uni.state.recv_bytes(), uni.state.get_error_code());
                 return err2;
             }
 
@@ -490,6 +485,9 @@ namespace utils {
             // called by QUIC runtime system
 
             error::Error recv(const frame::Frame& frame) {
+                const auto callback = helper::defer([&] {
+                    saver.recv_callback(this);
+                });
                 if (is_STREAM(frame.type.type_detail())) {
                     return recv_stream(static_cast<const frame::StreamFrame&>(frame));
                 }
@@ -503,6 +501,7 @@ namespace utils {
             }
 
             IOResult send(frame::fwriter& w, auto&& observer_vec) {
+                saver.send_callback(this);
                 const auto locked = uni.lock();
                 auto res = send_stop_sending_unlocked(w, observer_vec);
                 if (res == IOResult::fatal) {
@@ -538,19 +537,19 @@ namespace utils {
                 return uni.request_stop_sending(code);
             }
 
-            // set receiver user callback
-            bool set_receiver(RecvArg arg, SaveFragmentCallback<RecvArg> save) {
+            // set user level recv handler
+            bool set_receiver(RecvBuffer&& handler) {
                 const auto locked = uni.lock();
                 if (uni.state.is_pre_recv()) {
-                    saver.set(std::move(arg), save);
+                    saver.impl = std::move(handler);
                     return true;
                 }
                 return false;
             }
 
-            RecvArg get_receiver_arg() {
+            auto get_receiver_ctx() {
                 const auto locked = uni.lock();
-                return std::as_const(saver.arg);
+                return saver.get_specific();
             }
 
             // notify application user read all data

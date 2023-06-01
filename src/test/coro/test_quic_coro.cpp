@@ -18,6 +18,8 @@
 #include <fnet/quic/server/server.h>
 #include <wrap/cout.h>
 #include <fnet/quic/ack/unacked.h>
+#include <fnet/debug.h>
+#include <testutil/alloc_hook.h>
 using namespace utils::fnet::quic::use::rawptr;
 namespace quic = utils::fnet::quic;
 using TConfig2 = quic::context::TypeConfig<std::mutex, DefaultStreamTypeConfig, quic::connid::TypeConfig<>, quic::status::NewReno, quic::ack::UnackedPackets>;
@@ -37,7 +39,7 @@ struct ThreadData {
 };
 
 void recv_stream(utils::coro::C* c, Recvs* s) {
-    auto th = static_cast<ThreadData*>(c->get_common_context());
+    auto th = static_cast<ThreadData*>(c->get_thread_context());
     std::vector<utils::fnet::flex_storage> read;
     const auto d = utils::helper::defer([&] {
         delete s;
@@ -56,7 +58,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
                     c->suspend();
                 }
                 c->add_coroutine(nullptr, [](utils::coro::C* c, void*) {
-                    auto th = static_cast<ThreadData*>(c->get_common_context());
+                    // auto th = static_cast<ThreadData*>(c->get_common_context());
                     c->suspend();
                 });
             });
@@ -83,7 +85,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
 
 void request(utils::coro::C* c, void* p) {
     auto n = std::uintptr_t(p);
-    auto th = static_cast<ThreadData*>(c->get_common_context());
+    auto th = static_cast<ThreadData*>(c->get_thread_context());
     auto streams = th->ctx->get_streams();
     while (true) {
         auto stream = streams->open_uni();
@@ -154,6 +156,9 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
 }
 
 int main() {
+    // utils::test::set_alloc_hook(true);
+    // utils::test::set_log_file("./ignore/memuse.log");
+    // utils::fnet::debug::allocs();
 #ifdef _WIN32
     utils::fnet::tls::set_libcrypto(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
     utils::fnet::tls::set_libssl(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
@@ -190,7 +195,7 @@ int main() {
         ThreadData data;
         data.ctx = ctx;
         data.req_count = 0;
-        c.set_common_context(&data);
+        c.set_thread_context(&data);
         ld.store(&c);
         while (!ctx->is_closed()) {
             c.run();

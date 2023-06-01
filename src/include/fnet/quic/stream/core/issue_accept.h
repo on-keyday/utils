@@ -91,7 +91,7 @@ namespace utils {
             }
 
             constexpr error::Error update_limit(size_t new_limit) {
-                if (new_limit >= size_t(1) << 60) {
+                if (new_limit >= std::uint64_t(1) << 60) {
                     return QUICError{
                         .transport_error = TransportError::FRAME_ENCODING_ERROR,
                         .frame_type = type == StreamType::bidi ? FrameType::MAX_STREAMS_BIDI : FrameType::MAX_STREAMS_UNI,
@@ -102,7 +102,7 @@ namespace utils {
             }
         };
 
-        struct ConnLimit {
+        struct ConnFlowLimit {
             Limiter send;
             Limiter recv;
             bool should_send_limit_update = false;
@@ -119,7 +119,7 @@ namespace utils {
             StreamIDIssuer bidi_issuer;
             StreamIDAcceptor uni_acceptor;
             StreamIDAcceptor bidi_acceptor;
-            ConnLimit conn;
+            ConnFlowLimit conn_flow;
             InitialLimits send_ini_limit;
             InitialLimits recv_ini_limit;
 
@@ -145,16 +145,16 @@ namespace utils {
 
             void set_send_initial_limit(InitialLimits lim) {
                 send_ini_limit = lim;
-                uni_issuer.limit.update_limit(lim.uni_stream_limit);
-                bidi_issuer.limit.update_limit(lim.bidi_stream_limit);
-                conn.send.update_limit(lim.conn_data_limit);
+                uni_issuer.limit.set_limit(lim.uni_stream_limit);
+                bidi_issuer.limit.set_limit(lim.bidi_stream_limit);
+                conn_flow.send.update_limit(lim.conn_data_limit);
             }
 
             void set_recv_initial_limit(InitialLimits lim) {
                 recv_ini_limit = lim;
-                uni_acceptor.limit.update_limit(lim.uni_stream_limit);
-                bidi_acceptor.limit.update_limit(lim.bidi_stream_limit);
-                conn.recv.update_limit(lim.conn_data_limit);
+                uni_acceptor.limit.set_limit(lim.uni_stream_limit);
+                bidi_acceptor.limit.set_limit(lim.bidi_stream_limit);
+                conn_flow.recv.update_limit(lim.conn_data_limit);
             }
         };
     }  // namespace fnet::quic::stream::core

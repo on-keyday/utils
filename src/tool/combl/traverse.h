@@ -8,6 +8,7 @@
 #pragma once
 #include <json/json_export.h>
 #include <variant>
+#include <memory>
 namespace combl::trvs {
     namespace json = utils::json;
     struct Scope;

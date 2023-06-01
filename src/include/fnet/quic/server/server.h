@@ -76,7 +76,7 @@ namespace utils {
             bool handle_packet(view::wvec payload) override {
                 const auto d = lock();
                 if (discard) {
-                    return;
+                    return false;
                 }
                 ctx.parse_udp_payload(payload);
                 next_deadline = ctx.get_earliest_deadline();
@@ -95,7 +95,7 @@ namespace utils {
                 auto next = std::allocate_shared<Closed>(glheap_allocator<Closed>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
-                next->next_deadline = c.close_timeout;
+                next->next_deadline = c.close_timeout.get_deadline();
                 return next;
             }
 
@@ -231,7 +231,7 @@ namespace utils {
             void notify(const std::shared_ptr<context::Context<TConfig>>& ctx) {
                 auto ptr = ctx->get_mux_ptr();
                 if (!ptr) {
-                    return false;
+                    return;
                 }
                 send_que.enque(std::static_pointer_cast<Handler>(std::move(ptr)));
             }

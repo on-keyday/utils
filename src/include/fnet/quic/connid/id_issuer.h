@@ -60,8 +60,8 @@ namespace utils {
             // after call this, IDIssuer is invalid
             void expose_close_ids(auto&& ids) {
                 for (auto&& s : srcids) {
-                    IDStorage& s = s.second;
-                    ids.push_back(CloseID{.id = std::move(s.id), .token = s.stateless_reset_token});
+                    IDStorage& exp = s.second;
+                    ids.push_back(CloseID{.id = std::move(exp.id), .token = s.stateless_reset_token});
                 }
             }
 

@@ -15,6 +15,7 @@
 #include "../helper/pushbacker.h"
 #include "../helper/appender.h"
 #include "../number/to_string.h"
+#include <atomic>
 
 namespace utils {
     namespace fnet::error {
@@ -187,7 +188,7 @@ namespace utils {
                         }
                         if (ord == WrapCtrlOrder::del) {
                             if (--f->ref == 0) {
-                                delete_with_global_heap(f, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*f)), alignof(decltype(*f))));
+                                delete_glheap(f);
                             }
                             return 0;
                         }

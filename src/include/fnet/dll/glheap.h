@@ -47,6 +47,7 @@ namespace utils {
             info.size_known = true;
             free_normal(p, info);
         }
+#define delete_glheap(p) delete_with_global_heap(p, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(decltype(*p)), alignof(decltype(*p))))
 
         inline char* get_charvec(size_t sz, DebugInfo info) {
             return static_cast<char*>(alloc_normal(sz, alignof(char), info));

@@ -26,7 +26,7 @@ namespace utils {
         constexpr error::Error errNoTLS = error::Error("TLS object is not initialized for TLS connection. maybe initialzed for QUIC connection", error::ErrorCategory::validationerr);
         constexpr error::Error errNoQUIC = error::Error("TLS object is not initialized for QUIC connection. maybe initialized for TLS connection", error::ErrorCategory::validationerr);
         constexpr error::Error errSSLNotInitialized = error::Error("TLS object is not set up for connection. call setup_ssl() or setup_quic() before", error::ErrorCategory::validationerr);
-        constexpr error::Error errAlready = error::Error("TLS object is already set up", error::ErrorCategory::sslerr);
+        // constexpr error::Error errAlready = error::Error("TLS object is already set up", error::ErrorCategory::sslerr);
         constexpr error::Error errNotSupport = error::Error("not supported", error::ErrorCategory::fneterr);
         constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
 
@@ -63,7 +63,7 @@ namespace utils {
         };
 
         TLS::~TLS() {
-            delete_with_global_heap(static_cast<SSLContexts*>(opt), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
+            delete_glheap(static_cast<SSLContexts*>(opt));
         }
 
         fnet_dll_implement(std::pair<TLS, error::Error>) create_tls_with_error(const TLSConfig& conf) {
@@ -76,7 +76,7 @@ namespace utils {
                 return {TLS{}, error::memory_exhausted};
             }
             auto w = helper::defer([&] {
-                delete_with_global_heap(c, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
+                delete_glheap(c);
             });
             auto ssl = lazy::ssl::SSL_new_(static_cast<ssl_import::SSL_CTX*>(conf.ctx));
             if (!ssl) {
@@ -112,7 +112,7 @@ namespace utils {
                 return {TLS{}, error::memory_exhausted};
             }
             auto w = helper::defer([&] {
-                delete_with_global_heap(c, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
+                delete_glheap(c);
             });
             auto ssl = lazy::ssl::SSL_new_(static_cast<ssl_import::SSL_CTX*>(conf.ctx));
             if (!ssl) {
@@ -305,7 +305,6 @@ namespace utils {
         std::pair<view::wvec, error::Error> TLS::receive_tls_data(view::wvec data) {
             CHECK_TLS_CONN(c, {})
             auto limited = data.substr(0, (std::numeric_limits<int>::max)());
-            size_t red = 0;
             auto res = lazy::crypto::BIO_read_(c->wbio, limited.data(), int(limited.size()));
             if (res < 0) {
                 if (lazy::crypto::bssl::sp::BIO_should_retry_.find()) {

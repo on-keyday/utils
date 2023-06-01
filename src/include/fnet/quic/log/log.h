@@ -18,7 +18,7 @@
 namespace utils {
     namespace fnet::quic::log {
         struct ConnLogCallbacks {
-            void (*drop_packet)(std::shared_ptr<void>&, PacketType, packetnum::Value, error::Error) = nullptr;
+            void (*drop_packet)(std::shared_ptr<void>&, PacketType, packetnum::Value, error::Error, view::rvec raw_packet, bool is_decrypted) = nullptr;
             void (*debug)(std::shared_ptr<void>&, const char*) = nullptr;
             void (*sending_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool) = nullptr;
             void (*recv_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool) = nullptr;
@@ -32,9 +32,9 @@ namespace utils {
             std::shared_ptr<void> ctx;
             const ConnLogCallbacks* callbacks = nullptr;
 
-            void drop_packet(PacketType type, packetnum::Value val, error::Error err) {
+            void drop_packet(PacketType type, packetnum::Value val, error::Error err, view::rvec raw_paket, bool decrypted) {
                 if (callbacks && callbacks->drop_packet) {
-                    callbacks->drop_packet(ctx, type, val, err);
+                    callbacks->drop_packet(ctx, type, val, err, raw_paket, decrypted);
                 }
             }
 

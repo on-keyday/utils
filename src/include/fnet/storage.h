@@ -22,7 +22,7 @@ namespace utils {
 
                 template <class T>
                 void operator()(T* data) const {
-                    delete_with_global_heap(data, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T)));
+                    delete_glheap(data);
                 }
             };
         }  // namespace internal

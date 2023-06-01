@@ -22,7 +22,15 @@ namespace utils {
     namespace fnet::quic::ack {
 
         struct SentPacketHistory {
+           private:
             slib::hash_map<packetnum::Value, SentPacket> sent_packets[3];
+
+           public:
+            void reset() {
+                for (auto& sent_packet : sent_packets) {
+                    sent_packet.clear();
+                }
+            }
 
             template <class Alg>
             error::Error on_packet_sent(status::Status<Alg>& status, status::PacketNumberSpace space, SentPacket&& sent) {

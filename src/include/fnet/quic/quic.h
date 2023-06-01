@@ -32,7 +32,8 @@ namespace utils {
         template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
         std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r) {
             auto read = std::allocate_shared<stream::impl::RecvSorted<Lock>>(glheap_allocator<stream::impl::RecvSorted<Lock>>{});
-            r.set_receiver(read, stream::impl::reader_recv_handler<Lock, TConfig>);
+            using Saver = typename TConfig::stream_handler::recv_buf;
+            r.set_receiver(Saver(read, stream::impl::reader_recv_handler<Lock, TConfig>));
             return read;
         }
 
@@ -55,7 +56,11 @@ namespace utils {
         // but for usability using smart_ptr (std::shared_ptr<void>) for receiver callback
         namespace rawptr {
             using namespace use;
-            using DefaultStreamTypeConfig = stream::TypeConfig<std::mutex, stream::UserCallbackArgType<void*, std::shared_ptr<void>>>;
+            using DefaultStreamTypeConfig =
+                stream::TypeConfig<
+                    std::mutex,
+                    stream::UserStreamHandlerType<>,
+                    stream::UserConnCallbackArgType<void*>>;
             using DefaultTypeConfig = context::TypeConfig<std::mutex, DefaultStreamTypeConfig>;
             using Context = context::Context<DefaultTypeConfig>;
 

@@ -12,6 +12,9 @@
 #include <cstddef>
 #include "../../io/number.h"
 #include "../../helper/appender.h"
+#include "stream_id.h"
+#include "../../io/expandable_writer.h"
+#include "../../io/ex_number.h"
 
 namespace utils {
     namespace fnet::http2 {
@@ -82,11 +85,30 @@ namespace utils {
             const char* debug = nullptr;
         };
 
+        struct Error {
+            H2Error code = H2Error::none;
+            bool stream = false;
+            const char* debug = nullptr;
+
+            constexpr operator bool() const {
+                return code != H2Error::none;
+            }
+
+            constexpr void error(auto&& pb) const {
+                helper::appends(pb, "http2: ", stream ? "stream error: " : "connection error: ", error_msg(code));
+                if (debug) {
+                    helper::appends(pb, " debug=", debug);
+                }
+            }
+        };
+
+        constexpr auto no_error = Error{};
+
         constexpr auto http2_connection_preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
         namespace frame {
 
-            enum class FrameType : std::uint8_t {
+            enum class Type : std::uint8_t {
                 data = 0x0,
                 header = 0x1,
                 priority = 0x2,
@@ -96,22 +118,34 @@ namespace utils {
                 ping = 0x6,
                 goaway = 0x7,
                 window_update = 0x8,
-                continuous = 0x9,
+                continuation = 0x9,
                 invalid = 0xff,
             };
 
-            BEGIN_ENUM_STRING_MSG(FrameType, frame_name)
-            ENUM_STRING_MSG(FrameType::data, "DATA")
-            ENUM_STRING_MSG(FrameType::header, "HEADER")
-            ENUM_STRING_MSG(FrameType::priority, "PRIORITY")
-            ENUM_STRING_MSG(FrameType::rst_stream, "RST_STREAM")
-            ENUM_STRING_MSG(FrameType::settings, "SETTINGS")
-            ENUM_STRING_MSG(FrameType::push_promise, "PUSH_PROMISE")
-            ENUM_STRING_MSG(FrameType::ping, "PING")
-            ENUM_STRING_MSG(FrameType::goaway, "GOAWAY")
-            ENUM_STRING_MSG(FrameType::window_update, "WINDOW_UPDATE")
-            ENUM_STRING_MSG(FrameType::continuous, "CONTINUOUS")
+            BEGIN_ENUM_STRING_MSG(Type, frame_name)
+            ENUM_STRING_MSG(Type::data, "DATA")
+            ENUM_STRING_MSG(Type::header, "HEADER")
+            ENUM_STRING_MSG(Type::priority, "PRIORITY")
+            ENUM_STRING_MSG(Type::rst_stream, "RST_STREAM")
+            ENUM_STRING_MSG(Type::settings, "SETTINGS")
+            ENUM_STRING_MSG(Type::push_promise, "PUSH_PROMISE")
+            ENUM_STRING_MSG(Type::ping, "PING")
+            ENUM_STRING_MSG(Type::goaway, "GOAWAY")
+            ENUM_STRING_MSG(Type::window_update, "WINDOW_UPDATE")
+            ENUM_STRING_MSG(Type::continuation, "CONTINUOUS")
             END_ENUM_STRING_MSG("UNKNOWN")
+
+            constexpr bool is_stream_level(Type type) {
+                using t = frame::Type;
+                return type == t::data || type == t::header ||
+                       type == t::priority || type == t::rst_stream ||
+                       type == t::push_promise || type == t::continuation;
+            }
+
+            constexpr bool is_connection_level(Type type) {
+                using t = frame::Type;
+                return type == t::settings || type == t::ping || type == t::goaway;
+            }
 
             enum Flag : std::uint8_t {
                 none = 0x0,
@@ -166,14 +200,14 @@ namespace utils {
 
             struct Frame {
                 std::uint32_t len = 0;
-                const FrameType type = FrameType::invalid;
+                const Type type = Type::invalid;
                 Flag flag = Flag::none;
-                std::int32_t id = 0;
+                stream::ID id = stream::invalid_id;
 
                 constexpr Frame() = default;
 
                protected:
-                constexpr Frame(FrameType type)
+                constexpr Frame(Type type)
                     : type(type) {}
 
                 constexpr bool render_with_len(io::writer& w, std::uint32_t id, std::uint32_t len) const noexcept {
@@ -213,10 +247,11 @@ namespace utils {
                     byte tmp = 0;
                     return io::read_uint24(r, len) &&
                            r.read(view::wvec(&tmp, 1)) &&
-                           FrameType(tmp) == type &&
+                           Type(tmp) == type &&
                            r.read(view::wvec(&tmp, 1)) &&
                            (flag = Flag(tmp), true) &&
-                           io::read_num(r, id);
+                           io::read_num(r, id.id) &&
+                           (id.unset_reserved(), true);
                 }
 
                 constexpr bool render(io::writer& w) const noexcept {
@@ -244,24 +279,30 @@ namespace utils {
                 view::rvec data;
                 view::rvec pad;  // parse only
                 constexpr DataFrame()
-                    : Frame(FrameType::data) {}
+                    : Frame(Type::data) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
                     if (flag & Flag::padded) {
                         if (!io::read_num(sub, padding)) {
-                            return false;
+                            return Error{H2Error::frame_size};
                         }
                     }
                     else {
                         padding = 0;
                     }
-                    return sub.read(data, len - padding) &&
-                           sub.read(pad, padding) &&
-                           sub.empty();
+                    if (len >= padding) {
+                        return Error{H2Error::protocol};
+                    }
+                    if (!sub.read(data, len - padding) ||
+                        !sub.read(pad, padding) ||
+                        !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -286,16 +327,16 @@ namespace utils {
                 view::rvec data;
                 view::rvec pad;  // parse only
                 constexpr HeaderFrame()
-                    : Frame(FrameType::header) {}
+                    : Frame(Type::header) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
                     if (flag & Flag::padded) {
                         if (!io::read_num(sub, padding)) {
-                            return false;
+                            return Error{H2Error::frame_size};
                         }
                     }
                     else {
@@ -303,12 +344,15 @@ namespace utils {
                     }
                     if (flag & Flag::priority) {
                         if (!priority.parse(sub)) {
-                            return false;
+                            return Error{H2Error::frame_size};
                         }
                     }
-                    return sub.read(data, len - padding) &&
-                           sub.read(pad, padding) &&
-                           sub.empty();
+                    if (!sub.read(data, len - padding) ||
+                        !sub.read(pad, padding) ||
+                        !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -331,14 +375,20 @@ namespace utils {
             struct PriorityFrame : Frame {
                 Priority priority;
                 constexpr PriorityFrame()
-                    : Frame(FrameType::priority) {}
+                    : Frame(Type::priority) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
-                    return priority.parse(sub) && sub.empty();
+                    if (len != 5) {
+                        return Error{H2Error::frame_size};
+                    }
+                    if (!priority.parse(sub) || !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -356,14 +406,20 @@ namespace utils {
             struct RstStreamFrame : Frame {
                 std::uint32_t code = 0;
                 constexpr RstStreamFrame()
-                    : Frame(FrameType::rst_stream) {}
+                    : Frame(Type::rst_stream) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
-                    return io::read_num(sub, code) && sub.empty();
+                    if (len != 4) {
+                        return Error{H2Error::frame_size};
+                    }
+                    if (!io::read_num(sub, code) || !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -381,18 +437,25 @@ namespace utils {
             struct SettingsFrame : Frame {
                 view::rvec settings;
                 constexpr SettingsFrame()
-                    : Frame(FrameType::settings) {}
+                    : Frame(Type::settings) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::conn);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
-                    if (sub.remain().size() % 6 != 0) {
-                        return false;
+                    if (flag & Flag::ack) {
+                        if (len != 0) {
+                            return Error{H2Error::frame_size};
+                        }
+                    }
+                    else {
+                        if (len % 6 != 0) {
+                            return Error{H2Error::frame_size};
+                        }
                     }
                     settings = sub.remain();
-                    return true;
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -406,6 +469,22 @@ namespace utils {
                     return Frame::render_with_len(w, 0, settings.size()) &&
                            w.write(settings);
                 }
+
+                constexpr bool visit(auto&& cb) const {
+                    io::reader r{settings};
+                    std::uint16_t id = 0;
+                    std::uint32_t value = 0;
+                    while (!r.empty()) {
+                        if (!io::read_num(r, id) ||
+                            !io::read_num(r, value)) {
+                            return false;
+                        }
+                        if (!cb(id, value)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
             };
 
             struct PushPromiseFrame : Frame {
@@ -414,25 +493,31 @@ namespace utils {
                 view::rvec data;
                 view::rvec pad;
                 constexpr PushPromiseFrame()
-                    : Frame(FrameType::push_promise) {}
+                    : Frame(Type::push_promise) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
                     if (flag & Flag::padded) {
                         if (!io::read_num(sub, padding)) {
-                            return false;
+                            return Error{H2Error::frame_size};
                         }
                     }
                     else {
                         padding = 0;
                     }
-                    return io::read_num(r, promise) &&
-                           sub.read(data, len - padding) &&
-                           sub.read(pad, padding) &&
-                           sub.empty();
+                    if (padding > len) {
+                        return Error{H2Error::protocol};
+                    }
+                    if (!io::read_num(r, promise) ||
+                        !sub.read(data, len - padding) ||
+                        !sub.read(pad, padding) ||
+                        !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -455,14 +540,20 @@ namespace utils {
             struct PingFrame : Frame {
                 std::uint64_t opaque = 0;
                 constexpr PingFrame()
-                    : Frame(FrameType::ping) {}
+                    : Frame(Type::ping) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::conn);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
-                    return io::read_num(sub, opaque) && sub.empty();
+                    if (len != 8) {
+                        return Error{H2Error::frame_size};
+                    }
+                    if (!io::read_num(sub, opaque) || !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -479,16 +570,23 @@ namespace utils {
                 std::uint32_t code = 0;
                 view::rvec debug;
                 constexpr GoAwayFrame()
-                    : Frame(FrameType::goaway) {}
+                    : Frame(Type::goaway) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::conn);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
-                    return io::read_num(sub, processed_id) &&
-                           io::read_num(sub, code) &&
-                           sub.empty();
+                    if (len < 8) {
+                        return Error{H2Error::frame_size};
+                    }
+                    if (!io::read_num(sub, processed_id) ||
+                        !io::read_num(sub, code) ||
+                        !r.read(debug, len - 8) ||
+                        !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -510,14 +608,20 @@ namespace utils {
             struct WindowUpdateFrame : Frame {
                 std::int32_t increment = 0;
                 constexpr WindowUpdateFrame()
-                    : Frame(FrameType::window_update) {}
+                    : Frame(Type::window_update) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::both);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
-                    return io::read_num(sub, increment) && sub.empty();
+                    if (len != 4) {
+                        return Error{H2Error::frame_size};
+                    }
+                    if (!io::read_num(sub, increment) || !sub.empty()) {
+                        return Error{H2Error::internal};
+                    }
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -532,15 +636,15 @@ namespace utils {
             struct ContinuationFrame : Frame {
                 view::rvec data;
                 constexpr ContinuationFrame()
-                    : Frame(FrameType::continuous) {}
+                    : Frame(Type::continuation) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
                     data = sub.remain();
-                    return true;
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -558,16 +662,16 @@ namespace utils {
 
             struct UnknownFrame : Frame {
                 view::rvec data;
-                constexpr UnknownFrame(FrameType type)
+                constexpr UnknownFrame(Type type)
                     : Frame(type) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr Error parse(io::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::both);
                     if (!ok) {
-                        return false;
+                        return Error{H2Error::protocol};
                     }
                     data = sub.remain();
-                    return true;
+                    return no_error;
                 }
 
                 constexpr size_t data_len() const noexcept {
@@ -622,30 +726,34 @@ namespace utils {
             // if skip succeedes returns true otherwise returns false
             fnet_dll_export(bool) pass_frame(const char* text, size_t size, size_t& red);*/
 
-            constexpr bool parse_frame(io::reader& r, auto&& cb) {
+            constexpr Error parse_frame(io::reader& r, size_t limit, auto&& cb) {
                 if (r.remain().size() < 9) {
-                    return false;
+                    return no_error;  // no buffer
                 }
                 auto peek = r.peeker();
                 std::uint32_t len = 0;
                 io::read_uint24(peek, len);
-                if (r.remain().size() < 9 + len) {
-                    return false;
+                if (9 + len > limit) {
+                    return Error{H2Error::frame_size};
                 }
-                const auto type = FrameType(peek.top());
+                if (r.remain().size() < 9 + len) {
+                    return no_error;  // no buffer
+                }
+                const auto type = Type(peek.top());
                 const auto base = r.offset();
                 peek.offset(base);
                 UnknownFrame unknown{type};
-                unknown.parse(r);
-#define F(FrameT)                         \
-    case frame_typeof<FrameT>: {          \
-        FrameT frame;                     \
-        if (!frame.parse(r)) {            \
-            cb(frame, unknown, true);     \
-            r = peek;                     \
-            return false;                 \
-        }                                 \
-        return cb(frame, unknown, false); \
+                unknown.parse(peek);
+#define F(FrameT)                        \
+    case frame_typeof<FrameT>: {         \
+        FrameT frame;                    \
+        if (auto err = frame.parse(r)) { \
+            cb(frame, unknown, err);     \
+            r = peek;                    \
+            return err;                  \
+        }                                \
+        cb(frame, unknown, no_error);    \
+        return no_error;                 \
     }
                 switch (type) {
                     F(DataFrame)
@@ -659,8 +767,8 @@ namespace utils {
                     F(WindowUpdateFrame)
                     F(ContinuationFrame)
                     default:
-                        cb(unknown, unknown, true);
-                        return false;
+                        cb(unknown, unknown, no_error);
+                        return no_error;
                 }
 #undef F
             }
@@ -686,15 +794,23 @@ namespace utils {
 #undef F
             }
 
-            constexpr bool render_frame(io::writer& w, const auto& frame) {
+            template <class T>
+            constexpr bool render_frame(io::expand_writer<T>& ew, const auto& frame) {
                 const auto len = 9 + frame.data_len();
+                ew.maybe_expand(len);
+                auto w = ew.writer();
                 if (w.remain().size() < len) {
                     return false;
                 }
-                return frame.render(w);
+                if (!frame.render(w)) {
+                    return false;
+                }
+                ew.offset(len);
+                return true;
             }
 
-            constexpr bool render_frame(io::writer& w, const Frame& frame) {
+            template <class T>
+            constexpr bool render_frame(io::expand_writer<T>& w, const Frame& frame) {
 #define F(FrameI)              \
     case frame_typeof<FrameI>: \
         return render_frame(w, static_cast<const FrameI&>(frame));

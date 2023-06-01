@@ -47,8 +47,8 @@ namespace utils {
                 if (pn < ignore_under) {
                     return true;
                 }
-                auto it = ranges.begin();
-                for (; it != ranges.end(); it++) {
+                auto it = ranges.rbegin();
+                for (; it != ranges.rend(); it++) {
                     if (it->begin <= pn && pn <= it->end) {
                         return true;
                     }

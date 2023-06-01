@@ -107,7 +107,7 @@ namespace utils {
         HTTP2::~HTTP2() {
             auto c = check_opt(opt, err);
             if (c) {
-                delete_with_global_heap(c, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*c), alignof(HTTP2Connection)));
+                delete_glheap(c);
             }
         }
 
@@ -253,7 +253,7 @@ namespace utils {
                 }
                 auto set = static_cast<frame::SettingsFrame*>(f);
                 auto update_settings = [&](std::uint16_t key, std::uint32_t value) {
-                    using sk = h2set::Skey;
+                    using sk = h2set::SettingKey;
                     using e = H2Error;
                     auto& settings = s->conn.state.recv.settings;
                     if (key == k(sk::table_size)) {

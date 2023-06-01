@@ -160,7 +160,7 @@ namespace utils {
                 return nullptr;
             }
             auto r = helper::defer([&] {
-                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+                delete_glheap(obj);
             });
             auto event = CreateEventW(nullptr, true, false, nullptr);
             if (!event) {
@@ -227,7 +227,7 @@ namespace utils {
                 return nullptr;
             }
             auto r = helper::defer([&] {
-                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+                delete_glheap(obj);
             });
             obj->hint.ai_family = addr.address_family;
             obj->hint.ai_socktype = addr.socket_type;
@@ -289,7 +289,7 @@ namespace utils {
         WaitAddrInfo::~WaitAddrInfo() {
             if (opt) {
                 auto obj = static_cast<WaitObject*>(opt);
-                delete_with_global_heap(obj, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+                delete_glheap(obj);
             }
         }
 

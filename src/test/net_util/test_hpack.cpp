@@ -6,11 +6,14 @@
 */
 
 #include <net_util/hpack/hpack_encode.h>
+#include <net_util/hpack/hpack.h>
 #include <string>
 #include <fnet/quic/crypto/keys.h>
 #include <number/array.h>
 #include <view/expand_iovec.h>
 #include <memory>
+#include <map>
+#include <deque>
 using string = utils::number::Array<char, 100>;
 using rvec = utils::view::basic_rvec<char, utils::byte>;
 
@@ -32,9 +35,94 @@ constexpr bool decode(utils::fnet::quic::crypto::KeyMaterial<s> data, const char
     return utils::hpack::decode_huffman(val, d) && val == rvec(expect);
 }
 
-int main() {
+void check_string_encoding() {
     static_assert(encode_decode("object identifier z"));
     static_assert(encode_decode("\x32\x44\xff"));
     bool d = encode_decode("object identifierz");
     static_assert(decode(utils::fnet::quic::crypto::make_material_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"), "Mon, 21 Oct 2013 20:13:21 GMT"));
+}
+
+using Header = std::map<std::string, std::string>;
+using Table = std::deque<std::pair<std::string, std::string>>;
+
+struct Tables {
+    Table encode_table;
+    Table decode_table;
+    std::uint32_t max_size_limit = 0;
+    std::uint32_t encode_size_limit = 0;
+    std::uint32_t decode_size_limit = 0;
+
+    void set_limit(std::uint32_t lim) {
+        max_size_limit = lim;
+        encode_size_limit = lim;
+        decode_size_limit = lim;
+    }
+};
+
+void check_header_compression_part(Header& encode_header, Tables& table) {
+    Header decode_header;
+    std::string payload;
+    auto on_modify = [](auto&& key, auto&& value, bool insert) {
+        ;
+    };
+    auto err = utils::hpack::encode(payload, table.encode_table, encode_header, table.encode_size_limit, true, on_modify);
+    assert(err == utils::hpack::HpackError::none);
+    err = utils::hpack::decode<std::string>(payload, table.decode_table, utils::hpack::emplacer(decode_header), table.decode_size_limit, table.max_size_limit, on_modify);
+    assert(err == utils::hpack::HpackError::none);
+    assert(encode_header == decode_header);
+    assert(table.encode_table == table.decode_table);
+}
+
+void check_header_compression_resize(std::uint32_t new_size, Tables& table) {
+    Header decode_header;
+    std::string payload;
+    auto on_modify = [](auto&& key, auto&& value, bool insert) {
+        ;
+    };
+    table.encode_size_limit = new_size;
+    utils::io::expand_writer<std::string&> w{payload};
+    auto err = utils::hpack::encode_table_size_update(w, new_size, table.encode_table, on_modify);
+    assert(err == utils::hpack::HpackError::none);
+    err = utils::hpack::decode<std::string>(
+        payload, table.decode_table, [](auto&&...) {}, table.decode_size_limit, table.max_size_limit, on_modify);
+    assert(err == utils::hpack::HpackError::none);
+    assert(table.encode_table == table.decode_table);
+}
+
+void check_header_compression() {
+    Header encode_header;
+    Tables tables;
+    tables.set_limit(300);
+    encode_header[":method"] = "GET";
+    encode_header[":path"] = "/";
+    encode_header[":authority"] = "www.google.com";
+    encode_header[":scheme"] = "https";
+    encode_header["accept"] = "*/*";
+    encode_header["upgrade"] = "websocket";
+    encode_header["unexpected"] = "value";
+    check_header_compression_part(encode_header, tables);
+    encode_header[":path"] = "/teapot";
+    encode_header["upgrade"] = "h3";
+    check_header_compression_part(encode_header, tables);
+    encode_header.clear();
+    encode_header[":method"] = "GET";
+    encode_header[":path"] = "/";
+    encode_header[":authority"] = "www.google.com";
+    encode_header[":scheme"] = "https";
+    check_header_compression_part(encode_header, tables);
+    check_header_compression_resize(0, tables);
+    check_header_compression_resize(200, tables);
+    encode_header[":method"] = "GET";
+    encode_header[":path"] = "/";
+    encode_header[":authority"] = "www.google.com";
+    encode_header[":scheme"] = "https";
+    for (auto i = 0; i < 20; i++) {
+        encode_header["abstract" + utils::number::to_string<std::string>(i)] = "object";
+    }
+    check_header_compression_part(encode_header, tables);
+}
+
+int main() {
+    check_string_encoding();
+    check_header_compression();
 }

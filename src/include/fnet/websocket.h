@@ -10,6 +10,7 @@
 #include "dll/dllh.h"
 #include "../helper/appender.h"
 #include "../view/charvec.h"
+#include "../view/sized.h"
 #include "../helper/pushbacker.h"
 #include "../helper/readutil.h"
 #include <cstdint>
@@ -17,161 +18,181 @@
 #include "../core/byte.h"
 #include "storage.h"
 #include "../io/number.h"
+#include "../helper/defer.h"
+#include "../bits/flags.h"
+#include "../unicode/utf/convert.h"
 
 namespace utils {
-    namespace fnet {
+    namespace fnet::websocket {
 
-        namespace websocket {
+        enum class FrameType {
+            continuous = 0x00,
+            text = 0x01,
+            binary = 0x02,
+            closing = 0x08,
+            ping = 0x09,
+            pong = 0x0A,
+        };
 
-            enum FrameType {
-                empty = 0xF0,
-                continuous = 0x00,
-                text = 0x01,
-                binary = 0x02,
-                closing = 0x08,
-                ping = 0x09,
-                pong = 0x0A,
-                mask_fin = 0x80,
-                mask_reserved = 0x70,
-                mask_opcode = 0x0f,
-            };
+        struct FrameFlags {
+           private:
+            bits::flags_t<byte, 1, 3, 4> flags;
+            bits_flag_alias_method(flags, 2, opcode_raw);
 
-            struct Frame {
-                FrameType type = {};
-                bool fin = false;
-                bool masked = false;
-                size_t len = 0;  // only parse
-                std::uint32_t maskkey = 0;
-                view::rvec data;
-            };
+           public:
+            bits_flag_alias_method(flags, 0, fin);
+            bits_flag_alias_method(flags, 1, reserved);
+            constexpr FrameType opcode() const {
+                return FrameType(opcode_raw());
+            }
 
-            // write_frame writes websocket frame
-            // if no_mask flag is set
-            // write_frame interprets frame.data has already been masked with frame.maskkey
-            bool write_frame(auto& buf, const Frame& frame, bool no_mask = false) {
-                if (frame.len && !frame.data) {
-                    return false;
-                }
-                const byte opcode = frame.type & websocket::mask_opcode;
-                const byte finmask = frame.fin ? mask_fin : 0;
-                const byte first_byte = opcode | finmask;
-                int len = 0;
-                byte lens[9]{};
-                io::writer w{lens};
-                const auto len = frame.data.size();
-                if (len <= 125) {
-                    w.write(byte(len), 1);
-                    len = 1;
-                }
-                else if (len <= 0xffff) {
-                    w.write(126, 1);
-                    io::write_num(w, std::uint16_t(len));
-                    len = 3;
-                }
-                else {
-                    w.write(127, 1);
-                    io::write_num(w, std::uint64_t(len));
-                    len = 9;
-                }
-                if (frame.masked) {
-                    lens[0] |= 0x80;
-                }
-                buf.push_back(first_byte);
-                helper::append(buf, view::CharVec(lens, len));
-                if (frame.masked) {
-                    endian::Buf<std::uint32_t> keys;
-                    keys.write_be(frame.maskkey);
-                    helper::append(buf, keys);
-                    if (no_mask) {
-                        helper::append(buf, frame.data);
-                    }
-                    else {
-                        for (size_t i = 0; i < frame.len; i++) {
-                            buf.push_back(frame.data[i] ^ keys[i % 4]);
-                        }
-                    }
-                }
-                else {
+            constexpr bool set_opcode(FrameType op) {
+                return set_opcode_raw(byte(op));
+            }
+
+            constexpr void set(byte h) {
+                flags.as_value() = h;
+            }
+
+            constexpr byte get() const {
+                return flags.as_value();
+            }
+        };
+
+        struct Frame {
+            FrameFlags flags;
+            bool masked = false;
+            std::uint64_t len = 0;  // only parse
+            std::uint32_t maskkey = 0;
+            view::rvec data;
+        };
+
+        namespace internal {
+            constexpr view::wvec cast_to_wvec(view::rvec data) {
+                return view::wvec(const_cast<byte*>(data.data()), data.size());
+            }
+        }  // namespace internal
+
+        constexpr void apply_mask(view::wvec data, std::uint32_t maskkey, auto&& apply_to) {
+            endian::Buf<std::uint32_t> keys;
+            keys.write_be(maskkey);
+            for (size_t i = 0; i < data.size(); i++) {
+                data[i] ^= keys[i % 4];
+                apply_to(data[i], data[i] ^ keys[i % 4]);
+            }
+        }
+
+        // write_frame writes websocket frame
+        // if no_mask flag is set
+        // write_frame interprets frame.data has already been masked with frame.maskkey
+        constexpr bool write_frame(auto& buf, const Frame& frame, bool no_mask = false) {
+            if (frame.data.null()) {
+                return false;
+            }
+            int len = 0;
+            byte lens[9]{};
+            io::writer w{lens};
+            const auto len = frame.data.size();
+            if (len <= 125) {
+                w.write(byte(len), 1);
+                len = 1;
+            }
+            else if (len <= 0xffff) {
+                w.write(126, 1);
+                io::write_num(w, std::uint16_t(len));
+                len = 3;
+            }
+            else {
+                w.write(127, 1);
+                io::write_num(w, std::uint64_t(len));
+                len = 9;
+            }
+            if (frame.masked) {
+                lens[0] |= 0x80;
+            }
+            buf.push_back(frame.flags.get());
+            helper::append(buf, view::CharVec(lens, len));
+            if (frame.masked) {
+                endian::Buf<std::uint32_t> keys;
+                keys.write_be(frame.maskkey);
+                helper::append(buf, keys);
+                if (no_mask) {
                     helper::append(buf, frame.data);
                 }
-                return true;
-            }
-
-            // read_frame_head reads frame before data payload
-            // this function returns true if enough length exists including payload
-            // otherwise returns false and red would not updated
-            constexpr bool read_frame_head(Frame& frame, io::reader& r) {
-                auto [first_bytes, ok] = r.read(2);
-                if (!ok) {
-                    return false;
-                }
-                const byte first_byte = first_bytes[0];
-                frame.fin = (first_byte & mask_fin) ? true : false;
-                frame.type = FrameType(first_byte & mask_opcode);
-                const byte mask_len = first_bytes[1];
-                const byte len = mask_len & 0x7f;
-                const bool mask = (mask_len & 0x80 ? true : false);
-                frame.masked = mask;
-                size_t offset = 0;
-                if (len <= 125) {
-                    frame.len = len;
-                }
-                else if (len == 126) {
-                    std::uint16_t data;
-                    if (!io::read_num(r, data)) {
-                        return false;
-                    }
-                    frame.len = data;
-                }
                 else {
-                    if (len != 127) {
-                        int* ptr = nullptr;
-                        *ptr = 0;  // terminate
+                    for (size_t i = 0; i < frame.len; i++) {
+                        buf.push_back(frame.data[i] ^ keys[i % 4]);
                     }
-                    std::uint64_t data;
-                    if (!io::read_num(r, data)) {
-                        return false;
-                    }
-                    frame.len = data;
+                    apply_mask(internal::cast_to_wvec(frame.data), frame.maskkey, [&](byte&, byte d) {
+                        buf.push_back(d);
+                    });
                 }
-                if (mask) {
-                    if (!io::read_num(r, frame.maskkey)) {
-                        return false;
-                    }
-                }
-                if (!r.read(frame.data, frame.len)) {
+            }
+            else {
+                helper::append(buf, frame.data);
+            }
+            return true;
+        }
+
+        // read_frame_head reads frame before data payload
+        // this function returns true if enough length exists including payload
+        // otherwise returns false and red would not updated
+        constexpr bool read_frame(io::reader& r, Frame& frame) {
+            auto ofs = r.offset();
+            auto rollback = helper::defer([&] {
+                r.reset(ofs);
+            });
+            auto [first_bytes, ok] = r.read(2);
+            if (!ok) {
+                return false;
+            }
+            frame.flags.set(first_bytes[0]);
+            const byte len = first_bytes[1] & 0x7f;
+            frame.masked = bool(first_bytes[1] & 0x80);
+            size_t offset = 0;
+            if (len <= 125) {
+                frame.len = len;
+            }
+            else if (len == 126) {
+                std::uint16_t data;
+                if (!io::read_num(r, data)) {
                     return false;
                 }
-                return true;
+                frame.len = data;
             }
-
-            void decode_payload(auto& buf, auto&& view, size_t len, std::uint32_t maskkey) {
-                endian::Buf<std::uint32_t> keys;
-                keys.write_be(maskkey);
-                for (size_t i = 0; i < len; i++) {
-                    buf.push_back(view[i] ^ keys[i % 4]);
+            else {
+                if (len != 127) {
+                    return false;  // unexpected!!!
+                }
+                std::uint64_t data;
+                if (!io::read_num(r, data)) {
+                    return false;
+                }
+                frame.len = data;
+            }
+            if (frame.masked) {
+                if (!io::read_num(r, frame.maskkey)) {
+                    return false;
                 }
             }
-
-            // tmp_decode_payload decodes payload with a
-            void tmp_decode_payload(char* dec, size_t len, std::uint32_t maskkey, auto&& callback) {
-                if (!dec || !len) {
-                    return;
-                }
-                struct Uncode {
-                    char* dec;
-                    size_t len;
-                    std::uint32_t maskkey;
-                    ~Uncode() {
-                        auto vec = helper::CharVecPushbacker(dec, len);
-                        decode_payload(vec, dec, len, maskkey);
-                    }
-                } u{dec, len, maskkey};
-                auto vec = helper::CharVecPushbacker(dec, len);
-                decode_payload(vec, dec, len, maskkey);
-                callback(dec, len);
+            if (!r.read(frame.data, frame.len)) {
+                return false;
             }
-        }  // namespace websocket
+            rollback.cancel();
+            return true;
+        }
+
+        // tmp_decode_payload decodes payload with a
+        void tmp_decode_payload(view::wvec buf, std::uint32_t maskkey, auto&& callback) {
+            auto f = [&] {
+                apply_mask(buf, maskkey, [](byte& to, byte d) {
+                    to = d;
+                });
+            };
+            const auto u = helper::defer(f);
+            f();
+            callback();
+        }
 
         struct WebSocket {
            private:
@@ -185,7 +206,7 @@ namespace utils {
 
            public:
             void add_input(auto&& data, size_t len) {
-                helper::append(input, helper::RefSizedView(data, len));
+                helper::append(input, view::SizedView(data, len));
             }
 
             size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
@@ -200,28 +221,33 @@ namespace utils {
                 return seq.rptr;
             }
 
-            bool write_frame(const websocket::Frame& frame, bool no_mask = false) {
+            bool write_frame(const Frame& frame, bool no_mask = false) {
                 return websocket::write_frame(output, frame, false);
             }
 
             bool read_frame(auto&& callback, bool peek = false) {
-                size_t red = 0;
                 websocket::Frame frame;
-                if (!websocket::read_frame(frame, input.text(), input.size(), red)) {
+                io::reader r{input};
+                if (!read_frame(frame, r)) {
                     return false;
                 }
-                if (frame.masked) {
-                    websocket::tmp_decode_payload(
-                        input.text() + red - frame.len,
-                        frame.len, frame.maskkey, [&](auto dec, auto len) {
+                if (frame.masked && peek) {
+                    tmp_decode_payload(
+                        internal::cast_to_wvec(frame.data),
+                        frame.maskkey, [&](auto p) {
                             callback(frame);
                         });
                 }
                 else {
+                    if (frame.masked) {
+                        apply_mask(internal::cast_to_wvec(frame.data), frame.maskkey, [](byte& to, byte d) {
+                            to = d;
+                        });
+                    }
                     callback(frame);
                 }
                 if (!peek) {
-                    in.shift(red);
+                    input.shift_front(r.offset());
                 }
                 return true;
             }
@@ -237,7 +263,9 @@ namespace utils {
 
             bool write_data(websocket::FrameType type, view::rvec data, bool fin = true) {
                 websocket::Frame frame;
-                frame.type = type;
+                if (!frame.flags.set_opcode(type)) {
+                    return false;
+                }
                 if (!server) {
                     frame.masked = true;
                     frame.maskkey = genmask();
@@ -246,28 +274,36 @@ namespace utils {
                     frame.masked = false;
                 }
                 frame.data = data;
-                frame.fin = fin;
+                frame.flags.set_fin(fin);
                 return write_frame(frame);
             }
 
             bool write_binary(view::rvec data, bool fin = true) {
-                return write_data(websocket::binary, data, fin);
+                return write_data(FrameType::binary, data, fin);
             }
 
+            bool write_text_raw(view::rvec data, bool fin = true) {
+                return write_data(FrameType::text, data, fin);
+            }
+
+            // this validates UTF-8 text
             bool write_text(view::rvec data, bool fin = true) {
-                return write_data(websocket::text, data, fin);
+                if (!utf::convert<0, 4>(data, helper::nop, false, false)) {
+                    return false;
+                }
+                return write_text_raw(data, fin);
             }
 
             bool write_ping(view::rvec data) {
-                return write_data(websocket::ping, data);
+                return write_data(FrameType::ping, data);
             }
 
             bool write_pong(view::rvec data) {
-                return write_data(websocket::pong, data);
+                return write_data(FrameType::pong, data);
             }
 
             bool write_close(view::rvec data) {
-                return write_data(websocket::closing, data);
+                return write_data(FrameType::closing, data);
             }
 
             bool close(std::uint16_t code) {
@@ -289,5 +325,6 @@ namespace utils {
                 server = is_server;
             }
         };
-    }  // namespace fnet
+
+    }  // namespace fnet::websocket
 }  // namespace utils

@@ -84,8 +84,9 @@ int main() {
     RecvQ q;
     conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
         auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
-        d->receiver.set_receiver(recv,
-                                 utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>);
+        using H = utils::fnet::quic::stream::impl::FragmentSaver<>;
+        d->receiver.set_receiver(H(std::move(recv),
+                                   utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
         static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
     });
 

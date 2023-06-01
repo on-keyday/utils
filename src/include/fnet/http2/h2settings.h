@@ -10,32 +10,21 @@
 #include <helper/pushbacker.h>
 
 namespace utils {
-    namespace fnet {
-        namespace h2frame {
-            enum class Status {
-                idle,
-                closed,
-                open,
-                half_closed_remote,
-                half_closed_local,
-                reserved_remote,
-                reserved_local,
-                unknown,
+    namespace fnet::http2 {
+        namespace setting {
+            enum class SettingKey : std::uint16_t {
+                table_size = 1,
+                enable_push = 2,
+                max_concurrent = 3,
+                initial_windows_size = 4,
+                max_frame_size = 5,
+                header_list_size = 6,
             };
 
-            BEGIN_ENUM_STRING_MSG(Status, status_name)
-            ENUM_STRING_MSG(Status::idle, "idle")
-            ENUM_STRING_MSG(Status::closed, "closed")
-            ENUM_STRING_MSG(Status::open, "open")
-            ENUM_STRING_MSG(Status::half_closed_local, "half_closed_local")
-            ENUM_STRING_MSG(Status::half_closed_remote, "half_closed_remote")
-            ENUM_STRING_MSG(Status::reserved_local, "reserved_local")
-            ENUM_STRING_MSG(Status::reserved_remote, "reserved_remote")
-            END_ENUM_STRING_MSG("unknown")
-        }  // namespace h2frame
+            constexpr auto k(SettingKey v) {
+                return (std::uint16_t)v;
+            }
 
-        namespace h2set {
-            using Skey = utils::net::http2::SettingKey;
             using Vec = helper::CharVecPushbacker<char>;
             struct PredefinedSettings {
                 std::uint32_t header_table_size = 4096;
@@ -58,7 +47,7 @@ namespace utils {
 
             constexpr bool write_predefined_settings(Vec& vec, PredefinedSettings& settings, bool only_not_default = false) {
                 constexpr auto default_ = PredefinedSettings();
-                using sk = Skey;
+                using sk = SettingKey;
                 auto write = [&](std::uint16_t key, std::uint32_t value) {
                     write_key_value(vec, key, value);
                 };
@@ -118,6 +107,7 @@ namespace utils {
                 return true;
             }
 
-        }  // namespace h2set
-    }      // namespace fnet
+        }  // namespace setting
+
+    }  // namespace fnet::http2
 }  // namespace utils

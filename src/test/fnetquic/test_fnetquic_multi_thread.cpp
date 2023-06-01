@@ -216,7 +216,7 @@ void rtt_event(std::shared_ptr<void>&, const utils::fnet::quic::status::RTT& rtt
 }
 
 utils::fnet::quic::log::ConnLogCallbacks cbs{
-    .drop_packet = [](std::shared_ptr<void>&, utils::fnet::quic::PacketType, utils::fnet::quic::packetnum::Value, utils::fnet::error::Error err) { utils::wrap::cout_wrap() << utils::wrap::packln("drop packet: ", err.error<std::string>()); },
+    .drop_packet = [](std::shared_ptr<void>&, utils::fnet::quic::PacketType, utils::fnet::quic::packetnum::Value, utils::fnet::error::Error err, utils::view::rvec packet, bool decrypted) { utils::wrap::cout_wrap() << utils::wrap::packln("drop packet: ", err.error<std::string>()); },
     .debug = [](std::shared_ptr<void>&, const char* msg) { utils::wrap::cout_wrap() << msg << "\n"; },
     .sending_packet = log_packet,
     .recv_packet = log_packet,

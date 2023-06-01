@@ -38,7 +38,7 @@ namespace utils {
             return is_LongPacket(type) && type != PacketType::Retry;
         }
 
-        constexpr bool is_CryptoPacket(PacketType type) noexcept {
+        constexpr bool is_ProtectedPacket(PacketType type) noexcept {
             return type == PacketType::Initial ||
                    type == PacketType::ZeroRTT ||
                    type == PacketType::Handshake ||
@@ -150,7 +150,7 @@ namespace utils {
                 }
             }
 
-            constexpr byte flags() const {
+            constexpr byte specs() const {
                 return raw() & spec_mask();
             }
 
@@ -178,7 +178,7 @@ namespace utils {
                 return raw() & 0x0C;
             }
 
-            constexpr bool spin_bit() const {
+            constexpr bool spin() const {
                 if (is_short()) {
                     return raw() & 0x20;
                 }

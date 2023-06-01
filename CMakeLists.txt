@@ -90,21 +90,22 @@ add_executable(reflect "src/test/reflect/test_reflect.cpp")
 add_executable(qpack "src/test/net_util/test_qpack.cpp")
 add_executable(span "src/test/view/test_span.cpp")
 add_executable(unicode_data "src/test/unicode/test_unicode_data.cpp")
-add_executable(fiber_coro "src/test/coro/test_fiber_coro.cpp")
+add_executable(quic_coro "src/test/coro/test_quic_coro.cpp")
+add_executable(coro_nest "src/test/coro/test_coro_nest.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
 add_executable(fnet_tls "src/test/fnet/test_fnet_tls.cpp")
 add_executable(fnet_http "src/test/fnet/test_fnet_http.cpp")
-add_executable(fnet_http2 "src/test/fnet/test_fnet_http2.cpp")
-add_executable(fnetquic_initial "src/test/fnet/test_fnetquic_initial.cpp")
-add_executable(fnetquic_context "src/test/fnet/test_fnetquic_context.cpp")
+# add_executable(fnet_http2 "src/test/fnet/test_fnet_http2.cpp")
+add_executable(fnetquic_initial "src/test/fnetquic/test_fnetquic_initial.cpp")
+add_executable(fnetquic_context "src/test/fnetquic/test_fnetquic_context.cpp")
 add_executable(fnet_error "src/test/fnet/test_fnet_error.cpp")
 add_executable(fnet_stun "src/test/fnet/test_fnet_stun.cpp")
-add_executable(fnetquic_frame "src/test/fnet/test_fnetquic_frame.cpp")
-add_executable(fnetquic_packet "src/test/fnet/test_fnetquic_packet.cpp")
-add_executable(fnetquic_stream "src/test/fnet/test_fnetquic_stream.cpp")
-add_executable(fnetquic_multi_thread "src/test/fnet/test_fnetquic_multi_thread.cpp")
+add_executable(fnetquic_frame "src/test/fnetquic/test_fnetquic_frame.cpp")
+add_executable(fnetquic_packet "src/test/fnetquic/test_fnetquic_packet.cpp")
+add_executable(fnetquic_stream "src/test/fnetquic/test_fnetquic_stream.cpp")
+add_executable(fnetquic_multi_thread "src/test/fnetquic/test_fnetquic_multi_thread.cpp")
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 
 
@@ -188,7 +189,7 @@ target_sources(fnet PRIVATE
   "src/lib/fnet/addrinfo.cpp"
   "src/lib/fnet/tls.cpp"
   "src/lib/fnet/tlsopt.cpp"
-  "src/lib/fnet/http2.cpp"
+  #"src/lib/fnet/http2.cpp"
   "src/lib/fnet/heaps.cpp"
   "src/lib/fnet/address.cpp"
   "src/lib/fnet/sockopt.cpp"
@@ -219,9 +220,15 @@ target_sources(fnetserv PRIVATE
   "src/lib/fnet/server/httpserv.cpp"
 )
 
+if(WIN32)
 target_sources(coro PRIVATE 
   "src/lib/coro/coro_win.cpp"
 )
+else()
+target_sources(coro PRIVATE
+  "src/lib/coro/coro_linux.cpp"
+)
+endif()
 
 
 
@@ -253,7 +260,7 @@ target_link_libraries(unicode_data utils)
 target_link_libraries(fnet_socket fnet)
 target_link_libraries(fnet_tls fnet)
 target_link_libraries(fnet_http fnet utils)
-target_link_libraries(fnet_http2 fnet)
+# target_link_libraries(fnet_http2 fnet)
 target_link_libraries(fnetquic_initial fnet)
 target_link_libraries(fnetquic_context fnet)
 target_link_libraries(fnet_error fnet)
@@ -267,7 +274,8 @@ target_link_libraries(fnet_dns fnet)
 target_link_libraries(fnetserv fnet)
 
 # test(libcoro)
-target_link_libraries(fiber_coro coro fnet utils)
+target_link_libraries(quic_coro coro fnet utils)
+target_link_libraries(coro_nest coro utils)
 
 # tools
 target_link_libraries(ifacegen utils)

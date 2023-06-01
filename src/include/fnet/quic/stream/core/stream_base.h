@@ -166,14 +166,14 @@ namespace utils {
             // settings by peer
             constexpr void set_initial(const InitialLimits& ini, Direction self) {
                 if (id.type() == StreamType::uni) {
-                    state.update_send_limit(ini.uni_stream_data_limit);
+                    state.set_send_limit(ini.uni_stream_data_limit);
                 }
                 else if (id.type() == StreamType::bidi) {
                     if (id.dir() == self) {
-                        state.update_send_limit(ini.bidi_stream_data_remote_limit);
+                        state.set_send_limit(ini.bidi_stream_data_remote_limit);
                     }
                     else {
-                        state.update_send_limit(ini.bidi_stream_data_local_limit);
+                        state.set_send_limit(ini.bidi_stream_data_local_limit);
                     }
                 }
             }
@@ -482,7 +482,7 @@ namespace utils {
                 ConnectionBase<Config> conn;
                 byte data[63];
                 io::writer w{data};
-                conn.state.conn.send.update_limit(1000);
+                conn.state.conn_flow.send.update_limit(1000);
                 base.state.update_send_limit(1000);
                 byte src[11000]{};
                 base.data.src = src;
@@ -498,7 +498,8 @@ namespace utils {
                 auto [result1, ig3] = base.send_stream(conn, fw, [](Fragment frag) {
                     return frag.offset == 61 && frag.fragment.size() == 2;
                 });
-                return result == IOResult::ok;
+                (void)ig3;
+                return result1 == IOResult::ok;
             }
 
             static_assert(check_stream_send());

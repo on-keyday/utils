@@ -9,10 +9,11 @@
 #include "coro_export.h"
 #include "ring.h"
 #include "../helper/defer.h"
+#include <cstddef>
 
 namespace utils {
     namespace coro {
-        struct M;
+
         enum class CState {
             idle,
             running,
@@ -36,6 +37,7 @@ namespace utils {
             void* handle = nullptr;
 
             static void coro_sub(C*);
+
             bool construct_platform(size_t max_running, size_t max_idle, Resource res);
             void destruct_platform();
             void suspend_platform();
@@ -66,7 +68,7 @@ namespace utils {
                 exchange(c);
             }
 
-            void* set_common_context(void* v) {
+            void* set_thread_context(void* v) {
                 void* prev = nullptr;
                 if (is_main()) {
                     prev = user;
@@ -79,7 +81,7 @@ namespace utils {
                 return prev;
             }
 
-            void* get_common_context() const {
+            void* get_thread_context() const {
                 if (is_main()) {
                     return user;
                 }

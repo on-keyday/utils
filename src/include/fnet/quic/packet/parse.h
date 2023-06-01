@@ -137,7 +137,7 @@ namespace utils {
                               std::is_same_v<P, HandshakePacketCipher> ||
                               std::is_same_v<P, ZeroRTTPacketCipher> ||
                               std::is_same_v<P, OneRTTPacketCipher>) {
-                    if (!check_connID(packet)) {
+                    if (!check_connID(packet, src)) {
                         return true;  // ignore packet
                     }
                     CryptoPacket crp;
@@ -207,7 +207,7 @@ namespace utils {
                 summary.type = PacketType::OneRTT;
                 summary.dstID = packet.dstID;
                 summary.packet_number = pn;
-                summary.spin = packet.flags.spin_bit();
+                summary.spin = packet.flags.spin();
                 summary.key_bit = packet.flags.key_phase();
             }
             else if constexpr (std::is_same_v<T, RetryPacket>) {

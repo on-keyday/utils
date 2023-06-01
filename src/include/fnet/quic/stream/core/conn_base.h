@@ -79,24 +79,24 @@ namespace utils {
             // cb is std::uint64_t(std::uint64_t avail_size,std::uint64_t limit)
             constexpr bool use_send_credit(auto&& cb) {
                 const auto locked = do_lock(send_locker);
-                std::uint64_t reqsize = cb(state.conn.send.avail_size(), state.conn.send.curlimit());
+                std::uint64_t reqsize = cb(state.conn_flow.send.avail_size(), state.conn_flow.send.curlimit());
                 if (reqsize == 0) {
                     return true;
                 }
-                return state.conn.send.use(reqsize);
+                return state.conn_flow.send.use(reqsize);
             }
 
             // called by each stream
             // you shouldn't get lock by yourself
             constexpr bool use_recv_credit(std::uint64_t use_delta) {
                 const auto locked = do_lock(recv_locker);
-                return state.conn.recv.use(use_delta);
+                return state.conn_flow.recv.use(use_delta);
             }
 
             // you shouldn't get lock by yourself
             constexpr bool recv_max_data(const frame::MaxDataFrame& limit) {
                 const auto locked = do_lock(send_locker);
-                return state.conn.send.update_limit(limit.max_data);
+                return state.conn_flow.send.update_limit(limit.max_data);
             }
 
             // you shouldn't get lock by yourself
@@ -128,25 +128,25 @@ namespace utils {
             }
 
             constexpr bool update_max_data(auto&& decide_new_limit) {
-                auto new_limit = decide_new_limit(std::as_const(state.conn.recv));
-                return state.conn.update_recv_limit(new_limit);
+                auto new_limit = decide_new_limit(std::as_const(state.conn_flow.recv));
+                return state.conn_flow.update_recv_limit(new_limit);
             }
 
             constexpr IOResult send_max_data(frame::fwriter& w) {
                 frame::MaxDataFrame frame;
-                frame.max_data = state.conn.recv.curlimit();
+                frame.max_data = state.conn_flow.recv.curlimit();
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
                 }
                 if (!w.write(frame)) {
                     return IOResult::fatal;
                 }
-                state.conn.should_send_limit_update = false;
+                state.conn_flow.should_send_limit_update = false;
                 return IOResult::ok;
             }
 
             constexpr IOResult send_max_data_if_updated(frame::fwriter& w) {
-                if (!state.conn.should_send_limit_update) {
+                if (!state.conn_flow.should_send_limit_update) {
                     return IOResult::not_in_io_state;
                 }
                 return send_max_data(w);

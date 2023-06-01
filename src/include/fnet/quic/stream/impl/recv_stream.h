@@ -22,8 +22,11 @@ namespace utils {
            private:
             Locker locker;
             slib::list<resend::StreamFragment> sorted;
+            // all data has been received
             bool done = false;
+            // FIN flag received
             bool fin = false;
+            // reset received
             bool rst = false;
             std::uint64_t read_pos = 0;
 
@@ -56,7 +59,7 @@ namespace utils {
                 if (done) {
                     return true;
                 }
-                if (!fin) {
+                if (!fin && !rst) {
                     return false;
                 }
                 std::uint64_t prev = read_pos;
@@ -115,11 +118,11 @@ namespace utils {
 
             std::pair<bool, error::Error> recv(FrameType type, Fragment frag) {
                 const auto unlock = lock();
-                if (done || rst) {
-                    return {true, error::none};
+                if (done) {
+                    return {true, error::none};  // ignore
                 }
                 if (frag.offset < read_pos) {
-                    return {true, error::none};  // ignore
+                    return {check_done(), error::none};  // ignore
                 }
                 for (auto it = sorted.begin(); it != sorted.end(); it++) {
                     if (it->offset <= frag.offset) {
@@ -173,9 +176,6 @@ namespace utils {
             }
 
             std::pair<view::wvec, bool> read_impl(view::wvec data) {
-                if (rst) {
-                    return {{}, true};
-                }
                 size_t i = 0;
                 auto sub = data;
                 while (sorted.size() != 0 && i < data.size()) {
@@ -224,9 +224,6 @@ namespace utils {
 
            private:
             std::pair<flex_storage, bool> read_direct_impl() {
-                if (rst) {
-                    return {{}, true};
-                }
                 if (sorted.size() == 0) {
                     return {{}, done};
                 }
@@ -259,7 +256,7 @@ namespace utils {
 
         // arg must be ptrlike
         template <class Locker, class TConfig>
-        inline std::pair<bool, error::Error> reader_recv_handler(typename TConfig::callback_arg::recv& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
+        inline std::pair<bool, error::Error> reader_recv_handler(decltype(std::declval<typename TConfig::stream_handler::recv_buf>().get_specific())& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
             if (!arg) {
                 return {false, error::Error("unexpected arg")};
             }

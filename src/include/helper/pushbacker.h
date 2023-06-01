@@ -20,7 +20,7 @@ namespace utils {
         struct NopPushBacker {
             constexpr NopPushBacker() {}
             template <class T>
-            constexpr void push_back(T&&) const {}
+            constexpr void push_back(T&&) const noexcept {}
         };
 
         constexpr NopPushBacker nop = {};

@@ -63,7 +63,7 @@ namespace utils {
 
             void decr() {
                 if (--storng_ref == 0) {
-                    delete_with_global_heap(this, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(*this), alignof(AsyncSuite)));
+                    delete_glheap(this);
                 }
             }
 
@@ -92,7 +92,7 @@ namespace utils {
 
             void decr() {
                 if (--strong_ref == 0) {
-                    delete_with_global_heap(this, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(AsyncSuite), alignof(AsyncSuite)));
+                    delete_glheap(this);
                 }
             }
 
