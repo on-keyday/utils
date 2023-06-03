@@ -78,6 +78,7 @@ namespace utils {
                 LAZY_BIND(libssl, ssl_import::bc::boring_ssl::ssl::SSL_set_quic_method, SSL_set_quic_method)
                 // specific
                 namespace sp {
+                    LAZY_BIND(libssl, ssl_import::ls::boring_ssl::ssl::SSL_CTX_get_ex_new_index, SSL_CTX_get_ex_new_index)
                     LAZY_BIND(libssl, ssl_import::ls::boring_ssl::ssl::SSL_set_tlsext_host_name, SSL_set_tlsext_host_name)
                     LAZY_BIND(libssl, ssl_import::ls::boring_ssl::ssl::SSL_error_description, SSL_error_description)
                 }  // namespace sp
@@ -89,6 +90,15 @@ namespace utils {
             LAZY(SSL_CTX_set_early_data_enabled)
             LAZY(SSL_early_data_accepted)
             LAZY(SSL_reset_early_data_reject)
+
+            // session
+            LAZY(SSL_set_session)
+            LAZY(SSL_get_session)
+            LAZY(SSL_CTX_sess_set_new_cb)
+            LAZY(SSL_CTX_set_session_cache_mode)
+
+            // get CTX for callback
+            LAZY(SSL_get_SSL_CTX)
 
             LAZY(SSL_CTX_get_ex_data)
             LAZY(SSL_CTX_set_ex_data)
@@ -127,6 +137,7 @@ namespace utils {
 #define LAZY(func) LAZY_BIND(libcrypto, ssl_import::ls::open_ssl::crypto::func, func)
                 // specific
                 namespace sp {
+                    LAZY(CRYPTO_get_ex_new_index)
                     LAZY(CRYPTO_set_mem_functions)
                     LAZY(EVP_KDF_fetch)
                     LAZY(EVP_KDF_CTX_new)

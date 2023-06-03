@@ -36,7 +36,7 @@ namespace utils {
             }
         };
 
-        constexpr stream::InitialLimits to_initial_limits(const DefinedTransportParams& params) {
+        constexpr stream::InitialLimits to_initial_limits(const auto& params) {
             stream::InitialLimits limits;
             limits.conn_data_limit = params.initial_max_data;
             limits.bidi_stream_limit = params.initial_max_streams_bidi;

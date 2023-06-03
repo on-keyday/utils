@@ -107,6 +107,7 @@ add_executable(fnetquic_packet "src/test/fnetquic/test_fnetquic_packet.cpp")
 add_executable(fnetquic_stream "src/test/fnetquic/test_fnetquic_stream.cpp")
 add_executable(fnetquic_multi_thread "src/test/fnetquic/test_fnetquic_multi_thread.cpp")
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
+add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
 
 
 
@@ -269,6 +270,7 @@ target_link_libraries(fnetquic_frame utils fnet)
 target_link_libraries(fnetquic_stream utils fnet)
 target_link_libraries(fnetquic_multi_thread utils fnet)
 target_link_libraries(fnet_dns fnet)
+target_link_libraries(fnetquic_0rtt fnet)
 
 # test(libfnetserv)
 target_link_libraries(fnetserv fnet)

@@ -134,6 +134,8 @@ namespace utils {
             ssl_import::SSL_CTX* ctx = nullptr;
             void (*alpn_callback)(ALPNSelector& sel, void*) = nullptr;
             void* alpn_callback_arg = nullptr;
+            bool (*session_callback)(Session&& sess, void*) = nullptr;
+            void* sess_callback_arg = nullptr;
         };
 
         fnet_dll_implement(TLSConfig) configure() {
@@ -141,9 +143,51 @@ namespace utils {
             if (!load_ssl()) {
                 return {};
             }
-            conf.ctx = lazy::ssl::SSL_CTX_new_(lazy::ssl::TLS_method_());
+            auto ctx = lazy::ssl::SSL_CTX_new_(lazy::ssl::TLS_method_());
+            if (!ctx) {
+                return {};
+            }
+            auto release = helper::defer([&] {
+                lazy::ssl::SSL_CTX_free_(ctx);
+            });
+            auto data = new_from_global_heap<SSLContextHolder>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContextHolder), alignof(SSLContextHolder)));
+            data->ctx = ctx;
+            int idx = -1;
+            auto del_fn = [](void* parent, void* ptr, ssl_import::CRYPTO_EX_DATA* ad,
+                             int index, long argl, void* argp) {
+                if (!ptr) {
+                    return;
+                }
+                delete_glheap(static_cast<SSLContextHolder*>(ptr));
+            };
+            auto release_data = helper::defer([&] {
+                delete_glheap(static_cast<SSLContextHolder*>(data));
+            });
+            if (lazy::ssl::bssl::sp::SSL_CTX_get_ex_new_index_.find()) {
+                idx = lazy::ssl::bssl::sp::SSL_CTX_get_ex_new_index_(
+                    0, nullptr, nullptr, nullptr,
+                    +del_fn);
+            }
+            else if (lazy::crypto::ossl::sp::CRYPTO_get_ex_new_index_.find()) {
+                idx = lazy::crypto::ossl::sp::CRYPTO_get_ex_new_index_(
+                    ssl_import::CRYPTO_EX_INDEX_SSL_CTX_, 0, nullptr, nullptr, nullptr,
+                    +del_fn);
+            }
+            if (idx < 0) {
+                return {};
+            }
+            if (!lazy::ssl::SSL_CTX_set_ex_data_(ctx, idx, data)) {
+                return {};
+            }
+            release_data.cancel();
+            if (!lazy::ssl::SSL_CTX_set_ex_data_(ctx, ssl_import::ssl_appdata_index, data)) {
+                return {};
+            }
+            release.cancel();
+            conf.ctx = ctx;
             return conf;
         }
+
         constexpr auto errNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
         constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
 
@@ -241,6 +285,22 @@ namespace utils {
                     }
                 },
                 const_cast<ALPNCallback*>(cb));
+            return error::none;
+        }
+
+        error::Error TLSConfig::set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg) {
+            CHECK_CTX(c)
+            auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(c, ssl_import::ssl_appdata_index));
+            holder->session_callback = cb;
+            holder->sess_callback_arg = arg;
+            lazy::ssl::SSL_CTX_set_session_cache_mode_(c, ssl_import::SSL_SESS_CACHE_CLIENT_ | ssl_import::SSL_SESS_CACHE_SERVER_);
+            lazy::ssl::SSL_CTX_sess_set_new_cb_(c, [](ssl_import::SSL* ssl, ssl_import::SSL_SESSION* sess) {
+                auto ctx = lazy::ssl::SSL_get_SSL_CTX_(ssl);
+                auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(ctx, ssl_import::ssl_appdata_index));
+                assert(ctx == holder->ctx);
+                Session s{sess};
+                return holder->session_callback(sess, holder->sess_callback_arg) ? 1 : 0;
+            });
             return error::none;
         }
 

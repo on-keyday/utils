@@ -22,6 +22,7 @@ namespace ssl_import {
     using SSL = struct SSL;
     using SSL_METHOD = struct SSL_METHOD;
     using SSL_CIPHER = struct SSL_CIPHER;
+    using SSL_SESSION = struct SSL_SESSION;
     using EVP_CIPHER_CTX = struct EVP_CIPHER_CTX;
     using EVP_CIPHER = struct EVP_CIPHER;
     using ENGINE = struct ENGINE;
@@ -31,6 +32,14 @@ namespace ssl_import {
     using BIO = struct BIO;
     using X509_VERIFY_PARAM = struct X509_VERIFY_PARAM;
     using X509_STORE_CTX = struct X509_STORE_CTX;
+
+    using CRYPTO_EX_DATA = struct CRYPTO_EX_DATA;
+    using CRYPTO_EX_free = void(void* parent, void* ptr, CRYPTO_EX_DATA* ad,
+                                int index, long argl, void* argp);
+
+    using CRYPTO_EX_dup = void();
+    using CRYPTO_EX_unused = void;
+
     // boringssl
     using EVP_AEAD = struct EVP_AEAD;
     using EVP_AEAD_CTX = struct EVP_AEAD_CTX;
@@ -53,6 +62,12 @@ namespace ssl_import {
     constexpr auto SSL_TLSEXT_ERR_ALERT_WARNING_ = 1;
     constexpr auto SSL_TLSEXT_ERR_ALERT_FATAL_ = 2;
     constexpr auto SSL_TLSEXT_ERR_NOACK_ = 3;
+
+    constexpr auto SSL_SESS_CACHE_CLIENT_ = 0x0001;
+    constexpr auto SSL_SESS_CACHE_SERVER_ = 0x0002;
+
+    // OpenSSL specific
+    constexpr auto CRYPTO_EX_INDEX_SSL_CTX_ = 1;
 
     // platform requirement
     static_assert(sizeof(unsigned char) == sizeof(std::uint8_t));
@@ -149,6 +164,16 @@ namespace ssl_import {
             int SSL_early_data_accepted(const SSL* ssl);
             void SSL_reset_early_data_reject(SSL* ssl);
 
+            // session (for 0RTT)
+            int SSL_set_session(SSL*, SSL_SESSION* sess);
+            SSL_SESSION* SSL_get_session(const SSL* ssl);
+            void SSL_CTX_sess_set_new_cb(
+                SSL_CTX* ctx, int (*new_session_cb)(SSL* ssl, SSL_SESSION* session));
+            int SSL_CTX_set_session_cache_mode(SSL_CTX* ctx, int mode);
+
+            // get CTX for callback
+            SSL_CTX* SSL_get_SSL_CTX(const SSL* ssl);
+
         }  // namespace ssl
 
         namespace crypto {
@@ -212,6 +237,7 @@ namespace ssl_import {
 
         namespace boring_ssl {
             namespace ssl {
+
                 int SSL_CTX_set_alpn_protos(SSL_CTX* ssl, const std::uint8_t* protos, size_t protos_len);
                 int SSL_set_alpn_protos(SSL* ssl, const std::uint8_t* protos, size_t protos_len);
 
@@ -247,6 +273,10 @@ namespace ssl_import {
 
             }  // namespace ssl
             namespace crypto {
+                int CRYPTO_get_ex_new_index(int class_index, long argl, void* argp,
+                                            CRYPTO_EX_unused* unused,
+                                            CRYPTO_EX_dup* dup_unused,
+                                            CRYPTO_EX_free* free_func);
                 int CRYPTO_set_mem_functions(
                     void* (*m)(size_t, const char*, int),
                     void* (*r)(void*, size_t, const char*, int),
@@ -279,6 +309,11 @@ namespace ssl_import {
             namespace ssl {
                 int SSL_set_tlsext_host_name(SSL* ssl, const char* name);
                 const char* SSL_error_description(int err);
+                int SSL_CTX_get_ex_new_index(long argl, void* argp,
+                                             CRYPTO_EX_unused* unused,
+                                             CRYPTO_EX_dup* dup_unused,
+                                             CRYPTO_EX_free* free_func);
+
             }  // namespace ssl
 
             namespace crypto {

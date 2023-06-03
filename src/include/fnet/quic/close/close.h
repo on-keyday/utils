@@ -167,7 +167,7 @@ namespace utils {
                 auto aerr = conn_err.as<AppError>();
                 if (aerr) {
                     flex_storage fxst;
-                    conn_err.error(fxst);
+                    aerr->msg.error(fxst);
                     cclose.type = FrameType::CONNECTION_CLOSE_APP;
                     cclose.error_code = aerr->error_code;
                     cclose.reason_phrase = fxst;

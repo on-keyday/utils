@@ -35,7 +35,7 @@ namespace utils {
                 return error::none;
             }
 
-            error::Error set_(DefinedTransportParams& params, trsparam::TransportParamStorage& box, trsparam::DuplicateSetChecker* checker, trsparam::TransportParameter param, bool is_server) {
+            error::Error set_(DefinedTransportParams& params, trsparam::TransportParamStorage& box, trsparam::DuplicateSetChecker* checker, trsparam::TransportParameter param, bool is_server, bool accept_zero_rtt) {
                 if (auto err = check_recv(param.id.id, is_server)) {
                     return err;
                 }
@@ -69,18 +69,18 @@ namespace utils {
 
            public:
             error::Error set_local(TransportParameter param) {
-                return set_(local, local_box, nullptr, param, false);
+                return set_(local, local_box, nullptr, param, false, false);
             }
 
             bool boxing() {
                 return local_box.boxing(local) && peer_box.boxing(peer);
             }
 
-            error::Error set_peer(TransportParameter param, bool is_server) {
-                return set_(peer, peer_box, &peer_checker, param, is_server);
+            error::Error set_peer(TransportParameter param, bool is_server, bool accept_zero_rtt) {
+                return set_(peer, peer_box, &peer_checker, param, is_server, accept_zero_rtt);
             }
 
-            error::Error parse_peer(io::reader& r, bool is_server) {
+            error::Error parse_peer(io::reader& r, bool is_server, bool accept_zero_rtt) {
                 while (!r.empty()) {
                     TransportParameter param;
                     if (!param.parse(r)) {
@@ -89,7 +89,7 @@ namespace utils {
                             .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
                         };
                     }
-                    if (auto err = set_peer(param, is_server)) {
+                    if (auto err = set_peer(param, is_server, accept_zero_rtt)) {
                         return err;
                     }
                 }

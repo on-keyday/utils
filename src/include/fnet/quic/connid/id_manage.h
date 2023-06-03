@@ -33,6 +33,7 @@ namespace utils {
                 cparam.version = version;
                 acceptor.reset(config.packet_per_id, config.max_packet_per_id, config.change_mode);
                 issuer.reset(std::move(config.exporter), std::move(config.generator), config.connid_len, config.concurrent_limit);
+                iniret.reset();
             }
 
             Random& random() {
@@ -144,6 +145,10 @@ namespace utils {
 
             error::Error on_preferred_address_received(view::rvec id, const StatelessResetToken& stateless_reset_token) {
                 return acceptor.on_preferred_address_received(cparam, id, stateless_reset_token);
+            }
+
+            void on_transport_parameter_recieved(std::uint64_t active_conn) {
+                issuer.on_transport_parameter_received(active_conn);
             }
 
             bool on_retry_received(view::rvec id) {

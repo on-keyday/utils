@@ -31,6 +31,7 @@ namespace utils {
                 flag_retry_sent = 0x200,
 
                 flag_started = 0x400,
+                flag_peer_validated_by_token = 0x800,
             } flag;
 
             friend constexpr HandshakeFlag& operator|=(HandshakeFlag& f, HandshakeFlag flag) noexcept {
@@ -121,11 +122,19 @@ namespace utils {
                 return sent_bytes >= amplification_factor * recv_bytes;
             }
 
+            constexpr bool peer_address_validated_by_token() const {
+                return flag & flag_peer_validated_by_token;
+            }
+
+            constexpr void set_peer_address_validated_by_token() {
+                flag |= flag_peer_validated_by_token;
+            }
+
             constexpr bool peer_address_validated() const {
                 if (!is_server()) {
                     return true;  // server address is always validated
                 }
-                return handshake_packet_is_received();
+                return handshake_packet_is_received() || peer_address_validated_by_token();
             }
 
             constexpr bool peer_completed_address_validation() const {

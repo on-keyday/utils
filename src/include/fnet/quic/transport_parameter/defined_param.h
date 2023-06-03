@@ -51,10 +51,35 @@ namespace utils {
             return false;
         }
 
+        constexpr bool must_greater_or_equal_if_0RTT(DefinedID id) {
+            return id == DefinedID::active_connection_id_limit ||
+                   id == DefinedID::initial_max_data ||
+                   id == DefinedID::initial_max_stream_data_bidi_local ||
+                   id == DefinedID::initial_max_stream_data_bidi_remote ||
+                   id == DefinedID::initial_max_stream_data_uni ||
+                   id == DefinedID::initial_max_streams_bidi ||
+                   id == DefinedID::initial_max_streams_uni ||
+                   id == DefinedID::max_datagram_frame_size;
+        }
+
+        struct ZeroRTTTransportParams {
+            std::uint64_t max_idle_timeout = 0;
+            std::uint64_t max_udp_payload_size = 65527;
+            std::uint64_t initial_max_data = 0;
+            std::uint64_t initial_max_stream_data_bidi_local = 0;
+            std::uint64_t initial_max_stream_data_bidi_remote = 0;
+            std::uint64_t initial_max_stream_data_uni = 0;
+            std::uint64_t initial_max_streams_bidi = 0;
+            std::uint64_t initial_max_streams_uni = 0;
+            bool disable_active_migration = false;
+            std::uint64_t active_connection_id_limit = 2;
+            std::uint64_t max_datagram_frame_size = 0;
+        };
+
         struct DefinedTransportParams {
             view::rvec original_dst_connection_id;
             std::uint64_t max_idle_timeout = 0;
-            byte stateless_reset_token[16];
+            byte stateless_reset_token[16]{};
             std::uint64_t max_udp_payload_size = 65527;
             std::uint64_t initial_max_data = 0;
             std::uint64_t initial_max_stream_data_bidi_local = 0;
@@ -73,16 +98,16 @@ namespace utils {
             bool grease_quic_bit = false;
 
             // returns(ok,changed)
-            constexpr std::pair<bool, bool> from_transport_param(TransportParameter param, DuplicateSetChecker* checker = nullptr) {
+            constexpr std::pair<bool, bool> from_transport_param(TransportParameter param, DuplicateSetChecker* checker = nullptr, bool accept_zero_rtt = false) {
                 auto id = param.id;
                 auto index = 0;
                 auto make_ = [&](auto&& cb) {
-                    return [&, cb](auto&& id) {
+                    return [&, cb](auto&& value) {
                         if (checker && checker->check[index]) {
                             checker->detect = true;
                             return false;
                         }
-                        if (!cb(id)) {
+                        if (!cb(value)) {
                             return false;
                         }
                         if (checker) {
@@ -91,11 +116,17 @@ namespace utils {
                         return true;
                     };
                 };
-                auto vlint = make_([&](std::uint64_t& id) {
+                auto vlint = make_([&](std::uint64_t& place) {
                     if (!param.data.as_qvarint()) {
                         return false;
                     }
-                    id = param.data.qvarint();
+                    auto val = param.data.qvarint();
+                    if (accept_zero_rtt && must_greater_or_equal_if_0RTT(id)) {
+                        if (place > val) {
+                            return false;
+                        }
+                    }
+                    place = param.data.qvarint();
                     return true;
                 });
                 auto rdata = make_([&](view::rvec& id) {
@@ -359,6 +390,38 @@ namespace utils {
                    MK(initial_max_streams_uni) &&
                    MK(active_connection_id_limit);
 #undef MK
+        }
+
+        constexpr ZeroRTTTransportParams to_0RTT(DefinedTransportParams& params) {
+            ZeroRTTTransportParams to;
+            to.active_connection_id_limit = params.active_connection_id_limit;
+            to.disable_active_migration = params.disable_active_migration;
+            to.initial_max_data = params.initial_max_data;
+            to.initial_max_stream_data_bidi_local = params.initial_max_stream_data_bidi_local;
+            to.initial_max_stream_data_bidi_remote = params.initial_max_stream_data_bidi_remote;
+            to.initial_max_stream_data_uni = params.initial_max_stream_data_uni;
+            to.initial_max_streams_bidi = params.initial_max_streams_bidi;
+            to.initial_max_streams_uni = params.initial_max_streams_uni;
+            to.max_datagram_frame_size = params.max_datagram_frame_size;
+            to.max_idle_timeout = params.max_idle_timeout;
+            to.max_udp_payload_size = params.max_udp_payload_size;
+            return to;
+        }
+
+        constexpr DefinedTransportParams from_0RTT(ZeroRTTTransportParams& params) {
+            DefinedTransportParams to;
+            to.active_connection_id_limit = params.active_connection_id_limit;
+            to.disable_active_migration = params.disable_active_migration;
+            to.initial_max_data = params.initial_max_data;
+            to.initial_max_stream_data_bidi_local = params.initial_max_stream_data_bidi_local;
+            to.initial_max_stream_data_bidi_remote = params.initial_max_stream_data_bidi_remote;
+            to.initial_max_stream_data_uni = params.initial_max_stream_data_uni;
+            to.initial_max_streams_bidi = params.initial_max_streams_bidi;
+            to.initial_max_streams_uni = params.initial_max_streams_uni;
+            to.max_datagram_frame_size = params.max_datagram_frame_size;
+            to.max_idle_timeout = params.max_idle_timeout;
+            to.max_udp_payload_size = params.max_udp_payload_size;
+            return to;
         }
 
     }  // namespace fnet::quic::trsparam

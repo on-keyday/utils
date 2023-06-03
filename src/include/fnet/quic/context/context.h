@@ -136,7 +136,8 @@ namespace utils {
                     return true;  // nothing can do
                 }
                 io::reader r{data};
-                auto err = params.parse_peer(r, status.is_server());
+                auto accepted = crypto.tls().get_early_data_accepted();
+                auto err = params.parse_peer(r, status.is_server(), accepted);
                 if (err) {
                     set_quic_runtime_error(std::move(err));
                     return false;
@@ -144,6 +145,7 @@ namespace utils {
                 auto& peer = params.peer;
                 // get registered initial_source_connection_id by peer
                 auto connID = connIDs.choose_dstID(0);
+                connIDs.on_transport_parameter_recieved(peer.active_connection_id_limit);
                 if (peer.initial_src_connection_id.null() || peer.initial_src_connection_id != connID.id) {
                     set_quic_runtime_error(QUICError{
                         .msg = "initial_src_connection_id is not matched to id contained on initial packet",
@@ -172,8 +174,8 @@ namespace utils {
                     if (!peer.preferred_address.connectionID.null()) {
                         connIDs.on_preferred_address_received(peer.preferred_address.connectionID, peer.preferred_address.stateless_reset_token);
                     }
-                    mtu.on_transport_parameter_received(peer.max_udp_payload_size);
                 }
+                mtu.on_transport_parameter_received(peer.max_udp_payload_size);
                 status.on_transport_parameter_received(peer.max_idle_timeout, peer.max_ack_delay, peer.ack_delay_exponent);
                 auto by_peer = trsparam::to_initial_limits(peer);
                 streams->apply_peer_initial_limits(by_peer);
@@ -185,6 +187,29 @@ namespace utils {
                 transport_param_read = true;
                 logger.debug("apply transport parameter");
                 return true;
+            }
+
+            void reset_peer_transport_parameter() {
+                params.peer = {};
+                params.peer_box.boxing(params.peer);
+            }
+
+            // RFC9000 says:
+            // A client MUST NOT use remembered values for the following parameters:
+            // ack_delay_exponent, max_ack_delay, initial_source_connection_id,
+            // original_destination_connection_id, preferred_address, retry_source_connection_id, and stateless_reset_token. The client MUST use the server's new values in the handshake instead;
+            // if the server does not provide new values, the default values are used.
+            void apply_0RTT_transport_parameter() {
+                auto peer = trsparam::to_0RTT(params.peer);
+                auto limits = trsparam::to_initial_limits(peer);
+                streams->apply_peer_initial_limits(limits);
+                connIDs.on_transport_parameter_recieved(peer.active_connection_id_limit);
+                mtu.on_transport_parameter_received(peer.max_udp_payload_size);
+                status.on_0RTT_transport_parameter(peer.max_idle_timeout);
+                datagrams->on_transport_parameter(peer.max_datagram_frame_size);
+                params.peer = trsparam::from_0RTT(peer);
+                params.peer_box.boxing(params.peer);
+                logger.debug("apply 0-RTT transport parameter");
             }
 
             void on_handshake_confirmed() {
@@ -602,7 +627,7 @@ namespace utils {
                     }
                 }
                 if (has_zerortt) {
-                    if (!write_zerortt(w, to_mode(!has_zerortt), waiters)) {
+                    if (!write_zerortt(w, to_mode(!has_handshake), waiters)) {
                         return {{}, false};
                     }
                 }
@@ -1102,6 +1127,9 @@ namespace utils {
                     set_quic_runtime_error(std::move(tmp_err));
                     return false;
                 }
+                if (config.session) {
+                    tls.set_session(std::move(config.session));
+                }
                 crypto.reset(std::move(tls), config.server);
 
                 // initialize connection status
@@ -1122,6 +1150,13 @@ namespace utils {
                 // set transport parameters
                 params.local = std::move(config.transport_parameters);
                 params.local_box.boxing(params.local);
+                // now if we are client, remaining peer transport parameter for 0-RTT
+                // will reset when connect_start
+                params.peer_checker = {};
+                if (config.server) {
+                    params.peer = {};  // reset when server; no 0-RTT exists
+                }
+                params.peer_box.boxing(params.peer);
                 auto local = trsparam::to_initial_limits(params.local);
 
                 // create streams
@@ -1152,7 +1187,7 @@ namespace utils {
             }
 
             // thread unsafe call
-            bool connect_start() {
+            bool connect_start(const char* hostname = nullptr) {
                 if (status.handshake_started()) {
                     return false;
                 }
@@ -1181,10 +1216,22 @@ namespace utils {
                 if (!set_transport_parameter()) {
                     return false;
                 }
+                if (hostname) {
+                    if (auto err = crypto.tls().set_hostname(hostname)) {
+                        set_quic_runtime_error(std::move(err));
+                        return false;
+                    }
+                }
                 auto err = crypto.tls().connect();
-                if (!tls::isTLSBlock(err)) {
+                if (err && !tls::isTLSBlock(err)) {
                     set_quic_runtime_error(std::move(err));
                     return false;
+                }
+                if (!crypto.write_installed(PacketType::ZeroRTT)) {
+                    reset_peer_transport_parameter();
+                }
+                else {
+                    apply_0RTT_transport_parameter();
                 }
                 return true;
             }
@@ -1320,7 +1367,7 @@ namespace utils {
                     case close::CloseReason::idle_timeout:
                     case close::CloseReason::handshake_timeout:
                         ctx.clock = status.clock();
-                        ctx.close_timeout.set_deadline( ctx.clock.now());
+                        ctx.close_timeout.set_deadline(ctx.clock.now());
                         return false;
                     default:
                         break;

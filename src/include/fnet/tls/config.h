@@ -11,6 +11,7 @@
 #include "../quic/crypto/enc_level.h"
 #include "../../helper/equal.h"
 #include "alpn.h"
+#include "session.h"
 
 namespace utils {
     namespace fnet {
@@ -108,6 +109,8 @@ namespace utils {
                 // if callback returns false then alert fatal error
                 // manage ALPNCallback yourself while connections alive
                 error::Error set_alpn_select_callback(const ALPNCallback* cb);
+
+                error::Error set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg);
             };
 
             // configure() returns TLSConfig object initialized with SSL_CTX object

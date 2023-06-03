@@ -18,6 +18,7 @@
 #include "../token/token.h"
 #include "../stream/config.h"
 #include "../ack/recv_history.h"
+#include "../../tls/session.h"
 
 namespace utils {
     namespace fnet::quic::context {
@@ -25,6 +26,7 @@ namespace utils {
         struct Config {
             Version version = version_1;
             bool server = false;
+            tls::Session session;  // for 0RTT
             tls::TLSConfig tls_config;
             status::Config internal_parameters;
             path::Config path_parameters;

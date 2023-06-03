@@ -119,6 +119,7 @@ namespace utils {
                         return true;
                     case EncryptionLevel::early_data:
                         zerortt.install_rsecret(secret, cipher);
+                        return true;
                     case EncryptionLevel::application:
                         return onertt.install_onertt_rsecret(secret, cipher);
                     default:
@@ -132,7 +133,8 @@ namespace utils {
                         handshake.install_wsecret(secret, cipher);
                         return true;
                     case EncryptionLevel::early_data:
-                        zerortt.install_rsecret(secret, cipher);
+                        zerortt.install_wsecret(secret, cipher);
+                        return true;
                     case EncryptionLevel::application:
                         return onertt.install_onertt_wsecret(secret, cipher);
                     default:

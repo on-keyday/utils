@@ -482,5 +482,28 @@ namespace utils {
             }();
             return ciph;
         }
+
+        Session TLS::get_session() {
+            Session sess;
+            [&]() -> error::Error {
+                CHECK_TLS(c)
+                sess.sess = lazy::ssl::SSL_get_session_(c->ssl);
+                return error::none;
+            }();
+            return sess;
+        }
+
+        bool TLS::set_session(Session&& sess) {
+            if (!sess.sess) {
+                return false;
+            }
+            bool ok = false;
+            [&]() -> error::Error {
+                CHECK_TLS(c)
+                ok = lazy::ssl::SSL_set_session_(c->ssl, static_cast<ssl_import::SSL_SESSION*>(sess.sess)) == 1;
+                return error::none;
+            }();
+            return ok;
+        }
     }  // namespace fnet::tls
 }  // namespace utils

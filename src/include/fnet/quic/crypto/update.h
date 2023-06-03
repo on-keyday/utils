@@ -53,6 +53,8 @@ namespace utils {
                 first_recv = packetnum::infinity;
                 num_recv = 0;
                 highest_recv = packetnum::infinity;
+                whp.clear();
+                rhp.clear();
             }
 
             bool install_onertt_rsecret(view::rvec secret, const tls::TLSCipher& cipher) {

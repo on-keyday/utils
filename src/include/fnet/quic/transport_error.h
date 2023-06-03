@@ -173,7 +173,7 @@ namespace utils {
                 void error(auto&& pb) {
                     helper::appends(pb, "quic(app): ");
                     msg.error(pb);
-                    helper::append(pb, "code=");
+                    helper::append(pb, " code=");
                     number::to_string(pb, error_code);
                 }
 

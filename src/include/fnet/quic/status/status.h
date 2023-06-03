@@ -158,6 +158,14 @@ namespace utils {
                 pacer.reset();
                 close_timer.cancel();
                 ping_timer.cancel();
+                // packet numbers
+                for (auto& r : pn_issuers) {
+                    r.reset();
+                }
+                for (auto& r : pn_acceptors) {
+                    r.reset();
+                }
+                sent_ack_tracker.reset();
                 creation_time = config.clock.now();
             }
 
@@ -167,6 +175,10 @@ namespace utils {
             constexpr void on_transport_parameter_received(std::uint64_t idle_timeout, std::uint64_t max_ack_delay, std::uint64_t ack_delay_exponent) {
                 rtt.apply_max_ack_delay(config.clock.to_clock_granurarity(max_ack_delay));
                 peer_ack_delay_exponent = ack_delay_exponent;
+                idle.apply_idle_timeout(config, idle_timeout);
+            }
+
+            constexpr void on_0RTT_transport_parameter(std::uint64_t idle_timeout) {
                 idle.apply_idle_timeout(config, idle_timeout);
             }
 

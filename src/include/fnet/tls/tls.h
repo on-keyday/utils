@@ -22,6 +22,7 @@
 #include "../error.h"
 #include "../dll/dll_path.h"
 #include "config.h"
+#include "session.h"
 
 namespace utils {
     namespace fnet {
@@ -133,6 +134,9 @@ namespace utils {
                 }
 
                 TLSCipher get_cipher();
+
+                bool set_session(Session&& sess);
+                Session get_session();
             };
 
             fnet_dll_export(void) set_libssl(lazy::dll_path path);

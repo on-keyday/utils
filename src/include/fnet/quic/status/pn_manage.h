@@ -113,6 +113,10 @@ namespace utils {
             std::uint64_t largest_recv_packet = 0;
 
            public:
+            constexpr void reset() {
+                largest_recv_packet = 0;
+            }
+
             constexpr void on_packet_processed(packetnum::Value pn) {
                 if (largest_recv_packet < pn.value) {
                     largest_recv_packet = pn.value;
@@ -129,6 +133,10 @@ namespace utils {
             std::uint64_t largest_onertt_acked_sent_ack = 0;
 
            public:
+            constexpr void reset() {
+                largest_onertt_acked_sent_ack = 0;
+            }
+
             constexpr std::uint64_t get_onertt_largest_acked_sent_ack() const {
                 return largest_onertt_acked_sent_ack;
             }
