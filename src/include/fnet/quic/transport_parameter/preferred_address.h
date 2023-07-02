@@ -7,7 +7,7 @@
 
 // preferred_address - QUIC transport parameter preferred address
 #pragma once
-#include "../../../io/number.h"
+#include "../../../binary/number.h"
 
 namespace utils {
     namespace fnet::quic::trsparam {
@@ -20,11 +20,11 @@ namespace utils {
             view::rvec connectionID;
             byte stateless_reset_token[16];
 
-            constexpr bool parse(io::reader& r) {
+            constexpr bool parse(binary::reader& r) {
                 return r.read(ipv4_address) &&
-                       io::read_num(r, ipv4_port, true) &&
+                       binary::read_num(r, ipv4_port, true) &&
                        r.read(ipv6_address) &&
-                       io::read_num(r, ipv6_port, true) &&
+                       binary::read_num(r, ipv6_port, true) &&
                        r.read(view::wvec(&connectionID_length, 1)) &&
                        r.read(connectionID, connectionID_length) &&
                        r.read(stateless_reset_token);
@@ -36,14 +36,14 @@ namespace utils {
                        connectionID.size() + 16;
             }
 
-            constexpr bool render(io::writer& w) const {
+            constexpr bool render(binary::writer& w) const {
                 if (connectionID.size() > 0xff) {
                     return false;
                 }
                 return w.write(ipv4_address) &&
-                       io::write_num(w, ipv4_port, true) &&
+                       binary::write_num(w, ipv4_port, true) &&
                        w.write(ipv6_address) &&
-                       io::write_num(w, ipv6_port, true) &&
+                       binary::write_num(w, ipv6_port, true) &&
                        w.write(byte(connectionID.size()), 1) &&
                        w.write(connectionID) &&
                        w.write(stateless_reset_token);

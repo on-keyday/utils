@@ -31,8 +31,8 @@ namespace utils {
             size_t write_offset = 0;
             resend::Retransmiter<resend::CryptoFragment, slib::list> frags;
 
-            IOResult send_retransmit(auto&& observer_vec, frame::fwriter& w) {
-                return frags.retransmit(observer_vec, [&](resend::CryptoFragment& frag, auto&& save_new) {
+            IOResult send_retransmit(auto&& observer, frame::fwriter& w) {
+                return frags.retransmit(observer, [&](resend::CryptoFragment& frag, auto&& save_new) {
                     auto [frame, ok] = frame::make_fit_size_Crypto(w.remain().size(), frag.offset, frag.data);
                     if (!ok) {
                         return IOResult::not_in_io_state;
@@ -58,7 +58,7 @@ namespace utils {
                 });
             }
 
-            IOResult send_crypto(auto&& observer_vec, frame::fwriter& w) {
+            IOResult send_crypto(auto&& observer, frame::fwriter& w) {
                 auto remain_data = write_data.rvec().substr(write_offset);
                 const auto writable_size = w.remain().size();
                 auto [frame, ok] = frame::make_fit_size_Crypto(writable_size, write_offset, remain_data);
@@ -69,7 +69,7 @@ namespace utils {
                     return IOResult::fatal;
                 }
                 write_offset += frame.crypto_data.size();
-                frags.sent(observer_vec,
+                frags.sent(observer,
                            resend::CryptoFragment{
                                .offset = frame.offset,
                                .data = frame.crypto_data,
@@ -90,15 +90,15 @@ namespace utils {
                 write_data.append(data);
             }
 
-            IOResult send(frame::fwriter& w, auto&& observer_vec) {
-                if (auto res = send_retransmit(observer_vec, w);
+            IOResult send(frame::fwriter& w, auto&& observer) {
+                if (auto res = send_retransmit(observer, w);
                     res == IOResult::fatal) {
                     return res;
                 }
                 if (write_data.size() - write_offset == 0) {
                     return IOResult::no_data;
                 }
-                return send_crypto(observer_vec, w);
+                return send_crypto(observer, w);
             }
 
             error::Error recv_crypto(tls::TLS& tls, EncryptionLevel level,
@@ -172,7 +172,7 @@ namespace utils {
             tls::TLS tls;
             CryptoHandshaker initial, handshake, onertt;
 
-            std::shared_ptr<ack::ACKLostRecord> wait_for_done;
+            resend::ACKHandler wait_for_done;
 
             byte alert_code = 0;
 
@@ -192,7 +192,7 @@ namespace utils {
             void reset(tls::TLS&& new_tls, bool is_server) {
                 tls = std::move(new_tls);
                 flags = is_server ? flag_server : 0;
-                wait_for_done = nullptr;
+                wait_for_done.reset();
                 initial.reset();
                 handshake.reset();
                 onertt.reset();
@@ -219,9 +219,10 @@ namespace utils {
                 }
             }
 
-            IOResult send(PacketType type, frame::fwriter& w, auto&& observer_vec) {
+            IOResult send(PacketType type, frame::fwriter& w, auto&& observer) {
                 if (is_server() && handshake_complete() && !handshake_done() && type == PacketType::OneRTT) {
-                    if (!wait_for_done || wait_for_done->is_lost()) {
+                    if (!wait_for_done.not_confirmed() ||
+                        wait_for_done.is_lost()) {
                         if (w.remain().size() == 0) {
                             return IOResult::no_capacity;
                         }
@@ -229,21 +230,20 @@ namespace utils {
                         if (!w.write(frame)) {
                             return IOResult::fatal;
                         }
-                        wait_for_done = ack::make_ack_wait();
-                        observer_vec.push_back(wait_for_done);
+                        wait_for_done.wait(observer);
                     }
-                    else if (wait_for_done->is_ack()) {
-                        ack::put_ack_wait(std::move(wait_for_done));
+                    else if (wait_for_done.is_ack()) {
+                        wait_for_done.confirm();
                         flags |= flag_handshake_done;
                     }
                 }
                 switch (type) {
                     case PacketType::Initial:
-                        return initial.send(w, observer_vec);
+                        return initial.send(w, observer);
                     case PacketType::Handshake:
-                        return handshake.send(w, observer_vec);
+                        return handshake.send(w, observer);
                     case PacketType::OneRTT:
-                        return onertt.send(w, observer_vec);
+                        return onertt.send(w, observer);
                     default:
                         return IOResult::invalid_data;
                 }

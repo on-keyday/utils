@@ -15,13 +15,13 @@ namespace utils {
         struct StreamIDAcceptor {
             Limiter limit;
             const StreamType type{};
-            Direction dir = Direction::unknown;
+            Origin dir = Origin::unknown;
             bool should_send_limit_update = false;
 
             constexpr StreamIDAcceptor(StreamType type)
                 : type(type) {}
 
-            constexpr void set_dir(Direction dir) {
+            constexpr void set_dir(Origin dir) {
                 this->dir = dir;
             }
 
@@ -60,12 +60,12 @@ namespace utils {
         struct StreamIDIssuer {
             Limiter limit;
             const StreamType type{};
-            Direction dir = Direction::unknown;
+            Origin dir = Origin::unknown;
 
             constexpr StreamIDIssuer(StreamType type)
                 : type(type) {}
 
-            constexpr void set_dir(Direction dir) {
+            constexpr void set_dir(Origin dir) {
                 this->dir = dir;
             }
 
@@ -128,18 +128,18 @@ namespace utils {
                   bidi_issuer(StreamType::bidi),
                   uni_acceptor(StreamType::uni),
                   bidi_acceptor(StreamType::bidi) {}
-            void set_dir(Direction dir) {
+            void set_dir(Origin dir) {
                 uni_issuer.set_dir(dir);
                 bidi_issuer.set_dir(dir);
                 uni_acceptor.set_dir(inverse(dir));
                 bidi_acceptor.set_dir(inverse(dir));
             }
 
-            Direction peer_dir() const {
+            Origin peer_dir() const {
                 return uni_acceptor.dir;
             }
 
-            Direction local_dir() const {
+            Origin local_dir() const {
                 return uni_issuer.dir;
             }
 
@@ -147,14 +147,14 @@ namespace utils {
                 send_ini_limit = lim;
                 uni_issuer.limit.set_limit(lim.uni_stream_limit);
                 bidi_issuer.limit.set_limit(lim.bidi_stream_limit);
-                conn_flow.send.update_limit(lim.conn_data_limit);
+                conn_flow.send.set_limit(lim.conn_data_limit);
             }
 
             void set_recv_initial_limit(InitialLimits lim) {
                 recv_ini_limit = lim;
                 uni_acceptor.limit.set_limit(lim.uni_stream_limit);
                 bidi_acceptor.limit.set_limit(lim.bidi_stream_limit);
-                conn_flow.recv.update_limit(lim.conn_data_limit);
+                conn_flow.recv.set_limit(lim.conn_data_limit);
             }
         };
     }  // namespace fnet::quic::stream::core

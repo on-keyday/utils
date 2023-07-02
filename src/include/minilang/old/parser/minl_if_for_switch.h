@@ -25,7 +25,7 @@ namespace utils {
                         return ret_type(nullptr);
                     }
                     auto space = [&] {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                     };
                     auto error = [&](auto... msg) {
                         p.errc.say(msg...);
@@ -127,12 +127,12 @@ namespace utils {
                     auto cur = if_;
                     while (true) {
                         const auto start = seq.rptr;
-                        space::consume_space(p.seq, false);
+                        strutil::consume_space(p.seq, false);
                         if (!expect_ident(p.seq, "else")) {
                             p.seq.rptr = start;
                             return if_;
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (seq.match("{")) {
                             auto els = block(call_stat())(p);
                             if (!els) {
@@ -166,7 +166,7 @@ namespace utils {
                         seq.rptr = begin;
                         return nullptr;
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     std::shared_ptr<MinNode> swcond;
                     if (!p.seq.match("{")) {
                         auto old = p.loc;
@@ -180,7 +180,7 @@ namespace utils {
                             return nullptr;
                         }
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     if (!p.seq.seek_if("{")) {
                         p.errc.say("expect switch statement begin { but not");
                         p.errc.trace(start, p.seq);
@@ -193,7 +193,7 @@ namespace utils {
                     root_switch->expr = std::move(swcond);
                     std::shared_ptr<BlockNode> block = swnode;
                     while (true) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (seq.eos()) {
                             p.errc.say("unexpected eof at switch statement");
                             p.errc.trace(start, p.seq);
@@ -215,7 +215,7 @@ namespace utils {
                                 p.err = true;
                                 return nullptr;
                             }
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             if (!p.seq.seek_if(":")) {
                                 p.errc.say("expect switch case : but not");
                                 p.errc.trace(start, p.seq);
@@ -232,7 +232,7 @@ namespace utils {
                             continue;
                         }
                         if (expect_ident(p.seq, "default")) {
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             if (!seq.seek_if(":")) {
                                 p.errc.say("expect switch default : but not");
                                 p.errc.trace(start, p.seq);
@@ -276,7 +276,7 @@ namespace utils {
                         seq.rptr = begin;
                         return nullptr;
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     std::shared_ptr<MinNode> swcond;
                     auto old = p.loc;
                     p.loc = pass_loc::condition;

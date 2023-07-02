@@ -13,7 +13,7 @@
 #include <fnet/dll/lazy/ssldll.h>
 #include <fnet/dll/glheap.h>
 #include <helper/pushbacker.h>
-#include <helper/appender.h>
+#include <strutil/append.h>
 
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -88,7 +88,7 @@ namespace utils {
         void log_fn_load(const char* fn, bool ok) {
             char buf[120]{};
             helper::CharVecPushbacker<char> pb{buf, 119};
-            helper::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
+            strutil::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
 #ifdef _WIN32
             OutputDebugStringA(buf);
 #endif

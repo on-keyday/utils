@@ -12,6 +12,7 @@
 #include "../frame/conn_manage.h"
 #include "../time.h"
 #include <atomic>
+#include "../path/path.h"
 
 namespace utils {
     namespace fnet::quic::close {
@@ -82,6 +83,7 @@ namespace utils {
             storage payload;
             time::Timer close_timeout;
             flags::CloseFlag flag;
+            path::PathID active_path;
             time::Clock clock;
 
             std::pair<view::rvec, bool> create_udp_payload() {
@@ -149,7 +151,7 @@ namespace utils {
                 return conn_err == err;
             }
 
-            bool send(frame::fwriter& fw) {
+            bool send(frame::fwriter& fw, PacketType type) {
                 if (flag.is_recevied()) {
                     return false;
                 }
@@ -159,18 +161,28 @@ namespace utils {
                     cclose.reason_phrase = qerr->msg;
                     cclose.error_code = std::uint64_t(qerr->transport_error);
                     cclose.frame_type = std::uint64_t(qerr->frame_type);
-                    if (qerr->is_app) {
+                    if (type == PacketType::OneRTT && qerr->is_app) {
                         cclose.type = FrameType::CONNECTION_CLOSE_APP;
+                    }
+                    else if (qerr->is_app) {
+                        // hide phrase for security
+                        cclose.reason_phrase = {};
+                        cclose.error_code = std::uint64_t(TransportError::APPLICATION_ERROR);
                     }
                     return fw.write(cclose);
                 }
                 auto aerr = conn_err.as<AppError>();
                 if (aerr) {
                     flex_storage fxst;
-                    aerr->msg.error(fxst);
-                    cclose.type = FrameType::CONNECTION_CLOSE_APP;
                     cclose.error_code = aerr->error_code;
-                    cclose.reason_phrase = fxst;
+                    if (type == PacketType::OneRTT) {
+                        cclose.type = FrameType::CONNECTION_CLOSE_APP;
+                        aerr->msg.error(fxst);
+                        cclose.reason_phrase = fxst;
+                    }
+                    else {
+                        cclose.error_code = std::uint64_t(TransportError::APPLICATION_ERROR);
+                    }
                     return fw.write(cclose);
                 }
                 flex_storage fxst;
@@ -209,10 +221,10 @@ namespace utils {
                 errtype.store(ErrorType::remote);
                 close_data = make_storage(cclose.len() + 1);
                 close_data.fill(0);
-                io::writer w{close_data};
+                binary::writer w{close_data};
                 cclose.render(w);
                 frame::ConnectionCloseFrame new_close;
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 new_close.parse(r);
                 conn_err = QUICError{
                     .msg = new_close.reason_phrase.as_char(),

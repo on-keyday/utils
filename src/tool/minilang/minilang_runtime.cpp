@@ -229,7 +229,7 @@ namespace minilang {
                 auto binab = [&](OpFilter op, const char* symbol, auto fn) {
                     if (!any(filter & op)) {
                         number::Array<char, 50, true> tmp;
-                        helper::appends(tmp, "operator ", symbol, " is not surpported here");
+                        strutil::appends(tmp, "operator ", symbol, " is not surpported here");
                         error(tmp.c_str(), node);
                         return false;
                     }

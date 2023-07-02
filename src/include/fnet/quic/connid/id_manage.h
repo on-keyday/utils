@@ -28,7 +28,7 @@ namespace utils {
             InitialRetry iniret;
 
            public:
-            void reset(std::uint32_t version, Config&& config) {
+            void reset(std::uint32_t version, const Config& config) {
                 cparam.random = std::move(config.random);
                 cparam.version = version;
                 acceptor.reset(config.packet_per_id, config.max_packet_per_id, config.change_mode);
@@ -114,13 +114,13 @@ namespace utils {
                 return error::none;
             }
 
-            IOResult send(frame::fwriter& w, auto&& observer_vec, bool allow_retire) {
+            IOResult send(frame::fwriter& w, auto&& observer, bool allow_retire) {
                 if (allow_retire) {
-                    if (!acceptor.send(w, observer_vec)) {
+                    if (!acceptor.send(w, observer)) {
                         return IOResult::fatal;
                     }
                 }
-                return issuer.send(w, observer_vec) ? IOResult::ok : IOResult::fatal;
+                return issuer.send(w, observer) ? IOResult::ok : IOResult::fatal;
             }
 
             auto get_dstID_len_callback() {

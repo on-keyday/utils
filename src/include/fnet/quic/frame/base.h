@@ -15,7 +15,7 @@ namespace utils {
 
         struct Frame {
             FrameFlags type;  // only parse
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 auto [data, ok] = varint::read(r);
                 if (!ok || !varint::is_min_len(data)) {
                     return false;
@@ -24,7 +24,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool parse_check(io::reader& r, FrameType ty) noexcept {
+            constexpr bool parse_check(binary::reader& r, FrameType ty) noexcept {
                 return parse(r) && type.type() == ty;
             }
 
@@ -32,7 +32,7 @@ namespace utils {
                 return varint::min_len(flags.value);
             }
 
-            static constexpr bool type_minwrite(io::writer& w, FrameFlags flags) noexcept {
+            static constexpr bool type_minwrite(binary::writer& w, FrameFlags flags) noexcept {
                 return varint::write(w, varint::Value(flags.value));
             }
 
@@ -40,7 +40,7 @@ namespace utils {
                 return type_minlen(type);
             }
 
-            constexpr bool render(io::writer& w) noexcept {
+            constexpr bool render(binary::writer& w) noexcept {
                 return type_minwrite(w, type);
             }
 
@@ -55,14 +55,14 @@ namespace utils {
         namespace test {
             constexpr bool do_test(auto&& frame, auto&& cb) {
                 byte data[100]{};
-                io::writer w{data};
+                binary::writer w{data};
                 auto prev = frame.len(false);
                 FrameType ty = frame.get_type(false);
                 bool ok1 = frame.render(w);
                 if (!ok1) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 bool ok2 = frame.parse(r);
                 if (!ok2) {
                     return false;

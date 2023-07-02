@@ -13,19 +13,40 @@ namespace utils {
     namespace fnet::quic::connid {
         // ConnIDExporter exports connection IDs to multiplexer
         struct ConnIDExporter {
-            std::weak_ptr<void> arg;
-            void (*add_connID)(void*, view::rvec id) = nullptr;
-            void (*retire_connID)(void*, view::rvec id) = nullptr;
+            // multiplexer pointer
+            std::weak_ptr<void> mux;
+            // object pointer (may refer self)
+            std::weak_ptr<void> obj;
+            void (*add_connID)(void*, void*, view::rvec id) = nullptr;
+            void (*retire_connID)(void*, void*, view::rvec id) = nullptr;
+
+            constexpr void set_addConnID(void (*add_)(void*, void*, view::rvec id)) {
+                add_connID = add_;
+            }
+
+            template <class T, class U>
+            void set_addConnID(void (*add_)(T*, U*, view::rvec id)) {
+                add_connID = reinterpret_cast<decltype(add_connID)>(add_);
+            }
+
+            constexpr void set_retireConnID(void (*retire_)(void*, void*, view::rvec id)) {
+                retire_connID = retire_;
+            }
+
+            template <class T, class U>
+            void set_retireConnID(void (*retire_)(T*, U*, view::rvec id)) {
+                retire_connID = reinterpret_cast<decltype(retire_connID)>(retire_);
+            }
 
             void add(view::rvec id, view::rvec statless_reset) {
                 if (add_connID != nullptr) {
-                    add_connID(arg.lock().get(), id);
+                    add_connID(mux.lock().get(), obj.lock().get(), id);
                 }
             }
 
-            void retire(view::rvec id,view::rvec stateless_reset) {
+            void retire(view::rvec id, view::rvec stateless_reset) {
                 if (retire_connID != nullptr) {
-                    retire_connID(arg.lock().get(), id);
+                    retire_connID(mux.lock().get(), obj.lock().get(), id);
                 }
             }
         };

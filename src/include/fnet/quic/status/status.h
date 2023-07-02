@@ -524,6 +524,14 @@ namespace utils {
                 return hs.has_received_retry();
             }
 
+            constexpr bool has_sent_retry() const {
+                return hs.has_sent_retry();
+            }
+
+            constexpr void set_retry_sent() {
+                hs.on_retry_sent();
+            }
+
             constexpr const HandshakeStatus& handshake_status() const {
                 return hs;
             }

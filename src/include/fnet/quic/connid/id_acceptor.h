@@ -14,13 +14,14 @@
 #include "../frame/writer.h"
 #include "../frame/conn_id.h"
 #include "../packet/stateless_reset.h"
+#include "../resend/ack_handler.h"
 
 namespace utils {
     namespace fnet::quic::connid {
 
         struct RetireWait {
             SequenceNumber seq = invalid_seq;
-            std::shared_ptr<ack::ACKLostRecord> wait;
+            resend::ACKHandler wait;
         };
 
         template <class TConfig>
@@ -72,9 +73,9 @@ namespace utils {
                         if (change_mode == ConnIDChangeMode::random) {
                             byte d[4]{};
                             cparam.random.gen_random(d);
-                            io::reader r{d};
+                            binary::reader r{d};
                             std::uint32_t v = 0;
-                            io::read_num(r, v);
+                            binary::read_num(r, v);
                             packet_per_id = v % max_packet_per_id;
                         }
                         return error::none;
@@ -228,6 +229,9 @@ namespace utils {
             }
 
             bool has_id(view::rvec cmp) const {
+                if (use_zero_length) {
+                    return cmp.size() == 0;
+                }
                 for (auto& id : dstids) {
                     if (id.second.id == cmp) {
                         return true;
@@ -247,7 +251,7 @@ namespace utils {
                 return true;
             }
 
-            bool send(frame::fwriter& fw, auto&& observer_vec) {
+            bool send(frame::fwriter& fw, auto&& observer) {
                 auto do_send = [&](RetireWait& it) {
                     frame::RetireConnectionIDFrame retire;
                     retire.sequence_number = it.seq.seq;
@@ -257,18 +261,17 @@ namespace utils {
                     if (!fw.write(retire)) {
                         return false;
                     }
-                    it.wait = ack::make_ack_wait();
-                    observer_vec.push_back(it.wait);
+                    it.wait.wait(observer);
                     return true;
                 };
                 for (auto it = waitlist.begin(); it != waitlist.end();) {
-                    if (it->wait) {
-                        if (it->wait->is_ack()) {
-                            ack::put_ack_wait(std::move(it->wait));
+                    if (it->wait.not_confirmed()) {
+                        if (it->wait.is_ack()) {
+                            it->wait.confirm();
                             it = waitlist.erase(it);
                             continue;
                         }
-                        else if (it->wait->is_lost()) {
+                        else if (it->wait.is_lost()) {
                             if (!do_send(*it)) {
                                 return false;
                             }

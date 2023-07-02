@@ -6,9 +6,9 @@
 */
 
 #pragma once
-#include "../../io/bit.h"
-#include "../../io/number.h"
-#include "../../helper/appender.h"
+#include "../../binary/bit.h"
+#include "../../binary/number.h"
+#include "../../strutil/append.h"
 #include "huffman.h"
 
 namespace utils {
@@ -145,7 +145,7 @@ namespace utils {
         // 0: invalid tree
         // -1: no input
         template <class T>
-        int read_huffman_code(const huffman::DecodeTree*& result, const huffman::DecodeTable& table, io::bit_reader<T>& r) {
+        int read_huffman_code(const huffman::DecodeTree*& result, const huffman::DecodeTable& table, binary::bit_reader<T>& r) {
             result = table.get_root();
             while (true) {
                 if (!result) {
@@ -164,7 +164,7 @@ namespace utils {
         }
 
         template <class T>
-        DeflateError read_dynamic_table(DynHuffmanHeader& head, const huffman::DecodeTable& root, io::bit_reader<T>& r, std::uint16_t litlen, std::uint16_t dist) {
+        DeflateError read_dynamic_table(DynHuffmanHeader& head, const huffman::DecodeTable& root, binary::bit_reader<T>& r, std::uint16_t litlen, std::uint16_t dist) {
             const huffman::DecodeTree* cur = nullptr;
             constexpr auto size = deflate_huffman_size + deflate_distance_huffman_size;
             huffman::CanonicalTable<deflate_huffman_size> codeh;
@@ -259,7 +259,7 @@ namespace utils {
         }
 
         template <class T>
-        DeflateError read_dyn_huffman_header(DynHuffmanHeader& h, io::bit_reader<T>& r) {
+        DeflateError read_dyn_huffman_header(DynHuffmanHeader& h, binary::bit_reader<T>& r) {
             std::uint16_t hlit = 0, hdist = 0, hclen = 0;
             if (!r.read(hlit, 5, false) ||
                 !r.read(hdist, 5, false) ||
@@ -296,7 +296,7 @@ namespace utils {
         }
 
         template <class Out, class T>
-        DeflateError decode_block(Out& out, const huffman::DecodeTable& litlen, const huffman::DecodeTable& dist, io::bit_reader<T>& r) {
+        DeflateError decode_block(Out& out, const huffman::DecodeTable& litlen, const huffman::DecodeTable& dist, binary::bit_reader<T>& r) {
             const huffman::DecodeTree* value;
             auto read_litlen = [&] {
                 switch (read_huffman_code(value, litlen, r)) {
@@ -362,7 +362,7 @@ namespace utils {
         }
 
         template <class Out, class T>
-        DeflateError decode_deflate(Out& out, io::bit_reader<T>& r) {
+        DeflateError decode_deflate(Out& out, binary::bit_reader<T>& r) {
             r.set_direction(true);
             bool fin = false;
             while (!fin) {
@@ -386,8 +386,8 @@ namespace utils {
                         }
                         auto br = bs.reader();
                         std::uint16_t len = 0, nlen = 0;
-                        if (!io::read_num(br, len, false) ||
-                            !io::read_num(br, nlen, false)) {
+                        if (!binary::read_num(br, len, false) ||
+                            !binary::read_num(br, nlen, false)) {
                             return DeflateError::internal_bug;
                         }
                         if (std::uint16_t(~len) != nlen) {
@@ -402,7 +402,7 @@ namespace utils {
                         if (!ok) {
                             return DeflateError::internal_bug;
                         }
-                        helper::append(out, data);
+                        strutil::append(out, data);
                         bs.offset(len);
                         break;
                     }

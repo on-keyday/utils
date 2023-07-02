@@ -7,15 +7,15 @@
 
 
 #include "interface_list.h"
-#include "../../include/helper/appender.h"
-#include "../../include/helper/strutil.h"
+#include "../../include/strutil/append.h"
+#include "../../include/strutil/strutil.h"
 #include "../../include/number/char_range.h"
 #include <random>
 #include <regex>
 #include <view/slice.h>
 
 namespace ifacegen {
-    namespace hlp = utils::helper;
+    namespace hlp = utils::strutil;
     namespace view = utils::view;
 
     constexpr auto decltype_func = "decltype";

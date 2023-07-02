@@ -20,20 +20,20 @@ namespace utils {
         struct UniStreamHeader {
             quic::varint::Value type;
 
-            constexpr bool parse(io::reader& r) {
+            constexpr bool parse(binary::reader& r) {
                 return quic::varint::read(r, type);
             }
 
-            constexpr bool render(io::writer& w) const {
+            constexpr bool render(binary::writer& w) const {
                 return quic::varint::write(w, type);
             }
 
-            constexpr bool parse_type(io::reader& r, Type t) {
+            constexpr bool parse_type(binary::reader& r, Type t) {
                 return parse(r) &&
                        type == std::uint64_t(t);
             }
 
-            constexpr bool redner_type(io::writer& w, Type type) const {
+            constexpr bool redner_type(binary::writer& w, Type type) const {
                 return quic::varint::write(w, std::uint64_t(type));
             }
         };

@@ -12,6 +12,7 @@
 #pragma once
 #include "context/context.h"
 #include "context/default.h"
+#include "context/typeconfig.h"
 #include "stream/impl/recv_stream.h"
 #include <mutex>
 
@@ -20,7 +21,8 @@ namespace utils {
 
         using Config = context::Config;
 
-        using context::use_default;
+        using context::use_default_config;
+        using context::use_default_context;
 
         using StreamID = stream::StreamID;
         using PacketNumber = packetnum::Value;
@@ -30,10 +32,17 @@ namespace utils {
         using FlowLimiter = stream::core::Limiter;
 
         template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
-        std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r) {
+        std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r, bool use_auto_update = false) {
             auto read = std::allocate_shared<stream::impl::RecvSorted<Lock>>(glheap_allocator<stream::impl::RecvSorted<Lock>>{});
             using Saver = typename TConfig::stream_handler::recv_buf;
-            r.set_receiver(Saver(read, stream::impl::reader_recv_handler<Lock, TConfig>));
+            if (use_auto_update) {
+                r.set_receiver(Saver(read,
+                                     stream::impl::reader_recv_handler<Lock, TConfig>,
+                                     stream::impl::reader_auto_updater<Lock, TConfig>));
+            }
+            else {
+                r.set_receiver(Saver(read, stream::impl::reader_recv_handler<Lock, TConfig>));
+            }
             return read;
         }
 
@@ -60,7 +69,7 @@ namespace utils {
                 stream::TypeConfig<
                     std::mutex,
                     stream::UserStreamHandlerType<>,
-                    stream::UserConnCallbackArgType<void*>>;
+                    stream::impl::Bind<stream::impl::ConnHandlerSingleArg, void*>::template bound>;
             using DefaultTypeConfig = context::TypeConfig<std::mutex, DefaultStreamTypeConfig>;
             using Context = context::Context<DefaultTypeConfig>;
 

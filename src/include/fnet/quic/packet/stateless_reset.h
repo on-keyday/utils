@@ -19,7 +19,7 @@ namespace utils {
                 return PacketType::StatelessReset;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return Packet::parse(r) &&
                        flags.is_short() &&
                        !flags.invalid() &&
@@ -33,7 +33,7 @@ namespace utils {
                        16;
             }
 
-            constexpr bool render(io::writer& w, byte first_byte_random = 0) const {
+            constexpr bool render(binary::writer& w, byte first_byte_random = 0) const {
                 if (unpredicable_bits.size() < 4) {
                     return false;
                 }
@@ -58,14 +58,14 @@ namespace utils {
                 StatelessReset reset;
                 byte bits[10] = "hogereya";
                 byte data[100];
-                io::writer w{data};
+                binary::writer w{data};
                 reset.unpredicable_bits = bits;
                 byte tok[] = "hogehoge ieyona";
                 view::copy(reset.stateless_reset_token, tok);
                 if (!reset.render(w, 'm')) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!reset.parse(r)) {
                     return false;
                 }

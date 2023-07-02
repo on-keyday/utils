@@ -8,7 +8,7 @@
 // slice - view slice
 #pragma once
 #include "../core/sequencer.h"
-#include "../helper/strutil.h"
+#include "../strutil/strutil.h"
 
 namespace utils {
     namespace view {
@@ -60,9 +60,9 @@ namespace utils {
                 : buf(std::forward<V>(t)) {}
 
             constexpr auto operator[](size_t index) const {
-                constexpr auto eq = helper::default_compare();
-                size_t first = index == 0 ? 0 : find(buf.buffer, sep, index - 1, 0, eq);
-                size_t second = helper::find(buf.buffer, sep, index, 0, eq);
+                constexpr auto eq = strutil::default_compare();
+                size_t first = index == 0 ? 0 : strutil::find(buf.buffer, sep, index - 1, 0, eq);
+                size_t second = strutil::find(buf.buffer, sep, index, 0, eq);
                 if (first == ~0 && second == ~0) {
                     return make_ref_slice(buf.buffer, 0, 0);
                 }
@@ -71,7 +71,7 @@ namespace utils {
             }
 
             constexpr size_t size() const {
-                return helper::count(buf.buffer, sep) + 1;
+                return strutil::count(buf.buffer, sep) + 1;
             }
         };
 

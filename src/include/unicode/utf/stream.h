@@ -7,9 +7,9 @@
 
 // stream - utf stream
 #pragma once
-#include "../io/reader.h"
+#include "../binary/reader.h"
 #include "convert.h"
-#include "../../endian/view.h"
+#include "../../binary/view.h"
 #include <tuple>
 
 namespace utils::unicode::utf {
@@ -97,12 +97,12 @@ namespace utils::unicode::utf {
                 return do_convert(u8view);
             }
             if (type == UTFType::utf16_le || type == UTFType::utf16_be) {
-                endian::EndianView<view::rvec, char16_t> u16view{u8view};
+                binary::EndianView<view::rvec, char16_t> u16view{u8view};
                 u16view.little_endian = type == UTFType::utf16_le;
                 return do_convert(u16view);
             }
             if (type == UTFType::utf32_le || type == UTFType::utf32_be) {
-                endian::EndianView<view::rvec, char32_t> u32view{u8view};
+                binary::EndianView<view::rvec, char32_t> u32view{u8view};
                 u32view.little_endian = type == UTFType::utf32_le;
                 return do_convert(u32view);
             }

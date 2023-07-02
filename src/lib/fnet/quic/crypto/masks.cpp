@@ -9,7 +9,7 @@
 #include <fnet/dll/lazy/ssldll.h>
 #include <helper/defer.h>
 #include <cstring>
-#include <endian/buf.h>
+#include <binary/buf.h>
 
 namespace utils {
     namespace fnet {
@@ -42,7 +42,7 @@ namespace utils {
                 int outlen = 32;
                 byte zeros[5]{0};
                 if (lazy::crypto::bssl::sp::CRYPTO_chacha_20_.find()) {
-                    auto counter = endian::Buf<std::uint32_t, const byte*>{sample}.read_le();
+                    auto counter = binary::Buf<std::uint32_t, const byte*>{sample}.read_le();
                     lazy::crypto::bssl::sp::CRYPTO_chacha_20_(data, zeros, 5, hp_key, sample + 4, counter);
                     memcpy(masks, zeros, 5);
                     return true;

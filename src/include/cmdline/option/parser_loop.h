@@ -43,7 +43,7 @@ namespace utils {
                 }
                 else if (state == FlagType::pf_one_assign || state == FlagType::pf_two_assign) {
                     opt_begin = state == FlagType::pf_one_assign ? 1 : 2;
-                    opt_end = helper::find(argv[index], get_assignment(flag));
+                    opt_end = strutil::find(argv[index], get_assignment(flag));
                 }
                 arg_track_index++;
                 return true;

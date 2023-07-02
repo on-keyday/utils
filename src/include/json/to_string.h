@@ -11,16 +11,16 @@
 #include "error.h"
 #include "jsonbase.h"
 #include "../number/to_string.h"
-#include <helper/appender.h>
+#include <strutil/append.h>
 #include "../escape/escape.h"
-#include "../helper/indent.h"
+#include "../code/code_writer.h"
 
 namespace utils {
 
     namespace json {
         namespace internal {
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string_detail(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag) {
+            JSONErr to_string_detail(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag) {
                 const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
                 auto numtostr = [&](auto& j) -> JSONErr {
                     auto e = number::to_string(out.t, j);
@@ -72,17 +72,17 @@ namespace utils {
                 };
                 if (holder.is_undef()) {
                     if (any(flag & FmtFlag::undef_as_null)) {
-                        helper::append(out.t, "null");
+                        strutil::append(out.t, "null");
                         return true;
                     }
                     return JSONError::invalid_value;
                 }
                 else if (holder.is_null()) {
-                    helper::append(out.t, "null");
+                    strutil::append(out.t, "null");
                     return true;
                 }
                 else if (auto b = holder.as_bool()) {
-                    helper::append(out.t, *b ? "true" : "false");
+                    strutil::append(out.t, *b ? "true" : "false");
                     return true;
                 }
                 else if (auto i = holder.as_numi()) {
@@ -156,7 +156,7 @@ namespace utils {
             }
         }  // namespace internal
         template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-        JSONErr to_string(const JSONBase<String, Vec, Object>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
+        JSONErr to_string(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
             auto e = internal::to_string_detail(json, out, flag);
             if (e && any(flag & FmtFlag::last_line)) {
                 out.write_ln();
@@ -166,7 +166,7 @@ namespace utils {
 
         template <class Out, class String, template <class...> class Vec, template <class...> class Object>
         JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, FmtFlag flag = FmtFlag::none, const char* indent = "    ") {
-            auto w = helper::make_indent_writer(out, indent);
+            auto w = code::make_indent_writer(out, indent);
             return to_string(json, w, flag);
         }
 

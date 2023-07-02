@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <array>
 #include <algorithm>
-#include "../../helper/equal.h"
+#include "../../strutil/equal.h"
 #include "../../core/strlen.h"
 
 namespace utils {
@@ -49,7 +49,7 @@ namespace utils {
             template <class Kind, size_t len>
             constexpr Kind find_index(auto src_mapping, auto str) {
                 for (auto i = 0; i < len; i++) {
-                    if (helper::equal(src_mapping[i], str)) {
+                    if (strutil::equal(src_mapping[i], str)) {
                         return Kind(i);
                     }
                 }

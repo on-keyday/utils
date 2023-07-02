@@ -8,7 +8,7 @@
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/wrap/iocommon.h"
 #include "../../include/wrap/cin.h"
-#include "../../include/helper/readutil.h"
+#include "../../include/strutil/readutil.h"
 #include "../../include/unicode/utf/convert.h"
 #include <cstdio>
 #include <iostream>
@@ -144,7 +144,7 @@ namespace utils {
                 while (true) {
                     lock.lock();
                     auto seq = make_ref_seq(glbuf);
-                    auto e = helper::read_until(out, seq, "\n");
+                    auto e = strutil::read_until(out, seq, "\n");
                     if (!e) {
                         lock.unlock();
                         std::getline(in, out);

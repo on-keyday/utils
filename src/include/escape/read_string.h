@@ -9,7 +9,7 @@
 // read_string - read string
 #pragma once
 #include "escape.h"
-#include "../helper/readutil.h"
+#include "../strutil/readutil.h"
 #include "../view/char.h"
 
 namespace utils {
@@ -57,7 +57,7 @@ namespace utils {
             seq.consume();
             bool esc = any(flag & ReadFlag::escape);
             bool line = any(flag & ReadFlag::allow_line);
-            helper::read_whilef(key, seq, [&](auto&& c) {
+            strutil::read_whilef(key, seq, [&](auto&& c) {
                 if (!line && c == '\n') {
                     return true;
                 }
@@ -107,7 +107,7 @@ namespace utils {
                     const auto view = view::CharView(store_c, count);
                     if (seq.seek_if(view)) {
                         str.push_back(store_c);
-                        helper::append(str, view);
+                        strutil::append(str, view);
                         return true;
                     }
                     seq.rptr = start;

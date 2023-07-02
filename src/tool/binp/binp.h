@@ -10,7 +10,7 @@
 #include <string>
 #include <variant>
 #include <json/json_export.h>
-#include <helper/indent.h>
+#include <code/code_writer.h>
 #include <helper/defer.h>
 #include <minilang/comb/nullctx.h>
 #include <string_view>
@@ -19,7 +19,7 @@ namespace binp {
 
     using Pos = utils::minilang::comb::Pos;
 
-    using Out = utils::helper::CodeWriter<std::string, std::string_view>;
+    using Out = utils::code::CodeWriter<std::string, std::string_view>;
 
     struct Attributes {
         Pos default_pos;

@@ -9,7 +9,7 @@
 #pragma once
 #include "../../escape/read_string.h"
 #include "token.h"
-#include "../../helper/appender.h"
+#include "../../strutil/append.h"
 #include"tokendef.h"
 
 namespace utils {
@@ -35,7 +35,7 @@ namespace utils {
                 str->pos.begin = b;
                 str->pos.end = src.seq.rptr;
                 char pf[] = {prfix, 0};
-                helper::appends(str->token, pf, tok, pf);
+                strutil::appends(str->token, pf, tok, pf);
                 str->unesc_err = escape::unescape_str(tok, str->unescaped, esc);
                 str->prefix = prfix;
                 return str;

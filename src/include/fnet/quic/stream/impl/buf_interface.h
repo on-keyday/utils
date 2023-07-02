@@ -38,12 +38,18 @@ namespace utils {
                 impl.shrink_to_fit();
             }
 
+            // this is called with unlocked this_
             constexpr void send_callback(auto this_) {
                 impl.send_callback(this_);
             }
 
+            // this is called with unlocked this_
             constexpr void recv_callback(auto this_) {
                 impl.send_callback(this_);
+            }
+
+            constexpr std::uint64_t fairness_limit() {
+                return impl.fairness_limit();
             }
 
             constexpr auto get_specific() {

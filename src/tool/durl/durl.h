@@ -10,7 +10,7 @@
 #include <wrap/cout.h>
 #include <json/convert_json.h>
 #include <json/json_export.h>
-#include <net_util/uri_parse.h>
+#include <fnet/util/uri.h>
 
 namespace durl {
     namespace subcmd = utils::cmdline::subcmd;

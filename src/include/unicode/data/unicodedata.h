@@ -12,7 +12,7 @@
 #include "../../number/to_string.h"
 #include <map>
 #include <vector>
-#include "../../helper/strutil.h"
+#include "../../strutil/strutil.h"
 
 namespace utils {
     namespace unicode::data {
@@ -179,12 +179,12 @@ namespace utils {
                 else if (info.decomposition.command == "<narrow>") {
                     info.east_asian_width = "H";
                 }
-                else if (helper::contains(info.name, "CJK") ||
-                         helper::contains(info.name, "HIRAGANA") ||
-                         helper::contains(info.name, "KATAKANA")) {
+                else if (strutil::contains(info.name, "CJK") ||
+                         strutil::contains(info.name, "HIRAGANA") ||
+                         strutil::contains(info.name, "KATAKANA")) {
                     info.east_asian_width = "W";
                 }
-                else if (helper::contains(info.name, "GREEK")) {
+                else if (strutil::contains(info.name, "GREEK")) {
                     info.east_asian_width = "A";
                 }
                 else {

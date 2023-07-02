@@ -13,7 +13,7 @@
 namespace utils {
     namespace fnet::quic::frame {
         struct fwriter {
-            io::writer& w;
+            binary::writer& w;
             packet::PacketStatus status;
             FrameType prev_type = FrameType::PADDING;
 

@@ -20,7 +20,7 @@ namespace utils {
                 return FrameType::RESET_STREAM;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::RESET_STREAM) &&
                        varint::read(r, streamID) &&
                        varint::read(r, application_protocol_error_code) &&
@@ -34,7 +34,7 @@ namespace utils {
                        varint::len(final_size);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, FrameType::RESET_STREAM) &&
                        varint::write(w, streamID) &&
                        varint::write(w, application_protocol_error_code) &&
@@ -50,7 +50,7 @@ namespace utils {
                 return FrameType::STOP_SENDING;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::STOP_SENDING) &&
                        varint::read(r, streamID) &&
                        varint::read(r, application_protocol_error_code);
@@ -62,7 +62,7 @@ namespace utils {
                        varint::len(application_protocol_error_code);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, FrameType::STOP_SENDING) &&
                        varint::write(w, streamID) &&
                        varint::write(w, application_protocol_error_code);
@@ -84,7 +84,7 @@ namespace utils {
                 return type.type_detail();
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::STREAM) &&
                        varint::read(r, streamID) &&
                        (type.STREAM_off()
@@ -109,7 +109,7 @@ namespace utils {
                        stream_data.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 auto tyval = FrameFlags{get_type()};
                 return type_minwrite(w, tyval) &&
                        varint::write(w, streamID) &&
@@ -194,7 +194,7 @@ namespace utils {
                 return t;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, t) &&
                        varint::read(r, streamID) &&
                        varint::read(r, max_stream_data);
@@ -206,7 +206,7 @@ namespace utils {
                        varint::len(max_stream_data);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, t) &&
                        varint::write(w, streamID) &&
                        varint::write(w, max_stream_data);

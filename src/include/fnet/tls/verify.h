@@ -20,6 +20,7 @@ namespace utils {
             }
 
            public:
+            void add_chain();
         };
     }  // namespace fnet::tls
 }  // namespace utils

@@ -175,8 +175,30 @@ namespace utils {
             return {data.substr(0, res), sockaddr_to_NetAddrPort(addr, fromlen), res == 0 && is_stream ? error::eof : error::none};
         }
 
-        error::Error Socket::shutdown(int mode) {
-            auto res = lazy::shutdown_(sock, mode);
+#ifdef _WIN32
+        constexpr auto shutdown_recv = SD_RECEIVE;
+        constexpr auto shutdown_send = SD_SEND;
+        constexpr auto shutdown_both = SD_BOTH;
+#else
+        constexpr auto shutdown_recv = SHUT_RD;
+        constexpr auto shutdown_send = SHUT_WR;
+        constexpr auto shutdown_both = SHUT_RDWR;
+#endif
+
+        error::Error Socket::shutdown(ShutdownMode mode) {
+            int mode_ = shutdown_both;
+            switch (mode) {
+                case ShutdownMode::send:
+                    mode_ = shutdown_send;
+                    break;
+                case ShutdownMode::recv:
+                    mode_ = shutdown_recv;
+                    break;
+                case ShutdownMode::both:  // nothing to do
+                default:
+                    break;
+            }
+            auto res = lazy::shutdown_(sock, mode_);
             if (res != 0) {
                 return Errno();
             }

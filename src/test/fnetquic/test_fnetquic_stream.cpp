@@ -12,6 +12,7 @@
 #include <cassert>
 #include <fnet/quic/frame/parse.h>
 #include <fnet/quic/stream/impl/recv_stream.h>
+#include <fnet/quic/stream/typeconfig.h>
 
 namespace test {
     namespace stream = utils::fnet::quic::stream;
@@ -65,23 +66,37 @@ int main() {
     using IOResult = utils::fnet::quic::IOResult;
     auto peer = test::gen_peer_limits();
     auto local = test::gen_local_limits();
-    auto conn_local = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Direction::client);
+    auto conn_local = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::client);
     conn_local->apply_peer_initial_limits(peer);
     conn_local->apply_local_initial_limits(local);
-    auto conn_peer = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Direction::server);
+    auto conn_peer = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::server);
     conn_peer->apply_local_initial_limits(peer);
     conn_peer->apply_peer_initial_limits(local);
     auto stream_1 = conn_local->open_bidi();
-    assert(stream_1 && stream_1->sender.id() == 2);
+    assert(stream_1 && stream_1->sender.id() == 0);
     stream_1->sender.add_data("Hello peer!", false);
     utils::byte traffic[1000];
-    utils::io::writer w{traffic};
-    std::vector<std::weak_ptr<utils::fnet::quic::ack::ACKLostRecord>> locals, peers;
+    utils::binary::writer w{traffic};
+    // std::vector<std::weak_ptr<utils::fnet::quic::ack::ACKLostRecord>> locals, peers;
     namespace frame = utils::fnet::quic::frame;
+    utils::fnet::quic::ack::ACKRecorder locals, peers;
     frame::fwriter fw{w};
     IOResult ok = conn_local->send(fw, locals);
-    assert(ok == IOResult::ok && locals.size() == 1);
+    // first, this program is not multi thread so use_count is correct,
+    // second, conn_local, locals and return value here holds same shared_ptr
+    // so, use_count() here should be 3
+    assert(ok == IOResult::ok && locals.get().use_count() == 3);
     RecvQ q;
+    auto h = conn_peer->conn_handler();
+    h->arg = std::shared_ptr<RecvQ>(&q, [](RecvQ*) {});
+    h->bidi_accept_cb = [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
+        auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
+        using H = utils::fnet::quic::stream::impl::FragmentSaver<>;
+        d->receiver.set_receiver(H(std::move(recv),
+                                   utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
+        static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
+    };
+    /*
     conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
         auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
         using H = utils::fnet::quic::stream::impl::FragmentSaver<>;
@@ -89,14 +104,15 @@ int main() {
                                    utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
         static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
     });
+    */
 
-    utils::io::reader r{w.written()};
+    utils::binary::reader r{w.written()};
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_peer->recv(f);
         assert(res && e.is_noerr());
         auto stream_1_peer = q.accept();
-        assert(stream_1_peer && stream_1_peer->receiver.id() == 2);
+        assert(stream_1_peer && stream_1_peer->receiver.id() == 0);
         res = stream_1_peer->receiver.request_stop_sending(23);
         assert(res);
         w.reset();
@@ -104,7 +120,9 @@ int main() {
         assert(ok == IOResult::ok);
         return true;
     });
-    locals[0].lock()->ack();
+    // locals[0].lock()->ack();
+    locals.get()->ack();
+    locals = {};  // clear this
     auto res = stream_1->sender.detect_ack_lost();
     assert(res == IOResult::no_data);
     r.reset(w.written());
@@ -119,13 +137,14 @@ int main() {
     res = stream_1->sender.detect_ack_lost();
     assert(res == IOResult::no_data);
     r.reset(w.written());
-    peers[0].lock()->ack();
+    peers.get()->ack();
+    peers = {};  // clear this
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_peer->recv(f);
         assert(res && e.is_noerr());
     });
-    locals[1].lock()->ack();
+    locals.get()->ack();
     res = stream_1->sender.detect_ack_lost();
     assert(res == IOResult::not_in_io_state);
 }

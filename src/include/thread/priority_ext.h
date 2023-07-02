@@ -11,7 +11,7 @@
 #include <queue>
 #include "../wrap/light/queue.h"
 #include "channel.h"
-#include "../helper/compare_type.h"
+#include "../strutil/compare_type.h"
 
 namespace utils {
     namespace thread {
@@ -28,7 +28,7 @@ namespace utils {
             }
         };
 
-        template <class PriorityChanger = decltype(helper::no_check())>
+        template <class PriorityChanger = decltype(strutil::no_check())>
         struct DualModeHandler {
            private:
             bool prev_ = false;

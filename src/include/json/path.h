@@ -7,7 +7,7 @@
 
 #pragma once
 #include "jsonbase.h"
-#include "../helper/readutil.h"
+#include "../strutil/readutil.h"
 #include "../escape/escape.h"
 #include "../escape/read_string.h"
 
@@ -39,7 +39,7 @@ namespace utils {
                 }
                 else {
                     str = false;
-                    helper::read_whilef<true>(key, seq, [&](auto&& c) {
+                    strutil::read_whilef<true>(key, seq, [&](auto&& c) {
                         return cond(c);
                     });
                 }

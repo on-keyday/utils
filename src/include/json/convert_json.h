@@ -10,7 +10,7 @@
 #pragma once
 
 #include "jsonbase.h"
-#include "../helper/sfinae.h"
+// #include "../helper/sfinae.h"
 #include "iterator.h"
 
 namespace utils {
@@ -28,81 +28,81 @@ namespace utils {
 
             template <class T>
             concept to_array_interface = requires(T t) {
-                                             { t.size() };
-                                             { t[size_t(0)] };
-                                         };
+                { t.size() };
+                { t[size_t(0)] };
+            };
 
             template <class T>
             concept to_map_interface = requires(T t) {
-                                           { get<1>(*t.begin()) };
-                                           { t.end() };
-                                       };
+                { get<1>(*t.begin()) };
+                { t.end() };
+            };
 
             template <class T, class JSON>
             concept to_json_adl = requires(T t, JSON j) {
-                                      { to_json(t, j) };
-                                  };
+                { to_json(t, j) };
+            };
 
             template <class T, class JSON>
             concept to_json_method = requires(T t, JSON j) {
-                                         { t.to_json(j) };
-                                     };
+                { t.to_json(j) };
+            };
 
             template <class T, class JSON>
             concept from_json_adl = requires(T t, JSON j) {
-                                        { from_json(t, j) };
-                                    };
+                { from_json(t, j) };
+            };
 
             template <class T, class JSON>
             concept from_json_method = requires(T t, JSON j) {
-                                           { t.from_json(j) };
-                                       };
+                { t.from_json(j) };
+            };
 
             template <class T, class JSON>
             concept from_json_adl_flag = requires(T t, JSON j) {
-                                             { from_json(t, j, FromFlag::none) };
-                                         };
+                { from_json(t, j, FromFlag::none) };
+            };
 
             template <class T, class JSON>
             concept from_json_method_flag = requires(T t, JSON j) {
-                                                { t.from_json(j, FromFlag::none) };
-                                            };
+                { t.from_json(j, FromFlag::none) };
+            };
 
             template <class T>
             concept derefable = requires(T t) {
-                                    { *t };
-                                    { !t };
-                                };
+                { *t };
+                { !t };
+            };
 
             template <class T>
             concept indexable = requires(T t) {
-                                    { t[1] };
-                                };
+                { t[1] };
+            };
 
             template <class T>
             concept from_array_t = indexable<T> && requires(T t) {
-                                                       { t.size() };
-                                                   };
+                { t.size() };
+            };
 
             template <class T>
             concept from_map_t = requires(T t) {
-                                     { t["key"] };
-                                 };
+                { t["key"] };
+            };
 
             template <class T>
             concept pushbackable = requires(T t) {
-                                       { t.push_back('C') };
-                                   };
+                { t.push_back('C') };
+            };
 
             template <class T>
             concept to_int_from_elm = requires(T t) {
-                                          { int(t[1]) };
-                                      };
+                { int(t[1]) };
+            };
 
             template <class T>
             concept has_clear = requires(T t) {
-                                    { t.clear() };
-                                };
+                { t.clear() };
+            };
 
             template <class JSON>
             struct is_json_t {
@@ -173,7 +173,7 @@ namespace utils {
                     return js.as_number(t);
                 }
                 else if constexpr (std::is_same_v<T_cv, typename json_t::string_t> ||
-                                   (helper::is_utf_convertable<T> && pushbackable<T>)) {
+                                   (strutil::is_utf_convertable<T> && pushbackable<T>)) {
                     if constexpr (has_clear<T>) {
                         if (!any(flag & FromFlag::not_clear_string)) {
                             t.clear();
@@ -203,7 +203,7 @@ namespace utils {
                                js.is_null();
                     }
                     for (auto&& a : as_array(js)) {
-                        using elm_t = helper::append_size_t<T>;
+                        using elm_t = strutil::append_size_t<T>;
                         elm_t v;
                         if (!dispatch_from_json(v, a, flag)) {
                             return false;
@@ -245,7 +245,7 @@ namespace utils {
                     js = JSON(t);
                     return true;
                 }
-                else if constexpr ((helper::is_utf_convertable<T_> && to_int_from_elm<T_>)) {
+                else if constexpr ((strutil::is_utf_convertable<T_> && to_int_from_elm<T_>)) {
                     js = utf::convert<typename json_t::string_t>(t);
                     return true;
                 }

@@ -158,6 +158,21 @@ namespace utils::comb2 {
                 ctxs::context_error(ctx, "expect null but not");
             }
         };
+
+        struct Any {
+            template <class T, class Ctx, class Rec>
+            constexpr Status operator()(Sequencer<T>& seq, Ctx&& ctx, Rec&& r) const {
+                if (seq.eos()) {
+                    return Status::not_match;
+                }
+                seq.consume();
+                return Status::match;
+            }
+
+            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
+                ctxs::context_error(ctx, "expect single char but not");
+            }
+        };
     }  // namespace types
 
     namespace ops {
@@ -166,6 +181,7 @@ namespace utils::comb2 {
         constexpr auto bol = types::BOL{};
 
         constexpr auto null = types::Null{};
+        constexpr auto any = types::Any{};
 
         template <class Lit>
         constexpr auto lit(Lit&& lit) {

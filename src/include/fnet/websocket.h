@@ -8,18 +8,18 @@
 // websocket - WebSocket implementation
 #pragma once
 #include "dll/dllh.h"
-#include "../helper/appender.h"
+#include "../strutil/append.h"
 #include "../view/charvec.h"
 #include "../view/sized.h"
 #include "../helper/pushbacker.h"
-#include "../helper/readutil.h"
+#include "../strutil/readutil.h"
 #include <cstdint>
 #include <random>
 #include "../core/byte.h"
 #include "storage.h"
-#include "../io/number.h"
+#include "../binary/number.h"
 #include "../helper/defer.h"
-#include "../bits/flags.h"
+#include "../binary/flags.h"
 #include "../unicode/utf/convert.h"
 
 namespace utils {
@@ -36,7 +36,7 @@ namespace utils {
 
         struct FrameFlags {
            private:
-            bits::flags_t<byte, 1, 3, 4> flags;
+            binary::flags_t<byte, 1, 3, 4> flags;
             bits_flag_alias_method(flags, 2, opcode_raw);
 
            public:
@@ -74,7 +74,7 @@ namespace utils {
         }  // namespace internal
 
         constexpr void apply_mask(view::wvec data, std::uint32_t maskkey, auto&& apply_to) {
-            endian::Buf<std::uint32_t> keys;
+            binary::Buf<std::uint32_t> keys;
             keys.write_be(maskkey);
             for (size_t i = 0; i < data.size(); i++) {
                 data[i] ^= keys[i % 4];
@@ -91,7 +91,7 @@ namespace utils {
             }
             int len = 0;
             byte lens[9]{};
-            io::writer w{lens};
+            binary::writer w{lens};
             const auto len = frame.data.size();
             if (len <= 125) {
                 w.write(byte(len), 1);
@@ -99,25 +99,25 @@ namespace utils {
             }
             else if (len <= 0xffff) {
                 w.write(126, 1);
-                io::write_num(w, std::uint16_t(len));
+                binary::write_num(w, std::uint16_t(len));
                 len = 3;
             }
             else {
                 w.write(127, 1);
-                io::write_num(w, std::uint64_t(len));
+                binary::write_num(w, std::uint64_t(len));
                 len = 9;
             }
             if (frame.masked) {
                 lens[0] |= 0x80;
             }
             buf.push_back(frame.flags.get());
-            helper::append(buf, view::CharVec(lens, len));
+            strutil::append(buf, view::CharVec(lens, len));
             if (frame.masked) {
-                endian::Buf<std::uint32_t> keys;
+                binary::Buf<std::uint32_t> keys;
                 keys.write_be(frame.maskkey);
-                helper::append(buf, keys);
+                strutil::append(buf, keys);
                 if (no_mask) {
-                    helper::append(buf, frame.data);
+                    strutil::append(buf, frame.data);
                 }
                 else {
                     for (size_t i = 0; i < frame.len; i++) {
@@ -129,7 +129,7 @@ namespace utils {
                 }
             }
             else {
-                helper::append(buf, frame.data);
+                strutil::append(buf, frame.data);
             }
             return true;
         }
@@ -137,7 +137,7 @@ namespace utils {
         // read_frame_head reads frame before data payload
         // this function returns true if enough length exists including payload
         // otherwise returns false and red would not updated
-        constexpr bool read_frame(io::reader& r, Frame& frame) {
+        constexpr bool read_frame(binary::reader& r, Frame& frame) {
             auto ofs = r.offset();
             auto rollback = helper::defer([&] {
                 r.reset(ofs);
@@ -155,7 +155,7 @@ namespace utils {
             }
             else if (len == 126) {
                 std::uint16_t data;
-                if (!io::read_num(r, data)) {
+                if (!binary::read_num(r, data)) {
                     return false;
                 }
                 frame.len = data;
@@ -165,13 +165,13 @@ namespace utils {
                     return false;  // unexpected!!!
                 }
                 std::uint64_t data;
-                if (!io::read_num(r, data)) {
+                if (!binary::read_num(r, data)) {
                     return false;
                 }
                 frame.len = data;
             }
             if (frame.masked) {
-                if (!io::read_num(r, frame.maskkey)) {
+                if (!binary::read_num(r, frame.maskkey)) {
                     return false;
                 }
             }
@@ -206,7 +206,7 @@ namespace utils {
 
            public:
             void add_input(auto&& data, size_t len) {
-                helper::append(input, view::SizedView(data, len));
+                strutil::append(input, view::SizedView(data, len));
             }
 
             size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
@@ -214,7 +214,7 @@ namespace utils {
                 if (out.size() < limit) {
                     limit = out.size();
                 }
-                helper::read_n(buf, seq, limit);
+                strutil::read_n(buf, seq, limit);
                 if (!peek) {
                     out.shift(seq.rptr);
                 }
@@ -227,7 +227,7 @@ namespace utils {
 
             bool read_frame(auto&& callback, bool peek = false) {
                 websocket::Frame frame;
-                io::reader r{input};
+                binary::reader r{input};
                 if (!read_frame(frame, r)) {
                     return false;
                 }
@@ -307,7 +307,7 @@ namespace utils {
             }
 
             bool close(std::uint16_t code) {
-                endian::Buf<std::uint16_t> data;
+                binary::Buf<std::uint16_t> data;
                 data.write_be(code);
                 return write_close(data);
             }
@@ -315,8 +315,8 @@ namespace utils {
             bool close(std::uint16_t code, view::rvec phrase) {
                 flex_storage str;
                 str.reserve(2 + phrase.size());
-                io::writer w{str};
-                io::write_num(w, code);
+                binary::writer w{str};
+                binary::write_num(w, code);
                 w.write(phrase);
                 return write_close(str);
             }

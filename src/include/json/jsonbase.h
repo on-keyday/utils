@@ -13,9 +13,10 @@
 #include "error.h"
 #include <stdexcept>
 #include "../unicode/utf/convert.h"
-#include "../helper/append_charsize.h"
+#include "../strutil/append_charsize.h"
 #include "../number/parse.h"
 #include "../number/to_string.h"
+#include "../code/code_writer.h"
 
 namespace utils {
     namespace helper {
@@ -25,10 +26,10 @@ namespace utils {
 
     namespace json {
         template <class T>
-        concept StringLike = std::is_default_constructible_v<T> && helper::is_utf_convertable<T>;
+        concept StringLike = std::is_default_constructible_v<T> && strutil::is_utf_convertable<T>;
         namespace internal {
             template <class Out, class Str, template <class...> class V, template <class...> class O>
-            JSONErr to_string_detail(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
+            JSONErr to_string_detail(const JSONBase<Str, V, O>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag);
         }
 
         template <class String, template <class...> class Vec, template <class...> class Object>
@@ -46,7 +47,7 @@ namespace utils {
             template <class T, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json, bool eof);
             template <class Out, class Str, template <class...> class V, template <class...> class O>
-            friend JSONErr internal::to_string_detail(const JSONBase<Str, V, O>& json, helper::IndentWriter<Out, const char*>& out, FmtFlag flag);
+            friend JSONErr internal::to_string_detail(const JSONBase<Str, V, O>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag);
 
             holder_t obj;
 
@@ -490,7 +491,7 @@ namespace utils {
             }
 
             template <class T>
-            requires std::is_integral_v<T>
+                requires std::is_integral_v<T>
             explicit operator T() const {
                 T t;
                 if (!as_number(t)) {
@@ -508,7 +509,7 @@ namespace utils {
             }
 
             template <class T>
-            requires std::is_floating_point_v<T>
+                requires std::is_floating_point_v<T>
             explicit operator T() const {
                 T t;
                 if (!as_number(t)) {

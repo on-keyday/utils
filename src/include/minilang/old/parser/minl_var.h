@@ -33,7 +33,7 @@ namespace utils {
                         p.seq.rptr = begin;
                         return nullptr;
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     std::shared_ptr<LetNode> root, letnode;
                     auto read_param_type = [&] {
                         const auto param_start = p.seq.rptr;
@@ -47,16 +47,16 @@ namespace utils {
                                 return;
                             }
                             param_end = p.seq.rptr;
-                            space::consume_space(p.seq, false);
+                            strutil::consume_space(p.seq, false);
                             if (seq.seek_if(",")) {
-                                space::consume_space(p.seq, true);
+                                strutil::consume_space(p.seq, true);
                                 str.push_back(',');
                                 continue;
                             }
                             break;
                         }
                         std::shared_ptr<MinNode> typ, init;
-                        if (!p.seq.match("=") && !p.seq.eos() && !space::parse_eol<false>(p.seq)) {
+                        if (!p.seq.match("=") && !p.seq.eos() && !strutil::parse_eol<false>(p.seq)) {
                             typ = p.type(p);
                             if (!typ) {
                                 p.errc.say("expect ", expect, " type but not");
@@ -64,7 +64,7 @@ namespace utils {
                                 p.err = true;
                                 return;
                             }
-                            space::consume_space(p.seq, false);
+                            strutil::consume_space(p.seq, false);
                         }
                         if (p.seq.seek_if("=")) {
                             init = p.expr(p);
@@ -90,7 +90,7 @@ namespace utils {
                     letnode = root;
                     if (seq.seek_if("(")) {
                         while (true) {
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             if (seq.seek_if(")")) {
                                 break;
                             }

@@ -109,14 +109,14 @@ namespace utils {
             error::Error syserr;
 
             void error(auto&& pb) {
-                helper::append(pb, "epoll: error mask ");
+                strutil::append(pb, "epoll: error mask ");
                 bool flag = false;
                 auto write = [&](auto str) {
                     if (!flag) {
-                        helper::append(pb, " | ");
+                        strutil::append(pb, " | ");
                         flag = true;
                     }
-                    helper::append(pb, str);
+                    strutil::append(pb, str);
                 };
                 if (events & EPOLLERR) {
                     write("EPOLLERR");

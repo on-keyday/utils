@@ -17,7 +17,7 @@ namespace utils {
             auto opts_write(auto& result) {
                 return [&](ParseFlag flag, auto& opt) {
                     auto write = [&](auto&&... v) {
-                        helper::appends(result, v...);
+                        strutil::appends(result, v...);
                     };
                     auto write_assign = [&](auto&& argdesc) {
                         if (bufsize(argdesc) == 0) {
@@ -84,7 +84,7 @@ namespace utils {
                     if (any(opt->mode & OptMode::hidden)) {
                         continue;
                     }
-                    helper::append(push, indent);
+                    strutil::append(push, indent);
                     tmp(flag, opt);
                     if (maxlen < push.count) {
                         maxlen = push.count;
@@ -97,14 +97,14 @@ namespace utils {
                     if (any(opt->mode & OptMode::hidden)) {
                         continue;
                     }
-                    helper::append(cb, indent);
+                    strutil::append(cb, indent);
                     actual(flag, opt);
                     while (maxlen > cb.count) {
                         cb.push_back(' ');
                     }
-                    helper::append(result, " : ");
-                    helper::append(result, opt->help);
-                    helper::append(result, "\n");
+                    strutil::append(result, " : ");
+                    strutil::append(result, opt->help);
+                    strutil::append(result, "\n");
                     cb.count = 0;
                 }
             }

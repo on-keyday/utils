@@ -8,7 +8,7 @@
 // long_packet - long packet base
 #pragma once
 #include "packet.h"
-#include "../../../io/number.h"
+#include "../../../binary/number.h"
 #include "../packet_number.h"
 
 namespace utils {
@@ -20,17 +20,17 @@ namespace utils {
             byte srcIDLen = 0;  // only parse
             view::rvec srcID;
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return Packet::parse(r) &&
                        flags.is_long() &&
-                       io::read_num(r, version, true) &&
+                       binary::read_num(r, version, true) &&
                        r.read(view::wvec(&dstIDLen, 1)) &&
                        r.read(dstID, dstIDLen) &&
                        r.read(view::wvec(&srcIDLen, 1)) &&
                        r.read(srcID, srcIDLen);
             }
 
-            constexpr bool parse_check(io::reader& r, PacketType type) noexcept {
+            constexpr bool parse_check(binary::reader& r, PacketType type) noexcept {
                 if (!parse(r)) {
                     return false;
                 }
@@ -52,20 +52,20 @@ namespace utils {
                        srcID.size();
             }
 
-            constexpr bool render_with_version(io::writer& w, PacketFlags first_byte, std::uint32_t ver) const noexcept {
+            constexpr bool render_with_version(binary::writer& w, PacketFlags first_byte, std::uint32_t ver) const noexcept {
                 if (dstID.size() > 0xff ||
                     srcID.size() > 0xff) {
                     return false;
                 }
                 return w.write(first_byte.value, 1) &&
-                       io::write_num(w, ver, true) &&
+                       binary::write_num(w, ver, true) &&
                        w.write(byte(dstID.size()), 1) &&
                        w.write(dstID) &&
                        w.write(byte(srcID.size()), 1) &&
                        w.write(srcID);
             }
 
-            constexpr bool render_with_pnlen(io::writer& w, PacketType type, byte pnlen) const noexcept {
+            constexpr bool render_with_pnlen(binary::writer& w, PacketType type, byte pnlen) const noexcept {
                 if (!packetnum::is_wire_len(pnlen)) {
                     return false;
                 }
@@ -76,7 +76,7 @@ namespace utils {
                 return render_with_version(w, val, version);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return render_with_version(w, flags, version);
             }
 

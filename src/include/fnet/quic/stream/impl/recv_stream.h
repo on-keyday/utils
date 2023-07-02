@@ -11,6 +11,8 @@
 #include "../../../error.h"
 #include "../../transport_error.h"
 #include "../stream_id.h"
+#include "../core/limiter.h"
+#include <atomic>
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -28,7 +30,8 @@ namespace utils {
             bool fin = false;
             // reset received
             bool rst = false;
-            std::uint64_t read_pos = 0;
+            std::atomic_uint64_t read_pos = 0;
+            std::uint64_t prev_pos = 0;
 
             auto pack_new(Fragment frag) {
                 resend::StreamFragment save;
@@ -252,6 +255,20 @@ namespace utils {
                     return read_direct_impl();
                 }
             }
+
+            // called by auto updater
+
+            std::uint64_t read() const {
+                return read_pos;
+            }
+
+            std::uint64_t prev_read() const {
+                return prev_pos;
+            }
+
+            void update_prev_read(std::uint64_t n) {
+                prev_pos = n;
+            }
         };
 
         // arg must be ptrlike
@@ -272,6 +289,21 @@ namespace utils {
                 return {false, error::none};
             }
             return s->recv(type, frag);
+        }
+
+        template <class Locker, class TConfig>
+        inline std::uint64_t reader_auto_updater(decltype(std::declval<typename TConfig::stream_handler::recv_buf>().get_specific())& arg, core::Limiter lim, std::uint64_t ini_limit, bool query_update) {
+            if (!arg) {
+                return 0;
+            }
+            auto s = static_cast<RecvSorted<Locker>*>(std::to_address(arg));
+            if (query_update) {
+                return s->read() - s->prev_read();
+            }
+            auto n = s->read();
+            auto increment = n - s->prev_read();
+            s->update_prev_read(n);
+            return lim.curlimit() + increment;
         }
     }  // namespace fnet::quic::stream::impl
 }  // namespace utils

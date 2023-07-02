@@ -15,13 +15,13 @@ namespace utils {
             constexpr auto import_field(auto& parse_after, auto& start, auto& curnode, auto& p) {
                 return [&] {
                     const auto begin = seq.rptr;
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     const auto start_as = p.seq.rptr;
                     const auto end_as = p.seq.rptr;
                     std::string as;
                     if (ident_default_read(as, p.seq)) {
                         end_as = seq.rptr;
-                        space::consume_space(p.seq, false);
+                        strutil::consume_space(p.seq, false);
                     }
                     if (auto c = seq.current(); c != '"' && c != '\'' && c != '`') {
                         p.errc.say("expect import statement string but not");
@@ -64,11 +64,11 @@ namespace utils {
                     root = std::make_shared<ImportNode>();
                     root->str = import_group_str_;
                     curnode = root;
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     p.err = false;
                     if (seq.seek_if("(")) {
                         while (true) {
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             if (seq.seek_if(")")) {
                                 break;
                             }

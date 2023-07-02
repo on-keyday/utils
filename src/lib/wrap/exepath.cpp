@@ -7,7 +7,7 @@
 
 #include <platform/windows/dllexport_source.h>
 #include <wrap/exepath.h>
-#include <helper/appender.h>
+#include <strutil/append.h>
 #include <unicode/utf/convert.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -53,7 +53,7 @@ namespace utils {
                     char buf[1024]{};
                     auto red = readlink(proc, buf, 1024);
                     if (red == st.st_size) {
-                        helper::append(pb, buf);
+                        strutil::append(pb, buf);
                         return;
                     }
                 }
@@ -62,7 +62,7 @@ namespace utils {
             path.resize(st.st_size);
             auto red = readlink(proc, path.data(), st.st_size);
             if (red == st.st_size) {
-                helper::append(pb, path.c_str());
+                strutil::append(pb, path.c_str());
             }
         }
 #endif

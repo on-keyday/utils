@@ -20,6 +20,7 @@
 #include <fnet/quic/ack/unacked.h>
 #include <fnet/debug.h>
 #include <testutil/alloc_hook.h>
+#include <env/env_sys.h>
 using namespace utils::fnet::quic::use::rawptr;
 namespace quic = utils::fnet::quic;
 using TConfig2 = quic::context::TypeConfig<std::mutex, DefaultStreamTypeConfig, quic::connid::TypeConfig<>, quic::status::NewReno, quic::ack::UnackedPackets>;
@@ -72,7 +73,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
         if (eof) {
             break;
         }
-        s->s->update_recv_limit([&](FlowLimiter lim) {
+        s->s->update_recv_limit([&](FlowLimiter lim, std::uint64_t) {
             if (lim.avail_size() < 5000) {
                 utils::wrap::cout_wrap() << "update max stream data seq: " << s->s->id().seq_count() << "\n";
                 return lim.curlimit() + 100000;
@@ -121,6 +122,20 @@ void request(utils::coro::C* c, void* p) {
 void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket& sock, utils::fnet::NetAddrPort& addr) {
     auto s = ctx->get_streams();
     // s->set_auto_remove(true);
+    auto ch = s->conn_handler();
+    ch->arg = c;
+    ch->uni_accept_cb = [](void*& c, std::shared_ptr<RecvStream> in) {
+        auto s = set_stream_reader(*in);
+        auto l = static_cast<utils::coro::C*>(c);
+        auto r = new Recvs();
+        r->r = std::move(s);
+        r->s = in;
+        if (!l->add_coroutine(r, recv_stream)) {
+            delete r;
+            in->request_stop_sending(1);
+        }
+    };
+    /*
     s->set_accept_uni(c, [](void*& c, std::shared_ptr<RecvStream> in) {
         auto s = set_stream_reader(*in);
         auto l = static_cast<utils::coro::C*>(c);
@@ -132,6 +147,7 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
             in->request_stop_sending(1);
         }
     });
+    */
     while (true) {
         auto [payload, _, idle] = ctx->create_udp_payload();
         if (!idle) {
@@ -145,7 +161,7 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
         if (recv.size()) {
             ctx->parse_udp_payload(recv);
         }
-        s->update_max_data([&](FlowLimiter v) {
+        s->update_max_data([&](FlowLimiter v, std::uint64_t) {
             if (v.avail_size() < 5000) {
                 utils::wrap::cout_wrap() << "update max data\n";
                 return v.curlimit() + 100000;
@@ -155,13 +171,26 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
     }
 }
 
+using path = utils::wrap::path_string;
+path libssl;
+path libcrypto;
+std::string cert;
+
+void load_env() {
+    auto env = utils::env::sys::env_getter();
+    env.get_or(libssl, "FNET_QUIC_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
+    env.get_or(libcrypto, "FNET_QUIC_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
+    env.get_or(cert, "FNET_QUIC_LOCAL_CERT", "cert.pem");
+}
+
 int main() {
+    load_env();
     // utils::test::set_alloc_hook(true);
     // utils::test::set_log_file("./ignore/memuse.log");
     // utils::fnet::debug::allocs();
 #ifdef _WIN32
-    utils::fnet::tls::set_libcrypto(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
-    utils::fnet::tls::set_libssl(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
+    utils::fnet::tls::set_libcrypto(libcrypto.data());
+    utils::fnet::tls::set_libssl(libssl.data());
 #endif
     auto [wait, err] = utils::fnet::resolve_address("localhost", "8090", utils::fnet::sockattr_udp());
     assert(!err);
@@ -183,8 +212,8 @@ int main() {
     auto ctx = std::make_shared<ContextT>();
     auto conf = utils::fnet::tls::configure();
     conf.set_alpn("\x04test");
-    conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
-    auto def = use_default(std::move(conf));
+    conf.set_cacert_file(cert.data());
+    auto def = use_default_config(std::move(conf));
     def.internal_parameters.use_ack_delay = true;
     ctx->init(std::move(def));
     auto streams = ctx->get_streams();

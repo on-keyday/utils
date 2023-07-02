@@ -11,7 +11,7 @@
 #include "../../space/eol.h"
 #include "../../space/space.h"
 #include "../../helper/pushbacker.h"
-#include "../../helper/readutil.h"
+#include "../../strutil/readutil.h"
 #include "tokendef.h"
 
 namespace utils {
@@ -46,7 +46,7 @@ namespace utils {
         }
 
         constexpr bool has_eol(auto& seq, bool& lf, bool& cr, const char*& line) {
-            auto len = space::parse_eol<false>(seq);
+            auto len = strutil::parse_eol<false>(seq);
             if (len == 0) {
                 return false;
             }

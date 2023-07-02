@@ -7,7 +7,7 @@
 
 #pragma once
 #include <cstdint>
-#include "../../io/number.h"
+#include "../../binary/number.h"
 #include "deflate.h"
 
 namespace utils::file::gzip {
@@ -71,7 +71,7 @@ namespace utils::file::gzip {
         std::uint32_t crc32 = 0;
         std::uint32_t isize = 0;
 
-        constexpr bool parse_optional_fields(io::reader& r) noexcept {
+        constexpr bool parse_optional_fields(binary::reader& r) noexcept {
             if (flag & FEXTRA) {
                 xlen = r.top();
                 r.offset(1);
@@ -106,7 +106,7 @@ namespace utils::file::gzip {
                 r.offset(1);  // ignore zero
             }
             if (flag & FHCRC) {
-                if (!io::read_num(r, crc16, false)) {
+                if (!binary::read_num(r, crc16, false)) {
                     return false;
                 }
             }
@@ -116,29 +116,29 @@ namespace utils::file::gzip {
             return true;
         }
 
-        constexpr bool parse_header(io::reader& r) noexcept {
+        constexpr bool parse_header(binary::reader& r) noexcept {
             return r.read(id) &&
                    id == valid_id &&
-                   io::read_num(r, cm) &&
-                   io::read_num(r, flag) &&
-                   io::read_num(r, mtime, false) &&
+                   binary::read_num(r, cm) &&
+                   binary::read_num(r, flag) &&
+                   binary::read_num(r, mtime, false) &&
                    r.read(view::wvec(&xfl, 1)) &&
-                   io::read_num(r, os) &&
+                   binary::read_num(r, os) &&
                    parse_optional_fields(r);
         }
 
-        constexpr bool parse_trailer(io::reader& r) noexcept {
-            return io::read_num(r, crc32, false) &&
-                   io::read_num(r, isize, false);
+        constexpr bool parse_trailer(binary::reader& r) noexcept {
+            return binary::read_num(r, crc32, false) &&
+                   binary::read_num(r, isize, false);
         }
 
-        constexpr bool parse(io::reader& r) noexcept {
+        constexpr bool parse(binary::reader& r) noexcept {
             return parse_header(r) &&
                    r.read(content, r.remain().size() - 8) &&
                    parse_trailer(r);
         }
 
-        constexpr bool render_optional_fields(io::writer& w) const {
+        constexpr bool render_optional_fields(binary::writer& w) const {
             if (flag & FEXTRA) {
                 if (extra.size() > 0xff) {
                     return false;
@@ -173,18 +173,18 @@ namespace utils::file::gzip {
                 }
             }
             if (flag & FHCRC) {
-                if (!io::write_num(w, crc16, false)) {
+                if (!binary::write_num(w, crc16, false)) {
                     return false;
                 }
             }
             return true;
         }
 
-        constexpr bool render_in_place(io::writer& w, auto&& render_contnet) const {
+        constexpr bool render_in_place(binary::writer& w, auto&& render_contnet) const {
             auto ok = w.write(valid_id) &&
                       w.write(byte(cm), 1) &&
                       w.write(byte(flag & ~FRESERVED), 1) &&
-                      io::write_num(w, mtime, false) &&
+                      binary::write_num(w, mtime, false) &&
                       w.write(xfl, 1) &&
                       w.write(byte(os), 1) &&
                       render_optional_fields(w);
@@ -199,8 +199,8 @@ namespace utils::file::gzip {
             if (cur > fin) {
                 return false;
             }
-            return io::write_num(w, crc32) &&
-                   io::write_num(w, isize, false);
+            return binary::write_num(w, crc32) &&
+                   binary::write_num(w, isize, false);
         }
 
         constexpr bool valid() const {
@@ -210,8 +210,8 @@ namespace utils::file::gzip {
     };
 
     template <class T, class Out>
-    deflate::DeflateError decode_gzip(Out& out, GZipHeader& head, io::bit_reader<T>& r) {
-        io::expand_reader<T>& base = r.get_base();
+    deflate::DeflateError decode_gzip(Out& out, GZipHeader& head, binary::bit_reader<T>& r) {
+        binary::expand_reader<T>& base = r.get_base();
         if (!base.check_input(20)) {
             return deflate::DeflateError::input_length;
         }

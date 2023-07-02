@@ -13,7 +13,7 @@ namespace utils {
     namespace fnet::http2 {
         namespace setting {
             enum class SettingKey : std::uint16_t {
-                table_size = 1,
+                max_header_table_size = 1,
                 enable_push = 2,
                 max_concurrent = 3,
                 initial_windows_size = 4,
@@ -27,7 +27,7 @@ namespace utils {
 
             using Vec = helper::CharVecPushbacker<char>;
             struct PredefinedSettings {
-                std::uint32_t header_table_size = 4096;
+                std::uint32_t max_header_table_size = 4096;
                 bool enable_push = true;
                 std::uint32_t max_concurrent_stream = ~0;
                 std::uint32_t initial_window_size = 65535;
@@ -56,7 +56,7 @@ namespace utils {
     if ((settings.value) != (default_.value)) { \
         write(key, settings.value);             \
     }
-                    WRITE_IF(k(sk::table_size), header_table_size);
+                    WRITE_IF(k(sk::max_header_table_size), max_header_table_size);
                     WRITE_IF(k(sk::enable_push), enable_push ? 1 : 0);
                     WRITE_IF(k(sk::max_concurrent), max_concurrent_stream);
                     WRITE_IF(k(sk::initial_windows_size), initial_window_size);
@@ -65,7 +65,7 @@ namespace utils {
 #undef WRITE_IF
                 }
                 else {
-                    write(k(sk::table_size), settings.header_table_size);
+                    write(k(sk::max_header_table_size), settings.max_header_table_size);
                     write(k(sk::enable_push), settings.enable_push ? 1 : 0);
                     write(k(sk::max_concurrent), settings.max_concurrent_stream);
                     write(k(sk::initial_windows_size), settings.initial_window_size);

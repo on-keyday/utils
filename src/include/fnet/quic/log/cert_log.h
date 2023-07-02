@@ -13,19 +13,19 @@ namespace utils {
         void format_certificate(auto& out, view::rvec data, bool omit_data, bool data_as_hex) {
             x509::parser::Certificate cert;
             asn1::TLV tlv;
-            io::reader r{data};
+            binary::reader r{data};
             const auto datafield = fmt_datafield(out, omit_data, data_as_hex);
             const auto hexfield = fmt_hexfield(out);
             const auto custom = fmt_key_value(out);
             const auto group = fmt_group(out);
             const auto typefield = [&](auto type) {
                 if (auto str = to_string(type)) {
-                    helper::appends(out, str);
+                    strutil::appends(out, str);
                 }
                 else {
-                    helper::append(out, "unknown(0x");
+                    strutil::append(out, "unknown(0x");
                     number::to_string(out, std::uint16_t(type), 16);
-                    helper::append(out, ")");
+                    strutil::append(out, ")");
                 }
             };
             const auto oid_field = [&](asn1::OID oid) {
@@ -38,29 +38,29 @@ namespace utils {
                     i++;
                     number::to_string(out, c);
                     if (!last) {
-                        helper::append(out, ".");
+                        strutil::append(out, ".");
                     }
                 });
                 if (i == 4) {
                     if (value[0] == 2 && value[1] == 5 && value[2] == 4) {
                         switch (value[3]) {
                             case 3:
-                                helper::append(out, "(CN)");
+                                strutil::append(out, "(CN)");
                                 break;
                             case 6:
-                                helper::append(out, "(C)");
+                                strutil::append(out, "(C)");
                                 break;
                             case 7:
-                                helper::append(out, "(L)");
+                                strutil::append(out, "(L)");
                                 break;
                             case 8:
-                                helper::append(out, "(ST)");
+                                strutil::append(out, "(ST)");
                                 break;
                             case 10:
-                                helper::append(out, "(O)");
+                                strutil::append(out, "(O)");
                                 break;
                             case 11:
-                                helper::append(out, "(OU)");
+                                strutil::append(out, "(OU)");
                                 break;
                             default:
                                 break;
@@ -82,7 +82,7 @@ namespace utils {
                 return;
             }
             group(nullptr, false, false, [&] {
-                custom([&] { helper::append(out, "version"); }, [&] { typefield(cert.tbsCertificate.version); });
+                custom([&] { strutil::append(out, "version"); }, [&] { typefield(cert.tbsCertificate.version); });
                 hexfield("serial_number", cert.tbsCertificate.certificate_serial_number.data());
                 format_names("issuer", cert.tbsCertificate.issuer, true);
                 format_names("subject", cert.tbsCertificate.subject, false);

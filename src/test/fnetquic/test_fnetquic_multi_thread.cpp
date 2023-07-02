@@ -95,7 +95,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
     }
     utils::fnet::HTTP http;
     while (true) {
-        runi.s->update_recv_limit([](FlowLimiter limit) {
+        runi.s->update_recv_limit([](FlowLimiter limit, std::uint64_t) {
             if (limit.avail_size() < 10000) {
                 return limit.curlimit() + 10000;
             }
@@ -146,10 +146,10 @@ void thread(QCTX ctx, RecvChan c, int i) {
         std::ofstream of(path + "html", std::ios_base::out | std::ios_base::binary);
         utils::file::gzip::GZipHeader gh;
         std::string dec;
-        utils::io::bit_reader<std::string&> in{text};
-        utils::io::reader tmpr{utils::view::rvec(text).substr(0, text.size() - 4)};
+        utils::binary::bit_reader<std::string&> in{text};
+        utils::binary::reader tmpr{utils::view::rvec(text).substr(0, text.size() - 4)};
         std::uint32_t reserve = 0;
-        utils::io::read_num(tmpr, reserve, false);
+        utils::binary::read_num(tmpr, reserve, false);
         dec.reserve(reserve);
         utils::file::gzip::decode_gzip(dec, gh, in);
         data_size = dec.size();
@@ -177,7 +177,7 @@ void log_packet(std::shared_ptr<void>&, utils::fnet::quic::packet::PacketSummary
         utils::number::to_string(res, d, 16);
     }
     utils::wrap::cout_wrap() << res << "\n";
-    utils::io::reader r{payload};
+    utils::binary::reader r{payload};
     utils::fnet::quic::frame::parse_frames<slib::vector>(r, [&](const auto& frame, bool) {
         std::string data;
         utils::fnet::quic::log::format_frame<slib::vector>(data, frame, true, false);
@@ -242,7 +242,7 @@ int main() {
     tls::TLSConfig conf = tls::configure();
     conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
     conf.set_alpn("\4test");
-    auto config = utils::fnet::quic::context::use_default(std::move(conf));
+    auto config = utils::fnet::quic::context::use_default_config(std::move(conf));
     config.logger.callbacks = &cbs;
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();
@@ -250,11 +250,19 @@ int main() {
 
     auto streams = ctx->get_streams();
     auto [w, r] = utils::thread::make_chan<Recvs>();
-    streams->set_accept_uni(std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {}), [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
+    auto ch = streams->conn_handler();
+    ch->arg = std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {});
+    ch->uni_accept_cb = [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
+        auto w2 = static_cast<SendChan*>(p.get());
+        auto data = set_stream_reader(*s);
+    };
+    /*
+    streams->set_accept_uni(, [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
         auto w2 = static_cast<SendChan*>(p.get());
         auto data = set_stream_reader(*s);
         *w2 << Recvs{std::move(s), std::move(data)};
     });
+    */
     auto wait = resolve_address("localhost", "8090", sockattr_udp());
     assert(!wait.second);
     auto [info, err] = wait.first.wait();
@@ -311,7 +319,7 @@ int main() {
                 .transport_error = quic::TransportError::NO_ERROR,
             });
         }
-        streams->update_max_data([](FlowLimiter limit) {
+        streams->update_max_data([](FlowLimiter limit, std::uint64_t) {
             if (limit.avail_size() < 10000) {
                 return limit.curlimit() + 50000;
             }

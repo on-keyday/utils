@@ -10,7 +10,7 @@
 #include <cstdint>
 #include "../core/byte.h"
 #include "../view/iovec.h"
-#include "../io/number.h"
+#include "../binary/number.h"
 
 namespace utils {
     namespace fnet {
@@ -41,18 +41,18 @@ namespace utils {
                 const std::uint32_t magic_cookie = 0x2112A442;
                 byte transaction_id[12];
 
-                void pack(io::writer& w) const {
-                    io::write_num(w, type);
-                    io::write_num(w, length);
-                    io::write_num(w, magic_cookie);
+                void pack(binary::writer& w) const {
+                    binary::write_num(w, type);
+                    binary::write_num(w, length);
+                    binary::write_num(w, magic_cookie);
                     w.write(transaction_id);
                 }
 
-                bool unpack(io::reader& r) {
+                bool unpack(binary::reader& r) {
                     std::uint32_t cookie = 0;
-                    return io::read_num(r, type) &&
-                           io::read_num(r, length) &&
-                           io::read_num(r, cookie) &&
+                    return binary::read_num(r, type) &&
+                           binary::read_num(r, length) &&
+                           binary::read_num(r, cookie) &&
                            cookie == magic_cookie &&
                            r.read(transaction_id);
                 }
@@ -62,22 +62,22 @@ namespace utils {
                 std::uint16_t type;
                 std::uint16_t length;
                 view::rvec value;
-                bool pack(io::writer& w, bool enc_value = false) const {
+                bool pack(binary::writer& w, bool enc_value = false) const {
                     if (enc_value) {
                         if (value.size() > 0xffff) {
                             return false;
                         }
-                        return io::write_num(w, type) &&
-                               io::write_num(w, std::uint16_t(value.size())) &&
+                        return binary::write_num(w, type) &&
+                               binary::write_num(w, std::uint16_t(value.size())) &&
                                w.write(value);
                     }
-                    return io::write_num(w, type) &&
-                           io::write_num(w, length);
+                    return binary::write_num(w, type) &&
+                           binary::write_num(w, length);
                 }
 
-                bool unpack(io::reader& r, bool dec_value = true) {
-                    if (!io::read_num(r, type) ||
-                        !io::read_num(r, length)) {
+                bool unpack(binary::reader& r, bool dec_value = true) {
+                    if (!binary::read_num(r, type) ||
+                        !binary::read_num(r, length)) {
                         return false;
                     }
                     if (dec_value) {
@@ -122,13 +122,13 @@ namespace utils {
                     }
                 }
 
-                bool pack(io::writer& w, const byte* xor_ = nullptr) const {
+                bool pack(binary::writer& w, const byte* xor_ = nullptr) const {
                     if (family != 0x1 && family != 0x2) {
                         return false;
                     }
                     if (!w.write(0, 1) ||
                         !w.write(family, 1) ||
-                        !io::write_num(w, port)) {
+                        !binary::write_num(w, port)) {
                         return false;
                     }
                     if (xor_) {
@@ -149,13 +149,13 @@ namespace utils {
                     return true;
                 }
 
-                bool unpack(io::reader& r, const byte* xor_ = nullptr) {
+                bool unpack(binary::reader& r, const byte* xor_ = nullptr) {
                     byte tmp;
                     if (!r.read(view::wvec(&tmp, 1)) ||
                         tmp != 0 ||
                         !r.read(view::wvec(&family, 1))) {
                     }
-                    if (!io::read_num(r, port)) {
+                    if (!binary::read_num(r, port)) {
                         return false;
                     }
                     if (xor_) {
@@ -179,7 +179,7 @@ namespace utils {
             struct ChangeRequest {
                 bool change_ip = false;
                 bool change_port = false;
-                void pack(io::writer& w) const {
+                void pack(binary::writer& w) const {
                     std::uint32_t val = 0;
                     if (change_ip) {
                         val |= 0x4;
@@ -187,11 +187,11 @@ namespace utils {
                     if (change_port) {
                         val |= 0x2;
                     }
-                    io::write_num(w, val);
+                    binary::write_num(w, val);
                 }
-                bool unpack(io::reader& r) {
+                bool unpack(binary::reader& r) {
                     std::uint32_t val = 0;
-                    if (!io::read_num(r, val)) {
+                    if (!binary::read_num(r, val)) {
                         return false;
                     }
                     change_ip = (val & 0x4) != 0;
@@ -202,18 +202,18 @@ namespace utils {
 
             struct ErrorCode {
                 std::uint32_t code;
-                bool pack(io::writer& w) const {
+                bool pack(binary::writer& w) const {
                     auto class_ = code / 100;
                     auto number = code % 100;
                     if (class_ < 3 || 6 < class_) {
                         return false;
                     }
                     // 10bit
-                    return io::write_num(w, std::uint32_t(class_ << 7 | number));
+                    return binary::write_num(w, std::uint32_t(class_ << 7 | number));
                 }
 
-                bool unpack(io::reader& r) {
-                    if (!io::read_num(r, code)) {
+                bool unpack(binary::reader& r) {
+                    if (!binary::read_num(r, code)) {
                         return false;
                     }
                     if (code & 0xFFFFFC00) {
@@ -269,7 +269,7 @@ namespace utils {
                 disconnected_failed,
             };
 
-            bool read_attr(io::reader& r, Attribute& attr) {
+            bool read_attr(binary::reader& r, Attribute& attr) {
                 if (!attr.unpack(r)) {
                     return false;
                 }
@@ -285,7 +285,7 @@ namespace utils {
                 byte transaction_id[12];
                 int errcode = 0;
 
-                StunResult request(io::writer& w) {
+                StunResult request(binary::writer& w) {
                     StunHeader h;
                     h.type = msg_binding_request;
                     view::copy(h.transaction_id, transaction_id);
@@ -337,7 +337,7 @@ namespace utils {
                 }
 
                private:
-                StunResult handle_response(io::reader& r, MappedAddress& mapped) {
+                StunResult handle_response(binary::reader& r, MappedAddress& mapped) {
                     auto root = r.remain();
                     StunHeader h;
                     if (!h.unpack(r)) {
@@ -351,7 +351,7 @@ namespace utils {
                         while (read_attr(r, attr)) {
                             if (attr.type == attr_error_code) {
                                 ErrorCode code;
-                                io::reader r{attr.value};
+                                binary::reader r{attr.value};
                                 if (code.unpack(r)) {
                                     errcode = code.code;
                                 }
@@ -364,7 +364,7 @@ namespace utils {
                         Attribute attr;
                         while (read_attr(r, attr)) {
                             if (attr.type == attr_mapped_address) {
-                                io::reader r{attr.value};
+                                binary::reader r{attr.value};
                                 if (!mapped.unpack(r)) {
                                     return StunResult::encoding_failed;
                                 }
@@ -372,7 +372,7 @@ namespace utils {
                             }
                             if (attr.type == attr_xor_mapped_address) {
                                 auto xor_ = root.data() + 4;
-                                io::reader r{attr.value};
+                                binary::reader r{attr.value};
                                 if (!mapped.unpack(r, xor_)) {
                                     return StunResult::encoding_failed;
                                 }
@@ -414,7 +414,7 @@ namespace utils {
                     return StunResult::done;
                 }
 
-                StunResult response(io::reader& r) {
+                StunResult response(binary::reader& r) {
                     if (state == StunState::test_1_started) {
                         auto res = handle_response(r, first_time);
                         if (res != StunResult::do_request) {

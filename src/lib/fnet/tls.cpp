@@ -198,9 +198,26 @@ namespace utils {
             return error::none;
         }
 
-        error::Error TLS::set_verify(int mode, int (*verify_callback)(int, void*)) {
+        int map_verify_mode(VerifyMode mode) {
+            int mode_ = 0;
+            if (any(mode & VerifyMode::peer)) {
+                mode_ |= ssl_import::SSL_VERIFY_PEER_;
+            }
+            if (any(mode & VerifyMode::fail_if_no_peer_cert)) {
+                mode_ |= ssl_import::SSL_VERIFY_FAIL_IF_NO_PEER_CERT_;
+            }
+            if (any(mode & VerifyMode::client_once)) {
+                mode_ |= ssl_import::SSL_VERIFY_CLIENT_ONCE_;
+            }
+            if (any(mode & VerifyMode::post_handshake)) {
+                mode_ |= ssl_import::SSL_VERIFY_POST_HANDSHAKE_;
+            }
+            return mode_;
+        }
+
+        error::Error TLS::set_verify(VerifyMode mode, int (*verify_callback)(int, void*)) {
             CHECK_TLS(c)
-            lazy::ssl::SSL_set_verify_(c->ssl, mode,
+            lazy::ssl::SSL_set_verify_(c->ssl, map_verify_mode(mode),
                                        (int (*)(int, ssl_import::X509_STORE_CTX*))(verify_callback));
             return error::none;
         }
@@ -433,16 +450,18 @@ namespace utils {
             return error::none;
         }
 
-        bool TLS::get_alpn(const char** selected, unsigned int* len) {
-            return [&]() -> error::Error {
+        view::rvec TLS::get_selected_alpn() {
+            const byte* selected = nullptr;
+            unsigned int len = 0;
+            [&]() -> error::Error {
                 CHECK_TLS(c)
-                lazy::ssl::SSL_get0_alpn_selected_(c->ssl, reinterpret_cast<const unsigned char**>(selected), len);
+                lazy::ssl::SSL_get0_alpn_selected_(c->ssl, &selected, &len);
                 return error::none;
-            }()
-                                .is_noerr();
+            }();
+            return view::rvec(selected, len);
         }
 
-        void TLS::get_errors(int (*cb)(const char*, size_t, void*), void* user) {
+        void get_error_strings(int (*cb)(const char*, size_t, void*), void* user) {
             if (!cb) {
                 return;
             }
@@ -493,7 +512,7 @@ namespace utils {
             return sess;
         }
 
-        bool TLS::set_session(Session&& sess) {
+        bool TLS::set_session(const Session& sess) {
             if (!sess.sess) {
                 return false;
             }

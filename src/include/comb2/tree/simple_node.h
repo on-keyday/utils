@@ -17,7 +17,9 @@ namespace utils {
             const char *tag = nullptr;
             Node(bool g)
                 : is_group(g) {}
+#ifdef _DEBUG
             virtual ~Node() {}
+#endif
         };
 
         struct Group : Node {
@@ -32,6 +34,16 @@ namespace utils {
                 : Node(false) {}
             std::string token;
         };
+
+        auto as_tok(auto &&tok) {
+            auto v = static_cast<Token *>(std::to_address(tok));
+            return v && !v->is_group ? v : nullptr;
+        }
+
+        auto as_group(auto &&tok) {
+            auto v = static_cast<Group *>(std::to_address(tok));
+            return v && v->is_group ? v : nullptr;
+        }
 
         // Ident or Group, which is derived from Element, must have const char* tag
         inline auto collect(const std::shared_ptr<tree::Element> &elm) {

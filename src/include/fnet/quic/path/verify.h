@@ -9,7 +9,7 @@
 #include "../frame/path.h"
 #include "../frame/writer.h"
 #include "../ioresult.h"
-#include "../ack/ack_lost_record.h"
+#include "../resend/ack_handler.h"
 #include "../transport_error.h"
 #include "../../std/deque.h"
 #include "../../std/set.h"
@@ -26,7 +26,7 @@ namespace utils {
             PathID id = unknown_path;
             time::Timer probe_timer;
             std::uint64_t probe_data = 0;
-            std::shared_ptr<ack::ACKLostRecord> wait;
+            resend::ACKHandler wait;
             bool force_probe = false;
         };
 
@@ -87,12 +87,12 @@ namespace utils {
            private:
             bool detect_dead_probe(PathProbeInfo& info, const time::Clock& clock) {
                 if (info.probe_timer.timeout(clock)) {
-                    if (!info.wait->is_ack() && !info.wait->is_lost()) {
+                    if (!info.wait.is_ack() && !info.wait.is_lost()) {
                         return false;
                     }
                     return true;
                 }
-                if (info.wait->is_lost()) {
+                if (info.wait.is_lost()) {
                     if (!valid_path.contains(info.id)) {
                         if (!info.force_probe && valid_path.contains(info.id)) {
                             return true;
@@ -113,7 +113,7 @@ namespace utils {
            public:
             void detect_path_probe_timeout(const time::Clock& clock) {
                 for (auto it = probes.begin(); it != probes.end();) {
-                    if (it->wait) {
+                    if (it->wait.not_confirmed()) {
                         if (detect_dead_probe(*it, clock)) {
                             it = probes.erase(it);
                             continue;
@@ -124,9 +124,9 @@ namespace utils {
                 }
             }
 
-            std::pair<IOResult, PathID> send_path_challange(frame::fwriter& w, auto&& observer_vec, connid::Random& random, time::Time probe_deadline, const time::Clock& clock) {
+            std::pair<IOResult, PathID> send_path_challange(frame::fwriter& w, auto&& observer, connid::Random& random, time::Time probe_deadline, const time::Clock& clock) {
                 for (auto it = probes.begin(); it != probes.end();) {
-                    if (it->wait) {
+                    if (it->wait.not_confirmed()) {
                         if (detect_dead_probe(*it, clock)) {
                             it = probes.erase(it);
                             continue;
@@ -142,22 +142,21 @@ namespace utils {
                     if (!random.gen_random(data)) {
                         return {IOResult::fatal, unknown_path};
                     }
-                    io::reader r{data};
-                    io::read_num(r, it->probe_data);
+                    binary::reader r{data};
+                    binary::read_num(r, it->probe_data);
                     ch.data = it->probe_data;
                     if (!w.write(ch)) {
                         return {IOResult::fatal, unknown_path};
                     }
-                    it->wait = ack::make_ack_wait();
                     if (it->probe_timer.not_working()) {
                         it->probe_timer.set_deadline(probe_deadline);
                     }
-                    observer_vec.push_back(it->wait);
+                    it->wait.wait(observer);
                     num_probe_to_send--;  // decrement
                     it++;
                     // detect tail
                     while (it != probes.end()) {
-                        if (it->wait) {
+                        if (it->wait.not_confirmed()) {
                             if (detect_dead_probe(*it, clock)) {
                                 it = probes.erase(it);
                                 continue;

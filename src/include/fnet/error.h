@@ -13,7 +13,7 @@
 #include "../view/iovec.h"
 #include "../helper/defer.h"
 #include "../helper/pushbacker.h"
-#include "../helper/appender.h"
+#include "../strutil/append.h"
 #include "../number/to_string.h"
 #include <atomic>
 
@@ -241,7 +241,7 @@ namespace utils {
             };
 
             union ErrType {
-                WithCateg<view::basic_rvec<char, byte>> str;
+                WithCateg<view::basic_rvec<char>> str;
                 WithCateg<std::uint64_t> code;
                 Wrap w;
                 constexpr ~ErrType() {}
@@ -283,7 +283,7 @@ namespace utils {
                     type_ = ErrorType::number;
                 }
                 else if (from.type_ == ErrorType::str) {
-                    detail.str = std::exchange(from.detail.str, internal::WithCateg<view::basic_rvec<char, byte>>{});
+                    detail.str = std::exchange(from.detail.str, internal::WithCateg<view::basic_rvec<char>>{});
                     type_ = ErrorType::str;
                 }
                 else if (from.type_ == ErrorType::wrap) {
@@ -367,7 +367,7 @@ namespace utils {
 
             constexpr explicit Error(const char* data, ErrorCategory categ = ErrorCategory::apperr, std::int64_t len = -1)
                 : type_(ErrorType::str) {
-                detail.str.value = view::basic_rvec<char, byte>(data);
+                detail.str.value = view::basic_rvec<char>(data);
                 detail.str.categ = categ;
             }
 
@@ -388,23 +388,23 @@ namespace utils {
             template <class T>
             constexpr void error(T&& t) const {
                 if (type_ == ErrorType::null) {
-                    helper::append(t, "<null>");
+                    strutil::append(t, "<null>");
                 }
                 else if (type_ == ErrorType::memexh) {
-                    helper::append(t, "!<memexh>");
+                    strutil::append(t, "!<memexh>");
                 }
                 else if (type_ == ErrorType::str) {
-                    helper::append(t, detail.str.value);
+                    strutil::append(t, detail.str.value);
                 }
                 else if (type_ == ErrorType::number) {
                     auto mode = internal::categ_spec_mode(detail.code.categ);
                     if (mode != NumErrMode::use_nothing) {
-                        helper::append(t, "code=");
+                        strutil::append(t, "code=");
                         number::to_string(t, detail.code.value);
-                        helper::append(t, ",categoly=");
+                        strutil::append(t, ",categoly=");
                         if (mode == NumErrMode::use_default) {
                             if (auto msg = categoly_string(detail.code.categ)) {
-                                helper::append(t, msg);
+                                strutil::append(t, msg);
                             }
                             else {
                                 number::to_string(t, size_t(detail.code.categ));

@@ -15,7 +15,7 @@ namespace utils {
     namespace fnet::quic::frame {
         struct DynFrame {
             virtual FrameType type(bool on_cast) const = 0;
-            virtual bool render(io::writer& w) const = 0;
+            virtual bool render(binary::writer& w) const = 0;
             virtual size_t len(bool use_length_field) const = 0;
             virtual Frame* frame() = 0;
             virtual ~DynFrame() {}
@@ -35,7 +35,7 @@ namespace utils {
                 return frame_.get_type(on_cast);
             }
 
-            bool render(io::writer& w) const override {
+            bool render(binary::writer& w) const override {
                 return frame_.render(w);
             }
 
@@ -59,7 +59,7 @@ namespace utils {
                 return frame_.get_type(on_cast);
             }
 
-            bool render(io::writer& w) const override {
+            bool render(binary::writer& w) const override {
                 return frame_.render(w);
             }
 

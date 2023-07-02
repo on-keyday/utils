@@ -20,14 +20,14 @@ namespace utils {
                 return PacketType::VersionNegotiation;
             }
 
-            constexpr bool parse(io::reader& r) {
+            constexpr bool parse(binary::reader& r) {
                 if (!parse_check(r, PacketType::VersionNegotiation)) {
                     return false;
                 }
                 negotiated_versions.clear();
                 while (!r.empty()) {
                     std::uint32_t ver;
-                    if (!io::read_num(r, ver, true)) {
+                    if (!binary::read_num(r, ver, true)) {
                         return false;
                     }
                     negotiated_versions.push_back(ver);
@@ -40,7 +40,7 @@ namespace utils {
                        4 * negotiated_versions.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 auto val = flags;
                 if (!flags.is_long()) {
                     val = make_packet_flags(0, PacketType::VersionNegotiation, 0);
@@ -49,7 +49,7 @@ namespace utils {
                     return false;
                 }
                 for (std::uint32_t ver : negotiated_versions) {
-                    if (!io::write_num(w, ver, true)) {
+                    if (!binary::write_num(w, ver, true)) {
                         return false;
                     }
                 }
@@ -65,13 +65,13 @@ namespace utils {
                 packet.negotiated_versions.push_back(9394);
                 byte data[100];
                 byte dummy[] = {'d', 'u', 'm', 'o', 'm'};
-                io::writer w{data};
+                binary::writer w{data};
                 packet.dstID = dummy;
                 packet.srcID = dummy;
                 if (!packet.render(w)) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!packet.parse(r)) {
                     return false;
                 }

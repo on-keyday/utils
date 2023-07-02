@@ -15,28 +15,28 @@ namespace utils::unicode::internal {
 
     template <class T, class U>
     concept has_append = requires(T t, U u) {
-                             { t.append(u, size_t()) };
-                         };
+        { t.append(u, size_t()) };
+    };
 
     template <class T>
     concept reftyp = std::is_reference_v<T> && (!std::is_const_v<std::remove_reference_t<T>>);
 
     template <class T, class U>
-    concept has_resize = requires(T t, U u) {
-                             { t[1] = u } -> reftyp;
-                             { t.size() } -> std::convertible_to<size_t>;
-                             { t.resize(size_t()) };
-                         };
+    concept has_string_like = requires(T t, U u) {
+        { t[1] = u } -> reftyp;
+        { t.size() } -> std::convertible_to<size_t>;
+        { t.resize(size_t()) };
+    };
 
     template <class T, class U>
     concept has_push_back = requires(T t, U u) {
-                                { t.push_back(u) };
-                            };
+        { t.push_back(u) };
+    };
 
     template <class T>
     concept has_is_limit = requires(T t) {
-                               { t.is_limit(size_t{}) };
-                           };
+        { t.is_limit(size_t{}) };
+    };
 
     constexpr bool output(auto&& output, auto* d, size_t l) {
         if constexpr (has_is_limit<decltype(output)>) {
@@ -52,7 +52,7 @@ namespace utils::unicode::internal {
         else if constexpr (has_append<decltype(output), decltype(d)>) {
             output.append(d, l);
         }
-        else if constexpr (has_resize<decltype(output), decltype(d[1])>) {
+        else if constexpr (has_string_like<decltype(output), decltype(d[1])>) {
             const auto s = output.size();
             output.resize(s + l);
             for (size_t i = 0; i < l; i++) {

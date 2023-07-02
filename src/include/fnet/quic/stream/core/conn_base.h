@@ -10,6 +10,7 @@
 #include "../../transport_error.h"
 #include "issue_accept.h"
 #include <helper/defer.h>
+#include <helper/lock.h>
 #include "../../frame/conn_manage.h"
 #include "../fragment.h"
 #include "../../ioresult.h"
@@ -28,57 +29,44 @@ namespace utils {
             Lock accept_uni_locker;
             Lock open_bidi_locker;
             Lock open_uni_locker;
-            bool initial_set = false;
-
-            // don't lock by yourself
-            void set_initial_limits(const InitialLimits& local, const InitialLimits& peer) {
-                {
-                    const auto lock = do_multi_lock(recv_locker, accept_bidi_locker, accept_uni_locker);
-                    state.set_recv_initial_limit(local);
-                }
-                {
-                    const auto lock = do_multi_lock(send_locker, open_bidi_locker, open_uni_locker);
-                    state.set_send_initial_limit(peer);
-                }
-            }
 
             // don't lock by yourself
             void set_local_initial_limits(const InitialLimits& local) {
-                const auto lock = do_multi_lock(recv_locker, accept_bidi_locker, accept_uni_locker);
+                const auto lock = helper::lock(recv_locker, accept_bidi_locker, accept_uni_locker);
                 state.set_recv_initial_limit(local);
             }
 
             // don't lock by yourself
             void set_peer_initial_limits(const InitialLimits& peer) {
-                const auto lock = do_multi_lock(send_locker, open_bidi_locker, open_uni_locker);
+                const auto lock = helper::lock(send_locker, open_bidi_locker, open_uni_locker);
                 state.set_send_initial_limit(peer);
             }
 
             auto recv_lock() {
-                return do_lock(recv_locker);
+                return helper::lock(recv_locker);
             }
 
             auto accept_bidi_lock() {
-                return do_lock(accept_bidi_locker);
+                return helper::lock(accept_bidi_locker);
             }
 
             auto accept_uni_lock() {
-                return do_lock(accept_uni_locker);
+                return helper::lock(accept_uni_locker);
             }
 
             auto open_bidi_lock() {
-                return do_lock(open_bidi_locker);
+                return helper::lock(open_bidi_locker);
             }
 
             auto open_uni_lock() {
-                return do_lock(open_uni_locker);
+                return helper::lock(open_uni_locker);
             }
 
             // called by each stream
             // you shouldn't get lock by yourself
             // cb is std::uint64_t(std::uint64_t avail_size,std::uint64_t limit)
             constexpr bool use_send_credit(auto&& cb) {
-                const auto locked = do_lock(send_locker);
+                const auto locked = helper::lock(send_locker);
                 std::uint64_t reqsize = cb(state.conn_flow.send.avail_size(), state.conn_flow.send.curlimit());
                 if (reqsize == 0) {
                     return true;
@@ -89,24 +77,24 @@ namespace utils {
             // called by each stream
             // you shouldn't get lock by yourself
             constexpr bool use_recv_credit(std::uint64_t use_delta) {
-                const auto locked = do_lock(recv_locker);
+                const auto locked = helper::lock(recv_locker);
                 return state.conn_flow.recv.use(use_delta);
             }
 
             // you shouldn't get lock by yourself
             constexpr bool recv_max_data(const frame::MaxDataFrame& limit) {
-                const auto locked = do_lock(send_locker);
+                const auto locked = helper::lock(send_locker);
                 return state.conn_flow.send.update_limit(limit.max_data);
             }
 
             // you shouldn't get lock by yourself
             constexpr error::Error recv_max_streams(const frame::MaxStreamsFrame& limit) {
                 if (limit.type.type_detail() == FrameType::MAX_STREAMS_UNI) {
-                    const auto locked = do_lock(open_uni_locker);
+                    const auto locked = helper::lock(open_uni_locker);
                     return state.uni_issuer.update_limit(limit.max_streams);
                 }
                 else if (limit.type.type_detail() == FrameType::MAX_STREAMS_BIDI) {
-                    const auto locked = do_lock(open_bidi_locker);
+                    const auto locked = helper::lock(open_bidi_locker);
                     return state.bidi_issuer.update_limit(limit.max_streams);
                 }
                 return error::none;
@@ -128,7 +116,8 @@ namespace utils {
             }
 
             constexpr bool update_max_data(auto&& decide_new_limit) {
-                auto new_limit = decide_new_limit(std::as_const(state.conn_flow.recv));
+                const auto ini_limit = state.recv_ini_limit.conn_data_limit;
+                auto new_limit = decide_new_limit(std::as_const(state.conn_flow.recv), ini_limit);
                 return state.conn_flow.update_recv_limit(new_limit);
             }
 
@@ -153,12 +142,14 @@ namespace utils {
             }
 
             constexpr bool update_max_uni_streams(auto&& decide_new_limit) {
-                auto new_limit = decide_new_limit(std::as_const(state.uni_acceptor.limit));
+                const auto ini_limit = state.recv_ini_limit.uni_stream_limit;
+                auto new_limit = decide_new_limit(std::as_const(state.uni_acceptor.limit), ini_limit);
                 return state.uni_acceptor.update_limit(new_limit);
             }
 
             constexpr bool update_max_bidi_streams(auto&& decide_new_limit) {
-                auto new_limit = decide_new_limit(std::as_const(state.bidi_acceptor.limit));
+                const auto ini_limit = state.recv_ini_limit.bidi_stream_limit;
+                auto new_limit = decide_new_limit(std::as_const(state.bidi_acceptor.limit), ini_limit);
                 return state.bidi_acceptor.update_limit(new_limit);
             }
 
@@ -206,7 +197,7 @@ namespace utils {
 
            private:
             constexpr void open_impl(auto& locker, auto& issuer, auto&& cb) {
-                const auto locked = do_lock(locker);
+                const auto locked = helper::lock(locker);
                 auto id = issuer.issue();
                 if (id == invalid_id) {
                     cb(id, issuer.limit.on_limit(1));
@@ -216,7 +207,7 @@ namespace utils {
             }
 
             constexpr void accept_impl(StreamID id, auto& locker, auto& acceptor, auto&& cb) {
-                const auto locked = do_lock(locker);
+                const auto locked = helper::lock(locker);
                 size_t curused = acceptor.limit.curused();
                 auto err = acceptor.accept(id);
                 if (err) {
@@ -266,7 +257,7 @@ namespace utils {
             constexpr std::pair<bool, error::Error> check_recv_frame(FrameType type, StreamID id) {
                 if (id.dir() == state.local_dir()) {
                     if (id.type() == StreamType::bidi) {
-                        const auto locked = do_lock(open_bidi_locker);
+                        const auto locked = helper::lock(open_bidi_locker);
                         // check whether id is already issued id
                         if (!state.bidi_issuer.is_issued(id)) {
                             return {true,
@@ -289,7 +280,7 @@ namespace utils {
                         return {true, error::none};
                     }
                     else if (id.type() == StreamType::uni) {
-                        const auto locked = do_lock(open_uni_locker);
+                        const auto locked = helper::lock(open_uni_locker);
                         // check whether id is already issued id
                         if (!state.uni_issuer.is_issued(id)) {
                             return {true,

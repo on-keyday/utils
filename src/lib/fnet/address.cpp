@@ -10,7 +10,7 @@
 #include <fnet/plthead.h>
 #include <fnet/dll/asyncbase.h>
 #include <cstring>
-#include <endian/buf.h>
+#include <binary/buf.h>
 
 namespace utils {
     namespace fnet {
@@ -52,15 +52,15 @@ namespace utils {
             NetAddrPort naddr;
             if (addr->sa_family == AF_INET) {
                 auto p = reinterpret_cast<sockaddr_in*>(addr);
-                endian::Buf<std::uint32_t> buf;
-                buf.write_be(endian::bswap_net(p->sin_addr.s_addr));
+                binary::Buf<std::uint32_t> buf;
+                buf.write_be(binary::bswap_net(p->sin_addr.s_addr));
                 naddr.addr = make_netaddr(NetAddrType::ipv4, buf.data);
-                naddr.port = endian::bswap_net(p->sin_port);
+                naddr.port = binary::bswap_net(p->sin_port);
             }
             else if (addr->sa_family == AF_INET6) {
                 auto p = reinterpret_cast<sockaddr_in6*>(addr);
                 naddr.addr = make_netaddr(NetAddrType::ipv6, p->sin6_addr.s6_addr);
-                naddr.port = endian::bswap_net(p->sin6_port);
+                naddr.port = binary::bswap_net(p->sin6_port);
             }
             else if (addr->sa_family == AF_UNIX) {
                 auto p = reinterpret_cast<sockaddr_un*>(addr);
@@ -84,9 +84,9 @@ namespace utils {
                 auto p = reinterpret_cast<sockaddr_in*>(addr);
                 *p = {};
                 p->sin_family = AF_INET;
-                endian::Buf<std::uint32_t, const byte*> buf{naddr.addr.data()};
+                binary::Buf<std::uint32_t, const byte*> buf{naddr.addr.data()};
                 p->sin_addr.s_addr = buf.read_be();
-                p->sin_port = endian::bswap_net(naddr.port.u16());
+                p->sin_port = binary::bswap_net(naddr.port.u16());
                 addrlen = sizeof(sockaddr_in);
             }
             else if (naddr.addr.type() == NetAddrType::ipv6) {
@@ -94,7 +94,7 @@ namespace utils {
                 *p = {};
                 p->sin6_family = AF_INET6;
                 memcpy(p->sin6_addr.s6_addr, naddr.addr.data(), 16);
-                p->sin6_port = endian::bswap_net(naddr.port.u16());
+                p->sin6_port = binary::bswap_net(naddr.port.u16());
                 addrlen = sizeof(sockaddr_in6);
             }
             else if (naddr.addr.type() == NetAddrType::unix_path) {

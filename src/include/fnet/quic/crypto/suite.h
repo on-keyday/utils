@@ -35,8 +35,8 @@ namespace utils {
                 secrets.reset();
             }
 
-            IOResult send(PacketType type, packetnum::Value pn, auto&& observer_vec, frame::fwriter& w) {
-                return handshaker.send(type, w, observer_vec);
+            IOResult send(PacketType type, packetnum::Value pn, auto&& observer, frame::fwriter& w) {
+                return handshaker.send(type, w, observer);
             }
 
             error::Error recv(PacketType type, const frame::Frame& frame) {

@@ -8,7 +8,7 @@
 
 #include "type_list.h"
 
-#include "../../include/helper/appender.h"
+#include "../../include/strutil/append.h"
 #include <view/slice.h>
 
 namespace binred {

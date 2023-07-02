@@ -6,7 +6,7 @@
 */
 
 
-#include "interface_list.h"
+// #include "interface_list.h"
 
 namespace ifacegen {
     constexpr auto package_def = "PACKAGE";

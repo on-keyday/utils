@@ -8,7 +8,7 @@
 // X509
 // der encoding subset for x509 certificate parser
 #pragma once
-#include "../../io/number.h"
+#include "../../binary/number.h"
 #include "asn1.h"
 
 namespace utils {

@@ -1,0 +1,9 @@
+ print := fn(param) {
+    __builtin_print(param)
+}
+
+dummy:=fn() {}
+
+a:=0
+print(a)
+dummy()

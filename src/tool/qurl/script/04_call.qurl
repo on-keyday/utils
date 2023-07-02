@@ -1,0 +1,1 @@
+a := __builtin_print(0,2,4)

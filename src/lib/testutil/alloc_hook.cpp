@@ -10,7 +10,7 @@
 #include "../../include/wrap/light/char.h"
 #include "../../include/testutil/alloc_hook.h"
 #include "../../include/testutil/timer.h"
-#include "../../include/helper/appender.h"
+#include "../../include/strutil/append.h"
 #include "../../include/number/to_string.h"
 #include "../../include/number/insert_space.h"
 #ifdef _WIN32
@@ -62,22 +62,22 @@ namespace utils {
             long long delta = 0;
             auto save_log = [&](auto name) {
                 number::Array<char, 80> arr{0};
-                helper::appends(arr, name, ":/size:");
+                strutil::appends(arr, name, ":/size:");
                 number::insert_space(arr, 7, nSize);
                 number::to_string(arr, nSize);
-                helper::appends(arr, "/req:");
+                strutil::appends(arr, "/req:");
                 number::insert_space(arr, 6, lRequest);
                 number::to_string(arr, lRequest);
-                helper::append(arr, "/total:");
+                strutil::append(arr, "/total:");
                 number::insert_space(arr, 8, total_alloced);
                 number::to_string(arr, total_alloced);
-                helper::append(arr, "/time: ");
+                strutil::append(arr, "/time: ");
                 delta = t.delta<std::chrono::microseconds>().count();
                 number::insert_space(arr, 8, delta);
                 number::to_string(arr, delta);
-                helper::append(arr, "/count: ");
+                strutil::append(arr, "/count: ");
                 number::to_string(arr, count);
-                helper::append(arr, "\n");
+                strutil::append(arr, "\n");
                 OutputDebugStringA(arr.buf);
                 if (dumpfile) {
                     DWORD w;

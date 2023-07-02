@@ -19,7 +19,7 @@ namespace utils {
                 dyn,
             };
 
-            template <class C,size_t size_>
+            template <class C, size_t size_>
             struct native_array {
                 C data[size_]{};
             };
@@ -28,8 +28,8 @@ namespace utils {
             struct basic_sso_storage {
                private:
                 union {
-                    native_array<C,sizeof(basic_wvec<C, U>)> sta{};
-                    basic_wvec<C, U> dyn;
+                    native_array<C, sizeof(basic_wvec<C>)> sta{};
+                    basic_wvec<C> dyn;
                 };
                 sso_state state = sso_state::sta;
 
@@ -65,7 +65,7 @@ namespace utils {
                 }
 
                 constexpr void set_dyn(C* dat, size_t size) noexcept {
-                    dyn = basic_wvec<C, U>{dat, size};
+                    dyn = basic_wvec<C>{dat, size};
                     state = sso_state::dyn;
                 }
 
@@ -80,21 +80,21 @@ namespace utils {
                     return true;
                 }
 
-                constexpr basic_wvec<C, U> wbuf() noexcept {
+                constexpr basic_wvec<C> wbuf() noexcept {
                     if (state == sso_state::dyn) {
                         return dyn;
                     }
                     else {
-                        return basic_wvec<C, U>(sta.data);
+                        return basic_wvec<C>(sta.data);
                     }
                 }
 
-                constexpr basic_rvec<C, U> rbuf() const noexcept {
+                constexpr basic_rvec<C> rbuf() const noexcept {
                     if (state == sso_state::dyn) {
                         return dyn;
                     }
                     else {
-                        return basic_rvec<C, U>(sta.data);
+                        return basic_rvec<C>(sta.data);
                     }
                 }
 
@@ -110,7 +110,7 @@ namespace utils {
             size_t size_ = 0;
             using traits = std::allocator_traits<Alloc>;
 
-            constexpr void copy_from_rvec(basic_rvec<C, U> input, const Alloc& inalloc) {
+            constexpr void copy_from_rvec(basic_rvec<C> input, const Alloc& inalloc) {
                 size_ = input.size();
                 data_.alloc = inalloc;
                 if (data_.set_sta(input.data(), size_)) {
@@ -126,7 +126,7 @@ namespace utils {
                 data_.set_dyn(ptr, size_);
             }
 
-            constexpr void copy_in_place(basic_rvec<C, U> src) {
+            constexpr void copy_in_place(basic_rvec<C> src) {
                 resize_nofill(src.size());
                 auto wb = data_.wbuf();
                 for (auto i = 0; i < src.size(); i++) {
@@ -144,11 +144,11 @@ namespace utils {
            public:
             constexpr basic_expand_storage_vec() = default;
 
-            constexpr basic_expand_storage_vec(basic_rvec<C, U> r) {
+            constexpr basic_expand_storage_vec(basic_rvec<C> r) {
                 copy_in_place(r);
             }
 
-            constexpr basic_expand_storage_vec(Alloc&& al, basic_rvec<C, U> r) {
+            constexpr basic_expand_storage_vec(Alloc&& al, basic_rvec<C> r) {
                 data_.alloc = std::move(al);
                 copy_in_place(r);
             }
@@ -301,11 +301,11 @@ namespace utils {
                 return data_.rbuf()[i];
             }
 
-            constexpr basic_wvec<C, U> wvec() {
+            constexpr basic_wvec<C> wvec() {
                 return data_.wbuf().substr(0, size_);
             }
 
-            constexpr basic_rvec<C, U> rvec() const {
+            constexpr basic_rvec<C> rvec() const {
                 return data_.rbuf().substr(0, size_);
             }
 
@@ -325,24 +325,24 @@ namespace utils {
 
             constexpr basic_expand_storage_vec& append(const U* ptr) {
                 struct {
-                    const U* p=nullptr;
-                    size_t size_=0;
-                    constexpr U operator[](size_t i) const{
+                    const U* p = nullptr;
+                    size_t size_ = 0;
+                    constexpr U operator[](size_t i) const {
                         return p[i];
                     }
                     constexpr size_t size() const {
                         return size_;
                     }
-                }l{ptr,utils::strlen(ptr)};
+                } l{ptr, utils::strlen(ptr)};
                 return append(l);
             }
 
-            constexpr basic_expand_storage_vec& append(const C* ptr){
-                return append(basic_rvec<C,U>(ptr));
+            constexpr basic_expand_storage_vec& append(const C* ptr) {
+                return append(basic_rvec<C>(ptr));
             }
 
             constexpr basic_expand_storage_vec& append(const C* ptr, size_t len) {
-                return append(basic_rvec<C,U>(ptr, len));
+                return append(basic_rvec<C>(ptr, len));
             }
 
             constexpr int compare(const basic_expand_storage_vec& in) {

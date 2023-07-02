@@ -58,8 +58,8 @@ add_executable(cout "src/test/wrap/test_cout.cpp")
 add_executable(channel "src/test/thread/test_channel.cpp")
 add_executable(number "src/test/number/test_number.cpp")
 add_executable(to_string "src/test/number/test_to_string.cpp")
-add_executable(worker "src/test/async/test_worker.cpp")
-add_executable(cookie "src/test/net_util/test_cookie.cpp")
+# add_executable(worker "src/test/async/test_worker.cpp")
+add_executable(cookie "src/test/fnet_util/test_cookie.cpp")
 add_executable(strutil "src/test/helper/test_strutil.cpp")
 add_executable(escape "src/test/escape/test_escape.cpp")
 add_executable(json "src/test/json/test_json.cpp")
@@ -67,37 +67,42 @@ add_executable(cin "src/test/wrap/test_cin.cpp")
 add_executable(to_json "src/test/json/test_to_json.cpp")
 add_executable(jsonpath "src/test/json/test_jsonpath.cpp")
 add_executable(digitcount "src/test/number/test_digitcount.cpp")
-add_executable(utfcast "src/test/utf/test_utfcast.cpp")
+# add_executable(utfcast "src/test/utf/test_utfcast.cpp")
+# add_executable(coroutine "src/test/async/test_coroutine.cpp")
+# add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cpp")
+# add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
+# add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
+# add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
+
 add_executable(optparse "src/test/cmdline/test_optparse.cpp")
 add_executable(optctx "src/test/cmdline/test_optctx.cpp")
 add_executable(subcmd "src/test/cmdline/test_subcmd.cpp")
-add_executable(coroutine "src/test/async/test_coroutine.cpp")
-add_executable(run_on_single_thread "src/test/async/test_run_on_single_thread.cpp")
-add_executable(make_arg "src/test/async/light/test_make_arg.cpp")
-add_executable(shared_context "src/test/async/light/test_shared_context.cpp")
-add_executable(taskpool2 "src/test/async/light/test_taskpool2.cpp")
 add_executable(dispatch_json "src/test/json/test_dispatch_json.cpp")
 add_executable(minl_def "src/test/minilang/test_minilangdef.cpp")
-add_executable(ipparse "src/test/net_util/test_ipparse.cpp")
+add_executable(ipparse "src/test/fnet_util/test_ipparse.cpp")
 add_executable(expand_iovec "src/test/view/test_expand_vec.cpp")
 add_executable(yaml_lexer "src/test/yaml/test_yaml_lexer.cpp")
-add_executable(hpack "src/test/net_util/test_hpack.cpp")
+add_executable(hpack "src/test/fnet_util/test_hpack.cpp")
 add_executable(comb "src/test/minilang/test_comb.cpp")
 add_executable(huffman "src/test/file/test_huffman.cpp")
 add_executable(deflate "src/test/file/test_deflate.cpp")
 add_executable(comb2 "src/test/comb2/test_comb2.cpp")
 add_executable(reflect "src/test/reflect/test_reflect.cpp")
-add_executable(qpack "src/test/net_util/test_qpack.cpp")
+add_executable(qpack "src/test/fnet_util/test_qpack.cpp")
 add_executable(span "src/test/view/test_span.cpp")
 add_executable(unicode_data "src/test/unicode/test_unicode_data.cpp")
 add_executable(quic_coro "src/test/coro/test_quic_coro.cpp")
 add_executable(coro_nest "src/test/coro/test_coro_nest.cpp")
+add_executable(base64 "src/test/fnet_util/test_base64.cpp")
+add_executable(sha1 "src/test/fnet_util/test_sha1.cpp")
+add_executable(env_expand "src/test/env/test_env_expand.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
 add_executable(fnet_tls "src/test/fnet/test_fnet_tls.cpp")
 add_executable(fnet_http "src/test/fnet/test_fnet_http.cpp")
 # add_executable(fnet_http2 "src/test/fnet/test_fnet_http2.cpp")
+add_executable(fnet_http2 "src/test/fnet/test_fnet_http2_state.cpp")
 add_executable(fnetquic_initial "src/test/fnetquic/test_fnetquic_initial.cpp")
 add_executable(fnetquic_context "src/test/fnetquic/test_fnetquic_context.cpp")
 add_executable(fnet_error "src/test/fnet/test_fnet_error.cpp")
@@ -108,14 +113,18 @@ add_executable(fnetquic_stream "src/test/fnetquic/test_fnetquic_stream.cpp")
 add_executable(fnetquic_multi_thread "src/test/fnetquic/test_fnetquic_multi_thread.cpp")
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
+add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_internet.cpp")
 
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 # tools
+
 add_executable(ifacegen "src/tool/ifacegen/interface_gen.cpp"
-  "src/tool/ifacegen/read_interface.cpp"
-  "src/tool/ifacegen/generate_interface.cpp")
+  # "src/tool/ifacegen/read_interface.cpp"
+  "src/tool/ifacegen/generate_interface.cpp"
+  "src/tool/ifacegen/traverse.cpp")
+#[[
 add_executable(binred "src/tool/binred/binred.cpp"
   "src/tool/binred/read_fmt.cpp"
   "src/tool/binred/generate_cpp.cpp")
@@ -123,7 +132,7 @@ add_executable(minilang "src/tool/minilang/minilang.cpp"
   "src/tool/minilang/minilang_runtime.cpp"
   "src/tool/minilang/minilang_llvm.cpp"
   "src/tool/minilang/minilang_stream.cpp"
-  "src/tool/minilang/main.cpp")
+  "src/tool/minilang/main.cpp")]]
 add_executable(durl "src/tool/durl/main.cpp"
   "src/tool/durl/uri.cpp"
   "src/tool/durl/http.cpp"
@@ -144,7 +153,9 @@ add_executable(unidump "src/tool/unidump/main.cpp")
 if(LLVM_FOUND)
 target_sources(combl PRIVATE "src/tool/combl/compile.cpp")
 endif()
-
+add_executable(oslbgen "src/tool/oslbgen/main.cpp"
+"src/tool/oslbgen/collect.cpp"
+"src/tool/oslbgen/code.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -174,12 +185,13 @@ target_sources(utils
   "src/lib/wrap/iocommon.cpp"
   "src/lib/wrap/cin.cpp"
   "src/lib/testutil/alloc_hook.cpp"
-  "src/lib/async/light/native_context.cpp"
-  "src/lib/async/light/native_stack.cpp"
   "src/lib/wrap/input.cpp"
   "src/lib/wrap/exepath.cpp"
-  "src/lib/deprecated/syntax/default_syntaxc.cpp" # deprecated but dependency uses
-  "src/lib/async/worker.cpp"
+  # "src/lib/deprecated/syntax/default_syntaxc.cpp" # deprecated but dependency uses
+  # "src/lib/async/worker.cpp"
+  # "src/lib/async/light/native_context.cpp"
+  # "src/lib/async/light/native_stack.cpp"
+  "src/lib/env/env_sys.cpp"
 )
 
 
@@ -237,7 +249,12 @@ endif()
 target_link_libraries(fileview utils)
 target_link_libraries(cout utils)
 target_link_libraries(channel utils Threads::Threads)
-target_link_libraries(worker utils)
+#[[ target_link_libraries(worker utils)
+target_link_libraries(coroutine utils)
+target_link_libraries(run_on_single_thread utils)
+target_link_libraries(shared_context utils)
+target_link_libraries(taskpool2 utils)
+]]
 target_link_libraries(json utils)
 target_link_libraries(cin utils)
 target_link_libraries(to_json utils)
@@ -246,10 +263,8 @@ target_link_libraries(digitcount utils)
 target_link_libraries(optparse utils)
 target_link_libraries(optctx utils)
 target_link_libraries(subcmd utils)
-target_link_libraries(coroutine utils)
-target_link_libraries(run_on_single_thread utils)
-target_link_libraries(shared_context utils)
-target_link_libraries(taskpool2 utils)
+target_link_libraries(env_expand utils)
+
 target_link_libraries(expand_iovec utils)
 target_link_libraries(comb utils)
 target_link_libraries(huffman utils)
@@ -270,7 +285,8 @@ target_link_libraries(fnetquic_frame utils fnet)
 target_link_libraries(fnetquic_stream utils fnet)
 target_link_libraries(fnetquic_multi_thread utils fnet)
 target_link_libraries(fnet_dns fnet)
-target_link_libraries(fnetquic_0rtt fnet)
+target_link_libraries(fnetquic_0rtt fnet utils)
+target_link_libraries(fnetquic_internet fnet utils)
 
 # test(libfnetserv)
 target_link_libraries(fnetserv fnet)
@@ -281,16 +297,17 @@ target_link_libraries(coro_nest coro utils)
 
 # tools
 target_link_libraries(ifacegen utils)
-target_link_libraries(binred utils)
-target_link_libraries(minilang utils)
+# target_link_libraries(binred utils)
+# target_link_libraries(minilang utils)
 target_link_libraries(durl utils fnet)
-target_link_libraries(server utils fnetserv)
+target_link_libraries(server utils fnet fnetserv)
 if(LLVM_FOUND)
 target_link_libraries(combl utils)
 target_compile_options(combl PRIVATE "-fconstexpr-steps=2147483647")
 endif()
 target_link_libraries(binp utils)
 target_link_libraries(unidump utils)
+target_link_libraries(oslbgen utils)
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")

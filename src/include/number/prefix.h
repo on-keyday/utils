@@ -9,21 +9,21 @@
 // prefix - number with prefix
 #pragma once
 
-#include "../helper/strutil.h"
-#include <helper/appender.h>
+#include "../strutil/strutil.h"
+#include <strutil/append.h>
 #include "parse.h"
 
 namespace utils {
     namespace number {
         template <class String>
         constexpr int has_prefix(String&& str) {
-            if (helper::starts_with(str, "0x") || helper::starts_with(str, "0X")) {
+            if (strutil::starts_with(str, "0x") || strutil::starts_with(str, "0X")) {
                 return 16;
             }
-            else if (helper::starts_with(str, "0o") || helper::starts_with(str, "0O")) {
+            else if (strutil::starts_with(str, "0o") || strutil::starts_with(str, "0O")) {
                 return 8;
             }
-            else if (helper::starts_with(str, "0b") || helper::starts_with(str, "0B")) {
+            else if (strutil::starts_with(str, "0b") || strutil::starts_with(str, "0B")) {
                 return 2;
             }
             return 0;
@@ -101,13 +101,13 @@ namespace utils {
         template <class Out>
         constexpr bool append_prefix(Out& out, int radix, bool upper = false) {
             if (radix == 16) {
-                helper::append(out, upper ? "0X" : "0x");
+                strutil::append(out, upper ? "0X" : "0x");
             }
             else if (radix == 2) {
-                helper::append(out, upper ? "0B" : "0b");
+                strutil::append(out, upper ? "0B" : "0b");
             }
             else if (radix == 8) {
-                helper::append(out, upper ? "0O" : "0o");
+                strutil::append(out, upper ? "0O" : "0o");
             }
             else {
                 return false;

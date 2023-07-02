@@ -25,7 +25,7 @@ namespace utils {
                            : FrameType::DATAGRAM_LEN;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::DATAGRAM) &&
                        (type.type_detail() == FrameType::DATAGRAM_LEN
                             ? varint::read(r, length) && r.read(datagram_data, length)
@@ -42,7 +42,7 @@ namespace utils {
                        datagram_data.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, get_type()) &&
                        (type.type_detail() == FrameType::DATAGRAM ||
                         varint::write(w, datagram_data.size())) &&

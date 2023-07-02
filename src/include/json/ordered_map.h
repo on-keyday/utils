@@ -9,7 +9,7 @@
 // ordered_map - ordered map
 #pragma once
 #include "../wrap/light/vector.h"
-#include "../helper/equal.h"
+#include "../strutil/equal.h"
 
 namespace utils {
 
@@ -37,7 +37,7 @@ namespace utils {
             template <class T>
             auto find(T&& t) const {
                 return std::find_if(obj.begin(), obj.end(), [&](auto& kv) {
-                    return helper::equal(get<0>(kv), t);
+                    return strutil::equal(get<0>(kv), t);
                 });
             }
 
@@ -72,7 +72,7 @@ namespace utils {
             template <class K>
             bool erase(K&& k) {
                 return std::erase_if(obj, [&](auto& kv) {
-                    return helper::equal(get<0>(kv), k);
+                    return strutil::equal(get<0>(kv), k);
                 });
             }
             size_t size() const {

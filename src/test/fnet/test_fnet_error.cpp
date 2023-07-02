@@ -14,7 +14,7 @@ int main() {
     struct LocalError {
         int val = 0;
         void error(helper::IPushBacker<> pb) {
-            helper::append(pb, "local_error");
+            strutil::append(pb, "local_error");
         }
 
         bool operator==(const LocalError& eq) const {

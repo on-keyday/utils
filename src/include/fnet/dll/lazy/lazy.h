@@ -224,12 +224,12 @@ namespace utils {
                     call_fail_traits(p->name);
                 }
                 return p->fn(arg...);
-            }  // namespace fnet::lazy
+            }
 
             constexpr Ret unsafe_call(Arg... arg) const {
                 return static_cast<Derived*>(this)->fn(arg...);
             }
-        };  // namespace utils
+        };
 
         template <class Derived, class Ret, class... Arg>
         struct Call<Derived, Ret(Arg...) noexcept> {

@@ -14,13 +14,14 @@
 #include "../frame/conn_id.h"
 #include "../transport_error.h"
 #include "../time.h"
+#include "../resend/ack_handler.h"
 
 namespace utils {
     namespace fnet::quic::connid {
         struct IDWait {
             std::int64_t seq = -1;
             std::int64_t retire_proior_to = 0;
-            std::shared_ptr<ack::ACKLostRecord> wait;
+            resend::ACKHandler wait;
         };
 
         constexpr auto default_max_active_conn_id = 2;
@@ -44,7 +45,7 @@ namespace utils {
             std::int64_t retire_proior_to_id = 0;
 
            public:
-            void reset(ConnIDExporter&& exp, ConnIDGenerator&& gen, byte conn_id_len, byte conc_limit) {
+            void reset(const ConnIDExporter& exp, const ConnIDGenerator& gen, byte conn_id_len, byte conc_limit) {
                 srcids.clear();
                 waitlist.clear();
                 max_active_conn_id = default_max_active_conn_id;
@@ -52,8 +53,8 @@ namespace utils {
                 current_seq = invalid_seq;
                 connID_len = conn_id_len;
                 concurrent_limit = conc_limit;
-                exporter = std::move(exp);
-                connid_gen = std::move(gen);
+                exporter = exp;
+                connid_gen = gen;
             }
 
             // expose_close_ids expose connIDs to close
@@ -61,7 +62,9 @@ namespace utils {
             void expose_close_ids(auto&& ids) {
                 for (auto&& s : srcids) {
                     IDStorage& exp = s.second;
-                    ids.push_back(CloseID{.id = std::move(exp.id), .token = s.stateless_reset_token});
+                    CloseID c{.id = std::move(exp.id)};
+                    view::copy(c.token, exp.stateless_reset_token);
+                    ids.push_back(std::move(c));
                 }
             }
 
@@ -117,7 +120,7 @@ namespace utils {
                 return {new_issued.to_ConnID(), error::none};
             }
 
-            bool send(frame::fwriter& fw, auto&& observer_vec) {
+            bool send(frame::fwriter& fw, auto&& observer) {
                 auto do_send = [&](IDWait& id_wait, ConnID id) {
                     frame::NewConnectionIDFrame new_conn;
                     new_conn.sequence_number = id.seq.seq;
@@ -130,18 +133,17 @@ namespace utils {
                     if (!fw.write(new_conn)) {
                         return false;
                     }
-                    id_wait.wait = ack::make_ack_wait();
-                    observer_vec.push_back(id_wait.wait);
+                    id_wait.wait.wait(observer);
                     return true;
                 };
                 for (auto it = waitlist.begin(); it != waitlist.end();) {
-                    if (it->wait) {
-                        if (it->wait->is_ack()) {
-                            ack::put_ack_wait(std::move(it->wait));
+                    if (it->wait.not_confirmed()) {
+                        if (it->wait.is_ack()) {
+                            it->wait.confirm();
                             it = waitlist.erase(it);
                             continue;
                         }
-                        else if (it->wait->is_lost()) {
+                        else if (it->wait.is_lost()) {
                             auto id = choose(it->seq);
                             if (!id.seq.valid()) {
                                 it = waitlist.erase(it);  // already retired
@@ -259,7 +261,7 @@ namespace utils {
             }
 
             auto get_onertt_dstID_len_callback() {
-                return [this](io::reader r, size_t* len) {
+                return [this](binary::reader r, size_t* len) {
                     if (this->is_using_zero_length()) {
                         *len = 0;
                         return true;

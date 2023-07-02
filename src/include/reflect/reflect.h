@@ -8,7 +8,7 @@
 #pragma once
 #include <type_traits>
 #include <tuple>
-#include "../io/number.h"
+#include "../binary/number.h"
 
 namespace utils {
     namespace reflect {
@@ -306,7 +306,7 @@ namespace utils {
                 if (!valid_offset<T>(offset)) {
                     return false;
                 }
-                io::reader r{view::rvec(static_cast<const byte*>(ptr), size())};
+                binary::reader r{view::rvec(static_cast<const byte*>(ptr), size())};
                 auto alignptr = r.remain().data() + offset;
                 if (std::uintptr_t(alignptr) % alignof(T) != 0) {
                     return false;
@@ -314,14 +314,14 @@ namespace utils {
                 r.offset(offset);
                 if constexpr (std::is_pointer_v<T>) {
                     std::uintptr_t tmp;
-                    if (!io::read_num(r, tmp, !endian::is_little())) {
+                    if (!binary::read_num(r, tmp, !binary::is_little())) {
                         return false;
                     }
                     val = reinterpret_cast<T>(tmp);
                     return true;
                 }
                 else {
-                    return io::read_num(r, val, !endian::is_little());
+                    return binary::read_num(r, val, !binary::is_little());
                 }
             }
 
@@ -338,17 +338,17 @@ namespace utils {
                 if (!valid_offset<T>(offset)) {
                     return false;
                 }
-                io::writer w{view::wvec(static_cast<byte*>(const_cast<void*>(ptr)), size())};
+                binary::writer w{view::wvec(static_cast<byte*>(const_cast<void*>(ptr)), size())};
                 auto alignptr = w.remain().data() + offset;
                 if (std::uintptr_t(alignptr) % alignof(T) != 0) {
                     return false;
                 }
                 w.offset(offset);
                 if constexpr (std::is_pointer_v<T>) {
-                    return io::write_num(w, std::uintptr_t(val), !endian::is_little());
+                    return binary::write_num(w, std::uintptr_t(val), !binary::is_little());
                 }
                 else {
-                    return io::write_num(w, val, !endian::is_little());
+                    return binary::write_num(w, val, !binary::is_little());
                 }
             }
 

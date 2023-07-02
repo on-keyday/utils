@@ -10,9 +10,9 @@
 #pragma once
 
 #include <wrap/light/enum.h>
-#include <helper/equal.h>
-#include "../../helper/strutil.h"
-#include "../../helper/appender.h"
+#include <strutil/equal.h>
+#include <strutil/strutil.h>
+#include <strutil/append.h>
 
 namespace utils {
     namespace cmdline {
@@ -71,9 +71,9 @@ namespace utils {
                 bool added = false;
                 auto add = [&](auto c) {
                     if (added) {
-                        helper::append(result, " | ");
+                        strutil::append(result, " | ");
                     }
-                    helper::append(result, c);
+                    strutil::append(result, c);
                     added = true;
                 };
                 if (flag == ParseFlag::none) {
@@ -225,7 +225,7 @@ namespace utils {
                     return FlagType::invalid_arg;
                 }
                 auto equal_ = [&](auto str) {
-                    return helper::equal(argv[index], str);
+                    return strutil::equal(argv[index], str);
                 };
                 if (any(ParseFlag::sf_ignore & flag) && equal_("--")) {
                     return FlagType::ignore;
@@ -244,7 +244,7 @@ namespace utils {
                     }
                 };
                 auto contains_assign = [&] {
-                    return helper::contains(argv[index], get_assignment(flag));
+                    return strutil::contains(argv[index], get_assignment(flag));
                 };
                 auto check_assign = [&](FlagType assign, FlagType ornot) {
                     if (fassign) {
@@ -284,10 +284,10 @@ namespace utils {
                     return suspend_or_arg();
                 }
                 if (fshort && flong) {
-                    if (helper::starts_with(argv[index], "--")) {
+                    if (strutil::starts_with(argv[index], "--")) {
                         return handle_pf_long();
                     }
-                    if (helper::starts_with(argv[index], "-")) {
+                    if (strutil::starts_with(argv[index], "-")) {
                         if (equal_("-")) {
                             return FlagType::equal_short_pf;
                         }
@@ -299,7 +299,7 @@ namespace utils {
                     return suspend_or_arg();
                 }
                 else if (fshort) {
-                    if (helper::starts_with(argv[index], get_prefix(flag))) {
+                    if (strutil::starts_with(argv[index], get_prefix(flag))) {
                         if (equal_(get_prefix(flag))) {
                             return FlagType::equal_one_pf;
                         }
@@ -308,7 +308,7 @@ namespace utils {
                     return suspend_or_arg();
                 }
                 else {
-                    if (helper::starts_with(argv[index], "--")) {
+                    if (strutil::starts_with(argv[index], "--")) {
                         return handle_pf_long();
                     }
                     return suspend_or_arg();

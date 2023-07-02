@@ -68,56 +68,56 @@ namespace utils {
         }
 
         void print_lib_error(helper::IPushBacker<> pb, const char* name, auto code) {
-            helper::appends(pb, name, "=error:");
+            strutil::appends(pb, name, "=error:");
             number::to_string(pb, code, 16);
-            helper::append(pb, ":");
+            strutil::append(pb, ":");
             if (is_boring_ssl()) {
                 auto str = lazy::crypto::bssl::ERR_lib_error_string_(code);
                 if (str) {
-                    helper::append(pb, str);
+                    strutil::append(pb, str);
                 }
-                helper::append(pb, "::");
+                strutil::append(pb, "::");
                 str = lazy::crypto::bssl::ERR_reason_error_string_(code);
                 if (str) {
-                    helper::append(pb, str);
+                    strutil::append(pb, str);
                 }
             }
             else if (is_open_ssl()) {
                 auto str = lazy::crypto::ossl::ERR_lib_error_string_(code);
                 if (str) {
-                    helper::append(pb, str);
+                    strutil::append(pb, str);
                 }
-                helper::append(pb, "::");
+                strutil::append(pb, "::");
                 str = lazy::crypto::ossl::ERR_reason_error_string_(code);
                 if (str) {
-                    helper::append(pb, str);
+                    strutil::append(pb, str);
                 }
             }
             else {
-                helper::append(pb, "::");
+                strutil::append(pb, "::");
             }
         }
 
         void LibError::error(helper::IPushBacker<> pb) const {
             if (ssl_code != 0) {
-                helper::append(pb, "ssl_error_code=");
+                strutil::append(pb, "ssl_error_code=");
                 number::to_string(pb, ssl_code);
                 if (lazy::ssl::bssl::sp::SSL_error_description_.find()) {  // on boringssl
-                    helper::append(pb, " ");
+                    strutil::append(pb, " ");
                     auto str = lazy::ssl::bssl::sp::SSL_error_description_(ssl_code);
                     if (str) {
-                        helper::appends(pb, "ssl_error_desc=\"", str, "\" ");
+                        strutil::appends(pb, "ssl_error_desc=\"", str, "\" ");
                     }
                 }
             }
             if (code != 0) {
                 if (ssl_code != 0) {
-                    helper::append(pb, " ");
+                    strutil::append(pb, " ");
                 }
                 print_lib_error(pb, "lib_error", code);
             }
             if (alt_err) {
-                helper::append(pb, " ");
+                strutil::append(pb, " ");
                 alt_err.error(pb);
             }
         }
@@ -125,7 +125,7 @@ namespace utils {
         void LibSubError::error(helper::IPushBacker<> pb) const {
             print_lib_error(pb, "sub_error", code);
             if (alt_err) {
-                helper::append(pb, " ");
+                strutil::append(pb, " ");
                 alt_err.error(pb);
             }
         }
@@ -188,6 +188,16 @@ namespace utils {
             return conf;
         }
 
+        TLSConfig& TLSConfig::operator=(const TLSConfig& conf) {
+            if (this->ctx == conf.ctx) {
+                return *this;
+            }
+            this->~TLSConfig();
+            lazy::ssl::SSL_CTX_up_ref_(static_cast<ssl_import::SSL_CTX*>(conf.ctx));
+            this->ctx = conf.ctx;
+            return *this;
+        }
+
         constexpr auto errNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
         constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
 
@@ -205,9 +215,11 @@ namespace utils {
             return error::none;
         }
 
-        error::Error TLSConfig::set_verify(int mode, int (*verify_callback)(int, void*)) {
+        int map_verify_mode(VerifyMode);
+
+        error::Error TLSConfig::set_verify(VerifyMode mode, int (*verify_callback)(int, void*)) {
             CHECK_CTX(c)
-            lazy::ssl::SSL_CTX_set_verify_(c, mode,
+            lazy::ssl::SSL_CTX_set_verify_(c, map_verify_mode(mode),
                                            (int (*)(int, ssl_import::X509_STORE_CTX*))(verify_callback));
             return error::none;
         }

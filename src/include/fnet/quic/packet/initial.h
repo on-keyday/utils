@@ -21,7 +21,7 @@ namespace utils {
                 return PacketType::Initial;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, PacketType::Initial) &&
                        varint::read(r, token_length) &&
                        r.read(token, token_length) &&
@@ -36,7 +36,7 @@ namespace utils {
                        (use_length_field ? varint::len(length) : 0);
             }
 
-            constexpr bool render(io::writer& w, byte pnlen) const noexcept {
+            constexpr bool render(binary::writer& w, byte pnlen) const noexcept {
                 return render_with_pnlen(w, PacketType::Initial, pnlen) &&
                        varint::write(w, varint::Value(token.size())) &&
                        w.write(token);
@@ -82,11 +82,11 @@ namespace utils {
                 if (fit_size != 1200) {
                     return false;
                 }
-                io::writer w{data};
+                binary::writer w{data};
                 if (!plain.render(w, wire, 16, padding)) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!plain.parse(r, 16)) {
                     return false;
                 }
@@ -124,15 +124,15 @@ namespace utils {
                 plain.dstID = id;
                 plain.token = id;
                 byte data[1000]{};
-                io::writer w{data};
+                binary::writer w{data};
                 byte p[] = "object";
-                auto payload_render = [&](io::writer& w) {
+                auto payload_render = [&](binary::writer& w) {
                     return w.write(p);
                 };
                 if (!plain.render_in_place(w, {1, 1}, payload_render, 16)) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!plain.parse(r, 16)) {
                     return false;
                 }

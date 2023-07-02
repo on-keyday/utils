@@ -13,6 +13,7 @@
 #include "../../../std/list.h"
 #include "../../hash_fn.h"
 #include <atomic>
+#include "conn_handler_interface.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -39,6 +40,7 @@ namespace utils {
 
         template <class TConfig>
         struct Conn : std::enable_shared_from_this<Conn<TConfig>> {
+            /*
             using UniOpenArg = typename TConfig::conn_cb_arg::open_uni;
             using UniAcceptArg = typename TConfig::conn_cb_arg::accept_uni;
             using BidiOpenArg = typename TConfig::conn_cb_arg::open_bidi;
@@ -48,19 +50,26 @@ namespace utils {
             using UniAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<RecvUniStream<TConfig>> stream);
             using BidiOpenCB = void (*)(UniOpenArg& arg, std::shared_ptr<BidiStream<TConfig>> stream);
             using BidiAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<BidiStream<TConfig>> stream);
-            using SendCB = IOResult (*)(SendeSchedArg<TConfig>, frame::fwriter& w, ack::ACKCollector observer_vec);
+            using SendCB = IOResult (*)(SendeSchedArg<TConfig>, frame::fwriter& w, ack::ACKRecorder& observer);
+            */
+
+            using ConnHandler = typename TConfig::template conn_handler<TConfig>;
 
            private:
             template <class K, class V>
             using stream_map = typename TConfig::template stream_map<K, V>;
 
             ConnFlowControl<TConfig> control;
-            stream_map<StreamID, std::shared_ptr<SendUniStream<TConfig>>> send_uni;
-            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> send_bidi;
-            stream_map<StreamID, std::shared_ptr<RecvUniStream<TConfig>>> recv_uni;
-            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> recv_bidi;
+            stream_map<StreamID, std::shared_ptr<SendUniStream<TConfig>>> local_uni;
+            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> local_bidi;
+            stream_map<StreamID, std::shared_ptr<RecvUniStream<TConfig>>> remote_uni;
+            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> remote_bidi;
             std::atomic_bool remove_auto = false;
 
+            // ConnHandler handler;
+            ConnHandlerInterface<ConnHandler> handler;
+
+            /*
             UniOpenArg uniopenarg;
             BidiOpenArg bidiopenarg;
             UniOpenCB open_uni_stream = nullptr;
@@ -72,6 +81,7 @@ namespace utils {
             BidiOpenCB accept_bidi_stream = nullptr;
 
             SendCB send_schedule = nullptr;
+            */
 
             auto borrow_control() {
                 return std::shared_ptr<ConnFlowControl<TConfig>>(
@@ -79,7 +89,7 @@ namespace utils {
             }
 
            public:
-            Conn(Direction self) {
+            Conn(Origin self) {
                 control.base.state.set_dir(self);
             }
 
@@ -104,9 +114,9 @@ namespace utils {
                         s->apply_local_initial_limits();
                     }
                 };
-                apply(control.base.open_bidi_lock(), send_bidi);
-                apply(control.base.accept_bidi_lock(), recv_bidi);
-                apply(control.base.accept_uni_lock(), recv_uni);
+                apply(control.base.open_bidi_lock(), local_bidi);
+                apply(control.base.accept_bidi_lock(), remote_bidi);
+                apply(control.base.accept_uni_lock(), remote_uni);
             }
 
             // called when initial limits updated
@@ -117,9 +127,9 @@ namespace utils {
                         s->apply_peer_initial_limits();
                     }
                 };
-                apply(control.base.open_bidi_lock(), send_bidi);
-                apply(control.base.open_uni_lock(), send_uni);
-                apply(control.base.accept_bidi_lock(), recv_bidi);
+                apply(control.base.open_bidi_lock(), local_bidi);
+                apply(control.base.open_uni_lock(), local_uni);
+                apply(control.base.accept_bidi_lock(), remote_bidi);
             }
 
             std::shared_ptr<SendUniStream<TConfig>> open_uni() {
@@ -129,10 +139,13 @@ namespace utils {
                         return;
                     }
                     s = internal::make_ptr<SendUniStream<TConfig>>(id, borrow_control());
-                    send_uni.emplace(id, s);
+                    local_uni.emplace(id, s);
+                    /*
                     if (open_uni_stream) {
                         open_uni_stream(uniopenarg, s);
                     }
+                    */
+                    handler.uni_open(s);
                 });
                 return s;
             }
@@ -146,14 +159,18 @@ namespace utils {
                     s = std::allocate_shared<BidiStream<TConfig>>(
                         glheap_allocator<BidiStream<TConfig>>{},
                         id, borrow_control());
-                    send_bidi.emplace(id, s);
+                    local_bidi.emplace(id, s);
+                    /*
                     if (open_bidi_stream) {
                         open_bidi_stream(bidiopenarg, s);
                     }
+                    */
+                    handler.bidi_open(s);
                 });
                 return s;
             }
 
+            /*
             void set_open_bidi(BidiOpenArg arg, BidiOpenCB cb) {
                 const auto lock = control.base.open_bidi_lock();
                 bidiopenarg = std::move(arg);
@@ -176,19 +193,45 @@ namespace utils {
                 const auto lock = control.base.accept_uni_lock();
                 uniacceptarg = std::move(arg);
                 accept_uni_stream = cb;
+            }*/
+
+            // thread unsafe call
+            // call this before share this with multi thread
+            auto conn_handler() {
+                return handler.impl_ptr();
             }
 
-            Direction local_dir() const {
+            Origin local_dir() const {
                 return control.base.state.local_dir();
             }
 
-            Direction peer_dir() const {
+            Origin peer_dir() const {
                 return control.base.state.peer_dir();
+            }
+
+            size_t local_bidi_avail() {
+                const auto locked = control.base.open_bidi_lock();
+                return local_bidi.size();
+            }
+
+            size_t remote_bidi_avail() {
+                const auto locked = control.base.accept_bidi_lock();
+                return remote_bidi.size();
+            }
+
+            size_t local_uni_avail() {
+                const auto locked = control.base.open_uni_lock();
+                return local_uni.size();
+            }
+
+            size_t remote_uni_avail() {
+                const auto locked = control.base.accept_uni_lock();
+                return remote_uni.size();
             }
 
             std::shared_ptr<BidiStream<TConfig>> find_local_bidi(StreamID id) {
                 const auto locked = control.base.open_bidi_lock();
-                if (auto it = send_bidi.find(id); it != send_bidi.end()) {
+                if (auto it = local_bidi.find(id); it != local_bidi.end()) {
                     return it->second;
                 }
                 return nullptr;
@@ -196,7 +239,7 @@ namespace utils {
 
             std::shared_ptr<BidiStream<TConfig>> find_remote_bidi(StreamID id) {
                 const auto locked = control.base.accept_bidi_lock();
-                if (auto it = recv_bidi.find(id); it != recv_bidi.end()) {
+                if (auto it = remote_bidi.find(id); it != remote_bidi.end()) {
                     return it->second;
                 }
                 return nullptr;
@@ -204,7 +247,7 @@ namespace utils {
 
             std::shared_ptr<SendUniStream<TConfig>> find_send_uni(StreamID id) {
                 const auto locked = control.base.open_uni_lock();
-                if (auto it = send_uni.find(id); it != send_uni.end()) {
+                if (auto it = local_uni.find(id); it != local_uni.end()) {
                     return it->second;
                 }
                 return nullptr;
@@ -212,7 +255,7 @@ namespace utils {
 
             std::shared_ptr<RecvUniStream<TConfig>> find_recv_uni(StreamID id) {
                 const auto locked = control.base.accept_uni_lock();
-                if (auto it = recv_uni.find(id); it != recv_uni.end()) {
+                if (auto it = remote_uni.find(id); it != remote_uni.end()) {
                     return it->second;
                 }
                 return nullptr;
@@ -244,18 +287,18 @@ namespace utils {
             IOResult remove(StreamID id) {
                 if (id.dir() == local_dir()) {
                     if (id.type() == StreamType::bidi) {
-                        return remove_impl(id, control.base.open_bidi_lock(), send_bidi);
+                        return remove_impl(id, control.base.open_bidi_lock(), local_bidi);
                     }
                     else if (id.type() == StreamType::uni) {
-                        return remove_impl(id, control.base.open_uni_lock(), send_uni);
+                        return remove_impl(id, control.base.open_uni_lock(), local_uni);
                     }
                 }
                 else if (id.dir() == peer_dir()) {
                     if (id.type() == StreamType::bidi) {
-                        return remove_impl(id, control.base.accept_bidi_lock(), recv_bidi);
+                        return remove_impl(id, control.base.accept_bidi_lock(), remote_bidi);
                     }
                     else if (id.type() == StreamType::uni) {
-                        return remove_impl(id, control.base.accept_uni_lock(), recv_uni);
+                        return remove_impl(id, control.base.accept_uni_lock(), remote_uni);
                     }
                 }
                 return IOResult::invalid_data;
@@ -279,25 +322,31 @@ namespace utils {
                     }
                     if (id.type() == StreamType::bidi) {
                         auto s = internal::make_ptr<BidiStream<TConfig>>(id, borrow_control());
-                        auto [_, ok] = recv_bidi.try_emplace(id, s);
+                        auto [_, ok] = remote_bidi.try_emplace(id, s);
                         if (!ok) {
                             oerr = error::Error("unexpected cration failure on bidi stream!");
                             return;
                         }
+                        /*
                         if (accept_bidi_stream) {
                             accept_bidi_stream(bidiacceptarg, std::move(s));
                         }
+                        */
+                        handler.bidi_accept(std::move(s));
                     }
                     else {
                         auto s = internal::make_ptr<RecvUniStream<TConfig>>(id, borrow_control());
-                        auto [_, ok] = recv_uni.try_emplace(id, s);
+                        auto [_, ok] = remote_uni.try_emplace(id, s);
                         if (!ok) {
                             oerr = error::Error("unexpected creation failure on uni stream!");
                             return;
                         }
+                        /*
                         if (accept_uni_stream) {
                             accept_uni_stream(uniacceptarg, std::move(s));
                         }
+                        */
+                        handler.uni_accept(std::move(s));
                     }
                 });
                 return {false, id.type() == StreamType::bidi, oerr};
@@ -367,6 +416,9 @@ namespace utils {
            public:
             // returns (is_handled,err)
             std::pair<bool, error::Error> recv(const frame::Frame& frame) {
+                const auto d = helper::defer([&] {
+                    handler.recv_callback(this);
+                });
                 auto [id, is_related] = frame::get_streamID(frame);
                 if (is_related) {
                     return {true, recv_stream_related(frame, id)};
@@ -380,7 +432,7 @@ namespace utils {
            private:
             // not concern about priority or evenity
             // should implement send_schedule for your application purpose
-            IOResult default_send_schedule(frame::fwriter& fw, auto&& observer_vec) {
+            IOResult default_send_schedule(frame::fwriter& fw, auto&& observer) {
                 IOResult r = IOResult::ok;
                 auto maybe_remove = [&](auto& it, auto& m) {
                     if (remove_auto && it->second->is_removable()) {
@@ -392,7 +444,7 @@ namespace utils {
                 auto do_send = [&](const auto& lock, auto& m) {
                     for (auto it = m.begin(); it != m.end();) {
                         auto& s = it->second;
-                        auto [res, fin] = s->send(fw, observer_vec);
+                        auto [res, fin] = s->send(fw, observer);
                         if (res == IOResult::fatal || res == IOResult::invalid_data) {
                             r = res;
                             return true;
@@ -407,7 +459,7 @@ namespace utils {
                 auto do_send_r = [&](const auto& lock, auto& m) {
                     for (auto it = m.begin(); it != m.end();) {
                         auto& s = it->second;
-                        auto res = s->send(fw, observer_vec);
+                        auto res = s->send(fw, observer);
                         if (res == IOResult::fatal || res == IOResult::invalid_data) {
                             r = res;
                             return true;
@@ -419,29 +471,23 @@ namespace utils {
                     }
                     return false;
                 };
-                (void)(do_send(control.base.open_bidi_lock(), send_bidi) ||
-                       do_send(control.base.open_uni_lock(), send_uni) ||
-                       do_send(control.base.accept_bidi_lock(), recv_bidi) ||
-                       do_send_r(control.base.accept_uni_lock(), recv_uni));
+                (void)(do_send(control.base.open_bidi_lock(), local_bidi) ||
+                       do_send(control.base.open_uni_lock(), local_uni) ||
+                       do_send(control.base.accept_bidi_lock(), remote_bidi) ||
+                       do_send_r(control.base.accept_uni_lock(), remote_uni));
                 return r;
             }
 
            public:
-            IOResult send(frame::fwriter& fw, auto&& observer_vec) {
-                if (auto res = control.send(fw, observer_vec); res == IOResult::fatal) {
+            IOResult send(frame::fwriter& fw, auto&& observer) {
+                handler.send_callback(this);
+                if (auto res = control.send(fw, observer); res == IOResult::fatal) {
                     return res;
                 }
-                if (send_schedule) {
-                    return send_schedule(SendeSchedArg<TConfig>{
-                                             .uniopenarg = uniopenarg,
-                                             .bidiopenarg = bidiopenarg,
-                                             .uniacceptarg = uniacceptarg,
-                                             .bidiacceptarg = bidiacceptarg,
-
-                                         },
-                                         fw, observer_vec);
-                }
-                return default_send_schedule(fw, observer_vec);
+                auto do_default = [&] {
+                    return default_send_schedule(fw, observer);
+                };
+                return handler.send_schedule(fw, observer, do_default);
             }
 
             // update is std::uint64_t/*new_limit*/(Limiter)
@@ -464,7 +510,7 @@ namespace utils {
         };
 
         template <class TConfig>
-        std::shared_ptr<Conn<TConfig>> make_conn(Direction self) {
+        std::shared_ptr<Conn<TConfig>> make_conn(Origin self) {
             return internal::make_ptr<Conn<TConfig>>(self);
         }
     }  // namespace fnet::quic::stream::impl

@@ -91,7 +91,7 @@ namespace utils {
                 if (output.size() > 0xffff) {
                     return false;
                 }
-                io::writer w{tmp};
+                binary::writer w{tmp};
                 byte label_len = 6 + quic_label.size();
                 // refer RFC8446 section 3.4
                 // A variable vector length has a vector length as a prefix of vector.
@@ -99,7 +99,7 @@ namespace utils {
                 // WARN(on-keyday): DON'T forget " " after "tls13"
                 // output.size() + (6 + quic_label.len) + "tls13 " + quic_label +
                 // (hash_value.len==0) + (hash_value=="")
-                bool ok = io::write_num(w, std::uint16_t(output.size())) &&
+                bool ok = binary::write_num(w, std::uint16_t(output.size())) &&
                           w.write(label_len, 1) &&
                           w.write("tls13 ") &&
                           w.write(quic_label) &&

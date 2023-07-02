@@ -22,7 +22,7 @@ namespace utils {
                 return FrameType::NEW_CONNECTION_ID;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::NEW_CONNECTION_ID) &&
                        varint::read(r, sequence_number) &&
                        varint::read(r, retire_proior_to) &&
@@ -40,7 +40,7 @@ namespace utils {
                        16;
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 if (connectionID.size() > 0xFF) {
                     return false;
                 }
@@ -73,7 +73,7 @@ namespace utils {
                 return FrameType::RETIRE_CONNECTION_ID;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::RETIRE_CONNECTION_ID) &&
                        varint::read(r, sequence_number);
             }
@@ -83,7 +83,7 @@ namespace utils {
                        varint::len(sequence_number);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, FrameType::RETIRE_CONNECTION_ID) &&
                        varint::write(w, sequence_number);
             }

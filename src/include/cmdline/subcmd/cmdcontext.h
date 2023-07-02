@@ -109,13 +109,13 @@ namespace utils {
                     else {
                         name = mainname;
                     }
-                    helper::appends(str, name, " - ", desc, "\n");
+                    strutil::appends(str, name, " - ", desc, "\n");
                     ctx.Usage(str, flag, name.c_str(), usage.c_str(), "    ");
                     if (subcommand.size()) {
-                        helper::append(str, "Command:\n");
+                        strutil::append(str, "Command:\n");
                     }
                     for (auto& cmd : subcommand) {
-                        helper::appends(str, "    ", cmd.first, " - ", cmd.second->desc, "\n");
+                        strutil::appends(str, "    ", cmd.first, " - ", cmd.second->desc, "\n");
                     }
                 }
 

@@ -32,7 +32,7 @@ namespace utils {
                         expect = "function parameter";
                     }
                     p.err = false;
-                    if (space::consume_space(p.seq, true); p.seq.seek_if(")")) {
+                    if (strutil::consume_space(p.seq, true); p.seq.seek_if(")")) {
                         goto END_OF_PARAM;
                     }
                     while (true) {
@@ -64,19 +64,19 @@ namespace utils {
                             }
                         }
                         par = tmp;
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if(",")) {
                             if (p.seq.seek_if(")")) {
                                 break;
                             }
                             return error("expect ", expect, " , or ) but not");
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                     }
                 END_OF_PARAM:
                     return true;
                 };
-                space::consume_space(p.seq, true);
+                strutil::consume_space(p.seq, true);
                 std::string name;
                 const auto ident_start = p.seq.rptr;
                 auto ident_end = p.seq.rptr;
@@ -86,7 +86,7 @@ namespace utils {
                         return nullptr;
                     }
                     ident_end = p.seq.rptr;
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                 }
                 if (!p.seq.seek_if("(")) {
                     return error("expect function parameter begin ( but not");
@@ -99,8 +99,8 @@ namespace utils {
                 if (p.err) {
                     return nullptr;
                 }
-                space::consume_space(p.seq, false);
-                if (!(p.seq.eos() || space::parse_eol<false>(p.seq) ||
+                strutil::consume_space(p.seq, false);
+                if (!(p.seq.eos() || strutil::parse_eol<false>(p.seq) ||
                       p.seq.match("{") || p.seq.match("}"))) {
                     std::shared_ptr<MinNode> tmp;
                     if (p.seq.seek_if("(")) {
@@ -118,7 +118,7 @@ namespace utils {
                         }
                     }
                     fnroot->return_ = std::move(tmp);
-                    space::consume_space(p.seq, false);
+                    strutil::consume_space(p.seq, false);
                 }
                 const auto no_block = mode == fe_tydec || mode == fe_iface;
                 if (!no_block && p.seq.match("{")) {
@@ -164,7 +164,7 @@ namespace utils {
                         p.seq.rptr = begin;
                         return nullptr;
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     if (!p.seq.seek_if("{")) {
                         p.errc.say("expect interface begin { but not");
                         p.errc.trace(start, p.seq);
@@ -175,7 +175,7 @@ namespace utils {
                     ret->str = interface_str_;
                     auto cur = ret;
                     while (true) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (p.seq.eos()) {
                             p.errc.say("unexpected EOF at interface declaration");
                             p.errc.trace(start, p.seq);

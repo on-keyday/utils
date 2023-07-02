@@ -1,0 +1,27 @@
+main:=fn(){
+    return fn(f) {
+        return f(fn(a) {return a})
+    }
+}
+argc:=1
+f:= main()
+
+f = f(f)(f)
+
+f = fn(a){
+    return fn(a){return a}(a)
+}(f(fn(a){
+    return a(fn(a){
+        a(fn(b){return b},a)
+        return fn(a){return a}})
+    }))
+    (fn(a,b){
+        return a(b)
+    })
+invoke:=fn(a){
+    return a()
+}
+
+callee:= main()(fn(a){return a})(f)(fn(){return fn(a){return a(fn(){return 9})}})()(fn(s){return s})
+
+return invoke(callee)

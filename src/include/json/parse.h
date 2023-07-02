@@ -10,8 +10,8 @@
 #pragma once
 #include "jsonbase.h"
 #include "../core/sequencer.h"
-#include "../space/space.h"
-#include "../helper/strutil.h"
+#include "../strutil/space.h"
+// #include "../strutil/strutil.h"
 #include "../escape/escape.h"
 #include "../view/slice.h"
 
@@ -26,7 +26,7 @@ namespace utils {
             using array_t = typename JSONBase<String, Vec, Object>::array_t;
 
             auto consume_space = [&] {
-                while (space::parse_space<true>(seq, true)) {
+                while (strutil::parse_space<true>(seq, true)) {
                 }
             };
 #define DETECT_EOF() \

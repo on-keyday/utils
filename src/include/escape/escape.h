@@ -10,7 +10,7 @@
 #pragma once
 
 #include "../core/sequencer.h"
-#include "../helper/appender.h"
+#include "../strutil/append.h"
 #include "../unicode/utf/convert.h"
 #include "../unicode/utf/minibuffer.h"
 #include "../number/char_range.h"
@@ -112,7 +112,7 @@ namespace utils {
                             utf::U16Buffer buf;
                             if (utf::convert_one(seq, buf)) {
                                 auto set_one = [&](auto n) -> number::NumErr {
-                                    helper::append(out, "\\u");
+                                    strutil::append(out, "\\u");
                                     if (n < 0x1000) {
                                         out.push_back('0');
                                     }
@@ -140,7 +140,7 @@ namespace utils {
                             }
                         }
                         if (!done && any(flag & EscapeFlag::hex)) {
-                            helper::append(out, "\\x");
+                            strutil::append(out, "\\x");
                             if (c < 0x10) {
                                 out.push_back('0');
                             }
@@ -150,7 +150,7 @@ namespace utils {
                             done = true;
                         }
                         if (!done && any(flag & EscapeFlag::oct)) {
-                            helper::append(out, "\\");
+                            strutil::append(out, "\\");
                             if (auto e = number::to_string(out, c, 8); !e) {
                                 return e;
                             }

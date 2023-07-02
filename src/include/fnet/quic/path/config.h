@@ -7,6 +7,7 @@
 
 #pragma once
 #include <cstdint>
+#include "path.h"
 
 namespace utils {
     namespace fnet::quic::path {
@@ -16,6 +17,7 @@ namespace utils {
             std::uint64_t min_plpmtu = 1200;
             std::uint64_t max_plpmtu = 0xffff;
             std::uint64_t base_plpmtu = 1200;
+            path::PathID original_path = path::original_path;
         };
 
     }  // namespace fnet::quic::path

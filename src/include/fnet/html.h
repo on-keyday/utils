@@ -7,7 +7,7 @@
 
 // html - easy html boilerplate
 #pragma once
-#include "../net_util/uri_parse.h"
+#include "util/uri.h"
 #include <string>
 #include <format>
 #include <memory>

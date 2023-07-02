@@ -18,10 +18,13 @@ namespace utils {
         struct TransportParameters {
             DefinedTransportParams local;
             DefinedTransportParams peer;
-            TransportParamStorage local_box;
-            TransportParamStorage peer_box;
             DuplicateSetChecker peer_checker;
 
+           private:
+            TransportParamStorage local_box;
+            TransportParamStorage peer_box;
+
+           public:
            private:
             error::Error check_recv(std::uint64_t id, bool is_server) {
                 if (is_server) {
@@ -72,15 +75,19 @@ namespace utils {
                 return set_(local, local_box, nullptr, param, false, false);
             }
 
-            bool boxing() {
-                return local_box.boxing(local) && peer_box.boxing(peer);
+            void local_boxing() {
+                local_box.boxing(local);
+            }
+
+            void peer_boxing() {
+                peer_box.boxing(peer);
             }
 
             error::Error set_peer(TransportParameter param, bool is_server, bool accept_zero_rtt) {
                 return set_(peer, peer_box, &peer_checker, param, is_server, accept_zero_rtt);
             }
 
-            error::Error parse_peer(io::reader& r, bool is_server, bool accept_zero_rtt) {
+            error::Error parse_peer(binary::reader& r, bool is_server, bool accept_zero_rtt) {
                 while (!r.empty()) {
                     TransportParameter param;
                     if (!param.parse(r)) {
@@ -96,12 +103,15 @@ namespace utils {
                 return error::none;
             }
 
-            bool render_local(io::writer& w, bool is_server) {
+            bool render_local(binary::writer& w, bool is_server, bool has_retry) {
                 return local.render(w, [&](TransportParameter param) {
                     if (!is_server) {
                         if (!is_defined_both_set_allowed(param.id)) {
                             return false;
                         }
+                    }
+                    if (!has_retry && param.id == DefinedID::retry_src_connection_id) {
+                        return false;
                     }
                     if (is_default_value(param)) {
                         return false;

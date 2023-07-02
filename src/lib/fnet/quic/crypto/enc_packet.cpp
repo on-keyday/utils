@@ -60,7 +60,7 @@ namespace utils {
             // see https://tex2e.github.io/blog/protocol/quic-initial-packet-decrypt
             // see https://tex2e.github.io/rfc-translater/html/rfc9001.html#5-3--AEAD-Usage
             void make_nonce(view::rvec iv, byte (&nonce)[32], packetnum::Value packet_number) {
-                endian::Buf<std::uint64_t, byte*> data{nonce + iv.size() - 8};
+                binary::Buf<std::uint64_t, byte*> data{nonce + iv.size() - 8};
                 data.write_be(packet_number);
                 for (auto i = 0; i < iv.size(); i++) {
                     nonce[i] ^= iv[i];
@@ -120,7 +120,7 @@ namespace utils {
                 }
                 // apply unprotection for packet_number field
                 apply_hp_pn_mask(masks + 1, pn_wire);
-                io::reader r{pn_wire};
+                binary::reader r{pn_wire};
                 auto [wireval, ok2] = packetnum::read(r, pnlen);
                 if (!ok2) {
                     return {{}, err_decode_pn};

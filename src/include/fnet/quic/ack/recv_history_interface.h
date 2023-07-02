@@ -21,34 +21,34 @@ namespace utils {
             Impl impl;
 
            public:
-            void reset() {
+            constexpr void reset() {
                 impl.reset();
             }
 
-            bool is_duplicated(status::PacketNumberSpace space, packetnum::Value pn) const {
+            constexpr bool is_duplicated(status::PacketNumberSpace space, packetnum::Value pn) const {
                 return impl.is_duplicated(space, pn);
             }
 
-            void on_packet_number_space_discarded(status::PacketNumberSpace space) {
+            constexpr void on_packet_number_space_discarded(status::PacketNumberSpace space) {
                 impl.on_packet_number_space_discarded(space);
             }
 
-            void delete_onertt_under(packetnum::Value pn) {
+            constexpr void delete_onertt_under(packetnum::Value pn) {
                 impl.delete_onertt_under(pn);
             }
 
-            void on_packet_processed(
+            constexpr void on_packet_processed(
                 status::PacketNumberSpace space, packetnum::Value pn,
                 bool is_ack_eliciting,
                 const status::InternalConfig& config) {
                 impl.on_packet_processed(space, pn, is_ack_eliciting, config);
             }
 
-            IOResult send(frame::fwriter& w, status::PacketNumberSpace space, const status::InternalConfig& config, packetnum::Value& largest_ack) {
+            constexpr IOResult send(frame::fwriter& w, status::PacketNumberSpace space, const status::InternalConfig& config, packetnum::Value& largest_ack) {
                 return impl.send(w, space, config, largest_ack);
             }
 
-            time::Time get_deadline() const {
+            constexpr time::Time get_deadline() const {
                 return impl.get_deadline();
             }
         };

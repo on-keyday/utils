@@ -27,9 +27,34 @@ namespace utils {
             concept is_not_const_data = requires(T t) {
                 { std::data(t) } -> non_const_ptr;
             };
+
+            template <class T>
+            struct default_as_char_ {
+                using U = char;
+            };
+
+            template <>
+            struct default_as_char_<char> {
+                using U = byte;
+            };
+
+            template <class T>
+            using default_as_char = typename default_as_char_<T>::U;
+
+            template <class C>
+            constexpr auto ptrdiff_len(const C* begin, const C* end)
+                -> decltype(end - begin) {
+                if (!std::is_constant_evaluated()) {
+                    if (begin > end) {
+                        return 0;
+                    }
+                }
+                auto diff = end - begin;
+                return diff < 0 ? 0 : diff;
+            }
         }  // namespace internal
 
-        template <class C, class U>
+        template <class C>
         struct basic_rvec {
            protected:
             const C* data_;
@@ -44,11 +69,27 @@ namespace utils {
             constexpr explicit basic_rvec(const C* d) noexcept
                 : data_(d), size_(d ? utils::strlen(d) : 0) {}
 
-            basic_rvec(const U* c, size_t s) noexcept
-                : basic_rvec(reinterpret_cast<const C*>(c), s) {}
+            template <class End, std::enable_if_t<std::is_same_v<End, const C*> || std::is_same_v<End, C*>, int> = 0>
+            constexpr basic_rvec(const C* begin, End end) noexcept
+                : basic_rvec(begin, internal::ptrdiff_len(begin, end)) {}
 
+#define rvec_enable_U template <class U, std::enable_if_t<!std::is_same_v<C, U> && sizeof(U) == sizeof(C), int> = 0>
+            rvec_enable_U basic_rvec(const U* c, size_t s) noexcept
+                : basic_rvec(reinterpret_cast<const C*>(c), s) {
+                static_assert(!std::is_same_v<C, U> && sizeof(U) == sizeof(C));
+            }
+
+            rvec_enable_U
             basic_rvec(const U* c)
-                : basic_rvec(reinterpret_cast<const C*>(c)) {}
+                : basic_rvec(reinterpret_cast<const C*>(c)) {
+                static_assert(!std::is_same_v<C, U> && sizeof(U) == sizeof(C));
+            }
+
+            rvec_enable_U
+            basic_rvec(const U* begin, const U* end)
+                : basic_rvec(reinterpret_cast<const C*>(begin), reinterpret_cast<const C*>(end)) {
+                static_assert(!std::is_same_v<C, U> && sizeof(U) == sizeof(C));
+            }
 
             template <class T>
             constexpr basic_rvec(T&& t) noexcept
@@ -82,6 +123,7 @@ namespace utils {
                 return data_;
             }
 
+            template <class U = internal::default_as_char<C>>
             const U* as_char() const noexcept {
                 return reinterpret_cast<const U*>(data_);
             }
@@ -157,17 +199,27 @@ namespace utils {
             }
         };
 
-        template <class C, class U>
-        struct basic_wvec : public basic_rvec<C, U> {
+        template <class C>
+        struct basic_wvec : public basic_rvec<C> {
             constexpr basic_wvec() noexcept = default;
             constexpr basic_wvec(C* d, size_t s) noexcept
-                : basic_rvec<C, U>(d, s) {}
+                : basic_rvec<C>(d, s) {}
+
+            template <class End, std::enable_if_t<std::is_same_v<End, C*>, int> = 0>
+            constexpr basic_wvec(C* begin, End end) noexcept
+                : basic_rvec<C>(begin, end) {}
+
+            rvec_enable_U
             basic_wvec(U* d, size_t s) noexcept
-                : basic_rvec<C, U>(d, s) {}
+                : basic_rvec<C>(d, s) {}
+
+            rvec_enable_U
+            basic_wvec(U* begin, U* end)
+                : basic_rvec<C>(begin, end) {}
 
             template <internal::is_not_const_data T>
             constexpr basic_wvec(T&& t) noexcept
-                : basic_rvec<C, U>(t) {}
+                : basic_rvec<C>(t) {}
 
             constexpr C* data() noexcept {
                 return const_cast<C*>(this->data_);
@@ -195,6 +247,7 @@ namespace utils {
                 return data() + this->size_;
             }
 
+            template <class U = internal::default_as_char<C>>
             U* as_char() noexcept {
                 return reinterpret_cast<U*>(data());
             }
@@ -235,7 +288,7 @@ namespace utils {
         };
 
         template <class D, class C, class U>
-        struct basic_storage_vec : public basic_wvec<C, U> {
+        struct basic_storage_vec : public basic_wvec<C> {
            private:
             D del{};
 
@@ -243,20 +296,20 @@ namespace utils {
             constexpr basic_storage_vec() noexcept(noexcept(D{})) = default;
 
             constexpr basic_storage_vec(C* c, size_t s, D&& d) noexcept(noexcept(D{}))
-                : del(std::move(d)), basic_wvec<C, U>(c, s) {}
+                : del(std::move(d)), basic_wvec<C>(c, s) {}
 
             basic_storage_vec(U* c, size_t s, D&& d) noexcept(noexcept(D{}))
-                : del(std::move(d)), basic_wvec<C, U>(c, s) {}
+                : del(std::move(d)), basic_wvec<C>(c, s) {}
 
             constexpr basic_storage_vec(C* c, size_t s) noexcept(noexcept(D{}))
-                : basic_wvec<C, U>(c, s) {}
+                : basic_wvec<C>(c, s) {}
 
             basic_storage_vec(U* c, size_t s) noexcept(noexcept(D{}))
-                : basic_wvec<C, U>(c, s) {}
+                : basic_wvec<C>(c, s) {}
 
             constexpr basic_storage_vec(basic_storage_vec&& in)
                 : del(std::exchange(in.del, D{})),
-                  basic_wvec<C, U>(const_cast<byte*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)) {}
+                  basic_wvec<C>(const_cast<byte*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)) {}
 
             constexpr basic_storage_vec& operator=(basic_storage_vec&& in) {
                 if (this == &in) {
@@ -282,14 +335,14 @@ namespace utils {
             }
         };
 
-        using rvec = basic_rvec<byte, char>;
-        using wvec = basic_wvec<byte, char>;
+        using rvec = basic_rvec<byte>;
+        using wvec = basic_wvec<byte>;
         template <class D>
         using storage_vec = basic_storage_vec<D, byte, char>;
 
-        template <class C, class U>
+        template <class C>
         constexpr auto make_copy_fn() {
-            return [](basic_wvec<C, U> dst, basic_rvec<C, U> src) {
+            return [](basic_wvec<C> dst, basic_rvec<C> src) {
                 size_t dst_ = dst.size();
                 size_t src_ = src.size();
                 size_t min_ = dst_ < src_ ? dst_ : src_;
@@ -306,11 +359,11 @@ namespace utils {
         //  0 if dst.size() == src.size()
         //  1 if dst.size() <  src.size()
         // -1 if dst.size() >  src.size()
-        constexpr auto copy = make_copy_fn<byte, char>();
+        constexpr auto copy = make_copy_fn<byte>();
 
         template <class C, class U>
         constexpr auto make_shift_fn() {
-            return [](basic_wvec<C, U> range, size_t to, size_t from, size_t len) {
+            return [](basic_wvec<C> range, size_t to, size_t from, size_t len) {
                 const auto size = range.size();
                 if (to >= size || from > size) {
                     return false;
@@ -361,9 +414,9 @@ namespace utils {
 
         constexpr auto default_hash_mask = 0x8f2cf39d98390b;
 
-        template <class C, class U, class F>
+        template <class C, class F>
         constexpr auto make_hash_fn(F&& f) {
-            return [=](view::basic_rvec<C, U> data, std::uint64_t* s = nullptr, std::uint64_t mask = default_hash_mask) {
+            return [=](view::basic_rvec<C> data, std::uint64_t* s = nullptr, std::uint64_t mask = default_hash_mask) {
                 std::uint64_t tmp = 0;
                 if (!s) {
                     s = &tmp;
@@ -375,7 +428,7 @@ namespace utils {
             };
         }
 
-        constexpr auto hash = make_hash_fn<byte, char>([](std::uint64_t s, byte b, std::uint64_t mask) {
+        constexpr auto hash = make_hash_fn<byte>([](std::uint64_t s, byte b, std::uint64_t mask) {
             constexpr auto u64_max = ~std::uint64_t(0);
             auto add = (s << 1);
             if (std::is_constant_evaluated()) {

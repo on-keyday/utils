@@ -6,76 +6,14 @@
 */
 
 #pragma once
-#include "../../packet_number.h"
+// #include "../../packet_number.h"
 #include "../../varint.h"
+#include "limiter.h"
 
 namespace utils {
     namespace fnet::quic::stream::core {
 
-        struct Limiter {
-           private:
-            std::uint64_t limit = 0;
-            std::uint64_t used = 0;
-
-           public:
-            constexpr Limiter() = default;
-            constexpr std::uint64_t avail_size() const {
-                return limit > used ? limit - used : 0;
-            }
-
-            constexpr bool on_limit(std::uint64_t delta) const {
-                return avail_size() < delta;
-            }
-
-            // use this for first time or transport parameter applying.
-            // use update_limit instead later time
-            constexpr bool set_limit(std::uint64_t new_limit) {
-                if (new_limit >= varint::border(8)) {
-                    return false;
-                }
-                limit = new_limit;
-                return true;
-            }
-
-            constexpr bool update_limit(std::uint64_t new_limit) {
-                if (new_limit >= varint::border(8)) {
-                    return false;
-                }
-                if (new_limit > limit) {
-                    limit = new_limit;
-                    return true;
-                }
-                return false;
-            }
-
-            constexpr bool use(std::uint64_t s) {
-                if (on_limit(s)) {
-                    return false;
-                }
-                used += s;
-                return true;
-            }
-
-            constexpr bool update_use(std::uint64_t new_used) {
-                if (limit < new_used) {
-                    return false;
-                }
-                if (new_used > used) {
-                    used = new_used;
-                }
-                return true;
-            }
-
-            constexpr std::uint64_t curlimit() const {
-                return limit;
-            }
-
-            constexpr std::uint64_t curused() const {
-                return used;
-            }
-        };
-
-        enum class SendState {
+        enum class SendState : byte {
             ready,
             send,
             data_sent,
@@ -237,7 +175,7 @@ namespace utils {
             }
         };
 
-        enum class RecvState {
+        enum class RecvState : byte {
             // pre recv state (no data nor no reset received)
             // this is almost same as recv semantics
             // but in some case, different operation
@@ -254,6 +192,7 @@ namespace utils {
            private:
             Limiter limit;
             std::uint64_t error_code = 0;
+            std::uint64_t ini_limit = 0;  // cache for update callback
             RecvState state = RecvState::pre_recv;
             bool stop_required = false;
             bool should_send_limit_update = false;
@@ -268,9 +207,17 @@ namespace utils {
                 return should_send_limit_update;
             }
 
-            // set_recv_limit is called first time call or transport applying
+            // set_recv_limit is called first time call or transport parameter applying
             constexpr bool set_recv_limit(std::uint64_t new_limit) noexcept {
-                return limit.set_limit(new_limit);
+                if (limit.set_limit(new_limit)) {
+                    ini_limit = new_limit;
+                    return true;
+                }
+                return false;
+            }
+
+            constexpr std::uint64_t initial_limit() const noexcept {
+                return ini_limit;
             }
 
             constexpr std::uint64_t recv_limit() const noexcept {
@@ -415,6 +362,11 @@ namespace utils {
             }
         };
 
+        namespace test {
+            constexpr auto sizeof_recv_stream = sizeof(RecvUniStreamState);
+            constexpr auto sizeof_send_stream = sizeof(SendUniStreamState);
+        }  // namespace test
+
         struct EmptyLock {
             constexpr void lock() noexcept {}
             constexpr void unlock() noexcept {};
@@ -422,55 +374,6 @@ namespace utils {
                 return true;
             }
         };
-
-        constexpr auto do_lock(auto& locker) {
-            locker.lock();
-            return helper::defer([&] {
-                locker.unlock();
-            });
-        }
-
-        namespace internal {
-            constexpr bool do_try_locks() {
-                return true;
-            }
-
-            constexpr bool do_try_locks(auto& cur, auto&... rem) {
-                if (!cur.try_lock()) {
-                    return false;
-                }
-                auto d = helper::defer([&] {
-                    cur.unlock();
-                });
-                if (!do_try_locks(rem...)) {
-                    return false;
-                }
-                d.cancel();
-                return true;
-            }
-
-            constexpr bool do_multi_lock_impl(auto& a, auto&&... rem) {
-                a.lock();
-                auto d = helper::defer([&] {
-                    a.unlock();
-                });
-                if (!do_try_locks(rem...)) {
-                    return false;
-                }
-                d.cancel();
-                return true;
-            }
-        }  // namespace internal
-
-        constexpr auto do_multi_lock(auto&... locker) {
-            while (!internal::do_multi_lock_impl(locker...)) {
-                // busy loop
-            }
-            return helper::defer([&] {
-                auto unlock = [&](auto& l) { l.unlock();return true; };
-                (... && unlock(locker));
-            });
-        }
 
     }  // namespace fnet::quic::stream::core
 }  // namespace utils

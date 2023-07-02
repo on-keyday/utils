@@ -38,7 +38,7 @@ int main() {
     }
     Input input{view};
     utils::file::gzip::GZipHeader head;
-    utils::io::bit_reader<Input&> bitr{input};
+    utils::binary::bit_reader<Input&> bitr{input};
     std::string out;
     auto err = utils::file::gzip::decode_gzip(out, head, bitr);
     assert(err == utils::file::gzip::deflate::DeflateError::none);

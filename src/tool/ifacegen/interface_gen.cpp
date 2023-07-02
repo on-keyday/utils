@@ -8,16 +8,28 @@
 
 // interface_gen - generate golang like interface
 
-#include <deprecated/syntax/syntaxc/make_syntaxc.h>
+// #include <deprecated/syntax/syntaxc/make_syntaxc.h>
 
 #include "../../include/wrap/cout.h"
 
 #include "../../include/file/file_view.h"
 #include "../../include/cmdline/option/optcontext.h"
-
+#include "iface.h"
 #include "interface_list.h"
+#include "traverse.h"
+#include <code/src_location.h>
 
 #include <fstream>
+
+#include <comb2/tree/branch_table.h>
+#include <comb2/tree/simple_node.h>
+
+struct Ctx : utils::comb2::tree::BranchTable {
+    void error(auto&&... arg) {
+        utils::wrap::cerr_wrap() << "ifacegen: error: ";
+        (utils::wrap::cerr_wrap() << ... << arg) << "\n";
+    }
+};
 
 int main(int argc, char** argv) {
     using namespace utils;
@@ -30,7 +42,7 @@ int main(int argc, char** argv) {
         cerr << "https://github.com/on-keyday/utils\n";
     };
     option::Context opt;
-    ifacegen::State state;
+    ifacegen::FileData data;
     auto cu = option::CustomFlag::appear_once;
     auto outfile = opt.String<wrap::string>("output-file,o", "", "set output file", "FILENAME", cu);
     auto infile = opt.String<wrap::string>("input-file,i", "", "set input file", "FILENAME", cu);
@@ -44,7 +56,7 @@ int main(int argc, char** argv) {
     auto nortti = opt.VecString<wrap::string>("no-rtti", 2, "use type and func instead of `const std::type_info&` and `typeid(T__)`", "TYPE FUNC", cu);
     opt.VarFlagSet(flag, "license", GF::add_license, "add /*license*/", cu);
     opt.VarFlagSet(flag, "not-accept-null,n", GF::not_accept_null, "not accept nullptr-object", cu);
-    opt.VarString(&state.data.helper_deref, "helper-deref", "helper deref location", "FILE", cu);
+    opt.VarString(&data.helper_deref, "helper-deref", "helper deref location", "FILE", cu);
     opt.VarFlagSet(flag, "use-dynamic-cast,d", GF::use_dyn_cast, "use dynamic cast for type assert", cu);
     opt.VarFlagSet(flag, "separate,S", GF::sep_namespace, "separate namespace by ::", cu);
     opt.VarFlagSet(flag, "independent,D", GF::not_depend_lib, "insert deref code not to depend utils", cu);
@@ -190,10 +202,11 @@ Special Value:
         }
     }*/
     for (auto&& h : opt.find("header")) {
-        state.data.headernames.push_back(*h.value.get_ptr<wrap::string>());
+        data.headernames.push_back(*h.value.get_ptr<wrap::string>());
     }
-    state.data.typeid_type = nortti->at(0);
-    state.data.typeid_func = nortti->at(1);
+    data.typeid_type = nortti->at(0);
+    data.typeid_func = nortti->at(1);
+    /*
     auto stxc = syntax::make_syntaxc();
     constexpr auto def = R"def(
         ROOT:=PACKAGE? [TYPEPARAM? [INTERFACE|ALIAS]|MACRO|IMPORT]*? EOF
@@ -204,7 +217,7 @@ Special Value:
         INTERFACE:= "interface"[ ID "{" FUNCDEF*? "}" ]! EOS
         TYPEPARAM:="typeparam" TYPENAME ["," TYPENAME]*?
         TYPENAME:="..." ID!|TYPEID DEFTYPE?
-        TYPEID:="^"? ID 
+        TYPEID:="^"? ID
         DEFTYPE:="=" ID
         FUNCDEF:="const"? "noexcept"? ID ["(" FUNCLIST? ")" TYPE ["=" ID!]? ]! EOS
         POINTER:="*"*
@@ -262,9 +275,28 @@ Special Value:
             cerr << "ifacegen: " << stxc->error();
             return -1;
         }
+    }*/
+    file::View view;
+    if (!view.open(*infile)) {
+        cerr << "ifacegen: error: file `" << *infile << "` couldn't open\n";
+        return -1;
+    }
+    auto sv = make_ref_seq(view);
+    Ctx table;
+    if (ifacegen::parser::parse(sv, table) != utils::comb2::Status::match) {
+        std::string err;
+        utils::code::write_src_loc(err, sv);
+        cerr << err << "\n";
+        cerr << "parse error\n";
+        return -1;
+    }
+    auto r = utils::comb2::tree::node::collect(table.root_branch);
+    if (!ifacegen::traverse(data, r)) {
+        cerr << "parse error";
+        return -1;
     }
     wrap::string got;
-    ifacegen::generate(state.data, got, ifacegen::Language::cpp, *flag);
+    ifacegen::generate(data, got, ifacegen::Language::cpp, *flag);
     if (*verbose) {
         cout << "generated code:\n";
         cout << got;

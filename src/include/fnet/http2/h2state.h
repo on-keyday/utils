@@ -8,7 +8,6 @@
 // h2state - http2 state machines
 #pragma once
 #include "h2frame.h"
-#include "stream_state.h"
 #include "h2frame.h"
 #include "h2err.h"
 #include "h2settings.h"
@@ -32,7 +31,7 @@ namespace utils {
             unknown,
         };
 
-        BEGIN_ENUM_STRING_MSG(State, status_name)
+        BEGIN_ENUM_STRING_MSG(State, state_name)
         ENUM_STRING_MSG(State::idle, "idle")
         ENUM_STRING_MSG(State::closed, "closed")
         ENUM_STRING_MSG(State::open, "open")
@@ -124,8 +123,43 @@ namespace utils {
             // CONTINUATION is needed contexcical handling
 
         }  // namespace policy
+        struct FlowControlWindow {
+           private:
+            std::int64_t window = 65535;
 
-        struct StreamNumCommonState {
+           public:
+            constexpr bool update(std::uint32_t n) {
+                if (exceeded(n)) {
+                    return false;
+                }
+                window += n;
+                return true;
+            }
+
+            constexpr void set_new_window(std::uint32_t old_initial_window, std::uint32_t new_initial_window) {
+                window = new_initial_window - (old_initial_window - window);
+            }
+
+            constexpr bool consume(std::uint32_t n) {
+                if (window < std::int64_t(n)) {
+                    return false;
+                }
+                window -= n;
+                return true;
+            }
+
+            constexpr std::uint64_t avail_size() const {
+                return window < 0 ? 0 : window;
+            }
+
+            // RFC9113 6.9.1. The Flow-Control Window says:
+            // A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets.
+            constexpr bool exceeded(std::uint32_t n) const {
+                return window + n > 0x7fffffff;
+            }
+        };
+
+        struct StreamCommonState {
             // stream id
             ID id = invalid_id;
             // stream state machine
@@ -134,6 +168,9 @@ namespace utils {
             std::uint32_t code = 0;
             // no need handling exclude PRIORITY
             bool perfect_closed = false;
+
+            constexpr StreamCommonState(ID id)
+                : id(id) {}
 
             constexpr void maybe_close_by_higher_creation() {
                 if (state == State::idle) {
@@ -202,7 +239,7 @@ namespace utils {
                     return no_error;
                 }
                 if (state == State::idle) {
-                    if (policy::send_idle(f.type)) {
+                    if (!policy::send_idle(f.type)) {
                         return Error{
                             H2Error::protocol,
                             false,
@@ -386,43 +423,7 @@ namespace utils {
             }
         };
 
-        struct FlowControlWindow {
-           private:
-            std::int64_t window = 0;
-
-           public:
-            constexpr bool update(std::uint32_t n) {
-                if (exceeded(n)) {
-                    return false;
-                }
-                window += n;
-                return true;
-            }
-
-            constexpr void set_new_window(std::uint32_t old_initial_window, std::uint32_t new_initial_window) {
-                window = new_initial_window - (old_initial_window - window);
-            }
-
-            constexpr bool consume(std::uint32_t n) {
-                if (window < std::int64_t(n)) {
-                    return false;
-                }
-                window -= n;
-                return true;
-            }
-
-            constexpr std::uint64_t avail_size() const {
-                return window < 0 ? 0 : window;
-            }
-
-            // RFC9113 6.9.1. The Flow-Control Window says:
-            // A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets.
-            constexpr bool exceeded(std::uint32_t n) const {
-                return window + n > 0x7fffffff;
-            }
-        };
-
-        struct StreamNumDirState {
+        struct StreamDirState {
             // flow control window
             FlowControlWindow window;
             // previous processed frame type
@@ -432,7 +433,7 @@ namespace utils {
             // - Type::contiuous without Flag.end_headers
             bool on_continuous = false;
 
-            constexpr StreamNumDirState() {
+            constexpr StreamDirState() {
                 window.set_new_window(0, 65535);
             }
 
@@ -459,7 +460,7 @@ namespace utils {
                 return window.update(increment);
             }
 
-            constexpr Error on_frame(const frame::Frame& f, StreamNumDirState& opposite) {
+            constexpr Error on_frame(const frame::Frame& f, StreamDirState& opposite) {
                 if (on_continuous) {
                     if (f.type != frame::Type::continuation) {
                         return Error{H2Error::protocol};
@@ -479,7 +480,7 @@ namespace utils {
                     // The entire DATA frame payload is included in flow control,
                     // including the Pad Length and Padding fields if present.
                     if (!on_data(static_cast<const frame::DataFrame&>(f).data_len())) {
-                        return Error{H2Error::flow_control};
+                        return Error{H2Error::flow_control, false, "DATA frame exceeded flow control limit"};
                     }
                 }
                 else if (f.type == frame::Type::window_update) {
@@ -493,7 +494,7 @@ namespace utils {
                             // type PROTOCOL_ERROR
                             return Error{H2Error::protocol, true};
                         }
-                        return Error{H2Error::flow_control, true};
+                        return Error{H2Error::flow_control, true, "WINDOW update exceed flow control limit"};
                     }
                 }
                 else if (f.type == frame::Type::rst_stream) {
@@ -511,13 +512,18 @@ namespace utils {
             }
         };
 
-        struct StreamNumState {
+        struct StreamState {
+           private:
             // common stream state
-            StreamNumCommonState com;
+            StreamCommonState com;
             // recv window(recv data,send window_update)
-            StreamNumDirState recv;
+            StreamDirState recv;
             // send window(send data,recv window_update)
-            StreamNumDirState send;
+            StreamDirState send;
+
+           public:
+            constexpr StreamState(ID id)
+                : com(id) {}
 
             constexpr ID id() const {
                 return com.id;
@@ -534,12 +540,12 @@ namespace utils {
             constexpr void maybe_close_by_higher_creation(ID max_server, ID max_client) {
                 auto d = id();
                 if (d.by_client()) {
-                    if (d > max_client) {
+                    if (d < max_client) {
                         com.maybe_close_by_higher_creation();
                     }
                 }
                 else {
-                    if (d > max_server) {
+                    if (d < max_server) {
                         com.maybe_close_by_higher_creation();
                     }
                 }
@@ -586,216 +592,19 @@ namespace utils {
                 }
                 if (f.type == frame::Type::data) {
                     if (!send.can_data(static_cast<const frame::DataFrame&>(f).data_len())) {
-                        return Error{H2Error::flow_control, true};
+                        return Error{H2Error::flow_control, true, "cannot send DATA frame by stream flow control limit"};
                     }
                 }
                 if (f.type == frame::Type::window_update) {
                     if (recv.window.exceeded(static_cast<const frame::WindowUpdateFrame&>(f).data_len())) {
-                        return Error{H2Error::flow_control, true};
+                        return Error{H2Error::flow_control, true, "cannot send WINDOW_UPDATE frame"};
                     }
                 }
                 return no_error;
             }
         };
 
-        /*
-        // change_state_send changes http2 protocol state following sender role
-        // state is represented at Section 5.1 of RFC7540
-        // this function would changes s.err and on_cotinuous parameter
-        // if state change succeeded returns true
-        // otherwise returns false and library error code is set to s.err
-        constexpr bool change_state_send(State& state, ErrCode& errs, bool& on_continuous, const frame::Frame& f) {
-            using t = frame::Type;
-            using l = frame::Flag;
-            using a = State;
-            if (on_continuous) {
-                if (f.type != t::continuation) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "ContinousFrame expected but not";
-                    return false;
-                }
-                if (f.flag & l::end_headers) {
-                    on_continuous = false;
-                }
-                return true;
-            }
-            auto proc_flags = [&](a move_to) {
-                if (f.type == t::data || f.type == t::header) {
-                    if (f.flag & l::end_stream) {
-                        state = move_to;
-                    }
-                }
-                if (f.type == t::header && !(f.flag & l::end_headers)) {
-                    on_continuous = true;
-                }
-            };
-
-            if (state == a::idle) {
-                if (f.type == t::header) {
-                    state = a::open;
-                }
-                else if (f.type != t::priority) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.idle but Frame.type is not header or priority";
-                    return false;
-                }
-            }
-            if (state == a::reserved_local) {
-                if (f.type == t::header) {
-                    state = a::half_closed_remote;
-                }
-                else if (f.type != t::rst_stream && f.type != t::priority) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.reserved_local but Frame.type is not header, rst_stream or priority";
-                    return false;
-                }
-            }
-            if (state == a::reserved_remote) {
-                if (f.type != t::rst_stream && f.type != t::window_update &&
-                    f.type != t::priority) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.reserved_remote but Frame.type is not rst_stream, priority or window_update";
-                    return false;
-                }
-            }
-            bool changed_now = false;
-            if (state == a::open) {
-                proc_flags(a::half_closed_local);
-                changed_now = true;
-            }
-            if (state == a::half_closed_local) {
-                if (!changed_now && f.type != t::rst_stream && f.type != t::window_update &&
-                    f.type != t::priority) {
-                    errs.err = http2_stream_state;
-                    errs.debug = "state is State.half_closed_local but Frame.type is not rst_stream, priority or window_update";
-                    return false;
-                }
-            }
-            if (state == a::half_closed_remote) {
-                proc_flags(a::closed);
-                changed_now = true;
-            }
-            if (f.type == t::rst_stream) {
-                state = a::closed;
-                changed_now = true;
-            }
-            if (state == a::closed) {
-                if (!changed_now &&
-                    f.type != t::priority &&
-                    f.type != t::window_update) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::stream_closed;
-                    errs.debug = "state is State.closed but Frame.type is not priority or window_update";
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        // change_state_recv changes http2 protocol state following receiver role
-        // state is represented at Section 5.1 of RFC7540
-        // this function would changes s.err, s.h2err and on_cotinuous parameter
-        // if state change succeeded returns true
-        // otherwise returns false and library error code is set to s.err and s.h2err
-        // if s.err was set and s.h2err is not set, that is library internal error below
-        // - s.id != f.id
-        constexpr bool change_state_recv(State& state, ErrCode& errs, bool& on_continuous, frame::Frame& f) {
-            using t = frame::Type;
-            using l = frame::Flag;
-            using a = State;
-            if (on_continuous) {
-                if (f.type != t::continuation) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "Continuous Frame expected but not";
-                    return false;
-                }
-                if (f.flag & l::end_headers) {
-                    on_continuous = false;
-                }
-                return true;
-            }
-            auto proc_flags = [&](a move_to) {
-                if (f.type == t::data || f.type == t::header) {
-                    if (f.flag & l::end_stream) {
-                        state = move_to;
-                    }
-                }
-                if (f.type == t::header && !(f.flag & l::end_headers)) {
-                    on_continuous = true;
-                }
-            };
-            if (state == a::idle) {
-                if (f.type == t::header) {
-                    state = a::open;
-                }
-                else if (f.type != t::priority) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.idle but Frame.type is not header or priority";
-                    return false;
-                }
-            }
-            if (state == a::reserved_local) {
-                if (f.type != t::priority && f.type != t::window_update && f.type != t::rst_stream) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.reserved_local but Frame.type is not rst_stream, priority or window_update";
-                    return false;
-                }
-            }
-            if (state == a::reserved_remote) {
-                if (f.type == t::header) {
-                    state = a::half_closed_local;
-                }
-                else if (f.type != t::rst_stream && f.type != t::priority) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.reserved_remote but Frame.type is not header rst_stream or priority";
-                    return false;
-                }
-            }
-            bool changed_now = false;
-            if (state == a::open) {
-                proc_flags(a::half_closed_remote);
-                changed_now = true;
-            }
-            if (state == a::half_closed_local) {
-                proc_flags(a::closed);
-                changed_now = true;
-            }
-            if (state == a::half_closed_remote) {
-                if (!changed_now && f.type != t::window_update && f.type != t::priority &&
-                    f.type != t::rst_stream) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::protocol;
-                    errs.debug = "state is State.half_closed_remote but Frame.type is not rst_stream, priority or window_update";
-                    return false;
-                }
-            }
-            if (f.type == t::rst_stream) {
-                state = a::closed;
-                changed_now = true;
-            }
-            if (state == a::closed) {
-                if (!changed_now &&
-                    f.type != t::priority &&
-                    f.type != t::rst_stream &&
-                    f.type != t::window_update) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = H2Error::stream_closed;
-                    errs.debug = "state is State.closed but Frame.type is not rst_stream, priority or window_update";
-                    return false;
-                }
-            }
-            return true;
-        }*/
-
-        struct ConnNumDirState {
+        struct ConnDirState {
             // previous read_frame/send_frame called id
             ID preproced_id = invalid_id;
             // previous read_frame/send_frame called type
@@ -829,8 +638,8 @@ namespace utils {
                 }
                 Error err;
                 auto res = s.visit([&](std::uint16_t key, std::uint32_t value) {
-                    if (k(setting::SettingKey::table_size) == key) {
-                        settings.header_table_size = value;
+                    if (k(setting::SettingKey::max_header_table_size) == key) {
+                        settings.max_header_table_size = value;
                     }
                     else if (k(setting::SettingKey::enable_push) == key) {
                         if (value != 1 && value != 0) {
@@ -844,7 +653,7 @@ namespace utils {
                     }
                     else if (k(setting::SettingKey::initial_windows_size) == key) {
                         if (value > 0x7fffffff) {
-                            err = Error{H2Error::flow_control};
+                            err = Error{H2Error::flow_control, false, "settings initial_window_size exceeds 2^31-1"};
                             return false;
                         }
                         settings.initial_window_size = value;
@@ -858,12 +667,12 @@ namespace utils {
                     return true;
                 });
                 if (!res) {
-                    return Error{H2Error::internal};
+                    return Error{H2Error::internal, false, "cannot read settings frame"};
                 }
                 return err;
             }
 
-            constexpr Error on_frame(const frame::Frame& f, ConnNumDirState& opposite) {
+            constexpr Error on_frame(const frame::Frame& f, ConnDirState& opposite) {
                 if (f.len > settings.max_frame_size) {
                     return Error{H2Error::frame_size};
                 }
@@ -886,7 +695,7 @@ namespace utils {
                 }
                 if (f.type == frame::Type::data) {
                     if (!on_data(static_cast<const frame::DataFrame&>(f).data_len())) {
-                        return Error{H2Error::flow_control};
+                        return Error{H2Error::flow_control, false, "DATA frame exceeded flow control limit"};
                     }
                 }
                 else if (f.type == frame::Type::window_update && f.id == 0) {
@@ -901,7 +710,7 @@ namespace utils {
                             // MUST be treated as a connection error (Section 5.4.1).
                             return Error{H2Error::protocol};
                         }
-                        return Error{H2Error::flow_control};
+                        return Error{H2Error::flow_control, false, "WINDOW_UPDATE frame exceeded flow control limit"};
                     }
                 }
                 else if (f.type == frame::Type::settings) {
@@ -929,7 +738,8 @@ namespace utils {
             }
         };
 
-        struct ConnNumState {
+        struct ConnState {
+           private:
             CloseState close;
             ID max_client_id = invalid_id;
             ID max_server_id = invalid_id;
@@ -937,14 +747,20 @@ namespace utils {
             ID max_closed_server_id = invalid_id;
 
             ID max_processed = invalid_id;
-            void on_recv_processed(ID id) {
-            }
+
             // recv
-            ConnNumDirState recv;
+            ConnDirState recv;
             // send preproced_id/local settings
-            ConnNumDirState send;
+            ConnDirState send;
             // is server mode
             bool is_server = false;
+
+           public:
+            constexpr ConnState(bool server)
+                : is_server(server) {}
+
+            void on_recv_processed(ID id) {
+            }
 
             constexpr setting::PredefinedSettings send_settings() const {
                 return send.settings;
@@ -975,7 +791,7 @@ namespace utils {
                 return no_error;
             }
 
-            constexpr void on_stream_frame_processed(StreamNumState& s) {
+            constexpr void on_stream_frame_processed(StreamState& s) {
                 if (s.id().by_server()) {
                     if (max_server_id < s.id()) {
                         max_server_id = s.id();
@@ -994,11 +810,17 @@ namespace utils {
                 }
             }
 
-            constexpr void maybe_closed_by_higher_creation(StreamNumState& s) {
+            constexpr void on_stream_created(StreamState& s) {
+                maybe_closed_by_higher_creation(s);
+            }
+
+           private:
+            constexpr void maybe_closed_by_higher_creation(StreamState& s) {
                 s.maybe_close_by_higher_creation(max_server_id, max_client_id);
             }
 
-            constexpr Error on_recv_stream_frame(const frame::Frame& f, StreamNumState& s) {
+           public:
+            constexpr Error on_recv_stream_frame(const frame::Frame& f, StreamState& s) {
                 if (f.id != s.id()) {
                     return Error{H2Error::internal, false, "stream routing is incorrect. library bug!!"};
                 }
@@ -1016,14 +838,14 @@ namespace utils {
                 return no_error;
             }
 
-            constexpr Error on_send_stream_frame(const frame::Frame& f, StreamNumState& s) {
+            constexpr Error on_send_stream_frame(const frame::Frame& f, StreamState& s) {
                 if (f.id != s.id()) {
                     return Error{H2Error::internal, false, "stream routing is incorrect. library bug!!"};
                 }
                 if (f.id.is_conn() || !f.id.valid()) {
                     return Error{H2Error::internal, false, "invalid stream id. library bug!!"};
                 }
-                s.maybe_close_by_higher_creation(max_server_id, max_client_id);
+                maybe_closed_by_higher_creation(s);
                 if (auto err = on_send_frame(f)) {
                     return err;
                 }
@@ -1034,7 +856,7 @@ namespace utils {
                 return no_error;
             }
 
-            constexpr Error can_send_stream_frame(const frame::Frame& f, const StreamNumState& s) {
+            constexpr Error can_send_stream_frame(const frame::Frame& f, const StreamState& s) {
                 if (f.id != s.id()) {
                     return Error{H2Error::internal, false, "stream routing is incorrect. library bug!!"};
                 }
@@ -1054,290 +876,190 @@ namespace utils {
                 }
                 if (f.type == frame::Type::data) {
                     if (!send.can_data(static_cast<const frame::DataFrame&>(f).data_len())) {
-                        return Error{H2Error::flow_control, false};
+                        return Error{H2Error::flow_control, false, "cannot send DATA frame by connection flow limit"};
+                    }
+                }
+                if (f.type == frame::Type::push_promise) {
+                    if (!send.settings.enable_push) {
+                        return Error{H2Error::protocol, false, "push disabled"};
                     }
                 }
                 return s.can_send_frame(f);
             }
         };
 
-        constexpr size_t get_sendable_size(ConnNumState& c, StreamNumState& s) {
-            auto cn = c.send.window.avail_size();
-            auto sn = s.send.window.avail_size();
-            if (cn < sn) {
-                return cn;
-            }
-            else {
-                return sn;
-            }
+        constexpr size_t get_sendable_size(ConnState& c, StreamState& s) {
+            return 0;  // TODO(on-keyday): implement or remove
         }
 
-        /*
-        constexpr int get_next_id(const ConnNumState& s) {
-            if (s.is_server) {
-                return s.max_issued_id % 2 == 0 ? s.max_issued_id + 2 : s.max_issued_id + 1;
-            }
-            else {
-                return s.max_issued_id % 2 == 0 ? s.max_issued_id + 1 : s.max_issued_id + 2;
-            }
-        }
+        namespace test {
 
-        constexpr bool update_max_issued_id(ConnNumState& s, int new_id) {
-            if (new_id > s.max_issued_id) {
-                s.max_issued_id = new_id;
+            struct States {
+                ConnState conn;
+                StreamState stream_1;
+                StreamState stream_2;
+                StreamState stream_3;
+                StreamState stream_4;
+                constexpr States(bool server, ID id1, ID id2, ID id3, ID id4)
+                    : conn(server),
+                      stream_1(id1),
+                      stream_2(id2),
+                      stream_3(id3),
+                      stream_4(id4) {}
+                template <size_t n>
+                constexpr StreamState& stream() {
+#define SWITCH()           \
+    if constexpr (false) { \
+    }
+#define CASE(N) else if constexpr (n == N) return stream_##N;
+                    SWITCH()
+                    CASE(1)
+                    CASE(2)
+                    CASE(3)
+                    CASE(4)
+                    else {
+                        throw "why";
+                    }
+
+#undef SWITCH
+#undef CASE
+                }
+            };
+
+            constexpr auto make_states(bool is_server, ID first) {
+                States client{is_server, first, first.next(),
+                              first.next().next(), first.next().next().next()};
+                return client;
+            }
+
+            template <size_t size>
+            constexpr byte virtual_buffer[size]{};
+
+            constexpr auto on_err(const char* msg, const char* debug = nullptr) {
+                if (std::is_constant_evaluated()) {
+                    throw "cannot open";
+                }
+                return;
+            }
+
+            template <size_t n, size_t err_step = 0>
+            constexpr void apply_stream_frames(const frame::Frame& f, States& sender, States& receiver, State expect_sender, State expect_receiver) {
+                if (sender.stream<n>().state() == State::idle) {
+                    sender.conn.on_stream_created(sender.stream<n>());
+                }
+                // should not be error
+                if (auto err = sender.conn.can_send_stream_frame(f, sender.stream<n>())) {
+                    if (err_step == 1) {
+                        return;
+                    }
+                    on_err(error_msg(err.code), err.debug);
+                }
+                if (err_step == 1) {
+                    on_err("expect error at step 1 but no error");
+                }
+                if (auto err = sender.conn.on_send_stream_frame(f, sender.stream<n>())) {
+                    if (err_step == 2) {
+                        return;
+                    }
+                    on_err(error_msg(err.code), err.debug);
+                }
+                if (err_step == 2) {
+                    on_err("expect error at step 2 but no error");
+                }
+                if (sender.stream<n>().state() != expect_sender) {
+                    if (err_step == 3) {
+                        return;
+                    }
+                    on_err(state_name(sender.stream<n>().state()));
+                }
+                if (err_step == 3) {
+                    on_err("expect error at step 3 but no error");
+                }
+                if (receiver.stream<n>().state() == State::idle) {
+                    receiver.conn.on_stream_created(receiver.stream<n>());
+                }
+                if (auto err = receiver.conn.on_recv_stream_frame(f, receiver.stream<n>())) {
+                    if (err_step == 4) {
+                        return;
+                    }
+                    on_err(error_msg(err.code), err.debug);
+                }
+                if (err_step == 4) {
+                    on_err("expect error at step 4 but no error");
+                }
+                if (receiver.stream<n>().state() != expect_receiver) {
+                    if (err_step == 5) {
+                        return;
+                    }
+                    on_err(state_name(receiver.stream<n>().state()));
+                }
+                if (err_step == 5) {
+                    on_err("expect error at step 5 but no error");
+                }
+            }
+
+            template <size_t err_step = 0>
+            constexpr void apply_conn_frames(const frame::Frame& f, States& sender, States& receiver) {
+                if (auto err = sender.conn.on_send_frame(f)) {
+                    if (err_step == 1) {
+                        return;
+                    }
+                    on_err(error_msg(err.code), err.debug);
+                }
+                if (err_step == 1) {
+                    on_err("expect error at step 1 but no error");
+                }
+                if (auto err = receiver.conn.on_recv_frame(f)) {
+                    if (err_step == 2) {
+                        return;
+                    }
+                    on_err(error_msg(err.code), err.debug);
+                }
+                if (err_step == 2) {
+                    on_err("expect error at step 4 but no error");
+                }
+            }
+
+            constexpr bool check_open() {
+                auto client = make_states(false, client_first);
+                auto server = make_states(true, client_first);
+                frame::HeaderFrame head;
+                head.id = client.stream_1.id();
+                constexpr auto default_frame_size = setting::PredefinedSettings{}.max_frame_size;
+                constexpr auto default_flow = setting::PredefinedSettings{}.initial_window_size;
+                head.data = virtual_buffer<default_frame_size - 9>;
+                apply_stream_frames<1>(head, client, server, State::open, State::open);
+                // should detect error at first step (can_send_stream_frame)
+                apply_stream_frames<1, 1>(head, client, server, State::open, State::open);
+                frame::ContinuationFrame cont;
+                cont.id = client.stream_1.id();
+                cont.data = virtual_buffer<100>;
+                cont.flag |= frame::Flag::end_headers;
+                apply_stream_frames<1>(cont, client, server, State::open, State::open);
+                frame::DataFrame data;
+                data.id = client.stream_1.id();
+                data.data = virtual_buffer<default_frame_size - 9>;
+                for (auto i = 0; i < 4; i++) {
+                    apply_stream_frames<1>(data, client, server, State::open, State::open);
+                }
+                // should detect error at first step (can_send_stream_frame)
+                data.flag |= frame::Flag::end_stream;
+                apply_stream_frames<1, 1>(data, client, server, State::closed, State::closed);
+                frame::WindowUpdateFrame winup;
+                winup.id = conn_id;
+                winup.increment = default_frame_size - 9;
+                apply_conn_frames(winup, server, client);
+                winup.id = client.stream_1.id();
+                apply_stream_frames<1>(winup, server, client, State::open, State::open);
+                data.flag |= frame::Flag::end_stream;
+                apply_stream_frames<1>(data, client, server, State::half_closed_local, State::half_closed_remote);
+                data.data = {};
+                apply_stream_frames<1>(data, server, client, State::closed, State::closed);
                 return true;
             }
-            return false;
-        }
 
-        constexpr bool update_max_closed_id(ConnNumState& s, int new_id) {
-            if (new_id > s.max_closed_id) {
-                s.max_closed_id = new_id;
-                return true;
-            }
-            return false;
-        }
-
-        // has_frame_state_error  detects error state between stream state and frame type.
-        // this function would not detect error that parse_frame/render_frame function change_state_* function detects.
-        // this behaviour is to follow DRY principle.
-        constexpr bool has_frame_state_error(
-            bool send,
-            h2set::PredefinedSettings& ps, State state, ErrCode& errs, frame::Frame& f) {
-            using t = frame::Type;
-            using l = frame::Flag;
-            using a = State;
-            using e = H2Error;
-            auto st = state;
-            if (f.type == t::data) {
-                if (send) {
-                    if (st != a::open && st != a::half_closed_remote) {
-                        errs.strm = true;
-                        errs.err = http2_stream_state;
-                        errs.h2err = e::stream_closed;
-                        errs.debug = "DataFrame is not on State.open or State.half_closed_remote";
-                        return true;
-                    }
-                }
-                else {
-                    if (st != a::open && st != a::half_closed_local) {
-                        errs.strm = true;
-                        errs.err = http2_stream_state;
-                        errs.h2err = e::stream_closed;
-                        errs.debug = "DataFrame is not on State.open or State.half_closed_local";
-                        return true;
-                    }
-                }
-            }
-            if (f.type == t::header) {
-                // nothing to do
-            }
-            if (f.type == t::priority) {
-                // nothing to do
-            }
-            if (f.type == t::rst_stream) {
-                if (st == a::idle) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = e::protocol;
-                    errs.debug = "RstStreamFrame on State.idle";
-                    return true;
-                }
-            }
-            if (f.type == t::settings) {
-                // nothing to do
-            }
-            if (f.type == t::push_promise) {
-                if (!ps.enable_push) {
-                    errs.err = http2_stream_state;
-                    errs.h2err = e::protocol;
-                    errs.debug = "PushPromiseFrame when SETTINGS_ENABLE_PUSH is disabled";
-                    return true;
-                }
-            }
-            if (f.type == t::ping) {
-                // nothing to do
-            }
-            if (f.type == t::goaway) {
-                // nothing to do
-            }
-            if (f.type == t::window_update) {
-                // nothing to do
-            }
-            return false;
-        }
-
-        constexpr bool update_window(ConnNumState& c, StreamNumState& s, frame::Frame& f, bool on_send) {
-            StreamNumDirState *sdir = nullptr, *s0dir = nullptr,
-                              *rdir = nullptr, *r0dir = nullptr;
-            if (on_send) {
-                sdir = &s.send;
-                s0dir = &c.s0.send;  // sending data -> effects to send parameter
-                rdir = &s.recv;
-                r0dir = &c.s0.recv;  // sending window_update -> effects to recv parameter
-            }
-            else {
-                sdir = &s.recv;
-                s0dir = &c.s0.recv;  // receiving data  -> effects to recv parameter
-                rdir = &s.send;
-                r0dir = &c.s0.send;  // receiving winodw_update -> effects to send parameter
-            }
-            if (f.type == frame::Type::data) {
-                if (s.com.id != f.id) {
-                    s.com.errs.err = http2_invalid_id;
-                    s.com.errs.debug = "s.com.id != f.id on DataFrame";
-                    return false;
-                }
-                sdir->window.consume(f.len);
-                s0dir->window.consume(f.len);
-            }
-            else if (f.type == frame::Type::window_update) {
-                auto& w = static_cast<frame::WindowUpdateFrame&>(f);
-                if (w.id == 0) {
-                    r0dir->window.update(w.increment);
-                }
-                else if (w.id == s.com.id) {
-                    rdir->window.update(w.increment);
-                }
-                else {
-                    s.com.errs.err = http2_invalid_id;
-                    s.com.errs.debug = "f.id != s.com.id&& f.id != 0 on WindowUpdateFrame";
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        constexpr void set_new_window(std::int64_t& window, std::uint32_t old_initial_window, std::uint32_t new_initial_window) {
-            window = new_initial_window - (old_initial_window - window);
-        }*
-
-        struct ConnDirState {
-            using strpair = std::pair<flex_storage, flex_storage>;
-            using Table = slib::deque<strpair>;
-            flex_storage settings;
-            Table table;
-        };
-
-        struct ConnState {
-            // number states
-            ConnNumState state;
-            // encoder table/local settings
-            ConnDirState send;
-            // decoder table/remote settings
-            ConnDirState recv;
-        };
-
-        constexpr void check_idle_stream(ConnNumState& c, StreamNumState& s) {
-            if (s.com.state == State::idle) {
-                if (c.max_server_id > s.com.id) {
-                    s.com.state = State::closed;  // implicit closed
-                }
-            }
-        }
-
-        constexpr size_t get_sendable_size(StreamNumDirState& c, StreamNumDirState& s) {
-            auto cn = c.window.avail_size();
-            auto sn = s.window.avail_size();
-            if (cn < sn) {
-                return cn;
-            }
-            else {
-                return sn;
-            }
-        }
-
-        constexpr bool check_data_window(const FlowControlWindow& cwindow, const FlowControlWindow& swindow, ErrCode& errs, frame::Frame& f) {
-            if (f.type == frame::Type::data) {
-                if (cwindow.avail_size() < f.len || swindow.avail_size() < f.len) {
-                    errs.err = http2_should_reduce_data;
-                    errs.h2err = H2Error::enhance_your_clam;
-                    errs.debug = "too large data length against window size on DataFrame";
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        constexpr bool check_continous(int preproced_id, ErrCode& errs, frame::Frame& f) {
-            if (preproced_id != f.id) {
-                errs.err = http2_invalid_header_blocks;
-                errs.h2err = H2Error::protocol;
-                errs.debug = "ContinousFrame expected but not";
-                return false;
-            }
-            return true;
-        }
-        *
-        // recv_frame updates conn state and stream state
-        // parse_frame -> has_frame_state_error -> recv_frame
-        // is better way to detect error
-        constexpr bool recv_frame(ConnNumState& c, StreamNumState& s, frame::Frame& f) {
-            if (c.s0.recv.on_continuous) {
-                if (!check_continous(c.recv.preproced_id, s.com.errs, f)) {
-                    return false;
-                }
-            }
-            update_window(c, s, f, false);
-            c.send.preproced_id = f.id;
-            c.send.preproced_type = f.type;
-            if (f.id != 0) {
-                check_idle_stream(c, s);
-                if (!check_data_window(c.s0.recv.window, s.recv.window, s.com.errs, f)) {
-                    return false;  // detect too large data frame
-                }
-                if (has_frame_state_error(false, c.send.settings, s.com.state, s.com.errs, f)) {
-                    return false;
-                }
-                auto res = change_state_recv(s.com.state, s.com.errs, s.recv.on_continuous, f);
-                if (!res) {
-                    return false;
-                }
-                s.recv.preproced_type = f.type;
-                c.recv.preproced_stream_id = f.id;
-                c.s0.recv.on_continuous = s.recv.on_continuous;
-                update_max_issued_id(c, f.id);
-                if (s.com.state == State::closed) {
-                    update_max_closed_id(c, f.id);
-                }
-            }
-            return true;
-        }
-
-        constexpr bool send_frame(ConnNumState& c, StreamNumState& s, frame::Frame& f) {
-            if (c.s0.send.on_continuous) {
-                if (c.send.preproced_id != f.id) {
-                    s.com.errs.err = http2_invalid_header_blocks;
-                    s.com.errs.h2err = H2Error::protocol;
-                    s.com.errs.debug = "ContinousFrame expected but not";
-                    return false;
-                }
-            }
-            update_window(c, s, f, true);
-            c.send.preproced_id = f.id;
-            c.send.preproced_type = f.type;
-            if (f.id != 0) {
-                check_idle_stream(c, s);
-                if (!check_data_window(c.s0.send.window, s.send.window, s.com.errs, f)) {
-                    return false;
-                }
-                if (has_frame_state_error(true, c.recv.settings, s.com.state, s.com.errs, f)) {
-                    return false;
-                }
-                auto res = change_state_send(s.com.state, s.com.errs, s.send.on_continuous, f);
-                if (!res) {
-                    return false;
-                }
-                s.send.preproced_type = f.type;
-                c.send.preproced_stream_id = f.id;
-                c.send.preproced_stream_type = f.type;
-                c.s0.send.on_continuous = s.send.on_continuous;
-                update_max_issued_id(c, f.id);
-                if (s.com.state == State::closed) {
-                    update_max_closed_id(c, f.id);
-                }
-            }
-            return true;
-        }*/
+            static_assert(check_open());
+        }  // namespace test
 
     }  // namespace fnet::http2::stream
 }  // namespace utils

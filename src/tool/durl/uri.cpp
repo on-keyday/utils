@@ -8,8 +8,8 @@
 #include "durl.h"
 
 #include <json/to_string.h>
-#include <net_util/punycode.h>
-#include <net_util/urlencode.h>
+#include <fnet/util/punycode.h>
+#include <fnet/util/urlencode.h>
 
 namespace durl {
 
@@ -28,7 +28,7 @@ namespace durl {
             }
             return uri::ParseError::none;
         }
-        if ((utils::helper::contains(uri.scheme, ".") ||
+        if ((utils::strutil::contains(uri.scheme, ".") ||
              uri.scheme == "localhost:") &&
             utils::number::is_number(uri.path) &&
             uri.hostname == "") {
@@ -41,8 +41,8 @@ namespace durl {
         }
         if (opt.strict_relative_path &&
             uri.hostname == "" &&
-            !utils::helper::starts_with(uri.path, "/") &&
-            utils::helper::contains(uri.path, "/")) {
+            !utils::strutil::starts_with(uri.path, "/") &&
+            utils::strutil::contains(uri.path, "/")) {
             auto tmp = std::move(uri);
             url = parse_prefix + url;
             err = uri::parse_ex(uri, url);
@@ -54,7 +54,7 @@ namespace durl {
     }
 
     bool is_ascii(auto& str) {
-        return utils::helper::is_valid(str, true, utils::number::is_ascii_non_control<std::uint8_t>);
+        return utils::strutil::is_valid(str, true, utils::number::is_ascii_non_control<std::uint8_t>);
     }
 
     int uri_parse_impl(std::vector<URIToJSON>& urls, subcmd::RunCommand& cmd, URIOption& opt) {
@@ -64,9 +64,9 @@ namespace durl {
                 printerr(cmd, "failed to parse uri ", url, " : ", uri::err_msg(err));
                 return -1;
             }
-            if (opt.punycode && !utils::helper::contains(uri.hostname, "xn--")) {
+            if (opt.punycode && !utils::strutil::contains(uri.hostname, "xn--")) {
                 std::string host;
-                if (!utils::net::punycode::encode_host(uri.hostname, host)) {
+                if (!utils::punycode::encode_host(uri.hostname, host)) {
                     printerr(cmd, "punycode encoding failed with", uri.hostname);
                     return -1;
                 }
@@ -74,9 +74,9 @@ namespace durl {
             }
             if (opt.path_urlenc &&
                 (!is_ascii(uri.path) ||
-                 !utils::helper::contains(uri.path, "%"))) {
+                 !utils::strutil::contains(uri.path, "%"))) {
                 std::string path;
-                if (!utils::net::urlenc::encode(uri.path, path, utils::net::urlenc::encodeURI())) {
+                if (!utils::urlenc::encode(uri.path, path, utils::urlenc::encodeURI())) {
                     printerr(cmd, "url encoding failed with ", uri.path);
                     return -1;
                 }
@@ -84,9 +84,9 @@ namespace durl {
             }
             if (opt.query_urlenc &&
                 (!is_ascii(uri.path) ||
-                 !utils::helper::contains(uri.query, "%"))) {
+                 !utils::strutil::contains(uri.query, "%"))) {
                 std::string query;
-                if (!utils::net::urlenc::encode(uri.query, query, utils::net::urlenc::encodeURI())) {
+                if (!utils::urlenc::encode(uri.query, query, utils::urlenc::encodeURI())) {
                     printerr(cmd, "url encoding failed with ", uri.path);
                     return -1;
                 }

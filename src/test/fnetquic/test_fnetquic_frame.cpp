@@ -18,9 +18,9 @@
 void make_and_parse(auto&& st) {
     utils::fnet::quic::frame::DynFramePtr dyn = makeDynFrame(std::move(st));
     utils::byte data[100]{};
-    utils::io::writer w{data};
+    utils::binary::writer w{data};
     dyn->render(w);
-    utils::io::reader r{w.written()};
+    utils::binary::reader r{w.written()};
     st.parse(r);
 }
 

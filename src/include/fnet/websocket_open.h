@@ -9,13 +9,14 @@
 #pragma once
 #include "websocket.h"
 #include "http.h"
-#include "../net_util/sha1.h"
-#include "../net_util/base64.h"
+#include "util/sha1.h"
+#include "util/base64.h"
 
 namespace utils {
     namespace fnet {
-        constexpr const char* websocket_magic_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         namespace websocket {
+
+            constexpr const char* websocket_magic_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
             enum Error {
                 error_none,
                 error_base64,
@@ -42,18 +43,18 @@ namespace utils {
                 }
                 ClientKey fixed;
                 SHAHash hash;
-                if (!net::base64::encode(view::CharVec(data, sizeof(data)), fixed)) {
+                if (!base64::encode(view::CharVec(data, sizeof(data)), fixed)) {
                     return error_base64;
                 }
                 header.emplace("Sec-WebSocket-Key", fixed.c_str());
                 header.emplace("Upgrade", "websocket");
                 header.emplace("Connection", "Upgrade");
                 header.emplace("Sec-WebSocket-Version", "13");
-                helper::append(fixed, websocket_magic_guid);
-                if (!net::sha::make_sha1(fixed, hash)) {
+                strutil::append(fixed, websocket_magic_guid);
+                if (!sha::make_sha1(fixed, hash)) {
                     return error_sha1;
                 }
-                if (!net::base64::encode(hash, compare_sec_key)) {
+                if (!base64::encode(hash, compare_sec_key)) {
                     return error_base64;
                 }
                 if (!http.write_request("GET", path, header)) {
@@ -71,17 +72,17 @@ namespace utils {
                 bool upgrade = false;
                 bool connection = false;
                 auto res = http.read_request<TmpString>(meth, path, header, &body, true, helper::nop, [&](auto&& key, auto&& value) {
-                    if (helper::equal(key, "Sec-WebSocket-Key", helper::ignore_case())) {
-                        helper::append(fixed, value);
+                    if (strutil::equal(key, "Sec-WebSocket-Key", strutil::ignore_case())) {
+                        strutil::append(fixed, value);
                     }
-                    else if (helper::equal(key, "Sec-Websocket-Version", helper::ignore_case())) {
+                    else if (strutil::equal(key, "Sec-Websocket-Version", strutil::ignore_case())) {
                         version = true;  // not check value
                     }
-                    else if (helper::equal(key, "Connection", helper::ignore_case())) {
-                        connection = helper::contains(value, "Upgrade", helper::ignore_case());
+                    else if (strutil::equal(key, "Connection", strutil::ignore_case())) {
+                        connection = helper::contains(value, "Upgrade", strutil::ignore_case());
                     }
-                    else if (helper::equal(key, "Upgrade", helper::ignore_case())) {
-                        upgrade = helper::contains(value, "websocket", helper::ignore_case());
+                    else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
+                        upgrade = helper::contains(value, "websocket", strutil::ignore_case());
                     }
                 });
                 if (res == 0) {
@@ -105,12 +106,12 @@ namespace utils {
                 if (fixed.size() == 0 || fixed.size() > 26) {
                     return error_invalid_sec_websocket_key;
                 }
-                helper::append(fixed, websocket_magic_guid);
+                strutil::append(fixed, websocket_magic_guid);
                 SHAHash hash;
                 if (!net::sha::make_sha1(fixed, hash)) {
                     return error_sha1;
                 }
-                if (!net::base64::encode(hash, pass_sec_key)) {
+                if (!base64::encode(hash, pass_sec_key)) {
                     return error_base64;
                 }
                 return error_none;
@@ -136,14 +137,14 @@ namespace utils {
                 bool connection = false;
                 http::header::StatusCode code;
                 auto res = http.read_response<TmpString>(code, header, &body, true, helper::nop, helper::nop, [&](auto&& key, auto&& value) {
-                    if (helper::equal(key, "Sec-WebSocket-Accept", helper::ignore_case())) {
-                        accept = helper::equal(value, compare_sec_key);
+                    if (strutil::equal(key, "Sec-WebSocket-Accept", strutil::ignore_case())) {
+                        accept = strutil::equal(value, compare_sec_key);
                     }
-                    else if (helper::equal(key, "Connection", helper::ignore_case())) {
-                        connection = helper::contains(value, "Upgrade", helper::ignore_case());
+                    else if (strutil::equal(key, "Connection", strutil::ignore_case())) {
+                        connection = helper::contains(value, "Upgrade", strutil::ignore_case());
                     }
-                    else if (helper::equal(key, "Upgrade", helper::ignore_case())) {
-                        upgrade = helper::contains(value, "websocket", helper::ignore_case());
+                    else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
+                        upgrade = helper::contains(value, "websocket", strutil::ignore_case());
                     }
                 });
                 if (res == 0) {

@@ -16,7 +16,7 @@ namespace utils {
         // bool(PacketType,Packet&,view::rvec src,bool err,bool valid_type)
         // Vec is for VersionNegotiationPacket
         template <template <class...> class Vec>
-        constexpr bool parse_packet(io::reader& r, size_t tag_len, auto&& cb, auto&& is_stateless_reset, auto&& get_dstID_len) {
+        constexpr bool parse_packet(binary::reader& r, size_t tag_len, auto&& cb, auto&& is_stateless_reset, auto&& get_dstID_len) {
             if (r.empty()) {
                 return false;
             }
@@ -38,7 +38,7 @@ namespace utils {
                 std::uint32_t version = 0;
                 auto peek = r.peeker();
                 peek.offset(1);
-                if (!io::read_num(peek, version, true)) {
+                if (!binary::read_num(peek, version, true)) {
                     Packet packet;
                     packet.flags = flags;
                     invoke_cb(PacketType::Unknown, packet, true, false);
@@ -103,7 +103,7 @@ namespace utils {
         }
 
         template <template <class...> class Vec>
-        constexpr bool parse_packets(io::reader& r, size_t auth_tag_len, auto&& cb, auto&& is_stateless_reset, auto&& get_dstID_len) {
+        constexpr bool parse_packets(binary::reader& r, size_t auth_tag_len, auto&& cb, auto&& is_stateless_reset, auto&& get_dstID_len) {
             while (!r.empty()) {
                 if (!parse_packet<Vec>(r, auth_tag_len, cb, is_stateless_reset, get_dstID_len)) {
                     return false;
@@ -115,7 +115,7 @@ namespace utils {
         // this version function call cb with view::wvec src
         template <template <class...> class Vec>
         constexpr bool parse_packets(view::wvec src, size_t auth_tag_len, auto&& cb, auto&& is_stateless_reset, auto&& get_dstID_len) {
-            io::reader r{src};
+            binary::reader r{src};
             auto wrap_cb = [&](PacketType type, auto&& packet, view::rvec rsrc, bool err, bool valid_type) {
                 auto writable = const_cast<byte*>(rsrc.data());
                 return cb(type, packet, view::wvec(writable, rsrc.size()), err, valid_type);
@@ -173,7 +173,7 @@ namespace utils {
         template <class T>
         constexpr auto convert_cipher_to_plain(CryptoPacket parsed, T&& in, size_t tag_len) {
             auto plain = cipher_to_plain<T>();
-            io::reader r{parsed.src};
+            binary::reader r{parsed.src};
             bool ok = false;
             if constexpr (std::is_same_v<decltype(plain), OneRTTPacketPlain>) {
                 ok = plain.parse(r, tag_len, [&](auto&&, size_t* len) {

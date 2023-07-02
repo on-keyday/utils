@@ -13,7 +13,7 @@ namespace utils {
     namespace fnet::quic::packet {
 
         // render_payload is bool(io::writer&,packetnum::WireVal)
-        constexpr std::pair<CryptoPacket, bool> create_packet(io::writer& w, PacketSummary summary,
+        constexpr std::pair<CryptoPacket, bool> create_packet(binary::writer& w, PacketSummary summary,
                                                               std::uint64_t largest_acked, size_t auth_tag_len, bool use_full,
                                                               auto&& render_payload) {
             auto tmp = packetnum::encode(summary.packet_number, largest_acked);
@@ -30,7 +30,7 @@ namespace utils {
                 cpacket.packet_number = summary.packet_number;
                 return {cpacket, true};
             };
-            auto with_padding = [&](io::writer& w) {
+            auto with_padding = [&](binary::writer& w) {
                 auto poffset = w.offset();
                 if (!render_payload(w, std::as_const(wire))) {
                     return false;
@@ -83,21 +83,21 @@ namespace utils {
         namespace test {
             constexpr bool check_packet_creation() {
                 byte data[1200]{};
-                io::writer w{data};
+                binary::writer w{data};
                 byte id[20]{};
                 PacketSummary summary;
                 summary.type = PacketType::Initial;
                 summary.version = 1;
                 summary.dstID = id;
                 summary.srcID = id;
-                auto [crypto, ok] = create_packet(w, summary, packetnum::infinity, 16, true, [&](io::writer& w, packetnum::WireVal) {
+                auto [crypto, ok] = create_packet(w, summary, packetnum::infinity, 16, true, [&](binary::writer& w, packetnum::WireVal) {
                     return w.write(1, 250);
                 });
                 if (!ok) {
                     return false;
                 }
                 InitialPacketPlain plain;
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!plain.parse(r, 16)) {
                     return false;
                 }

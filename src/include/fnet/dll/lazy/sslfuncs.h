@@ -69,6 +69,14 @@ namespace ssl_import {
     // OpenSSL specific
     constexpr auto CRYPTO_EX_INDEX_SSL_CTX_ = 1;
 
+    // OPENSSL verify mode. used by TLS.set_verify
+    // TODO(on-keyday): replace with enum value
+    constexpr auto SSL_VERIFY_NONE_ = 0x00;
+    constexpr auto SSL_VERIFY_PEER_ = 0x01;
+    constexpr auto SSL_VERIFY_FAIL_IF_NO_PEER_CERT_ = 0x02;
+    constexpr auto SSL_VERIFY_CLIENT_ONCE_ = 0x04;
+    constexpr auto SSL_VERIFY_POST_HANDSHAKE_ = 0x08;
+
     // platform requirement
     static_assert(sizeof(unsigned char) == sizeof(std::uint8_t));
 

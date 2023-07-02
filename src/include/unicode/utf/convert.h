@@ -8,7 +8,7 @@
 // convert - for api compatibility
 #pragma once
 #include "do_convert.h"
-#include "../../helper/append_charsize.h"
+#include "../../strutil/append_charsize.h"
 #include "../../core/sequencer.h"
 #include "../../wrap/light/enum.h"
 
@@ -21,7 +21,7 @@ namespace utils {
             };
             template <class U>
             struct DecideOutLen<U, 0> {
-                static constexpr size_t size = helper::append_size_v<U>;
+                static constexpr size_t size = strutil::append_size_v<U>;
             };
         }  // namespace internal
 

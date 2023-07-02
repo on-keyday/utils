@@ -7,7 +7,7 @@
 
 #pragma once
 #include "dns.h"
-#include "../../io/expandable_writer.h"
+#include "../../binary/expandable_writer.h"
 
 namespace utils {
     namespace fnet::dns {
@@ -17,11 +17,11 @@ namespace utils {
                 if (r.type != RecordType::A) {
                     return false;
                 }
-                io::reader p{r.data};
+                binary::reader p{r.data};
                 return p.read(address) && p.empty();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return w.write(address);
             }
         };
@@ -32,11 +32,11 @@ namespace utils {
                 if (r.type != RecordType::AAAA) {
                     return false;
                 }
-                io::reader p{r.data};
+                binary::reader p{r.data};
                 return p.read(address) && p.empty();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return w.write(address);
             }
         };

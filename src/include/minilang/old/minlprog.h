@@ -22,7 +22,7 @@ namespace utils {
             return [=](auto&& stat, auto&& expr, auto& seq, std::shared_ptr<MinNode>& node, bool& err, auto& errc) -> bool {
                 MINL_FUNC_LOG_OLD("comment")
                 auto line_comment = [&](auto& comment) {
-                    while (!seq.eos() && !space::parse_eol<true>(seq)) {
+                    while (!seq.eos() && !strutil::parse_eol<true>(seq)) {
                         comment.push_back(seq.current());
                         seq.consume();
                     }
@@ -61,7 +61,7 @@ namespace utils {
                     if (err) {
                         return false;
                     }
-                    space::consume_space(seq, true);
+                    strutil::consume_space(seq, true);
                     const auto start = seq.rptr;
                     if (seq.seek_if(com.begin)) {
                         std::string comment;
@@ -108,7 +108,7 @@ namespace utils {
                 MINL_FUNC_LOG_OLD("until_eof_or_not_matched")
                 std::shared_ptr<BlockNode> root, bnode;
                 err = false;
-                space::consume_space(seq, true);
+                strutil::consume_space(seq, true);
                 while (!seq.eos()) {
                     const auto start = seq.rptr;
                     if (!f(f, expr, seq, node, err, errc)) {
@@ -128,7 +128,7 @@ namespace utils {
                         root = tmp;
                     }
                     bnode = tmp;
-                    space::consume_space(seq, true);
+                    strutil::consume_space(seq, true);
                 }
                 node = std::move(root);
                 return node != nullptr;
@@ -138,13 +138,13 @@ namespace utils {
         constexpr auto import_field(auto& parse_after, auto& start, auto& seq, auto& curnode, bool& err, auto& errc) {
             return [&] {
                 const auto begin = seq.rptr;
-                space::consume_space(seq, true);
+                strutil::consume_space(seq, true);
                 const auto start_as = seq.rptr;
                 auto end_as = seq.rptr;
                 std::string as;
                 if (ident_default_read(as, seq)) {
                     end_as = seq.rptr;
-                    space::consume_space(seq, false);
+                    strutil::consume_space(seq, false);
                 }
                 if (auto c = seq.current(); c != '"' && c != '\'' && c != '`') {
                     errc.say("expect import statement string but not");
@@ -186,11 +186,11 @@ namespace utils {
                 root = std::make_shared<ImportNode>();
                 root->str = import_group_str_;
                 curnode = root;
-                space::consume_space(seq, true);
+                strutil::consume_space(seq, true);
                 err = false;
                 if (seq.seek_if("(")) {
                     while (true) {
-                        space::consume_space(seq, true);
+                        strutil::consume_space(seq, true);
                         if (seq.seek_if(")")) {
                             break;
                         }

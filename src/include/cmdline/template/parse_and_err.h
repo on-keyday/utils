@@ -28,7 +28,7 @@ namespace utils {
                 }
                 if (auto msg = error_msg(err)) {
                     String buf;
-                    helper::appends(buf, "error: ", ctx.erropt(), ": ", msg, "\n");
+                    strutil::appends(buf, "error: ", ctx.erropt(), ": ", msg, "\n");
                     show(std::move(buf));
                     return -1;
                 }

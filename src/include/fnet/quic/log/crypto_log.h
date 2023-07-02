@@ -18,15 +18,15 @@ namespace utils {
     if constexpr (false) { \
     }
 #define CASE(T) else if constexpr (std::is_same_v<const T&, decltype(hs)>)
-            io::reader r{src};
+            binary::reader r{src};
             auto typefield = [&](auto type) {
                 if (auto str = to_string(type)) {
-                    helper::appends(out, str);
+                    strutil::appends(out, str);
                 }
                 else {
-                    helper::append(out, "unknown(0x");
+                    strutil::append(out, "unknown(0x");
                     number::to_string(out, std::uint16_t(type), 16);
-                    helper::append(out, ")");
+                    strutil::append(out, ")");
                 }
             };
             const auto numfield = fmt_numfield(out);
@@ -47,7 +47,7 @@ namespace utils {
                                 group("transport_parameters", true, false, [&] {
                                     q.params.iterate([&](quic::trsparam::TransportParameter param,bool last) {
                                         group(nullptr, false, !last, [&] {
-                                            custom_key_value([&]{helper::append(out,"id");},[&]{ typefield((quic::trsparam::DefinedID)param.id);});
+                                            custom_key_value([&]{strutil::append(out,"id");},[&]{ typefield((quic::trsparam::DefinedID)param.id);});
                                             numfield("length", param.length);
                                             hexfield("data", param.data.bytes(),false);
                                         });
@@ -80,7 +80,7 @@ namespace utils {
             };
             while (tls::handshake::parse_one(r, [&](const auto& hs, bool err) {
                 if (err) {
-                    helper::append(out, "error at parsing...\n");
+                    strutil::append(out, "error at parsing...\n");
                     return true;
                 }
                 typefield(hs.msg_type);
@@ -94,7 +94,7 @@ namespace utils {
                             const auto size = ch.cipher_suites.size();
                             for (size_t i = 0; i < size; i++) {
                                 typefield(ch.cipher_suites[i]);
-                                helper::append(out, ",");
+                                strutil::append(out, ",");
                             }
                         });
                       format_extensions(ch.msg_type,ch.extensions);
@@ -102,7 +102,7 @@ namespace utils {
                     CASE(tls::handshake::ServerHello) {
                         const tls::handshake::ServerHello& sh = hs;
                         hexfield("random", sh.random);
-                        custom_key_value([&]{helper::append(out,"cipher_suite");},[&]{ typefield(sh.cipher_suite);});
+                        custom_key_value([&]{strutil::append(out,"cipher_suite");},[&]{ typefield(sh.cipher_suite);});
                         format_extensions(sh.msg_type,sh.extensions);
                     }
                     CASE(tls::handshake::EncryptedExtensions){
@@ -115,7 +115,7 @@ namespace utils {
                         group("certificate_list",true,false,[&]{
                             cert.certificate_list.iterate([&](const tls::handshake::CertificateEntry& ent,bool last ){
                                 group(nullptr,false,!last,[&]{
-                                    custom_key_value([&]{helper::append(out,"cert_data");},[&]{
+                                    custom_key_value([&]{strutil::append(out,"cert_data");},[&]{
                                         format_certificate(out,ent.cert_data.data(),omit_data,data_as_hex);
                                     });
                                     format_extensions(cert.msg_type,ent.extensions);
@@ -129,7 +129,7 @@ namespace utils {
                         datafield("raw_data",ch.raw_data,false);
                     }
                 });
-                helper::append(out, "\n");
+                strutil::append(out, "\n");
                 return true;
             })) {
             }

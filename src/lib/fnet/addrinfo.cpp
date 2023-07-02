@@ -12,11 +12,11 @@
 #include <number/array.h>
 #include <fnet/dll/glheap.h>
 #include <helper/defer.h>
-#include <helper/strutil.h>
+// #include <strutil/strutil.h>
 #include <bit>
 #include <cstring>
 #include <fnet/dll/errno.h>
-#include <net_util/ipaddr.h>
+#include <fnet/util/ipaddr.h>
 #include <fnet/dll/asyncbase.h>
 #include <view/charvec.h>
 #ifndef _WIN32

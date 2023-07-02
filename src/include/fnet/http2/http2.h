@@ -7,7 +7,7 @@
 
 #pragma once
 #include "h2conn.h"
-#include "h2streams.h"
+#include "h2stream.h"
 #include <unordered_map>
 
 namespace utils {
@@ -28,14 +28,14 @@ namespace utils {
                 }
                 auto found = streams.find(f.id);
                 std::shared_ptr<stream::Stream> s;
-                if (found != streams.end()) {
+                if (found == streams.end()) {
                     s = std::allocate_shared<stream::Stream>(glheap_allocator<stream::Stream>{});
                     streams.emplace(f.id, s);
                 }
                 else {
                     s = found->second;
                 }
-                if (auto err = s->recv_frame(conn.state, f)) {
+                if (auto err = s->recv_frame(f)) {
                     return err;
                 }
             }
@@ -43,7 +43,7 @@ namespace utils {
             Error read_frames() {
                 bool ok = false;
                 while (true) {
-                    io::reader r{recv_buffer};
+                    binary::reader r{recv_buffer};
                     auto err = frame::parse_frame(r, conn.state.recv.settings.max_frame_size, [&](const auto& f, const frame::UnknownFrame&, Error err) {
                         ok = true;
                         if constexpr (std::is_same_v<decltype(f), const frame::UnknownFrame&>) {
@@ -93,7 +93,7 @@ namespace utils {
         write(key, settings.value);                      \
     }
                     if (diff) {
-                        WRITE_IF(k(sk::table_size), header_table_size);
+                        WRITE_IF(k(sk::table_size), max_header_table_size);
                         WRITE_IF(k(sk::enable_push), enable_push ? 1 : 0);
                         WRITE_IF(k(sk::max_concurrent), max_concurrent_stream);
                         WRITE_IF(k(sk::initial_windows_size), initial_window_size);
@@ -102,7 +102,7 @@ namespace utils {
 #undef WRITE_IF
                     }
                     else {
-                        write(k(sk::table_size), settings.header_table_size);
+                        write(k(sk::table_size), settings.max_header_table_size);
                         write(k(sk::enable_push), settings.enable_push ? 1 : 0);
                         write(k(sk::max_concurrent), settings.max_concurrent_stream);
                         write(k(sk::initial_windows_size), settings.initial_window_size);

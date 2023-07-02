@@ -14,6 +14,35 @@
 
 namespace utils {
     namespace fnet::quic::path::ip {
+        struct RawPathKey {
+            byte data[36]{};
+
+            friend constexpr bool operator==(const RawPathKey& a, const RawPathKey& b) {
+                return view::rvec(a.data, 36) == view::rvec(b.data, 36);
+            }
+        };
+    }  // namespace fnet::quic::path::ip
+}  // namespace utils
+
+namespace std {
+    template <>
+    struct hash<utils::fnet::quic::path::ip::RawPathKey> {
+        constexpr auto operator()(auto&& d) const {
+            return utils::view::hash(d.data);
+        }
+    };
+
+    template <>
+    struct hash<utils::fnet::quic::path::PathID> {
+        constexpr auto operator()(auto&& d) const {
+            return std::hash<std::uint32_t>{}(d.id);
+        }
+    };
+
+}  // namespace std
+
+namespace utils {
+    namespace fnet::quic::path::ip {
 
         enum class MigrateMode {
             none,
@@ -36,10 +65,6 @@ namespace utils {
             return MigrateMode::none;
         }
 
-        struct RawPathKey {
-            byte data[36]{};
-        };
-
         constexpr RawPathKey ip_key(const NetAddrPort& local, const NetAddrPort& peer) {
             RawPathKey d;
             auto i = 16 - local.addr.size();
@@ -47,13 +72,13 @@ namespace utils {
             for (; i < local.addr.size(); i++) {
                 d.data[i] = local.addr.data()[i];
             }
-            io::writer w{view::wvec(d.data + 16, 2)};
-            io::write_num(w, local.port.u16());
+            binary::writer w{view::wvec(d.data + 16, 2)};
+            binary::write_num(w, local.port.u16());
             for (; j < peer.addr.size(); j++) {
                 d.data[18 + j] = peer.addr.data()[i];
             }
             w.reset(view::wvec(d.data + 34, 2));
-            io::write_num(w, peer.port.u16());
+            binary::write_num(w, peer.port.u16());
             return d;
         }
 
@@ -67,7 +92,6 @@ namespace utils {
             slib::hash_map<RawPathKey, PathAddr> ingress;
             slib::hash_map<PathID, PathAddr*> egress;
             NetAddrPort active_local;
-            NetAddrPort active_peer;
             PathID id = original_path;
 
             PathID get_path_id(const NetAddrPort& peer) {
@@ -89,7 +113,7 @@ namespace utils {
 
             NetAddrPort get_peer_address(PathID id) const {
                 auto found = egress.find(id);
-                if (found != egress.end()) {
+                if (found == egress.end()) {
                     return {};
                 }
                 return found->second->peer;
@@ -98,11 +122,3 @@ namespace utils {
 
     }  // namespace fnet::quic::path::ip
 }  // namespace utils
-
-namespace std {
-    struct hash<utils::fnet::quic::path::ip::RawPathKey> {
-        constexpr auto operator()(auto&& d) {
-            return utils::view::hash(d.data);
-        }
-    };
-}  // namespace std

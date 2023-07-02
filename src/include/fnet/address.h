@@ -8,8 +8,8 @@
 // address - address representation
 #pragma once
 #include "../core/byte.h"
-#include "../net_util/ipaddr.h"
-#include "../helper/appender.h"
+#include "util/ipaddr.h"
+#include "../strutil/append.h"
 #include "storage.h"
 
 namespace utils {
@@ -183,10 +183,10 @@ namespace utils {
                     }
                 }
                 else if (addr.type() == NetAddrType::unix_path) {
-                    helper::append(str, (const char*)addr.data());
+                    strutil::append(str, (const char*)addr.data());
                 }
                 else {
-                    helper::append(str, "<opaque sockaddr>");
+                    strutil::append(str, "<opaque sockaddr>");
                 }
             }
 

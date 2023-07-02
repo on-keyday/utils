@@ -7,7 +7,7 @@
 
 #pragma once
 #include "typeonly.h"
-#include "../../../io/number.h"
+#include "../../../binary/number.h"
 
 namespace utils {
     namespace fnet::quic::frame {
@@ -21,18 +21,18 @@ namespace utils {
                 return t;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, t) &&
-                       io::read_num(r, data);
+                       binary::read_num(r, data);
             }
 
             constexpr size_t len(bool = false) const noexcept {
                 return type_minlen(t) + 8;
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, t) &&
-                       io::write_num(w, data);
+                       binary::write_num(w, data);
             }
         };
 

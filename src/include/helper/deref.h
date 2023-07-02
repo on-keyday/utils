@@ -9,7 +9,6 @@
 // deref - dereference wrapper
 #pragma once
 
-#include "sfinae.h"
 #include <memory>
 
 namespace utils {
@@ -22,6 +21,7 @@ namespace utils {
 
         namespace internal {
 
+            /*
             SFINAE_BLOCK_T_BEGIN(derefable, *std::declval<T>())
             constexpr static auto kind = std::is_pointer_v<T> ? DerefKind::ptr : DerefKind::ptrlike;
             using type = decltype(std::addressof(*std::declval<T&>()));
@@ -38,16 +38,17 @@ namespace utils {
                 return std::addressof(t);
             }
             SFINAE_BLOCK_T_END()
+            */
 
             template <class T>
             concept has_arrow = requires(T t) {
-                                    { t.operator->() };
-                                };
+                { t.operator->() };
+            };
 
             template <class T>
             concept has_deref = requires(T t) {
-                                    { std::addressof(*t) };
-                                };
+                { std::addressof(*t) };
+            };
 
             constexpr auto deref_impl(auto& t) {
                 if constexpr (has_arrow<decltype(t)>) {
@@ -72,6 +73,7 @@ namespace utils {
             return t;
         }
 
+        /*
         template <class T>
         constexpr DerefKind derefkind() {
             return internal::derefable<T>::kind;
@@ -80,6 +82,6 @@ namespace utils {
         template <class T>
         constexpr bool is_deref() {
             return derefkind<T>() != DerefKind::object;
-        }
+        }*/
     }  // namespace helper
 }  // namespace utils

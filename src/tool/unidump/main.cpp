@@ -102,7 +102,7 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
         }
     }
     std::string out;
-    utils::io::expand_writer<std::string&> w{out};
+    utils::binary::expand_writer<std::string&> w{out};
     if (!unicodedata::bin::serialize_unicodedata(w, data)) {
         cerr << "failed to serialize unicode data\n";
         return -1;

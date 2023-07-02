@@ -13,10 +13,10 @@
 #include "../../../std/vector.h"
 #include "../../../storage.h"
 #include "../../ack/ack_lost_record.h"
-#include "../../../../helper/condincr.h"
 #include <algorithm>
 #include "../../resend/fragments.h"
 #include "buf_interface.h"
+#include "../../resend/ack_handler.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -32,7 +32,7 @@ namespace utils {
             // SendBuffer src;
             SendBufInterface<SendBuffer> src;
 
-            std::shared_ptr<ack::ACKLostRecord> reset_wait;
+            resend::ACKHandler reset_wait;
             resend::Retransmiter<resend::StreamFragment, TConfig::template retransmit_que> frags;
 
             // move state to data_recved if condition satisfied
@@ -43,11 +43,11 @@ namespace utils {
             }
 
             // do STREAM frame retransmission
-            IOResult send_retransmit(auto&& observer_vec, frame::fwriter& w) {
+            IOResult send_retransmit(auto&& observer, frame::fwriter& w) {
                 if (!uni.state.can_retransmit()) {
                     return IOResult::not_in_io_state;
                 }
-                auto res = frags.retransmit(observer_vec, [&](resend::StreamFragment& frag, auto&& save_new) {
+                auto res = frags.retransmit(observer, [&](resend::StreamFragment& frag, auto&& save_new) {
                     bool should_remove = false;
                     auto save_retransmit = [&](Fragment sent, Fragment remain, bool has_remain) {
                         save_new(resend::StreamFragment{
@@ -81,27 +81,29 @@ namespace utils {
                 return res;
             }
 
-            IOResult send_stream_unlocked(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send_stream_unlocked(frame::fwriter& w, auto&& observer) {
                 auto c = conn.lock();
                 if (!c) {
                     return IOResult::fatal;  // no way to recover
                 }
                 size_t blocked_size;
                 // first try retransmition
-                IOResult res = send_retransmit(observer_vec, w);
+                IOResult res = send_retransmit(observer, w);
                 if (res != IOResult::ok && res != IOResult::no_data &&
                     res != IOResult::not_in_io_state) {
                     return res;
                 }
                 // send STREAM frame
-                std::tie(res, blocked_size) = uni.send_stream(c->base, w, [&](Fragment frag) {
-                    frags.sent(observer_vec, resend::StreamFragment{
+                std::tie(res, blocked_size) = uni.send_stream(
+                    c->base, w,
+                    src.fairness_limit(), [&](Fragment frag) {
+                        frags.sent(observer, resend::StreamFragment{
                                                  .offset = frag.offset,
                                                  .data = frag.fragment,
                                                  .fin = frag.fin,
                                              });
-                    return true;
-                });
+                        return true;
+                    });
                 if (res == IOResult::block_by_stream) {
                     res = core::send_stream_blocked(w, uni.id, blocked_size);
                     return res == IOResult::ok ? IOResult::block_by_stream : res;
@@ -113,17 +115,16 @@ namespace utils {
                 return res;
             }
 
-            IOResult send_reset_unlocked(frame::fwriter& w, auto&& observer_vec) {
-                if (reset_wait) {
-                    if (reset_wait->is_ack()) {
-                        ack::put_ack_wait(std::move(reset_wait));
+            IOResult send_reset_unlocked(frame::fwriter& w, auto&& observer) {
+                if (reset_wait.not_confirmed()) {
+                    if (reset_wait.is_ack()) {
+                        reset_wait.confirm();
                         return uni.reset_done();
                     }
-                    if (reset_wait->is_lost()) {
+                    if (reset_wait.is_lost()) {
                         auto res = uni.send_retransmit_reset(w);
                         if (res == IOResult::ok) {
-                            reset_wait = ack::make_ack_wait();
-                            observer_vec.push_back(reset_wait);
+                            reset_wait.wait(observer);
                         }
                         return res;
                     }
@@ -133,8 +134,7 @@ namespace utils {
                 if (r != IOResult::ok) {
                     return r;
                 }
-                reset_wait = ack::make_ack_wait();
-                observer_vec.push_back(reset_wait);
+                reset_wait.wait(observer);
                 return IOResult::ok;
             }
 
@@ -164,12 +164,12 @@ namespace utils {
             // IOResult::not_in_io_state - finished
             IOResult detect_ack_lost() {
                 const auto lock = uni.lock();
-                if (reset_wait) {
-                    if (reset_wait->is_ack()) {
+                if (reset_wait.not_confirmed()) {
+                    if (reset_wait.is_ack()) {
                         uni.reset_done();
                         return IOResult::not_in_io_state;
                     }
-                    if (reset_wait->is_lost()) {
+                    if (reset_wait.is_lost()) {
                         return IOResult::ok;
                     }
                     return IOResult::no_data;
@@ -182,14 +182,14 @@ namespace utils {
                 return should_be_active ? IOResult::ok : IOResult::no_data;
             }
 
-            IOResult send_stream(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send_stream(frame::fwriter& w, auto&& observer) {
                 const auto lock = uni.lock();
-                return send_stream_unlocked(w, observer_vec);
+                return send_stream_unlocked(w, observer);
             }
 
-            IOResult send_reset(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send_reset(frame::fwriter& w, auto&& observer) {
                 const auto lock = uni.lock();
-                return send_reset_unlocked(w, observer_vec);
+                return send_reset_unlocked(w, observer);
             }
 
             void recv_stop_sending(const frame::StopSendingFrame& frame) {
@@ -206,18 +206,18 @@ namespace utils {
             // called by QUIC runtime system
 
             // returns (result,finished)
-            std::pair<IOResult, bool> send(frame::fwriter& w, auto&& observer_vec) {
+            std::pair<IOResult, bool> send(frame::fwriter& w, auto&& observer) {
                 src.send_callback(this);
                 const auto lock = uni.lock();
                 if (uni.state.is_terminal_state()) {
                     return {IOResult::ok, true};
                 }
                 // fire reset if reset sent
-                auto res = send_reset_unlocked(w, observer_vec);
+                auto res = send_reset_unlocked(w, observer);
                 if (res != IOResult::not_in_io_state) {
                     return {res, uni.state.is_terminal_state()};
                 }
-                res = send_stream_unlocked(w, observer_vec);
+                res = send_stream_unlocked(w, observer);
                 return {res, uni.state.is_terminal_state()};
             }
 
@@ -357,21 +357,20 @@ namespace utils {
             using RecvBuffer = typename TConfig::stream_handler::recv_buf;
             // RecvBuffer saver;
             RecvBufInterface<RecvBuffer> saver;
-            std::shared_ptr<ack::ACKLostRecord> max_data_wait;
-            std::shared_ptr<ack::ACKLostRecord> stop_sending_wait;
+            resend::ACKHandler max_data_wait;
+            resend::ACKHandler stop_sending_wait;
 
-            IOResult send_stop_sending_unlocked(frame::fwriter& w, auto&& observer_vec) {
-                if (stop_sending_wait) {
-                    if (stop_sending_wait->is_lost()) {
+            IOResult send_stop_sending_unlocked(frame::fwriter& w, auto&& observer) {
+                if (stop_sending_wait.not_confirmed()) {
+                    if (stop_sending_wait.is_lost()) {
                         if (auto res = uni.send_stop_sending(w); res != IOResult::ok) {
                             return res;
                         }
-                        stop_sending_wait = ack::make_ack_wait();
-                        observer_vec.push_back(stop_sending_wait);
+                        stop_sending_wait.wait(observer);
                         return IOResult::ok;
                     }
-                    if (stop_sending_wait->is_ack()) {
-                        ack::put_ack_wait(std::move(stop_sending_wait));
+                    if (stop_sending_wait.is_ack()) {
+                        stop_sending_wait.confirm();
                         return IOResult::ok;
                     }
                 }
@@ -380,48 +379,49 @@ namespace utils {
                 if (auto res = uni.send_stop_sending(w); res != IOResult::ok) {
                     return res;
                 }
-                stop_sending_wait = ack::make_ack_wait();
-                observer_vec.push_back(stop_sending_wait);
+                stop_sending_wait.wait(observer);
                 return IOResult::ok;
             }
 
-            IOResult send_max_stream_data_unlocked(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send_max_stream_data_unlocked(frame::fwriter& w, auto&& observer) {
                 auto res = uni.send_max_stream_data_if_updated(w);
                 if (res == IOResult::ok) {
                     // clear old ACKLostRecord
-                    max_data_wait = ack::make_ack_wait();
-                    observer_vec.push_back(max_data_wait);
+                    max_data_wait.wait(observer);
                     return res;
                 }
                 if (res == IOResult::fatal) {
                     return res;
                 }
-                if (max_data_wait) {
-                    if (max_data_wait->is_lost()) {
+                if (max_data_wait.not_confirmed()) {
+                    if (max_data_wait.is_lost()) {
                         // retransmit
                         res = uni.send_max_stream_data(w);
                         if (res != IOResult::ok) {
                             if (res == IOResult::not_in_io_state) {
                                 // state is not RecvState::Recv
-                                max_data_wait = nullptr;
+                                max_data_wait.confirm();
                             }
                             return res;
                         }
-                        max_data_wait = ack::make_ack_wait();
-                        observer_vec.push_back(max_data_wait);
+                        max_data_wait.wait(observer);
                     }
-                    else if (max_data_wait->is_ack()) {
-                        ack::put_ack_wait(std::move(max_data_wait));
+                    else if (max_data_wait.is_ack()) {
+                        max_data_wait.confirm();
                     }
                 }
                 return IOResult::ok;
+            }
+
+            void set_initial(InitialLimits& recv_ini_limit, Origin self) {
+                uni.set_initial(recv_ini_limit, self);
             }
 
            public:
             RecvUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TConfig>> c)
                 : uni(id) {
                 conn = c;
-                uni.set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
+                set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
             }
 
             void apply_local_initial_limits() {
@@ -430,7 +430,7 @@ namespace utils {
                 if (!c) {
                     return;  // no meaning
                 }
-                uni.set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
+                set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
             }
 
             // each methods
@@ -471,14 +471,14 @@ namespace utils {
                 return err2;
             }
 
-            IOResult send_stop_sending(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send_stop_sending(frame::fwriter& w, auto&& observer) {
                 const auto locked = uni.lock();
-                return send_stop_sending_unlocked(w, observer_vec);
+                return send_stop_sending_unlocked(w, observer);
             }
 
-            IOResult send_max_stream_data(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send_max_stream_data(frame::fwriter& w, auto&& observer) {
                 const auto locked = uni.lock();
-                return send_stop_sending_unlocked(w, observer_vec);
+                return send_stop_sending_unlocked(w, observer);
             }
 
             // general handling
@@ -500,14 +500,14 @@ namespace utils {
                 return error::Error("unexpected frame type");
             }
 
-            IOResult send(frame::fwriter& w, auto&& observer_vec) {
+            IOResult send(frame::fwriter& w, auto&& observer) {
                 saver.send_callback(this);
                 const auto locked = uni.lock();
-                auto res = send_stop_sending_unlocked(w, observer_vec);
+                auto res = send_stop_sending_unlocked(w, observer);
                 if (res == IOResult::fatal) {
                     return res;
                 }
-                return send_max_stream_data_unlocked(w, observer_vec);
+                return send_max_stream_data_unlocked(w, observer);
             }
 
             // for user operation
@@ -591,12 +591,12 @@ namespace utils {
 
             // returns (result,finished)
             // called by quic runtime
-            std::pair<IOResult, bool> send(frame::fwriter& w, auto&& observer_vec) {
-                auto res = receiver.send(w, observer_vec);
+            std::pair<IOResult, bool> send(frame::fwriter& w, auto&& observer) {
+                auto res = receiver.send(w, observer);
                 if (res == IOResult::fatal || res == IOResult::invalid_data) {
                     return {res, false};
                 }
-                return sender.send(w, observer_vec);
+                return sender.send(w, observer);
             }
 
             // do recv for each sender or receiver

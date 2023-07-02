@@ -7,15 +7,15 @@
 
 #pragma once
 #include "../types.h"
-#include "../../../io/reader.h"
-#include "../../../io/writer.h"
+#include "../../../binary/reader.h"
+#include "../../../binary/writer.h"
 
 namespace utils {
     namespace fnet::quic::packet {
 
         struct Packet {
             PacketFlags flags;  // only parse
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 if (r.empty()) {
                     return false;
                 }
@@ -24,7 +24,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool parse_check(io::reader& r, PacketType type) noexcept {
+            constexpr bool parse_check(binary::reader& r, PacketType type) noexcept {
                 if (!parse(r)) {
                     return false;
                 }
@@ -41,7 +41,7 @@ namespace utils {
                 return 1;
             }
 
-            constexpr bool render(io::writer& r) const noexcept {
+            constexpr bool render(binary::writer& r) const noexcept {
                 return r.write(flags.value, 1);
             }
 

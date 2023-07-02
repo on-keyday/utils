@@ -18,7 +18,7 @@ namespace utils {
                 return FrameType::NEW_TOKEN;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::NEW_TOKEN) &&
                        varint::read(r, token_length) &&
                        r.read(token, token_length);
@@ -30,7 +30,7 @@ namespace utils {
                        token.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, FrameType::NEW_TOKEN) &&
                        varint::write(w, token.size()) &&
                        w.write(token);

@@ -20,7 +20,7 @@ namespace utils {
             }
 
             // get_dstID_len is bool(io::reader b,size_t* len)
-            constexpr bool parse(io::reader& r, auto&& get_dstID_len) noexcept {
+            constexpr bool parse(binary::reader& r, auto&& get_dstID_len) noexcept {
                 size_t len = 0;
                 return Packet::parse_check(r, PacketType::OneRTT) &&
                        get_dstID_len(r.peeker(), &len) &&
@@ -35,7 +35,7 @@ namespace utils {
                 return len();
             }
 
-            constexpr bool render(io::writer& w, std::uint32_t version, byte pnlen, bool key, bool spin = false) const noexcept {
+            constexpr bool render(binary::writer& w, std::uint32_t version, byte pnlen, bool key, bool spin = false) const noexcept {
                 auto val = make_packet_flags(version, PacketType::OneRTT, pnlen, spin, key);
                 if (val.value == 0) {
                     return false;
@@ -65,7 +65,7 @@ namespace utils {
             view::rvec payload;
             view::rvec auth_tag;  // only parse
 
-            constexpr bool parse(io::reader& r, size_t tag_len, auto&& get_dstID_len) noexcept {
+            constexpr bool parse(binary::reader& r, size_t tag_len, auto&& get_dstID_len) noexcept {
                 return OneRTTPacketPartial::parse(r, get_dstID_len) &&
                        packetnum::read(r, wire_pn, flags.packet_number_length()) &&
                        r.read(payload, r.remain().size() - tag_len) &&
@@ -79,7 +79,7 @@ namespace utils {
                        (use_length_field ? auth_tag.size() : padding + auth_tag_len);
             }
 
-            constexpr bool render(io::writer& w, std::uint32_t version, packetnum::WireVal pn, bool key, size_t auth_tag_len, size_t padding = 0, bool spin = false) const noexcept {
+            constexpr bool render(binary::writer& w, std::uint32_t version, packetnum::WireVal pn, bool key, size_t auth_tag_len, size_t padding = 0, bool spin = false) const noexcept {
                 return OneRTTPacketPartial::render(w, version, pn.len, key, spin) &&
                        packetnum::write(w, pn) &&
                        w.write(0, padding) &&
@@ -87,13 +87,13 @@ namespace utils {
                        w.write(0, auth_tag_len);
             }
 
-            constexpr bool render_in_place(io::writer& w, std::uint32_t version, packetnum::WireVal pn, bool key, auto&& payload_render, size_t auth_tag_len, size_t padding = 0, bool spin = false) {
+            constexpr bool render_in_place(binary::writer& w, std::uint32_t version, packetnum::WireVal pn, bool key, auto&& payload_render, size_t auth_tag_len, size_t padding = 0, bool spin = false) {
                 auto check_write = [&] {
                     auto rem = w.remain();
                     if (rem.size() < auth_tag_len) {
                         return false;  // not enough buffer
                     }
-                    auto tmpw = io::writer(rem.substr(0, rem.size() - auth_tag_len));
+                    auto tmpw = binary::writer(rem.substr(0, rem.size() - auth_tag_len));
                     if (!payload_render(tmpw)) {
                         return false;
                     }
@@ -112,7 +112,7 @@ namespace utils {
             view::rvec protected_payload;
             view::rvec auth_tag;
 
-            constexpr bool parse(io::reader& r, size_t tag_len, auto&& get_dstID_len) noexcept {
+            constexpr bool parse(binary::reader& r, size_t tag_len, auto&& get_dstID_len) noexcept {
                 return OneRTTPacketPartial::parse(r, get_dstID_len) &&
                        r.read(protected_payload, r.remain().size() - tag_len) &&
                        r.read(auth_tag, tag_len);
@@ -135,12 +135,12 @@ namespace utils {
                 plain.dstID = id;
                 plain.payload = payload;
                 plain.auth_tag = tag;
-                io::writer w{data};
+                binary::writer w{data};
                 if (!plain.render(w, 1, {.value = 1, .len = 1}, false, 16)) {
                     return false;
                 }
-                io::reader r{w.written()};
-                if (!plain.parse(r, 16, [](io::reader, size_t* len) {
+                binary::reader r{w.written()};
+                if (!plain.parse(r, 16, [](binary::reader, size_t* len) {
                         *len = 4;
                         return true;
                     })) {
@@ -154,7 +154,7 @@ namespace utils {
                 }
                 r.reset();
                 OneRTTPacketCipher cipher;
-                if (!cipher.parse(r, 16, [](io::reader, size_t* len) {
+                if (!cipher.parse(r, 16, [](binary::reader, size_t* len) {
                         *len = 4;
                         return true;
                     })) {

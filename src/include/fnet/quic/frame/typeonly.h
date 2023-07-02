@@ -16,7 +16,7 @@ namespace utils {
                 return t;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return Frame::parse(r) && type.type_detail() == t;
             }
 
@@ -24,7 +24,7 @@ namespace utils {
                 return varint::min_len(std::uint64_t(t));
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return varint::write(w, varint::Value(std::uint64_t(t)));
             }
         };

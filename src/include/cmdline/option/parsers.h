@@ -23,21 +23,21 @@ namespace utils {
                 static bool parse(bool& val, CmdParseState& state, bool to_set, bool rough) {
                     auto set = [&] {
                         if (state.val) {
-                            if (helper::equal(state.val, "true")) {
+                            if (strutil::equal(state.val, "true")) {
                                 return 1;
                             }
-                            else if (helper::equal(state.val, "false")) {
+                            else if (strutil::equal(state.val, "false")) {
                                 return 0;
                             }
                             if (rough) {
-                                if (helper::equal(state.val, "true", helper::ignore_case()) ||
-                                    helper::equal(state.val, "T", helper::ignore_case()) ||
-                                    helper::equal(state.val, "on", helper::ignore_case())) {
+                                if (strutil::equal(state.val, "true", strutil::ignore_case()) ||
+                                    strutil::equal(state.val, "T", strutil::ignore_case()) ||
+                                    strutil::equal(state.val, "on", strutil::ignore_case())) {
                                     return 1;
                                 }
-                                if (helper::equal(state.val, "false", helper::ignore_case()) ||
-                                    helper::equal(state.val, "F", helper::ignore_case()) ||
-                                    helper::equal(state.val, "off", helper::ignore_case())) {
+                                if (strutil::equal(state.val, "false", strutil::ignore_case()) ||
+                                    strutil::equal(state.val, "F", strutil::ignore_case()) ||
+                                    strutil::equal(state.val, "off", strutil::ignore_case())) {
                                     return 0;
                                 }
                             }

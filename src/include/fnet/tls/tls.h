@@ -17,8 +17,7 @@
 #include <utility>
 #include <cstddef>
 #include <memory>
-#include "../../helper/strutil.h"
-#include "../../helper/equal.h"
+#include "../../strutil/equal.h"
 #include "../error.h"
 #include "../dll/dll_path.h"
 #include "config.h"
@@ -28,13 +27,6 @@ namespace utils {
     namespace fnet {
 
         namespace tls {
-
-            // OPENSSL verify mode. used by TLS.set_verify
-            constexpr auto SSL_VERIFY_NONE_ = 0x00;
-            constexpr auto SSL_VERIFY_PEER_ = 0x01;
-            constexpr auto SSL_VERIFY_FAIL_IF_NO_PEER_CERT_ = 0x02;
-            constexpr auto SSL_VERIFY_CLIENT_ONCE_ = 0x04;
-            constexpr auto SSL_VERIFY_POST_HANDSHAKE_ = 0x08;
 
             fnet_dll_export(bool) isTLSBlock(const error::Error& err);
 
@@ -70,7 +62,7 @@ namespace utils {
                     return opt != nullptr;
                 }
 
-                error::Error set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
+                error::Error set_verify(VerifyMode mode, int (*verify_callback)(int, void*) = nullptr);
                 error::Error set_client_cert_file(const char* cert);
                 error::Error set_cert_chain(const char* pubkey, const char* prvkey);
                 error::Error set_alpn(view::rvec alpn);
@@ -109,35 +101,25 @@ namespace utils {
 
                 bool has_ssl() const;
 
-                bool get_alpn(const char** selected, unsigned int* len);
-
-                const char* get_alpn(unsigned int* len = nullptr) {
-                    unsigned int l = 0;
-                    if (!len) {
-                        len = &l;
-                    }
-                    const char* sel = nullptr;
-                    get_alpn(&sel, len);
-                    return sel;
-                }
-
-                static void get_errors(int (*cb)(const char*, size_t, void*), void* user);
-
-                template <class Fn>
-                static void get_errors(Fn&& fn) {
-                    auto ptr = std::addressof(fn);
-                    get_errors(
-                        [](const char* msg, size_t len, void* p) -> int {
-                            return (*decltype(ptr)(p))(msg, len);
-                        },
-                        ptr);
-                }
+                view::rvec get_selected_alpn();
 
                 TLSCipher get_cipher();
 
-                bool set_session(Session&& sess);
+                bool set_session(const Session& sess);
                 Session get_session();
             };
+
+            void get_error_strings(int (*cb)(const char*, size_t, void*), void* user);
+
+            template <class Fn>
+            void get_error_strings(Fn&& fn) {
+                auto ptr = std::addressof(fn);
+                get_errors(
+                    [](const char* msg, size_t len, void* p) -> int {
+                        return (*decltype(ptr)(p))(msg, len);
+                    },
+                    ptr);
+            }
 
             fnet_dll_export(void) set_libssl(lazy::dll_path path);
             fnet_dll_export(void) set_libcrypto(lazy::dll_path path);

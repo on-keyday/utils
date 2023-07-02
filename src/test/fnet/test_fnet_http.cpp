@@ -10,8 +10,8 @@
 #include <testutil/timer.h>
 #include <wrap/cout.h>
 #include <vector>
-#include <net_util/uri_parse.h>
-#include <helper/equal.h>
+#include <fnet/util/uri.h>
+#include <strutil/equal.h>
 using namespace utils;
 /*
 template <size_t len>
@@ -31,10 +31,10 @@ void test_host(uri::URIFixed<char, len> uri) {
         }
     };
     const char* scheme = nullptr;
-    if (helper::equal(uri.scheme, "http:")) {
+    if (strutil::equal(uri.scheme, "http:")) {
         scheme = "http";
     }
-    else if (helper::equal(uri.scheme, "https:")) {
+    else if (strutil::equal(uri.scheme, "https:")) {
         scheme = "https";
     }
     assert(scheme);
@@ -43,7 +43,7 @@ void test_host(uri::URIFixed<char, len> uri) {
         port = uri.port.c_str();
     }
     else {
-        if (helper::equal(scheme, "http")) {
+        if (strutil::equal(scheme, "http")) {
             port = "80";
         }
         else {
@@ -101,22 +101,22 @@ void test_fnet_http() {
 void test_uri_parse() {
     constexpr auto test_parse1 = utils::uri::fixed("file:///C:/user/pc/workspace/yes.json");
     constexpr auto test_ok1 =
-        utils::helper::equal(test_parse1.scheme, "file:") &&
-        utils::helper::equal(test_parse1.authority, "") &&
-        utils::helper::equal(test_parse1.path, "/C:/user/pc/workspace/yes.json");
+        utils::strutil::equal(test_parse1.scheme, "file:") &&
+        utils::strutil::equal(test_parse1.authority, "") &&
+        utils::strutil::equal(test_parse1.path, "/C:/user/pc/workspace/yes.json");
     constexpr auto test_parse2 = utils::uri::fixed(u8"https://Go言語.com:443/man?q=fmt.Printf#");
     constexpr auto test_ok2 =
-        utils::helper::equal(test_parse2.scheme, "https:") &&
-        utils::helper::equal(test_parse2.authority, u8"Go言語.com:443") &&
-        utils::helper::equal(test_parse2.hostname, u8"Go言語.com") &&
-        utils::helper::equal(test_parse2.port, ":443") &&
-        utils::helper::equal(test_parse2.path, "/man") &&
-        utils::helper::equal(test_parse2.query, "?q=fmt.Printf") &&
-        utils::helper::equal(test_parse2.fragment, "#");
+        utils::strutil::equal(test_parse2.scheme, "https:") &&
+        utils::strutil::equal(test_parse2.authority, u8"Go言語.com:443") &&
+        utils::strutil::equal(test_parse2.hostname, u8"Go言語.com") &&
+        utils::strutil::equal(test_parse2.port, ":443") &&
+        utils::strutil::equal(test_parse2.path, "/man") &&
+        utils::strutil::equal(test_parse2.query, "?q=fmt.Printf") &&
+        utils::strutil::equal(test_parse2.fragment, "#");
     constexpr auto test_parse3 = utils::uri::fixed(R"a(javascript:alert("function"))a");
     constexpr auto test_ok3 =
-        utils::helper::equal(test_parse3.scheme, "javascript:") &&
-        utils::helper::equal(test_parse3.path, R"(alert("function"))");
+        utils::strutil::equal(test_parse3.scheme, "javascript:") &&
+        utils::strutil::equal(test_parse3.path, R"(alert("function"))");
     static_assert(test_ok1 && test_ok2 && test_ok3);
 }
 

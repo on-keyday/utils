@@ -47,7 +47,7 @@ namespace utils {
                     }
                     std::shared_ptr<MinNode> after, block;
                     if (not_must) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (seq.match("{")) {
                             goto BLOCK;
                         }
@@ -60,7 +60,7 @@ namespace utils {
                         return nullptr;
                     }
                 BLOCK:
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     if (!p.seq.match("{")) {
                         errc.say("expect ", word, " statement block begin { but not");
                         errc.trace(start, p.seq);
@@ -94,8 +94,8 @@ namespace utils {
                     std::shared_ptr<MinNode> after;
                     if (not_must) {
                         auto tmp = p.seq.rptr;
-                        space::consume_space(p.seq, false);
-                        if (space::parse_eol<false>(p.seq)) {
+                        strutil::consume_space(p.seq, false);
+                        if (strutil::parse_eol<false>(p.seq)) {
                             p.seq.rptr = tmp;
                             goto END;
                         }

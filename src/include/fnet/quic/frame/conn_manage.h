@@ -20,7 +20,7 @@ namespace utils {
                 return t;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, t) &&
                        varint::read(r, max_data);
             }
@@ -30,7 +30,7 @@ namespace utils {
                        varint::len(max_data);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, t) &&
                        varint::write(w, max_data);
             }
@@ -50,7 +50,7 @@ namespace utils {
                 return type.type_detail();  // not check anyway
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, t) &&
                        varint::read(r, max_streams);
             }
@@ -60,7 +60,7 @@ namespace utils {
                        varint::len(max_streams);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 if (type.type() != t) {
                     return false;
                 }
@@ -87,7 +87,7 @@ namespace utils {
                            : FrameType::CONNECTION_CLOSE;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::CONNECTION_CLOSE) &&
                        varint::read(r, error_code) &&
                        (type.type_detail() == FrameType::CONNECTION_CLOSE_APP ||
@@ -108,7 +108,7 @@ namespace utils {
                        reason_phrase.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, get_type()) &&
                        varint::write(w, error_code) &&
                        (type.type_detail() == FrameType::CONNECTION_CLOSE_APP ||

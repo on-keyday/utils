@@ -9,7 +9,7 @@
 #pragma once
 #include "token.h"
 #include "space.h"
-#include "../../helper/appender.h"
+#include "../../strutil/append.h"
 #include "tokendef.h"
 
 namespace utils {
@@ -33,7 +33,7 @@ namespace utils {
                 pass_log(src, "line_comment");
                 auto cm = std::make_shared<Comment>();
                 cm->detail = std::move(tok);
-                helper::appends(cm->token, begin, cm->detail, eol);
+                strutil::appends(cm->token, begin, cm->detail, eol);
                 cm->pos.begin = b;
                 cm->pos.end = src.seq.rptr;
                 cm->begin = begin;
@@ -63,7 +63,7 @@ namespace utils {
                             pass_log(src, "block_comment");
                             auto cm = std::make_shared<Comment>();
                             cm->detail = std::move(tok);
-                            helper::appends(cm->token, begin, cm->detail, end);
+                            strutil::appends(cm->token, begin, cm->detail, end);
                             cm->pos.begin = b;
                             cm->pos.end = src.seq.rptr;
                             cm->begin = begin;

@@ -23,7 +23,7 @@ namespace utils {
             PacketType type = PacketType::Unknown;
             packet::PacketStatus status;
             packetnum::Value packet_number;
-            ACKWaiters waiters;
+            std::weak_ptr<ACKLostRecord> waiter;
             std::uint64_t sent_bytes = 0;
             time::Time time_sent = time::invalid;
             packetnum::Value largest_ack = packetnum::infinity;

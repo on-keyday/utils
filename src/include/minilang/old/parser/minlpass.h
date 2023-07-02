@@ -103,7 +103,7 @@ namespace utils {
 
 #define MINL_BEGIN_AND_START(seq)            \
     const size_t begin = seq.rptr;           \
-    space::consume_space(seq, true); \
+    strutil::consume_space(seq, true); \
     const size_t start = seq.rptr
 
             struct NullErrC {

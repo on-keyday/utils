@@ -7,7 +7,7 @@
 
 #pragma once
 #include <cstdint>
-#include "../../io/number.h"
+#include "../../binary/number.h"
 
 namespace utils {
     namespace fnet::dns {
@@ -136,17 +136,17 @@ namespace utils {
             std::uint16_t authority_count = 0;        // only parse
             std::uint16_t additional_info_count = 0;  // only parse
 
-            constexpr bool parse(io::reader& r) noexcept {
-                return io::read_num(r, id) &&
-                       io::read_num(r, flag.flag) &&
-                       io::read_num(r, query_count) &&
-                       io::read_num(r, answer_count) &&
-                       io::read_num(r, authority_count) &&
-                       io::read_num(r, additional_info_count);
+            constexpr bool parse(binary::reader& r) noexcept {
+                return binary::read_num(r, id) &&
+                       binary::read_num(r, flag.flag) &&
+                       binary::read_num(r, query_count) &&
+                       binary::read_num(r, answer_count) &&
+                       binary::read_num(r, authority_count) &&
+                       binary::read_num(r, additional_info_count);
             }
 
             constexpr bool render(
-                io::writer& w,
+                binary::writer& w,
                 std::uint64_t query, std::uint64_t answer, std::uint64_t authority, std::uint64_t additional) const noexcept {
                 if (query > 0xffff ||
                     answer > 0xffff ||
@@ -154,12 +154,12 @@ namespace utils {
                     additional > 0xffff) {
                     return false;
                 }
-                return io::write_num(w, id) &&
-                       io::write_num(w, flag.flag) &&
-                       io::write_num(w, std::uint16_t(query)) &&
-                       io::write_num(w, std::uint16_t(answer)) &&
-                       io::write_num(w, std::uint16_t(authority)) &&
-                       io::write_num(w, std::uint16_t(additional));
+                return binary::write_num(w, id) &&
+                       binary::write_num(w, flag.flag) &&
+                       binary::write_num(w, std::uint16_t(query)) &&
+                       binary::write_num(w, std::uint16_t(answer)) &&
+                       binary::write_num(w, std::uint16_t(authority)) &&
+                       binary::write_num(w, std::uint16_t(additional));
             }
         };
 
@@ -225,7 +225,7 @@ namespace utils {
         // len - label len field
         // offset - compression offset
         // if offset is enable, len&0xC0 is true
-        constexpr bool read_label(io::reader& r, byte& len, view::rvec& label, std::uint16_t* offset) {
+        constexpr bool read_label(binary::reader& r, byte& len, view::rvec& label, std::uint16_t* offset) {
             if (r.empty()) {
                 return false;
             }
@@ -234,7 +234,7 @@ namespace utils {
                 if (!offset) {
                     return false;
                 }
-                if (!io::read_num(r, *offset)) {
+                if (!binary::read_num(r, *offset)) {
                     return false;
                 }
                 *offset &= 0x3FFF;
@@ -248,8 +248,8 @@ namespace utils {
         }
 
         // this not resove compressed labels
-        constexpr bool read_labels(io::reader& r, view::rvec& name, bool allow_compress) {
-            io::reader p{r.remain()};
+        constexpr bool read_labels(binary::reader& r, view::rvec& name, bool allow_compress) {
+            binary::reader p{r.remain()};
             while (true) {
                 byte len = 0;
                 std::uint16_t offset = 0;
@@ -267,13 +267,13 @@ namespace utils {
         }
 
         // not allow compressed
-        constexpr bool render_uri_labels(io::writer& w, view::rvec labels) {
+        constexpr bool render_uri_labels(binary::writer& w, view::rvec labels) {
             if (labels.size() > 253) {
                 return false;
             }
-            io::reader r{labels};
+            binary::reader r{labels};
             auto read_label = [&] {
-                io::reader p{r.remain()};
+                binary::reader p{r.remain()};
                 view::rvec data;
                 while (!p.empty()) {
                     if (p.top() == '.') {
@@ -310,7 +310,7 @@ namespace utils {
         struct Name {
             view::rvec name;
             bool is_raw_format = false;
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 if (!read_labels(r, name, true)) {
                     return false;
                 }
@@ -322,10 +322,10 @@ namespace utils {
                 return is_raw_format ? name.size() : name.size() + 2;
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 if (is_raw_format) {
                     // check
-                    io::reader r{name};
+                    binary::reader r{name};
                     view::rvec tmp;
                     if (!read_labels(r, tmp, true) || !r.empty()) {
                         return false;
@@ -343,16 +343,16 @@ namespace utils {
             RecordType type{};
             DNSClass dns_class = DNSClass::IN;
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return name.parse(r) &&
-                       io::read_num(r, type) &&
-                       io::read_num(r, dns_class);
+                       binary::read_num(r, type) &&
+                       binary::read_num(r, dns_class);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return name.render(w) &&
-                       io::write_num(w, type) &&
-                       io::write_num(w, dns_class);
+                       binary::write_num(w, type) &&
+                       binary::write_num(w, dns_class);
             }
         };
 
@@ -364,12 +364,12 @@ namespace utils {
             std::uint16_t data_len = 0;  // only parse
             view::rvec data;
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return name.parse(r) &&
-                       io::read_num(r, type) &&
-                       io::read_num(r, dns_class) &&
-                       io::read_num(r, ttl) &&
-                       io::read_num(r, data_len) &&
+                       binary::read_num(r, type) &&
+                       binary::read_num(r, dns_class) &&
+                       binary::read_num(r, ttl) &&
+                       binary::read_num(r, data_len) &&
                        r.read(data, data_len);
             }
 
@@ -377,15 +377,15 @@ namespace utils {
                 return name.len() + 2 + 2 + 4 + 2 + data.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 if (data.size() > 0xffff) {
                     return false;
                 }
                 return name.render(w) &&
-                       io::write_num(w, type) &&
-                       io::write_num(w, dns_class) &&
-                       io::write_num(w, ttl) &&
-                       io::write_num(w, std::uint16_t(data.size())) &&
+                       binary::write_num(w, type) &&
+                       binary::write_num(w, dns_class) &&
+                       binary::write_num(w, ttl) &&
+                       binary::write_num(w, std::uint16_t(data.size())) &&
                        w.write(data);
             }
         };
@@ -398,7 +398,7 @@ namespace utils {
             Vec<Record> authority;
             Vec<Record> additional;
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 if (!header.parse(r)) {
                     return false;
                 }
@@ -426,7 +426,7 @@ namespace utils {
                        each_record(header.additional_info_count, additional);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 if (!header.render(w, query.size(), answer.size(), authority.size(), additional.size())) {
                     return false;
                 }
@@ -459,7 +459,7 @@ namespace utils {
             }
             std::uint16_t total = 0;
             std::uint16_t offset = 0;
-            io::reader r{name.name};
+            binary::reader r{name.name};
             while (true) {
                 byte len = 0;
                 view::rvec label;

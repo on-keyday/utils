@@ -9,8 +9,8 @@
 #include "unicodedata.h"
 #include "../../core/sequencer.h"
 #include "../../number/parse.h"
-#include "../../space/eol.h"
-#include "../../helper/readutil.h"
+#include "../../strutil/eol.h"
+#include "../../strutil/readutil.h"
 
 namespace utils {
     namespace unicode::data::text {
@@ -47,7 +47,7 @@ namespace utils {
                 if (!seq.seek_if(";")) {
                     return ParseError::expect_semicolon;
                 }
-                if (!space::parse_eol<false>(seq)) {
+                if (!strutil::parse_eol<false>(seq)) {
                     if (!number::parse_integer(seq, ca.title, 16)) {
                         return ParseError::parse_hex;
                     }
@@ -63,7 +63,7 @@ namespace utils {
                 }
                 if (seq.match("<")) {
                     res.command.clear();
-                    if (!helper::read_until(res.command, seq, ">")) {
+                    if (!strutil::read_until(res.command, seq, ">")) {
                         return ParseError::unexpected_eof;
                     }
                     res.command.push_back('>');
@@ -149,7 +149,7 @@ namespace utils {
 
             template <class T>
             bool read_until_semicolon(Sequencer<T>& seq, auto& out) {
-                return helper::read_until(out, seq, ";");
+                return strutil::read_until(out, seq, ";");
             }
 
             template <class T, class String>
@@ -197,7 +197,7 @@ namespace utils {
                 if (auto err = parse_case(seq, info.casemap); err != ParseError::none) {
                     return err;
                 }
-                if (!space::parse_eol<true>(seq)) {
+                if (!strutil::parse_eol<true>(seq)) {
                     return ParseError::expect_eol;
                 }
                 data::internal::guess_east_asian_width(info);
@@ -222,8 +222,8 @@ namespace utils {
         namespace internal {
 
             bool skip_line(auto& seq) {
-                helper::read_whilef(helper::nop, seq, [](auto c) { return c != '\r' && c != '\n'; });
-                return space::parse_eol(seq);
+                strutil::read_whilef(helper::nop, seq, [](auto c) { return c != '\r' && c != '\n'; });
+                return strutil::parse_eol(seq);
             }
 
             ParseError read_range(std::uint32_t& begin, std::uint32_t& end, auto& seq, bool must) {
@@ -261,7 +261,7 @@ namespace utils {
                 if (!seq.seek_if("; ")) {
                     return ParseError::expect_semicolon;
                 }
-                if (!helper::read_whilef(block_name, seq, [](auto c) { return c != '\r' && c != '\n'; })) {
+                if (!strutil::read_whilef(block_name, seq, [](auto c) { return c != '\r' && c != '\n'; })) {
                     return ParseError::unexpected_eof;
                 }
                 if (!internal::skip_line(seq)) {
@@ -295,7 +295,7 @@ namespace utils {
                 if (!seq.seek_if(";")) {
                     return ParseError::expect_semicolon;
                 }
-                if (!helper::read_until(width, seq, " ")) {
+                if (!strutil::read_until(width, seq, " ")) {
                     return ParseError::unexpected_eof;
                 }
                 if (!internal::skip_line(seq)) {
@@ -325,11 +325,11 @@ namespace utils {
                 if (auto err = internal::read_range(begin, end, seq, false); err != ParseError::none) {
                     return err;
                 }
-                helper::read_until<false>(helper::nop, seq, ";");
+                strutil::read_until<false>(helper::nop, seq, ";");
                 if (!seq.seek_if("; ")) {
                     return ParseError::expect_semicolon;
                 }
-                if (!helper::read_whilef(emoji, seq, [](auto c) { return c != ' ' && c != '#'; })) {
+                if (!strutil::read_whilef(emoji, seq, [](auto c) { return c != ' ' && c != '#'; })) {
                     return ParseError::unexpected_eof;
                 }
                 if (!internal::skip_line(seq)) {

@@ -7,8 +7,8 @@
 
 // context - quic context suite
 #pragma once
-#include "../ack/sent_history.h"
 #include "../ack/recv_history_interface.h"
+#include "../ack/sent_history_interface.h"
 #include "../status/status.h"
 #include "../packet/creation.h"
 #include "../packet/parse.h"
@@ -57,8 +57,10 @@ namespace utils {
         constexpr auto err_handshake_timeout = error::Error("HANDSHAKE_TIMEOUT");
 
         // Context is QUIC connection context suite
-        // this handles single connection both client and server
-        // this has no interest in about ip address and port
+        // this class handles single connection both client and server
+        // this class has no interest in about ip address and port
+        // on client mode, this class has interest in Retry and 0-RTT tokens
+        // on server mode, token validations are out of scope
         template <class TConfig>
         struct Context {
             using UserDefinedTypesConfig = typename TConfig::user_defined_types_config;
@@ -70,13 +72,14 @@ namespace utils {
             using StreamTypeConfig = typename TConfig::stream_type_config;
             using ConnIDTypeConfig = typename TConfig::connid_type_config;
             using RecvPacketHistory = typename TConfig::recv_packet_history;
+            using SentPacketHistory = typename TConfig::sent_packet_history;
 
             // QUIC runtime handlers
             Version version = version_negotiation;
             status::Status<CongestionAlgorithm> status;
             trsparam::TransportParameters params;
             crypto::CryptoSuite crypto;
-            ack::SentPacketHistory ackh;
+            ack::SendHistoryInterface<SentPacketHistory> ackh;
             ack::RecvHistoryInterface<RecvPacketHistory> unacked;
             connid::IDManager<ConnIDTypeConfig> connIDs;
             token::RetryToken retry_token;
@@ -135,7 +138,7 @@ namespace utils {
                 if (data.null()) {
                     return true;  // nothing can do
                 }
-                io::reader r{data};
+                binary::reader r{data};
                 auto accepted = crypto.tls().get_early_data_accepted();
                 auto err = params.parse_peer(r, status.is_server(), accepted);
                 if (err) {
@@ -191,7 +194,7 @@ namespace utils {
 
             void reset_peer_transport_parameter() {
                 params.peer = {};
-                params.peer_box.boxing(params.peer);
+                params.peer_boxing();
             }
 
             // RFC9000 says:
@@ -208,7 +211,7 @@ namespace utils {
                 status.on_0RTT_transport_parameter(peer.max_idle_timeout);
                 datagrams->on_transport_parameter(peer.max_datagram_frame_size);
                 params.peer = trsparam::from_0RTT(peer);
-                params.peer_box.boxing(params.peer);
+                params.peer_boxing();
                 logger.debug("apply 0-RTT transport parameter");
             }
 
@@ -223,7 +226,7 @@ namespace utils {
 
             // write_frames calls each send() call of frame generator
             // this is used for normal packet writing
-            bool write_frames(packet::PacketSummary& summary, ack::ACKWaiters& waiters, frame::fwriter& fw) {
+            bool write_frames(packet::PacketSummary& summary, ack::ACKRecorder& waiters, frame::fwriter& fw) {
                 auto pn_space = status::from_packet_type(summary.type);
                 auto wrap_io = [&](IOResult res) {
                     set_quic_runtime_error(QUICError{
@@ -272,7 +275,7 @@ namespace utils {
             }
 
             // write_path_probe_frames writes PATH_CHALLANGE and set writing path
-            bool write_path_probe_frames(packet::PacketSummary& summary, ack::ACKWaiters& waiters, frame::fwriter& fw, bool should_be_non_probe) {
+            bool write_path_probe_frames(packet::PacketSummary& summary, ack::ACKRecorder& waiters, frame::fwriter& fw, bool should_be_non_probe) {
                 // TODO(on-keyday): can this write at 0-RTT?
                 if (summary.type != PacketType::OneRTT) {
                     return true;  // nothing to write
@@ -311,8 +314,8 @@ namespace utils {
 
             // render_payload_callback returns render_payload callback for packet::create_packet
             // this calls write_frame and add paddings for encryption
-            auto render_payload_callback(packet::PacketSummary& summary, ack::ACKWaiters& wait, bool& no_payload, packet::PacketStatus& pstatus, bool fill_all) {
-                return [&, fill_all](io::writer& w, packetnum::WireVal wire) {
+            auto render_payload_callback(packet::PacketSummary& summary, ack::ACKRecorder& wait, bool& no_payload, packet::PacketStatus& pstatus, bool fill_all) {
+                return [&, fill_all](binary::writer& w, packetnum::WireVal wire) {
                     const auto prev_offset = w.offset();
                     frame::fwriter fw{w};
                     if (!write_frames(summary, wait, fw)) {
@@ -337,26 +340,28 @@ namespace utils {
             }
 
             // save_sent_packet saves information about packet that has just sent
-            bool save_sent_packet(packet::PacketSummary summary, packet::PacketStatus pstatus, std::uint64_t sent_bytes, ack::ACKWaiters& waiters) {
+            bool save_sent_packet(packet::PacketSummary summary, packet::PacketStatus pstatus, std::uint64_t sent_bytes, ack::ACKRecorder& waiters) {
                 const auto pn_space = status::from_packet_type(summary.type);
                 ack::SentPacket sent;
                 sent.packet_number = summary.packet_number;
                 sent.type = summary.type;
                 sent.status = pstatus;
                 sent.sent_bytes = sent_bytes;
-                sent.waiters = std::move(waiters);
+                // sent.waiters = std::move(waiters);
+                sent.waiter = waiters.record();
                 sent.largest_ack = summary.largest_ack;
                 auto err = ackh.on_packet_sent(status, pn_space, std::move(sent));
                 if (err) {
                     set_quic_runtime_error(std::move(err));
-                    ack::mark_as_lost(sent.waiters);
+                    ack::mark_as_lost(sent.waiter);
                     return false;
                 }
                 crypto.on_packet_sent(summary.type, summary.packet_number);
                 return true;
             }
 
-            bool write_packet(io::writer& w, packet::PacketSummary summary, WriteFlag flags, ack::ACKWaiters& waiters) {
+            // waiters is needed for MTU Probe packet
+            bool write_packet(binary::writer& w, packet::PacketSummary summary, WriteFlag flags, ack::ACKRecorder& waiters) {
                 auto wmode = WriteFlag(std::uint32_t(flags) & std::uint32_t(WriteFlag::write_mode_mask));
                 auto set_error = [&](auto&& err) {
                     if (wmode == WriteFlag::conn_close) {
@@ -390,7 +395,8 @@ namespace utils {
                 bool no_payload = false;
                 packet::PacketStatus pstatus;
                 auto mark_lost = helper::defer([&] {
-                    ack::mark_as_lost(waiters);
+                    std::weak_ptr<ack::ACKLostRecord> r = waiters.get();
+                    ack::mark_as_lost(r);
                 });
 
                 // use copy
@@ -408,9 +414,9 @@ namespace utils {
                         std::tie(plain, rendered) = packet::create_packet(
                             copy, summary, largest_acked,
                             auth_tag_len,
-                            flags & WriteFlag::use_all_buffer, [&](io::writer& w, packetnum::WireVal wire) {
+                            flags & WriteFlag::use_all_buffer, [&](binary::writer& w, packetnum::WireVal wire) {
                                 frame::fwriter fw{w};
-                                if (!closer.send(fw)) {
+                                if (!closer.send(fw, summary.type)) {
                                     return false;
                                 }
                                 frame::add_padding_for_encryption(fw, wire, crypto::sample_skip_size);
@@ -423,7 +429,7 @@ namespace utils {
                     case WriteFlag::mtu_probe: {
                         std::tie(plain, rendered) = packet::create_packet(
                             copy, summary, largest_acked,
-                            auth_tag_len, true, [&](io::writer& w, packetnum::WireVal wire) {
+                            auth_tag_len, true, [&](binary::writer& w, packetnum::WireVal wire) {
                                 frame::fwriter fw{w};
                                 fw.write(frame::PingFrame{});
                                 pstatus = fw.status;
@@ -438,7 +444,7 @@ namespace utils {
                         std::tie(plain, rendered) = packet::create_packet(
                             copy, summary, largest_acked,
                             auth_tag_len, flags & WriteFlag::use_all_buffer,
-                            [&](io::writer& w, packetnum::WireVal wire) {
+                            [&](binary::writer& w, packetnum::WireVal wire) {
                                 frame::fwriter fw{w};
                                 if (!write_path_probe_frames(summary, waiters, fw, wmode == WriteFlag::path_probe)) {
                                     return false;
@@ -515,7 +521,7 @@ namespace utils {
             }
 
             // write_initial generates initial packet
-            bool write_initial(io::writer& w, WriteFlag mode, ack::ACKWaiters& waiters) {
+            bool write_initial(binary::writer& w, WriteFlag mode) {
                 packet::PacketSummary summary;
                 summary.type = PacketType::Initial;
                 summary.srcID = connIDs.pick_up_srcID();
@@ -531,7 +537,8 @@ namespace utils {
                         summary.token = ztoken.token;
                     }
                 }
-                if (!write_packet(w, summary, mode, waiters)) {
+                ack::ACKRecorder waiter;
+                if (!write_packet(w, summary, mode, waiter)) {
                     return false;
                 }
                 return true;
@@ -539,14 +546,15 @@ namespace utils {
 
             // write_handshake generates handshake packet
             // if succeeded, may drop initial key
-            bool write_handshake(io::writer& w, WriteFlag mode, ack::ACKWaiters& waiters) {
+            bool write_handshake(binary::writer& w, WriteFlag mode) {
                 packet::PacketSummary summary;
                 summary.type = PacketType::Handshake;
                 summary.srcID = connIDs.pick_up_srcID();
                 if (!pickup_dstID(summary.dstID)) {
                     return false;
                 }
-                if (!write_packet(w, summary, mode, waiters)) {
+                ack::ACKRecorder waiter;
+                if (!write_packet(w, summary, mode, waiter)) {
                     return false;
                 }
                 if (!status.is_server() && crypto.maybe_drop_initial()) {
@@ -558,20 +566,21 @@ namespace utils {
             }
 
             // write_onertt generates 1-RTT packet
-            bool write_onertt(io::writer& w, WriteFlag mode, ack::ACKWaiters& waiters) {
+            // waiter is used for MTU probe
+            bool write_onertt(binary::writer& w, WriteFlag mode, ack::ACKRecorder& waiter) {
                 packet::PacketSummary summary;
                 summary.type = PacketType::OneRTT;
                 if (!pickup_dstID(summary.dstID)) {
                     return false;
                 }
-                if (!write_packet(w, summary, mode, waiters)) {
+                if (!write_packet(w, summary, mode, waiter)) {
                     return false;
                 }
                 return true;
             }
 
             // write_zerortt generates 0-RTT packet
-            bool write_zerortt(io::writer& w, WriteFlag mode, ack::ACKWaiters& waiters) {
+            bool write_zerortt(binary::writer& w, WriteFlag mode) {
                 if (status.is_server()) {
                     return true;
                 }
@@ -581,18 +590,19 @@ namespace utils {
                 if (!pickup_dstID(summary.dstID)) {
                     return false;
                 }
-                if (!write_packet(w, summary, mode, waiters)) {
+                ack::ACKRecorder waiter;
+                if (!write_packet(w, summary, mode, waiter)) {
                     return false;
                 }
                 return true;
             }
 
-            io::writer prepare_writer(flex_storage* external_buffer, std::uint64_t bufsize) {
+            binary::writer prepare_writer(flex_storage* external_buffer, std::uint64_t bufsize) {
                 if (!external_buffer) {
                     external_buffer = &packet_creation_buffer;
                 }
                 external_buffer->resize(bufsize);
-                return io::writer{*external_buffer};
+                return binary::writer{*external_buffer};
             }
 
             std::pair<view::rvec, bool> create_encrypted_packet(bool on_close, flex_storage* external_buffer) {
@@ -607,10 +617,11 @@ namespace utils {
                                      status.can_send(status::PacketNumberSpace::handshake);
                 const bool has_onertt = crypto.write_installed(PacketType::OneRTT) &&
                                         status.can_send(status::PacketNumberSpace::application);
-                const bool has_zerortt = !status.is_server() &&
+                const bool has_zerortt = !status.is_server() &&  // client
                                          crypto.write_installed(PacketType::ZeroRTT) &&
                                          status.can_send(status::PacketNumberSpace::application) &&
-                                         !has_onertt;
+                                         !has_onertt &&
+                                         !on_close;  // cannot send CONNECTION_CLOSE
                 const auto to_mode = [&](bool b) {
                     if (on_close) {
                         return b ? WriteFlag::use_all_buffer | WriteFlag::conn_close : WriteFlag::conn_close;
@@ -620,14 +631,13 @@ namespace utils {
                     }
                 };
 
-                ack::ACKWaiters waiters;
                 if (has_initial) {
-                    if (!write_initial(w, to_mode(!has_handshake && !has_zerortt && !has_onertt), waiters)) {
+                    if (!write_initial(w, to_mode(!has_handshake && !has_zerortt && !has_onertt))) {
                         return {{}, false};
                     }
                 }
                 if (has_zerortt) {
-                    if (!write_zerortt(w, to_mode(!has_handshake), waiters)) {
+                    if (!write_zerortt(w, to_mode(!has_handshake))) {
                         return {{}, false};
                     }
                 }
@@ -636,12 +646,13 @@ namespace utils {
                     has_handshake = false;
                 }
                 if (has_handshake) {
-                    if (!write_handshake(w, to_mode(has_initial && !has_onertt), waiters)) {
+                    if (!write_handshake(w, to_mode(has_initial && !has_onertt))) {
                         return {{}, false};
                     }
                 }
                 if (has_onertt) {
-                    if (!write_onertt(w, to_mode(has_initial), waiters)) {
+                    ack::ACKRecorder waiter;
+                    if (!write_onertt(w, to_mode(has_initial), waiter)) {
                         return {{}, false};
                     }
                 }
@@ -668,8 +679,8 @@ namespace utils {
                 // we are willing to do DPLPMTUD with path probe
                 // but currently use fixed 1200 byte
                 auto w = prepare_writer(external_buffer, path::initial_udp_datagram_size);
-                ack::ACKWaiters waiters;
-                if (!write_onertt(w, WriteFlag::path_probe, waiters)) {
+                ack::ACKRecorder waiter;
+                if (!write_onertt(w, WriteFlag::path_probe, waiter)) {
                     return {{}, false};
                 }
                 logger.loss_timer_state(status.loss_timer(), status.now());
@@ -682,7 +693,7 @@ namespace utils {
                 if (!has_onertt) {
                     return {{}, true};  // nothing to do
                 }
-                ack::ACKWaiters waiter;
+                ack::ACKRecorder waiter;
                 auto [size, required] = mtu.probe_required(waiter);
                 if (!required) {
                     return {{}, true};  // nothing to do too
@@ -734,11 +745,14 @@ namespace utils {
                 return {packet, true};
             }
 
+            // set tranport parameter sets transport parameter to TLS layer
+            // client: before connection start
+            // server: on first initial packet received
             bool set_transport_parameter() {
                 // set transport parameter
                 packet_creation_buffer.resize(1200);
-                io::writer w{packet_creation_buffer};
-                if (!params.render_local(w, status.is_server())) {
+                binary::writer w{packet_creation_buffer};
+                if (!params.render_local(w, status.is_server(), status.has_sent_retry())) {
                     set_quic_runtime_error(error::Error("failed to render transport params"));
                     return false;
                 }
@@ -880,12 +894,24 @@ namespace utils {
                             return false;
                         }
                         if (status.is_server()) {
+                            byte dum = 0;
+                            view::rvec srcID{&dum, 0};
                             if (!connIDs.local_using_zero_length()) {
-                                if (!issue_seq0_connid()) {
+                                if (!issue_seq0_connid(&srcID)) {
                                     return false;
                                 }
                             }
                             logger.debug("save client connection ID");
+                            if (status.has_sent_retry()) {
+                                params.local.retry_src_connection_id = srcID;
+                            }
+                            else {
+                                params.local.initial_src_connection_id = srcID;
+                            }
+                            params.local_boxing();
+                            if (!set_transport_parameter()) {
+                                return false;  // failure
+                            }
                         }
                         else {
                             logger.debug("save server connection ID");
@@ -953,7 +979,7 @@ namespace utils {
                 if (!handle_on_initial(summary)) {
                     return false;
                 }
-                io::reader r{payload};
+                binary::reader r{payload};
                 packet::PacketStatus pstatus;
                 if (!frame::parse_frames<slib::vector>(r, [&](frame::Frame& f, bool err) {
                         if (err) {
@@ -1007,7 +1033,7 @@ namespace utils {
                 packet::RetryPseduoPacket pseduo;
                 pseduo.from_retry_packet(connIDs.get_initial(), retry);
                 packet_creation_buffer.resize(pseduo.len());
-                io::writer w{packet_creation_buffer};
+                binary::writer w{packet_creation_buffer};
                 if (!pseduo.render(w)) {
                     set_quic_runtime_error(error::Error("failed to render Retry packet. library bug!!"));
                     return false;
@@ -1029,7 +1055,7 @@ namespace utils {
                 return true;
             }
 
-            bool issue_seq0_connid() {
+            bool issue_seq0_connid(view::rvec* first = nullptr) {
                 auto [issued, err] = connIDs.issue(false);
                 if (err) {
                     set_quic_runtime_error(std::move(err));
@@ -1038,6 +1064,9 @@ namespace utils {
                 if (issued.seq != 0) {
                     set_quic_runtime_error(error::Error("failed to issue connection ID with sequence number 0. library bug!!"));
                     return false;
+                }
+                if (first) {
+                    *first = issued.id;
                 }
                 return true;
             }
@@ -1056,6 +1085,11 @@ namespace utils {
             // thread unsafe call
             bool handshake_complete() const {
                 return status.handshake_complete();
+            }
+
+            // thread unsafe call
+            bool handshake_confirmed() const {
+                return status.handshake_confirmed();
             }
 
             // thread safe call
@@ -1108,7 +1142,7 @@ namespace utils {
             }
 
             // thread unsafe call
-            bool init(Config&& config, UserDefinedTypesConfig&& udconfig = {}) {
+            bool init(const Config& config, UserDefinedTypesConfig&& udconfig = {}) {
                 // reset internal parameters
                 reset_internal();
                 closer.reset();
@@ -1149,20 +1183,20 @@ namespace utils {
 
                 // set transport parameters
                 params.local = std::move(config.transport_parameters);
-                params.local_box.boxing(params.local);
+                params.local_boxing();
                 // now if we are client, remaining peer transport parameter for 0-RTT
                 // will reset when connect_start
                 params.peer_checker = {};
                 if (config.server) {
                     params.peer = {};  // reset when server; no 0-RTT exists
                 }
-                params.peer_box.boxing(params.peer);
+                params.peer_boxing();
                 auto local = trsparam::to_initial_limits(params.local);
 
                 // create streams
                 streams = stream::impl::make_conn<StreamTypeConfig>(config.server
-                                                                        ? stream::Direction::server
-                                                                        : stream::Direction::client);
+                                                                        ? stream::Origin::server
+                                                                        : stream::Origin::client);
                 streams->apply_local_initial_limits(local);
 
                 // setup connection IDs manager
@@ -1171,7 +1205,7 @@ namespace utils {
 
                 // setup token storage
                 retry_token.reset();
-                zero_rtt_token.reset(std::move(config.zero_rtt));
+                zero_rtt_token.reset(config.zero_rtt);
 
                 // setup datagram handler
                 using DgramT = datagram::DatagramManager<Lock, DatagramDrop>;
@@ -1179,7 +1213,7 @@ namespace utils {
                 datagrams->reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
 
                 // setup path validation status
-                path_verifyer.reset(path::original_path);
+                path_verifyer.reset(config.path_parameters.original_path);
 
                 // finalize initialization
                 closed.store(close::CloseReason::not_closed);
@@ -1217,6 +1251,7 @@ namespace utils {
                     return false;
                 }
                 if (hostname) {
+                    // enable SNI
                     if (auto err = crypto.tls().set_hostname(hostname)) {
                         set_quic_runtime_error(std::move(err));
                         return false;
@@ -1237,7 +1272,10 @@ namespace utils {
             }
 
             // thread unsafe call
-            bool accept_start() {
+            // if before_retry_src_conn_id is not null, it is set to initial_src_connection_id
+            // and next initial packet's src connection id will be retry_src_connection_id
+            // otherwise next initial packet's src connection id will be initial_src_connection_id
+            bool accept_start(view::rvec original_dst_id, view::rvec before_retry_src_conn_id = {}) {
                 if (status.handshake_started()) {
                     return false;
                 }
@@ -1245,11 +1283,14 @@ namespace utils {
                     return false;
                 }
                 status.on_handshake_start();
-                auto err = crypto.tls().accept();
-                if (!tls::isTLSBlock(err)) {
-                    set_quic_runtime_error(std::move(err));
-                    return false;
+                params.local.original_dst_connection_id = original_dst_id;
+                if (!before_retry_src_conn_id.null()) {
+                    params.local.initial_src_connection_id = before_retry_src_conn_id;
+                    status.set_retry_sent();
                 }
+                params.local_boxing();
+                // needless to call tls.accept here
+                // because no handshake data is available here
                 return true;
             }
 
@@ -1361,6 +1402,7 @@ namespace utils {
             bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
                 const auto l = close_lock();
                 connIDs.expose_close_ids(ids);
+                ctx.active_path = path_verifyer.get_writing_path();
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
                         return false;
@@ -1396,6 +1438,11 @@ namespace utils {
                        // see also https://datatracker.ietf.org/doc/html/rfc9000#name-connection-migration
                        status.handshake_confirmed() &&
                        !params.peer.disable_active_migration;
+            }
+
+            // thread unsafe call
+            view::rvec get_selected_alpn() {
+                return crypto.tls().get_selected_alpn();
             }
         };
     }  // namespace fnet::quic::context

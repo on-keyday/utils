@@ -1,0 +1,7 @@
+if 0==0 {
+    __builtin_print(1)
+    return 0
+} else {
+    __builtin_print(0)
+    return 1
+}

@@ -156,7 +156,7 @@ namespace utils {
                 auto find(auto&& name) {
                     sort_result();
                     auto check = [&](auto&& v) {
-                        return helper::equal(v.desc->mainname, name);
+                        return strutil::equal(v.desc->mainname, name);
                     };
                     auto begiter = std::find_if(result.begin(), result.end(), check);
                     if (begiter == result.end()) {

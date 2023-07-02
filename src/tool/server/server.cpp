@@ -20,9 +20,11 @@
 
 struct Flags : utils::cmdline::templ::HelpOption {
     std::string port = "8091";
+    bool quic = false;
     void bind(utils::cmdline::option::Context& ctx) {
         bind_help(ctx);
         ctx.VarString(&port, "port", "port number (default:8091)", "PORT");
+        ctx.VarBool(&quic, "quic", "enable quic server");
     }
 };
 namespace serv = utils::fnet::server;
@@ -73,7 +75,12 @@ void server_entry(void* p, serv::Client&& cl, serv::StateContext ctx) {
     serv::http_handler(p, std::move(cl), ctx);
 }
 
+int quic_server();
+
 int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
+    if (flag.quic) {
+        return quic_server();
+    }
     serv::HTTPServ serv;
     serv.next = http_serve;
     auto s = std::make_shared<serv::State>(&serv, server_entry);

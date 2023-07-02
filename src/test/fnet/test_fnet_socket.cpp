@@ -10,7 +10,7 @@
 #include <fnet/addrinfo.h>
 #include <cassert>
 #include <string>
-#include <net_util/http/http_headers.h>
+#include <fnet/util/http/http_headers.h>
 #include <map>
 
 using namespace utils;

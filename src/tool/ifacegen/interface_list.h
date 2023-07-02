@@ -8,8 +8,8 @@
 
 #pragma once
 #include "../../include/wrap/light/lite.h"
-#include <deprecated/syntax/make_parser/keyword.h>
-#include <deprecated/syntax/matching/matching.h>
+// #include <deprecated/syntax/make_parser/keyword.h>
+// #include <deprecated/syntax/matching/matching.h>
 
 namespace ifacegen {
     namespace utw = utils::wrap;
@@ -107,6 +107,6 @@ namespace ifacegen {
 
     DEFINE_ENUM_FLAGOP(GenFlag)
 
-    bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
+    // bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
     bool generate(FileData& data, utw::string& str, Language lang, GenFlag flag);
 }  // namespace ifacegen

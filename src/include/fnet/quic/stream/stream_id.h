@@ -11,7 +11,7 @@
 namespace utils {
     namespace fnet::quic::stream {
         // initiated by
-        enum class Direction {
+        enum class Origin {
             client,
             server,
             unknown,
@@ -23,25 +23,25 @@ namespace utils {
             unknown,
         };
 
-        constexpr size_t dir_to_mask(Direction dir) {
+        constexpr size_t dir_to_mask(Origin dir) {
             switch (dir) {
-                case Direction::client:
+                case Origin::client:
                     return 0x0;
-                case Direction::server:
+                case Origin::server:
                     return 0x1;
                 default:
                     return ~0;
             }
         }
 
-        constexpr Direction inverse(Direction dir) {
+        constexpr Origin inverse(Origin dir) {
             switch (dir) {
-                case Direction::client:
-                    return Direction::server;
-                case Direction::server:
-                    return Direction::client;
+                case Origin::client:
+                    return Origin::server;
+                case Origin::server:
+                    return Origin::client;
                 default:
-                    return Direction::unknown;
+                    return Origin::unknown;
             }
         }
 
@@ -91,20 +91,20 @@ namespace utils {
                 }
             }
 
-            constexpr Direction dir() const {
+            constexpr Origin dir() const {
                 if (!valid()) {
-                    return Direction::unknown;
+                    return Origin::unknown;
                 }
                 if (id & 0x1) {
-                    return Direction::server;
+                    return Origin::server;
                 }
                 else {
-                    return Direction::client;
+                    return Origin::client;
                 }
             }
         };
 
-        constexpr StreamID make_id(std::uint64_t seq, Direction dir, StreamType type) noexcept {
+        constexpr StreamID make_id(std::uint64_t seq, Origin dir, StreamType type) noexcept {
             return (seq << 2) | type_to_mask(type) | dir_to_mask(dir);
         }
 

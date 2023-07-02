@@ -48,31 +48,11 @@ namespace utils {
             }
         };
 
-        // TODO(on-keyday): memory pool?
-        inline void put_ack_wait(std::shared_ptr<ACKLostRecord>&& discard) {
-            auto _ = std::move(discard);
-        }
-
         inline std::shared_ptr<ACKLostRecord> make_ack_wait() {
             return std::allocate_shared<ACKLostRecord>(glheap_allocator<ACKLostRecord>{});
         }
 
-        void mark_as_lost(auto&& vec) {
-            for (std::weak_ptr<ACKLostRecord>& w : vec) {
-                if (auto got = w.lock()) {
-                    got->lost();
-                }
-            }
-        }
-
-        void mark_as_ack(auto&& vec) {
-            for (std::weak_ptr<ACKLostRecord>& w : vec) {
-                if (auto got = w.lock()) {
-                    got->ack();
-                }
-            }
-        }
-
+        /*
         struct ACKCollector {
            private:
             void* p = nullptr;
@@ -91,5 +71,42 @@ namespace utils {
                 pb(p, std::forward<decltype(b)>(b));
             }
         };
+        */
+
+        struct ACKRecorder {
+           private:
+            std::shared_ptr<ACKLostRecord> rec;
+
+           public:
+            constexpr ACKRecorder() = default;
+
+            std::shared_ptr<ACKLostRecord> record() {
+                if (!rec) {
+                    rec = ack::make_ack_wait();
+                }
+                return rec;
+            }
+
+            std::shared_ptr<ACKLostRecord> get() const {
+                return rec;
+            }
+        };
+
+        void mark_as_lost(auto&& vec) {
+            std::shared_ptr<ACKLostRecord> r = vec.lock();
+            if (!r) {
+                return;  // nothing to do
+            }
+            r->lost();
+        }
+
+        void mark_as_ack(auto&& vec) {
+            std::shared_ptr<ACKLostRecord> r = vec.lock();
+            if (!r) {
+                return;  // nothing to do
+            }
+            r->ack();
+        }
+
     }  // namespace fnet::quic::ack
 }  // namespace utils

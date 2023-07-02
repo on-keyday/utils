@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include "../../io/number.h"
+#include "../../binary/number.h"
 
 namespace utils {
     namespace fnet::quic::packetnum {
@@ -107,16 +107,16 @@ namespace utils {
             return {{}, false};
         }
 
-        constexpr bool write(io::writer& w, const WireVal& value) noexcept {
+        constexpr bool write(binary::writer& w, const WireVal& value) noexcept {
             if (!is_wire_len(value.len)) {
                 return false;
             }
-            endian::Buf<std::uint32_t> data;
+            binary::Buf<std::uint32_t> data;
             data.write_be(value.value);
             return w.write(view::rvec(data.data + 4 - value.len, value.len));
         }
 
-        constexpr bool read(io::reader& r, std::uint32_t& value, byte len) noexcept {
+        constexpr bool read(binary::reader& r, std::uint32_t& value, byte len) noexcept {
             if (!is_wire_len(len)) {
                 return false;
             }
@@ -124,7 +124,7 @@ namespace utils {
             if (!ok) {
                 return false;
             }
-            endian::Buf<std::uint32_t> data{};
+            binary::Buf<std::uint32_t> data{};
             for (size_t i = 0; i < len; i++) {
                 data[4 - len + i] = buf[i];
             }
@@ -132,7 +132,7 @@ namespace utils {
             return true;
         }
 
-        constexpr std::pair<WireVal, bool> read(io::reader& r, byte len) noexcept {
+        constexpr std::pair<WireVal, bool> read(binary::reader& r, byte len) noexcept {
             std::uint32_t value;
             if (!read(r, value, len)) {
                 return {{}, false};
@@ -149,11 +149,11 @@ namespace utils {
                     return false;
                 }
                 byte data[100];
-                io::writer w{data};
+                binary::writer w{data};
                 if (!write(w, wire)) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 std::uint32_t value;
                 if (!read(r, value, wire.len)) {
                     return false;

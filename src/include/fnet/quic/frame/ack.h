@@ -46,7 +46,7 @@ namespace utils {
                            : FrameType::ACK;
             }
 
-            constexpr bool parse_ack_ranges(io::reader& r) {
+            constexpr bool parse_ack_ranges(binary::reader& r) {
                 ack_ranges.clear();
                 for (size_t i = 0; i < ack_range_count; i++) {
                     WireACKRange range;
@@ -59,7 +59,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool parse_ecn_counts(io::reader& r) noexcept {
+            constexpr bool parse_ecn_counts(binary::reader& r) noexcept {
                 if (type.type_detail() != FrameType::ACK_ECN) {
                     return true;
                 }
@@ -68,7 +68,7 @@ namespace utils {
                        varint::read(r, ecn_counts.ect1);
             }
 
-            constexpr bool parse(io::reader& r) {
+            constexpr bool parse(binary::reader& r) {
                 return parse_check(r, FrameType::ACK) &&
                        varint::read(r, largest_ack) &&
                        varint::read(r, ack_delay) &&
@@ -106,7 +106,7 @@ namespace utils {
                        ecn_counts_len();
             }
 
-            constexpr bool render_ack_range(io::writer& w) const noexcept {
+            constexpr bool render_ack_range(binary::writer& w) const noexcept {
                 if (ack_ranges.size() != ack_range_count.value) {
                     return false;
                 }
@@ -119,7 +119,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool render_ecn_counts(io::writer& w) const noexcept {
+            constexpr bool render_ecn_counts(binary::writer& w) const noexcept {
                 if (type.type_detail() != FrameType::ACK_ECN) {
                     return true;
                 }
@@ -128,7 +128,7 @@ namespace utils {
                        varint::write(w, ecn_counts.ect1);
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, get_type()) &&
                        varint::write(w, largest_ack) &&
                        varint::write(w, ack_delay) &&
@@ -164,7 +164,7 @@ namespace utils {
         }
 
         // render ack directly from ACKRange
-        constexpr bool render_ack_direct(io::writer& w, auto&& ranges, std::uint64_t ack_delay, ECNCounts ecn = {}) {
+        constexpr bool render_ack_direct(binary::writer& w, auto&& ranges, std::uint64_t ack_delay, ECNCounts ecn = {}) {
             if (!is_sorted_ack_ranges(ranges)) {
                 return false;
             }

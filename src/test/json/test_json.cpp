@@ -34,7 +34,7 @@ void test_json() {
         json);
     json["handle"] = 0;
     utils::wrap::string v;
-    auto w = utils::helper::make_indent_writer(v, "    ");
+    auto w = utils::code::make_indent_writer(v, "    ");
     using namespace utils;
     json::to_string(json, w);
     auto& cout = utils::wrap::cout_wrap();

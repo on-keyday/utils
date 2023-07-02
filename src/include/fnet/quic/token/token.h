@@ -40,7 +40,7 @@ namespace utils {
         struct ZeroRTTStorage {
             std::shared_ptr<void> obj;
             TokenStorage (*find_token)(void*, view::rvec key) = nullptr;
-            void (*store_token)(void*, view::rvec key, Token token)=nullptr;
+            void (*store_token)(void*, view::rvec key, Token token) = nullptr;
 
             void store(view::rvec key, Token token) const {
                 if (store_token != nullptr) {
@@ -63,8 +63,8 @@ namespace utils {
             storage found_cache;
 
            public:
-            void reset(ZeroRTTStorage&& in) {
-                importer = std::move(in);
+            void reset(const ZeroRTTStorage& in) {
+                importer = in;
                 found_cache = {};
             }
 

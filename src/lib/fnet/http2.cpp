@@ -7,7 +7,7 @@
 
 #include <fnet/dll/dllcpp.h>
 #include <fnet/http2/http2.h>
-#include <helper/appender.h>
+#include <strutil/append.h>
 #include <view/charvec.h>
 #include <helper/pushbacker.h>
 #include <helper/strutil.h>
@@ -15,7 +15,7 @@
 #include <fnet/dll/glheap.h>
 #include <fnet/http2/h2frame.h>
 #include <fnet/http2/h2state.h>
-#include <net_util/hpack/hpack.h>
+#include <fnet/util/hpack/hpack.h>
 #include <functional>
 #include <string_view>
 #include <optional>
@@ -51,7 +51,7 @@ namespace utils {
         };
 
         struct Stream {
-            stream::StreamNumState state;
+            stream::StreamState state;
             frame::Priority prio;
             flex_storage data_buf;
             flex_storage header_buf;
@@ -113,7 +113,7 @@ namespace utils {
 
         bool HTTP2::provide_http2_data(const void* data, size_t size) {
             return check_opt(opt, err, [&](HTTP2Connection* s) {
-                helper::append(s->input, view::CharVec(static_cast<const char*>(data), size));
+                strutil::append(s->input, view::CharVec(static_cast<const char*>(data), size));
                 return true;
             });
         }
@@ -125,7 +125,7 @@ namespace utils {
                     return false;
                 }
                 auto pb = helper::CharVecPushbacker(static_cast<char*>(data), size);
-                helper::append(pb, s->output);
+                strutil::append(pb, s->output);
                 s->output.shift_front(pb.size_);
                 *red = pb.size();
                 return true;
@@ -156,7 +156,7 @@ namespace utils {
                 auto settings = h2set::Vec(buf, sizeof(buf));
                 auto res = h2set::write_predefined_settings(settings, s->conn.state.send.settings, false);
                 assert(res);
-                helper::append(sets, settings);
+                strutil::append(sets, settings);
             }
             frame::SettingsFrame f;
             f.id = 0;
@@ -169,7 +169,7 @@ namespace utils {
         bool idle_to_open(HTTP2Connection* s) {
             if (state(s) == stream::State::idle) {
                 if (!s->conn.state.is_server) {
-                    helper::append(s->output, view::rvec(http2_connection_preface));
+                    strutil::append(s->output, view::rvec(http2_connection_preface));
                 }
                 if (!enque_settings(s)) {
                     state(s) = stream::State::closed;
@@ -315,16 +315,16 @@ namespace utils {
             using t = frame::FrameType;
             if (f->type == t::data) {
                 auto d = static_cast<frame::DataFrame*>(f);
-                helper::append(strm.data_buf, d->data);
+                strutil::append(strm.data_buf, d->data);
             }
             if (f->type == t::header || f->type == t::continuous) {
                 if (f->type == t::header) {
                     auto h = static_cast<frame::HeaderFrame*>(f);
-                    helper::append(strm.header_buf, h->data);
+                    strutil::append(strm.header_buf, h->data);
                 }
                 else {
                     auto h = static_cast<frame::ContinuationFrame*>(f);
-                    helper::append(strm.header_buf, h->data);
+                    strutil::append(strm.header_buf, h->data);
                 }
                 if (f->flag & frame::Flag::end_headers) {
                     s->hpkerr = hpack::decode(strm.header_buf, s->conn.recv.table, strm.header, s->conn.state.recv.settings.header_table_size);

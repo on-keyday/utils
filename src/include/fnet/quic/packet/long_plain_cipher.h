@@ -20,7 +20,7 @@ namespace utils {
             view::rvec payload;
             view::rvec auth_tag;  // only parse
 
-            constexpr bool parse(io::reader& r, size_t tag_len) noexcept {
+            constexpr bool parse(binary::reader& r, size_t tag_len) noexcept {
                 return Partial::parse(r) &&
                        packetnum::read(r, wire_pn, this->flags.packet_number_length()) &&
                        r.read(payload, this->length.value - this->flags.packet_number_length() - tag_len) &&
@@ -43,7 +43,7 @@ namespace utils {
                        (use_length_field ? auth_tag.size() : padding + auth_tag_len);
             }
 
-            constexpr bool render(io::writer& w, packetnum::WireVal pn, size_t auth_tag_len, size_t padding = 0) const noexcept {
+            constexpr bool render(binary::writer& w, packetnum::WireVal pn, size_t auth_tag_len, size_t padding = 0) const noexcept {
                 return Partial::render(w, pn.len) &&
                        varint::write(w, pn.len + payload.size() + padding + auth_tag_len) &&
                        packetnum::write(w, pn) &&
@@ -52,7 +52,7 @@ namespace utils {
                        w.write(0, auth_tag_len);
             }
 
-            constexpr bool render_in_place(io::writer& w, packetnum::WireVal pn, auto&& payload_render, size_t auth_tag_len, size_t padding = 0) {
+            constexpr bool render_in_place(binary::writer& w, packetnum::WireVal pn, auto&& payload_render, size_t auth_tag_len, size_t padding = 0) {
                 auto write_length_pn_payload_tag = [&] {
                     auto rem = w.remain();
                     const auto min_ = varint::len(pn.len + padding + auth_tag_len);
@@ -65,7 +65,7 @@ namespace utils {
                         return false;
                     }
                     const auto usable = rem.size() - reserved;
-                    auto tmpw = io::writer(rem.substr(reserved, usable));
+                    auto tmpw = binary::writer(rem.substr(reserved, usable));
                     if (!payload_render(tmpw)) {
                         return false;
                     }
@@ -111,7 +111,7 @@ namespace utils {
         struct LongPacketCipherBase : Partial {
             view::rvec protected_payload;
             view::rvec auth_tag;
-            constexpr bool parse(io::reader& r, size_t tag_len) noexcept {
+            constexpr bool parse(binary::reader& r, size_t tag_len) noexcept {
                 return Partial::parse(r) &&
                        r.read(protected_payload, this->length.value - tag_len) &&
                        r.read(auth_tag, tag_len);

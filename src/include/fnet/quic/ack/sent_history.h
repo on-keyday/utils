@@ -11,7 +11,6 @@
 #include "../../dll/allocator.h"
 #include "../frame/ack.h"
 #include "../transport_error.h"
-#include "../../../helper/condincr.h"
 #include "../../error.h"
 #include "../../std/hash_map.h"
 #include "../hash_fn.h"
@@ -80,7 +79,7 @@ namespace utils {
                                 };
                                 return false;
                             }
-                            mark_as_lost(sent.waiters);
+                            mark_as_lost(sent.waiter);
                             if (rem) {
                                 rem->push_back(std::move(sent));
                             }
@@ -132,7 +131,7 @@ namespace utils {
                     return then([&](auto&& apply_ack) {
                         for (auto& r : acked) {
                             apply_ack(r.sent_bytes, r.time_sent, r.status);
-                            mark_as_ack(r.waiters);
+                            mark_as_ack(r.waiter);
                         }
                     });
                 };
@@ -180,7 +179,7 @@ namespace utils {
                 status.on_packet_number_space_discard(space, [&](auto& apply_remove) {
                     for (auto& r : sent_packets[space_to_index(space)]) {
                         apply_remove(r.second.sent_bytes, r.second.status);
-                        mark_as_lost(r.second.waiters);
+                        mark_as_lost(r.second.waiter);
                     }
                     sent_packets[space_to_index(space)].clear();
                 });
@@ -195,12 +194,12 @@ namespace utils {
                             continue;
                         }
                         apply_remove(r.second.time_sent);
-                        mark_as_lost(r.second.waiters);
+                        mark_as_lost(r.second.waiter);
                     }
                     initial.clear();
                     auto& app = sent_packets[space_to_index(status::PacketNumberSpace::application)];
                     for (auto& r : app) {
-                        mark_as_lost(r.second.waiters);
+                        mark_as_lost(r.second.waiter);
                     }
                     app.clear();
                 });

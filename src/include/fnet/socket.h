@@ -74,6 +74,24 @@ namespace utils {
             constexpr void operator()(auto&&...) {}
         };
 
+        enum class ShutdownMode {
+            send,
+            recv,
+            both,
+        };
+
+        struct SetDFError {
+            error::Error errv4;
+            error::Error errv6;
+
+            constexpr void error(auto&& pb) {
+                strutil::append(pb, "set DF error: ipv4=");
+                errv4.error(pb);
+                strutil::append(pb, " ipv6=");
+                errv6.error(pb);
+            }
+        };
+
         // Socket is wrappper class of native socket
         struct fnet_class_export Socket {
            private:
@@ -116,7 +134,7 @@ namespace utils {
 
             error::Error connect(const NetAddrPort& addr);
 
-            error::Error shutdown(int mode = 2 /*= both*/);
+            error::Error shutdown(ShutdownMode mode = ShutdownMode::both);
 
             // I/O methods
 
@@ -210,6 +228,10 @@ namespace utils {
             // user on linux platform has to use set_mtu_discover(MTUConfig::enable_mtu) instead
             error::Error set_dontfragment(bool df);
             error::Error set_dontfragment_v6(bool df);
+
+            // set_DF is commonly used to set IP layer Dont Fragment flag
+            // this choose best way to set DF flag in each platform
+            error::Error set_DF(bool df);
 
             // set_blocking calls ioctl(FIONBIO)
             [[deprecated]] void set_blocking(bool blocking);

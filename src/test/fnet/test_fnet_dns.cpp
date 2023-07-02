@@ -10,7 +10,7 @@
 #include <fnet/socket.h>
 #include <fnet/addrinfo.h>
 #include <fnet/dns/records.h>
-#include <io/expandable_writer.h>
+#include <binary/expandable_writer.h>
 #include <vector>
 #include <string>
 using namespace utils;
@@ -40,10 +40,10 @@ int main() {
     edns.pack(rec);
     msg.additional.push_back(std::move(rec));
     byte buf[1200]{};
-    io::writer w{buf};
+    binary::writer w{buf};
     auto res = msg.render(w);
     assert(res);
-    io::reader r{w.written()};
+    binary::reader r{w.written()};
     res = msg.parse(r);
     assert(res);
     auto [_, e] = sock.writeto(addr, w.written());

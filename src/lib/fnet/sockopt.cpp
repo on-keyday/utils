@@ -200,5 +200,22 @@ namespace utils {
             return {attr, error::none};
 #endif
         }
+
+        error::Error Socket::set_DF(bool df) {
+#ifdef _WIN32
+            auto errv4 = set_dontfragment_v6(df);
+            auto errv6 = set_dontfragment(df);
+#else
+            auto errv4 = set_mtu_discover(df);
+            auto errv6 = set_mtu_discover_v6(df);
+#endif
+            if (errv4 || errv6) {
+                if (errv4 && errv6) {
+                    return SetDFError{std::move(errv4), std::move(errv6)};
+                }
+                return errv4 ? errv4 : errv6;
+            }
+            return error::none;
+        }
     }  // namespace fnet
 }  // namespace utils

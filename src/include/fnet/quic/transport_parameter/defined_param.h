@@ -11,7 +11,7 @@
 #include "../../std/array.h"
 #include "../../../view/iovec.h"
 #include "../varint.h"
-#include "../../../io/number.h"
+#include "../../../binary/number.h"
 #include "../../storage.h"
 #include "defined_id.h"
 #include "transport_param.h"
@@ -189,7 +189,7 @@ namespace utils {
                 VLINT(max_ack_delay);
                 BOOL(disable_active_migration)
                 auto addr = make_([&](PreferredAddress& id) {
-                    io::reader r{param.data.bytes()};
+                    binary::reader r{param.data.bytes()};
                     if (!id.parse(r) || !r.empty()) {
                         return false;
                     }
@@ -244,9 +244,9 @@ namespace utils {
                 MAKE(max_ack_delay);
                 BOOL(disable_active_migration);
                 enough_to_store_preferred_address tmp;
-                io::writer tmpw{tmp};
+                binary::writer tmpw{tmp};
                 preferred_address.render(tmpw);
-                if (!visit(index, make_transport_param(DefinedID::preferred_address, view::rvec{tmpw.written()}), true)) {
+                if (!visit(index, make_transport_param(DefinedID::preferred_address, view::rvec{tmpw.written()}), !preferred_address.connectionID.null())) {
                     return false;
                 }
                 index++;
@@ -283,7 +283,7 @@ namespace utils {
                 return params;
             }
 
-            constexpr bool render(io::writer& w, auto&& should_render) const {
+            constexpr bool render(binary::writer& w, auto&& should_render) const {
                 return visit_each_param([&](int, TransportParameter param, bool exists) {
                     if (exists && should_render(std::as_const(param))) {
                         return param.render(w);
@@ -351,7 +351,7 @@ namespace utils {
             return TransportParamError::none;
         }
 
-        constexpr bool write_session_ticket_format(io::writer& w, const DefinedTransportParams& params) {
+        constexpr bool write_session_ticket_format(binary::writer& w, const DefinedTransportParams& params) {
             auto mk = [&](DefinedID id, std::uint64_t val) {
                 return make_transport_param(id, val).render(w);
             };
@@ -366,7 +366,7 @@ namespace utils {
 #undef MK
         }
 
-        constexpr bool read_session_ticket_format(io::reader& w, DefinedTransportParams& params) {
+        constexpr bool read_session_ticket_format(binary::reader& w, DefinedTransportParams& params) {
             auto mk = [&](DefinedID id, std::uint64_t& val) {
                 TransportParameter param;
                 if (!param.parse(w)) {

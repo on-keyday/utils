@@ -21,7 +21,7 @@ namespace utils {
                 return type;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, type) &&
                        varint::read(r, length);
             }
@@ -31,7 +31,7 @@ namespace utils {
                        (use_length_field ? varint::len(length) : 0);
             }
 
-            constexpr bool render(io::writer& w, byte pnlen) const noexcept {
+            constexpr bool render(binary::writer& w, byte pnlen) const noexcept {
                 return render_with_pnlen(w, type, pnlen);
                 // length field will be written by derived class
             }
@@ -68,11 +68,11 @@ namespace utils {
                 plain.dstID = id;
                 plain.wire_pn = wire.value;
                 plain.payload = payload;
-                io::writer w{data};
+                binary::writer w{data};
                 if (!plain.render(w, wire, 0, 16)) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!plain.parse(r, 16)) {
                     return false;
                 }

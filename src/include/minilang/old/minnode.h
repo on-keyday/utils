@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>
 #include <number/prefix.h>
-#include <space/space.h>
-#include <space/eol.h>
+#include <strutil/space.h>
+#include <strutil/eol.h>
 #include <view/slice.h>
 
 namespace utils {
@@ -478,11 +478,11 @@ namespace utils {
                     return false;
                 }
                 param_end = seq.rptr;
-                space::consume_space(seq, true);
+                strutil::consume_space(seq, true);
                 if (seq.seek_if(",")) {
                     // expect multiple param_name in same type
                     param_name.push_back(',');
-                    space::consume_space(seq, true);
+                    strutil::consume_space(seq, true);
                     continue;
                 }
                 if (seq.match(")")) {
@@ -491,7 +491,7 @@ namespace utils {
                     break;
                 }
                 auto tmp = seq.rptr;
-                if (seq.seek_if(".") && (space::consume_space(seq, true), ident_default()(seq))) {
+                if (seq.seek_if(".") && (strutil::consume_space(seq, true), ident_default()(seq))) {
                     seq.rptr = param_start;
                     no_param_name = true;
                     break;
@@ -500,7 +500,7 @@ namespace utils {
                 break;
             }
             if (expect_ident(seq, "type")) {
-                space::consume_space(seq, true);
+                strutil::consume_space(seq, true);
             }
             return true;
         }

@@ -9,6 +9,7 @@
 #include "../time.h"
 #include "../ack/ack_lost_record.h"
 #include "config.h"
+#include "../resend/ack_handler.h"
 
 namespace utils {
     namespace fnet::quic::path {
@@ -46,6 +47,14 @@ namespace utils {
 
            public:
             constexpr BinarySearcher() = default;
+
+            constexpr void reset() noexcept {
+                high = 0;
+                mid = 0;
+                low = 0;
+                accuracy = 1;
+                high_updated = false;
+            }
 
             // set low, high, and accurary
             constexpr bool set(size_t l, size_t h, size_t ac = 1) noexcept {
@@ -94,7 +103,7 @@ namespace utils {
             size_t current_payload_size = 0;
             size_t probe_count = 0;
             BinarySearcher bin_search;
-            std::shared_ptr<ack::ACKLostRecord> wait;
+            resend::ACKHandler wait;
             std::uint64_t transport_param_value = 0;
             bool transport_param_set = false;
 
@@ -114,6 +123,9 @@ namespace utils {
                 state = State::disabled;
                 transport_param_set = false;
                 transport_param_value = 0;
+                probe_count = 0;
+                wait.reset();
+                bin_search.reset();
             }
 
             constexpr bool on_transport_parameter_received(std::uint64_t value) {
@@ -125,26 +137,36 @@ namespace utils {
                 return true;
             }
 
-            constexpr void on_handshake_confirmed() {
+           private:
+            constexpr void on_searching() {
                 state = State::searching;
                 const auto max_mtu = transport_param_value < config.max_plpmtu ? transport_param_value : config.max_plpmtu;
                 bin_search.set(config.base_plpmtu, max_mtu);
             }
 
-            constexpr std::pair<size_t, bool> probe_required(auto&& observer_vec) {
+           public:
+            constexpr void on_handshake_confirmed() {
+                on_searching();
+            }
+
+            constexpr void on_path_migrated() {
+                on_searching();
+            }
+
+            constexpr std::pair<size_t, bool> probe_required(auto&& observer) {
                 if (state != State::searching) {
                     return {0, false};
                 }
-                if (wait) {
-                    if (wait->is_lost()) {
+                if (wait.not_confirmed()) {
+                    if (wait.is_lost()) {
                         probe_count++;
                         if (probe_count == config.max_probes) {
                             bin_search.on_lost();
                             probe_count = 0;
                         }
                     }
-                    else if (wait->is_ack()) {
-                        ack::put_ack_wait(std::move(wait));
+                    else if (wait.is_ack()) {
+                        wait.confirm();
                         current_payload_size = bin_search.get_next();  // current
                         bin_search.on_ack();
                     }
@@ -153,12 +175,11 @@ namespace utils {
                     }
                 }
                 if (bin_search.complete()) {
-                    wait = nullptr;
+                    wait.confirm();
                     state = State::search_complete;
                     return {0, false};  // already done
                 }
-                wait = ack::make_ack_wait();
-                observer_vec.push_back(wait);
+                wait.wait(observer);
                 const auto next_step = bin_search.get_next();
                 return {next_step, true};
             }

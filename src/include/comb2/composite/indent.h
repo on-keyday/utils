@@ -36,7 +36,7 @@ namespace utils::comb2::composite {
                 return Status::not_match;
             }
             if (mode == IndentMode::more || mode == IndentMode::more_equal) {
-                auto expect = types::context_get_expect_indent(ctx);
+                auto expect = ctxs::context_get_expect_indent(ctx);
                 auto from = i;
                 if (mode == IndentMode::more) {
                     if (seq.current() != ' ') {

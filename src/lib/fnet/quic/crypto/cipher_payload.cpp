@@ -115,7 +115,7 @@ namespace utils {
                 flex_storage method;
 
                 void error(auto&& pb) {
-                    helper::appends(pb, "unknown cipher suite: ", method);
+                    strutil::appends(pb, "unknown cipher suite: ", method);
                 }
             };
 

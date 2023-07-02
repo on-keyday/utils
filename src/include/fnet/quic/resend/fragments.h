@@ -11,6 +11,7 @@
 #include "../ack/ack_lost_record.h"
 #include "../../storage.h"
 #include "../ioresult.h"
+#include "ack_handler.h"
 
 namespace utils {
     namespace fnet::quic::resend {
@@ -29,7 +30,7 @@ namespace utils {
         template <class T>
         struct Resend {
             T frag;
-            std::shared_ptr<ack::ACKLostRecord> wait;
+            ACKHandler wait;
         };
 
         template <class Fragment, template <class...> class List>
@@ -40,8 +41,7 @@ namespace utils {
             static void save_new_frag(auto&& fragset, Fragment&& frag, auto&& observer) {
                 Resend<Fragment> data;
                 data.frag = std::move(frag);
-                data.wait = ack::make_ack_wait();
-                observer.push_back(std::as_const(data.wait));
+                data.wait.wait(observer);
                 fragset.push_back(std::move(data));
             }
 
@@ -54,12 +54,12 @@ namespace utils {
             size_t detect_ack_and_lost() {
                 size_t i = 0;
                 for (auto it = fragments.begin(); it != fragments.end();) {
-                    if (it->wait->is_ack()) {
-                        ack::put_ack_wait(std::move(it->wait));
+                    if (it->wait.is_ack()) {
+                        it->wait.confirm();
                         it = fragments.erase(it);
                         continue;
                     }
-                    if (it->wait->is_lost()) {
+                    if (it->wait.is_lost()) {
                         i++;
                     }
                     it++;
@@ -80,12 +80,12 @@ namespace utils {
             IOResult retransmit(auto&& observer, auto&& send) {
                 List<Resend<Fragment>> tmpfrags;
                 for (auto it = fragments.begin(); it != fragments.end();) {
-                    if (it->wait->is_ack()) {
-                        ack::put_ack_wait(std::move(it->wait));
+                    if (it->wait.is_ack()) {
+                        it->wait.confirm();
                         it = fragments.erase(it);
                         continue;
                     }
-                    if (it->wait->is_lost()) {
+                    if (it->wait.is_lost()) {
                         auto save_new = [&](Fragment&& frag) {
                             save_new_frag(tmpfrags, std::move(frag), observer);
                         };
@@ -97,9 +97,8 @@ namespace utils {
                             break;
                         }
                         else if (res == IOResult::not_in_io_state) {
-                            ack::put_ack_wait(std::move(it->wait));
-                            it->wait = ack::make_ack_wait();
-                            observer.push_back(std::as_const(it->wait));
+                            it->wait.confirm();
+                            it->wait.wait(observer);
                         }
                         else {
                             it = fragments.erase(it);

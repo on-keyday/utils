@@ -7,10 +7,10 @@
 
 // varint - QUIC variable integer
 #pragma once
-#include "../../endian/buf.h"
+#include "../../binary/buf.h"
 #include "../../view/iovec.h"
-#include "../../io/writer.h"
-#include "../../io/reader.h"
+#include "../../binary/writer.h"
+#include "../../binary/reader.h"
 #include <tuple>
 
 namespace utils {
@@ -131,13 +131,13 @@ namespace utils {
                     data = input[0];
                     break;
                 case 2:
-                    data = endian::Buf<std::uint16_t, decltype(input)>{input}.read_be();
+                    data = binary::Buf<std::uint16_t, decltype(input)>{input}.read_be();
                     break;
                 case 4:
-                    data = endian::Buf<std::uint32_t, decltype(input)>{input}.read_be();
+                    data = binary::Buf<std::uint32_t, decltype(input)>{input}.read_be();
                     break;
                 case 8:
-                    data = endian::Buf<std::uint64_t, decltype(input)>{input}.read_be();
+                    data = binary::Buf<std::uint64_t, decltype(input)>{input}.read_be();
                     break;
                 default:
                     // undefined behaviour
@@ -147,7 +147,7 @@ namespace utils {
             return data;
         }
 
-        constexpr std::tuple<Value, bool> read(io::reader& input) {
+        constexpr std::tuple<Value, bool> read(binary::reader& input) {
             if (input.empty()) {
                 return {Value{}, false};
             }
@@ -162,7 +162,7 @@ namespace utils {
             return {value, true};
         }
 
-        constexpr bool read(io::reader& input, Value& output) {
+        constexpr bool read(binary::reader& input, Value& output) {
             bool ok;
             std::tie(output, ok) = read(input);
             return ok;
@@ -174,18 +174,18 @@ namespace utils {
                     output[0] = byte(value);
                     return;
                 case 2:
-                    endian::Buf<std::uint16_t, decltype(output)>{output}.write_be(value)[0] |= len_mask(2);
+                    binary::Buf<std::uint16_t, decltype(output)>{output}.write_be(value)[0] |= len_mask(2);
                     return;
                 case 4:
-                    endian::Buf<std::uint32_t, decltype(output)>{output}.write_be(value)[0] |= len_mask(4);
+                    binary::Buf<std::uint32_t, decltype(output)>{output}.write_be(value)[0] |= len_mask(4);
                     return;
                 case 8:
-                    endian::Buf<std::uint64_t, decltype(output)>{output}.write_be(value)[0] |= len_mask(8);
+                    binary::Buf<std::uint64_t, decltype(output)>{output}.write_be(value)[0] |= len_mask(8);
                     return;
             }
         }
 
-        constexpr bool write(io::writer& output, const Value& value) {
+        constexpr bool write(binary::writer& output, const Value& value) {
             auto rem = output.remain();
             if (value.len == 0) {
                 auto len = min_len(value.value);

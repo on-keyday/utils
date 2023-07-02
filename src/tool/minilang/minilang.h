@@ -39,7 +39,7 @@ namespace minilang {
         }
 
         bool stringify(expr::PushBacker pb) const override {
-            helper::append(pb, val);
+            strutil::append(pb, val);
             return true;
         }
     };
@@ -288,7 +288,7 @@ namespace minilang {
             wrap::vector<Error> stack;
 
             void write(auto&&... v) {
-                helper::appends(buffer, v...);
+                strutil::appends(buffer, v...);
             }
 
             void error(auto&& v, Node* node) {
@@ -299,7 +299,7 @@ namespace minilang {
                 wrap::string ret = prefix;
                 number::to_string(ret, tmpindex);
                 tmpindex++;
-                helper::append(ret, suffix);
+                strutil::append(ret, suffix);
                 return ret;
             }
         };

@@ -34,7 +34,7 @@ namespace utils {
                         p.seq.rptr = begin;
                         return nullptr;
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     if (!p.seq.seek_if("{")) {
                         p.errc.say("expected ", word, " begin { but not");
                         p.errc.trace(start, p.seq);
@@ -45,7 +45,7 @@ namespace utils {
                     root->str = str_;
                     auto cur = root;
                     while (true) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (p.seq.eos()) {
                             p.errc.say("unexpected eof at reading ", word, " field");
                             p.errc.trace(start, p.seq);
@@ -66,10 +66,10 @@ namespace utils {
                                 return nullptr;
                             }
                             name_end = p.seq.rptr;
-                            space::consume_space(p.seq, false);
+                            strutil::consume_space(p.seq, false);
                             if (p.seq.seek_if(",")) {
                                 name.push_back(',');
-                                space::consume_space(p.seq, true);
+                                strutil::consume_space(p.seq, true);
                                 continue;
                             }
                             break;
@@ -82,10 +82,10 @@ namespace utils {
                             return nullptr;
                         }
                         auto field_end = p.seq.rptr;
-                        space::consume_space(p.seq, false);
+                        strutil::consume_space(p.seq, false);
                         std::shared_ptr<MinNode> init;
                         if (p.seq.seek_if("=")) {
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             init = p.expr(p);
                             if (!init) {
                                 p.errc.say("expected ", word, " field initialization expr but not");
@@ -159,7 +159,7 @@ namespace utils {
                         return node;
                     }
                     else if (expect_ident(p.seq, "typeof")) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if("(")) {
                             p.errc.say("expect type typeof() begin ( but not");
                             p.errc.trace(start, p.seq);
@@ -173,7 +173,7 @@ namespace utils {
                             p.err = true;
                             return nullptr;
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if(")")) {
                             p.errc.say("expect type typeof() end ) but not");
                             p.errc.trace(start, p.seq);
@@ -188,7 +188,7 @@ namespace utils {
                     }
                     else if (expect_ident(p.seq, "genr")) {
                         const auto end = p.seq.rptr;
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if("(")) {
                             p.seq.rptr = end;
                             auto gen = std::make_shared<GenericTypeNode>();
@@ -196,7 +196,7 @@ namespace utils {
                             gen->pos = {start, end};
                             return gen;
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         std::string tp;
                         if (!ident_default_read(tp, p.seq)) {
                             p.errc.say("expect type parameter identifier but not");
@@ -204,7 +204,7 @@ namespace utils {
                             p.err = true;
                             return nullptr;
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (p.seq.seek_if(")")) {
                             p.errc.say("expect type parameter end ) but not");
                             p.errc.trace(start, p.seq);
@@ -219,7 +219,7 @@ namespace utils {
                     }
                     else if (p.seq.seek_if("...")) {
                         const auto end = p.seq.rptr;
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         std::shared_ptr<TypeNode> node;
                         if (!p.seq.match(")")) {
                             node = self_call();
@@ -242,7 +242,7 @@ namespace utils {
                         return node;
                     }
                     else if (p.seq.seek_if("[")) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         const char* type_ = array_str_;
                         if (p.seq.seek_if("]")) {
                             type_ = vector_str_;
@@ -253,7 +253,7 @@ namespace utils {
                                 p.err = true;
                                 return nullptr;
                             }
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             if (!p.seq.seek_if("]")) {
                                 p.errc.say("expected array end ] but not");
                                 p.errc.trace(start, p.seq);
@@ -290,10 +290,10 @@ namespace utils {
                                 return nullptr;
                             }
                             const auto end = p.seq.rptr;
-                            space::consume_space(p.seq, false);
+                            strutil::consume_space(p.seq, false);
                             if (p.seq.consume_if('.')) {
                                 str.push_back('.');
-                                space::consume_space(p.seq, true);
+                                strutil::consume_space(p.seq, true);
                                 continue;
                             }
                             p.seq.rptr = end;
@@ -318,7 +318,7 @@ namespace utils {
                         p.seq.rptr = begin;
                         return nullptr;
                     }
-                    space::consume_space(p.seq, true);
+                    strutil::consume_space(p.seq, true);
                     if (p.seq.match("<")) {  // type primitive
                         p.seq.rptr = begin;
                         return nullptr;
@@ -336,10 +336,10 @@ namespace utils {
                             return true;
                         }
                         const auto name_end = p.seq.rptr;
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (p.seq.seek_if("=")) {
                             type_ = type_alias_str_;
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                         }
                         auto node = p.type(p);
                         if (!node) {
@@ -363,7 +363,7 @@ namespace utils {
                     p.err = false;
                     if (p.seq.seek_if("(")) {
                         while (true) {
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             if (p.seq.seek_if(")")) {
                                 break;
                             }
@@ -390,7 +390,7 @@ namespace utils {
                     MINL_BEGIN_AND_START(p.seq);
                     std::shared_ptr<MinNode> tmp;
                     if (expect_ident(p.seq, "type")) {
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if("<")) {
                             // TODO(on-keyday): error?
                             p.errc.say("expect type primitive begin < but not");
@@ -406,7 +406,7 @@ namespace utils {
                             p.err = true;
                             return nullptr;
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if(">")) {
                             // TODO(on-keyday): error?
                             p.errc.say("expect type primitive end > but not");

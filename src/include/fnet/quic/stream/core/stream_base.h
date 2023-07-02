@@ -13,7 +13,6 @@
 #include "../../ioresult.h"
 #include "../../frame/writer.h"
 #include "../stream_id.h"
-#include "../config.h"
 
 namespace utils {
     namespace fnet::quic::stream::core {
@@ -62,9 +61,10 @@ namespace utils {
         };
 
         // returns (result,blocked_limit_if_blocked)
+        // faireness_limit is limit usage for other stream usage
         template <class TConfig>
         constexpr std::pair<IOResult, std::uint64_t> send_impl(
-            frame::fwriter& w, ConnectionBase<TConfig>& conn, StreamID id,
+            frame::fwriter& w, ConnectionBase<TConfig>& conn, StreamID id, std::uint64_t faireness_limit,
             SendUniStreamState& state, StreamWriteData& data, auto&& save_fragment) {
             if (!state.can_send()) {
                 return {IOResult::not_in_io_state, 0};  // cannot sendable on this state
@@ -79,9 +79,13 @@ namespace utils {
             if (remain_data_size == 0 && !data.should_fin()) {
                 return {IOResult::no_data, 0};  // nothing to write
             }
+
+            // adjust payload size for fairness among streams
+            const auto adjust_data_size = remain_data_size < faireness_limit ? remain_data_size : faireness_limit;
+
             const auto stream_flow_limit = state.sendable_size();
             // decide stream payload size temporary
-            const auto payload_limit = remain_data_size < stream_flow_limit ? remain_data_size : stream_flow_limit;
+            const auto payload_limit = adjust_data_size < stream_flow_limit ? adjust_data_size : stream_flow_limit;
             if (payload_limit == 0 && !data.should_fin()) {
                 return {IOResult::block_by_stream, state.send_limit()};  // blocked by stream flow control limit
             }
@@ -151,7 +155,7 @@ namespace utils {
                 : id(id) {}
 
             constexpr auto lock() {
-                return do_lock(locker);
+                return helper::lock(locker);
             }
 
             constexpr bool update_data(std::uint64_t discard, view::rvec src, bool fin) {
@@ -164,7 +168,7 @@ namespace utils {
             }
 
             // settings by peer
-            constexpr void set_initial(const InitialLimits& ini, Direction self) {
+            constexpr void set_initial(const InitialLimits& ini, Origin self) {
                 if (id.type() == StreamType::uni) {
                     state.set_send_limit(ini.uni_stream_data_limit);
                 }
@@ -179,8 +183,8 @@ namespace utils {
             }
 
             template <class ConnLock>
-            constexpr std::pair<IOResult, std::uint64_t> send_stream(ConnectionBase<ConnLock>& conn, frame::fwriter& w, auto&& save_fragment) {
-                return send_impl(w, conn, id, state, data, save_fragment);
+            constexpr std::pair<IOResult, std::uint64_t> send_stream(ConnectionBase<ConnLock>& conn, frame::fwriter& w, std::uint64_t faireness_limit, auto&& save_fragment) {
+                return send_impl(w, conn, id, faireness_limit, state, data, save_fragment);
             }
 
             // return false is no error
@@ -368,11 +372,11 @@ namespace utils {
                 : id(id) {}
 
             constexpr auto lock() {
-                return do_lock(locker);
+                return helper::lock(locker);
             }
 
             // settings by local
-            constexpr void set_initial(const InitialLimits& ini, Direction self) {
+            constexpr void set_initial(const InitialLimits& ini, Origin self) {
                 if (id.type() == StreamType::uni) {
                     state.set_recv_limit(ini.uni_stream_data_limit);
                 }
@@ -392,7 +396,7 @@ namespace utils {
             }
 
             constexpr bool update_recv_limit(auto&& decide_new_limit) {
-                std::uint64_t new_limit = decide_new_limit(state.get_recv_limiter());
+                std::uint64_t new_limit = decide_new_limit(state.get_recv_limiter(), state.initial_limit());
                 // update limit (ignore result)
                 state.update_recv_limit(new_limit);
                 return true;
@@ -476,18 +480,23 @@ namespace utils {
         };
 
         namespace test {
+            struct TestConfig {
+                using conn_lock = EmptyLock;
+                using send_stream_lock = EmptyLock;
+            };
+
             constexpr bool check_stream_send() {
-                using Config = TypeConfig<EmptyLock>;
+                using Config = TestConfig;
                 SendUniStreamBase<Config> base{1};
                 ConnectionBase<Config> conn;
                 byte data[63];
-                io::writer w{data};
+                binary::writer w{data};
                 conn.state.conn_flow.send.update_limit(1000);
                 base.state.update_send_limit(1000);
                 byte src[11000]{};
                 base.data.src = src;
                 frame::fwriter fw{w};
-                auto [result, ig1] = base.send_stream(conn, fw, [](Fragment frag) {
+                auto [result, ig1] = base.send_stream(conn, fw, ~0, [](Fragment frag) {
                     return frag.offset == 0 && frag.fragment.size() == 61;
                 });
                 if (result != IOResult::ok) {
@@ -495,7 +504,7 @@ namespace utils {
                 }
                 base.data.src = view::wvec(src, 63);
                 w.reset();
-                auto [result1, ig3] = base.send_stream(conn, fw, [](Fragment frag) {
+                auto [result1, ig3] = base.send_stream(conn, fw, ~0, [](Fragment frag) {
                     return frag.offset == 61 && frag.fragment.size() == 2;
                 });
                 (void)ig3;

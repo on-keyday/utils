@@ -1,0 +1,28 @@
+// undefined operation
+UNDEF,
+// stack control
+PUSH,
+POP,
+RESOLVE,
+// function call/return
+CALL,
+RET,
+RET_NONE,
+// operation
+ADD,
+SUB,
+MUL,
+DIV,
+MOD,
+AND,
+OR,
+EQ,
+NEQ,
+// variable scope control
+ENTER,
+LEAVE,
+ALLOC,
+ASSIGN,
+// flow control
+JMPIF,
+LABEL,

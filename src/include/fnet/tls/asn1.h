@@ -7,7 +7,7 @@
 
 // asn1 - asn1 subset for x509 certificate parser
 #pragma once
-#include "../../io/number.h"
+#include "../../binary/number.h"
 
 namespace utils {
     namespace fnet::asn1 {
@@ -58,7 +58,7 @@ namespace utils {
                 return len;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 if (r.empty()) {
                     return false;
                 }
@@ -92,14 +92,14 @@ namespace utils {
             Len len;
             view::rvec data;
 
-            constexpr bool parse(io::reader& r) {
-                return io::read_num(r, tag) &&
+            constexpr bool parse(binary::reader& r) {
+                return binary::read_num(r, tag) &&
                        len.parse(r) &&
                        r.read(data, len);
             }
 
             constexpr bool iterate(size_t least, auto&& cb) const {
-                io::reader r{data};
+                binary::reader r{data};
                 size_t count = 0;
                 while (!r.empty()) {
                     TLV tlv;
@@ -119,7 +119,7 @@ namespace utils {
                     return {{}, false};
                 }
                 TLV tlv;
-                io::reader r{data};
+                binary::reader r{data};
                 if (!tlv.parse(r) || !r.empty()) {
                     return {{}, false};  // not single strucutured
                 }

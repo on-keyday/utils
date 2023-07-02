@@ -36,9 +36,9 @@ int main() {
     res = unicodedata::text::parse_emoji_data_text(seq3, data);
     assert(res == unicodedata::text::ParseError::none);
     std::string binary;
-    utils::io::expand_writer<std::string&> w{binary};
+    utils::binary::expand_writer<std::string&> w{binary};
     unicodedata::bin::serialize_unicodedata(w, data);
-    utils::io::reader r{binary};
+    utils::binary::reader r{binary};
     unicodedata::UnicodeData<utils::view::rvec> red;
     auto ok = unicodedata::bin::deserialize_unicodedata(r, red);
     assert(ok);

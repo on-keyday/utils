@@ -6,10 +6,10 @@
 */
 
 #pragma once
-#include "../io/number.h"
+#include "../binary/number.h"
 #include "../wrap/light/enum.h"
 #include "../fnet/quic/varint.h"
-#include "../io/term.h"
+#include "../binary/term.h"
 
 namespace utils {
     namespace reflect::layout {
@@ -88,17 +88,17 @@ namespace utils {
                 return is_base(flag, LayoutFlag::flag_union) && length == 0;
             }
 
-            constexpr bool write(io::writer& layout) const {
-                if (!io::write_num(layout, flag)) {
+            constexpr bool write(binary::writer& layout) const {
+                if (!binary::write_num(layout, flag)) {
                     return false;
                 }
                 if (any(flag & LayoutFlag::flag_meta_type)) {
-                    if (!io::write_terminated(layout, meta_class)) {
+                    if (!binary::write_terminated(layout, meta_class)) {
                         return false;
                     }
                 }
                 if (any(flag & LayoutFlag::flag_meta_field)) {
-                    if (!io::write_terminated(layout, meta_field)) {
+                    if (!binary::write_terminated(layout, meta_field)) {
                         return false;
                     }
                 }
@@ -108,19 +108,19 @@ namespace utils {
                 return fnet::quic::varint::write(layout, length);
             }
 
-            constexpr bool read(io::reader& layout) {
+            constexpr bool read(binary::reader& layout) {
                 if (layout.empty()) {
                     return false;
                 }
                 flag = LayoutFlag(layout.top());
                 layout.offset(1);
                 if (any(flag & LayoutFlag::flag_meta_type)) {
-                    if (!io::read_terminated(layout, meta_class)) {
+                    if (!binary::read_terminated(layout, meta_class)) {
                         return false;
                     }
                 }
                 if (any(flag & LayoutFlag::flag_meta_field)) {
-                    if (!io::read_terminated(layout, meta_field)) {
+                    if (!binary::read_terminated(layout, meta_field)) {
                         return false;
                     }
                 }
@@ -152,7 +152,7 @@ namespace utils {
             static_assert(std::is_integral_v<T> ||
                           std::is_floating_point_v<T> ||
                           std::is_enum_v<T>);
-            constexpr bool write(io::writer& w) const {
+            constexpr bool write(binary::writer& w) const {
                 LayoutHeader head;
                 if constexpr (std::is_floating_point_v<T>) {
                     head.flag = LayoutFlag::flag_float;
@@ -175,7 +175,7 @@ namespace utils {
         struct StructLayoutBase : Metadata {
             std::tuple<Field...> fields;
 
-            constexpr bool write(io::writer& w) const {
+            constexpr bool write(binary::writer& w) const {
                 LayoutHeader head;
                 head.flag = base | metadata(type, field);
                 head.meta_class = type;
@@ -205,7 +205,7 @@ namespace utils {
             size_t length;
             Element element;
 
-            constexpr bool write(io::writer& w) const {
+            constexpr bool write(binary::writer& w) const {
                 LayoutHeader head;
                 head.flag = LayoutFlag::flag_array | metadata(type, field);
                 head.meta_class = type;

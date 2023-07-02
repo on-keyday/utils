@@ -8,8 +8,8 @@
 // http - http request response generator
 #pragma once
 // #include "httpstring.h"
-#include "../net_util/http/http_headers.h"
-#include "../net_util/http/predefined.h"
+#include "util/http/http_headers.h"
+#include "util/http/predefined.h"
 #include "../view/charvec.h"
 #include "../view/sized.h"
 #include "storage.h"
@@ -106,7 +106,7 @@ namespace utils {
                 if (!h::render_request(output, method, path, header, h::default_validator())) {
                     return false;
                 }
-                helper::append(output, view::CharVec(body, blen));
+                strutil::append(output, view::CharVec(body, blen));
                 return true;
             }
 
@@ -116,15 +116,15 @@ namespace utils {
                 if (!reason) {
                     reason = http::value::reason_phrase(status, true);
                 }
-                if (!h::render_response(output, status, reason, header, h::default_validator(), false, helper::no_check(), http_1_0 ? 0 : 1)) {
+                if (!h::render_response(output, status, reason, header, h::default_validator(), false, strutil::no_check(), http_1_0 ? 0 : 1)) {
                     return false;
                 }
-                helper::append(output, view::SizedView(body, blen));
+                strutil::append(output, view::SizedView(body, blen));
                 return true;
             }
 
             void write_data(auto&& data, size_t len) {
-                helper::append(output, view::SizedView(data, len));
+                strutil::append(output, view::SizedView(data, len));
             }
 
             void write_chunked_data(auto&& data, size_t len) {
@@ -151,7 +151,7 @@ namespace utils {
                 if (limit > output.size()) {
                     limit = output.size();
                 }
-                helper::read_n(buf, check, limit);
+                strutil::read_n(buf, check, limit);
                 if (!peek) {
                     view::shift(output, 0, limit, output.size() - limit);
                     output.resize(output.size() - limit);
@@ -164,7 +164,7 @@ namespace utils {
                 if (limit > input.size()) {
                     limit = input.size();
                 }
-                helper::read_n(buf, check, limit);
+                strutil::read_n(buf, check, limit);
                 if (!peek) {
                     input.shift_front(limit);
                 }
@@ -180,7 +180,7 @@ namespace utils {
             }
 
             void add_input(auto&& data, size_t size) {
-                helper::append(input, view::SizedView(data, size));
+                strutil::append(input, view::SizedView(data, size));
             }
 
             // check_response make sure input contains full of response header
@@ -232,9 +232,9 @@ namespace utils {
             }
 
             template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
-                      class Preview = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
+                      class Preview = decltype(strutil::no_check2()), class Prepare = decltype(strutil::no_check2())>
             size_t read_response(auto&& status, auto&& header, HTTPBodyInfo* info, bool peek = false, Reason&& reason = helper::nop, Version&& version = helper::nop,
-                                 Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
+                                 Preview&& preview = strutil::no_check2(), Prepare&& prepare = strutil::no_check2()) {
                 namespace h = http::header;
                 HTTPBodyInfo body{};
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
@@ -257,9 +257,9 @@ namespace utils {
             }
 
             template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
-                      class Preview = decltype(helper::no_check2()), class Prepare = decltype(helper::no_check2())>
+                      class Preview = decltype(strutil::no_check2()), class Prepare = decltype(strutil::no_check2())>
             size_t read_request(auto&& method, auto&& path, auto&& header, HTTPBodyInfo* info, bool peek = false, Version&& version = helper::nop,
-                                Preview&& preview = helper::no_check2(), Prepare&& prepare = helper::no_check2()) {
+                                Preview&& preview = strutil::no_check2(), Prepare&& prepare = strutil::no_check2()) {
                 namespace h = http::header;
                 HTTPBodyInfo body{};
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));

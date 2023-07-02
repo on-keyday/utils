@@ -1,0 +1,18 @@
+assign:
+  ident: print
+  token: :=
+  expr:
+    fn:
+      ident: param
+      token: ...
+      block:
+        expr:
+          ident: __builtin_print
+          call:
+            expr:
+              ident: param
+expr:
+  ident: print
+  call:
+    expr:
+      int: 0

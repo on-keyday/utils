@@ -45,10 +45,8 @@ namespace utils {
             }
 
             void detect() {
-                struct L {
-                    void push_back(const std::shared_ptr<ack::ACKLostRecord>&) const {}
-                } nop;
-                retransmit.retransmit(nop, [&](SendDatagram& sd, auto&&) {
+                ack::ACKRecorder rec;
+                retransmit.retransmit(rec, [&](SendDatagram& sd, auto&&) {
                     drop(sd.data, sd.pn);
                     return IOResult::ok;
                 });
@@ -117,7 +115,7 @@ namespace utils {
                 return error::none;
             }
 
-            IOResult send(packetnum::Value pn, frame::fwriter& fw, auto&& observer_vec) {
+            IOResult send(packetnum::Value pn, frame::fwriter& fw, auto&& observer) {
                 const auto d = lock();
                 if (send_que.empty()) {
                     return IOResult::no_data;
@@ -138,7 +136,7 @@ namespace utils {
                     if (!fw.write(dgram)) {
                         return IOResult::fatal;
                     }
-                    drop.sent(observer_vec, std::move(*it));
+                    drop.sent(observer, std::move(*it));
                     it++;
                 }
                 return IOResult::ok;

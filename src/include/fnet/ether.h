@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include "../io/number.h"
+#include "../binary/number.h"
 #include "crc.h"
 
 namespace utils {
@@ -21,18 +21,18 @@ namespace utils {
             view::rvec payload;
 
             constexpr bool parse(view::rvec frame) noexcept {
-                io::reader r{frame};
+                binary::reader r{frame};
                 if (!r.read(dst_mac) ||
                     !r.read(src_mac) ||
-                    !io::read_num(r, ether_type)) {
+                    !binary::read_num(r, ether_type)) {
                     return false;
                 }
                 if (ether_type == 0x8100) {
-                    if (!io::read_num(r, vlan_tag)) {
+                    if (!binary::read_num(r, vlan_tag)) {
                         return false;
                     }
                     has_vlan_tag = true;
-                    if (!io::read_num(r, ether_type)) {
+                    if (!binary::read_num(r, ether_type)) {
                         return false;
                     }
                 }
@@ -44,15 +44,15 @@ namespace utils {
                        r.empty();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 const auto ofs = w.offset();
                 if (!w.write(dst_mac) ||
                     !w.write(src_mac)) {
                     return false;
                 }
                 if (has_vlan_tag) {
-                    if (!io::write_num(w, std::uint16_t(0x8100)) ||
-                        !io::write_num(w, vlan_tag)) {
+                    if (!binary::write_num(w, std::uint16_t(0x8100)) ||
+                        !binary::write_num(w, vlan_tag)) {
                         return false;
                     }
                 }
@@ -69,8 +69,8 @@ namespace utils {
                 else {
                     return false;
                 }
-                return io::write_num(w, to_write) &&
-                       io::write_num(w, payload);
+                return binary::write_num(w, to_write) &&
+                       binary::write_num(w, payload);
             }
         };
 
@@ -82,8 +82,8 @@ namespace utils {
                 if (!frame.parse(crc_target)) {
                     return false;
                 }
-                io::reader r{f.substr(crc_target.size())};
-                if (!io::read_num(r, crc) &&
+                binary::reader r{f.substr(crc_target.size())};
+                if (!binary::read_num(r, crc) &&
                     !r.empty()) {
                     return false;
                 }
@@ -93,12 +93,12 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 const auto offset = w.offset();
                 if (!frame.render(w)) {
                     return false;
                 }
-                return io::write_num(w, crc::crc32(w.written().substr(offset)));
+                return binary::write_num(w, crc::crc32(w.written().substr(offset)));
             }
         };
 

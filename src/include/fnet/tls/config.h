@@ -9,9 +9,10 @@
 #include "../dll/dllh.h"
 #include "../error.h"
 #include "../quic/crypto/enc_level.h"
-#include "../../helper/equal.h"
+#include "../../strutil/equal.h"
 #include "alpn.h"
 #include "session.h"
+#include <wrap/light/enum.h>
 
 namespace utils {
     namespace fnet {
@@ -38,7 +39,7 @@ namespace utils {
                 }
 
                 bool is_algorithm(const char* alg_rfc_name) const {
-                    return helper::equal(rfcname(), alg_rfc_name);
+                    return strutil::equal(rfcname(), alg_rfc_name);
                 }
 
                 constexpr bool operator==(const TLSCipher& c) const {
@@ -70,6 +71,16 @@ namespace utils {
         namespace tls {
             struct TLS;
 
+            enum class VerifyMode {
+                none = 0x0,
+                peer = 0x1,
+                fail_if_no_peer_cert = 0x2,
+                client_once = 0x4,
+                post_handshake = 0x8,
+            };
+
+            DEFINE_ENUM_FLAGOP(VerifyMode)
+
             struct ALPNCallback {
                 bool (*select)(ALPNSelector& selector, void*) = nullptr;
                 void* arg = nullptr;
@@ -97,8 +108,10 @@ namespace utils {
                     return *this;
                 }
 
+                TLSConfig& operator=(const TLSConfig& conf);
+
                 error::Error set_cacert_file(const char* cacert, const char* dir = nullptr);
-                error::Error set_verify(int mode, int (*verify_callback)(int, void*) = nullptr);
+                error::Error set_verify(VerifyMode mode, int (*verify_callback)(int, void*) = nullptr);
                 error::Error set_client_cert_file(const char* cert);
                 error::Error set_alpn(view::rvec alpn);
                 error::Error set_cert_chain(const char* pubkey, const char* prvkey);
@@ -111,6 +124,10 @@ namespace utils {
                 error::Error set_alpn_select_callback(const ALPNCallback* cb);
 
                 error::Error set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg);
+
+                constexpr operator bool() const {
+                    return ctx != nullptr;
+                }
             };
 
             // configure() returns TLSConfig object initialized with SSL_CTX object

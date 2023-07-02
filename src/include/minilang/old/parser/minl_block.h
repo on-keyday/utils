@@ -32,7 +32,7 @@ namespace utils {
                     auto cur = block;
                     while (true) {
                         const auto tmp_begin = p.seq.rptr;
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         const auto tmp_start = p.seq.rptr;
                         if (p.seq.eos()) {
                             p.errc.say("unexpected eof at block statement. expect }.");
@@ -65,8 +65,8 @@ namespace utils {
             auto eol_factor(auto inner) {
                 return [=](auto&& p) -> decltype(inner(p)) {
                     const auto start = p.seq.rptr;
-                    space::consume_space(p.seq, false);
-                    if (space::parse_eol<true>(p.seq)) {
+                    strutil::consume_space(p.seq, false);
+                    if (strutil::parse_eol<true>(p.seq)) {
                         return nullptr;
                     }
                     return inner(p);
@@ -83,7 +83,7 @@ namespace utils {
                     bool one = false;
                     while (true) {
                         const auto tmp_begin = p.seq.rptr;
-                        space::consume_space(p.seq, consume_line);
+                        strutil::consume_space(p.seq, consume_line);
                         const auto tmp_start = p.seq.rptr;
                         if (p.seq.eos()) {
                             break;
@@ -123,7 +123,7 @@ namespace utils {
                     auto cur = block;
                     while (true) {
                         const auto tmp_begin = p.seq.rptr;
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         const auto tmp_start = p.seq.rptr;
                         if (p.seq.eos()) {
                             break;

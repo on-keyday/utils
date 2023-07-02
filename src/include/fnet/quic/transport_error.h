@@ -8,7 +8,7 @@
 // error - QUIC error code
 #pragma once
 #include "../../core/byte.h"
-#include "../../helper/appender.h"
+#include "../../strutil/append.h"
 #include "../error.h"
 #include "types.h"
 
@@ -87,69 +87,69 @@ namespace utils {
                 bool by_peer = false;
 
                 void error(auto&& pb) {
-                    helper::appends(pb,
+                    strutil::appends(pb,
                                     "quic", is_app ? "(app)" : "", ": ",
                                     msg);
                     if (by_peer) {
-                        helper::append(pb, " by peer");
+                        strutil::append(pb, " by peer");
                     }
                     if (is_app) {
-                        helper::append(pb, " code=");
+                        strutil::append(pb, " code=");
                         number::to_string(pb, std::uint64_t(transport_error));
                     }
                     else {
                         if (transport_error != TransportError::NO_ERROR) {
-                            helper::append(pb, " transport_error=");
+                            strutil::append(pb, " transport_error=");
                             if (auto msg = errmsg(transport_error)) {
-                                helper::append(pb, msg);
+                                strutil::append(pb, msg);
                                 if (is_CRYPTO_ERROR(transport_error)) {
-                                    helper::append(pb, "(");
+                                    strutil::append(pb, "(");
                                     number::to_string(pb, std::uint64_t(transport_error) & 0xFF, 16);
-                                    helper::append(pb, ")");
+                                    strutil::append(pb, ")");
                                 }
                             }
                             else {
-                                helper::append(pb, "TransportError(");
+                                strutil::append(pb, "TransportError(");
                                 number::to_string(pb, int(transport_error));
-                                helper::append(pb, ")");
+                                strutil::append(pb, ")");
                             }
                         }
                     }
                     if (frame_type != FrameType::PADDING) {
-                        helper::append(pb, " frame_type=");
+                        strutil::append(pb, " frame_type=");
                         if (auto msg = to_string(frame_type)) {
-                            helper::append(pb, msg);
+                            strutil::append(pb, msg);
                             if (is_STREAM(frame_type)) {
                                 if (FrameFlags{frame_type}.STREAM_off()) {
-                                    helper::append(pb, "|OFF");
+                                    strutil::append(pb, "|OFF");
                                 }
                                 if (FrameFlags{frame_type}.STREAM_len()) {
-                                    helper::append(pb, "|LEN");
+                                    strutil::append(pb, "|LEN");
                                 }
                                 if (FrameFlags{frame_type}.STREAM_fin()) {
-                                    helper::append(pb, "|FIN");
+                                    strutil::append(pb, "|FIN");
                                 }
                             }
                         }
                         else {
-                            helper::append(pb, "FrameType(");
+                            strutil::append(pb, "FrameType(");
                             number::to_string(pb, FrameFlags{frame_type}.value);
-                            helper::append(pb, ")");
+                            strutil::append(pb, ")");
                         }
                     }
                     if (packet_type != PacketType::Unknown) {
-                        helper::append(pb, "packet_type=");
+                        strutil::append(pb, "packet_type=");
                         if (auto msg = to_string(packet_type)) {
-                            helper::append(pb, msg);
+                            strutil::append(pb, msg);
                         }
                         else {
-                            helper::append(pb, "PacketType(");
+                            strutil::append(pb, "PacketType(");
                             number::to_string(pb, int(packet_type));
-                            helper::append(pb, ")");
+                            strutil::append(pb, ")");
                         }
                     }
                     if (base != error::none) {
-                        helper::append(pb, " base=");
+                        strutil::append(pb, " base=");
                         base.error(pb);
                     }
                 }
@@ -170,10 +170,16 @@ namespace utils {
             struct AppError {
                 std::uint64_t error_code = 0;
                 error::Error msg;
+                constexpr AppError() = default;
+                constexpr AppError(std::uint64_t code,const char* v)
+                    :error_code(code),  msg(error::Error(v)) {}
+                constexpr AppError(std::uint64_t code,auto&& err)
+                    : error_code(code), msg(std::forward<decltype(err)>(err)) {}
+
                 void error(auto&& pb) {
-                    helper::appends(pb, "quic(app): ");
+                    strutil::appends(pb, "quic(app): ");
                     msg.error(pb);
-                    helper::append(pb, " code=");
+                    strutil::append(pb, " code=");
                     number::to_string(pb, error_code);
                 }
 

@@ -10,7 +10,7 @@
 #pragma once
 #include <cstdint>
 #include "../../core/byte.h"
-#include "../../io/number.h"
+#include "../../binary/number.h"
 #include "../quic/transport_parameter/transport_param.h"
 
 namespace utils {
@@ -70,7 +70,7 @@ namespace utils {
             static_assert(minlen <= maxlen);
             view::rvec data_;
 
-            constexpr bool read_data(io::reader& r, std::uint64_t len) {
+            constexpr bool read_data(binary::reader& r, std::uint64_t len) {
                 if (len < minlen || maxlen < len) {
                     return false;
                 }
@@ -83,20 +83,20 @@ namespace utils {
            public:
             constexpr NumVector() = default;
 
-            constexpr bool parse(io::reader& r) {
+            constexpr bool parse(binary::reader& r) {
                 if constexpr (minlen == maxlen) {
                     return read_data(r, maxlen);  // no length field
                 }
                 else if constexpr (std::is_same_v<LenFieldT, uint24>) {
                     std::uint32_t len = 0;
-                    if (!io::read_uint24(r, len)) {
+                    if (!binary::read_uint24(r, len)) {
                         return false;
                     }
                     return read_data(r, len);
                 }
                 else {
                     LenFieldT len = 0;
-                    if (!io::read_num(r, len)) {
+                    if (!binary::read_num(r, len)) {
                         return false;
                     }
                     return read_data(r, len);
@@ -120,7 +120,7 @@ namespace utils {
                 if (index >= size()) {
                     return T{};
                 }
-                return endian::read_from<T>(data_.data() + index, true);
+                return binary::read_from<T>(data_.data() + index, true);
             }
 
             constexpr view::rvec data() const {
@@ -135,7 +135,7 @@ namespace utils {
 
            public:
             constexpr bool iterate(auto&& cb) const noexcept {
-                io::reader r{data_};
+                binary::reader r{data_};
                 T element;
                 while (!r.empty()) {
                     if (!element.parse(r)) {
@@ -148,7 +148,7 @@ namespace utils {
                 return true;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 NumVector<byte, minlen, maxlen> tmp;
                 if (!tmp.parse(r)) {
                     return false;
@@ -179,10 +179,10 @@ namespace utils {
                 std::uint16_t length;
                 view::rvec fragment;
 
-                constexpr bool parse(io::reader& r) {
-                    return io::read_num(r, type) &&
-                           io::read_num(r, legacy_record_version) &&
-                           io::read_num(r, length) &&
+                constexpr bool parse(binary::reader& r) {
+                    return binary::read_num(r, type) &&
+                           binary::read_num(r, legacy_record_version) &&
+                           binary::read_num(r, length) &&
                            r.read(fragment, length);
                 }
             };
@@ -199,7 +199,7 @@ namespace utils {
                 std::uint16_t length;
                 view::rvec encrypted_text;
 
-                bool parse(io::reader& r) {
+                bool parse(binary::reader& r) {
                     TLSPlaintext plain;
                     if (!plain.parse(r)) {
                         return false;
@@ -354,8 +354,8 @@ namespace utils {
                     ExtensionType extension_type{};
                     NumVector<byte, 0, 0xffff> extension_data;
 
-                    constexpr bool parse(io::reader& r) {
-                        return io::read_num(r, extension_type) &&
+                    constexpr bool parse(binary::reader& r) {
+                        return binary::read_num(r, extension_type) &&
                                extension_data.parse(r);
                     }
 
@@ -363,8 +363,8 @@ namespace utils {
                         return extension_data.data();
                     }
 
-                    constexpr io::reader reader() const {
-                        return io::reader{data()};
+                    constexpr binary::reader reader() const {
+                        return binary::reader{data()};
                     }
                 };
 
@@ -388,7 +388,7 @@ namespace utils {
                             return false;
                         }
                         auto r = ext.reader();
-                        return io::read_num(r, selected_version) && r.empty();
+                        return binary::read_num(r, selected_version) && r.empty();
                     }
                 };
 
@@ -435,7 +435,7 @@ namespace utils {
                     NumVector<byte, 1, 0xff> oid;
                     NumVector<byte, 0, 0xffff> values;
 
-                    constexpr bool parse(io::reader& r) noexcept {
+                    constexpr bool parse(binary::reader& r) noexcept {
                         return oid.parse(r) &&
                                values.parse(r);
                     }
@@ -499,8 +499,8 @@ namespace utils {
                 struct KeyShareEntry {
                     NamedGroup group;
                     NumVector<byte, 1, 0xffff> key_exchange;
-                    constexpr bool parse(io::reader& r) noexcept {
-                        return io::read_num(r, group) &&
+                    constexpr bool parse(binary::reader& r) noexcept {
+                        return binary::read_num(r, group) &&
                                key_exchange.parse(r);
                     }
                 };
@@ -523,7 +523,7 @@ namespace utils {
                             return false;
                         }
                         auto r = ext.reader();
-                        return io::read_num(r, selected_group) && r.empty();
+                        return binary::read_num(r, selected_group) && r.empty();
                     }
                 };
 
@@ -553,7 +553,7 @@ namespace utils {
                         if (!entry.key_exchange.valid()) {
                             return false;
                         }
-                        io::reader r{entry.key_exchange.data()};
+                        binary::reader r{entry.key_exchange.data()};
                         byte form;
                         if (!r.read(view::wvec(&form, 1)) ||
                             form != legacy_form) {
@@ -602,7 +602,7 @@ namespace utils {
                             return false;
                         }
                         auto r = ext.reader();
-                        return io::read_num(r, max_early_data_size) && r.empty();
+                        return binary::read_num(r, max_early_data_size) && r.empty();
                     }
                 };
 
@@ -619,9 +619,9 @@ namespace utils {
                     NumVector<byte, 1, 0xffff> identity;
                     std::uint32_t obfuscated_ticket_age;
 
-                    constexpr bool parse(io::reader& r) noexcept {
+                    constexpr bool parse(binary::reader& r) noexcept {
                         return identity.parse(r) &&
-                               io::read_num(r, obfuscated_ticket_age);
+                               binary::read_num(r, obfuscated_ticket_age);
                     }
                 };
 
@@ -631,7 +631,7 @@ namespace utils {
                     ElementVector<PskIdentity, 7, 0xffff> identities;
                     ElementVector<PskBinderEntry, 33, 0xffff> binders;
 
-                    constexpr bool parse(io::reader& r) noexcept {
+                    constexpr bool parse(binary::reader& r) noexcept {
                         return identities.parse(r) &&
                                binders.parse(r);
                     }
@@ -657,7 +657,7 @@ namespace utils {
                             return false;
                         }
                         auto r = ext.reader();
-                        return io::read_num(r, selected_identity) && r.empty();
+                        return binary::read_num(r, selected_identity) && r.empty();
                     }
                 };
 
@@ -681,7 +681,7 @@ namespace utils {
 
                    public:
                     constexpr bool iterate(auto&& cb) const {
-                        io::reader r{data};
+                        binary::reader r{data};
                         while (!r.empty()) {
                             quic::trsparam::TransportParameter param;
                             if (!param.parse(r)) {
@@ -801,11 +801,11 @@ namespace utils {
                     : msg_type(typ) {}
 
                protected:
-                constexpr std::pair<view::rvec, bool> parse_unknown(io::reader& r) {
+                constexpr std::pair<view::rvec, bool> parse_unknown(binary::reader& r) {
                     HandshakeType type;
                     std::uint32_t value;
-                    if (!io::read_num(r, type) ||
-                        !io::read_uint24(r, value)) {
+                    if (!binary::read_num(r, type) ||
+                        !binary::read_uint24(r, value)) {
                         return {{view::rvec{}}, false};
                     }
                     const_cast<HandshakeType&>(msg_type) = type;
@@ -815,13 +815,13 @@ namespace utils {
                 }
 
                public:
-                constexpr std::pair<io::reader, bool> parse_msg(io::reader& r) {
+                constexpr std::pair<binary::reader, bool> parse_msg(binary::reader& r) {
                     HandshakeType type;
                     std::uint32_t value;
                     auto p = r.peeker();
-                    if (!io::read_num(p, type) ||
+                    if (!binary::read_num(p, type) ||
                         type != msg_type ||
-                        !io::read_uint24(p, value)) {
+                        !binary::read_uint24(p, value)) {
                         return {{view::rvec{}}, false};
                     }
                     length = value;
@@ -867,13 +867,13 @@ namespace utils {
                 NumVector<byte, 1, 254> legacy_compression_methods;
                 ElementVector<ext::Extension, 8, 0xffff> extensions;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
                     }
                     ProtocolVersion version;
-                    return io::read_num(sub, version) &&
+                    return binary::read_num(sub, version) &&
                            version == legacy_version &&
                            sub.read(random) &&
                            legacy_session_id.parse(sub) &&
@@ -894,18 +894,18 @@ namespace utils {
                 const byte legacy_compression_method = 0;
                 ElementVector<ext::Extension, 6, 0xffff> extensions;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
                     }
                     ProtocolVersion version;
                     byte meth;
-                    return io::read_num(sub, version) &&
+                    return binary::read_num(sub, version) &&
                            version == legacy_version &&
                            sub.read(random) &&
                            legacy_session_id_echo.parse(sub) &&
-                           io::read_num(sub, cipher_suite) &&
+                           binary::read_num(sub, cipher_suite) &&
                            sub.read(view::wvec(&meth, 1)) &&
                            meth == legacy_compression_method &&
                            extensions.parse(sub) &&
@@ -918,7 +918,7 @@ namespace utils {
                     : Handshake(encrypted_extensions) {}
                 ElementVector<ext::Extension, 0, 0xffff> extensions;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
@@ -933,7 +933,7 @@ namespace utils {
                     : Handshake(certificate_request) {}
                 NumVector<byte, 0, 255> certificate_request_context;
                 ElementVector<ext::Extension, 2, 0xffff> extensions;
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
@@ -953,7 +953,7 @@ namespace utils {
                 NumVector<byte, 1, 0xffffff> cert_data;
                 ElementVector<ext::Extension, 0, 0xffff> extensions;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     return cert_data.parse(r) &&
                            extensions.parse(r);
                 }
@@ -965,7 +965,7 @@ namespace utils {
                 NumVector<byte, 0, 255> certificate_request_context;
                 ElementVector<CertificateEntry, 0, 0xffffff> certificate_list;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
@@ -982,12 +982,12 @@ namespace utils {
                 SignatureScheme algorithm;
                 NumVector<byte, 0, 0xffff> signature;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
                     }
-                    return io::read_num(sub, algorithm) &&
+                    return binary::read_num(sub, algorithm) &&
                            signature.parse(sub) &&
                            sub.empty();
                 }
@@ -998,7 +998,7 @@ namespace utils {
                     : Handshake(finished) {}
                 view::rvec verify_data;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
@@ -1012,7 +1012,7 @@ namespace utils {
                 constexpr EndOfEarlyData()
                     : Handshake(end_of_early_data) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
@@ -1030,13 +1030,13 @@ namespace utils {
                 NumVector<byte, 0, 255> ticket_nonce;
                 NumVector<byte, 1, 0xffff> ticket;
                 ElementVector<ext::Extension, 0, 0xffff> extensions;
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
                     }
-                    return io::read_num(sub, ticket_lifetime) &&
-                           io::read_num(sub, ticket_age_add) &&
+                    return binary::read_num(sub, ticket_lifetime) &&
+                           binary::read_num(sub, ticket_age_add) &&
                            ticket_nonce.parse(sub) &&
                            ticket.parse(sub) &&
                            extensions.parse(sub) &&
@@ -1055,12 +1055,12 @@ namespace utils {
 
                 KeyUpdateRequest request_update;
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_msg(r);
                     if (!ok) {
                         return false;
                     }
-                    return io::read_num(r, request_update) &&
+                    return binary::read_num(r, request_update) &&
                            sub.empty();
                 }
             };
@@ -1071,7 +1071,7 @@ namespace utils {
                 constexpr Unknown()
                     : Handshake(server_hello) {}
 
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_unknown(r);
                     if (!ok) {
                         return false;
@@ -1081,7 +1081,7 @@ namespace utils {
                 }
             };
 
-            constexpr bool parse_one(io::reader& r, auto&& cb) {
+            constexpr bool parse_one(binary::reader& r, auto&& cb) {
                 if (r.empty()) {
                     return false;
                 }
@@ -1156,9 +1156,9 @@ namespace utils {
                 AlertLevel level;
                 AlertDescription description;
 
-                constexpr bool parse(io::reader& r) {
-                    return io::read_num(r, level) &&
-                           io::read_num(r, description);
+                constexpr bool parse(binary::reader& r) {
+                    return binary::read_num(r, level) &&
+                           binary::read_num(r, description);
                 }
             };
 
@@ -1170,15 +1170,15 @@ namespace utils {
                 NumVector<byte, 7, 255> label;
                 NumVector<byte, 0, 255> context;
 
-                constexpr bool parse(io::reader& r) {
-                    if (!io::read_num(r, length)) {
+                constexpr bool parse(binary::reader& r) {
+                    if (!binary::read_num(r, length)) {
                         return false;
                     }
                     auto [sub, ok] = r.read(length);
                     if (!ok) {
                         return false;
                     }
-                    io::reader subr{sub};
+                    binary::reader subr{sub};
                     return label.parse(subr) &&
                            context.parse(subr) &&
                            subr.empty();

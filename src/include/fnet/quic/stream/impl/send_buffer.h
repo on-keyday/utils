@@ -50,6 +50,9 @@ namespace utils {
             void get_specific() {}
             void send_callback(auto d) {}
             void recv_callback(auto d) {}
+            std::uint64_t fairness_limit() const {
+                return ~0;  // No Limit!
+            }
         };
     }  // namespace fnet::quic::stream::impl
 }  // namespace utils

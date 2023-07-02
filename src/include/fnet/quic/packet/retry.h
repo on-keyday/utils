@@ -18,7 +18,7 @@ namespace utils {
                 return PacketType::Retry;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, PacketType::Retry) &&
                        r.read(retry_token, r.remain().size() - 16) &&
                        r.read(retry_integrity_tag);
@@ -30,7 +30,7 @@ namespace utils {
                        16;
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return render_with_pnlen(w, PacketType::Retry, 1) &&
                        w.write(retry_token) &&
                        w.write(retry_integrity_tag);
@@ -64,7 +64,7 @@ namespace utils {
                 return 1 + origDstID.size() + long_packet.len() + retry_token.size();
             }
 
-            constexpr bool render(io::writer& w) const {
+            constexpr bool render(binary::writer& w) const {
                 if (origDstID.size() > 0xff) {
                     return false;
                 }
@@ -90,12 +90,12 @@ namespace utils {
                 byte tag[] = "fuzakeruna nemu";
                 view::copy(retry.retry_integrity_tag, tag);
                 byte data[100];
-                io::writer w{data};
+                binary::writer w{data};
                 bool ok = retry.render(w);
                 if (!ok) {
                     return false;
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 if (!retry.parse(r)) {
                     return false;
                 }

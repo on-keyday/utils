@@ -73,11 +73,11 @@ namespace utils {
                 bool keep_alive = false;
                 bool close = false;
                 if (!http.read_request<TmpString>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {
-                        if (helper::equal(key, "Connection", helper::ignore_case())) {
-                            if (helper::contains(value, "close", helper::ignore_case())) {
+                        if (strutil::equal(key, "Connection", strutil::ignore_case())) {
+                            if (strutil::contains(value, "close", strutil::ignore_case())) {
                                 close = true;
                             }
-                            if (helper::contains(value, "keep-alive", helper::ignore_case())) {
+                            if (strutil::contains(value, "keep-alive", strutil::ignore_case())) {
                                 keep_alive = true;
                             }
                         }
@@ -90,7 +90,7 @@ namespace utils {
                 if (keep_alive) {
                     return true;
                 }
-                if (helper::equal(version, "HTTP/1.0")) {
+                if (strutil::equal(version, "HTTP/1.0")) {
                     return false;  // connection close
                 }
                 return true;  // HTTP/1.1 implicitly keep-alive

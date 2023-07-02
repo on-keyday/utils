@@ -8,7 +8,7 @@
 // transport_param - transport param format
 #pragma once
 #include "../varint.h"
-#include "../../../io/number.h"
+#include "../../../binary/number.h"
 #include "defined_id.h"
 
 namespace utils {
@@ -34,7 +34,7 @@ namespace utils {
             constexpr TransportParamValue(size_t v)
                 : is_varint(true), qvint(v) {}
 
-            constexpr bool parse(io::reader& r, size_t len) {
+            constexpr bool parse(binary::reader& r, size_t len) {
                 return r.read(byts, len);
             }
 
@@ -47,7 +47,7 @@ namespace utils {
                 }
             }
 
-            constexpr bool render(io::writer& w) const {
+            constexpr bool render(binary::writer& w) const {
                 if (is_varint) {
                     return varint::write(w, qvint);
                 }
@@ -60,7 +60,7 @@ namespace utils {
                 if (is_varint) {
                     return true;
                 }
-                io::reader r{byts};
+                binary::reader r{byts};
                 auto [val, ok] = varint::read(r);
                 if (ok && r.empty()) {
                     qvint = val;
@@ -113,7 +113,7 @@ namespace utils {
             varint::Value length;  // only parse
             TransportParamValue data;
 
-            constexpr bool parse(io::reader& r) {
+            constexpr bool parse(binary::reader& r) {
                 return varint::read(r, id.id) &&
                        varint::read(r, length) &&
                        data.parse(r, length);
@@ -125,7 +125,7 @@ namespace utils {
                        data.len();
             }
 
-            constexpr bool render(io::writer& w) const {
+            constexpr bool render(binary::writer& w) const {
                 return varint::write(w, id.id) &&
                        varint::write(w, data.len()) &&
                        data.render(w);

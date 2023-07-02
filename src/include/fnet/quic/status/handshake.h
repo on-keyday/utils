@@ -164,6 +164,10 @@ namespace utils {
                 flag |= flag_started;
             }
 
+            constexpr bool has_sent_retry() const {
+                return flag & flag_retry_sent;
+            }
+
             constexpr bool handshake_started() const {
                 return flag & flag_started;
             }

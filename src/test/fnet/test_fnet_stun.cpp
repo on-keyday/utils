@@ -12,7 +12,7 @@
 #include <string>
 #include <thread>
 
-void test_fnet_stun_run(utils::io::writer& w, int af) {
+void test_fnet_stun_run(utils::binary::writer& w, int af) {
     using namespace utils::fnet;
     using namespace std::chrono_literals;
     stun::StunContext ctx;
@@ -66,7 +66,7 @@ void test_fnet_stun_run(utils::io::writer& w, int af) {
                     }
                     continue;
                 }
-                utils::io::reader r{n};
+                utils::binary::reader r{n};
                 result = ctx.response(r);
                 break;
             }
@@ -78,7 +78,7 @@ void test_fnet_stun_run(utils::io::writer& w, int af) {
 
 void test_fnet_stun() {
     utils::byte buf[2500];
-    utils::io::writer w{buf};
+    utils::binary::writer w{buf};
     test_fnet_stun_run(w, AF_INET);
 }
 

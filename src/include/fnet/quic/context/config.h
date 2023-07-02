@@ -16,8 +16,6 @@
 #include "../path/config.h"
 #include "../dgram/config.h"
 #include "../token/token.h"
-#include "../stream/config.h"
-#include "../ack/recv_history.h"
 #include "../../tls/session.h"
 
 namespace utils {
@@ -35,25 +33,6 @@ namespace utils {
             connid::Config connid_parameters;
             datagram::Config datagram_parameters;
             token::ZeroRTTStorage zero_rtt;
-        };
-
-        template <class CtxLock,
-                  class StreamTypeConfig = stream::TypeConfig<CtxLock>,
-                  class ConnIDTypeConfig = connid::TypeConfig<>,
-                  class CongestionAlgorithm = status::NewReno,
-                  class RecvPacketHistory = ack::RecvPacketHistory,
-                  class DatagramDrop = datagram::DatagrmDropNull>
-        struct TypeConfig {
-            using context_lock = CtxLock;
-            using stream_type_config = StreamTypeConfig;
-            using connid_type_config = ConnIDTypeConfig;
-            using congestion_algorithm = CongestionAlgorithm;
-            using recv_packet_history = RecvPacketHistory;
-            using datagram_drop = DatagramDrop;
-            struct user_defined_types_config {
-                congestion_algorithm algorithm;
-                datagram_drop dgram_drop;
-            };
         };
 
     }  // namespace fnet::quic::context

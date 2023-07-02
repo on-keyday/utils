@@ -10,11 +10,11 @@
 #include "../dll/dllh.h"
 #include <wrap/light/enum.h>
 #include <cstddef>
-#include "../../io/number.h"
-#include "../../helper/appender.h"
+#include "../../binary/number.h"
+#include "../../strutil/append.h"
 #include "stream_id.h"
-#include "../../io/expandable_writer.h"
-#include "../../io/ex_number.h"
+#include "../../binary/expandable_writer.h"
+#include "../../binary/ex_number.h"
 
 namespace utils {
     namespace fnet::http2 {
@@ -34,8 +34,8 @@ namespace utils {
             enhance_your_clam = 0xb,
             inadequate_security = 0xc,
             http_1_1_required = 0xd,
-
-            user_defined_bit = 0x100,
+            transport = 0x100,
+            /*user_defined_bit = 0x100,
             unknown,
             read_len,
             read_type,
@@ -50,8 +50,8 @@ namespace utils {
             read_processed_id,
 
             type_mismatch,
-            transport,
-            ping_failed,
+
+            ping_failed,*/
         };
 
         DEFINE_ENUM_FLAGOP(H2Error)
@@ -95,9 +95,9 @@ namespace utils {
             }
 
             constexpr void error(auto&& pb) const {
-                helper::appends(pb, "http2: ", stream ? "stream error: " : "connection error: ", error_msg(code));
+                strutil::appends(pb, "http2: ", stream ? "stream error: " : "connection error: ", error_msg(code));
                 if (debug) {
-                    helper::appends(pb, " debug=", debug);
+                    strutil::appends(pb, " debug=", debug);
                 }
             }
         };
@@ -164,10 +164,10 @@ namespace utils {
                 bool first = true;
                 auto write = [&](auto&& v) {
                     if (!first) {
-                        helper::append(buf, " | ");
+                        strutil::append(buf, " | ");
                     }
                     first = false;
-                    helper::append(buf, v);
+                    strutil::append(buf, v);
                 };
                 if (flag & Flag::ack) {
                     if (ack) {
@@ -210,14 +210,14 @@ namespace utils {
                 constexpr Frame(Type type)
                     : type(type) {}
 
-                constexpr bool render_with_len(io::writer& w, std::uint32_t id, std::uint32_t len) const noexcept {
-                    return io::write_uint24(w, len) &&
+                constexpr bool render_with_len(binary::writer& w, std::uint32_t id, std::uint32_t len) const noexcept {
+                    return binary::write_uint24(w, len) &&
                            w.write(byte(type), 1) &&
                            w.write(byte(flag), 1) &&
-                           io::write_num(w, id);
+                           binary::write_num(w, id);
                 }
 
-                constexpr std::pair<io::reader, bool> parse_and_subreader(io::reader& r, FrameIDMode mode) noexcept {
+                constexpr std::pair<binary::reader, bool> parse_and_subreader(binary::reader& r, FrameIDMode mode) noexcept {
                     if (!parse(r)) {
                         return {{view::rvec{}}, false};
                     }
@@ -243,18 +243,18 @@ namespace utils {
                 }
 
                public:
-                constexpr bool parse(io::reader& r) noexcept {
+                constexpr bool parse(binary::reader& r) noexcept {
                     byte tmp = 0;
-                    return io::read_uint24(r, len) &&
+                    return binary::read_uint24(r, len) &&
                            r.read(view::wvec(&tmp, 1)) &&
                            Type(tmp) == type &&
                            r.read(view::wvec(&tmp, 1)) &&
                            (flag = Flag(tmp), true) &&
-                           io::read_num(r, id.id) &&
+                           binary::read_num(r, id.id) &&
                            (id.unset_reserved(), true);
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     return render_with_len(w, id, len);
                 }
             };
@@ -263,13 +263,13 @@ namespace utils {
                 std::uint32_t depend = 0;
                 std::uint8_t weight = 0;
 
-                constexpr bool parse(io::reader& r) noexcept {
-                    return io::read_num(r, depend) &&
-                           io::read_num(r, weight);
+                constexpr bool parse(binary::reader& r) noexcept {
+                    return binary::read_num(r, depend) &&
+                           binary::read_num(r, weight);
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
-                    return io::write_num(w, depend) &&
+                constexpr bool render(binary::writer& w) const noexcept {
+                    return binary::write_num(w, depend) &&
                            w.write(weight, 1);
                 }
             };
@@ -281,13 +281,13 @@ namespace utils {
                 constexpr DataFrame()
                     : Frame(Type::data) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
                         return Error{H2Error::protocol};
                     }
                     if (flag & Flag::padded) {
-                        if (!io::read_num(sub, padding)) {
+                        if (!binary::read_num(sub, padding)) {
                             return Error{H2Error::frame_size};
                         }
                     }
@@ -309,7 +309,7 @@ namespace utils {
                     return data.size() + (flag & Flag::padded ? 1 + padding : 0);
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     const auto len = data_len();
                     if (id == 0 || len > 0xffffff) {
                         return false;
@@ -329,13 +329,13 @@ namespace utils {
                 constexpr HeaderFrame()
                     : Frame(Type::header) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
                         return Error{H2Error::protocol};
                     }
                     if (flag & Flag::padded) {
-                        if (!io::read_num(sub, padding)) {
+                        if (!binary::read_num(sub, padding)) {
                             return Error{H2Error::frame_size};
                         }
                     }
@@ -359,7 +359,7 @@ namespace utils {
                     return data.size() + (flag & Flag::padded ? 1 + padding : 0) + (flag & Flag::priority ? 5 : 0);
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     const auto len = data_len();
                     if (id == 0 && len > 0xffffff) {
                         return false;
@@ -377,7 +377,7 @@ namespace utils {
                 constexpr PriorityFrame()
                     : Frame(Type::priority) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -395,7 +395,7 @@ namespace utils {
                     return 5;
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     if (id == 0) {
                         return false;
                     }
@@ -408,7 +408,7 @@ namespace utils {
                 constexpr RstStreamFrame()
                     : Frame(Type::rst_stream) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -416,7 +416,7 @@ namespace utils {
                     if (len != 4) {
                         return Error{H2Error::frame_size};
                     }
-                    if (!io::read_num(sub, code) || !sub.empty()) {
+                    if (!binary::read_num(sub, code) || !sub.empty()) {
                         return Error{H2Error::internal};
                     }
                     return no_error;
@@ -426,11 +426,11 @@ namespace utils {
                     return 4;
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     if (id == 0) {
                         return false;
                     }
-                    return Frame::render_with_len(w, id, 4) && io::write_num(w, code);
+                    return Frame::render_with_len(w, id, 4) && binary::write_num(w, code);
                 }
             };
 
@@ -439,7 +439,7 @@ namespace utils {
                 constexpr SettingsFrame()
                     : Frame(Type::settings) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::conn);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -462,7 +462,7 @@ namespace utils {
                     return settings.size();
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     if (settings.size() % 6 != 0) {
                         return false;
                     }
@@ -471,12 +471,12 @@ namespace utils {
                 }
 
                 constexpr bool visit(auto&& cb) const {
-                    io::reader r{settings};
+                    binary::reader r{settings};
                     std::uint16_t id = 0;
                     std::uint32_t value = 0;
                     while (!r.empty()) {
-                        if (!io::read_num(r, id) ||
-                            !io::read_num(r, value)) {
+                        if (!binary::read_num(r, id) ||
+                            !binary::read_num(r, value)) {
                             return false;
                         }
                         if (!cb(id, value)) {
@@ -495,13 +495,13 @@ namespace utils {
                 constexpr PushPromiseFrame()
                     : Frame(Type::push_promise) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
                         return Error{H2Error::protocol};
                     }
                     if (flag & Flag::padded) {
-                        if (!io::read_num(sub, padding)) {
+                        if (!binary::read_num(sub, padding)) {
                             return Error{H2Error::frame_size};
                         }
                     }
@@ -511,7 +511,7 @@ namespace utils {
                     if (padding > len) {
                         return Error{H2Error::protocol};
                     }
-                    if (!io::read_num(r, promise) ||
+                    if (!binary::read_num(r, promise) ||
                         !sub.read(data, len - padding) ||
                         !sub.read(pad, padding) ||
                         !sub.empty()) {
@@ -524,14 +524,14 @@ namespace utils {
                     return data.size() + (flag & Flag::padded ? 1 + padding : 0) + 4;
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     const auto len = data_len();
                     if (id == 0 && len > 0xffffff) {
                         return false;
                     }
                     return render_with_len(w, id, len) &&
                            (flag & Flag::padded ? w.write(padding, 1) : true) &&
-                           io::write_num(w, promise) &&
+                           binary::write_num(w, promise) &&
                            w.write(data) &&
                            (flag & Flag::padded ? w.write(0, padding) : true);
                 }
@@ -542,7 +542,7 @@ namespace utils {
                 constexpr PingFrame()
                     : Frame(Type::ping) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::conn);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -550,7 +550,7 @@ namespace utils {
                     if (len != 8) {
                         return Error{H2Error::frame_size};
                     }
-                    if (!io::read_num(sub, opaque) || !sub.empty()) {
+                    if (!binary::read_num(sub, opaque) || !sub.empty()) {
                         return Error{H2Error::internal};
                     }
                     return no_error;
@@ -560,8 +560,8 @@ namespace utils {
                     return 8;
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
-                    return Frame::render_with_len(w, 0, 8) && io::write_num(w, opaque);
+                constexpr bool render(binary::writer& w) const noexcept {
+                    return Frame::render_with_len(w, 0, 8) && binary::write_num(w, opaque);
                 }
             };
 
@@ -572,7 +572,7 @@ namespace utils {
                 constexpr GoAwayFrame()
                     : Frame(Type::goaway) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::conn);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -580,8 +580,8 @@ namespace utils {
                     if (len < 8) {
                         return Error{H2Error::frame_size};
                     }
-                    if (!io::read_num(sub, processed_id) ||
-                        !io::read_num(sub, code) ||
+                    if (!binary::read_num(sub, processed_id) ||
+                        !binary::read_num(sub, code) ||
                         !r.read(debug, len - 8) ||
                         !sub.empty()) {
                         return Error{H2Error::internal};
@@ -593,14 +593,14 @@ namespace utils {
                     return 8 + debug.size();
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     const auto len = data_len();
                     if (len > 0xffffff) {
                         return false;
                     }
                     return Frame::render_with_len(w, 0, len) &&
-                           io::write_num(w, processed_id) &&
-                           io::write_num(w, code) &&
+                           binary::write_num(w, processed_id) &&
+                           binary::write_num(w, code) &&
                            w.write(debug);
                 }
             };
@@ -610,7 +610,7 @@ namespace utils {
                 constexpr WindowUpdateFrame()
                     : Frame(Type::window_update) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::both);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -618,7 +618,7 @@ namespace utils {
                     if (len != 4) {
                         return Error{H2Error::frame_size};
                     }
-                    if (!io::read_num(sub, increment) || !sub.empty()) {
+                    if (!binary::read_num(sub, increment) || !sub.empty()) {
                         return Error{H2Error::internal};
                     }
                     return no_error;
@@ -628,8 +628,8 @@ namespace utils {
                     return 4;
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
-                    return Frame::render_with_len(w, id, 4) && io::write_num(w, increment);
+                constexpr bool render(binary::writer& w) const noexcept {
+                    return Frame::render_with_len(w, id, 4) && binary::write_num(w, increment);
                 }
             };
 
@@ -638,7 +638,7 @@ namespace utils {
                 constexpr ContinuationFrame()
                     : Frame(Type::continuation) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::stream);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -651,7 +651,7 @@ namespace utils {
                     return data.size();
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     if (id == 0 || data.size() > 0xffffff) {
                         return false;
                     }
@@ -665,7 +665,7 @@ namespace utils {
                 constexpr UnknownFrame(Type type)
                     : Frame(type) {}
 
-                constexpr Error parse(io::reader& r) noexcept {
+                constexpr Error parse(binary::reader& r) noexcept {
                     auto [sub, ok] = parse_and_subreader(r, FrameIDMode::both);
                     if (!ok) {
                         return Error{H2Error::protocol};
@@ -678,7 +678,7 @@ namespace utils {
                     return data.size();
                 }
 
-                constexpr bool render(io::writer& w) const noexcept {
+                constexpr bool render(binary::writer& w) const noexcept {
                     if (data.size() > 0xffffff) {
                         return false;
                     }
@@ -726,13 +726,13 @@ namespace utils {
             // if skip succeedes returns true otherwise returns false
             fnet_dll_export(bool) pass_frame(const char* text, size_t size, size_t& red);*/
 
-            constexpr Error parse_frame(io::reader& r, size_t limit, auto&& cb) {
+            constexpr Error parse_frame(binary::reader& r, size_t limit, auto&& cb) {
                 if (r.remain().size() < 9) {
                     return no_error;  // no buffer
                 }
                 auto peek = r.peeker();
                 std::uint32_t len = 0;
-                io::read_uint24(peek, len);
+                binary::read_uint24(peek, len);
                 if (9 + len > limit) {
                     return Error{H2Error::frame_size};
                 }
@@ -795,7 +795,7 @@ namespace utils {
             }
 
             template <class T>
-            constexpr bool render_frame(io::expand_writer<T>& ew, const auto& frame) {
+            constexpr bool render_frame(binary::expand_writer<T>& ew, const auto& frame) {
                 const auto len = 9 + frame.data_len();
                 ew.maybe_expand(len);
                 auto w = ew.writer();
@@ -810,7 +810,7 @@ namespace utils {
             }
 
             template <class T>
-            constexpr bool render_frame(io::expand_writer<T>& w, const Frame& frame) {
+            constexpr bool render_frame(binary::expand_writer<T>& w, const Frame& frame) {
 #define F(FrameI)              \
     case frame_typeof<FrameI>: \
         return render_frame(w, static_cast<const FrameI&>(frame));

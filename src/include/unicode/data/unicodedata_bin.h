@@ -6,10 +6,10 @@
 */
 
 #pragma once
-#include "../../io/number.h"
-#include "../../io/ex_number.h"
+#include "../../binary/number.h"
+#include "../../binary/ex_number.h"
 #include "unicodedata.h"
-#include "../../io/ex_term.h"
+#include "../../binary/ex_term.h"
 
 namespace utils {
     namespace unicode::data::bin {
@@ -24,7 +24,7 @@ namespace utils {
                 return w.write(byte(str.size()), 1) &&
                        w.write(view::rvec(str));
             }
-            return io::write_terminated(w, view::rvec(str));
+            return binary::write_terminated(w, view::rvec(str));
         }
 
         inline bool read_string(auto& r, auto& str, int version) {
@@ -39,7 +39,7 @@ namespace utils {
                 }
             }
             else {
-                if (!io::read_terminated(r, data)) {
+                if (!binary::read_terminated(r, data)) {
                     return false;
                 }
             }
@@ -47,7 +47,7 @@ namespace utils {
                 str = data;
             }
             else {
-                str.assign(data.as_char(), data.size());
+                str.assign(data.as_char<char>(), data.size());
             }
             return true;
         }
@@ -57,10 +57,10 @@ namespace utils {
             if (version > enable_version) {
                 return false;
             }
-            if (!io::write_num(w, info.codepoint) ||
+            if (!binary::write_num(w, info.codepoint) ||
                 !write_string(w, info.name, version) ||
                 !write_string(w, info.category, version) ||
-                !io::write_num(w, info.ccc) ||
+                !binary::write_num(w, info.ccc) ||
                 !write_string(w, info.bidiclass, version) ||
                 !write_string(w, info.decomposition.command, version)) {
                 return false;
@@ -70,26 +70,26 @@ namespace utils {
             if (d > 0xff) {
                 return false;
             }
-            if (!io::write_num(w, byte(d))) {
+            if (!binary::write_num(w, byte(d))) {
                 return false;
             }
             for (auto c : info.decomposition.to) {
-                if (!io::write_num(w, c)) {
+                if (!binary::write_num(w, c)) {
                     return false;
                 }
             }
             auto write_numeric3 = [&] {
                 if (info.numeric.flag & flags::large_num) {
-                    return io::write_num(w, info.numeric.v3_L);
+                    return binary::write_num(w, info.numeric.v3_L);
                 }
                 else {
                     if (info.numeric.flag & flags::exist_one) {
-                        if (!io::write_num(w, info.numeric.v3_S._1)) {
+                        if (!binary::write_num(w, info.numeric.v3_S._1)) {
                             return false;
                         }
                     }
                     if (info.numeric.flag & flags::exist_two) {
-                        if (!io::write_num(w, info.numeric.v3_S._2)) {
+                        if (!binary::write_num(w, info.numeric.v3_S._2)) {
                             return false;
                         }
                     }
@@ -97,8 +97,8 @@ namespace utils {
                 return true;
             };
             if (version <= 2) {
-                if (!io::write_num(w, byte(info.numeric.v1)) ||
-                    !io::write_num(w, byte(info.numeric.v2))) {
+                if (!binary::write_num(w, byte(info.numeric.v1)) ||
+                    !binary::write_num(w, byte(info.numeric.v2))) {
                     return false;
                 }
                 if (version == 0) {
@@ -108,7 +108,7 @@ namespace utils {
                     }
                 }
                 else if (version >= 1) {
-                    if (!io::write_num(w, byte(info.numeric.flag))) {
+                    if (!binary::write_num(w, byte(info.numeric.flag))) {
                         return false;
                     }
                     if (!write_numeric3()) {
@@ -123,16 +123,16 @@ namespace utils {
                         fl = flags::has_block_name;
                     }
                 }
-                if (!io::write_num(w, byte(info.numeric.flag | fl))) {
+                if (!binary::write_num(w, byte(info.numeric.flag | fl))) {
                     return false;
                 }
                 if (info.numeric.flag & flags::has_digit) {
-                    if (!io::write_num(w, byte(info.numeric.v1))) {
+                    if (!binary::write_num(w, byte(info.numeric.v1))) {
                         return false;
                     }
                 }
                 if (info.numeric.flag & flags::has_decimal) {
-                    if (!io::write_num(w, byte(info.numeric.v2))) {
+                    if (!binary::write_num(w, byte(info.numeric.v2))) {
                         return false;
                     }
                 }
@@ -144,28 +144,28 @@ namespace utils {
                 return false;
             }
             if (version <= 2) {
-                if (!io::write_num(w, info.casemap.upper) ||
-                    !io::write_num(w, info.casemap.lower) ||
-                    !io::write_num(w, info.casemap.title)) {
+                if (!binary::write_num(w, info.casemap.upper) ||
+                    !binary::write_num(w, info.casemap.lower) ||
+                    !binary::write_num(w, info.casemap.title)) {
                     return false;
                 }
             }
             else {
-                if (!io::write_num(w, byte(info.casemap.flag))) {
+                if (!binary::write_num(w, byte(info.casemap.flag))) {
                     return false;
                 }
                 if (info.casemap.flag & flags::has_upper) {
-                    if (!io::write_num(w, info.casemap.upper)) {
+                    if (!binary::write_num(w, info.casemap.upper)) {
                         return false;
                     }
                 }
                 if (info.casemap.flag & flags::has_lower) {
-                    if (!io::write_num(w, info.casemap.lower)) {
+                    if (!binary::write_num(w, info.casemap.lower)) {
                         return false;
                     }
                 }
                 if (info.casemap.flag & flags::has_title) {
-                    if (!io::write_num(w, info.casemap.title)) {
+                    if (!binary::write_num(w, info.casemap.title)) {
                         return false;
                     }
                 }
@@ -203,10 +203,10 @@ namespace utils {
             if (version > enable_version) {
                 return false;
             }
-            if (!io::read_num(r, info.codepoint) ||
+            if (!binary::read_num(r, info.codepoint) ||
                 !read_string(r, info.name, version) ||
                 !read_string(r, info.category, version) ||
-                !io::read_num(r, info.ccc) ||
+                !binary::read_num(r, info.ccc) ||
                 !read_string(r, info.bidiclass, version) ||
                 !read_string(r, info.decomposition.command, version)) {
                 return false;
@@ -218,25 +218,25 @@ namespace utils {
             auto size = size_[0] / sizeof(char32_t);
             for (auto i = 0; i < size; i++) {
                 char32_t v;
-                if (!io::read_num(r, v)) {
+                if (!binary::read_num(r, v)) {
                     return false;
                 }
                 info.decomposition.to.push_back(v);
             }
             auto read_numeric3 = [&] {
                 if (info.numeric.flag & flags::large_num) {
-                    if (!io::read_num(r, info.numeric.v3_L)) {
+                    if (!binary::read_num(r, info.numeric.v3_L)) {
                         return false;
                     }
                 }
                 else {
                     if (info.numeric.flag & flags::exist_one) {
-                        if (!io::read_num(r, info.numeric.v3_S._1)) {
+                        if (!binary::read_num(r, info.numeric.v3_S._1)) {
                             return false;
                         }
                     }
                     if (info.numeric.flag & flags::exist_two) {
-                        if (!io::read_num(r, info.numeric.v3_S._2)) {
+                        if (!binary::read_num(r, info.numeric.v3_S._2)) {
                             return false;
                         }
                     }
@@ -245,8 +245,8 @@ namespace utils {
             };
             if (version <= 2) {
                 byte v1, v2;
-                if (!io::read_num(r, v1) ||
-                    !io::read_num(r, v2)) {
+                if (!binary::read_num(r, v1) ||
+                    !binary::read_num(r, v2)) {
                     return false;
                 }
                 info.numeric.v1 = v1;
@@ -262,7 +262,7 @@ namespace utils {
                     }
                 }
                 else if (version >= 1) {
-                    if (!io::read_num(r, info.numeric.flag)) {
+                    if (!binary::read_num(r, info.numeric.flag)) {
                         return false;
                     }
                     if (!read_numeric3()) {
@@ -272,17 +272,17 @@ namespace utils {
             }
             else {
                 byte v1, v2;
-                if (!io::read_num(r, info.numeric.flag)) {
+                if (!binary::read_num(r, info.numeric.flag)) {
                     return false;
                 }
                 if (info.numeric.flag & flags::has_digit) {
-                    if (!io::read_num(r, v1)) {
+                    if (!binary::read_num(r, v1)) {
                         return false;
                     }
                     info.numeric.v1 = v1;
                 }
                 if (info.numeric.flag & flags::has_decimal) {
-                    if (!io::read_num(r, v2)) {
+                    if (!binary::read_num(r, v2)) {
                         return false;
                     }
                     info.numeric.v2 = v2;
@@ -298,9 +298,9 @@ namespace utils {
             info.mirrored = mil ? true : false;
             if (version <= 2) {
                 byte upper, lower, title;
-                if (!io::read_num(r, upper) ||
-                    !io::read_num(r, lower) ||
-                    !io::read_num(r, title)) {
+                if (!binary::read_num(r, upper) ||
+                    !binary::read_num(r, lower) ||
+                    !binary::read_num(r, title)) {
                     return false;
                 }
                 info.casemap.upper = upper == 0xff ? invalid_char : upper;
@@ -308,21 +308,21 @@ namespace utils {
                 info.casemap.title = title == 0xff ? invalid_char : title;
             }
             else {
-                if (!io::read_num(r, info.casemap.flag)) {
+                if (!binary::read_num(r, info.casemap.flag)) {
                     return false;
                 }
                 if (info.casemap.flag & flags::has_upper) {
-                    if (!io::read_num(r, info.casemap.upper)) {
+                    if (!binary::read_num(r, info.casemap.upper)) {
                         return false;
                     }
                 }
                 if (info.casemap.flag & flags::has_lower) {
-                    if (!io::read_num(r, info.casemap.lower)) {
+                    if (!binary::read_num(r, info.casemap.lower)) {
                         return false;
                     }
                 }
                 if (info.casemap.flag & flags::has_title) {
-                    if (!io::read_num(r, info.casemap.title)) {
+                    if (!binary::read_num(r, info.casemap.title)) {
                         return false;
                     }
                 }
@@ -360,8 +360,8 @@ namespace utils {
             return true;
         }
 
-        template <class T, class C, class U, class String>
-        inline bool serialize_unicodedata(io::basic_expand_writer<T, C, U>& w, const UnicodeData<String>& data, int version = enable_version) {
+        template <class T, class C, class String>
+        inline bool serialize_unicodedata(binary::basic_expand_writer<T, C>& w, const UnicodeData<String>& data, int version = enable_version) {
             auto write_version = [&] {
                 return w.write('U', 1) &&
                        w.write('D', 1) &&
@@ -390,8 +390,8 @@ namespace utils {
             return true;
         }
 
-        template <class C, class U, class String>
-        bool deserialize_unicodedata(io::basic_reader<C, U>& r, UnicodeData<String>& data) {
+        template <class C, class String>
+        bool deserialize_unicodedata(binary::basic_reader<C>& r, UnicodeData<String>& data) {
             int version = 0;
             auto seq = make_ref_seq(r.remain());
             if (seq.seek_if("UDv1")) {

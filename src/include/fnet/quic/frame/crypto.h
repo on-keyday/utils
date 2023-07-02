@@ -23,7 +23,7 @@ namespace utils {
                 return FrameType::CRYPTO;
             }
 
-            constexpr bool parse(io::reader& r) noexcept {
+            constexpr bool parse(binary::reader& r) noexcept {
                 return parse_check(r, FrameType::CRYPTO) &&
                        varint::read(r, offset) &&
                        varint::read(r, length) &&
@@ -37,7 +37,7 @@ namespace utils {
                        crypto_data.size();
             }
 
-            constexpr bool render(io::writer& w) const noexcept {
+            constexpr bool render(binary::writer& w) const noexcept {
                 return type_minwrite(w, FrameType::CRYPTO) &&
                        varint::write(w, offset) &&
                        varint::write(w, crypto_data.size()) &&

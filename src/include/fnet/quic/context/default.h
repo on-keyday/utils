@@ -7,12 +7,13 @@
 
 #pragma once
 #include "config.h"
+#include "context.h"
 #include <random>
 #include <chrono>
 
 namespace utils {
     namespace fnet::quic::context {
-        Config use_default(tls::TLSConfig&& tls) {
+        Config use_default_config(tls::TLSConfig&& tls) {
             Config config;
             config.tls_config = std::move(tls);
             config.connid_parameters.random = utils::fnet::quic::connid::Random{
@@ -41,6 +42,16 @@ namespace utils {
             config.transport_parameters.initial_max_stream_data_bidi_remote = 100000;
             config.internal_parameters.ping_duration = 15000;
             return config;
+        }
+
+        template <class TConfig>
+        std::shared_ptr<Context<TConfig>> use_default_context(tls::TLSConfig&& conf) {
+            auto alc = std::allocate_shared<Context<T>>(glheap_allocator<Context<T>>{});
+            auto conf = use_default_config(std::move(conf));
+            if (!alc->init(std::move(conf))) {
+                return nullptr;
+            }
+            return alc;
         }
     }  // namespace fnet::quic::context
 }  // namespace utils

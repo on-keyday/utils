@@ -17,7 +17,7 @@ namespace utils {
         // unknown type frame is passed to cb with packed as Frame with err==true
         // if suceeded parse_frame returns true otherwise false
         template <template <class...> class Vec>  // for ACK Frame
-        constexpr bool parse_frame(io::reader& r, auto&& cb) {
+        constexpr bool parse_frame(binary::reader& r, auto&& cb) {
             auto invoke_cb = [&](auto& frame, bool err) {
                 if constexpr (std::is_convertible_v<decltype(cb(frame, err)), bool>) {
                     if (!cb(frame, err)) {
@@ -53,7 +53,7 @@ namespace utils {
         // PADDING frame is ignored and doesn't elicit cb invocation if ignore_padding is true
         // limit is reading frame count limit
         template <template <class...> class Vec>
-        constexpr bool parse_frames(io::reader& r, auto&& cb, size_t limit = ~0, bool ignore_padding = true) {
+        constexpr bool parse_frames(binary::reader& r, auto&& cb, size_t limit = ~0, bool ignore_padding = true) {
             size_t i = 0;
             while (!r.empty() && i < limit) {
                 if (ignore_padding && r.top() == 0) {
@@ -72,7 +72,7 @@ namespace utils {
             constexpr bool check_parse() {
                 byte data[113]{};
                 byte dummy[5]{'h', 'e', 'l', 'l', 'o'};
-                io::writer w{data};
+                binary::writer w{data};
                 for (auto type : known_frame_types) {
                     bool ok = select_Frame<quic::test::FixedTestVec>(type, [&](auto&& frame) {
                         if (type == FrameType::STREAMS_BLOCKED ||
@@ -88,7 +88,7 @@ namespace utils {
                         return false;
                     }
                 }
-                io::reader r{w.written()};
+                binary::reader r{w.written()};
                 size_t i = 0;
                 return parse_frames<quic::test::FixedTestVec>(
                     r, [&](auto&& fr, bool) {

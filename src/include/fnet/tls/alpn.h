@@ -24,7 +24,7 @@ namespace utils {
                 if (std::is_constant_evaluated()) {
                     return false;
                 }
-                return protocol_name.begin() < input || protocol_name.end() <= input + input_len;
+                return protocol_name.begin() < input || protocol_name.end() > input + input_len;
             }
 
            public:

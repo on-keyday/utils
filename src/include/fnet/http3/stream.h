@@ -8,7 +8,7 @@
 #include "../quic/stream/impl/stream.h"
 #include "../quic/stream/impl/recv_stream.h"
 #include "frame.h"
-#include "../../net_util/qpack/qpack.h"
+#include "../util/qpack/qpack.h"
 #include "error.h"
 #include "../quic/transport_error.h"
 
@@ -38,7 +38,7 @@ namespace utils {
                     return false;
                 }
                 frame::FrameHeaderArea id_area;
-                io::writer w{id_area};
+                binary::writer w{id_area};
                 quic::varint::write(w, push_id);
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, type, quic::varint::len(push_id));
@@ -66,7 +66,7 @@ namespace utils {
                     frame::Setting setting;
                     setting.id = id;
                     setting.value = data;
-                    io::writer w{area};
+                    binary::writer w{area};
                     if (!setting.render(w)) {
                         return false;
                     }
@@ -106,13 +106,13 @@ namespace utils {
             }
 
             template <class String>
-            bool read_field_section(quic::stream::StreamID id, io::reader& r, auto&& read) {
+            bool read_field_section(quic::stream::StreamID id, binary::reader& r, auto&& read) {
                 auto locked = lock();
                 table.read_header(id, r, read);
             }
 
             template <class String>
-            bool write_field_section(quic::stream::StreamID id, io::expand_writer<String>& w, auto&& write) {
+            bool write_field_section(quic::stream::StreamID id, binary::expand_writer<String>& w, auto&& write) {
                 auto locked = lock();
                 auto err = table.write_header(id, w, [&](auto&& add_entry, auto&& add_field) {
                     auto add_entry_wrap = qpack::http3_entry_validate_wrapper(add_entry);
@@ -149,7 +149,7 @@ namespace utils {
                 if (q->sender.is_fin()) {
                     return false;
                 }
-                io::expand_writer<String> w;
+                binary::expand_writer<String> w;
                 if (!conn->write_field_section(stream->sender.id(), w, write)) {
                     return false;
                 }
@@ -190,11 +190,11 @@ namespace utils {
                     return false;
                 }
                 frame::FrameHeaderArea id_area;
-                io::writer id_w{id_area};
+                binary::writer id_w{id_area};
                 if (!quic::varint::write(id_w, push_id)) {
                     return false;
                 }
-                io::expand_writer<String> w;
+                binary::expand_writer<String> w;
                 if (!conn->write_field_section(stream->sender.id(), w, write)) {
                     return false;
                 }

@@ -12,7 +12,7 @@
 #include <minilang/comb/make_json.h>
 #include <minilang/comb/print.h>
 #include <file/file_view.h>
-#include <space/line_pos.h>
+#include <code/src_location.h>
 #include <json/json_export.h>
 #include "binp.h"
 
@@ -46,7 +46,7 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
         seq.rptr = pos.begin;
         cerr << (as_note ? "note: " : "binp: error: ") << msg << "\n";
         out.clear();
-        auto loc = utils::space::write_src_loc(out, seq, pos.end - pos.begin);
+        auto loc = utils::code::write_src_loc(out, seq, pos.end - pos.begin);
         cerr << flags.input << ":" << loc.line + 1 << ":" << loc.pos + 1 << "\n";
         cerr << out << "\n";
     };

@@ -13,7 +13,7 @@
 namespace utils {
     namespace fnet::quic::ack {
 
-        using ACKWaiters = slib::vector<std::weak_ptr<ACKLostRecord>>;
+        // using ACKWaiters = slib::vector<std::weak_ptr<ACKLostRecord>>;
         using ACKRangeVec = slib::vector<frame::ACKRange>;
 
     }  // namespace fnet::quic::ack

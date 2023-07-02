@@ -20,7 +20,7 @@ namespace utils {
                 return [=](auto& seq, auto& expected, Pos& pos) {
                     auto fold = [&](auto op) {
                         const size_t begin = seq.rptr;
-                        space::consume_space(seq, consume_line);
+                        strutil::consume_space(seq, consume_line);
                         const size_t start = seq.rptr;
                         if (seq.seek_if(op.op)) {
                             for (auto c : op.errs) {
@@ -191,7 +191,7 @@ namespace utils {
                             p.err = true;
                             return true;
                         }
-                        space::consume_space(p.seq, true);
+                        strutil::consume_space(p.seq, true);
                         if (!p.seq.seek_if(br.end)) {
                             p.errc.say("expect ", br.op, " end ", br.end, " but not");
                             p.errc.trace(start, p.seq);
@@ -279,7 +279,7 @@ namespace utils {
                             return true;
                         }
                         while (true) {
-                            space::consume_space(p.seq, true);
+                            strutil::consume_space(p.seq, true);
                             const auto sep_start = p.seq.rptr;
                             if (p.seq.seek_if(br.sep)) {
                                 auto bin = std::make_shared<BinaryNode>();
@@ -287,7 +287,7 @@ namespace utils {
                                 bin->pos = {sep_start, p.seq.rptr};
                                 bin->left = std::move(cur);
                                 cur = bin;
-                                space::consume_space(p.seq, true);
+                                strutil::consume_space(p.seq, true);
                                 if (p.seq.match(br.end)) {
                                     goto END;
                                 }
