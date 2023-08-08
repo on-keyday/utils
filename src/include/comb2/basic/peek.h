@@ -24,7 +24,7 @@ namespace utils::comb2 {
                 const auto ptr = seq.rptr;
                 Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
-                    ctxs::context_error(ctx, "Status::fatal at peeking");
+                    ctxs::context_error(seq, ctx, "Status::fatal at peeking");
                     return res;
                 }
                 seq.rptr = ptr;
@@ -32,9 +32,9 @@ namespace utils::comb2 {
                 return res;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "peek and expect so but fail");
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "peek and expect so but fail");
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
 
@@ -48,7 +48,7 @@ namespace utils::comb2 {
                 const auto ptr = seq.rptr;
                 Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
-                    ctxs::context_error(ctx, "Status::fatal at peeking");
+                    ctxs::context_error(seq, ctx, "Status::fatal at peeking");
                     return res;
                 }
                 seq.rptr = ptr;
@@ -56,9 +56,9 @@ namespace utils::comb2 {
                 return res == Status::match ? Status::not_match : Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "peek and expect NOT so but fail");
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "peek and expect NOT so but fail");
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
     }  // namespace types

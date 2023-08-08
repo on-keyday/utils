@@ -11,7 +11,6 @@
 #include <comb2/basic/group.h>
 
 namespace oslbgen {
-    using namespace utils::comb2::ops;
 
     constexpr auto k_args = "args";
     constexpr auto k_define = "define";
@@ -30,6 +29,7 @@ namespace oslbgen {
     constexpr auto k_alias = "alias";
 
     constexpr auto gen_parser() {
+        using namespace utils::comb2::ops;
         namespace cps = utils::comb2::composite;
         auto ident = str(k_ident, cps::c_ident);
         auto space = cps::space | cps::tab;

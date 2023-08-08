@@ -92,7 +92,7 @@ namespace utils {
                 template <class Str>
                 void Usage(Str& str, ParseFlag flag, const char* cmdname, const char* usage = "[option]", const char* indent = "    ") {
                     strutil::appends(str, "Usage:\n",
-                                    indent, cmdname, " ", usage, "\n");
+                                     indent, cmdname, " ", usage, "\n");
                     if (desc.list.size()) {
                         strutil::append(str, "Option:\n");
                         help(str, flag, indent);
@@ -164,7 +164,7 @@ namespace utils {
                 }
 
                 template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
-                requires std::is_integral_v<T>
+                    requires std::is_integral_v<T>
                 bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
@@ -172,7 +172,7 @@ namespace utils {
                 }
 
                 template <class T = double, template <class...> class Vec = wrap::vector>
-                requires std::is_floating_point_v<T>
+                    requires std::is_floating_point_v<T>
                 bool UnboundVecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
@@ -196,7 +196,7 @@ namespace utils {
                 }
 
                 template <class T>
-                requires std::is_integral_v<T>
+                    requires std::is_integral_v<T>
                 bool VarInt(T* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
@@ -207,7 +207,7 @@ namespace utils {
                 }
 
                 template <class T>
-                requires std::is_floating_point_v<T>
+                    requires std::is_floating_point_v<T>
                 bool VarFloat(T* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
@@ -229,7 +229,7 @@ namespace utils {
                 }
 
                 template <class T, template <class...> class Vec>
-                requires std::is_integral_v<T>
+                    requires std::is_integral_v<T>
                 bool VarVecInt(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
@@ -242,7 +242,7 @@ namespace utils {
                 }
 
                 template <class T, template <class...> class Vec>
-                requires std::is_floating_point_v<T>
+                    requires std::is_floating_point_v<T>
                 bool VarVecFloat(Vec<T>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     if (!ptr) {
                         return false;
@@ -275,16 +275,16 @@ namespace utils {
                 }
 
                 template <class T = std::int64_t>
-                requires std::is_integral_v<T>
-                    T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
+                    requires std::is_integral_v<T>
+                T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return Option(
                         option, defaultv,
                         IntParser{.radix = radix}, help, argdesc, flag);
                 }
 
                 template <class T = double>
-                requires std::is_floating_point_v<T>
-                    T* Float(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
+                    requires std::is_floating_point_v<T>
+                T* Float(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return Option(
                         option, defaultv,
                         FloatParser{.radix = radix}, help, argdesc, flag);
@@ -297,9 +297,8 @@ namespace utils {
                 }
 
                 template <class T = std::int64_t, template <class...> class Vec = wrap::vector>
-                requires std::is_integral_v<T>
-                    Vec<T>
-                *VecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
+                    requires std::is_integral_v<T>
+                Vec<T>* VecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
                     if (defaultv.size() < len) {
                         defaultv.resize(len);
                     }
@@ -309,9 +308,8 @@ namespace utils {
                 }
 
                 template <class T = double, template <class...> class Vec = wrap::vector>
-                requires std::is_floating_point_v<T>
-                    Vec<T>
-                *VecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
+                    requires std::is_floating_point_v<T>
+                Vec<T>* VecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10, Vec<T>&& defaultv = Vec<T>{}) {
                     if (defaultv.size() < len) {
                         defaultv.resize(len);
                     }
@@ -344,6 +342,34 @@ namespace utils {
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
                         help, "", flag);
+                }
+
+                template <class State, class F>
+                bool Func(auto&& option, auto&& help, auto&& argdesc, State state, F&& f, CustomFlag flag = CustomFlag::none) {
+                    return (bool)Option(option, std::move(state),
+                                        FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
+                                        help, argdesc, flag);
+                }
+
+                template <class State, class F>
+                bool VarFunc(State* ptr, auto&& option, auto&& help, auto&& argdesc, F&& f, CustomFlag flag = CustomFlag::none) {
+                    return (bool)Option(option, ptr,
+                                        FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
+                                        help, argdesc, flag);
+                }
+
+                template <class Key, class Value, template <class...> class M>
+                bool Map(auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none, Value&& defaultv = Value()) {
+                    return (bool)Option(option, std::move(defaultv),
+                                        MappingParser<Key, Value, M>{std::move(mapping)},
+                                        help, argdesc, flag);
+                }
+
+                template <class Key, class Value, template <class...> class M>
+                bool VarMap(Value* ptr, auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none) {
+                    return (bool)Option(option, ptr,
+                                        MappingParser<Key, Value, M>{std::move(mapping)},
+                                        help, argdesc, flag);
                 }
 
                 auto find(auto&& optname) {

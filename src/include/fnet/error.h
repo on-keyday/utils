@@ -561,5 +561,6 @@ namespace utils {
 
         constexpr auto unimplemented = Error("UNIMPLEMENTED", ErrorCategory::fneterr);
 
+        fnet_dll_export(Error) Errno();
     }  // namespace fnet::error
 }  // namespace utils

@@ -149,6 +149,7 @@ add_executable(binp "src/tool/binp/main.cpp"
 "src/tool/binp/collect.cpp"
 "src/tool/binp/gen.cpp")
 add_executable(unidump "src/tool/unidump/main.cpp")
+add_executable(langc "src/tool/langc/main.cpp")
 
 if(LLVM_FOUND)
 target_sources(combl PRIVATE "src/tool/combl/compile.cpp")
@@ -308,6 +309,7 @@ endif()
 target_link_libraries(binp utils)
 target_link_libraries(unidump utils)
 target_link_libraries(oslbgen utils)
+target_link_libraries(langc utils)
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")

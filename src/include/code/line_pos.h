@@ -19,7 +19,7 @@ namespace utils {
             seq.rptr = 0;
             line = 0;
             pos = 0;
-            for (; seq.rptr < rptr;) {
+            for (; !seq.eos() && seq.rptr < rptr;) {
                 if (strutil::parse_eol<true>(seq)) {
                     pos = 0;
                     line++;

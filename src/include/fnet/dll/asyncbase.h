@@ -200,6 +200,5 @@ namespace utils {
         void set_nonblock(std::uintptr_t sock, bool);
         void sockclose(std::uintptr_t sock);
 
-        error::Error Errno();
     }  // namespace fnet
 }  // namespace utils

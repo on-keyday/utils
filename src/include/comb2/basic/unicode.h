@@ -49,7 +49,7 @@ namespace utils::comb2 {
                         std::uint32_t cmp = 0;
                         if (auto ok = utf::to_utf32(cmps, cmp, true); !ok) {
                             ctxs::context_is_fatal_utf_error(ctx, seq, ok);
-                            ctxs::context_error(ctx, "unicode literal has invalid code point");
+                            ctxs::context_error(seq, ctx, "unicode literal has invalid code point");
                             return Status::fatal;
                         }
                         if (auto s = cvt1(); s != Status::match) {
@@ -64,8 +64,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect unicode literal ", literal, " but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect unicode literal ", literal, " but not");
             }
         };
 
@@ -105,7 +105,7 @@ namespace utils::comb2 {
                         std::uint32_t cmp = 0;
                         if (auto ok = utf::to_utf32(cmps, cmp, true); !ok) {
                             ctxs::context_is_fatal_utf_error(ctx, seq, ok);
-                            ctxs::context_error(ctx, "unicode literal has invalid code point");
+                            ctxs::context_error(seq, ctx, "unicode literal has invalid code point");
                             return Status::fatal;
                         }
                         if (auto s = cvt1(); s != Status::match) {
@@ -120,8 +120,8 @@ namespace utils::comb2 {
                 return Status::not_match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect one of unicode ", literal, " but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect one of unicode ", literal, " but not");
             }
         };
 
@@ -151,8 +151,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect unicode range [", lita, "-", litb, "] but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect unicode range [", lita, "-", litb, "] but not");
             }
         };
 
@@ -172,8 +172,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect any unicode character but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect any unicode character but not");
             }
         };
     }  // namespace types

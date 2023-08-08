@@ -47,6 +47,7 @@ namespace utils::comb2::composite {
 
     constexpr auto hex_integer = hex_prefix & +~hexadecimal_number;
     constexpr auto oct_integer = oct_prefix & +~octal_number;
+    constexpr auto oct_c_integer = '0'_l & ~octal_number;
     constexpr auto bin_integer = bin_prefix & +~binary_number;
     constexpr auto dec_integer = ~decimal_number;
 

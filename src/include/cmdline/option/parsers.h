@@ -316,6 +316,36 @@ namespace utils {
                     return true;
                 }
             };
+
+            template <class F, class State>
+            struct FuncParser {
+                F f;
+
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    if (!reserved) {
+                        val.set_value(State{});
+                    }
+                    auto ptr = val.get_ptr<State>();
+                    if (!ptr) {
+                        state.state = FlagType::type_not_match;
+                        return false;
+                    }
+                    const char* key = state.val;
+                    if (!key) {
+                        key = state.argv[state.arg_track_index];
+                        if (!key) {
+                            state.state = FlagType::require_more_argument;
+                            return false;
+                        }
+                        state.arg_track_index++;
+                    }
+                    if (!f(key, *ptr)) {
+                        state.state = FlagType::not_accepted;
+                        return false;
+                    }
+                    return true;
+                }
+            };
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils

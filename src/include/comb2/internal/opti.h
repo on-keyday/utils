@@ -63,11 +63,11 @@ namespace utils::comb2::opti {
     struct MaybeEmptyAB<A, B, true, true> {
         constexpr MaybeEmptyAB(auto&& a_, auto&& b_) {}
 
-        A useA() const {
+        constexpr A useA() const {
             return A{};
         }
 
-        B useB() const {
+        constexpr B useB() const {
             return B{};
         }
     };

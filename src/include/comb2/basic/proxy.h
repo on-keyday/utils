@@ -15,7 +15,7 @@ namespace utils::comb2 {
     namespace types {
 
         struct MustMatchErrorFn {
-            constexpr void operator()(auto&& ctx, auto&& rec) const {}
+            constexpr void operator()(auto&& seq, auto&& ctx, auto&& rec) const {}
         };
 
         template <class A, class B>
@@ -27,8 +27,8 @@ namespace utils::comb2 {
                 return this->useA()(seq, ctx, r);
             }
 
-            constexpr auto must_match_error(auto&& ctx, auto&& rec) const {
-                this->useB()(ctx, rec);
+            constexpr auto must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                this->useB()(seq, ctx, rec);
             }
         };
 
@@ -55,6 +55,8 @@ namespace utils::comb2 {
 
 #define method_proxy(method)                                                                                      \
     proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::utils::comb2::Status { return rec.method(seq, ctx, rec); }, \
-          [](auto&& ctx, auto&& rec) { ::utils::comb2::ctxs::context_call_must_match_error(ctx, rec.method, rec); })
+          [](auto&& seq, auto&& ctx, auto&& rec) { ::utils::comb2::ctxs::context_call_must_match_error(seq, ctx, rec.method, rec); })
+
+#define decl_method_proxy(method) decltype(method##_) method
     }  // namespace ops
 }  // namespace utils::comb2

@@ -108,13 +108,13 @@ namespace utils {
 
         }  // namespace internal
 
-        constexpr auto default_num_ignore() {
-            return [](auto&& a) {
+        struct DefaultIgnore {
+            constexpr bool operator()(auto&& a) const {
                 return false;
-            };
-        }
+            }
+        };
 
-        template <class Ignore>
+        template <class Ignore = DefaultIgnore>
         struct NumConfig {
             Ignore ignore;
             char dot = '.';

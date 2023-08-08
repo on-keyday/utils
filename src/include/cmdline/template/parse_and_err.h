@@ -14,6 +14,11 @@ namespace utils {
     namespace cmdline {
         namespace templ {
 
+            template <class T>
+            concept has_args = requires(T t) {
+                { t.args };
+            };
+
             // void show(string usage_or_err)
             // int then(Option opt,option::Context ctx)
             // opt.bind(ctx) is used
@@ -21,15 +26,21 @@ namespace utils {
             int parse_or_err(int argc, char** argv, auto&& opt, auto&& show, auto&& then) {
                 option::Context ctx;
                 opt.bind(ctx);
-                auto err = option::parse_required(argc, argv, ctx, helper::nop, option::ParseFlag::assignable_mode);
+                option::FlagType err;
+                if constexpr (has_args<decltype(opt)>) {
+                    err = option::parse_required(argc, argv, ctx, opt.args, option::ParseFlag::assignable_mode);
+                }
+                else {
+                    err = option::parse_required(argc, argv, ctx, helper::nop, option::ParseFlag::assignable_mode);
+                }
                 if (perfect_parsed(err) && opt.help) {
-                    show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0]));
+                    show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0]), false);
                     return 1;
                 }
                 if (auto msg = error_msg(err)) {
                     String buf;
                     strutil::appends(buf, "error: ", ctx.erropt(), ": ", msg, "\n");
-                    show(std::move(buf));
+                    show(std::move(buf), true);
                     return -1;
                 }
                 return then(opt, ctx);

@@ -68,6 +68,10 @@ namespace utils {
             constexpr CodeWriter(const char* indent = "    ")
                 : w(String{}, indent) {}
 
+            template <class V>
+            constexpr CodeWriter(V&& s, const char* indent = "    ")
+                : w(std::forward<V>(s), indent) {}
+
             constexpr const String& out() const {
                 return w.t;
             }
@@ -164,7 +168,7 @@ namespace utils {
                 });
             }
 
-            constexpr auto indent_scope_ex(std::uint32_t i = 1) {
+            [[nodiscard]] constexpr auto indent_scope_ex(std::uint32_t i = 1) {
                 w.indent(i);
                 auto d = helper::defer([this, i] {
                     w.indent(-i);
@@ -173,11 +177,21 @@ namespace utils {
                 auto ptr = new D{std::move(d)};
                 struct del {
                     constexpr auto operator()(D* v) {
-                        v->execute();
                         delete v;
                     }
                 };
                 return std::unique_ptr<D, del>{ptr};
+            }
+
+            void indent_writeln(auto&& a, auto&&... s) {
+                if constexpr (std::is_integral_v<std::decay_t<decltype(a)>>) {
+                    auto ind = indent_scope(a);
+                    writeln(s...);
+                }
+                else {
+                    auto ind = indent_scope();
+                    writeln(a, s...);
+                }
             }
         };
 

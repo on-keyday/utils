@@ -30,6 +30,9 @@ namespace utils::comb2::tree {
        protected:
         Element(ElmType t)
             : type(t) {}
+#ifdef _DEBUG
+        virtual ~Element() {}
+#endif
     };
 
     struct Branch : Element {
@@ -102,6 +105,9 @@ namespace utils::comb2::tree {
         std::shared_ptr<Branch> current_branch;
         // if str_count > 0 then ignore branch making
         size_t str_count = 0;
+        // if lexer_mode is true then conditional state holder is disabled
+        // this feature is experimental
+        bool lexer_mode = false;
 
         void maybe_init() {
             if (!root_branch) {
@@ -143,6 +149,9 @@ namespace utils::comb2::tree {
             if (str_count) {
                 return;
             }
+            if (lexer_mode) {
+                return;
+            }
             auto br = std::make_shared<Branch>();
             maybe_init();
             current_branch->child.push_back(br);
@@ -162,6 +171,9 @@ namespace utils::comb2::tree {
                 return;
             }
             if (str_count) {
+                return;
+            }
+            if (lexer_mode) {
                 return;
             }
             auto br = current_branch->parent.lock();
@@ -197,7 +209,7 @@ namespace utils::comb2::tree {
     template <class IdentTag = const char*, class GroupTag = const char*>
     void visit_nodes(const std::shared_ptr<Element>& elm, auto&& cb) {
         if (auto id = comb2::tree::is_Ident<IdentTag>(elm)) {
-            cb(*id, false);
+            cb(*id, true);
         }
         else if (auto v = comb2::tree::is_Group<GroupTag>(elm)) {
             cb(*v, true);
@@ -211,6 +223,31 @@ namespace utils::comb2::tree {
         else if (auto v = comb2::tree::is_Branch(elm)) {
             for (auto& e : v->child) {
                 visit_nodes(e, cb);
+            }
+        }
+    }
+
+    template <class IdentTag = const char*, class GroupTag = const char*>
+    void visit_nodes_raw(const std::shared_ptr<Element>& elm, auto&& cb) {
+        if (auto id = comb2::tree::is_Ident<IdentTag>(elm)) {
+            cb(*id, true);
+        }
+        else if (auto v = comb2::tree::is_Group<GroupTag>(elm)) {
+            cb(*v, true);
+            const auto d = utils::helper::defer([&] {
+                cb(*v, false);
+            });
+            for (auto& e : v->child) {
+                visit_nodes_raw(e, cb);
+            }
+        }
+        else if (auto v = comb2::tree::is_Branch(elm)) {
+            cb(*v, true);
+            const auto d = utils::helper::defer([&] {
+                cb(*v, false);
+            });
+            for (auto& e : v->child) {
+                visit_nodes_raw(e, cb);
             }
         }
     }

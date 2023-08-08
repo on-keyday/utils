@@ -28,9 +28,9 @@ namespace utils::comb2 {
                 return this->useB()(seq, ctx, r);
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
-                ctxs::context_call_must_match_error(ctx, this->useB(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
+                // ctxs::context_call_must_match_error(seq,ctx, this->useB(), rec);
             }
         };
 
@@ -64,9 +64,9 @@ namespace utils::comb2 {
                 return Status::not_match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
-                ctxs::context_call_must_match_error(ctx, this->useB(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
+                ctxs::context_call_must_match_error(seq, ctx, this->useB(), rec);
             }
         };
 
@@ -89,8 +89,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
 
@@ -115,7 +115,7 @@ namespace utils::comb2 {
                     }
                     // detect infinity loop model
                     if (seq.rptr <= ptr) {
-                        ctxs::context_error(ctx, "detect infinity loop at ", seq.rptr);
+                        ctxs::context_error(seq, ctx, "detect infinity loop at ", seq.rptr);
                         return Status::fatal;
                     }
                     ctxs::context_logic_result(ctx, CallbackType::repeat_step, Status::match);
@@ -126,8 +126,8 @@ namespace utils::comb2 {
                 return first ? Status::not_match : Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
 
@@ -159,7 +159,7 @@ namespace utils::comb2 {
                     }
                     // detect infinity loop model
                     if (seq.rptr <= ptr) {
-                        ctxs::context_error(ctx, "detect infinity loop at ", seq.rptr);
+                        ctxs::context_error(seq, ctx, "detect infinity loop at ", seq.rptr);
                         return Status::fatal;
                     }
                     ctxs::context_logic_entry(ctx, CallbackType::repeat_step);
@@ -168,8 +168,8 @@ namespace utils::comb2 {
                 return i < min_ ? Status::not_match : Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
 
@@ -183,14 +183,14 @@ namespace utils::comb2 {
                     return res;
                 }
                 if (res == Status::not_match) {
-                    ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+                    ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
                     return Status::fatal;
                 }
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
     }  // namespace types
@@ -226,6 +226,12 @@ namespace utils::comb2 {
             return types::Repeat<std::decay_t<A>>{
                 std::forward<A>(a),
             };
+        }
+
+        // optional repeat
+        template <class A>
+        constexpr auto operator*(A&& a) {
+            return -~a;
         }
 
         // must match (stronger)

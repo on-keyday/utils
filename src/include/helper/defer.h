@@ -52,5 +52,11 @@ namespace utils {
             return Defer<std::decay_t<decltype(fn)>>(std::forward<decltype(fn)>(fn));
         }
 
+        // initializer helper method
+        [[nodiscard]] constexpr auto init(auto&& fn) {
+            fn();
+            return true;
+        }
+
     }  // namespace helper
 }  // namespace utils

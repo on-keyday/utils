@@ -7,7 +7,13 @@
 
 #include <fnet/dll/dllcpp.h>
 #include <fnet/error.h>
+#include <helper/defer.h>
+#include <unicode/utf/convert.h>
+#include <fnet/dll/errno.h>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 namespace utils {
     namespace fnet::error {
         struct Defined {
@@ -104,6 +110,35 @@ namespace utils {
                 });
             }
 
+#ifdef _WIN32
+
+            static auto d = helper::init([]() {
+                register_categspec_nummsg(ErrorCategory::syserr, NumErrMode::use_nothing, [](helper::IPushBacker<> pn, std::uint64_t code) {
+                    LPWSTR lpMsgBuf;
+                    FormatMessageW(
+                        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                            FORMAT_MESSAGE_FROM_SYSTEM |
+                            FORMAT_MESSAGE_IGNORE_INSERTS,
+                        NULL,
+                        code,
+                        LANG_ENGLISH,
+                        (LPWSTR)&lpMsgBuf,
+                        0, NULL);
+                    const auto d = helper::defer([&] {
+                        LocalFree(lpMsgBuf);
+                    });
+                    strutil::append(pn, "code=");
+                    number::to_string(pn, code);
+                    strutil::append(pn, " ");
+                    utf::convert<2, 1>(lpMsgBuf, pn);
+                });
+            });
+#else
+#endif
+
         }  // namespace internal
-    }      // namespace fnet::error
+        fnet_dll_implement(Error) Errno() {
+            return Error(get_error(), ErrorCategory::syserr);
+        }
+    }  // namespace fnet::error
 }  // namespace utils

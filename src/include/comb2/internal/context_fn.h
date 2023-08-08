@@ -8,6 +8,7 @@
 #pragma once
 #include "../pos.h"
 #include "../cbtype.h"
+#include "../status.h"
 
 namespace utils::comb2 {
     namespace ctxs {
@@ -43,10 +44,14 @@ namespace utils::comb2 {
         }
 
         HAS(error)
+        HAS(error_seq)
 
-        constexpr auto context_error(auto&& ctx, auto&&... arg) {
-            if constexpr (has_error<decltype(ctx), decltype(arg)...>) {
-                ctx.error(arg...);
+        constexpr auto context_error(auto&& seq, auto&& ctx, auto&& err1, auto&&... arg) {
+            if constexpr (has_error_seq<decltype(ctx), decltype(seq), decltype(err1), decltype(arg)...>) {
+                ctx.error_seq(seq, err1, arg...);
+            }
+            else if constexpr (has_error<decltype(ctx), decltype(err1), decltype(arg)...>) {
+                ctx.error(err1, arg...);
             }
         }
 
@@ -106,9 +111,9 @@ namespace utils::comb2 {
 
         HAS(must_match_error)
 
-        constexpr void context_call_must_match_error(auto&& ctx, auto&& target, auto&& rec) {
-            if constexpr (has_must_match_error<decltype(target), decltype(ctx), decltype(rec)>) {
-                target.must_match_error(ctx, rec);
+        constexpr void context_call_must_match_error(auto&& seq, auto&& ctx, auto&& target, auto&& rec) {
+            if constexpr (has_must_match_error<decltype(target), decltype(seq), decltype(ctx), decltype(rec)>) {
+                target.must_match_error(seq, ctx, rec);
             }
         }
 

@@ -33,9 +33,9 @@ namespace utils::comb2 {
                 return res;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error("not match to group. tag: ", tag);
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "not match to group. tag: ", tag);
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
 
@@ -60,9 +60,9 @@ namespace utils::comb2 {
                 return res;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error("not match to string. tag: ", tag);
-                ctxs::context_call_must_match_error(ctx, this->useA(), rec);
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "not match to string. tag: ", tag);
+                ctxs::context_call_must_match_error(seq, ctx, this->useA(), rec);
             }
         };
     }  // namespace types

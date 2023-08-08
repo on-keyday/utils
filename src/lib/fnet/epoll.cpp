@@ -85,7 +85,7 @@ namespace utils {
 
         error::Error epollIOCommon(RWAsyncSuite* rw, AsyncSuite* suite, std::uintptr_t sock, view::rvec buf, std::shared_ptr<thread::Waker>& waker, int flag, bool is_stream) {
             if (!register_fd(suite->sock, rw)) {
-                return Errno();
+                return error::Errno();
             }
             suite->sock = sock;
             suite->waker = std::move(waker);
@@ -152,10 +152,10 @@ namespace utils {
 
         void set_epoll_or_errno(error::Error& err, bool eof = false) {
             if (auto eperr = err.as<EpollError>()) {
-                eperr->syserr = eof ? error::eof : Errno();
+                eperr->syserr = eof ? error::eof : error::Errno();
             }
             else {
-                err = eof ? error::eof : Errno();
+                err = eof ? error::eof : error::Errno();
             }
         }
 

@@ -67,10 +67,6 @@ namespace utils {
 #endif
         }
 
-        error::Error Errno() {
-            return error::Error(get_error(), error::ErrorCategory::syserr);
-        }
-
         constexpr auto errAddrNotSupport = error::Error("NetAddrPort type not supported by fnet", error::ErrorCategory::fneterr);
 
         error::Error Socket::connect(const NetAddrPort& addr) {
@@ -81,7 +77,7 @@ namespace utils {
             }
             auto res = lazy::connect_(sock, a, len);
             if (res < 0) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
         }
@@ -103,18 +99,18 @@ namespace utils {
                 res = lazy::select_(sock + 1, nullptr, &xset, &excset, &val);
             }
             if (res == -1) {
-                return Errno();
+                return error::Errno();
             }
 #ifdef _WIN32
             if (lazy::__WSAFDIsSet_(sock, &excset)) {
-                return Errno();
+                return error::Errno();
             }
             if (lazy::__WSAFDIsSet_(sock, &xset)) {
                 return error::none;
             }
 #else
             if (FD_ISSET(sock, &excset)) {
-                return Errno();
+                return error::Errno();
             }
             if (FD_ISSET(sock, &xset)) {
                 return error::none;
@@ -135,7 +131,7 @@ namespace utils {
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
             auto res = lazy::send_(sock, sub.as_char(), sub.size(), flag);
             if (res < 0) {
-                return {data, Errno()};
+                return {data, error::Errno()};
             }
             return {data.substr(res), error::none};
         }
@@ -144,7 +140,7 @@ namespace utils {
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
             auto res = lazy::recv_(sock, sub.as_char(), sub.size(), flag);
             if (res < 0) {
-                return {{}, Errno()};
+                return {{}, error::Errno()};
             }
             return {data.substr(0, res), res == 0 && is_stream ? error::eof : error::none};
         }
@@ -158,7 +154,7 @@ namespace utils {
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
             auto res = lazy::sendto_(sock, sub.as_char(), sub.size(), flag, addrptr, addrlen);
             if (res < 0) {
-                return {data, Errno()};
+                return {data, error::Errno()};
             }
             return {data.substr(res), error::none};
         }
@@ -170,7 +166,7 @@ namespace utils {
             auto sub = data.substr(0, (std::numeric_limits<socklen_t>::max)());
             auto res = lazy::recvfrom_(sock, sub.as_char(), sub.size(), flag, addr, &fromlen);
             if (res < 0) {
-                return {{}, NetAddrPort{}, Errno()};
+                return {{}, NetAddrPort{}, error::Errno()};
             }
             return {data.substr(0, res), sockaddr_to_NetAddrPort(addr, fromlen), res == 0 && is_stream ? error::eof : error::none};
         }
@@ -200,7 +196,7 @@ namespace utils {
             }
             auto res = lazy::shutdown_(sock, mode_);
             if (res != 0) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
         }
@@ -217,7 +213,7 @@ namespace utils {
             }
             auto res = lazy::bind_(sock, addr_ptr, len);
             if (res != 0) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
         }
@@ -225,7 +221,7 @@ namespace utils {
         error::Error Socket::listen(int back) {
             auto res = lazy::listen_(sock, back);
             if (res != 0) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
         }
@@ -236,7 +232,7 @@ namespace utils {
             auto ptr = reinterpret_cast<sockaddr*>(&st);
             auto new_sock = lazy::accept_(sock, ptr, &addrlen);
             if (new_sock == -1) {
-                return {Socket(), NetAddrPort(), Errno()};
+                return {Socket(), NetAddrPort(), error::Errno()};
             }
             set_nonblock(new_sock);
             return {

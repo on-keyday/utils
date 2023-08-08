@@ -15,9 +15,12 @@ namespace utils::comb2::composite {
     constexpr auto small_alphabet = range('a', 'z');
     constexpr auto large_alphabet = range('A', 'Z');
     constexpr auto alphabet = small_alphabet | large_alphabet;
-    constexpr auto digit_number = range('0', '9');
+    constexpr auto digit = range('0', '9');
+    constexpr auto bit = range('0', '1');
+    constexpr auto oct = range('0', '7');
+    constexpr auto hex = range('0', '9') | range('a', 'f') | range('A', 'F');
     constexpr auto c_ident_first = alphabet | lit('_');
-    constexpr auto c_ident_next = c_ident_first | digit_number;
+    constexpr auto c_ident_next = c_ident_first | digit;
 
     constexpr auto c_ident = c_ident_first & -~c_ident_next;
 
@@ -29,7 +32,7 @@ namespace utils::comb2::composite {
     constexpr auto line_feed = unix_eol;
     constexpr auto carriage_return = oldmac_eol;
 
-    constexpr auto eol = win_eol | unix_eol | oldmac_eol;
+    constexpr auto eol = -lit('\r') & lit('\n');
 
     constexpr auto space = lit(' ');
     constexpr auto tab = lit('\t');

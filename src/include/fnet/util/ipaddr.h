@@ -140,7 +140,7 @@ namespace utils {
             static_assert(sizeof(out[1]) == 1);
             auto read = [&](auto& parsed) {
                 std::uint8_t b = 0;
-                auto conf = number::NumConfig{number::default_num_ignore()};
+                auto conf = number::NumConfig{};
                 conf.allow_zero_prefixed = false;
                 if (!number::parse_integer(seq, b, 10, conf)) {
                     return false;

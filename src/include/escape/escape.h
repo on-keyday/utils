@@ -26,6 +26,7 @@ namespace utils {
             utf = 0x1,  // \u0000
             oct = 0x2,  // \000
             hex = 0x4,  // \x00
+            all = utf | oct | hex,
         };
 
         DEFINE_ENUM_FLAGOP(EscapeFlag)
@@ -176,8 +177,16 @@ namespace utils {
             return escape_str(seq, out, flag, esc, range);
         }
 
+        template <class Out, class In, class Escape = decltype(default_set()), class Range = decltype(default_range())>
+        constexpr Out escape_str(In&& seq, EscapeFlag flag = EscapeFlag::none,
+                                 Escape&& esc = default_set(), Range&& range = default_range()) {
+            Out out;
+            escape_str(seq, out, flag, esc, range);
+            return out;
+        }
+
         template <class In, class Out, class Escape = decltype(default_set())>
-        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, Escape&& esc = default_set()) {
+        constexpr number::NumErr unescape_str(Sequencer<In>& seq, Out& out, Escape&& esc = default_set(), EscapeFlag flag = EscapeFlag::all) {
             constexpr auto mx = (std::numeric_limits<std::make_unsigned_t<
                                      typename Sequencer<In>::char_type>>::max)();
             while (!seq.eos()) {
@@ -197,7 +206,7 @@ namespace utils {
                         }
                     }
                     if (!done) {
-                        if (c == 'x') {
+                        if (c == 'x' && any(flag & EscapeFlag::hex)) {
                             seq.consume();
                             if (seq.eos()) {
                                 return false;
@@ -211,7 +220,7 @@ namespace utils {
                             }
                             out.push_back(i);
                         }
-                        else if (c == 'u') {
+                        else if (c == 'u' && any(flag & EscapeFlag::utf)) {
                             seq.consume();
                             if (seq.eos()) {
                                 return false;
@@ -241,7 +250,7 @@ namespace utils {
                             }
                             seq.backto();
                         }
-                        else if (number::is_oct(c)) {
+                        else if (number::is_oct(c) && any(flag & EscapeFlag::oct)) {
                             std::uint8_t i;
                             if (auto e = number::read_limited_int<3>(seq, i, 8); !e) {
                                 return e;
@@ -263,9 +272,16 @@ namespace utils {
         }
 
         template <class In, class Out, class Escape = decltype(default_set())>
-        constexpr number::NumErr unescape_str(In&& in, Out& out, Escape&& esc = default_set()) {
+        constexpr number::NumErr unescape_str(In&& in, Out& out, Escape&& esc = default_set(), EscapeFlag flag = EscapeFlag::all) {
             auto seq = make_ref_seq(in);
-            return unescape_str(seq, out, esc);
+            return unescape_str(seq, out, esc, flag);
+        }
+
+        template <class Out, class In, class Escape = decltype(default_set())>
+        constexpr Out unescape_str(In&& in, Escape&& esc = default_set(), EscapeFlag flag = EscapeFlag::all) {
+            Out out;
+            unescape_str(in, out, esc, flag);
+            return out;
         }
 
     }  // namespace escape

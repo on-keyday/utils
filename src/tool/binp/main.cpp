@@ -81,7 +81,7 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
 int main(int argc, char** argv) {
     Flags flags;
     return utils::cmdline::templ::parse_or_err<std::string>(
-        argc, argv, flags, [](auto&& str) { cout << str; },
+        argc, argv, flags, [](auto&& str, bool) { cout << str; },
         [](Flags& flags, utils::cmdline::option::Context& ctx) {
             return Main(flags, ctx);
         });

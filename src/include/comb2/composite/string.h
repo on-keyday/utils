@@ -22,16 +22,27 @@ namespace utils::comb2::composite {
     constexpr auto utf16_str = lit('u') & hex4_str;
     constexpr auto utf32_str = lit('U') & hex4_str & hex4_str;
 
-    constexpr auto strlit = (back_slash &
-                             +(hex_str |
-                               oct_str |
-                               utf16_str |
-                               utf32_str |
-                               uany)) |
-                            uany;
+    constexpr auto make_strlit(auto after_bs, auto normal) {
+        return (back_slash &
+                +(hex_str |
+                  oct_str |
+                  utf16_str |
+                  utf32_str |
+                  after_bs)) |
+               normal;
+    }
 
-    constexpr auto c_str = lit('"') & -~(not_('"'_l | eol) & strlit) & +lit('"');
-    constexpr auto go_raw_str = lit('`') & -~(not_('`') & uany) & +lit('`');
+    constexpr auto strlit = make_strlit(eol | uany, uany);
+
+    constexpr auto make_string(auto quote, auto end_cond, auto inner) {
+        return quote & *(not_(end_cond) & inner) & +quote;
+    }
+
+    constexpr auto c_str = make_string(lit('"'), lit('"') | eol, strlit);
+    constexpr auto char_str = make_string(lit('\''), lit('\'') | eol, strlit);
+    constexpr auto go_raw_str = make_string(lit('`'), lit('`'), uany);
+    constexpr auto py_doc_str_double = make_string(lit("\"\"\""), lit("\"\"\""), uany);
+    constexpr auto py_doc_str_single = make_string(lit("'''"), lit("'''"), uany);
 
     constexpr auto inner_cpp_raw_str = proxy([](auto&& seq, auto&& ctx, auto&&) {
         const auto b = seq.rptr;
@@ -68,5 +79,15 @@ namespace utils::comb2::composite {
     });
 
     constexpr auto cpp_raw_str = 'R'_l & '"'_l & inner_cpp_raw_str & '"'_l;
+
+    namespace test {
+        constexpr auto check_string() {
+            auto seq = make_ref_seq(R"("object\
+                ")");
+            return c_str(seq, comb2::test::TestContext{}, 0) == Status::match;
+        }
+
+        static_assert(check_string());
+    }  // namespace test
 
 }  // namespace utils::comb2::composite

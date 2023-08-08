@@ -7,10 +7,12 @@
 
 #pragma once
 #include <type_traits>
+#include "../pos.h"
+#include "../lexctx.h"
 
 namespace utils::comb2 {
     namespace test {
-        constexpr void error_if_constexpr(auto&&... arg) {
+        constexpr void error_if_constexpr(auto... arg) {
             if (std::is_constant_evaluated()) {
                 throw "error";
             }
@@ -29,7 +31,12 @@ namespace utils::comb2 {
 
         static_assert(is_template_instance_of<Test<int>, Test> && !is_template_instance_of<int, Test>);
 
-        struct TestContext {
+        template <class Tag = const char*>
+        struct TestContext : LexContext<Tag> {
+            constexpr void error_seq(auto& seq, auto&&... err) {
+                error_if_constexpr(seq.buf.buffer[seq.rptr], seq.rptr, err...);
+            }
+
             constexpr void error(auto&&... err) {
                 error_if_constexpr(err...);
             }

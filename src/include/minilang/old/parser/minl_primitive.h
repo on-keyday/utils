@@ -46,7 +46,7 @@ namespace utils {
                     node->radix = prefix;
                     node->pos = {start, p.seq.rptr};
                     node->str = std::move(str);
-                    number::NumConfig conf{number::default_num_ignore()};
+                    number::NumConfig<> conf{};
                     conf.offset = prefix == 10 ? 0 : 2;
                     if (is_float) {
                         node->parsable = number::parse_float(node->str, node->floating, node->radix, conf);

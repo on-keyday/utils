@@ -71,7 +71,7 @@ namespace utils {
                 error::Error err;
                 DWORD nt = 0;
                 if (!GetOverlappedResult((HANDLE)async_head->sock, ent[i].lpOverlapped, &nt, false)) {
-                    err = Errno();
+                    err = error::Errno();
                 }
                 {
                     const auto r = helper::defer([&] {
@@ -86,7 +86,7 @@ namespace utils {
 
         error::Error winIOCommon(std::uintptr_t sock, const byte* data, size_t len, AsyncSuite* suite, std::shared_ptr<thread::Waker>& w, int flag, bool is_stream) {
             if (!register_handle(sock)) {
-                return Errno();
+                return error::Errno();
             }
             suite->sock = sock;
             suite->plt.buf.buf = reinterpret_cast<CHAR*>(const_cast<byte*>(data));
@@ -115,7 +115,7 @@ namespace utils {
                 flag |= FILE_SKIP_COMPLETION_PORT_ON_SUCCESS;
             }
             if (!lazy::SetFileCompletionNotificationModes_((HANDLE)sock, flag)) {
-                return Errno();
+                return error::Errno();
             }
             if (skip_notif) {
                 rw->plt.skipNotif = true;
@@ -126,7 +126,7 @@ namespace utils {
         std::pair<AsyncState, error::Error> handleStart(RWAsyncSuite* rw, AsyncSuite* suite, auto&& cb) {
             auto result = get_error();
             if (result != NO_ERROR && result != WSA_IO_PENDING) {
-                return {AsyncState::failed, Errno()};
+                return {AsyncState::failed, error::Errno()};
             }
             if (rw->plt.skipNotif) {
                 suite->on_operation = false;
@@ -300,7 +300,7 @@ namespace utils {
                 }
                 suite->plt.accept_sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
                 if (suite->plt.accept_sock == -1) {
-                    return {AsyncState::failed, Errno()};
+                    return {AsyncState::failed, error::Errno()};
                 }
                 set_error(0);
                 auto res = handleStart(rw, suite, [&] {

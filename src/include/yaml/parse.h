@@ -182,7 +182,7 @@ namespace utils::yaml::parser {
                                                  default:
                                                      break;
                                              }
-                                             ctxs::context_error(ctx, "unexpected context");
+                                             ctxs::context_error(seq,ctx, "unexpected context");
                                              return Status::fatal;
                                          }));
 
@@ -242,7 +242,7 @@ namespace utils::yaml::parser {
                                               default:
                                                   break;
                                           }
-                                          ctxs::context_error(ctx, "unexpected context");
+                                          ctxs::context_error(seq,ctx, "unexpected context");
                                           return Status::fatal;
                                       }));
 
@@ -326,7 +326,7 @@ namespace utils::yaml::parser {
                                                   default:
                                                       break;
                                               }
-                                              ctxs::context_error(ctx, "unexpected context");
+                                              ctxs::context_error(seq,ctx, "unexpected context");
                                               return Status::fatal;
                                           }));
 
@@ -374,7 +374,7 @@ namespace utils::yaml::parser {
                                                   default:
                                                       break;
                                               }
-                                              ctxs::context_error(ctx, "unexpected context");
+                                              ctxs::context_error(seq,ctx, "unexpected context");
                                               return Status::fatal;
                                           }));
 

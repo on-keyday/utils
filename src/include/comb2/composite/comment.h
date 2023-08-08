@@ -49,20 +49,24 @@ namespace utils::comb2::composite {
                           std::forward<decltype(err)>(err));
     }
     using namespace ops;
-    constexpr auto c_comment = comment(ops::lit("/*"), ops::any, +ops::not_(ops::eos) & ops::lit("*/"), false, [](auto&& ctx, auto&& rec) {
-        ctxs::context_error(ctx, "unexpected EOF while parsing comment. expect */");
+    constexpr auto c_comment = comment(ops::lit("/*"), ops::any, +ops::not_(ops::eos) & ops::lit("*/"), false, [](auto&& seq, auto&& ctx, auto&& rec) {
+        ctxs::context_error(seq, ctx, "unexpected EOF while parsing comment. expect */");
     });
 
-    constexpr auto nested_c_comment = comment(ops::lit("/*"), ops::any, +ops::not_(ops::eos) & ops::lit("*/"), true, [](auto&& ctx, auto&& rec) {
-        ctxs::context_error(ctx, "unexpected EOF while parsing comment. expect */");
+    constexpr auto nested_c_comment = comment(ops::lit("/*"), ops::any, +ops::not_(ops::eos) & ops::lit("*/"), true, [](auto&& seq, auto&& ctx, auto&& rec) {
+        ctxs::context_error(seq, ctx, "unexpected EOF while parsing comment. expect */");
     });
 
-    constexpr auto shell_comment = comment(ops::lit("#"), ops::any, eol | eos, false, [](auto&& ctx, auto&& rec) {
-        ctxs::context_error(ctx, "unexpected error");
+    constexpr auto shell_comment = comment(ops::lit("#"), ops::any, eol | eos, false, [](auto&& seq, auto&& ctx, auto&& rec) {
+        ctxs::context_error(seq, ctx, "unexpected error");
     });
 
-    constexpr auto cpp_comment = comment(ops::lit("//"), ops::any, eol | eos, false, [](auto&& ctx, auto&& rec) {
-        ctxs::context_error(ctx, "unexpected error");
+    constexpr auto cpp_comment = comment(ops::lit("//"), ops::any, eol | eos, false, [](auto&& seq, auto&& ctx, auto&& rec) {
+        ctxs::context_error(seq, ctx, "unexpected error");
+    });
+
+    constexpr auto asm_comment = comment(ops::lit(";"), ops::any, eol | eos, false, [](auto&& seq, auto&& ctx, auto&& rec) {
+        ctxs::context_error(seq, ctx, "unexpected error");
     });
 
     namespace test {

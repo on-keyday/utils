@@ -33,8 +33,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect literal `", literal, "` but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect literal `", literal, "` but not");
             }
         };
 
@@ -77,8 +77,8 @@ namespace utils::comb2 {
                 }
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect oneof `", literal, "` but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect oneof `", literal, "` but not");
             }
         };
 
@@ -96,8 +96,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect range [", lita, "-", litb, "] but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect range [", lita, "-", litb, "] but not");
             }
         };
 
@@ -111,8 +111,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect EOF but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect EOF but not");
             }
         };
 
@@ -126,8 +126,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect BOF but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect BOF but not");
             }
         };
 
@@ -143,8 +143,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect BOL but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect BOL but not");
             }
         };
 
@@ -154,8 +154,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect null but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect null but not");
             }
         };
 
@@ -169,8 +169,8 @@ namespace utils::comb2 {
                 return Status::match;
             }
 
-            constexpr void must_match_error(auto&& ctx, auto&& rec) const {
-                ctxs::context_error(ctx, "expect single char but not");
+            constexpr void must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
+                ctxs::context_error(seq, ctx, "expect single char but not");
             }
         };
     }  // namespace types

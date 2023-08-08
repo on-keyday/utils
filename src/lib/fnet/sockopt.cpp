@@ -20,7 +20,7 @@ namespace utils {
             auto addr = reinterpret_cast<sockaddr*>(&st);
             auto res = lazy::getsockname_(sock, addr, &len);
             if (res != 0) {
-                return {{}, Errno()};
+                return {{}, error::Errno()};
             }
             return {sockaddr_to_NetAddrPort(addr, len), error::none};
         }
@@ -31,7 +31,7 @@ namespace utils {
             auto addr = reinterpret_cast<sockaddr*>(&st);
             auto res = lazy::getpeername_(sock, addr, &len);
             if (res != 0) {
-                return {{}, Errno()};
+                return {{}, error::Errno()};
             }
             return {sockaddr_to_NetAddrPort(addr, len), error::none};
         }
@@ -40,7 +40,7 @@ namespace utils {
             socklen_t len = int(size);
             auto res = lazy::getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
             if (res != 0) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
         }
@@ -48,7 +48,7 @@ namespace utils {
         error::Error Socket::set_option(int layer, int opt, const void* buf, size_t size) {
             auto res = lazy::setsockopt_(sock, layer, opt, static_cast<const char*>(buf), int(size));
             if (res != 0) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
         }
@@ -160,7 +160,7 @@ namespace utils {
             DWORD ret = 0;
             auto err = lazy::WSAIoctl_(sock, SIO_UDP_CONNRESET, &flag, sizeof(flag), nullptr, 0, &ret, nullptr, nullptr);
             if (err == SOCKET_ERROR) {
-                return Errno();
+                return error::Errno();
             }
             return error::none;
 #else

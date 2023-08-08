@@ -199,7 +199,7 @@ namespace utils {
         }
 
         constexpr auto errNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
-        constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
+        constexpr auto errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
 
 #define CHECK_CTX(c)              \
     if (!ctx) {                   \
