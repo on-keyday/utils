@@ -128,7 +128,7 @@ namespace utils {
         struct UnixEnv {
             bool get_environ(EnvSetter s) {
                 for (auto i = 0; environ[i]; i++) {
-                    auto [key, value] = env::get_key_value(kv);
+                    auto [key, value] = env::get_key_value(environ[i]);
                     if (key.null()) {
                         return false;
                     }
@@ -143,7 +143,7 @@ namespace utils {
                 if (k.null()) {
                     return get_environ(s);
                 }
-                return get_cb([&](env_value_t key) {
+                return get_cb(k, [&](env_value_t key) {
                     auto res = getenv(key.data());
                     if (!res) {
                         return false;
