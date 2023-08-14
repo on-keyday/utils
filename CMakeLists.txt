@@ -113,7 +113,7 @@ add_executable(fnetquic_stream "src/test/fnetquic/test_fnetquic_stream.cpp")
 add_executable(fnetquic_multi_thread "src/test/fnetquic/test_fnetquic_multi_thread.cpp")
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
-add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_internet.cpp")
+add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_Internet.cpp")
 
 
 
