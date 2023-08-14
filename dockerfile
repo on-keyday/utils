@@ -47,7 +47,7 @@ RUN ln -s /lib/llvm-15/bin/clang++ /bin/clang++
 RUN ln -s /lib/llvm-15/bin/clang /bin/clang
 RUN ln -s /bin/lldb-15 /bin/lldb
 RUN ln -s /lib/llvm-15/lib/libc++abi.so.1.0 /lib/llvm-15/lib/libc++abi.so
-RUN ln -s /usr/bin/lldb-server-15 /usr/bin/lldb-server-15.0.6
+RUN ln -s /usr/bin/lldb-server-15 /usr/bin/lldb-server-15.0.7
 RUN ln -s /bin/g++-11 /bin/g++
 RUN unlink /usr/bin/ld
 RUN ln -s /lib/llvm-14/bin/lld /usr/bin/ld

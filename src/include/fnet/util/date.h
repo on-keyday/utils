@@ -13,6 +13,7 @@
 #include <core/sequencer.h>
 #include <wrap/light/enum.h>
 #include <strutil/append.h>
+#include <strutil/splits.h>
 #include <wrap/light/vector.h>
 #include <ctime>
 

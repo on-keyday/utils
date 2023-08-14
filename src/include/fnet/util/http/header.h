@@ -227,7 +227,7 @@ namespace utils {
             }
             template <class String, class Method, class Path>
             bool render_request_line(String& str, Method&& method, Path&& path) {
-                if (helper::contains(method, " ") || helper::contains(path, " ")) {
+                if (strutil::contains(method, " ") || strutil::contains(path, " ")) {
                     return false;
                 }
                 strutil::append(str, method);

@@ -115,7 +115,7 @@ add_executable(fnetquic_multi_thread "src/test/fnetquic/test_fnetquic_multi_thre
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
 add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_Internet.cpp")
-
+add_executable(exepath "src/test/wrap/test_exepath.cpp")
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
@@ -273,6 +273,7 @@ target_link_libraries(huffman utils)
 target_link_libraries(deflate utils)
 target_link_libraries(qpack utils)
 target_link_libraries(unicode_data utils)
+target_link_libraries(exepath utils)
 
 # test(libfnet)
 target_link_libraries(fnet_socket fnet)

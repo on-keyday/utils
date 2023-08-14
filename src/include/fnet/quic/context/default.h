@@ -45,9 +45,9 @@ namespace utils {
         }
 
         template <class TConfig>
-        std::shared_ptr<Context<TConfig>> use_default_context(tls::TLSConfig&& conf) {
-            auto alc = std::allocate_shared<Context<T>>(glheap_allocator<Context<T>>{});
-            auto conf = use_default_config(std::move(conf));
+        std::shared_ptr<Context<TConfig>> use_default_context(tls::TLSConfig&& c) {
+            auto alc = std::allocate_shared<Context<TConfig>>(glheap_allocator<Context<TConfig>>{});
+            auto conf = use_default_config(std::move(c));
             if (!alc->init(std::move(conf))) {
                 return nullptr;
             }

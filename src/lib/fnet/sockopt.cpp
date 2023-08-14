@@ -206,8 +206,8 @@ namespace utils {
             auto errv4 = set_dontfragment_v6(df);
             auto errv6 = set_dontfragment(df);
 #else
-            auto errv4 = set_mtu_discover(df);
-            auto errv6 = set_mtu_discover_v6(df);
+            auto errv4 = set_mtu_discover(mtu_enable);
+            auto errv6 = set_mtu_discover_v6(mtu_enable);
 #endif
             if (errv4 || errv6) {
                 if (errv4 && errv6) {

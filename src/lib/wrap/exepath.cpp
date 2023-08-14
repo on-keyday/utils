@@ -14,7 +14,6 @@
 #else
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #endif
 
 namespace utils {
@@ -43,27 +42,28 @@ namespace utils {
         }
 #else
         void get_exepath(helper::IPushBacker<> pb) {
-            struct stat64 st;
             constexpr auto proc = "/proc/self/exe";
-            if (lstat64(proc, &st) != 0) {
-                return;
-            }
-            if (st.st_size < 1024) {
-                {
-                    char buf[1024]{};
-                    auto red = readlink(proc, buf, 1024);
-                    if (red == st.st_size) {
-                        strutil::append(pb, buf);
-                        return;
-                    }
+            {  // first time
+                char buf[1024]{};
+                auto red = readlink(proc, buf, 1024);
+                if (red < 1024) {
+                    strutil::append(pb, buf);
+                    return;
                 }
             }
+            // max 1024 << 9 = 524,288, enough to save
             wrap::path_string path;
-            path.resize(st.st_size);
-            auto red = readlink(proc, path.data(), st.st_size);
-            if (red == st.st_size) {
-                strutil::append(pb, path.c_str());
+            path.reserve(2400);
+            path.resize(1024);
+            for (size_t i = 0; i < 10; i++) {
+                path.resize(path.size() << 1);
+                auto red = readlink(proc, path.data(), path.size());
+                if (red < path.size()) {
+                    strutil::append(pb, path.c_str());
+                    return;
+                }
             }
+            strutil::append(pb, path.c_str());
         }
 #endif
     }  // namespace wrap
