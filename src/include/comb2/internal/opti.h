@@ -7,6 +7,7 @@
 
 #pragma once
 #include <type_traits>
+#include <utility>
 
 namespace utils::comb2::opti {
     template <class A, class B,
