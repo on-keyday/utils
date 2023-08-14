@@ -125,7 +125,7 @@ namespace utils {
             template <class Buf = wrap::path_string, class Key, class Value, class Default = Value,
                       std::enable_if_t<strutil::is_utf_convertable<Key>,
                                        int> = 0>
-            constexpr void get_or(Value&& value, Key&& key, Default&& default_ = Default()) {
+            constexpr void get_or(Value&& value, Key&& key, Default&& default_) {
                 if (!get<Buf>(value, key)) {
                     value = utf::convert<std::decay_t<Value>>(default_);
                 }
@@ -138,6 +138,15 @@ namespace utils {
                 Value val;
                 get<Buf>(val, key);
                 return val;
+            }
+
+            template <class Value, class Buf = wrap::path_string, class Key, class Default = Value,
+                      std::enable_if_t<strutil::is_utf_convertable<Key>,
+                                       int> = 0>
+            constexpr Value get_or(Key&& key, Default&& default_) {
+                Value buf;
+                get_or<Buf>(buf, key, default_);
+                return buf;
             }
         };
 

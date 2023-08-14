@@ -24,6 +24,9 @@ namespace utils {
         constexpr Sequencer(Args&&... args)
             : buf(std::forward<Args>(args)...) {}
 
+        constexpr Sequencer(Sequencer&& in)
+            : buf(std::forward<T>(in.buf)), rptr(in.rptr) {}
+
        private:
         template <class String, class F>
         constexpr size_t match_impl(Buffer<String>& tmp, F&& f) {

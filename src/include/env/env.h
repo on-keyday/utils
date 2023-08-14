@@ -184,6 +184,17 @@ namespace utils {
             };
         }
 
+        template <class BufType>
+        constexpr auto expand_map(auto& map) noexcept {
+            return [&](auto&& out, auto&& read) {
+                BufType buf;
+                if (!read(buf)) {
+                    return;  // error
+                }
+                strutil::append(out, map[buf]);
+            };
+        }
+
         namespace test {
 
             struct Buf : binary::writer {

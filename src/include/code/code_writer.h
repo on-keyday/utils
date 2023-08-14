@@ -89,7 +89,7 @@ namespace utils {
             }
 
            public:
-            constexpr void write_unformated(auto&& v) {
+            constexpr void write_unformatted(auto&& v) {
                 auto cur = View(v);
                 auto iter = [&](View cur, auto&& apply, auto&& add_line) {
                     while (cur.size()) {

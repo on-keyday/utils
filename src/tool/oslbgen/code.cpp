@@ -18,7 +18,7 @@ namespace oslbgen {
 #define CASE(T) else if (auto t = std::get_if<T>(&code))
             SWITCH()
             CASE(Comment) {
-                out.write_unformated(t->comment);
+                out.write_unformatted(t->comment);
                 if (!t->comment.ends_with("\n")) {
                     out.line();
                 }
@@ -71,7 +71,7 @@ namespace oslbgen {
 
                 SWITCH()
                 CASE(Comment) {
-                    out.write_unformated(t->comment);
+                    out.write_unformatted(t->comment);
                     if (!t->comment.ends_with("\n")) {
                         out.line();
                     }
@@ -108,7 +108,7 @@ namespace oslbgen {
                 }
                 CASE(Strc) {
                     out.write(t->type, " ", t->name, " ");
-                    out.write_unformated(t->inner);
+                    out.write_unformatted(t->inner);
                     out.writeln(";");
                 }
                 CASE(Spec) {

@@ -74,7 +74,7 @@ namespace binp {
                 const auto do_call = "callback(" + field.name + ", \"" + field.name + "\")";
                 if (field.type.attrs.encode_method.size()) {
                     auto unform = format_method(field.type.attrs.encode_method, do_call);
-                    out.write_unformated(unform);
+                    out.write_unformatted(unform);
                     out.line();
                 }
                 else {
@@ -92,7 +92,7 @@ namespace binp {
                 if (field.type.attrs.decode_method.size()) {
                     auto unform = std::regex_replace(field.type.attrs.decode_method, std::regex("invoke_callback"), do_call);
                     trim_line(unform);
-                    out.write_unformated(unform);
+                    out.write_unformatted(unform);
                     out.line();
                 }
                 else {
