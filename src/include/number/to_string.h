@@ -54,7 +54,7 @@ namespace utils {
                 minus += modulo * d;
                 modulo /= radix;
                 if (d || !first) {
-                    result.push_back(to_num_char(d, any(flag & ToStrFlag::none)));
+                    result.push_back(to_num_char(d, any(flag & ToStrFlag::upper)));
                     first = false;
                 }
             }
@@ -214,7 +214,7 @@ namespace utils {
 
         template <class Result, class T>
         constexpr Result to_string(T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
-            Result result;
+            Result result{};
             to_string(result, in, radix, flag);
             return result;
         }

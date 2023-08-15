@@ -16,7 +16,7 @@ namespace utils::minilang::comb::branch {
     auto make_json(auto& out) {
         auto escape = [](auto&& in) {
             std::string str;
-            escape::escape_str(in, str, escape::EscapeFlag::utf | escape::EscapeFlag::hex);
+            escape::escape_str(in, str, escape::EscapeFlag::utf16 | escape::EscapeFlag::hex);
             return "\"" + str + "\"";
         };
         return [&, escape](const std::shared_ptr<Element>& elm, CallEntry ent) {

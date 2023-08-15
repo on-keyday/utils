@@ -62,7 +62,7 @@ namespace utils::minilang::comb {
 
         void ctoken(const char* tok, Pos pos) {
             std::string str;
-            escape::escape_str(tok, str, escape::EscapeFlag::utf | escape::EscapeFlag::hex);
+            escape::escape_str(tok, str, escape::EscapeFlag::utf16 | escape::EscapeFlag::hex);
             if (set.token) {
                 cout << "token: \"" << str << "\"\n";
             }
@@ -75,7 +75,7 @@ namespace utils::minilang::comb {
             for (auto i = pos.begin; i < pos.end; i++) {
                 str.push_back(seq.buf.buffer[i]);
             }
-            escape::escape_str(str, esc, escape::EscapeFlag::utf | escape::EscapeFlag::hex);
+            escape::escape_str(str, esc, escape::EscapeFlag::utf16 | escape::EscapeFlag::hex);
             if (set.ident) {
                 cout << "ident: " << convert_tag_to_string(tag) << " \"" << str << "\"\n";
             }

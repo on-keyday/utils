@@ -12,6 +12,7 @@
 #include "../internal/context_fn.h"
 #include "../../core/sequencer.h"
 #include "../cbtype.h"
+#include <helper/template_instance.h>
 
 namespace utils::comb2 {
     namespace types {
@@ -96,7 +97,7 @@ namespace utils::comb2 {
 
         template <class A>
         struct Repeat : opti::MaybeEmptyA<A> {
-            static_assert(!test::is_template_instance_of<A, Optional>, "`~-` is not allowed. use `-~` instead");
+            static_assert(!helper::is_template_instance_of<A, Optional>, "`~-` is not allowed. use `-~` instead");
             using opti::MaybeEmptyA<A>::MaybeEmptyA;
 
             template <class T, class Ctx, class Rec>
@@ -133,7 +134,7 @@ namespace utils::comb2 {
 
         template <class Min, class Max, class A>
         struct LimitedRepeat : opti::MaybeEmptyA<A> {
-            static_assert(!test::is_template_instance_of<A, Optional>, "`~-` is not allowed. use `-~` instead");
+            static_assert(!helper::is_template_instance_of<A, Optional>, "`~-` is not allowed. use `-~` instead");
             Min min_;
             Max max_;
 

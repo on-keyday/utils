@@ -92,7 +92,7 @@ namespace combl::istr {
             }
             else if (auto v = as_string()) {
                 std::string str;
-                utils::escape::escape_str(*v, str, utils::escape::EscapeFlag::hex | utils::escape::EscapeFlag::utf);
+                utils::escape::escape_str(*v, str, utils::escape::EscapeFlag::hex | utils::escape::EscapeFlag::utf16);
                 return "\"" + str + "\"";
             }
             else if (value.index() == 4) {

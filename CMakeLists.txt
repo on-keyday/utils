@@ -116,7 +116,7 @@ add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
 add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_Internet.cpp")
 add_executable(exepath "src/test/wrap/test_exepath.cpp")
-
+add_executable(json_stringer "src/test/json/test_json_stringer.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 # tools

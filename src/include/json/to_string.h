@@ -14,11 +14,80 @@
 #include <strutil/append.h>
 #include "../escape/escape.h"
 #include "../code/code_writer.h"
+#include "stringer.h"
 
 namespace utils {
 
     namespace json {
         namespace internal {
+            template <class S, class String, template <class...> class Vec, template <class...> class Object>
+            JSONErr to_string_detail(S& out, const JSONBase<String, Vec, Object>& json, FmtFlag flags, IntTraits traits) {
+                static_assert(helper::is_template_instance_of<S, Stringer>);
+                using tio = typename helper::template_instance_of_t<S, Stringer>;
+                using Str = Stringer<typename tio::template param_at<0>, typename tio::template param_at<1>, typename tio::template param_at<2>>;
+                using Holder = const internal::JSONHolder<String, Vec, Object>;
+                Str& w = out;
+                Holder& holder = json.get_holder();
+                w.set_utf_escape(any(flags & FmtFlag::escape));
+                w.set_html_escape(any(flags & FmtFlag::html));
+                w.set_no_colon_space(any(flags & FmtFlag::no_space_key_value));
+                w.set_int_traits(traits);
+                auto f = [&](auto& f, Holder& h) -> JSONErr {
+                    if (h.is_undef()) {
+                        if (!any(flags & FmtFlag::undef_as_null)) {
+                            return JSONError::invalid_value;
+                        }
+                        w.null();
+                    }
+                    else if (h.is_null()) {
+                        w.null();
+                    }
+                    else if (auto i = holder.as_numi()) {
+                        w.number(*i);
+                    }
+                    else if (auto u = holder.as_numu()) {
+                        w.number(*u);
+                    }
+                    else if (auto f = holder.as_numf()) {
+                        w.number(*f);
+                    }
+                    else if (auto str = holder.as_str()) {
+                        w.string(*str);
+                    }
+                    else if (auto b = holder.as_bool()) {
+                        w.boolean(*b);
+                    }
+                    else if (auto obj = holder.as_obj()) {
+                        auto field = w.object();
+                        for (auto& kv : *obj) {
+                            JSONError err;
+                            field(get<0>(kv), [&] {
+                                Holder& h = get<1>(kv).get_holder();
+                                err = f(f, h);
+                            });
+                            if (err != JSONError::none) {
+                                return err;
+                            }
+                        }
+                    }
+                    else if (auto arr = holder.as_arr()) {
+                        auto field = w.array();
+                        for (auto& v : *arr) {
+                            JSONError err;
+                            field([&] {
+                                Holder& h = v.get_holder();
+                                err = f(f, h);
+                            });
+                            if (err != JSONError::none) {
+                                return err;
+                            }
+                        }
+                    }
+                    return JSONError::none;
+                };
+                return f(f, holder);
+            }
+
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr to_string_detail(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag) {
                 const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
@@ -29,7 +98,7 @@ namespace utils {
                     }
                     return true;
                 };
-                auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf : escape::EscapeFlag::none;
+                auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf16 : escape::EscapeFlag::none;
                 auto line = !any(flag & FmtFlag::no_line);
                 auto write_comma = [&](bool& first) {
                     if (first) {
@@ -63,7 +132,7 @@ namespace utils {
                     }
                     else {
                         if (any(flag & FmtFlag::unescape_slash)) {
-                            return escape::escape_str(str, out.t, escflag, escape::json_set_without_slash());
+                            return escape::escape_str(str, out.t, escflag, escape::json_set_no_html());
                         }
                         else {
                             return escape::escape_str(str, out.t, escflag, escape::json_set());
@@ -155,6 +224,7 @@ namespace utils {
                 return JSONError::not_json;
             }
         }  // namespace internal
+
         template <class Out, class String, template <class...> class Vec, template <class...> class Object>
         JSONErr to_string(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
             auto e = internal::to_string_detail(json, out, flag);

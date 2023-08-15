@@ -18,19 +18,6 @@ namespace utils::comb2 {
             }
         }
 
-        template <class T, template <class...> class Templ>
-        struct template_instance_of_t : std::false_type {};
-        template <class... U, template <class...> class Templ>
-        struct template_instance_of_t<Templ<U...>, Templ> : std::true_type {};
-
-        template <class T, template <class...> class Templ>
-        concept is_template_instance_of = template_instance_of_t<T, Templ>::value;
-
-        template <class A>
-        struct Test {};
-
-        static_assert(is_template_instance_of<Test<int>, Test> && !is_template_instance_of<int, Test>);
-
         template <class Tag = const char*>
         struct TestContext : LexContext<Tag> {
             constexpr void error_seq(auto& seq, auto&&... err) {
