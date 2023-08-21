@@ -15,6 +15,7 @@
 #include <memory>
 #include <initializer_list>
 #include <exception>
+#include <functional>
 
 namespace utils {
     namespace helper::either {
