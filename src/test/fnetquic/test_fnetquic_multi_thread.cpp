@@ -28,6 +28,8 @@
 #include <file/gzip/gzip.h>
 #include <testutil/timer.h>
 #include <fnet/quic/quic.h>
+#include <fnet/connect.h>
+
 using namespace utils::fnet::quic::use::smartptr;
 using QCTX = std::shared_ptr<Context>;
 using namespace utils::fnet;
@@ -263,21 +265,9 @@ int main() {
         *w2 << Recvs{std::move(s), std::move(data)};
     });
     */
-    auto wait = resolve_address("localhost", "8090", sockattr_udp());
-    assert(!wait.second);
-    auto [info, err] = wait.first.wait();
-    assert(!err);
-    Socket sock;
-    NetAddrPort addr;
-    while (info.next()) {
-        auto saddr = info.sockaddr();
-        sock = make_socket(saddr.attr);
-        if (!sock) {
-            continue;
-        }
-        addr = saddr.addr;
-        break;
-    }
+
+    auto [sock, addr] = connect("localhost", "8090", sockattr_udp(), false).value();
+
     assert(sock);
     constexpr auto tasks = 11;
     for (auto i = 0; i < tasks; i++) {
@@ -298,18 +288,18 @@ int main() {
             assert(val);
         }
         if (data.size()) {
-            sock.writeto(addr, data);
+            sock.writeto(addr.addr, data);
         }
         while (true) {
-            auto [d, peer, err] = sock.readfrom(buf);
-            if (isSysBlock(err)) {
+            auto data = sock.readfrom(buf);
+            if (!data && isSysBlock(data.error())) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
                 break;
             }
-            if (err) {
+            if (!data) {
                 break;
             }
-            if (ctx->parse_udp_payload(d)) {
+            if (ctx->parse_udp_payload(data->first)) {
                 break;
             }
         }

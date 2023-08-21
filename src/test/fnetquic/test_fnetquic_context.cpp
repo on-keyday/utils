@@ -14,6 +14,7 @@
 #include <fnet/addrinfo.h>
 #include <thread>
 #include <fnet/quic/quic.h>
+#include <fnet/connect.h>
 using namespace utils::fnet;
 
 void test_fnetquic_context() {
@@ -39,21 +40,7 @@ void test_fnetquic_context() {
     assert(val);
     utils::view::rvec data;
 
-    auto wait = resolve_address("localhost", "8090", {.socket_type = SOCK_DGRAM});
-    assert(!wait.second);
-    auto [info, err] = wait.first.wait();
-    assert(!err);
-    Socket sock;
-    NetAddrPort addr;
-    while (info.next()) {
-        auto saddr = info.sockaddr();
-        sock = make_socket(saddr.attr);
-        if (!sock) {
-            continue;
-        }
-        addr = saddr.addr;
-        break;
-    }
+    auto [sock, addr] = utils::fnet::connect("localhost", "8090", sockattr_udp(), false).value();
     utils::byte buf[3000];
     while (true) {
         std::tie(data, std::ignore, val) = ctx->create_udp_payload();
@@ -62,15 +49,15 @@ void test_fnetquic_context() {
         }
         assert(val);
         if (data.size()) {
-            sock.writeto(addr, data);
+            sock.writeto(addr.addr, data);
         }
         while (true) {
-            auto [d, peer, err] = sock.readfrom(buf);
-            if (isSysBlock(err)) {
+            auto data = sock.readfrom(buf);
+            if (!data && isSysBlock(data.error())) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
                 break;
             }
-            ctx->parse_udp_payload(d);
+            ctx->parse_udp_payload(data->first);
         }
     }
 }

@@ -94,7 +94,7 @@ namespace utils {
                     this->buffer.string(name);
                     this->buffer.colon();
                     this->buffer.value(value);
-                    this->buffer.maybe_fallback();
+                    this->buffer.set_object_field();
                 });
             }
 
@@ -129,6 +129,14 @@ namespace utils {
                               requires(T t) {
                                   { t.raw } -> std::convertible_to<View>;
                               };
+
+        enum class Token : byte {
+            none,
+            colon,
+            open_object,
+            object_field,
+            object,
+        };
 
         template <class Output = std::string, class StringView = std::string_view, class Indent = const char*>
         struct Stringer {
@@ -190,7 +198,7 @@ namespace utils {
             constexpr void write_indent() {
                 if (prev_colon) {
                     prev_colon = false;
-                    return;
+                    return;  // "key" : <here>
                 }
                 if (use_indent()) {
                     for (size_t i = 0; i < current_indent; i++) {
@@ -223,7 +231,7 @@ namespace utils {
                 }
             }
 
-            constexpr void maybe_fallback() {
+            constexpr void set_object_field() {
                 if (prev_colon) {
                     null();
                 }
@@ -259,7 +267,7 @@ namespace utils {
                 else if constexpr (has_json_member<T, Stringer&>) {
                     value.as_json(*this);
                 }
-                else if constexpr (has_json_member<T, Stringer&>) {
+                else if constexpr (has_json_adl<T, Stringer&>) {
                     as_json(value, *this);
                 }
                 else if constexpr (std::is_same_v<T, std::nullptr_t>) {

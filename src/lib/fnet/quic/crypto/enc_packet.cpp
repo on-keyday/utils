@@ -164,12 +164,12 @@ namespace utils {
                 if (err) {
                     return err;
                 }
-                bool ok;
                 // decode packet number
-                std::tie(packet.packet_number, ok) = packetnum::decode(pn_wire, largest_pn);
+                auto ok = packetnum::decode(pn_wire, largest_pn);
                 if (!ok) {
                     return err_decode_pn;
                 }
+                packet.packet_number = *ok;
                 return error::none;
             }
 

@@ -21,22 +21,21 @@ namespace utils {
             Socket& get_request_sock(Requester& req) {
                 return req.client.sock;
             }
-            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, error::Error);
+            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, bool was_err);
 
             void call_read_async(HTTPServ* serv, Requester& req, StateContext& as) {
-                auto fn = [=](Socket&& sock, Requester&& req, StateContext&& as, error::Error&& err) {
+                auto fn = [=](Socket&& sock, Requester&& req, StateContext&& as, bool was_err) {
                     req.client.sock = std::move(sock);  // restore
-                    http_handler_impl(serv, std::move(req), std::move(as), std::move(err));
+                    as.log(log_level::debug, "reenter http handler from async read", req.client.addr);
+                    http_handler_impl(serv, std::move(req), std::move(as), was_err);
                 };
                 if (!as.read_async(req.client.sock, fn, std::move(req))) {
-                    req.client.sock.shutdown();
-                    as.log(debug, "failed to start read_async operation", req.client);
+                    req.client.sock.shutdown();  // discard
                 }
             }
 
-            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, error::Error err) {
-                if (err) {
-                    as.log(debug, "error occured", req.client);
+            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, bool was_err) {
+                if (was_err) {
                     return;  // discard
                 }
                 bool complete = false;
@@ -46,10 +45,10 @@ namespace utils {
                     size_t len;
                     req.http.borrow_input(data, len);
                     if (len == 0) {
-                        as.log(debug, "connection closed", req.client);
+                        as.log(log_level::info, "connection closed", req.client.addr);
                     }
                     else {
-                        as.log(debug, "invalid request received", req.client, data, len);
+                        as.log(log_level::warn, "invalid request received", req.client.addr);
                     }
                     return;  // discard
                 }
@@ -65,22 +64,23 @@ namespace utils {
 
             void start_handling(HTTPServ* serv, Requester&& req, StateContext&& s) {
                 char buf[1024];
-                bool red = false;
-                if (auto err = req.client.sock.read_until_block(red, buf, [&](view::wvec r) {
+                if (auto result = req.client.sock.read_until_block(buf, [&](view::wvec r) {
                         req.http.add_input(r, r.size());
-                    })) {
-                    s.log(debug, "connection closed at reading first data", req.client);
+                    });
+                    !result) {
+                    if (isSysBlock(result.error())) {
+                        // no data available, so wait async
+                        call_read_async(serv, req, s);
+                        return;
+                    }
+                    s.log(log_level::warn, &req.client.addr, result.error());
                     return;  // discard
                 }
-                if (!red) {
-                    call_read_async(serv, req, s);
-                    return;
-                }
-                http_handler_impl(serv, std::move(req), std::move(s), error::none);
+                http_handler_impl(serv, std::move(req), std::move(s), false);
             }
 
             fnetserv_dll_internal(void) http_handler(void* v, Client&& cl, StateContext s) {
-                s.log(perf, start_timing, cl);
+                s.log(log_level::perf, start_timing, cl.addr);
                 auto serv = static_cast<HTTPServ*>(v);
                 Requester req;
                 req.client = std::move(cl);
@@ -88,7 +88,7 @@ namespace utils {
             }
 
             fnetserv_dll_export(void) handle_keep_alive(Requester&& req, StateContext s) {
-                s.log(debug, "start keep-alive waiting", req.client);
+                s.log(log_level::debug, "start keep-alive waiting", req.client.addr);
                 req.http.clear_input();
                 req.http.clear_output();
                 auto serv = static_cast<HTTPServ*>(req.internal_);

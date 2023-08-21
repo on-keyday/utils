@@ -17,14 +17,22 @@
 #include <fnet/server/format_state.h>
 #include <mutex>
 #include <helper/pushbacker.h>
+#include <testutil/alloc_hook.h>
+#include <fnet/debug.h>
 
 struct Flags : utils::cmdline::templ::HelpOption {
     std::string port = "8091";
     bool quic = false;
+    bool single_thread = false;
+    bool memory_debug = false;
+    bool verbose = false;
     void bind(utils::cmdline::option::Context& ctx) {
         bind_help(ctx);
         ctx.VarString(&port, "port", "port number (default:8091)", "PORT");
         ctx.VarBool(&quic, "quic", "enable quic server");
+        ctx.VarBool(&single_thread, "single", "single thread mode");
+        ctx.VarBool(&memory_debug, "memory-debug", "add memory debug hook");
+        ctx.VarBool(&verbose, "verbose", "verbose log");
     }
 };
 namespace serv = utils::fnet::server;
@@ -59,47 +67,59 @@ void log_thread() {
                 l.unlock();
                 continue;
             }
-            auto v = std::move(lg.front());
-            lg.pop_front();
+            auto vec = std::move(lg);
             l.unlock();
-            cout << v;
+            for (auto& v : vec) {
+                cout << v;
+            }
         }
     }
 }
 
-void server_entry(void* p, serv::Client&& cl, serv::StateContext ctx) {
-    auto r = utils::wrap::packln("accept ", cl.addr.to_string<std::string>(true, true)).raw();
+void log(auto&&... msg) {
+    auto r = utils::wrap::packln(msg...).raw();
     m.lock();
     ac.push_back(std::move(r));
     m.unlock();
+}
+
+void server_entry(void* p, serv::Client&& cl, serv::StateContext ctx) {
+    ctx.log(serv::log_level::info, "accept", cl.addr);
     serv::http_handler(p, std::move(cl), ctx);
 }
 
 int quic_server();
+bool verbose = false;
 
 int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
+    if (flag.memory_debug) {
+        utils::fnet::debug::allocs();
+        utils::test::set_alloc_hook(true);
+    }
     if (flag.quic) {
         return quic_server();
     }
     serv::HTTPServ serv;
     serv.next = http_serve;
+    verbose = flag.verbose;
     auto s = std::make_shared<serv::State>(&serv, server_entry);
+    s->set_log([](serv::log_level level, utils::fnet::NetAddrPort* addr, utils::fnet::error::Error& err) {
+        if (!verbose && level < serv::log_level::info) {
+            return;
+        }
+        log(addr ? addr->to_string<std::string>(true, true) : "<no address>", " ",
+            err.error<std::string>());
+    });
     s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
     s->set_reduce_skip(10);
-    if (!serv::prepare_listeners(
-            flag.port.c_str(), [&](auto&&, utils::fnet::Socket& prep) {
-                s->add_accept_thread(std::move(prep));
-            },
-            2, 10000)) {
-        utils::wrap::cout_wrap() << "failed to create server";
+    auto server = serv::prepare_listener(flag.port, 10000);
+    if (!server) {
+        utils::wrap::cout_wrap() << "failed to create server " << server.error().error<std::string>();
         return -1;
     }
-    utils::wrap::cout_wrap() << "running server on port " << flag.port << " \n";
-    utils::wrap::path_string str;
-    std::thread(log_thread).detach();
     auto& servstate = s->state();
-    for (;;) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    utils::wrap::path_string str;
+    auto input_callback = [&] {
         if (!servstate.busy() && m.try_lock()) {
             if (ac.size()) {
                 std::thread([ac = std::move(ac)] {
@@ -116,7 +136,7 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
         }
         utils::wrap::input(str, true);
         if (!str.size()) {
-            continue;
+            return true;
         }
         if (str.back() == '\n') {
             str.pop_back();
@@ -130,8 +150,19 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
             cout << "stopping server\n";
             s->notify();
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            break;
+            return false;
         }
+        return true;
+    };
+    utils::wrap::cout_wrap() << "running server on port " << flag.port << " \n";
+    std::thread(log_thread).detach();
+    if (flag.single_thread) {
+        s->serve(server->first, input_callback);
+        return 0;
+    }
+    s->add_accept_thread(std::move(server->first));
+    while (input_callback()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return 0;
 }

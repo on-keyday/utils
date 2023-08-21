@@ -21,6 +21,7 @@
 #include <fnet/debug.h>
 #include <testutil/alloc_hook.h>
 #include <env/env_sys.h>
+#include <fnet/connect.h>
 using namespace utils::fnet::quic::use::rawptr;
 namespace quic = utils::fnet::quic;
 using TConfig2 = quic::context::TypeConfig<std::mutex, DefaultStreamTypeConfig, quic::connid::TypeConfig<>, quic::status::NewReno, quic::ack::UnackedPackets>;
@@ -157,9 +158,9 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
             sock.writeto(addr, payload);
         }
         utils::byte data[1500];
-        auto [recv, addr, err] = sock.readfrom(data);
-        if (recv.size()) {
-            ctx->parse_udp_payload(recv);
+        auto recv = sock.readfrom(data);
+        if (recv && recv->first.size()) {
+            ctx->parse_udp_payload(recv->first);
         }
         s->update_max_data([&](FlowLimiter v, std::uint64_t) {
             if (v.avail_size() < 5000) {
@@ -192,23 +193,7 @@ int main() {
     utils::fnet::tls::set_libcrypto(libcrypto.data());
     utils::fnet::tls::set_libssl(libssl.data());
 #endif
-    auto [wait, err] = utils::fnet::resolve_address("localhost", "8090", utils::fnet::sockattr_udp());
-    assert(!err);
-    auto [info, err2] = wait.wait();
-    assert(!err2);
-    utils::fnet::Socket sock;
-    utils::fnet::NetAddrPort to;
-    while (info.next()) {
-        auto addr = info.sockaddr();
-        sock = utils::fnet::make_socket(addr.attr);
-        if (!sock) {
-            continue;
-        }
-        to = std::move(addr.addr);
-        sock.connect(to);
-        break;
-    }
-    assert(sock);
+    auto [sock, to] = utils::fnet::connect("localhost", "8090", utils::fnet::sockattr_udp(), false).value();
     auto ctx = std::make_shared<ContextT>();
     auto conf = utils::fnet::tls::configure();
     conf.set_alpn("\x04test");
@@ -238,5 +223,5 @@ int main() {
             c->add_coroutine((void*)(i), request);
         }
     }).detach();
-    conn(c, ctx, sock, to);
+    conn(c, ctx, sock, to.addr);
 }

@@ -68,40 +68,40 @@ namespace utils {
                 byte id[9] = "idididid";
                 byte payload[11]{};  // dummy
                 byte data[1210]{};
-                auto [wire, ok] = packetnum::encode(1, 0);
+                auto wire = packetnum::encode(1, 0);
                 plain.version = 1;
                 plain.srcID = id;
                 plain.dstID = id;
                 plain.token = id;
                 plain.payload = payload;
-                size_t normal = plain.len(false, wire.len);
+                size_t normal = plain.len(false, wire->len);
                 size_t padding = 1200 - normal;
-                size_t with_padding = plain.len(false, wire.len, 16, padding);
+                size_t with_padding = plain.len(false, wire->len, 16, padding);
                 padding -= with_padding - 1200;
-                size_t fit_size = plain.len(false, wire.len, 16, padding);
+                size_t fit_size = plain.len(false, wire->len, 16, padding);
                 if (fit_size != 1200) {
                     return false;
                 }
                 binary::writer w{data};
-                if (!plain.render(w, wire, 16, padding)) {
+                if (!plain.render(w, *wire, 16, padding)) {
                     return false;
                 }
                 binary::reader r{w.written()};
                 if (!plain.parse(r, 16)) {
                     return false;
                 }
-                ok = plain.flags.type() == PacketType::Initial &&
-                     plain.flags.packet_number_length() == wire.len &&
-                     plain.version == 1 &&
-                     plain.dstIDLen == 9 &&
-                     plain.dstID == id &&
-                     plain.srcIDLen == 9 &&
-                     plain.srcID == id &&
-                     plain.token_length.value == 9 &&
-                     plain.token == id &&
-                     plain.wire_pn == wire.value &&
-                     plain.length == (wire.len + 11 + padding + 16) &&
-                     plain.auth_tag.size() == 16;
+                bool ok = plain.flags.type() == PacketType::Initial &&
+                          plain.flags.packet_number_length() == wire->len &&
+                          plain.version == 1 &&
+                          plain.dstIDLen == 9 &&
+                          plain.dstID == id &&
+                          plain.srcIDLen == 9 &&
+                          plain.srcID == id &&
+                          plain.token_length.value == 9 &&
+                          plain.token == id &&
+                          plain.wire_pn == wire->value &&
+                          plain.length == (wire->len + 11 + padding + 16) &&
+                          plain.auth_tag.size() == 16;
                 if (!ok) {
                     return false;
                 }
@@ -110,7 +110,7 @@ namespace utils {
                 if (!cipher.parse(r, 16)) {
                     return false;
                 }
-                ok = cipher.protected_payload.size() == wire.len + 11 + padding;
+                ok = cipher.protected_payload.size() == wire->len + 11 + padding;
                 return ok;
             }
 

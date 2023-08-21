@@ -37,6 +37,8 @@ namespace utils {
                 std::atomic_uint32_t current_enqued;
                 // total IOCP/epoll call count
                 std::atomic_uint64_t total_async_invocation;
+                // max concurrent IOCP/epoll call count
+                std::atomic_uint32_t max_concurrent_async_invocation;
                 // total accept called
                 std::atomic_uint64_t total_accepted;
                 // total accept failure
@@ -93,18 +95,18 @@ namespace utils {
             enum log_level {
                 perf,
                 debug,
-                normal,
+                info,
+                warn,
             };
 
             struct Queued {
-                std::shared_ptr<thread::Waker> runner;
+                DeferredNotification runner;
             };
 
             using ServerEntry = void (*)(void*, Client&&, StateContext);
 
             struct fnetserv_class_export State : std::enable_shared_from_this<State> {
-                using log_t = void (*)(log_level, const char* msg, Client&,
-                                       const char* data, size_t len);
+                using log_t = void (*)(log_level, NetAddrPort* addr, error::Error& err);
 
                private:
                 Counter count;
@@ -191,45 +193,60 @@ namespace utils {
                         ptr);
                 }
 
+                void log(log_level level, NetAddrPort* addr, error::Error& err) {
+                    if (log_evt) {
+                        log_evt(level, addr, err);
+                    }
+                }
+
                private:
                 // fn is void(Socket&& sock,auto&& context,StateContext&&)
                 // context.get_buffer() returns view::wvec for reading buffer
                 // context.add_data(view::rvec) appends application data
                 bool read_async(Socket& sock, auto fn, auto&& context) {
-                    count.total_async_invocation++;
-                    count.waiting_async_read++;
-                    view::wvec buf = context.get_buffer();
-                    auto s = std::move(sock);
-                    auto callback = [fn, ctx = std::move(context), th = shared_from_this()](
-                                        Socket&& sock, view::wvec read, view::wvec buffer, error::Error err, void* arg) mutable {
-                        th->count.waiting_async_read--;
-                        Enter ent{th->count.current_handling_handler_thread};
-                        if (!err) {
-                            ctx.add_data(read);
-                            if (read.size() == buffer.size()) {
-                                bool red = false;
-                                sock.read_until_block(red, buffer, [&](view::rvec s) {
-                                    ctx.add_data(s);
-                                });
+                    // use explicit clone
+                    // context may contains sock self, and then read_async moves sock into heap and
+                    // finally fails to call read_async
+                    // so use cloned sock
+                    auto s = sock.clone();
+                    auto result = s.read_async_deferred(
+                        std::forward<decltype(context)>(context), [th = shared_from_this()](DeferredNotification&& n) { th->enque_object(std::move(n)); },
+                        [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& result) {
+                            th->count.waiting_async_read--;
+                            Enter ent{th->count.current_handling_handler_thread};
+                            if (result) {
+                                auto& size = *result;
+                                auto&& base_buffer = context.get_buffer();
+                                if (size) {
+                                    context.add_data(view::wvec(base_buffer).substr(0, *size));
+                                }
+                                if (!size || *size == base_buffer.size()) {
+                                    result = s.read_until_block(base_buffer, [&](view::rvec s) {
+                                        context.add_data(s);
+                                    });
+                                }
                             }
-                        }
-                        fn(std::move(sock), std::move(ctx), {th}, std::move(err));
-                    };
-                    auto woken = [th = shared_from_this()](std::shared_ptr<thread::Waker> w) {
-                        th->enque_object(std::move(w));
-                    };
-                    auto [canceler, err] = s.read_async(buf, std::move(callback), false, woken);
-                    if (err) {
-                        count.total_async_invocation--;
-                        count.waiting_async_read--;
+                            if (!result) {
+                                if (th->log_evt) {
+                                    auto addr = s.get_remoteaddr();
+                                    th->log_evt(log_level::warn, addr.value_ptr(), result.error());
+                                }
+                            }
+                            fn(std::move(s), std::move(context), {th}, result.error_ptr());
+                        });
+                    if (!result) {
                         count.total_failed_async++;
-                        sock = std::move(s);  // get back
+                        auto addr = s.get_remoteaddr();
+                        log(log_level::warn, addr.value_ptr(), result.error());
                         return false;
                     }
+                    count.total_async_invocation++;
+                    auto concur = ++count.waiting_async_read - 1;
+                    count.max_concurrent_async_invocation.compare_exchange_strong(concur, concur + 1);
                     return true;
                 }
 
-                void enque_object(std::shared_ptr<thread::Waker>&& w) {
+                void enque_object(DeferredNotification&& w) {
                     count.total_queued++;
                     count.current_enqued++;
                     enque << Queued{std::move(w)};
@@ -249,11 +266,15 @@ namespace utils {
                                          std::forward<decltype(context)>(context));
                 }
 
-                void log(log_level level, const char* msg, Client& cl, const char* data = nullptr, size_t len = 0) {
+                void log(log_level level, NetAddrPort* addr, auto&& err) {
                     auto l = s->log_evt;
                     if (l) {
-                        l(level, msg, cl, data, len);
+                        l(level, addr, err);
                     }
+                }
+
+                void log(log_level level, const char* msg, NetAddrPort& addr) {
+                    log(level, &addr, error::Error(msg));
                 }
 
                 void enque_object(auto fn, auto&& obj) {

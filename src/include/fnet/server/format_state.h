@@ -18,6 +18,7 @@ namespace utils {
             js["current_handling_handler_thread"] = servstate.current_handling_handler_thread.load();
             js["waiting_async_read"] = servstate.waiting_async_read.load();
             js["total_async_invocation"] = servstate.total_async_invocation.load();
+            js["max_concurrent_async_invocation"] = servstate.max_concurrent_async_invocation.load();
             js["total_accepted"] = servstate.total_accepted.load();
             js["active_recommend"] = servstate.waiting_recommend.load();
             js["max_handler_thread"] = servstate.max_handler_thread.load();

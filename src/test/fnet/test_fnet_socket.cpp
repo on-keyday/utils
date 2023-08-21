@@ -11,6 +11,7 @@
 #include <cassert>
 #include <string>
 #include <fnet/util/http/http_headers.h>
+#include <fnet/connect.h>
 #include <map>
 
 using namespace utils;
@@ -26,38 +27,9 @@ struct SockHolder {
 
 int main() {
     fnet::SockAddr addr{};
-    auto [resolve, err1] = fnet::resolve_address("www.google.com", "http", fnet::sockattr_tcp());
-    assert(!err1);
-    auto [list, err2] = resolve.wait();
-    assert(!err2);
-    fnet::Socket sock;
-    while (list.next()) {
-        auto addr = list.sockaddr();
-        auto tmp = fnet::make_socket(addr.attr);
-        if (!tmp) {
-            continue;
-        }
-
-        auto err = tmp.connect(addr.addr);
-        if (!err) {
-            goto END;
-        }
-        if (fnet::isSysBlock(err)) {
-            if (!tmp.wait_writable(10, 0).is_error()) {
-                goto END;
-            }
-        }
-
-        continue;
-    END:
-        sock = std::move(tmp);
-        break;
-    }
-    assert(sock);
+    auto sock = fnet::connect("www.google.com", "http", fnet::sockattr_tcp()).value().first;
     constexpr auto data = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
-    if (auto [_, err] = sock.write(data); err) {
-        return -1;
-    }
+    sock.write(data).value();
     SockHolder holder{std::move(sock)};
     auto completion = [](void* user, void* data, size_t len, size_t bufmax, int err) {
         auto h = static_cast<SockHolder*>(user);
@@ -66,12 +38,12 @@ int main() {
             size_t size = len;
             char buf[2048]{};
             while (true) {
-                auto [read, err] = h->sock.read(buf);
-                if (err) {
+                auto data = h->sock.read(buf);
+                if (!data) {
                     break;
                 }
-                h->str.append(read.as_char(), read.size());
-                len += read.size();
+                h->str.append(data->as_char(), data->size());
+                len += data->size();
             }
         };
         if (len == bufmax) {

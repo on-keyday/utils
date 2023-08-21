@@ -62,30 +62,30 @@ namespace utils {
                 byte id[9] = "idididid";
                 byte payload[11]{};  // dummy
                 byte data[1210]{};
-                auto [wire, ok] = packetnum::encode(1, 0);
+                auto wire = packetnum::encode(1, 0);
                 plain.version = 1;
                 plain.srcID = id;
                 plain.dstID = id;
-                plain.wire_pn = wire.value;
+                plain.wire_pn = wire->value;
                 plain.payload = payload;
                 binary::writer w{data};
-                if (!plain.render(w, wire, 0, 16)) {
+                if (!plain.render(w, *wire, 0, 16)) {
                     return false;
                 }
                 binary::reader r{w.written()};
                 if (!plain.parse(r, 16)) {
                     return false;
                 }
-                ok = plain.flags.type() == PacketType::Handshake &&
-                     plain.flags.packet_number_length() == wire.len &&
-                     plain.version == 1 &&
-                     plain.dstIDLen == 9 &&
-                     plain.dstID == id &&
-                     plain.srcIDLen == 9 &&
-                     plain.srcID == id &&
-                     plain.wire_pn == wire.value &&
-                     plain.length == (wire.len + 11 + 16) &&
-                     plain.auth_tag.size() == 16;
+                bool ok = plain.flags.type() == PacketType::Handshake &&
+                          plain.flags.packet_number_length() == wire->len &&
+                          plain.version == 1 &&
+                          plain.dstIDLen == 9 &&
+                          plain.dstID == id &&
+                          plain.srcIDLen == 9 &&
+                          plain.srcID == id &&
+                          plain.wire_pn == wire->value &&
+                          plain.length == (wire->len + 11 + 16) &&
+                          plain.auth_tag.size() == 16;
                 if (!ok) {
                     return false;
                 }
@@ -94,7 +94,7 @@ namespace utils {
                 if (!cipher.parse(r, 16)) {
                     return false;
                 }
-                ok = cipher.protected_payload.size() == wire.len + 11;
+                ok = cipher.protected_payload.size() == wire->len + 11;
                 return ok;
             }
 

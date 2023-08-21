@@ -26,12 +26,12 @@ struct ServerContext {
 void recv_packets(std::shared_ptr<ServerContext> ctx) {
     while (!ctx->end) {
         utils::byte data[2000];
-        auto [payload, addr, err] = ctx->sock.readfrom(data);
-        if (err) {
+        auto payload = ctx->sock.readfrom(data);
+        if (!payload) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
-        ctx->hm->parse_udp_payload(payload, addr);
+        ctx->hm->parse_udp_payload(payload->first, payload->second);
     }
 }
 
@@ -92,24 +92,26 @@ int quic_server() {
     tls_conf.set_alpn_select_callback(&cb);
     // tls_conf.set_cert_chain();
     ctx->hm->set_config(utils::fnet::quic::use::use_default_config(std::move(tls_conf)));
-    auto [wait, err] = fnet::get_self_server_address("8090", fnet::sockattr_udp(6));
-    assert(!err);
-    auto [list, err2] = wait.wait();
+    auto list = fnet::get_self_server_address("8090", fnet::sockattr_udp(6))
+                    .and_then([&](fnet::WaitAddrInfo&& info) {
+                        return info.wait();
+                    })
+                    .value();
     fnet::Socket sock;
     while (list.next()) {
         auto addr = list.sockaddr();
-        sock = fnet::make_socket(addr.attr);
-        if (!sock) {
-            continue;
-        }
-        err = sock.bind(addr.addr);
-        if (err) {
-            continue;
-        }
-        err = sock.set_ipv6only(false);
-        if (err) {
-            continue;
-        }
+        sock = fnet::make_socket(addr.attr)
+                   .and_then([&](fnet::Socket&& s) {
+                       return sock.bind(addr.addr)
+                           .and_then([&]() -> fnet::expected<void> {
+                               return sock.set_ipv6only(false);
+                           })
+                           .transform([&] {
+                               return std::move(s);
+                           });
+                   })
+                   .value_or(fnet::Socket());
+
         break;
     }
     assert(sock);

@@ -17,10 +17,10 @@ namespace utils {
                                                               std::uint64_t largest_acked, size_t auth_tag_len, bool use_full,
                                                               auto&& render_payload) {
             auto tmp = packetnum::encode(summary.packet_number, largest_acked);
-            if (!tmp.second) {
+            if (!tmp) {
                 return {{}, false};
             }
-            auto wire = tmp.first;
+            auto wire = *tmp;
             std::uint64_t payload_len = 0;
             auto offset = w.offset();
             auto get_crypto_packet = [&]() -> std::pair<CryptoPacket, bool> {

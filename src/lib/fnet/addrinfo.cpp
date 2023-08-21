@@ -12,12 +12,12 @@
 #include <number/array.h>
 #include <fnet/dll/glheap.h>
 #include <helper/defer.h>
+#include <fnet/sock_internal.h>
 // #include <strutil/strutil.h>
 #include <bit>
 #include <cstring>
 #include <fnet/dll/errno.h>
 #include <fnet/util/ipaddr.h>
-#include <fnet/dll/asyncbase.h>
 #include <view/charvec.h>
 #ifndef _WIN32
 #include <signal.h>
@@ -293,9 +293,9 @@ namespace utils {
             }
         }
 
-        fnet_dll_implement(std::pair<WaitAddrInfo, error::Error>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr) {
+        fnet_dll_implement(expected<WaitAddrInfo>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr) {
             if (!lazy::load_addrinfo()) {
-                return {WaitAddrInfo{}, error::Error("socket library not loaded", error::ErrorCategory::syserr)};
+                return unexpect(error::Error("socket library not loaded", error::ErrorCategory::syserr));
             }
             Host host{};
             Port port_{};
@@ -308,24 +308,24 @@ namespace utils {
             error::Error err;
             auto obj = platform_resolve_address(attr, err, !hostname.null() ? &host : nullptr, !port.null() ? &port_ : nullptr);
             if (!obj) {
-                return {WaitAddrInfo{}, std::move(err)};
+                return unexpect(std::move(err));
             }
-            return {WaitAddrInfo{obj}, error::none};
+            return WaitAddrInfo{obj};
         }
 
-        fnet_dll_implement(std::pair<WaitAddrInfo, error::Error>) get_self_server_address(view::rvec port, SockAttr attr) {
+        fnet_dll_implement(expected<WaitAddrInfo>) get_self_server_address(view::rvec port, SockAttr attr) {
             attr.flag |= AI_PASSIVE;
             return resolve_address({}, port, attr);
         }
 
-        fnet_dll_export(std::pair<WaitAddrInfo, error::Error>) get_self_host_address(view::rvec port, SockAttr attr) {
+        fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr) {
             if (!lazy::load_addrinfo()) {
-                return {WaitAddrInfo{}, error::Error("socket library not loaded", error::ErrorCategory::syserr)};
+                return unexpect(error::Error("socket library not loaded", error::ErrorCategory::syserr));
             }
             char host[256]{0};
             auto err = lazy::gethostname_(host, sizeof(host));
             if (err != 0) {
-                return {WaitAddrInfo{}, error::Error(get_error(), error::ErrorCategory::syserr)};
+                return unexpect(error::Errno());
             }
             return resolve_address(host, port, attr);
         }

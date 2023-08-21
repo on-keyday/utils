@@ -9,6 +9,7 @@
 #include <env/env_sys.h>
 #include <fnet/addrinfo.h>
 #include <fnet/socket.h>
+#include <fnet/connect.h>
 using namespace utils::fnet::quic::use::rawptr;
 
 using path = utils::wrap::path_string;
@@ -37,21 +38,7 @@ int main() {
     auto ok = ctx->init(std::move(config)) &&
               ctx->connect_start("www.google.com");
     assert(ok);
-    auto [wait, err] = utils::fnet::resolve_address("www.google.com", "443", utils::fnet::sockattr_udp());
-    assert(!err);
-    auto [addrlist, err2] = wait.wait();
-    assert(!err2);
-    utils::fnet::Socket sock;
-    utils::fnet::SockAddr saddr;
-    while (addrlist.next()) {
-        saddr = addrlist.sockaddr();
-        sock = utils::fnet::make_socket(saddr.attr);
-        if (!sock) {
-            continue;
-        }
-        sock.connect(saddr.addr);
-        break;
-    }
+    auto [sock, addr] = utils::fnet::connect("www.google.com", "443", utils::fnet::sockattr_udp(), false).value();
 
     while (true) {
         auto [data, _, idle] = ctx->create_udp_payload();
@@ -59,12 +46,12 @@ int main() {
             break;
         }
         if (data.size()) {
-            sock.writeto(saddr.addr, data);
+            sock.writeto(addr.addr, data);
         }
         utils::byte buf[2000];
-        auto [rdata, addr, err] = sock.readfrom(buf);
-        if (rdata.size()) {
-            ctx->parse_udp_payload(rdata);
+        auto rdata = sock.readfrom(buf);
+        if (rdata && rdata->first.size()) {
+            ctx->parse_udp_payload(rdata->first);
         }
         if (ctx->handshake_confirmed()) {
             ctx->request_close(AppError{1, "sorry, this client doesn't implement http/3. currently, connectivity test."});

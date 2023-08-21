@@ -11,31 +11,15 @@
 #include <cstring>
 #include <cassert>
 #include <thread>
+#include <fnet/connect.h>
 
 using namespace utils;
 
 int main() {
     fnet::SockAddr addr{};
     constexpr auto host = "www.google.com";
-    auto resolve = fnet::resolve_address(host, "https", fnet::sockattr_tcp());
-    assert(resolve.second.is_noerr());
-    auto [list, err] = resolve.first.wait();
-    assert(!err);
-    fnet::Socket sock;
-    while (list.next()) {
-        addr = list.sockaddr();
-        auto tmp = fnet::make_socket(addr.attr);
-        auto err = tmp.connect(addr.addr);
-        if (!err) {
-            sock = std::move(tmp);
-            break;
-        }
-        if (!fnet::isSysBlock(err) || tmp.wait_writable(10, 0).is_error()) {
-            continue;
-        }
-        sock = std::move(tmp);
-        break;
-    }
+    auto sock = fnet::connect(host, "https", fnet::sockattr_tcp()).value().first;
+
 #ifdef _WIN32
     fnet::tls::set_libcrypto(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
     fnet::tls::set_libssl(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
@@ -54,11 +38,12 @@ int main() {
         }
         view::wvec v;
         while (true) {
-            std::tie(v, err) = sock.read(buf);
-            if (!err) {
+            auto data = sock.read(buf);
+            if (data) {
+                v = *data;
                 break;
             }
-            assert(fnet::isSysBlock(err));
+            assert(fnet::isSysBlock(data.error()));
             std::this_thread::yield();
         }
         tls.provide_tls_data(v);

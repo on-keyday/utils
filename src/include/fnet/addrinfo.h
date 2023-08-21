@@ -69,8 +69,8 @@ namespace utils {
             // error::Error err;
             constexpr WaitAddrInfo(void* o)
                 : opt(o) {}
-            friend fnet_dll_export(std::pair<WaitAddrInfo, error::Error>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr);
-            friend fnet_dll_export(std::pair<WaitAddrInfo, error::Error>) get_self_host_address(view::rvec port, SockAttr attr);
+            friend fnet_dll_export(expected<WaitAddrInfo>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr);
+            friend fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr);
 
            public:
             constexpr WaitAddrInfo(WaitAddrInfo&& info)
@@ -84,10 +84,13 @@ namespace utils {
                 return *this;
             }
 
-            std::pair<AddrInfo, error::Error> wait(std::uint32_t time = ~0) {
+            expected<AddrInfo> wait(std::uint32_t time = ~0) {
                 AddrInfo info;
-                auto err = wait(info, ~0);
-                return {std::move(info), std::move(err)};
+                auto err = wait(info, time);
+                if (err) {
+                    return unexpect(err);
+                }
+                return std::move(info);
             }
 
             error::Error wait(AddrInfo& info, std::uint32_t time);
@@ -98,13 +101,13 @@ namespace utils {
         };
 
         // you MUST set attr to find address
-        [[nodiscard]] fnet_dll_export(std::pair<WaitAddrInfo, error::Error>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr);
+        [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr);
 
         // this invokes resolve_address with attr.flag|=AI_PASSIVE and hostname = {}
-        [[nodiscard]] fnet_dll_export(std::pair<WaitAddrInfo, error::Error>) get_self_server_address(view::rvec port, SockAttr attr);
+        [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) get_self_server_address(view::rvec port, SockAttr attr);
 
         // this invokes resolve_address with hostname=gethostname()
-        [[nodiscard]] fnet_dll_export(std::pair<WaitAddrInfo, error::Error>) get_self_host_address(view::rvec port, SockAttr attr);
+        [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr);
 
         fnet_dll_export(SockAttr) sockattr_tcp(int ipver = 0);
         fnet_dll_export(SockAttr) sockattr_udp(int ipver = 0);

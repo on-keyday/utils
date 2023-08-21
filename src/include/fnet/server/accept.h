@@ -14,68 +14,66 @@ namespace utils {
     namespace fnet {
         namespace server {
 
-            inline std::pair<Socket, error::Error> make_server_socket(SockAddr& addr, int backlog, bool reuse, bool ipv6only) {
-                auto sock = make_socket(addr.attr);
-                if (!sock) {
-                    return {
-                        Socket{},
-                        error::Error("make_socket failed"),
-                    };
-                }
-                sock.set_ipv6only(ipv6only);
-                sock.set_reuse_addr(reuse);
-                if (auto err = sock.bind(addr.addr)) {
-                    return {Socket{}, std::move(err)};
-                }
-                if (auto err = sock.listen(backlog)) {
-                    return {Socket{}, std::move(err)};
-                }
-                return {std::move(sock), error::none};
+            inline expected<Socket> make_server_socket(SockAddr& addr, int backlog, bool reuse, bool ipv6only) {
+                return make_socket(addr.attr)
+                    .and_then([&](Socket&& sock) -> expected<Socket> {
+                        sock.set_ipv6only(ipv6only);  // ignore errors; best effort
+                        sock.set_reuse_addr(reuse);   // ignore errors; best effort
+                        return sock;
+                    })
+                    .and_then([&](Socket&& s) {
+                        return s.bind(addr.addr).transform([&] {
+                            return std::move(s);
+                        });
+                    })
+                    .and_then([&](Socket&& s) {
+                        return s.listen(backlog).transform([&] {
+                            return std::move(s);
+                        });
+                    });
             }
 
-            bool prepare_listeners(const char* port, auto&& prepared, size_t count, int backlog = 10,
-                                   bool reuse = true, bool ipv6only = false) {
-                if (count == 0) {
-                    return false;
-                }
-                auto [wait, err] = fnet::get_self_server_address(port, fnet::sockattr_tcp());
-                if (err) {
-                    return false;
-                }
-                auto [addr, err2] = wait.wait();
-                if (err2) {
-                    return false;
-                }
-                while (addr.next()) {
-                    auto resolved = addr.sockaddr();
-                    auto [sock, err] = make_server_socket(resolved, backlog, reuse, ipv6only);
-                    if (err) {
-                        continue;
+            struct ErrList {
+                error::Error err;
+                error::Error before;
+
+                void error(auto&& pb) {
+                    if (before) {
+                        before.error(pb);
+                        pb.push_back(',');
                     }
-                    prepared(std::as_const(resolved.addr), sock);
-                    for (size_t i = 1; i < count; i++) {
-                        std::tie(sock, err) = make_server_socket(resolved, backlog, reuse, ipv6only);
-                        if (!sock) {
-                            return false;
+                    err.error(pb);
+                }
+            };
+
+            inline expected<std::pair<Socket, SockAddr>> prepare_listener(view::rvec port, int backlog = 10,
+                                                                          bool reuse = true, bool ipv6only = false) {
+                return fnet::get_self_server_address(port, fnet::sockattr_tcp())
+                    .and_then([&](WaitAddrInfo&& w) {
+                        return w.wait();
+                    })
+                    .and_then([&](AddrInfo&& addr) -> expected<std::pair<Socket, SockAddr>> {
+                        error::Error err;
+                        while (addr.next()) {
+                            auto resolved = addr.sockaddr();
+                            auto sock = make_server_socket(resolved, backlog, reuse, ipv6only);
+                            if (!sock) {
+                                if (err) {
+                                    err = ErrList{std::move(sock.error()), std::move(err)};
+                                }
+                                else {
+                                    err = std::move(sock.error());
+                                }
+                            }
+                            return std::make_pair(std::move(*sock), std::move(resolved));
                         }
-                        prepared(std::as_const(resolved.addr), sock);
-                    }
-                    return true;
-                }
-                return false;
+                        if (!err) {
+                            return unexpect("no socket address found");
+                        }
+                        return unexpect(std::move(err));
+                    });
             }
 
-            bool do_accept(Socket& sock, auto&& accepted, auto&& failed) {
-                if (auto err = sock.wait_readable(0, 1000)) {
-                    return failed(err, true /*at wait*/);
-                }
-                auto [new_sock, addr, err] = sock.accept();
-                if (err) {
-                    return failed(err, false /*at accept*/);
-                }
-                accepted(std::move(new_sock), std::move(addr));
-                return true;
-            }
         }  // namespace server
     }      // namespace fnet
 }  // namespace utils

@@ -16,7 +16,7 @@
 using namespace utils;
 
 int main() {
-    fnet::Socket sock = fnet::make_socket(fnet::sockattr_udp(4));
+    fnet::Socket sock = fnet::make_socket(fnet::sockattr_udp(4)).value();
     assert(sock);
     auto addr = fnet::ipv4(1, 1, 1, 1, 53);
     namespace dns = fnet::dns;
@@ -46,22 +46,37 @@ int main() {
     binary::reader r{w.written()};
     res = msg.parse(r);
     assert(res);
-    auto [_, e] = sock.writeto(addr, w.written());
-    assert(!e);
+    sock.writeto(addr, w.written()).value();
+    fnet::BufferManager<view::wvec> d{
+        view::wvec(buf),
+    };
     bool end = false;
-    auto [cancel, err] = sock.readfrom_async(view::wvec(buf), [&](fnet::Socket&& s, view::wvec data, view::wvec buf, fnet::NetAddrPort addr, fnet::error::Error err, void*) {
-        r.reset(data);
-        res = msg.parse(r);
-        assert(res);
-        assert(msg.answer.size());
-        std::string resolv;
-        res = dns::resolve_name(resolv, msg.answer[0].name, data, true);
-        assert(res);
-        end = true;
-    });
-    assert(!err);
+    auto result = sock.readfrom_async(d, [&](fnet::Socket&& s, fnet::BufferManager<view::wvec>& w, fnet::NetAddrPort&& addr, fnet::NotifyResult result) {
+                          auto& d = result.value();
+                          view::wvec data;
+                          if (d) {
+                              data = w.buffer.substr(*d);
+                          }
+                          else {
+                              std::tie(data, addr) = s.readfrom(w.buffer).value();
+                          }
+                          utils::binary::reader r{data};
+                          res = msg.parse(r);
+                          assert(res);
+                          assert(msg.answer.size());
+                          std::string resolv;
+                          res = dns::resolve_name(resolv, msg.answer[0].name, data, true);
+                          assert(res);
+                          end = true;
+                      })
+                      .value();
+    if (result.state == fnet::NotifyState::done) {
+        return 0;  // done
+    }
     while (!end) {
         fnet::wait_io_event(10000);
-        cancel.cancel();
+        if (!end) {
+            result.cancel.cancel();
+        }
     }
 }

@@ -9,6 +9,7 @@
 #include <fnet/socket.h>
 #include <fnet/addrinfo.h>
 #include <env/env_sys.h>
+#include <fnet/connect.h>
 using namespace utils::fnet::quic::use::rawptr;
 namespace tls = utils::fnet::tls;
 namespace quic = utils::fnet::quic;
@@ -32,23 +33,9 @@ int main() {
     utils::fnet::tls::set_libcrypto(libcrypto.data());
     utils::fnet::tls::set_libssl(libssl.data());
 #endif
-    auto [wait, err] = utils::fnet::resolve_address("localhost", "8090", utils::fnet::sockattr_udp());
-    assert(!err);
-    auto [info, err2] = wait.wait();
-    assert(!err2);
-    utils::fnet::Socket sock;
-    utils::fnet::NetAddrPort to;
-    while (info.next()) {
-        auto addr = info.sockaddr();
-        sock = utils::fnet::make_socket(addr.attr);
-        if (!sock) {
-            continue;
-        }
-        to = std::move(addr.addr);
-        sock.connect(to);
-        break;
-    }
-    assert(sock);
+
+    auto [sock, to] = utils::fnet::connect("localhost", "8090", utils::fnet::sockattr_udp(), false).value();
+
     auto ctx = std::make_shared<Context>();
     auto conf = utils::fnet::tls::configure();
     assert(conf);
@@ -88,12 +75,12 @@ int main() {
             break;
         }
         if (payload.size()) {
-            sock.writeto(to, payload);
+            sock.writeto(to.addr, payload);
         }
         utils::byte data[1500];
-        auto [recv, addr, err] = sock.readfrom(data);
-        if (recv.size()) {
-            ctx->parse_udp_payload(recv);
+        auto recv = sock.readfrom(data);
+        if (recv && recv->first.size()) {
+            ctx->parse_udp_payload(recv->first);
         }
         if (s.size() && !reqested) {
             ctx->request_close(AppError(0, "OK"));
@@ -125,12 +112,12 @@ int main() {
             break;
         }
         if (payload.size()) {
-            sock.writeto(to, payload);
+            sock.writeto(to.addr, payload);
         }
         utils::byte data[1500];
-        auto [recv, addr, err] = sock.readfrom(data);
-        if (recv.size()) {
-            ctx->parse_udp_payload(recv);
+        auto recv = sock.readfrom(data);
+        if (recv && recv->first.size()) {
+            ctx->parse_udp_payload(recv->first);
         }
         if (read) {
             while (true) {

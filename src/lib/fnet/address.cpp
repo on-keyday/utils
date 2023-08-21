@@ -8,7 +8,6 @@
 #include <fnet/dll/dllcpp.h>
 #include <fnet/address.h>
 #include <fnet/plthead.h>
-#include <fnet/dll/asyncbase.h>
 #include <cstring>
 #include <binary/buf.h>
 

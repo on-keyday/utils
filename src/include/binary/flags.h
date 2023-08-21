@@ -143,10 +143,10 @@ namespace utils {
         }  // namespace internal
 
         constexpr size_t log2i(std::uint64_t n) {
-            if (n == 0) {
+            if (n == 1) {
                 return 0;
             }
-            else if (n == 1) {
+            else if (n == 2 || n == 3) {
                 return 1;
             }
             return internal::log2i_impl<0, 64>(n);

@@ -7,6 +7,7 @@
 
 #pragma once
 #include "../../binary/number.h"
+#include <fnet/error.h>
 
 namespace utils {
     namespace fnet::quic::packetnum {
@@ -34,9 +35,9 @@ namespace utils {
             return 1 <= len && len <= 4;
         }
 
-        constexpr std::pair<Value, bool> decode(std::uint32_t value, byte len, std::uint64_t largest_pn) noexcept {
+        constexpr expected<Value> decode(std::uint32_t value, byte len, std::uint64_t largest_pn) noexcept {
             if (!is_wire_len(len)) {
-                return {0, false};
+                return unexpect("unexpected wire len");
             }
             auto expected_pn = largest_pn + 1;
             auto pn_win = 1 << (len << 3);
@@ -57,10 +58,10 @@ namespace utils {
                 return b;
             };
             auto selected = closer(expected_pn, base + value, closer(expected_pn, prev + value, next + value));
-            return {selected, true};
+            return selected;
         }
 
-        constexpr std::pair<Value, bool> decode(WireVal pn_wire, std::uint64_t largest_pn) noexcept {
+        constexpr expected<Value> decode(WireVal pn_wire, std::uint64_t largest_pn) noexcept {
             return decode(pn_wire.value, pn_wire.len, largest_pn);
         }
 
@@ -79,7 +80,7 @@ namespace utils {
             return ~0;
         }
 
-        constexpr std::pair<WireVal, bool> encode(std::uint64_t pn, size_t largest_ack) noexcept {
+        constexpr expected<WireVal> encode(std::uint64_t pn, size_t largest_ack) noexcept {
             size_t num_unacked = 0;
             if (largest_ack == ~0) {
                 num_unacked = pn + 1;
@@ -90,7 +91,7 @@ namespace utils {
             auto min_bits = log2i(num_unacked) + 1;
             auto min_bytes = min_bits / 8 + (min_bits % 8 ? 1 : 0);
             auto wire = [&](std::uint32_t mask, byte len) {
-                return std::pair<WireVal, bool>{WireVal{std::uint32_t(pn & mask), len}, true};
+                return WireVal{std::uint32_t(pn & mask), len};
             };
             if (min_bytes == 1) {
                 return wire(0xff, 1);
@@ -104,7 +105,7 @@ namespace utils {
             if (min_bytes == 4) {
                 return wire(0xffffffff, 4);
             }
-            return {{}, false};
+            return unexpect("expect value must be in range 1-4");
         }
 
         constexpr bool write(binary::writer& w, const WireVal& value) noexcept {
@@ -144,23 +145,23 @@ namespace utils {
 
             constexpr bool check_packet_number_encoding() {
                 constexpr auto expect = 0x9394939393;
-                auto [wire, ok] = encode(expect, 0x9394933293);
-                if (!ok) {
+                auto wire = encode(expect, 0x9394933293);
+                if (!wire) {
                     return false;
                 }
                 byte data[100];
                 binary::writer w{data};
-                if (!write(w, wire)) {
+                if (!write(w, *wire)) {
                     return false;
                 }
                 binary::reader r{w.written()};
                 std::uint32_t value;
-                if (!read(r, value, wire.len)) {
+                if (!read(r, value, wire->len)) {
                     return false;
                 }
                 // on flight, packet order is changed ....
-                auto [decoded, ok2] = decode(value, wire.len, 0x9394933301);
-                if (!ok2) {
+                auto decoded = decode(value, wire->len, 0x9394933301);
+                if (!decoded) {
                     return false;
                 }
                 return decoded == expect;

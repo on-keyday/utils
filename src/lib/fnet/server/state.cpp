@@ -31,7 +31,7 @@ namespace utils {
                     if (deq >> q) {
                         state->count.current_enqued--;
                         Enter active(state->count.current_handling_handler_thread);
-                        q.runner->run();
+                        q.runner.invoke();
                     }
                     auto res = recv >> cl;
                     if (!res) {
@@ -65,18 +65,20 @@ namespace utils {
 
             void State::accept_thread(Socket listener, std::shared_ptr<State> state) {
                 Enter start{state->count.current_acceptor_thread};
+                auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
+                    state->count.total_accepted++;
+                    state->check_and_start();
+                    state->send << Client{std::move(sock), std::move(addr)};
+                };
                 while (!state->count.end_flag.test()) {
-                    auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
-                        state->count.total_accepted++;
-                        state->check_and_start();
-                        state->send << Client{std::move(sock), std::move(addr)};
-                    };
-                    do_accept(listener, handle, [&](error::Error&, bool waiting) {
-                        if (!waiting) {
-                            state->count.total_failed_accept++;
-                        }
-                        return waiting;
-                    });
+                    auto new_socks = listener.accept_select(0, 1000);
+                    if (new_socks) {
+                        handle(std::move(new_socks->first), std::move(new_socks->second));
+                    }
+                    else if (!isSysBlock(new_socks.error())) {
+                        state->count.total_failed_accept++;
+                        state->log(log_level::warn, nullptr, new_socks.error());
+                    }
                     std::this_thread::yield();
                 }
             }
@@ -87,27 +89,29 @@ namespace utils {
                 }
                 auto deq = deque;
                 deq.set_blocking(false);
+                auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
+                    count.total_accepted++;
+                    Enter active(count.current_handling_handler_thread);
+                    if (handler) {
+                        handler(ctx, Client{std::move(sock), std::move(addr)}, StateContext{shared_from_this()});
+                    }
+                };
                 while (true) {
                     wait_io_event(1);
                     Queued q;
                     if (deq >> q) {
                         count.current_enqued--;
                         Enter active(count.current_handling_handler_thread);
-                        q.runner->run();
+                        q.runner.invoke();
                     }
-                    auto handle = [&](Socket&& sock, NetAddrPort&& addr) {
-                        count.total_accepted++;
-                        Enter active(count.current_handling_handler_thread);
-                        if (handler) {
-                            handler(ctx, Client{std::move(sock), std::move(addr)}, StateContext{shared_from_this()});
-                        }
-                    };
-                    do_accept(listener, handle, [&](error::Error& err, bool waiting) {
-                        if (!waiting) {
-                            count.total_failed_accept++;
-                        }
-                        return waiting;
-                    });
+                    auto new_socks = listener.accept_select(0, 1000);
+                    if (new_socks) {
+                        handle(std::move(new_socks->first), std::move(new_socks->second));
+                    }
+                    else if (!isSysBlock(new_socks.error())) {
+                        count.total_failed_accept++;
+                        log(log_level::warn, nullptr, new_socks.error());
+                    }
                     if (cb) {
                         if (!cb(user)) {
                             return true;

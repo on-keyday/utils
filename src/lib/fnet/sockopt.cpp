@@ -8,72 +8,101 @@
 #include <fnet/dll/dllcpp.h>
 #include <fnet/socket.h>
 #include <fnet/plthead.h>
-#include <fnet/dll/asyncbase.h>
 #include <fnet/dll/lazy/sockdll.h>
+#include <fnet/sock_internal.h>
 
 namespace utils {
     namespace fnet {
 
-        std::pair<NetAddrPort, error::Error> Socket::get_localaddr() {
-            sockaddr_storage st{};
-            socklen_t len = sizeof(st);
-            auto addr = reinterpret_cast<sockaddr*>(&st);
-            auto res = lazy::getsockname_(sock, addr, &len);
-            if (res != 0) {
-                return {{}, error::Errno()};
+        expected<std::uintptr_t> Socket::get_raw() {
+            if (!ctx) {
+                return unexpect("socket not initialized");
             }
-            return {sockaddr_to_NetAddrPort(addr, len), error::none};
+            return static_cast<SockTable*>(ctx)->sock;
         }
 
-        std::pair<NetAddrPort, error::Error> Socket::get_remoteaddr() {
-            sockaddr_storage st{};
-            socklen_t len = sizeof(st);
-            auto addr = reinterpret_cast<sockaddr*>(&st);
-            auto res = lazy::getpeername_(sock, addr, &len);
-            if (res != 0) {
-                return {{}, error::Errno()};
+        void decr_table(void* tbl) {
+            if (tbl) {
+                static_cast<SockTable*>(tbl)->decr();
             }
-            return {sockaddr_to_NetAddrPort(addr, len), error::none};
         }
 
-        error::Error Socket::get_option(int layer, int opt, void* buf, size_t size) {
-            socklen_t len = int(size);
-            auto res = lazy::getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
-            if (res != 0) {
-                return error::Errno();
+        Socket Socket::clone() const {
+            if (!ctx) {
+                return Socket();
             }
-            return error::none;
+            static_cast<SockTable*>(ctx)->incr();  // increment for clone
+            return make_socket(ctx);
+        };
+
+        expected<NetAddrPort> Socket::get_localaddr() {
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<NetAddrPort> {
+                sockaddr_storage st{};
+                socklen_t len = sizeof(st);
+                auto addr = reinterpret_cast<sockaddr*>(&st);
+                auto res = lazy::getsockname_(sock, addr, &len);
+                if (res != 0) {
+                    return unexpect(error::Errno());
+                }
+                return sockaddr_to_NetAddrPort(addr, len);
+            });
         }
 
-        error::Error Socket::set_option(int layer, int opt, const void* buf, size_t size) {
-            auto res = lazy::setsockopt_(sock, layer, opt, static_cast<const char*>(buf), int(size));
-            if (res != 0) {
-                return error::Errno();
-            }
-            return error::none;
+        expected<NetAddrPort> Socket::get_remoteaddr() {
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<NetAddrPort> {
+                sockaddr_storage st{};
+                socklen_t len = sizeof(st);
+                auto addr = reinterpret_cast<sockaddr*>(&st);
+                auto res = lazy::getpeername_(sock, addr, &len);
+                if (res != 0) {
+                    return unexpect(error::Errno());
+                }
+                return sockaddr_to_NetAddrPort(addr, len);
+            });
         }
 
-        error::Error Socket::set_reuse_addr(bool resue) {
+        expected<void> Socket::get_option(int layer, int opt, void* buf, size_t size) {
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<void> {
+                socklen_t len = int(size);
+                auto res = lazy::getsockopt_(sock, layer, opt, static_cast<char*>(buf), &len);
+                if (res != 0) {
+                    return unexpect(error::Errno());
+                }
+                return {};
+            });
+        }
+
+        expected<void> Socket::set_option(int layer, int opt, const void* buf, size_t size) {
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<void> {
+                auto res = lazy::setsockopt_(sock, layer, opt, static_cast<const char*>(buf), int(size));
+                if (res != 0) {
+                    return unexpect(error::Errno());
+                }
+                return {};
+            });
+        }
+
+        expected<void> Socket::set_reuse_addr(bool resue) {
             int yes = resue ? 1 : 0;
             return set_option(SOL_SOCKET, SO_REUSEADDR, yes);
         }
 
-        error::Error Socket::set_ipv6only(bool only) {
+        expected<void> Socket::set_ipv6only(bool only) {
             int yes = only ? 1 : 0;
             return set_option(IPPROTO_IPV6, IPV6_V6ONLY, yes);
         }
 
-        error::Error Socket::set_nodelay(bool no_delay) {
+        expected<void> Socket::set_nodelay(bool no_delay) {
             int yes = no_delay ? 1 : 0;
             return set_option(IPPROTO_TCP, TCP_NODELAY, yes);
         }
 
-        error::Error Socket::set_ttl(unsigned char ttl) {
+        expected<void> Socket::set_ttl(unsigned char ttl) {
             int ttl_buf = ttl;
             return set_option(IPPROTO_IP, IP_TTL, ttl_buf);
         }
 
-        error::Error Socket::set_exclusive_use(bool exclusive) {
+        expected<void> Socket::set_exclusive_use(bool exclusive) {
 #ifdef _WIN32
             int yes = exclusive ? 1 : 0;
             return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
@@ -82,7 +111,7 @@ namespace utils {
 #endif
         }
 
-        error::Error Socket::set_mtu_discover(MTUConfig conf) {
+        expected<void> Socket::set_mtu_discover(MTUConfig conf) {
             int val = 0;
             if (conf == mtu_default) {
 #ifdef _WIN32
@@ -101,12 +130,12 @@ namespace utils {
                 val = IP_PMTUDISC_PROBE;
             }
             else {
-                return error::Error("invalid MTUConfig", error::ErrorCategory::validationerr);
+                return unexpect(error::Error("invalid MTUConfig", error::ErrorCategory::validationerr));
             }
             return set_option(IPPROTO_IP, IP_MTU_DISCOVER, val);
         }
 
-        error::Error Socket::set_mtu_discover_v6(MTUConfig conf) {
+        expected<void> Socket::set_mtu_discover_v6(MTUConfig conf) {
             int val = 0;
             if (conf == mtu_default) {
 #ifdef _WIN32
@@ -125,83 +154,73 @@ namespace utils {
                 val = IP_PMTUDISC_PROBE;
             }
             else {
-                return error::Error("invalid MTUConfig", error::ErrorCategory::validationerr);
+                return unexpect(error::Error("invalid MTUConfig", error::ErrorCategory::validationerr));
             }
             return set_option(IPPROTO_IPV6, IPV6_MTU_DISCOVER, val);
         }
 
-        std::int32_t Socket::get_mtu() {
+        expected<std::int32_t> Socket::get_mtu() {
             std::int32_t val = 0;
-            if (!get_option(IPPROTO_IP, IP_MTU, val)) {
-                return -1;
-            }
-            return val;
+            return get_option(IPPROTO_IP, IP_MTU, val).transform([&] { return val; });
         }
 
         void Socket::set_blocking(bool blocking) {
-            set_nonblock(sock, !blocking);
+            get_raw().transform([&](std::uintptr_t sock) {
+                set_nonblock(sock, !blocking);
+            });
         }
 
-        error::Error Socket::set_dontfragment(bool df) {
+        expected<void> Socket::set_dontfragment(bool df) {
 #ifdef _WIN32
             return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
 #else
-            return error::Error("IP_DONTFRAGMENT is not supported on linux", error::ErrorCategory::fneterr);
+            return unexpect(error::Error("IP_DONTFRAGMENT is not supported on linux", error::ErrorCategory::fneterr));
 #endif
         }
 
-        error::Error Socket::set_dontfragment_v6(bool df) {
+        expected<void> Socket::set_dontfragment_v6(bool df) {
             return set_option(IPPROTO_IP, IPV6_DONTFRAG, std::uint32_t(df ? 1 : 0));
         }
 
-        error::Error Socket::set_connreset(bool enable) {
+        expected<void> Socket::set_connreset(bool enable) {
 #ifdef _WIN32
-            std::int32_t flag = enable ? 1 : 0;
-            DWORD ret = 0;
-            auto err = lazy::WSAIoctl_(sock, SIO_UDP_CONNRESET, &flag, sizeof(flag), nullptr, 0, &ret, nullptr, nullptr);
-            if (err == SOCKET_ERROR) {
-                return error::Errno();
-            }
-            return error::none;
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<void> {
+                std::int32_t flag = enable ? 1 : 0;
+                DWORD ret = 0;
+                auto err = lazy::WSAIoctl_(sock, SIO_UDP_CONNRESET, &flag, sizeof(flag), nullptr, 0, &ret, nullptr, nullptr);
+                if (err == SOCKET_ERROR) {
+                    return unexpect(error::Errno());
+                }
+                return {};
+            });
 #else
-            return error::Error("SIO_UDP_CONNRESET is not supported", error::ErrorCategory::fneterr);
+            return unexpect(error::Error("SIO_UDP_CONNRESET is not supported", error::ErrorCategory::fneterr));
 #endif
         }
 
-        std::pair<SockAttr, error::Error> Socket::get_sockattr() {
+        expected<SockAttr> Socket::get_sockattr() {
 #ifdef _WIN32
             WSAPROTOCOL_INFOW info{};
-            auto err = get_option(SOL_SOCKET, SO_PROTOCOL_INFOW, info);
-            if (err) {
-                return {{-1, -1, -1}, err};
-            }
-            return {
-                SockAttr{
+            return get_option(SOL_SOCKET, SO_PROTOCOL_INFOW, info).transform([&] {
+                return SockAttr{
                     .address_family = info.iAddressFamily,
                     .socket_type = info.iSocketType,
                     .protocol = info.iProtocol,
-                },
-                error::none,
-            };
+                };
+            });
 #else
             SockAttr attr{-1, -1, -1};
-            auto err = get_option(SOL_SOCKET, SO_DOMAIN, attr.address_family);
-            if (err) {
-                return {attr, err};
-            }
-            err = get_option(SOL_SOCKET, SO_TYPE, attr.socket_type);
-            if (err) {
-                return {attr, err};
-            }
-            err = get_option(SOL_SOCKET, SO_PROTOCOL, attr.protocol);
-            if (err) {
-                return {attr, err};
-            }
-            return {attr, error::none};
+            return get_option(SOL_SOCKET, SO_DOMAIN, attr.address_family)
+                .and_then([&] {
+                    return get_option(SOL_SOCKET, SO_TYPE, attr.socket_type);
+                })
+                .and_then([&] {
+                    return get_option(SOL_SOCKET, SO_PROTOCOL, attr.protocol);
+                });
 #endif
         }
 
-        error::Error Socket::set_DF(bool df) {
+        expected<void> Socket::set_DF(bool df) {
 #ifdef _WIN32
             auto errv4 = set_dontfragment_v6(df);
             auto errv6 = set_dontfragment(df);
@@ -209,13 +228,13 @@ namespace utils {
             auto errv4 = set_mtu_discover(mtu_enable);
             auto errv6 = set_mtu_discover_v6(mtu_enable);
 #endif
-            if (errv4 || errv6) {
-                if (errv4 && errv6) {
-                    return SetDFError{std::move(errv4), std::move(errv6)};
+            if (!errv4 || !errv6) {
+                if (!errv4 && !errv6) {
+                    return unexpect(SetDFError{std::move(errv4.error()), std::move(errv6.error())});
                 }
-                return errv4 ? errv4 : errv6;
+                return !errv4 ? errv4 : errv6;
             }
-            return error::none;
+            return {};
         }
     }  // namespace fnet
 }  // namespace utils

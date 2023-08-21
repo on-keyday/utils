@@ -118,10 +118,11 @@ namespace utils {
                     FormatMessageW(
                         FORMAT_MESSAGE_ALLOCATE_BUFFER |
                             FORMAT_MESSAGE_FROM_SYSTEM |
-                            FORMAT_MESSAGE_IGNORE_INSERTS,
+                            FORMAT_MESSAGE_IGNORE_INSERTS |
+                            FORMAT_MESSAGE_MAX_WIDTH_MASK,
                         NULL,
                         code,
-                        LANG_ENGLISH,
+                        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
                         (LPWSTR)&lpMsgBuf,
                         0, NULL);
                     const auto d = helper::defer([&] {

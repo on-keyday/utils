@@ -11,6 +11,7 @@
 #include <fnet/plthead.h>
 #include <string>
 #include <thread>
+#include <fnet/connect.h>
 
 void test_fnet_stun_run(utils::binary::writer& w, int af) {
     using namespace utils::fnet;
@@ -18,24 +19,8 @@ void test_fnet_stun_run(utils::binary::writer& w, int af) {
     stun::StunContext ctx;
     SockAddr resolv;
     constexpr auto stun_sever = "stun.l.google.com";
-    auto wait = resolve_address(stun_sever, "19302", sockattr_udp());
-    assert(!wait.second);
-    auto [addr, err] = wait.first.wait();
-    assert(!err);
-    Socket sock;
-    SockAddr server;
-    while (addr.next()) {
-        server = addr.sockaddr();
-        sock = make_socket(server.attr);
-        assert(sock);
-        auto err = sock.connect(server.addr);
-        if (!err || isSysBlock(err)) {
-            break;
-        }
-    }
-    assert(sock);
-    auto [local, err2] = sock.get_localaddr();
-    assert(!err2);
+    auto [sock, addr] = connect(stun_sever, "19302", sockattr_udp(), false).value();
+    auto local = sock.get_localaddr().value();
     auto str = local.to_string<std::string>();
     ctx.original_address.family = local.addr.type() == NetAddrType::ipv6 ? stun::family_ipv6 : stun::family_ipv4;
     ctx.original_address.port = local.port;
@@ -50,23 +35,23 @@ void test_fnet_stun_run(utils::binary::writer& w, int af) {
             continue;
         }
         if (result == stun::StunResult::do_roundtrip) {
-            sock.writeto(server.addr, w.written());
+            sock.writeto(addr.addr, w.written());
             int count = 0;
             while (true) {
                 w.reset();
-                auto [n, addr, err] = sock.readfrom(w.remain());
-                if (err) {
+                auto data = sock.readfrom(w.remain());
+                if (!data) {
                     if (count > 100) {
                         result = ctx.no_response();
                         break;
                     }
-                    if (isSysBlock(err)) {
+                    if (isSysBlock(data.error())) {
                         std::this_thread::sleep_for(1ms);
                         count++;
                     }
                     continue;
                 }
-                utils::binary::reader r{n};
+                utils::binary::reader r{data->first};
                 result = ctx.response(r);
                 break;
             }
