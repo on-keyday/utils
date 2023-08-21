@@ -130,10 +130,6 @@ namespace utils {
         template <>
         struct bad_expected_access<void> : std::exception {
             bad_expected_access() = default;
-
-           protected:
-            bad_expected_access(const char* m)
-                : exception(m) {}
         };
 
         template <class E>
@@ -247,15 +243,34 @@ namespace utils {
 
         template <>
         struct bad_expected_access<const char*> : public bad_expected_access<void> {
+           private:
+            const char* e;
+
+           public:
             explicit bad_expected_access(const char* e)
-                : bad_expected_access<void>(e) {
-            }
+                : e(e) {}
 
             bad_expected_access(const bad_expected_access& e) = default;
             bad_expected_access(bad_expected_access&& e) = default;
 
-            constexpr const char* error() const noexcept {
-                return what();
+            const char* what() const noexcept override {
+                return e;
+            }
+
+            constexpr const char* const& error() const& noexcept {
+                return e;
+            }
+
+            constexpr const char*& error() & noexcept {
+                return e;
+            }
+
+            constexpr const char* const&& error() const&& noexcept {
+                return std::move(e);
+            }
+
+            constexpr const char*&& error() && noexcept {
+                return std::move(e);
             }
         };
 
