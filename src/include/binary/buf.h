@@ -14,7 +14,35 @@
 namespace utils {
     namespace binary {
 
-        constexpr auto bit_per_byte = 8;
+        template <class T>
+        constexpr T bswap_shift(T input) {
+            using Out = std::make_unsigned_t<T>;
+            Out in = input, out = 0;
+            for (auto i = 0; i < sizeof(T); i++) {
+                out |= Out(byte((in >> (i * bit_per_byte)) & 0xff)) << ((sizeof(T) - 1 - i) * bit_per_byte);
+            }
+            return out;
+        }
+
+        // using direct memory access
+        template <class T>
+        inline T bswap_direct(T input) {
+            T hold;
+            auto direct0 = reinterpret_cast<byte*>(&hold);
+            const auto direct1 = reinterpret_cast<byte*>(&input);
+            for (auto i = 0; i < sizeof(T); i++) {
+                direct0[i] = direct1[sizeof(T) - 1 - i];
+            }
+            return hold;
+        }
+
+        template <class T>
+        constexpr T bswap(T input) {
+            if (std::is_constant_evaluated()) {
+                return bswap_shift(input);
+            }
+            return bswap_direct(input);
+        }
 
         template <class T, class Data = byte[sizeof(T)]>
         struct Buf {
@@ -123,30 +151,8 @@ namespace utils {
         };
 
         template <class T>
-        constexpr T bswap(T input) {
-            using Out = std::make_unsigned_t<T>;
-            Out in = input, out = 0;
-            for (auto i = 0; i < sizeof(T); i++) {
-                out |= Out(byte((in >> (i * 8)) & 0xff)) << ((sizeof(T) - 1 - i) * 8);
-            }
-            return out;
-        }
-
-        // using direct memory access
-        template <class T>
-        inline T bswap_direct(T input) {
-            T hold;
-            auto direct0 = reinterpret_cast<byte*>(&hold);
-            const auto direct1 = reinterpret_cast<byte*>(&input);
-            for (auto i = 0; i < sizeof(T); i++) {
-                direct0[i] = direct1[sizeof(T) - 1 - i];
-            }
-            return hold;
-        }
-
-        template <class T>
         constexpr void write_into(auto&& output, T input, bool be) {
-            Buf<T, decltype(output)> buf{output};
+            Buf<T, decltype(output)> buf{std::forward<decltype(output)>(output)};
             if (be) {
                 buf.write_be(input);
             }
@@ -157,7 +163,7 @@ namespace utils {
 
         template <class T>
         constexpr void read_from(T& output, auto&& input, bool be) {
-            Buf<T, decltype(input)> buf{input};
+            Buf<T, decltype(input)> buf{std::forward<decltype(input)>(input)};
             if (be) {
                 buf.read_be(output);
             }
@@ -175,7 +181,7 @@ namespace utils {
 
         // is_little judges whether this program runs on little endian
         inline bool is_little() {
-            const int test = 0x00000001;
+            const std::uint32_t test = 0x00000001;
             auto test_vec = reinterpret_cast<const byte*>(&test);
             return test_vec[0] == 0x01;
         }

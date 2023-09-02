@@ -5,10 +5,10 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-// byte - byte type
-#pragma once
-
-namespace utils {
-    using byte = unsigned char;
-    constexpr auto bit_per_byte = 8;
-}  // namespace utils
+#include <binary/leb128.h>
+#include <binary/float.h>
+#include <wasm/module.h>
+int main() {
+    namespace wasm = utils::wasm;
+    wasm::Module mod;
+}

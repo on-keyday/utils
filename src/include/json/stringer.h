@@ -151,7 +151,7 @@ namespace utils {
             friend struct FieldBase;
             Output buf;
             Indent indent{};
-            escape::EscapeFlag escape_flags = escape::EscapeFlag::none;
+            escape::EscapeFlag escape_flags = escape::EscapeFlag::none;  // for safety
 
             enum : byte {
                 f_html_escape = 0x1,
@@ -594,6 +594,13 @@ true,
                 s.out().i = 0;
                 s.value("\xff\xfe");
                 if (!strutil::equal(s.out(), R"("��")")) {
+                    return false;
+                }
+                s.out().i = 0;
+                s.set_utf_escape(true, false, false);
+                s.value(" ");
+                if (!strutil::equal(s.out(), R"(" ")")) {
+                    [](auto... arg) { throw "error"; }(s.out().i);
                     return false;
                 }
                 return true;

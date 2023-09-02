@@ -44,6 +44,10 @@ namespace utils {
             std::uint8_t operator[](size_t position) const;
 
             void close();
+
+            const byte* data() const {
+                return info.direct();
+            }
         };
     }  // namespace file
 }  // namespace utils

@@ -47,7 +47,7 @@ namespace utils {
                 if (filehandle == INVALID_HANDLE_VALUE) {
                     return false;
                 }
-                info->maphandle = CreateFileMappingA(filehandle, NULL, PAGE_READONLY, 0, 0, NULL);
+                info->maphandle = CreateFileMappingW(filehandle, NULL, PAGE_READONLY, 0, 0, NULL);
                 if (info->maphandle == nullptr) {
                     return false;
                 }

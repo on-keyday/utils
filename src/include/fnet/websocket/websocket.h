@@ -7,20 +7,20 @@
 
 // websocket - WebSocket implementation
 #pragma once
-#include "dll/dllh.h"
-#include "../strutil/append.h"
-#include "../view/charvec.h"
-#include "../view/sized.h"
-#include "../helper/pushbacker.h"
-#include "../strutil/readutil.h"
+#include "../dll/dllh.h"
+#include <strutil/append.h>
+#include <view/charvec.h>
+#include <view/sized.h>
+#include <helper/pushbacker.h>
+#include <strutil/readutil.h>
 #include <cstdint>
 #include <random>
-#include "../core/byte.h"
+#include <core/byte.h>
 #include "storage.h"
-#include "../binary/number.h"
-#include "../helper/defer.h"
-#include "../binary/flags.h"
-#include "../unicode/utf/convert.h"
+#include <binary/number.h>
+#include <helper/defer.h>
+#include <binary/flags.h>
+#include <unicode/utf/convert.h>
 
 namespace utils {
     namespace fnet::websocket {

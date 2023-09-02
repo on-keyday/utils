@@ -13,39 +13,6 @@
 
 namespace utils {
     namespace fnet {
-        NetAddr make_netaddr(NetAddrType type, view::rvec b) {
-            NetAddr addr;
-            if (internal::NetAddronHeap(type)) {
-                addr.fdata = make_storage(b);
-                if (addr.fdata.null()) {
-                    return {};
-                }
-            }
-            else {
-                addr.data_copy(b.data(), b.size());
-            }
-            addr.type_ = type;
-            return addr;
-        }
-
-        fnet_dll_implement(NetAddrPort) ipv4(byte a, byte b, byte c, byte d,
-                                             std::uint16_t port) {
-            byte val[] = {a, b, c, d};
-            NetAddrPort naddr;
-            naddr.addr = make_netaddr(NetAddrType::ipv4, val);
-            naddr.port = port;
-            return naddr;
-        }
-
-        fnet_dll_implement(NetAddrPort) ipv6(byte a, byte b, byte c, byte d, byte e, byte f, byte g, byte h,
-                                             byte i, byte j, byte k, byte l, byte m, byte n, byte o, byte p,
-                                             std::uint16_t port) {
-            byte val[] = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
-            NetAddrPort naddr;
-            naddr.addr = make_netaddr(NetAddrType::ipv6, val);
-            naddr.port = port;
-            return naddr;
-        }
 
         NetAddrPort sockaddr_to_NetAddrPort(sockaddr* addr, size_t len) {
             NetAddrPort naddr;
@@ -53,18 +20,18 @@ namespace utils {
                 auto p = reinterpret_cast<sockaddr_in*>(addr);
                 binary::Buf<std::uint32_t> buf;
                 buf.write_be(binary::bswap_net(p->sin_addr.s_addr));
-                naddr.addr = make_netaddr(NetAddrType::ipv4, buf.data);
+                naddr.addr = internal::make_netaddr(NetAddrType::ipv4, buf.data);
                 naddr.port = binary::bswap_net(p->sin_port);
             }
             else if (addr->sa_family == AF_INET6) {
                 auto p = reinterpret_cast<sockaddr_in6*>(addr);
-                naddr.addr = make_netaddr(NetAddrType::ipv6, p->sin6_addr.s6_addr);
+                naddr.addr = internal::make_netaddr(NetAddrType::ipv6, p->sin6_addr.s6_addr);
                 naddr.port = binary::bswap_net(p->sin6_port);
             }
             else if (addr->sa_family == AF_UNIX) {
                 auto p = reinterpret_cast<sockaddr_un*>(addr);
                 auto len = utils::strlen(p->sun_path) + 1;
-                naddr.addr = make_netaddr(NetAddrType::unix_path, view::rvec(p->sun_path, len));
+                naddr.addr = internal::make_netaddr(NetAddrType::unix_path, view::rvec(p->sun_path, len));
                 naddr.port = {};
             }
             else if (addr->sa_family == AF_UNSPEC) {
@@ -72,7 +39,7 @@ namespace utils {
             }
             else {
                 auto opaque = reinterpret_cast<byte*>(addr);
-                naddr.addr = make_netaddr(NetAddrType::opaque, view::rvec(opaque, len));
+                naddr.addr = internal::make_netaddr(NetAddrType::opaque, view::rvec(opaque, len));
             }
             return naddr;
         }
@@ -84,7 +51,7 @@ namespace utils {
                 *p = {};
                 p->sin_family = AF_INET;
                 binary::Buf<std::uint32_t, const byte*> buf{naddr.addr.data()};
-                p->sin_addr.s_addr = buf.read_be();
+                p->sin_addr.s_addr = binary::bswap_net(buf.read_be());
                 p->sin_port = binary::bswap_net(naddr.port.u16());
                 addrlen = sizeof(sockaddr_in);
             }

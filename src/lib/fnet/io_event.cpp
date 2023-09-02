@@ -68,7 +68,7 @@ namespace utils::fnet::event {
     }
 
 #else
-    fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*)) {
+    fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*,void*), void* rt) {
         if (!f) {
             return unexpect(error::Error("need non-null pointer handler", error::ErrorCategory::validationerr));
         }
@@ -76,7 +76,7 @@ namespace utils::fnet::event {
         if (h == -1) {
             return unexpect(error::Errno());
         }
-        return IOEvent(std::uintptr_t(h), f);
+        return IOEvent(std::uintptr_t(h), f, rt);
     }
 
     expected<void> IOEvent::register_handle(std::uintptr_t handle, void* ptr) {
@@ -99,7 +99,7 @@ namespace utils::fnet::event {
         }
         int proc = 0;
         for (auto i = 0; i < res; i++) {
-            f(&ev[i]);
+            f(&ev[i], rt);
         }
         return proc;
     }

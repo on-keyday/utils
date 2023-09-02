@@ -10,177 +10,157 @@
 #include <cstdint>
 #include <type_traits>
 #include <bit>
+#include "flags.h"
 
 namespace utils {
     namespace binary {
-
-        template <class T>
-        constexpr size_t bitsof() noexcept {
-            return sizeof(T) << 3;  // sizoef(T)*8
-        }
 
         // msb to lsb
         template <class T>
         constexpr T bit_range(byte start, byte size) {
             T value = 0;
-            auto bit = [&](auto i) { return T(1) << (bitsof<T>() - 1 - i); };
+            auto bit = [&](auto i) { return T(1) << (sizeof(T) * bit_per_byte - 1 - i); };
             for (size_t i = 0; i < size; i++) {
                 value |= bit(start + i);
             }
             return value;
         }
 
-        template <class T, class Exp, byte exp_width, Exp bias_>
+        template <class T, class F, byte exp_width, int bias_>
         struct IEEEFloat {
-            using frac_t = T;
-            using exp_t = Exp;
+            static_assert(std::is_void_v<F> || std::is_floating_point_v<F>);
+            using float_t = F;
 
-            static constexpr Exp bias = bias_;
+           private:
+            static constexpr auto t_bit = sizeof(T) * bit_per_byte;
+            flags_t<T, 1, exp_width, byte(t_bit - 1 - exp_width)> value;
+
+           public:
+            using frac_t = T;
+            using exp_t = decltype(value.template get<1>());
+
+            static constexpr exp_t bias = bias_;
             static constexpr byte exp_bits_width = exp_width;
-            static constexpr byte exp_shift = bitsof<T>() - 1 - exp_bits_width;
+            static constexpr byte exp_shift = t_bit - 1 - exp_bits_width;
 
             static constexpr T sign_bit = bit_range<T>(0, 1);
             static constexpr T exp_bits = bit_range<T>(1, exp_bits_width);
             static constexpr T frac_bits = ~(sign_bit | exp_bits);
 
-            static constexpr Exp exp_max = Exp(exp_bits >> exp_shift);
+            static constexpr T frac_msb = bit_range<T>(t_bit - exp_shift, 1);
 
-            static constexpr T frac_msb = bit_range<T>(bitsof<T>() - exp_shift, 1);
-
-           private:
-            T frac_ = 0;
-            bool sign_ = false;
-            Exp exp_ = 0;
-
-           public:
             constexpr IEEEFloat() = default;
             constexpr IEEEFloat(T input) noexcept {
-                parse(input);
+                value.as_value() = input;
             }
+
+            template <class V>
+                requires std::is_floating_point_v<V> && (sizeof(T) == sizeof(V))
+            constexpr IEEEFloat(V v)
+                : IEEEFloat(std::bit_cast<T>(v)) {}
 
             constexpr operator T() const noexcept {
-                return compose();
+                return value.as_value();
             }
 
-            // parse/compose
+            // raw values getter/setter
 
-            constexpr void parse(T value) noexcept {
-                sign_ = bool(value & sign_bit);
-                exp_ = Exp((value & exp_bits) >> exp_shift);
-                frac_ = (value & frac_bits);
+            bits_flag_alias_method(value, 0, sign);
+            bits_flag_alias_method(value, 1, exponent);
+            bits_flag_alias_method(value, 2, fraction);
+
+            constexpr std::make_signed_t<exp_t> biased_exponent() const noexcept {
+                return exponent() - bias;
             }
 
-            constexpr T compose() const noexcept {
-                T value = 0;
-                if (sign_) {
-                    value |= sign_bit;
-                }
-                value |= (T(exp_) << exp_shift) & exp_bits;
-                value |= frac_ & frac_bits;
-                return value;
-            }
-
-            // raw values
-
-            constexpr bool sign() const noexcept {
-                return sign_;
-            }
-
-            constexpr Exp exponent() const noexcept {
-                return exp_;
-            }
-
-            constexpr T fraction() const noexcept {
-                return frac_;
-            }
-
-            // setter
-
-            constexpr void set_sign(bool s) noexcept {
-                sign_ = s;
-            }
-
-            constexpr bool set_exponent(Exp exp) noexcept {
-                if (exp & (~bit_range<Exp>(0, bitsof<Exp>()))) {
-                    return false;
-                }
-                exp_ = exp;
-            }
-
-            constexpr bool set_biased_exponent(std::make_signed_t<Exp> exp) noexcept {
-                return set_exponent(exp + bias_);
-            }
-
-            constexpr bool set_fraction(T frac) noexcept {
-                if (frac & (~frac_bits)) {
-                    return false;
-                }
-                frac_ = frac;
-                return true;
+            constexpr bool set_biased_exponent(std::make_signed_t<exp_t> exp) noexcept {
+                return set_exponent(exp + bias);
             }
 
             // status
 
             constexpr bool has_implicit_1() const noexcept {
-                return exp_ != 0;
+                return exponent() != 0;
             }
 
             constexpr bool is_denormalized() const noexcept {
-                return exp_ == 0 && frac_ != 0;
+                return exponent() == 0 && fraction() != 0;
             }
 
             constexpr bool is_normalized() const noexcept {
-                return exp_ != 0;
+                return exponent() != 0;
             }
 
             // ±Inf
             constexpr bool is_infinity() const noexcept {
-                return exp_ == exp_max && frac_ == 0;
+                return exponent() == exponent_max && fraction() == 0;
             }
 
             // NaN (both quiet and signaling)
             constexpr bool is_nan() const noexcept {
-                return exp_ == exp_max && frac_ != 0;
+                return exponent() == exponent_max && fraction() != 0;
             }
 
             constexpr bool is_signaling_nan() const noexcept {
-                return is_nan() && bool(frac_ & frac_msb);
+                return is_nan() && bool(fraction() & frac_msb);
             }
 
             // processed values
 
-            constexpr std::make_signed_t<Exp> biased_exponent() const noexcept {
-                return exp_ - bias_;
-            }
-
             constexpr T fraction_with_implicit_1() const noexcept {
                 if (has_implicit_1()) {
-                    return (T(1) << exp_shift) | frac_;
+                    return (T(1) << exp_shift) | fraction();
                 }
-                return frac_;
+                return fraction();
+            }
+
+            // cast
+
+            constexpr F to_float() const noexcept
+                requires(!std::is_void_v<F>)
+            {
+                return std::bit_cast<F>(value.as_value());
+            }
+
+            constexpr const T& to_int() const noexcept {
+                return value.as_value();
+            }
+
+            constexpr T& to_int() noexcept {
+                return value.as_value();
             }
         };
 
-        using HalfFloat = IEEEFloat<std::uint16_t, byte, 5, 15>;
-        using SingleFloat = IEEEFloat<std::uint32_t, byte, 8, 127>;
-        using DoubleFloat = IEEEFloat<std::uint64_t, std::uint16_t, 11, 1023>;
+        using HalfFloat = IEEEFloat<std::uint16_t, void, 5, 15>;
+        using SingleFloat = IEEEFloat<std::uint32_t, float, 8, 127>;
+        using DoubleFloat = IEEEFloat<std::uint64_t, double, 11, 1023>;
 
         namespace test {
             static_assert(HalfFloat::exp_shift == 10 && SingleFloat::exp_shift == 23 && DoubleFloat::exp_shift == 52);
             constexpr bool check_ieeefloat() {
                 SingleFloat single;
-                single.parse(0xc0000000);
-                if (single.compose() != 0xC0000000 ||
+                single = (0xc0000000);
+                if (single != 0xC0000000 ||
                     !single.sign() ||
                     single.exponent() != 0x80 ||
                     single.fraction() != 0) {
                     return false;
                 }
-                single.parse(0x7f7fffff);
-                if (single.compose() != 0x7f7fffff ||
+                single = (0x7f7fffff);
+                if (single != 0x7f7fffff ||
                     single.sign() ||
                     single.exponent() != 0xFE ||
                     single.fraction() != 0x7fffff) {
+                    return false;
+                }
+                single = 1.0e10f;
+                if (single != 0x501502f9 ||
+                    single.sign() ||
+                    single.exponent() != 0xA0 ||
+                    single.fraction() != 0x1502f9) {
+                    return false;
+                }
+                if (single.to_float() != 1.0e10f) {
                     return false;
                 }
                 return true;

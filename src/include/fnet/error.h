@@ -10,11 +10,11 @@
 #include "dll/dllh.h"
 #include "dll/glheap.h"
 #include <concepts>
-#include "../view/iovec.h"
-#include "../helper/defer.h"
-#include "../helper/pushbacker.h"
-#include "../strutil/append.h"
-#include "../number/to_string.h"
+#include <view/iovec.h>
+#include <helper/defer.h>
+#include <helper/pushbacker.h>
+#include <strutil/append.h>
+#include <number/to_string.h>
 #include <atomic>
 #include <helper/expected.h>
 #include <string>
@@ -567,16 +567,16 @@ namespace utils {
 
             constexpr auto block = Error("BLOCK", ErrorCategory::syserr);
 
-            constexpr auto unimplemented = Error("UNIMPLEMENTED", ErrorCategory::fneterr);
-
             fnet_dll_export(Error) Errno();
+
+            constexpr size_t sizeof_error = sizeof(Error);
 
         }  // namespace error
         template <class T>
         using expected = helper::either::expected<T, error::Error>;
 
-        auto unexpect(auto&&... a) {
-            return helper::either::unexpected<error::Error>(std::in_place, a...);
+        constexpr auto unexpect(auto&&... a) {
+            return helper::either::unexpected<error::Error>(std::in_place, std::forward<decltype(a)>(a)...);
         }
 
     }  // namespace fnet

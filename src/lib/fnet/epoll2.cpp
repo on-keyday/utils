@@ -7,8 +7,8 @@
 
 #include <fnet/dll/dllcpp.h>
 #include <fnet/sock_internal.h>
-#include <dll/lazy/sockdll.h>
-#include <dll/errno.h>
+#include <fnet/dll/lazy/sockdll.h>
+#include <fnet/dll/errno.h>
 #include <fnet/event/io.h>
 #include <fnet/socket.h>
 #include <cstdint>
@@ -63,7 +63,7 @@ namespace utils::fnet {
         }
     }  // namespace event
 
-    void call_stream(utils::fnet::NotifyCallback* cb, void* base, utils::fnet::expected<size_t>&& result) {
+    void call_stream(utils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
         auto hdr = (EpollIOTableHeader*)base;
         auto sock = make_socket(hdr->base);
         hdr->cb = {};     // clear for epoll_lock
@@ -72,7 +72,7 @@ namespace utils::fnet {
         notify(std::move(sock), cb->user, std::move(result));
     }
 
-    void call_recvfrom(utils::fnet::NotifyCallback* cb, void* base, utils::fnet::expected<size_t>&& result) {
+    void call_recvfrom(utils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
         auto hdr = (EpollIOTableHeader*)base;
         auto sock = make_socket(hdr->base);
         hdr->cb = {};     // clear for epoll_lock
@@ -134,14 +134,13 @@ namespace utils::fnet {
         auto& cb = io.cb;
 
         return io.l.try_lock()  // lock released by call_stream
-            .and_then([&](std::uint64_t cancel_code) {
+            .and_then([&](std::uint64_t cancel_code) -> expected<AsyncResult> {
                 io.base = t;
                 auto [addr, len] = get_addr(io);
                 if (!addr) {
                     io.l.unlock();
                     return unexpect(error::Error("unsupported address type", error::ErrorCategory::validationerr));
                 }
-                io.set_buffer(buffer);
                 io.epoll_lock = true;
                 const auto d = helper::defer([&] { io.epoll_lock = false; });  // anyway, release finally
                 if (is_write) {
@@ -153,7 +152,7 @@ namespace utils::fnet {
                 t->incr();  // increment, released by Socket passed to notify() or on_success()
 
                 auto result = is_write
-                                  ? lazy::sendto_(t->sock, buffer.as_char(), buffer.size(), flag, addr, *len, )
+                                  ? lazy::sendto_(t->sock, buffer.as_char(), buffer.size(), flag, addr, *len)
                                   : lazy::recvfrom_(t->sock, (char*)buffer.as_char(), buffer.size(), flag, addr, len);
 
                 return handle_result(result, t, io, cancel_code, is_write);

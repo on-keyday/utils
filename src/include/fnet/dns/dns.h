@@ -8,6 +8,7 @@
 #pragma once
 #include <cstdint>
 #include "../../binary/number.h"
+#include <binary/flags.h>
 
 namespace utils {
     namespace fnet::dns {
@@ -31,118 +32,28 @@ namespace utils {
             not_in_zone = 9,
         };
 
-        struct Flag {
-            std::uint16_t flag = 0;
-
-            constexpr bool is_response() const noexcept {
-                return (flag & 0x8000);
-            }
-
-            constexpr bool is_query() const noexcept {
-                return !is_response();
-            }
-
-           private:
-            constexpr void set_bit(std::uint16_t bit, bool q) noexcept {
-                if (q) {
-                    flag |= bit;
-                }
-                else {
-                    flag &= ~bit;
-                }
-            }
-
-           public:
-            constexpr void set_response(bool qr) noexcept {
-                set_bit(0x8000, qr);
-            }
-
-            constexpr OpCode op_code() const noexcept {
-                return OpCode((flag & 0x7800) >> 11);
-            }
-
-            constexpr void set_op_code(OpCode code) noexcept {
-                flag &= 0x87ff;
-                flag |= (std::uint16_t(code) & 0xf) << 11;
-            }
-
-            constexpr bool authoritative() const noexcept {
-                return (flag & 0x0400);
-            }
-
-            constexpr void set_authoritative(bool aa) noexcept {
-                set_bit(0x0400, aa);
-            }
-
-            constexpr bool truncated() const noexcept {
-                return (flag & 0x0200);
-            }
-
-            constexpr void set_truncated(bool tc) noexcept {
-                set_bit(0x0200, tc);
-            }
-
-            constexpr bool recursion_desired() const noexcept {
-                return (flag & 0x0100);
-            }
-
-            constexpr void set_recursion_desired(bool rd) noexcept {
-                set_bit(0x0100, rd);
-            }
-
-            constexpr bool recursion_available() const noexcept {
-                return (flag & 0x0080);
-            }
-
-            constexpr void set_recursion_available(bool ra) noexcept {
-                set_bit(0x0080, ra);
-            }
-
-            constexpr void clear_z() noexcept {
-                flag &= 0xFFBF;
-            }
-
-            constexpr bool dnssec() const noexcept {
-                return (flag & 0x0040);
-            }
-
-            constexpr void set_dnssec(bool ad) noexcept {
-                set_bit(0x0040, ad);
-            }
-
-            constexpr bool ban_dnssec() const noexcept {
-                return (flag & 0x0020);
-            }
-
-            constexpr void set_ban_dnssec(bool cd) noexcept {
-                set_bit(0x0020, cd);
-            }
-
-            constexpr ReturnCode return_code() const noexcept {
-                return ReturnCode(flag & 0x000F);
-            }
-
-            constexpr void set_return_code(ReturnCode code) noexcept {
-                flag &= 0xfff0;
-                flag |= (std::uint16_t(code) & 0xf);
-            }
-        };
-
         struct Header {
             std::uint16_t id = 0;
-            Flag flag;
+            binary::flags_t<std::uint16_t, 1, 4, 1, 1, 1, 1, 1, 1, 1, 4> flags;
+            // Flag flag;
+            bits_flag_alias_method(flags, 0, response);
+            bits_flag_alias_method_with_enum(flags, 1, op_code, OpCode);
+            bits_flag_alias_method(flags, 2, authoritative);
+            bits_flag_alias_method(flags, 3, truncated);
+            bits_flag_alias_method(flags, 4, recursion_desired);
+            bits_flag_alias_method(flags, 5, recursion_available);
+            bits_flag_alias_method(flags, 6, reserved);
+            bits_flag_alias_method(flags, 7, dnssec);
+            bits_flag_alias_method(flags, 8, ban_dnssec);
+            bits_flag_alias_method_with_enum(flags, 9, return_code, ReturnCode);
+
             std::uint16_t query_count = 0;            // only parse
             std::uint16_t answer_count = 0;           // only parse
             std::uint16_t authority_count = 0;        // only parse
             std::uint16_t additional_info_count = 0;  // only parse
 
             constexpr bool parse(binary::reader& r) noexcept {
-                return binary::read_num(r, id) &&
-                       binary::read_num(r, flag.flag) &&
-                       binary::read_num(r, query_count) &&
-                       binary::read_num(r, answer_count) &&
-                       binary::read_num(r, authority_count) &&
-                       binary::read_num(r, additional_info_count);
+                return binary::read_num_bulk(r, true, id, flags.as_value(), query_count, answer_count, authority_count, additional_info_count);
             }
 
             constexpr bool render(
@@ -154,12 +65,7 @@ namespace utils {
                     additional > 0xffff) {
                     return false;
                 }
-                return binary::write_num(w, id) &&
-                       binary::write_num(w, flag.flag) &&
-                       binary::write_num(w, std::uint16_t(query)) &&
-                       binary::write_num(w, std::uint16_t(answer)) &&
-                       binary::write_num(w, std::uint16_t(authority)) &&
-                       binary::write_num(w, std::uint16_t(additional));
+                return binary::write_num_bulk(w, true, id, flags.as_value(), std::uint16_t(query), std::uint16_t(answer), std::uint16_t(authority), std::uint16_t(additional));
             }
         };
 

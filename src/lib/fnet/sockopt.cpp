@@ -35,7 +35,7 @@ namespace utils {
             return make_socket(ctx);
         };
 
-        expected<NetAddrPort> Socket::get_localaddr() {
+        expected<NetAddrPort> Socket::get_local_addr() {
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<NetAddrPort> {
                 sockaddr_storage st{};
                 socklen_t len = sizeof(st);
@@ -48,7 +48,7 @@ namespace utils {
             });
         }
 
-        expected<NetAddrPort> Socket::get_remoteaddr() {
+        expected<NetAddrPort> Socket::get_remote_addr() {
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<NetAddrPort> {
                 sockaddr_storage st{};
                 socklen_t len = sizeof(st);
@@ -107,7 +107,7 @@ namespace utils {
             int yes = exclusive ? 1 : 0;
             return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
 #else
-            return error::Error("SO_EXCLUSIVEADDRUSE is not supported on linux", error::ErrorCategory::fneterr);
+            return unexpect(error::Error("SO_EXCLUSIVEADDRUSE is not supported on linux", error::ErrorCategory::fneterr));
 #endif
         }
 
@@ -170,7 +170,7 @@ namespace utils {
             });
         }
 
-        expected<void> Socket::set_dontfragment(bool df) {
+        expected<void> Socket::set_dont_fragment_v4(bool df) {
 #ifdef _WIN32
             return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
 #else
@@ -178,7 +178,7 @@ namespace utils {
 #endif
         }
 
-        expected<void> Socket::set_dontfragment_v6(bool df) {
+        expected<void> Socket::set_dont_fragment_v6(bool df) {
             return set_option(IPPROTO_IP, IPV6_DONTFRAG, std::uint32_t(df ? 1 : 0));
         }
 
@@ -216,14 +216,15 @@ namespace utils {
                 })
                 .and_then([&] {
                     return get_option(SOL_SOCKET, SO_PROTOCOL, attr.protocol);
-                });
+                })
+                .transform([&] { return attr; });
 #endif
         }
 
         expected<void> Socket::set_DF(bool df) {
 #ifdef _WIN32
-            auto errv4 = set_dontfragment_v6(df);
-            auto errv6 = set_dontfragment(df);
+            auto errv4 = set_dont_fragment_v6(df);
+            auto errv6 = set_dont_fragment_v4(df);
 #else
             auto errv4 = set_mtu_discover(mtu_enable);
             auto errv6 = set_mtu_discover_v6(mtu_enable);
@@ -235,6 +236,17 @@ namespace utils {
                 return !errv4 ? errv4 : errv6;
             }
             return {};
+        }
+
+        // for raw socket
+        expected<void> Socket::set_header_include_v4(bool incl) {
+            int on = incl ? 1 : 0;
+            return set_option(IPPROTO_IP, IP_HDRINCL, on);
+        }
+
+        expected<void> Socket::set_header_include_v6(bool incl) {
+            int on = incl ? 1 : 0;
+            return set_option(IPPROTO_IPV6, IPV6_HDRINCL, on);
         }
     }  // namespace fnet
 }  // namespace utils

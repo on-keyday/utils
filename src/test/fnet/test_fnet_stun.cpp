@@ -20,7 +20,7 @@ void test_fnet_stun_run(utils::binary::writer& w, int af) {
     SockAddr resolv;
     constexpr auto stun_sever = "stun.l.google.com";
     auto [sock, addr] = connect(stun_sever, "19302", sockattr_udp(), false).value();
-    auto local = sock.get_localaddr().value();
+    auto local = sock.get_local_addr().value();
     auto str = local.to_string<std::string>();
     ctx.original_address.family = local.addr.type() == NetAddrType::ipv6 ? stun::family_ipv6 : stun::family_ipv4;
     ctx.original_address.port = local.port;

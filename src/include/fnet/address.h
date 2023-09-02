@@ -11,6 +11,7 @@
 #include "util/ipaddr.h"
 #include "../strutil/append.h"
 #include "storage.h"
+#include "error.h"
 
 namespace utils {
     namespace fnet {
@@ -23,19 +24,23 @@ namespace utils {
             opaque,
         };
 
+        struct NetAddr;
+
         namespace internal {
             constexpr bool NetAddronHeap(NetAddrType type) {
                 return type != NetAddrType::ipv4 &&
                        type != NetAddrType::ipv6 &&
                        type != NetAddrType::null;
             }
+            constexpr NetAddr make_netaddr(NetAddrType type, view::rvec b);
+
         }  // namespace internal
 
         struct NetAddr {
            private:
-            friend NetAddr make_netaddr(NetAddrType, view::rvec);
+            friend constexpr NetAddr internal::make_netaddr(NetAddrType, view::rvec);
             union {
-                byte bdata[16];
+                byte bdata[16]{};
                 storage fdata;
             };
             NetAddrType type_ = NetAddrType::null;
@@ -46,7 +51,7 @@ namespace utils {
                 }
             }
 
-            void copy(const NetAddr& from) {
+            constexpr void copy(const NetAddr& from) {
                 if (internal::NetAddronHeap(from.type_)) {
                     fdata = make_storage(from.fdata);
                     if (!fdata.null()) {
@@ -55,7 +60,7 @@ namespace utils {
                     }
                 }
                 else {
-                    data_copy(from.bdata, sizeof(bdata));
+                    data_copy(from.bdata, from.size());
                 }
                 type_ = from.type_;
             }
@@ -65,36 +70,38 @@ namespace utils {
                     fdata = std::move(from.fdata);
                 }
                 else {
-                    data_copy(from.bdata, sizeof(bdata));
+                    data_copy(from.bdata, from.size());
                 }
                 type_ = from.type_;
                 from.type_ = NetAddrType::null;
             }
 
-           public:
-            constexpr NetAddr()
-                : fdata() {}
-
-            ~NetAddr() {
+            constexpr void destruct() {
                 if (internal::NetAddronHeap(type_)) {
-                    fdata.~basic_storage_vec();
+                    std::destroy_at(std::addressof(fdata));
                 }
             }
-            NetAddr(const NetAddr& from)
-                : fdata() {
+
+           public:
+            constexpr NetAddr() {}
+
+            constexpr ~NetAddr() {
+                destruct();
+            }
+
+            constexpr NetAddr(const NetAddr& from) {
                 copy(from);
             }
 
-            constexpr NetAddr(NetAddr&& from)
-                : fdata() {
+            constexpr NetAddr(NetAddr&& from) {
                 move(std::move(from));
             }
 
-            NetAddr& operator=(const NetAddr& from) {
+            constexpr NetAddr& operator=(const NetAddr& from) {
                 if (this == &from) {
                     return *this;
                 }
-                this->~NetAddr();
+                destruct();
                 copy(from);
                 return *this;
             }
@@ -103,7 +110,7 @@ namespace utils {
                 if (this == &from) {
                     return *this;
                 }
-                this->~NetAddr();
+                destruct();
                 move(std::move(from));
                 return *this;
             }
@@ -130,6 +137,35 @@ namespace utils {
 
             constexpr NetAddrType type() const {
                 return type_;
+            }
+
+            template <class Str>
+            constexpr void to_string(Str& str, bool detect_ipv4_mapped = false, bool ipv4mapped_as_ipv4 = false) const {
+                if (type() == NetAddrType::ipv4) {
+                    ipaddr::ipv4_to_string(str, data());
+                }
+                else if (type() == NetAddrType::ipv6) {
+                    auto is_v4_mapped = detect_ipv4_mapped && ipaddr::is_ipv4_mapped(data());
+                    if (ipv4mapped_as_ipv4 && is_v4_mapped) {
+                        ipaddr::ipv4_to_string(str, data() + 12);
+                    }
+                    else {
+                        ipaddr::ipv6_to_string(str, data(), is_v4_mapped);
+                    }
+                }
+                else if (type() == NetAddrType::unix_path) {
+                    strutil::append(str, (const char*)data());
+                }
+                else {
+                    strutil::append(str, "<opaque sockaddr>");
+                }
+            }
+
+            template <class Str>
+            constexpr Str to_string(bool detect_ipv4_mapped = false, bool ipv4mapped_as_ipv4 = false) const {
+                Str str;
+                to_string(str, detect_ipv4_mapped, ipv4mapped_as_ipv4);
+                return str;
             }
         };
 
@@ -198,14 +234,45 @@ namespace utils {
             }
         };
 
-        fnet_dll_export(NetAddrPort) ipv4(byte a, byte b, byte c, byte d, std::uint16_t port);
-        fnet_dll_export(NetAddrPort) ipv6(byte a, byte b, byte c, byte d, byte e, byte f, byte g, byte h,
-                                          byte i, byte j, byte k, byte l, byte m, byte n, byte o, byte p,
-                                          std::uint16_t port);
+        namespace internal {
+            constexpr NetAddr make_netaddr(NetAddrType type, view::rvec b) {
+                NetAddr addr;
+                if (internal::NetAddronHeap(type)) {
+                    addr.fdata = make_storage(b);
+                    if (addr.fdata.null()) {
+                        return {};
+                    }
+                }
+                else {
+                    addr.data_copy(b.data(), b.size());
+                }
+                addr.type_ = type;
+                return addr;
+            }
+        }  // namespace internal
 
-        inline NetAddrPort ipv6(std::uint16_t a, std::uint16_t b, std::uint16_t c, std::uint16_t d,
-                                std::uint16_t e, std::uint16_t f, std::uint16_t g, std::uint16_t h,
-                                std::uint16_t port) {
+        constexpr NetAddrPort ipv4(byte a, byte b, byte c, byte d,
+                                   std::uint16_t port) {
+            byte val[] = {a, b, c, d};
+            NetAddrPort naddr;
+            naddr.addr = internal::make_netaddr(NetAddrType::ipv4, val);
+            naddr.port = port;
+            return naddr;
+        }
+
+        constexpr NetAddrPort ipv6(byte a, byte b, byte c, byte d, byte e, byte f, byte g, byte h,
+                                   byte i, byte j, byte k, byte l, byte m, byte n, byte o, byte p,
+                                   std::uint16_t port) {
+            byte val[] = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
+            NetAddrPort naddr;
+            naddr.addr = internal::make_netaddr(NetAddrType::ipv6, val);
+            naddr.port = port;
+            return naddr;
+        }
+
+        constexpr NetAddrPort ipv6(std::uint16_t a, std::uint16_t b, std::uint16_t c, std::uint16_t d,
+                                   std::uint16_t e, std::uint16_t f, std::uint16_t g, std::uint16_t h,
+                                   std::uint16_t port) {
             constexpr auto h_ = [](std::uint16_t b) {
                 return byte((b >> 8) & 0xff);
             };
@@ -217,11 +284,11 @@ namespace utils {
                         port);
         }
 
-        inline NetAddrPort ipv4(const byte* addr, std::uint16_t port) {
+        constexpr NetAddrPort ipv4(const byte* addr, std::uint16_t port) {
             return ipv4(addr[0], addr[1], addr[2], addr[3], port);
         }
 
-        inline NetAddrPort ipv6(const byte* addr, std::uint16_t port) {
+        constexpr NetAddrPort ipv6(const byte* addr, std::uint16_t port) {
             return ipv6(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
                         addr[8], addr[9], addr[10], addr[11], addr[12], addr[13], addr[14], addr[15], port);
         }
@@ -230,20 +297,20 @@ namespace utils {
             return ipv6(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7], port);
         }
 
-        std::pair<NetAddr, bool> toipv4(auto&& addr, std::uint16_t port) {
+        constexpr expected<NetAddrPort> to_ipv4(auto&& addr, std::uint16_t port) {
             auto d = ipaddr::to_ipv4(addr);
             if (!d.second) {
-                return {{}, false};
+                return unexpect("not valid IPv4 address");
             }
-            return {ipv4(d.first.addr, port), true};
+            return ipv4(d.first.addr, port);
         }
 
-        std::pair<NetAddr, bool> toipv6(auto&& addr, std::uint16_t port) {
+        constexpr expected<NetAddrPort> to_ipv6(auto&& addr, std::uint16_t port) {
             auto d = ipaddr::to_ipv6(addr);
             if (!d.second) {
-                return {{}, false};
+                return unexpect("not valid IPv6 address");
             }
-            return {ipv4(d.first.addr), true};
+            return ipv6(d.first.addr);
         }
 
         // SockAttr is basic attributes to make socket or search address

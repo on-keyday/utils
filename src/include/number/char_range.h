@@ -81,7 +81,7 @@ namespace utils {
 
         template <class C>
         constexpr bool is_control_char(C&& c) {
-            return c >= 0 && c <= 0x20;
+            return c >= 0 && c <= 0x20 || c == 0xFF;
         }
 
         template <class C>

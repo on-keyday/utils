@@ -343,8 +343,8 @@ namespace utils {
 
             union {
                 alignas(larger_align) byte data[larger_size];
-                T t;
-                E e;
+                T t_val;
+                E e_val;
             };
             bool holds;
 
@@ -353,13 +353,13 @@ namespace utils {
             }
 
             constexpr T* construct_T(auto&&... a) {
-                auto ptr = std::construct_at(std::addressof(t), std::forward<decltype(a)>(a)...);
+                auto ptr = std::construct_at(std::addressof(t_val), std::forward<decltype(a)>(a)...);
                 set_holds(internal::holds_T);
                 return std::launder(ptr);
             }
 
             constexpr E* construct_E(auto&&... a) {
-                auto ptr = std::construct_at(std::addressof(e), std::forward<decltype(a)>(a)...);
+                auto ptr = std::construct_at(std::addressof(e_val), std::forward<decltype(a)>(a)...);
                 set_holds(internal::holds_E);
                 return std::launder(ptr);
             }
@@ -387,10 +387,10 @@ namespace utils {
 
             constexpr void destruct() {
                 if (has_value()) {
-                    std::destroy_at(std::addressof(t));
+                    std::destroy_at(std::addressof(t_val));
                 }
                 else {
-                    std::destroy_at(std::addressof(e));
+                    std::destroy_at(std::addressof(e_val));
                 }
             }
 
@@ -421,10 +421,10 @@ namespace utils {
             {
                 if (has_value() == rhs.has_value()) {
                     if (has_value()) {
-                        std::swap(t, rhs.t);
+                        std::swap(t_val, rhs.t_val);
                     }
                     else {
-                        std::swap(e, rhs.e);
+                        std::swap(e_val, rhs.e_val);
                     }
                     return;
                 }
@@ -433,26 +433,26 @@ namespace utils {
                 }
                 // copies from https://cpprefjp.github.io/reference/expected/expected/swap.html
                 if constexpr (std::is_nothrow_move_constructible_v<E>) {
-                    E tmp(std::move(rhs.e));
-                    std::destroy_at(std::addressof(rhs.e));
+                    E tmp(std::move(rhs.e_val));
+                    std::destroy_at(std::addressof(rhs.e_val));
                     try {
-                        std::construct_at(std::addressof(rhs.t), std::move(t));
-                        std::destroy_at(std::addressof(t));
-                        std::construct_at(std::addressof(e), std::move(tmp));
+                        std::construct_at(std::addressof(rhs.t_val), std::move(t_val));
+                        std::destroy_at(std::addressof(t_val));
+                        std::construct_at(std::addressof(e_val), std::move(tmp));
                     } catch (...) {
-                        std::construct_at(std::addressof(rhs.e), std::move(tmp));
+                        std::construct_at(std::addressof(rhs.e_val), std::move(tmp));
                         throw;
                     }
                 }
                 else {
-                    T tmp(std::move(t));
-                    std::destroy_at(std::addressof(t));
+                    T tmp(std::move(t_val));
+                    std::destroy_at(std::addressof(t_val));
                     try {
-                        std::construct_at(std::addressof(e), std::move(rhs.e));
-                        std::destroy_at(std::addressof(rhs.e));
-                        std::construct_at(std::addressof(rhs.t), std::move(tmp));
+                        std::construct_at(std::addressof(e_val), std::move(rhs.e_val));
+                        std::destroy_at(std::addressof(rhs.e_val));
+                        std::construct_at(std::addressof(rhs.t_val), std::move(tmp));
                     } catch (...) {
-                        std::construct_at(std::addressof(t), std::move(tmp));
+                        std::construct_at(std::addressof(t_val), std::move(tmp));
                         throw;
                     }
                 }
@@ -566,19 +566,19 @@ namespace utils {
             constexpr void do_assign(auto&& rhs, auto&& apply) {
                 if (has_value() == rhs.has_value()) {
                     if (has_value()) {
-                        this->t = apply(rhs.t);
+                        this->t_val = apply(rhs.t_val);
                     }
                     else {
-                        this->e = apply(rhs.e);
+                        this->e_val = apply(rhs.error());
                     }
                     return;
                 }
                 if (has_value()) {
-                    reinit_expected(e, t, apply(rhs.e));
+                    reinit_expected(e_val, t_val, apply(rhs.error()));
                     set_holds(internal::holds::holds_E);
                 }
                 else {
-                    reinit_expected(t, e, apply(rhs.t));
+                    reinit_expected(t_val, e_val, apply(rhs.t_val));
                     set_holds(internal::holds::holds_T);
                 }
             }
@@ -587,19 +587,19 @@ namespace utils {
             constexpr void do_assign_no_expected(auto&& value) {
                 if (has_value() == has_val) {
                     if constexpr (has_val) {
-                        this->t = std::forward<decltype(value)>(value);
+                        this->t_val = std::forward<decltype(value)>(value);
                     }
                     else {
-                        this->e = std::forward<decltype(value)>(value);
+                        this->e_val = std::forward<decltype(value)>(value);
                     }
                 }
                 else {
                     if constexpr (has_val) {
-                        reinit_expected(t, e, std::forward<decltype(value)>(value));
+                        reinit_expected(t_val, e_val, std::forward<decltype(value)>(value));
                         set_holds(internal::holds::holds_T);
                     }
                     else {
-                        reinit_expected(e, t, std::forward<decltype(value)>(value));
+                        reinit_expected(e_val, t_val, std::forward<decltype(value)>(value));
                         set_holds(internal::holds::holds_E);
                     }
                 }
@@ -674,53 +674,59 @@ namespace utils {
             }
 
            private:
-#define must_copy(has_val)                  \
-    if (has_val != has_value()) {           \
-        throw bad_expected_access(error()); \
+#define must_copy(has_val)                                                    \
+    if (has_val != has_value()) {                                             \
+        if (std::is_constant_evaluated()) {                                   \
+            [](auto v) { throw bad_expected_access(std::move(v)); }(error()); \
+        }                                                                     \
+        throw bad_expected_access(error());                                   \
     }
 
-#define must_move(has_val)                             \
-    if (has_val != has_value()) {                      \
-        throw bad_expected_access(std::move(error())); \
+#define must_move(has_val)                                                               \
+    if (has_val != has_value()) {                                                        \
+        if (std::is_constant_evaluated()) {                                              \
+            [](auto v) { throw bad_expected_access(std::move(v)); }(std::move(error())); \
+        }                                                                                \
+        throw bad_expected_access(std::move(error()));                                   \
     }
 
            public:
             constexpr const T& value() const& {
                 must_copy(true);
-                return t;
+                return t_val;
             }
             constexpr T& value() & {
                 must_copy(true);
-                return t;
+                return t_val;
             }
             constexpr const T&& value() const&& {
                 must_move(true);
-                return std::move(t);
+                return std::move(t_val);
             }
             constexpr T&& value() && {
                 must_move(true);
-                return std::move(t);
+                return std::move(t_val);
             }
 
             constexpr const E& error() const& noexcept {
-                return e;
+                return e_val;
             }
 
             constexpr E& error() & noexcept {
-                return e;
+                return e_val;
             }
             constexpr const E&& error() const&& noexcept {
-                return std::move(e);
+                return std::move(e_val);
             }
 
             constexpr E&& error() && noexcept {
-                return std::move(e);
+                return std::move(e_val);
             }
 
             // extended methods
             constexpr T* value_ptr() noexcept {
                 if (has_value()) {
-                    return std::addressof(t);
+                    return std::addressof(t_val);
                 }
                 return nullptr;
             }
@@ -728,7 +734,7 @@ namespace utils {
             // extended methods
             constexpr const T* value_ptr() const noexcept {
                 if (has_value()) {
-                    return std::addressof(t);
+                    return std::addressof(t_val);
                 }
                 return nullptr;
             }
@@ -736,7 +742,7 @@ namespace utils {
             // extended methods
             constexpr E* error_ptr() noexcept {
                 if (!has_value()) {
-                    return std::addressof(e);
+                    return std::addressof(e_val);
                 }
                 return nullptr;
             }
@@ -744,37 +750,37 @@ namespace utils {
             // extended methods
             constexpr const E* error_ptr() const noexcept {
                 if (!has_value()) {
-                    return std::addressof(e);
+                    return std::addressof(e_val);
                 }
                 return nullptr;
             }
 
             constexpr const T* operator->() const noexcept {
                 if (has_value()) {
-                    return std::addressof(t);
+                    return std::addressof(t_val);
                 }
                 return nullptr;
             }
 
             constexpr T* operator->() noexcept {
                 if (has_value()) {
-                    return std::addressof(t);
+                    return std::addressof(t_val);
                 }
                 return nullptr;
             }
 
             constexpr const T& operator*() const& noexcept {
-                return t;
+                return t_val;
             }
             constexpr T& operator*() & noexcept {
-                return t;
+                return t_val;
             }
             constexpr T&& operator*() && noexcept {
-                return std::move(t);
+                return std::move(t_val);
             }
 
             constexpr const T&& operator*() const&& noexcept {
-                return std::move(t);
+                return std::move(t_val);
             }
 
             constexpr explicit operator bool() const noexcept {
@@ -1007,7 +1013,7 @@ namespace utils {
            private:
             union {
                 alignas(alignof(E)) byte data[sizeof(E)];
-                E e;
+                E e_val;
             };
             bool holds;
 
@@ -1020,7 +1026,7 @@ namespace utils {
             }
 
             constexpr E* construct_E(auto&&... a) {
-                auto ptr = std::construct_at(std::addressof(e), std::forward<decltype(a)>(a)...);
+                auto ptr = std::construct_at(std::addressof(e_val), std::forward<decltype(a)>(a)...);
                 set_holds(internal::holds_E);
                 return std::launder(ptr);
             }
@@ -1048,7 +1054,7 @@ namespace utils {
 
             constexpr void destruct() {
                 if (!has_value()) {
-                    std::destroy_at(std::addressof(e));
+                    std::destroy_at(std::addressof(e_val));
                 }
             }
 
@@ -1073,14 +1079,14 @@ namespace utils {
                     if (has_value()) {
                         return;  // nothing to do
                     }
-                    std::swap(e, rhs.e);
+                    std::swap(e_val, rhs.e_val);
                     return;
                 }
                 if (!has_value()) {
                     return rhs.swap(*this);
                 }
-                std::construct_at(std::addressof(e), std::move(rhs.e));
-                std::destroy_at(std::addressof(rhs.e));
+                std::construct_at(std::addressof(e_val), std::move(rhs.e_val));
+                std::destroy_at(std::addressof(rhs.e_val));
                 set_holds(internal::holds_E);
                 rhs.set_holds(internal::holds_T);
             }
@@ -1148,15 +1154,15 @@ namespace utils {
                         // nothing to do
                     }
                     else {
-                        this->e = apply(rhs.e);
+                        this->e_val = apply(rhs.error());
                     }
                     return;
                 }
                 if (has_value()) {
-                    construct_E(apply(rhs.e));
+                    construct_E(apply(rhs.error()));
                 }
                 else {
-                    std::destroy_at(std::addressof(e));
+                    std::destroy_at(std::addressof(e_val));
                     construct_T();
                 }
             }
@@ -1166,7 +1172,7 @@ namespace utils {
                     construct_E(std::forward<decltype(value)>(value));
                 }
                 else {
-                    this->e = std::forward<decltype(value)>(value);
+                    this->e_val = std::forward<decltype(value)>(value);
                 }
             }
 
@@ -1223,24 +1229,24 @@ namespace utils {
             }
 
             constexpr const E& error() const& noexcept {
-                return e;
+                return e_val;
             }
 
             constexpr E& error() & noexcept {
-                return e;
+                return e_val;
             }
             constexpr const E&& error() const&& noexcept {
-                return std::move(e);
+                return std::move(e_val);
             }
 
             constexpr E&& error() && noexcept {
-                return std::move(e);
+                return std::move(e_val);
             }
 
             // extended methods
             constexpr const E* error_ptr() const noexcept {
                 if (!has_value()) {
-                    return std::addressof(e);
+                    return std::addressof(e_val);
                 }
                 return nullptr;
             }
@@ -1248,7 +1254,7 @@ namespace utils {
             // extended methods
             constexpr E* error_ptr() noexcept {
                 if (!has_value()) {
-                    return std::addressof(e);
+                    return std::addressof(e_val);
                 }
                 return nullptr;
             }

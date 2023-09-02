@@ -86,22 +86,22 @@ namespace utils {
             };
         }
 
-        constexpr auto default_range() {
+        constexpr auto default_should_escape() {
             return [](auto&& c) {
-                return c != ' ' && !number::is_in_visible_range(c);
+                return !number::is_in_visible_range(c) && c != ' ';
             };
         };
 
         constexpr auto html_range() {
             return [](auto&& c) {
-                constexpr auto defrange = default_range();
+                constexpr auto defrange = default_should_escape();
                 return defrange(c) || c == '<' || c == '>';
             };
         }
 
-        template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_range())>
+        template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_should_escape())>
         constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none,
-                                            Escape&& esc = default_set(), Range&& range = default_range()) {
+                                            Escape&& esc = default_set(), Range&& should_escape = default_should_escape()) {
             auto flush_hex_number = [&](auto n) -> number::NumErr {
                 number::ToStrFlag f = number::ToStrFlag::none;
                 if (any(flag & EscapeFlag::upper)) {
@@ -124,7 +124,7 @@ namespace utils {
                     }
                 }
                 if (!done) {
-                    if (range(c)) {
+                    if (should_escape(c)) {
                         if (any(flag & EscapeFlag::utf16)) {
                             auto s = seq.rptr;
                             utf::U16Buffer buf;
@@ -229,16 +229,16 @@ namespace utils {
             return true;
         }
 
-        template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_range())>
+        template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_should_escape())>
         constexpr number::NumErr escape_str(In&& in, Out& out, EscapeFlag flag = EscapeFlag::none,
-                                            Escape&& esc = default_set(), Range&& range = default_range()) {
+                                            Escape&& esc = default_set(), Range&& range = default_should_escape()) {
             auto seq = make_ref_seq(in);
             return escape_str(seq, out, flag, esc, range);
         }
 
-        template <class Out, class In, class Escape = decltype(default_set()), class Range = decltype(default_range())>
+        template <class Out, class In, class Escape = decltype(default_set()), class Range = decltype(default_should_escape())>
         constexpr Out escape_str(In&& seq, EscapeFlag flag = EscapeFlag::none,
-                                 Escape&& esc = default_set(), Range&& range = default_range()) {
+                                 Escape&& esc = default_set(), Range&& range = default_should_escape()) {
             Out out{};
             escape_str(seq, out, flag, esc, range);
             return out;

@@ -181,7 +181,69 @@ namespace utils {
             { t.get_address() } -> std::convertible_to<NetAddrPort&>;
         };
 
-        using NotifyResult = expected<std::optional<size_t>>;
+        using NotifyResult_v = expected<std::optional<size_t>>;
+
+        struct NotifyResult {
+           private:
+            NotifyResult_v result;
+
+           public:
+            constexpr NotifyResult(auto&& v)
+                : result(std::move(v)) {}
+            constexpr NotifyResult() = default;
+
+            NotifyResult_v& value() {
+                return result;
+            }
+
+            expected<view::wvec> read_unwrap(view::wvec buf, auto&& read_op) {
+                if (!result) {
+                    return result.transform([&](auto) { return buf; });
+                }
+                if (*result) {
+                    return buf.substr(0, **result);
+                }
+                else {
+                    auto res = read_op();
+                    if (!res) {
+                        return res.transform([&](auto) { return buf; });
+                    }
+                    return *res;
+                }
+            }
+
+            expected<std::pair<view::wvec, NetAddrPort>> readfrom_unwrap(view::wvec buf, NetAddrPort& addr, auto&& read_op) {
+                if (!result) {
+                    return result.transform([&](auto) { return std::make_pair(buf, addr); });
+                }
+                if (*result) {
+                    return std::make_pair(buf.substr(0, **result), std::move(addr));
+                }
+                else {
+                    auto res = read_op();
+                    if (!res) {
+                        return res.transform([&](auto) { return std::make_pair(buf, addr); });
+                    }
+                    return *res;
+                }
+            }
+
+            expected<view::rvec> write_unwrap(view::rvec buf, auto&& write_op) {
+                if (!result) {
+                    return result.transform([&](auto) { return buf; });
+                }
+                if (*result) {
+                    return buf.substr(**result);
+                }
+                else {
+                    auto res = write_op();
+                    if (!res) {
+                        return res.transform([&](auto) { return buf; });
+                    }
+                    return *res;
+                }
+            }
+        };
 
         using stream_notify_t = void (*)(Socket&&, void*, NotifyResult&& err);
         using recvfrom_notify_t = void (*)(Socket&&, NetAddrPort&&, void*, NotifyResult&& err);
@@ -290,9 +352,9 @@ namespace utils {
 
             // get/set attributes of socket
 
-            expected<NetAddrPort> get_localaddr();
+            expected<NetAddrPort> get_local_addr();
 
-            expected<NetAddrPort> get_remoteaddr();
+            expected<NetAddrPort> get_remote_addr();
 
             // get_option invokes getsockopt with getsockopt(layer,opt,std::addressof(t),sizeof(t))
             template <class T>
@@ -337,12 +399,16 @@ namespace utils {
             // these function sets DF flag on IP layer
             // these function is enable on windows
             // user on linux platform has to use set_mtu_discover(MTUConfig::enable_mtu) instead
-            expected<void> set_dontfragment(bool df);
-            expected<void> set_dontfragment_v6(bool df);
+            expected<void> set_dont_fragment_v4(bool df);
+            expected<void> set_dont_fragment_v6(bool df);
 
             // set_DF is commonly used to set IP layer Dont Fragment flag
             // this choose best way to set DF flag in each platform
             expected<void> set_DF(bool df);
+
+            // for raw socket
+            expected<void> set_header_include_v4(bool incl);
+            expected<void> set_header_include_v6(bool incl);
 
             // set_blocking calls ioctl(FIONBIO)
             [[deprecated]] void set_blocking(bool blocking);

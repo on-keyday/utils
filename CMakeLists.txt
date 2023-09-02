@@ -97,6 +97,10 @@ add_executable(coro_nest "src/test/coro/test_coro_nest.cpp")
 add_executable(base64 "src/test/fnet_util/test_base64.cpp")
 add_executable(sha1 "src/test/fnet_util/test_sha1.cpp")
 add_executable(env_expand "src/test/env/test_env_expand.cpp")
+add_executable(exepath "src/test/wrap/test_exepath.cpp")
+add_executable(json_stringer "src/test/json/test_json_stringer.cpp")
+add_executable(expected "src/test/helper/test_expected.cpp")
+add_executable(leb128 "src/test/wasm/test_leb128.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
@@ -115,9 +119,7 @@ add_executable(fnetquic_multi_thread "src/test/fnetquic/test_fnetquic_multi_thre
 add_executable(fnet_dns "src/test/fnet/test_fnet_dns.cpp")
 add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
 add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_Internet.cpp")
-add_executable(exepath "src/test/wrap/test_exepath.cpp")
-add_executable(json_stringer "src/test/json/test_json_stringer.cpp")
-add_executable(expected "src/test/helper/test_expected.cpp")
+add_executable(fnet_ip "src/test/fnet/test_fnet_ip.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 # tools
@@ -160,6 +162,8 @@ add_executable(oslbgen "src/tool/oslbgen/main.cpp"
 "src/tool/oslbgen/collect.cpp"
 "src/tool/oslbgen/code.cpp")
 
+add_executable(ping "src/tool/ping/main.cpp")
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "lib")
@@ -195,6 +199,7 @@ target_sources(utils
   # "src/lib/async/light/native_context.cpp"
   # "src/lib/async/light/native_stack.cpp"
   "src/lib/env/env_sys.cpp"
+  "src/lib/wrap/admin.cpp"
 )
 
 
@@ -315,6 +320,7 @@ target_link_libraries(binp utils)
 target_link_libraries(unidump utils)
 target_link_libraries(oslbgen utils)
 target_link_libraries(langc utils)
+target_link_libraries(ping utils fnet coro)
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")
@@ -352,6 +358,11 @@ if(WIN32)
     add_custom_command(
       TARGET fnetserv POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnetserv.dll" "tool/libfnetserv.dll"
+    )
+
+    add_custom_command(
+      TARGET coro POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libcoro.dll" "tool/libcoro.dll"
     )
 
   endif()

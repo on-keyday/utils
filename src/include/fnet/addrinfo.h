@@ -12,6 +12,7 @@
 #include "../core/strlen.h"
 #include "address.h"
 #include "error.h"
+#include "ip/protocol.h"
 
 namespace utils {
     namespace fnet {
@@ -48,9 +49,7 @@ namespace utils {
             constexpr const void* exists() const {
                 return root;
             }
-            constexpr const void* current() const {
-                return select;
-            }
+
             constexpr void reset_iterator() {
                 select = nullptr;
             }
@@ -109,7 +108,9 @@ namespace utils {
         // this invokes resolve_address with hostname=gethostname()
         [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr);
 
-        fnet_dll_export(SockAttr) sockattr_tcp(int ipver = 0);
-        fnet_dll_export(SockAttr) sockattr_udp(int ipver = 0);
+        fnet_dll_export(SockAttr) sockattr_tcp(ip::Version ipver = ip::Version::unspec);
+        fnet_dll_export(SockAttr) sockattr_udp(ip::Version ipver = ip::Version::unspec);
+        fnet_dll_export(SockAttr) sockattr_raw(ip::Version ipver = ip::Version::ipv4, ip::Protocol protocol = ip::Protocol::udp);  //
+
     }  // namespace fnet
 }  // namespace utils

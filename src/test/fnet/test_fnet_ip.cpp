@@ -5,10 +5,6 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-// byte - byte type
-#pragma once
+#include <fnet/ip/ip.h>
 
-namespace utils {
-    using byte = unsigned char;
-    constexpr auto bit_per_byte = 8;
-}  // namespace utils
+int main() {}

@@ -212,11 +212,12 @@ namespace utils {
                 }
                 if (res != EAI_INPROGRESS) {
                     map_error(res, err);
+                    return false;
                 }
                 std::this_thread::sleep_for(ms);
                 msec++;
             }
-            err = error::Error(ETIMEDOUT, error::ErrorCategory::syserr);
+            err = error::block;
             return false;
         }
 
@@ -330,15 +331,15 @@ namespace utils {
             return resolve_address(host, port, attr);
         }
 
-        fnet_dll_implement(SockAttr) sockattr_tcp(int ipver) {
+        fnet_dll_implement(SockAttr) sockattr_tcp(ip::Version ipver) {
             switch (ipver) {
-                case 4:
+                case ip::Version::ipv4:
                     return SockAttr{
                         .address_family = AF_INET,
                         .socket_type = SOCK_STREAM,
                         .protocol = IPPROTO_TCP,
                     };
-                case 6:
+                case ip::Version::ipv6:
                     return SockAttr{
                         .address_family = AF_INET6,
                         .socket_type = SOCK_STREAM,
@@ -353,15 +354,15 @@ namespace utils {
             }
         }
 
-        fnet_dll_implement(SockAttr) sockattr_udp(int ipver) {
+        fnet_dll_implement(SockAttr) sockattr_udp(ip::Version ipver) {
             switch (ipver) {
-                case 4:
+                case ip::Version::ipv4:
                     return SockAttr{
                         .address_family = AF_INET,
                         .socket_type = SOCK_DGRAM,
                         .protocol = IPPROTO_UDP,
                     };
-                case 6:
+                case ip::Version::ipv6:
                     return SockAttr{
                         .address_family = AF_INET6,
                         .socket_type = SOCK_DGRAM,
@@ -372,6 +373,24 @@ namespace utils {
                         .address_family = AF_UNSPEC,
                         .socket_type = SOCK_DGRAM,
                         .protocol = IPPROTO_UDP,
+                    };
+            }
+        }
+
+        fnet_dll_implement(SockAttr) sockattr_raw(ip::Version ipver, ip::Protocol protocol) {
+            switch (ipver) {
+                case ip::Version::ipv4:
+                default:
+                    return SockAttr{
+                        .address_family = AF_INET,
+                        .socket_type = SOCK_RAW,
+                        .protocol = int(protocol),
+                    };
+                case ip::Version::ipv6:
+                    return SockAttr{
+                        .address_family = AF_INET6,
+                        .socket_type = SOCK_RAW,
+                        .protocol = int(protocol),
                     };
             }
         }

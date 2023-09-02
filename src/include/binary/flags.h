@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <cstdint>
 #include "../core/byte.h"
-#include "buf.h"
 
 namespace utils {
     namespace binary {
@@ -295,13 +294,22 @@ namespace utils {
         template <class T, byte... split>
         using flags_t = decltype(make_flags_value<T, split...>());
 
-#define bits_flag_alias_method(flags, num, name)                         \
-    constexpr auto name() const noexcept {                               \
-        return flags.get<num>();                                         \
-    }                                                                    \
-    constexpr auto set_##name(decltype(flags.get<num>()) val) noexcept { \
-        return flags.set<num>(val);                                      \
-    }                                                                    \
+#define bits_flag_alias_method(flags, num, name)                                  \
+    constexpr auto name() const noexcept {                                        \
+        return flags.template get<num>();                                         \
+    }                                                                             \
+    constexpr auto set_##name(decltype(flags.template get<num>()) val) noexcept { \
+        return flags.template set<num>(val);                                      \
+    }                                                                             \
+    static constexpr auto name##_max = decltype(flags)::template limit<num>();
+
+#define bits_flag_alias_method_with_enum(flags, num, name, Enum)                  \
+    constexpr auto name() const noexcept {                                        \
+        return Enum(flags.template get<num>());                                   \
+    }                                                                             \
+    constexpr auto set_##name(Enum val) noexcept {                                \
+        return flags.template set<num>(decltype(flags.template get<num>())(val)); \
+    }                                                                             \
     static constexpr auto name##_max = decltype(flags)::limit<num>();
 
     }  // namespace binary

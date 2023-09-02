@@ -18,6 +18,7 @@
 
 #include "../wrap/light/char.h"
 #include <utility>
+#include <core/byte.h>
 
 namespace utils {
     namespace file {
@@ -55,6 +56,10 @@ namespace utils {
                 void close();
                 bool is_open() const;
                 ~ReadFileInfo();
+
+                const byte* direct() const {
+                    return reinterpret_cast<byte*>(mapptr);
+                }
             };
         }  // namespace platform
     }      // namespace file

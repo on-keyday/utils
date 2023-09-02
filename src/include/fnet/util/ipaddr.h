@@ -408,8 +408,8 @@ namespace utils {
 
         template <size_t s>
         struct ByteBuf {
-            std::uint8_t addr[s];
-            std::uint16_t port;
+            std::uint8_t addr[s]{};
+            std::uint16_t port = 0;
         };
 
         constexpr std::pair<ByteBuf<4>, bool> to_ipv4(auto&& addr) {

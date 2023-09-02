@@ -7,7 +7,7 @@
 
 #pragma once
 #include "dns.h"
-#include "../../binary/expandable_writer.h"
+#include <binary/number.h>
 
 namespace utils {
     namespace fnet::dns {

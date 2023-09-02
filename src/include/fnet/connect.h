@@ -18,7 +18,7 @@ namespace utils::fnet {
                 return info.wait();
             })
             .and_then([&](AddrInfo&& info) -> expected<std::pair<Socket, SockAddr>> {
-                while (info.current()) {
+                while (info.next()) {
                     auto addr = info.sockaddr();
                     auto s = make_socket(addr.attr)
                                  .and_then([&](Socket&& s) {
@@ -29,6 +29,47 @@ namespace utils::fnet {
                                              }
                                              if (wait_write) {
                                                  return s.wait_writable(10, 0);
+                                             }
+                                             return {};
+                                         })
+                                         .transform([&] {
+                                             return std::make_pair(std::move(s), std::move(addr));
+                                         });
+                                 });
+                    if (s) {
+                        return s;
+                    }
+                }
+                return unexpect("cannot connect");
+            });
+    }
+
+    enum class WithState {
+        addr_solve,
+        connect,
+    };
+
+    auto connect_with(view::rvec hostname, view::rvec port, SockAttr attr, bool wait_write, auto&& with) {
+        return resolve_address(hostname, port, attr)
+            .and_then([&](WaitAddrInfo&& info) {
+                return with(WithState::addr_solve, [&](auto t, std::uint32_t = 0) {
+                    return info.wait(t);
+                });
+            })
+            .and_then([&](AddrInfo&& info) -> expected<std::pair<Socket, SockAddr>> {
+                while (info.next()) {
+                    auto addr = info.sockaddr();
+                    auto s = make_socket(addr.attr)
+                                 .and_then([&](Socket&& s) {
+                                     return s.connect(addr.addr)
+                                         .or_else([&](error::Error&& err) -> expected<void> {
+                                             if (!isSysBlock(err)) {
+                                                 return unexpect(std::move(err));
+                                             }
+                                             if (wait_write) {
+                                                 return with(WithState::connect, [&](auto t, std::uint32_t us = 0) {
+                                                     return s.wait_writable(t, us);
+                                                 });
                                              }
                                              return {};
                                          })

@@ -92,7 +92,7 @@ int quic_server() {
     tls_conf.set_alpn_select_callback(&cb);
     // tls_conf.set_cert_chain();
     ctx->hm->set_config(utils::fnet::quic::use::use_default_config(std::move(tls_conf)));
-    auto list = fnet::get_self_server_address("8090", fnet::sockattr_udp(6))
+    auto list = fnet::get_self_server_address("8090", fnet::sockattr_udp(fnet::ip::Version::ipv6))
                     .and_then([&](fnet::WaitAddrInfo&& info) {
                         return info.wait();
                     })

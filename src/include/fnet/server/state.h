@@ -211,9 +211,10 @@ namespace utils {
                     auto s = sock.clone();
                     auto result = s.read_async_deferred(
                         std::forward<decltype(context)>(context), [th = shared_from_this()](DeferredNotification&& n) { th->enque_object(std::move(n)); },
-                        [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& result) {
+                        [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& r) {
                             th->count.waiting_async_read--;
                             Enter ent{th->count.current_handling_handler_thread};
+                            auto& result = r.value();
                             if (result) {
                                 auto& size = *result;
                                 auto&& base_buffer = context.get_buffer();
@@ -228,7 +229,7 @@ namespace utils {
                             }
                             if (!result) {
                                 if (th->log_evt) {
-                                    auto addr = s.get_remoteaddr();
+                                    auto addr = s.get_remote_addr();
                                     th->log_evt(log_level::warn, addr.value_ptr(), result.error());
                                 }
                             }
@@ -236,7 +237,7 @@ namespace utils {
                         });
                     if (!result) {
                         count.total_failed_async++;
-                        auto addr = s.get_remoteaddr();
+                        auto addr = s.get_remote_addr();
                         log(log_level::warn, addr.value_ptr(), result.error());
                         return false;
                     }
