@@ -9,6 +9,8 @@
 #include <type_traits>
 #include <cstdint>
 #include "../core/byte.h"
+#include <utility>
+#include <cstddef>
 
 namespace utils {
     namespace binary {
