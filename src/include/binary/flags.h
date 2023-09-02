@@ -251,7 +251,7 @@ namespace utils {
                 T masks[sizeof...(split)];
 
                 constexpr auto init_masks() {
-                    static_assert(sizeof(T) * bit_per_byte <= (... + split));
+                    static_assert(sizeof(T) * bit_per_byte >= (... + split));
                     auto m = indexed_mask<T>();
                     auto t = uns(T());
                     byte sp = 0;
