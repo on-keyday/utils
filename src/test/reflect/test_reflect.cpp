@@ -54,7 +54,19 @@ void test_complex() {
     refl.get_aligned(cap, 4);
 }
 
+void test_vtable_ptr() {
+    utils::reflect::test::Test4 t;
+    utils::reflect::Reflect r{t};
+
+    auto table = r.get_vtable_ptr();
+    table[2] = [](auto a) {
+
+    };
+    table[2](r.unsafe_ptr());
+}
+
 int main() {
     test_basic();
     test_complex();
+    test_vtable_ptr();
 }

@@ -520,7 +520,7 @@ namespace utils::wasm::section {
                         data = Data2{};
                         break;
                 }
-                return std::visit([&](auto&& data) {
+                return std::visit([&](auto&& data) -> result<void> {
                     return data.parse(r);
                 },
                                   data);

@@ -11,15 +11,32 @@
 #include <type_traits>
 #include <bit>
 #include "flags.h"
+#if __has_include(<stdfloat>)
+#include <stdfloat>
+#define UTILS_BINARY_SUPPORT_STDFLOAT 1
+#endif
 
 namespace utils {
     namespace binary {
+#ifdef UTILS_BINARY_SUPPORT_STDFLOAT
+        using bfloat16_t = std::bfloat16_t;
+        using float16_t = std::float16_t;
+        using float32_t = std::float32_t;
+        using float64_t = std::float64_t;
+        using float128_t = std::float128_t;
+#else
 
+        using bfloat16_t = void;
+        using float16_t = void;
+        using float32_t = float;
+        using float64_t = double;
+        using float128_t = void;
+#endif
         // msb to lsb
         template <class T>
         constexpr T bit_range(byte start, byte size) {
             T value = 0;
-            auto bit = [&](auto i) { return T(1) << (sizeof(T) * bit_per_byte - 1 - i); };
+            auto bit = indexed_mask<T>();
             for (size_t i = 0; i < size; i++) {
                 value |= bit(start + i);
             }
@@ -27,7 +44,7 @@ namespace utils {
         }
 
         template <class T, class F, byte exp_width, int bias_>
-        struct IEEEFloat {
+        struct Float {
             static_assert(std::is_void_v<F> || std::is_floating_point_v<F>);
             using float_t = F;
 
@@ -49,15 +66,15 @@ namespace utils {
 
             static constexpr T frac_msb = bit_range<T>(t_bit - exp_shift, 1);
 
-            constexpr IEEEFloat() = default;
-            constexpr IEEEFloat(T input) noexcept {
+            constexpr Float() = default;
+            constexpr Float(T input) noexcept {
                 value.as_value() = input;
             }
 
             template <class V>
                 requires std::is_floating_point_v<V> && (sizeof(T) == sizeof(V))
-            constexpr IEEEFloat(V v)
-                : IEEEFloat(std::bit_cast<T>(v)) {}
+            constexpr Float(V v)
+                : Float(std::bit_cast<T>(v)) {}
 
             constexpr operator T() const noexcept {
                 return value.as_value();
@@ -131,9 +148,13 @@ namespace utils {
             }
         };
 
-        using HalfFloat = IEEEFloat<std::uint16_t, void, 5, 15>;
-        using SingleFloat = IEEEFloat<std::uint32_t, float, 8, 127>;
-        using DoubleFloat = IEEEFloat<std::uint64_t, double, 11, 1023>;
+        using HalfFloat = Float<std::uint16_t, float16_t, 5, 15>;
+        using BrainHalfFloat = Float<std::uint16_t, bfloat16_t, 8, 127>;
+        using SingleFloat = Float<std::uint32_t, float32_t, 8, 127>;
+        using DoubleFloat = Float<std::uint64_t, float64_t, 11, 1023>;
+#ifdef UTILS_BINARY_SUPPORT_INT128
+        using ExtDoubleFloat = Float<uint128_t, float128_t, 15, 16383>;
+#endif
 
         namespace test {
             static_assert(HalfFloat::exp_shift == 10 && SingleFloat::exp_shift == 23 && DoubleFloat::exp_shift == 52);

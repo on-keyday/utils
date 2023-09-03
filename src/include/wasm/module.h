@@ -14,7 +14,7 @@ namespace utils::wasm {
         std::uint32_t version = 0;
         std::vector<section::Section> sections;
 
-        constexpr result<void> parse(binary::reader& r) {
+        result<void> parse(binary::reader& r) {
             auto cmp = r.read_best(4);
             if (cmp != magic) {
                 return unexpect(Error::magic_mismatch);

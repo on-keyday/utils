@@ -8,11 +8,12 @@
 #pragma once
 #include "reader.h"
 #include "writer.h"
+#include "signint.h"
 
 namespace utils::binary {
     template <class T, class C>
     constexpr bool read_leb128_uint(basic_reader<C>& r, T& result) {
-        using U = std::make_unsigned_t<T>;
+        using U = uns_t<T>;
         result = 0;
         int shift = 0;
         for (;;) {
@@ -36,7 +37,7 @@ namespace utils::binary {
 
     template <class T, class C>
     constexpr bool write_leb128_uint(basic_writer<C>& w, T value) {
-        using U = std::make_unsigned_t<T>;
+        using U = uns_t<T>;
         U v = value;
         do {
             auto t = byte(v & 0x7f);
@@ -53,7 +54,7 @@ namespace utils::binary {
 
     template <class T, class C>
     constexpr bool read_leb128_int(basic_reader<C>& r, T& result) {
-        using U = std::make_unsigned_t<T>;
+        using U = uns_t<T>;
         result = 0;
         int shift = 0;
         constexpr auto size = sizeof(T) * bit_per_byte;
@@ -84,7 +85,7 @@ namespace utils::binary {
 
     template <class T, class C>
     constexpr bool write_leb128_int(basic_writer<C>& w, T value) {
-        using U = std::make_unsigned_t<T>;
+        using U = uns_t<T>;
         int shift = 0;
         constexpr auto size = sizeof(T) * bit_per_byte;
         bool sign = (value < 0);

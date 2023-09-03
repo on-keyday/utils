@@ -379,9 +379,9 @@ namespace utils::wasm::code {
         Arg arg;
     };
 
-    constexpr result<Op> parse_instr(binary::reader& r);
+    inline result<Op> parse_instr(binary::reader& r);
 
-    constexpr result<Expr> parse_expr(binary::reader& r, bool detect_else = false) {
+    inline result<Expr> parse_expr(binary::reader& r, bool detect_else = false) {
         Expr b;
         while (true) {
             auto op = parse_instr(r);
@@ -413,7 +413,7 @@ namespace utils::wasm::code {
         };
     }
 
-    constexpr result<Op> parse_instr(binary::reader& r) {
+    inline result<Op> parse_instr(binary::reader& r) {
         auto t = read_byte(r).and_then([&](byte t) -> result<Instruction> {
             auto instr = Instruction(t);
             if (instr == Instruction::need_more_1 || instr == Instruction::need_more_2) {

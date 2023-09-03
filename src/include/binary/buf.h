@@ -10,13 +10,14 @@
 #include <type_traits>
 #include "../core/byte.h"
 #include <bit>
+#include "signint.h"
 
 namespace utils {
     namespace binary {
 
         template <class T>
         constexpr T bswap_shift(T input) {
-            using Out = std::make_unsigned_t<T>;
+            using Out = uns_t<T>;
             Out in = input, out = 0;
             for (auto i = 0; i < sizeof(T); i++) {
                 out |= Out(byte((in >> (i * bit_per_byte)) & 0xff)) << ((sizeof(T) - 1 - i) * bit_per_byte);
@@ -62,7 +63,7 @@ namespace utils {
 
             // encode `input` as big endian into `this->data`
             constexpr Buf& write_be(T input) {
-                using U = std::make_unsigned_t<decltype(input)>;
+                using U = uns_t<decltype(input)>;
                 U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
                     data[i] = byte((in >> ((sizeof(input) - 1 - i) * bit_per_byte)) & 0xff);
@@ -72,7 +73,7 @@ namespace utils {
 
             // encode `input` as little endian into `this->data`
             constexpr Buf& write_le(T input) {
-                using U = std::make_unsigned_t<decltype(input)>;
+                using U = uns_t<decltype(input)>;
                 U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
                     data[i] = byte((in >> (i * bit_per_byte)) & 0xff);
@@ -82,7 +83,7 @@ namespace utils {
 
             // read_be read big endian integer from `data`
             constexpr const Buf& read_be(T& output) const {
-                using Out = std::make_unsigned_t<T>;
+                using Out = uns_t<T>;
                 Out out = 0;
                 for (auto i = 0; i < sizeof(out); i++) {
                     out |= Out(data[i]) << ((sizeof(out) - 1 - i) * bit_per_byte);
@@ -100,7 +101,7 @@ namespace utils {
 
             // read_be read little endian integer from `data`
             constexpr const Buf& read_le(T& output) const {
-                using Out = std::make_unsigned_t<T>;
+                using Out = uns_t<T>;
                 Out out = 0;
                 for (auto i = 0; i < sizeof(out); i++) {
                     out |= Out(data[i]) << (i * bit_per_byte);

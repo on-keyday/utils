@@ -13,6 +13,10 @@
 #include <wrap/admin.h>
 #include <coro/coro.h>
 #include <chrono>
+#if _WIN32
+#include <format>
+#define HAS_FORMAT
+#endif
 using namespace utils::fnet;
 struct Flags : utils::cmdline::templ::HelpOption {
     std::vector<std::string> args;
@@ -193,7 +197,11 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
         cout << "\n";
         for (auto p : target.period) {
             if (!p.failure) {
+#ifdef HAS_FORMAT
                 cout << std::format("rtt: {} ttl: {}\n", std::chrono::duration_cast<std::chrono::milliseconds>(p.end - p.begin), p.ttl);
+#else
+                cout << "rtt: " << std::chrono::duration_cast<std::chrono::milliseconds>(p.end - p.begin).count() << "ms ttl: " << p.ttl;
+#endif
             }
             else {
                 cout << "ping failure\n";

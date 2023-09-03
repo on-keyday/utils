@@ -5,6 +5,9 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+// reflect - lite runtime reflection
+// not have interface for name access
+// but write binary directly
 #pragma once
 #include <type_traits>
 #include <tuple>
@@ -27,6 +30,7 @@ namespace utils {
             is_array,
             is_signed,
             is_unsigned,
+            is_polymorphic,
 
             // internal
             underlying_ptr,
@@ -88,6 +92,9 @@ namespace utils {
             }
             else if (traits == Traits::is_unsigned) {
                 return std::is_unsigned_v<T>;
+            }
+            else if (traits == Traits::is_polymorphic) {
+                return std::is_polymorphic_v<T>;
             }
             else if (traits == Traits::underlying_ptr) {
                 if constexpr (std::is_pointer_v<T>) {
@@ -164,6 +171,7 @@ namespace utils {
 
         }  // namespace test
 
+        using vtable_fn_t = void (*)(const void* instance);
         struct Reflect {
            private:
             Type type = nullptr;
@@ -444,6 +452,22 @@ namespace utils {
                     default:
                         return 0;
                 }
+            }
+
+            constexpr vtable_fn_t* get_vtable_ptr() const {
+                if (!traits(Traits::is_polymorphic)) {
+                    return nullptr;
+                }
+                std::uintptr_t ptr = 0;
+                get(ptr);
+                return std::bit_cast<vtable_fn_t*>(ptr);
+            }
+
+            constexpr bool set_vtable_ptr(vtable_fn_t* fn) {
+                if (!traits(Traits::is_polymorphic)) {
+                    return false;
+                }
+                return set(std::uintptr_t(fn));
             }
         };
 

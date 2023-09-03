@@ -6,253 +6,285 @@
 */
 
 #pragma once
-#include "../binary/number.h"
-#include "../wrap/light/enum.h"
-#include "../fnet/quic/varint.h"
-#include "../binary/term.h"
+#include <cstdint>
+#include <core/byte.h>
+#include <binary/signint.h>
+#include <binary/number.h>
+#include <core/strlen.h>
+#include <strutil/equal.h>
+#include <tuple>
 
-namespace utils {
-    namespace reflect::layout {
-        enum class LayoutFlag : byte {
-            flag_none = 0x00,
-            flag_int = 0x00,     // flag|interger length
-            flag_uint = 0x01,    // flag|integer length
-            flag_float = 0x02,   // flag|floating point length
-            flag_array = 0x03,   // flag|array element count|element layout
-            flag_struct = 0x04,  // flag|struct element count|each element layout...
-            flag_union = 0x05,   // flag|union element count|each element layout...
-            flag_enum = 0x06,    // flag|enum base integer length
-            base_flags = 0x07,
-            flag_ptr = 0x08,          // flag only
-            flag_ptr_element = 0x80,  // has ptr element type info
-            flag_const = 0x10,        // const
-            // meta data is inserted after flag field if below flag is enabled
-            // null terminated
-            // order is class_name -> field_name
-            flag_meta_field = 0x20,  // meta data (field name)
-            flag_meta_type = 0x40,   // meta data (class name)
-        };
+namespace utils::reflect {
 
-        DEFINE_ENUM_FLAGOP(LayoutFlag)
+#define REFLECT_LAYOUT_BUILDER(name) \
+    struct name {                    \
+        constexpr auto operator()(auto&& field) const noexcept { return std::make_tuple(
+#define REFLECT_LAYOUT_FIELD(name, type) field(name, type{}),
 
-        constexpr bool is_base(LayoutFlag t, LayoutFlag f) {
-            return (t & LayoutFlag::base_flags) == f;
+#define REFLECT_LAYOUT_BUILDER_END() int()); \
+    }                                        \
+    }                                        \
+    ;
+
+    template <class Builder, size_t alignment>
+    struct Layout;
+
+    namespace internal {
+        constexpr auto count_from_builder(auto&& builder) {
+            size_t i = 0;
+            auto field1 = [&](auto, auto) {
+                i++;
+                return 0;
+            };
+            builder(field1);
+            return i;
         }
 
-        struct LayoutHeader {
-            LayoutFlag flag;
-            view::rvec meta_class;
-            view::rvec meta_field;
-            size_t length = 0;
-
-            constexpr bool is_ptr() const {
-                return any(flag & LayoutFlag::flag_ptr);
-            }
-
-            constexpr std::uint64_t is_int() const {
-                return is_base(flag, LayoutFlag::flag_int) ? length : 0;
-            }
-
-            constexpr std::uint64_t is_uint() const {
-                return is_base(flag, LayoutFlag::flag_uint) ? length : 0;
-            }
-
-            constexpr std::uint64_t is_float() const {
-                return is_base(flag, LayoutFlag::flag_float) ? length : 0;
-            }
-
-            constexpr std::uint64_t is_enum() const {
-                return is_base(flag, LayoutFlag::flag_enum) ? length : 0;
-            }
-
-            constexpr std::uint64_t is_struct() const {
-                return is_base(flag, LayoutFlag::flag_struct) ? length : 0;
-            }
-
-            constexpr bool is_empty_struct() const {
-                return is_base(flag, LayoutFlag::flag_struct) && length == 0;
-            }
-
-            constexpr std::uint64_t is_array() const {
-                return is_base(flag, LayoutFlag::flag_array) ? length : 0;
-            }
-            constexpr bool is_empty_array() const {
-                return is_base(flag, LayoutFlag::flag_array) && length == 0;
-            }
-
-            constexpr std::uint64_t is_union() const {
-                return is_base(flag, LayoutFlag::flag_union) ? length : 0;
-            }
-
-            constexpr bool is_empty_union() const {
-                return is_base(flag, LayoutFlag::flag_union) && length == 0;
-            }
-
-            constexpr bool write(binary::writer& layout) const {
-                if (!binary::write_num(layout, flag)) {
-                    return false;
+        constexpr auto align_from_builder(auto&& builder) {
+            size_t max_align = 1;
+            auto field1 = [&](auto, auto val) {
+                if (alignof(decltype(val)) > max_align) {
+                    max_align = alignof(decltype(val));
                 }
-                if (any(flag & LayoutFlag::flag_meta_type)) {
-                    if (!binary::write_terminated(layout, meta_class)) {
-                        return false;
-                    }
-                }
-                if (any(flag & LayoutFlag::flag_meta_field)) {
-                    if (!binary::write_terminated(layout, meta_field)) {
-                        return false;
-                    }
-                }
-                if (any(flag & LayoutFlag::flag_ptr)) {
-                    return true;
-                }
-                return fnet::quic::varint::write(layout, length);
-            }
-
-            constexpr bool read(binary::reader& layout) {
-                if (layout.empty()) {
-                    return false;
-                }
-                flag = LayoutFlag(layout.top());
-                layout.offset(1);
-                if (any(flag & LayoutFlag::flag_meta_type)) {
-                    if (!binary::read_terminated(layout, meta_class)) {
-                        return false;
-                    }
-                }
-                if (any(flag & LayoutFlag::flag_meta_field)) {
-                    if (!binary::read_terminated(layout, meta_field)) {
-                        return false;
-                    }
-                }
-                if (any(flag & LayoutFlag::flag_ptr)) {
-                    length = 0;
-                    return true;
-                }
-                auto [len, ok] = fnet::quic::varint::read(layout);
-                if (!ok) {
-                    return false;
-                }
-                length = len;
-                return true;
-            }
-        };
-
-        constexpr LayoutFlag metadata(view::rvec type, view::rvec field) {
-            return (type.size() ? LayoutFlag::flag_meta_type : LayoutFlag::flag_none) |
-                   (field.size() ? LayoutFlag::flag_meta_field : LayoutFlag::flag_none);
+                return 0;
+            };
+            builder(field1);
+            return max_align;
         }
 
-        struct Metadata {
-            const char* type = nullptr;
-            const char* field = nullptr;
+        constexpr auto diff(size_t base_align, size_t add_align, size_t cur_offset) {
+            if (base_align < add_align) {
+                return cur_offset % base_align;
+            }
+            return cur_offset % add_align;
+        }
+
+        constexpr auto size_until_count_from_builder(auto&& builder, size_t count, size_t align) {
+            size_t size_sum = 0;
+            size_t i = 0;
+            auto field1 = [&](auto, auto val) {
+                if (i < count) {
+                    auto size = sizeof(val);
+                    auto padding = diff(align, alignof(decltype(val)), size_sum);
+                    size_sum += padding;
+                    size_sum += size;
+                }
+                i++;
+                return 0;
+            };
+            builder(field1);
+            return size_sum;
+        }
+
+        constexpr auto size_from_builder(auto&& builder, size_t align) {
+            auto size = size_until_count_from_builder(builder, count_from_builder(builder), align);
+            return size + (size % align);
+        }
+
+        constexpr auto size_at_i_from_builder(auto&& builder, size_t i) {
+            size_t size = 0;
+            size_t j = 0;
+            auto field1 = [&](auto, auto val) {
+                if (i == j) {
+                    size = sizeof(val);
+                }
+                j++;
+                return 0;
+            };
+            builder(field1);
+            return size;
+        }
+
+        constexpr auto is_x_at_i_from_builder(auto&& builder, size_t i, auto&& is_x) {
+            bool s = false;
+            size_t j = 0;
+            auto field1 = [&](auto, auto val) {
+                if (i == j) {
+                    s = is_x(val);
+                }
+                j++;
+                return 0;
+            };
+            builder(field1);
+            return s;
+        }
+
+        template <size_t i>
+        constexpr auto type_of_builder_at_i(auto&& builder) {
+            size_t j = 0;
+            auto g = [&](auto, auto d) {
+                return d;
+            };
+            auto tup = builder(g);
+            return get<i>(tup);
+        }
+
+        constexpr auto name_at_i_from_builder(auto&& builder, size_t i) {
+            size_t j = 0;
+            const char* id = nullptr;
+            auto field1 = [&](auto name, auto) {
+                if (i == j) {
+                    id = name;
+                }
+                j++;
+                return 0;
+            };
+            builder(field1);
+            return id;
+        }
+
+        template <class Builder>
+        struct NameLookup {
+            size_t index = -1;
+
+            consteval NameLookup(const char* name) {
+                if (!name) {
+                    throw "unexpected nullptr";
+                }
+                Builder builder;
+                size_t i = 0;
+                auto field = [&](auto id, auto) {
+                    if (strutil::equal(id, name)) {
+                        if (index != -1) {
+                            [](auto id) { throw "duplicated name referred"; }(id);
+                        }
+                        index = i;
+                    }
+                    i++;
+                    return 0;
+                };
+                builder(field);
+                if (index == -1) {
+                    [](auto id) { throw "such name not found"; }(name);
+                }
+            }
         };
 
         template <class T>
-        struct NumberLayout : Metadata {
-            static_assert(std::is_integral_v<T> ||
-                          std::is_floating_point_v<T> ||
-                          std::is_enum_v<T>);
-            constexpr bool write(binary::writer& w) const {
-                LayoutHeader head;
-                if constexpr (std::is_floating_point_v<T>) {
-                    head.flag = LayoutFlag::flag_float;
-                }
-                else if constexpr (std::is_enum_v<T>) {
-                    head.flag = LayoutFlag::flag_enum;
-                }
-                else {
-                    head.flag = std::is_unsigned_v<T> ? LayoutFlag::flag_uint : LayoutFlag::flag_int;
-                }
-                head.flag |= metadata(type, field);
-                head.meta_class = type;
-                head.meta_field = field;
-                head.length = sizeof(T);
-                return head.write(w);
-            }
+        struct IsLayout : std::false_type {
         };
 
-        template <LayoutFlag base, class... Field>
-        struct StructLayoutBase : Metadata {
-            std::tuple<Field...> fields;
+        template <class Builder, size_t alignment>
+        struct IsLayout<Layout<Builder, alignment>> : std::true_type {};
 
-            constexpr bool write(binary::writer& w) const {
-                LayoutHeader head;
-                head.flag = base | metadata(type, field);
-                head.meta_class = type;
-                head.meta_field = field;
-                head.length = sizeof...(Field);
-                if (!head.write(w)) {
-                    return false;
-                }
-                return std::apply(
-                    [&](auto&&... fields) {
-                        auto fold = [&](auto& field) {
-                            return field.write(w);
-                        };
-                        return (... && fold(w));
-                    },
-                    fields);
+    }  // namespace internal
+
+    template <class Builder, size_t alignment = internal::align_from_builder(Builder{})>
+    struct Layout {
+        using builder_t = Builder;
+
+        static constexpr auto align = alignment;
+        static constexpr auto size = internal::size_from_builder(Builder{}, align);
+        static constexpr auto field_count = internal::count_from_builder(Builder{});
+
+        alignas(align) byte data[size]{};
+
+        template <size_t i>
+        static constexpr auto type_at() {
+            static_assert(i < field_count);
+            return internal::type_of_builder_at_i<i>(Builder{});
+        }
+
+        template <size_t i>
+        using type_at_t = decltype(type_at<i>());
+
+        template <size_t i>
+        using type_at_uint_t = binary::n_byte_uint_t<sizeof(type_at_t<i>)>;
+
+        template <size_t i>
+        constexpr auto get() const noexcept {
+            static_assert(i < field_count);
+            constexpr auto ofs = offset<i>();
+            type_at_uint_t<i> val;
+            binary::read_from(val, data + ofs, !binary::is_little());
+            return type_at_t<i>(val);
+        }
+
+        template <size_t i>
+        constexpr void set(type_at_t<i> val) noexcept {
+            static_assert(i < field_count);
+            constexpr auto ofs = offset<i>();
+            binary::write_into(data + ofs, type_at_uint_t<i>(val), !binary::is_little());
+        }
+
+        template <internal::NameLookup<Builder> b>
+        constexpr auto get() const noexcept {
+            return get<b.index>();
+        }
+
+        template <internal::NameLookup<Builder> b>
+        constexpr auto set(type_at_t<b.index> s) noexcept {
+            return set<b.index>(s);
+        }
+
+        template <size_t i>
+        constexpr auto direct(bool allow_non_aligned = false) noexcept {
+            using T = decltype(get<i>());
+            constexpr auto ofs = offset<i>();
+            auto ptr = data + ofs;
+            if (!allow_non_aligned && std::uintptr_t(ptr) % alignof(T)) {
+                return (T*)nullptr;
             }
-        };
+            return std::bit_cast<T*>(ptr);
+        }
 
-        template <class... Field>
-        struct StructLayout : StructLayoutBase<LayoutFlag::flag_struct, Field...> {};
-        template <class... Field>
-        struct UnionLayout : StructLayoutBase<LayoutFlag::flag_union, Field...> {};
-
-        template <class Element>
-        struct ArrayLayout : Metadata {
-            size_t length;
-            Element element;
-
-            constexpr bool write(binary::writer& w) const {
-                LayoutHeader head;
-                head.flag = LayoutFlag::flag_array | metadata(type, field);
-                head.meta_class = type;
-                head.meta_field = field;
-                head.length = length;
-                if (!head.write(w)) {
-                    return false;
-                }
-                return element.write(w);
+        template <size_t i>
+        constexpr auto direct(bool allow_non_aligned = false) const noexcept {
+            using T = decltype(get<i>());
+            constexpr auto ofs = offset<i>();
+            auto ptr = data + ofs;
+            if (!allow_non_aligned && std::uintptr_t(ptr) % alignof(T)) {
+                return (T*)nullptr;
             }
-        };
-
-        template <class InnerLayout>
-        struct PointerLayout {};
-
-        constexpr auto array(Metadata meta, size_t len, auto&& element) {
-            return ArrayLayout<std::decay_t<decltype(element)>>{
-                {meta.type, meta.filed},
-                len,
-                std::forward<decltype(element)>(element),
-            };
+            return std::bit_cast<T*>(ptr);
         }
 
-        constexpr auto struct_(Metadata meta, auto&&... fields) {
-            return StructLayout<std::decay_t<decltype(fields)>>{
-                {
-                    {meta.type, meta.filed},
-                    std::make_tuple(std::forward<decltype(fields)>(fields)...),
-                },
-            };
+        template <size_t i>
+        static constexpr auto offset() {
+            return internal::size_until_count_from_builder(Builder{}, i, align);
         }
 
-        constexpr auto union_(Metadata meta, auto&&... fields) {
-            return UnionLayout<std::decay_t<decltype(fields)>>{
-                {
-                    {meta.type, meta.filed},
-                    std::make_tuple(std::forward<decltype(fields)>(fields)...),
-                },
-            };
+        template <size_t i>
+        static constexpr auto nameof() {
+            return internal::name_at_i_from_builder(Builder{}, i);
         }
 
-        template <class T>
-        constexpr auto number(Metadata meta) {
-            return NumberLayout<T>{
-                {meta.type, meta.filed},
-            };
+       private:
+        template <size_t i>
+        constexpr auto call(auto&& fn, bool allow_non_aligned) {
+            constexpr auto name = internal::name_at_i_from_builder(Builder{}, i);
+            auto mem = direct<i>(allow_non_aligned);
+            auto val = get<i>();
+            fn(name, mem, val);
         }
 
-    }  // namespace reflect::layout
-}  // namespace utils
+        template <size_t... i>
+        constexpr void call_each(std::index_sequence<i...>, auto&& fn, bool allow_non_aligned) {
+            (..., call<i>(fn, allow_non_aligned));
+        }
+
+       public:
+        template <class Fn>
+        constexpr auto apply(Fn&& fn, bool allow_non_aligned = false) {
+            call_each(std::make_index_sequence<field_count>{}, fn, allow_non_aligned);
+        }
+    };
+
+    namespace test {
+        REFLECT_LAYOUT_BUILDER(LTest)
+        REFLECT_LAYOUT_FIELD("id", std::uint16_t)
+        REFLECT_LAYOUT_FIELD("name", std::uint32_t)
+        REFLECT_LAYOUT_BUILDER_END()
+
+        static_assert(Layout<LTest>::align == 4 && Layout<LTest>::size == 8);
+
+        constexpr bool check_name() {
+            Layout<LTest> ltest;
+            ltest.set<"id">(10);
+            ltest.set<"name">(20);
+            return ltest.get<"id">() == 10 &&
+                   ltest.get<"name">() == 20;
+        }
+    }  // namespace test
+
+}  // namespace utils::reflect
