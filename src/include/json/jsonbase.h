@@ -16,21 +16,18 @@
 #include "../strutil/append_charsize.h"
 #include "../number/parse.h"
 #include "../number/to_string.h"
-#include "../code/code_writer.h"
 
 namespace utils {
-    namespace helper {
-        template <class T, class Indent>
-        struct IndentWriter;
-    }
 
     namespace json {
         template <class T>
         concept StringLike = std::is_default_constructible_v<T> && strutil::is_utf_convertable<T>;
         namespace internal {
-            template <class Out, class Str, template <class...> class V, template <class...> class O>
-            JSONErr to_string_detail(const JSONBase<Str, V, O>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag);
+            template <class S, class Str, template <class...> class V, template <class...> class O>
+            JSONErr to_string_detail(S& out, const JSONBase<Str, V, O>& json, FmtFlag flag);
         }
+
+        enum class IntTraits : byte;
 
         template <class String, template <class...> class Vec, template <class...> class Object>
         struct JSONBase {
@@ -46,8 +43,8 @@ namespace utils {
            private:
             template <class T, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json, bool eof);
-            template <class Out, class Str, template <class...> class V, template <class...> class O>
-            friend JSONErr internal::to_string_detail(const JSONBase<Str, V, O>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag);
+            template <class S, class Str, template <class...> class V, template <class...> class O>
+            friend JSONErr internal::to_string_detail(S& out, const JSONBase<Str, V, O>& json, FmtFlag flag, IntTraits traits);
 
             holder_t obj;
 
@@ -57,15 +54,11 @@ namespace utils {
                 throw std::invalid_argument(err);
             }
 
-            static const self_t& as_const(self_t& in) {
-                return in;
-            }
-
-            const holder_t& get_holder() const {
+            constexpr const holder_t& get_holder() const {
                 return obj;
             }
 
-            holder_t& get_holder() {
+            constexpr holder_t& get_holder() {
                 return obj;
             }
 
@@ -168,11 +161,11 @@ namespace utils {
             }
 
             self_t* at(size_t n, const char** err = nullptr) {
-                return const_cast<self_t*>(as_const(*this).at(n, err));
+                return const_cast<self_t*>(std::as_const(*this).at(n, err));
             }
 
             self_t* at(const String& n, const char** err = nullptr) {
-                return const_cast<self_t*>(as_const(*this).at(n, err));
+                return const_cast<self_t*>(std::as_const(*this).at(n, err));
             }
 
             const self_t& operator[](size_t n) const {

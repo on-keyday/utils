@@ -6,6 +6,7 @@
 */
 
 #include <helper/expected.h>
+#include <helper/expected_op.h>
 
 // some code are copied from https://cpprefjp.github.io/reference/expected/expected.html and it's linked pages
 // which is under CC Attribution 3.0 Unported
@@ -630,6 +631,11 @@ void test_22() {
 
     exp::expected<void, int> e1 = exp::unexpected{42};
     assert(e1.transform_error(int2str).error() == "(42)");
+}
+
+void test_23() {
+    exp::expected<void, int> v1;
+    auto val = v1 & get_answer | int2str | revstr;
 }
 
 int main() {

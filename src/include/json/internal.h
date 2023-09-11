@@ -17,7 +17,7 @@
 namespace utils {
 
     namespace json {
-        enum class JSONKind {
+        enum class JSONKind : unsigned char {
             undefined,
             null,
             boolean,
@@ -121,6 +121,9 @@ namespace utils {
                 }
 
                 JSONHolder& operator=(JSONHolder&& n) {
+                    if (this == &n) {
+                        return *this;
+                    }
                     this->~JSONHolder();
                     kind_ = n.kind_;
                     p = n.p;
@@ -135,13 +138,16 @@ namespace utils {
                 }
 
                 JSONHolder& operator=(const JSONHolder& n) {
+                    if (this == &n) {
+                        return *this;
+                    }
                     this->~JSONHolder();
                     kind_ = n.kind_;
                     copy(n);
                     return *this;
                 }
 
-                ~JSONHolder() {
+                constexpr ~JSONHolder() {
                     if (kind_ == JSONKind::array) {
                         delete a;
                     }

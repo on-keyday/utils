@@ -13,10 +13,22 @@ namespace utils {
     namespace helper {
         template <class T, template <class...> class Templ>
         struct template_instance_of_t : std::false_type {};
+        template <size_t i, size_t cur, class T, class... U>
+        struct param_at_t;
+
+        template <bool ok, size_t i, size_t cur, class T, class... U>
+        struct get_param {
+            using param = T;
+        };
+
+        template <size_t i, size_t cur, class T, class... U>
+        struct get_param<false, i, cur, T, U...> {
+            using param = typename param_at_t<i, cur + 1, U...>::param;
+        };
 
         template <size_t i, size_t cur, class T, class... U>
         struct param_at_t {
-            using param = std::conditional_t<i == cur, T, param_at_t<i, cur + 1, U...>>;
+            using param = typename get_param<i == cur, i, cur, T, U...>::param;
         };
 
         template <size_t i, size_t cur, class T>
@@ -31,7 +43,7 @@ namespace utils {
             using as_tuple = std::tuple<T, U...>;
 
             template <size_t i>
-            using param_at = param_at_t<i, 0, T, U...>;
+            using param_at = typename param_at_t<i, 0, T, U...>::param;
         };
 
         template <class T>
@@ -41,12 +53,15 @@ namespace utils {
             using as_tuple = std::tuple<T>;
 
             template <size_t i>
-            using param_at = param_at_t<i, 0, T>;
+            using param_at = typename param_at_t<i, 0, T>::param;
         };
 
         template <class... U, template <class...> class Templ>
         struct template_instance_of_t<Templ<U...>, Templ> : type_params<U...> {
             using instance = Templ<U...>;
+
+            template <class... V>
+            using rebind = Templ<V...>;
         };
 
         template <class T, template <class...> class Templ>
@@ -56,6 +71,20 @@ namespace utils {
         struct Test {};
 
         static_assert(is_template_instance_of<Test<int>, Test> && !is_template_instance_of<int, Test>);
+
+        template <class T>
+        struct template_of_t : std::false_type {};
+
+        template <class... U, template <class...> class Templ>
+        struct template_of_t<Templ<U...>> : type_params<U...> {
+            using instance = Templ<U...>;
+
+            template <class... V>
+            using rebind = Templ<V...>;
+        };
+
+        template <class T>
+        concept is_template = template_of_t<T>::value;
 
     }  // namespace helper
 }  // namespace utils

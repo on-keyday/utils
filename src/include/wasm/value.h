@@ -12,8 +12,11 @@
 #include <binary/number.h>
 #include <unicode/utf/convert.h>
 #include <helper/pushbacker.h>
+#include <helper/transform.h>
 
 namespace utils::wasm {
+    using helper::either::assign_to, helper::either::cast_to, helper::either::push_back_to, helper::either::empty_value;
+
     template <class T>
     constexpr result<T> parse_uint(binary::reader& r) {
         T n = 0;
@@ -171,30 +174,6 @@ namespace utils::wasm {
             }
             return {};
         });
-    }
-
-    constexpr auto push_back_to(auto& vec) {
-        return [&](auto&& v) {
-            vec.push_back(std::move(v));
-        };
-    }
-
-    constexpr auto assign_to(auto& val) {
-        return [&](auto&& v) {
-            val = std::move(v);
-        };
-    }
-
-    template <class T>
-    constexpr auto cast_to(auto& val) {
-        return [&](auto&& v) {
-            val = T(std::move(v));
-        };
-    }
-
-    template <class T>
-    constexpr auto empty_value() {
-        return [](auto&&...) { return T{}; };
     }
 
     constexpr result<void> render_vec(binary::writer& w, auto len, auto&& elem) {

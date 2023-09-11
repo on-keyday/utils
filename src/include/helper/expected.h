@@ -999,7 +999,7 @@ namespace utils {
             friend constexpr bool operator==(const expected& x, const unexpected<E2>& v) {
                 return !x.has_value() && static_cast<bool>(x.error() == v.error());
             }
-        };  // namespace helper::either
+        };
 
         template <class T, class E>
             requires std::is_void_v<T>
@@ -1437,7 +1437,6 @@ namespace utils {
 #undef do_or_else
 #undef do_transform
 #undef do_transform_error
-#undef do_nothing
 
             template <class T2, class E2>
                 requires(std::is_void_v<T2>)
@@ -1453,6 +1452,14 @@ namespace utils {
                 return !x.has_value() && static_cast<bool>(x.error() == v.hold);
             }
         };
+
+#undef do_and_then
+#undef do_or_else
+#undef do_transform
+#undef do_transform_error
+#undef do_nothing
+#undef must_move
+#undef must_copy
 
     }  // namespace helper::either
 }  // namespace utils

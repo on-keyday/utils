@@ -118,8 +118,34 @@ namespace utils {
                 return exponent() == exponent_max && fraction() != 0;
             }
 
-            constexpr bool is_signaling_nan() const noexcept {
+            constexpr bool is_quiet_nan() const noexcept {
                 return is_nan() && bool(fraction() & frac_msb);
+            }
+
+            constexpr bool is_signaling_nan() const noexcept {
+                return is_nan() && !is_quiet_nan();
+            }
+
+            constexpr bool make_quiet_signaling(frac_t bit = 1) {
+                if (is_quiet_nan()) {
+                    if (bit & frac_msb) {
+                        return false;
+                    }
+                    return set_fraction((fraction() & ~frac_msb) | bit /*to be nan*/);
+                }
+                return false;
+            }
+
+            constexpr bool make_signaling_quiet() {
+                if (is_signaling_nan()) {
+                    return set_fraction((fraction() | frac_msb));
+                }
+                return true;
+            }
+
+            // ±0
+            constexpr bool is_zero() const noexcept {
+                return fraction() == 0 && exponent() == 0;
             }
 
             // processed values

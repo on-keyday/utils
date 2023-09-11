@@ -42,22 +42,22 @@ namespace utils {
                     else if (h.is_null()) {
                         w.null();
                     }
-                    else if (auto i = holder.as_numi()) {
+                    else if (auto i = h.as_numi()) {
                         w.number(*i);
                     }
-                    else if (auto u = holder.as_numu()) {
+                    else if (auto u = h.as_numu()) {
                         w.number(*u);
                     }
-                    else if (auto f = holder.as_numf()) {
-                        w.number(*f);
+                    else if (auto fl = h.as_numf()) {
+                        w.number(*fl);
                     }
-                    else if (auto str = holder.as_str()) {
+                    else if (auto str = h.as_str()) {
                         w.string(*str);
                     }
-                    else if (auto b = holder.as_bool()) {
+                    else if (auto b = h.as_bool()) {
                         w.boolean(*b);
                     }
-                    else if (auto obj = holder.as_obj()) {
+                    else if (auto obj = h.as_obj()) {
                         auto field = w.object();
                         for (auto& kv : *obj) {
                             JSONError err;
@@ -70,7 +70,7 @@ namespace utils {
                             }
                         }
                     }
-                    else if (auto arr = holder.as_arr()) {
+                    else if (auto arr = h.as_arr()) {
                         auto field = w.array();
                         for (auto& v : *arr) {
                             JSONError err;
@@ -83,11 +83,15 @@ namespace utils {
                             }
                         }
                     }
+                    else {
+                        return JSONError::not_json;
+                    }
                     return JSONError::none;
                 };
                 return f(f, holder);
             }
 
+            /*
             template <class Out, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr to_string_detail(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag) {
                 const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
@@ -222,28 +226,32 @@ namespace utils {
                     return true;
                 }
                 return JSONError::not_json;
-            }
+            }*/
         }  // namespace internal
 
-        template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-        JSONErr to_string(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag = FmtFlag::none) {
-            auto e = internal::to_string_detail(json, out, flag);
+        template <class S, class String, template <class...> class Vec, template <class...> class Object>
+            requires helper::is_template_instance_of<S, Stringer>
+        JSONErr to_string(const JSONBase<String, Vec, Object>& json, S& out, FmtFlag flag = FmtFlag::none, IntTraits traits = IntTraits::int_as_int) {
+            auto e = internal::to_string_detail(out, json, flag, traits);
             if (e && any(flag & FmtFlag::last_line)) {
-                out.write_ln();
+                out.out().push_back('\n');
             }
             return e;
         }
 
-        template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-        JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, FmtFlag flag = FmtFlag::none, const char* indent = "    ") {
+        template <class Out, class String, template <class...> class Vec, template <class...> class Object, class Indent = const char*>
+            requires(!helper::is_template_instance_of<Out, Stringer>)
+        JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, FmtFlag flag = FmtFlag::none, Indent indent = "    ", IntTraits traits = IntTraits::int_as_int) {
             auto w = code::make_indent_writer(out, indent);
-            return to_string(json, w, flag);
+            Stringer<decltype(out), std::string_view, std::decay_t<Indent>> s{out};
+            s.set_indent(indent);
+            return to_string(json, s, flag, traits);
         }
 
         template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-        Out to_string(const JSONBase<String, Vec, Object>& json, FmtFlag flag = FmtFlag::none, const char* indent = "    ") {
+        Out to_string(const JSONBase<String, Vec, Object>& json, FmtFlag flag = FmtFlag::none, const char* indent = "    ", IntTraits traits = IntTraits::int_as_int) {
             Out res;
-            if (!to_string(json, res, flag, indent)) {
+            if (!to_string(json, res, flag, indent, traits)) {
                 return {};
             }
             return res;

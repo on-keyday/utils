@@ -7,16 +7,24 @@
 
 #include <reflect/layout.h>
 
-REFLECT_LAYOUT_BUILDER(Frame)
-REFLECT_LAYOUT_FIELD("type", std::uint8_t)
-REFLECT_LAYOUT_FIELD("len", std::uint64_t)
-REFLECT_LAYOUT_FIELD("", std::uint32_t)
+REFLECT_LAYOUT_BUILDER(FrameBuilder)
+REFLECT_LAYOUT_FIELD(type, std::uint8_t)
+REFLECT_LAYOUT_FIELD(z, std::uint32_t)
+REFLECT_LAYOUT_FIELD(len, std::uint64_t)
 REFLECT_LAYOUT_BUILDER_END()
+
+struct Frame {
+    std::uint8_t type;
+    std::uint32_t z;
+    std::uint64_t len;
+};
 
 int main() {
     utils::reflect::test::check_name();
-    utils::reflect::Layout<Frame, 1> layout;
+    utils::reflect::Layout<FrameBuilder, 1> layout;
     constexpr auto name = layout.nameof<0>();
+    constexpr auto offset = layout.offset<2>();
+    constexpr auto size = layout.size;
     auto val = layout.get<name>();
     auto print = [](auto name, auto val) {
 
@@ -25,4 +33,10 @@ int main() {
         print(name, *mem);
     },
                  true);
+
+    utils::reflect::Layout<FrameBuilder> compat;
+    constexpr auto ofs = compat.offset<0>();
+    constexpr auto size2 = compat.size;
+    auto fr = compat.cast<Frame>();
+    auto len = &fr->len;
 }

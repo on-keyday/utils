@@ -163,6 +163,7 @@ namespace utils {
                 if (!any(flag & ToStrFlag::no_minus)) {
                     result.push_back('-');
                 }
+                in = -in;
             }
             if (in == std::numeric_limits<T>::infinity() ||
                 in == -std::numeric_limits<T>::infinity()) {

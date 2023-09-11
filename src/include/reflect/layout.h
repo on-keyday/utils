@@ -16,14 +16,19 @@
 
 namespace utils::reflect {
 
-#define REFLECT_LAYOUT_BUILDER(name) \
-    struct name {                    \
-        constexpr auto operator()(auto&& field) const noexcept { return std::make_tuple(
-#define REFLECT_LAYOUT_FIELD(name, type) field(name, type{}),
+#define REFLECT_LAYOUT_BUILDER(name)                             \
+    struct name {                                                \
+        static constexpr auto struct_name = #name;               \
+        constexpr auto operator()(auto&& field) const noexcept { \
+            return std::tuple {
+#define REFLECT_LAYOUT_FIELD(name, type) field(#name, type{}),
 
-#define REFLECT_LAYOUT_BUILDER_END() int()); \
-    }                                        \
-    }                                        \
+#define REFLECT_LAYOUT_BUILDER_END() \
+    int()                            \
+    }                                \
+    ;                                \
+    }                                \
+    }                                \
     ;
 
     template <class Builder, size_t alignment>
@@ -52,22 +57,33 @@ namespace utils::reflect {
             return max_align;
         }
 
-        constexpr auto diff(size_t base_align, size_t add_align, size_t cur_offset) {
-            if (base_align < add_align) {
-                return cur_offset % base_align;
+        constexpr size_t diff(size_t base_align, size_t add_align, size_t cur_offset) {
+            if (base_align == 1) {
+                return 0;
             }
-            return cur_offset % add_align;
+            auto align = add_align;
+            if (add_align > base_align) {
+                align = base_align;
+            }
+            auto delta = cur_offset % align;
+            if (delta) {
+                return align - delta;
+            }
+            return 0;
         }
 
         constexpr auto size_until_count_from_builder(auto&& builder, size_t count, size_t align) {
             size_t size_sum = 0;
             size_t i = 0;
+            size_t prev_align = 0;
             auto field1 = [&](auto, auto val) {
                 if (i < count) {
                     auto size = sizeof(val);
-                    auto padding = diff(align, alignof(decltype(val)), size_sum);
+                    auto cur_align = alignof(decltype(val));
+                    auto padding = diff(align, cur_align, size_sum);
                     size_sum += padding;
                     size_sum += size;
+                    prev_align = cur_align;
                 }
                 i++;
                 return 0;
@@ -179,6 +195,26 @@ namespace utils::reflect {
 
         alignas(align) byte data[size]{};
 
+        template <class T>
+        constexpr T* cast() {
+            if (sizeof(T) == size && alignof(T) == align) {
+                return std::bit_cast<T*>(+data);
+            }
+            return nullptr;
+        }
+
+        template <class T>
+        constexpr const T* cast() const {
+            if (sizeof(T) == size && alignof(T) == align) {
+                return std::bit_cast<const T*>(+data);
+            }
+            return nullptr;
+        }
+
+        static constexpr auto struct_name() {
+            return Builder::struct_name;
+        }
+
         template <size_t i>
         static constexpr auto type_at() {
             static_assert(i < field_count);
@@ -241,12 +277,16 @@ namespace utils::reflect {
 
         template <size_t i>
         static constexpr auto offset() {
-            return internal::size_until_count_from_builder(Builder{}, i, align);
+            static_assert(i < field_count);
+            constexpr auto prev = internal::size_until_count_from_builder(Builder{}, i, align);
+            constexpr auto then = internal::size_until_count_from_builder(Builder{}, i + 1, align);
+            return prev + (then - prev - sizeof(type_at_t<i>));
         }
 
         template <size_t i>
         static constexpr auto nameof() {
-            return internal::name_at_i_from_builder(Builder{}, i);
+            constexpr auto name = internal::name_at_i_from_builder(Builder{}, i);
+            return name;
         }
 
        private:
@@ -272,8 +312,8 @@ namespace utils::reflect {
 
     namespace test {
         REFLECT_LAYOUT_BUILDER(LTest)
-        REFLECT_LAYOUT_FIELD("id", std::uint16_t)
-        REFLECT_LAYOUT_FIELD("name", std::uint32_t)
+        REFLECT_LAYOUT_FIELD(id, std::uint16_t)
+        REFLECT_LAYOUT_FIELD(name, std::uint32_t)
         REFLECT_LAYOUT_BUILDER_END()
 
         static_assert(Layout<LTest>::align == 4 && Layout<LTest>::size == 8);

@@ -33,12 +33,12 @@ void test_json() {
         })",
         json);
     json["handle"] = 0;
-    utils::wrap::string v;
-    auto w = utils::code::make_indent_writer(v, "    ");
     using namespace utils;
-    json::to_string(json, w);
+    json::Stringer<> s;
+    s.set_indent("    ");
+    json::to_string(json, s);
     auto& cout = utils::wrap::cout_wrap();
-    cout << v << "\n";
+    cout << s.out() << "\n";
     using namespace json::literals;
     auto js = R"({
       "\they yp": {
