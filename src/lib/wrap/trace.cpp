@@ -99,7 +99,7 @@ namespace utils::wrap {
             }
         }
 #else
-        auto p = backtrace_symbols((void**)entry.data(), entry.size());
+        auto t = backtrace_symbols((void**)entry.data(), entry.size());
         if (!t) {
             return;
         }
