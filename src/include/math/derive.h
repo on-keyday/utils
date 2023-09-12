@@ -281,11 +281,11 @@ namespace utils::math {
             }
             else if constexpr (T::value) {
                 if constexpr (T::count == 1) {
-                    using V = T::template instance<decltype(replace_x(base.a, new_x))>;
+                    using V = typename T::template instance<decltype(replace_x(base.a, new_x))>;
                     return V{};
                 }
                 else if constexpr (T::count == 2) {
-                    using V = T::template instance<decltype(replace_x(base.a, new_x)), decltype(replace_x(base.b, new_x))>;
+                    using V = typename T::template instance<decltype(replace_x(base.a, new_x)), decltype(replace_x(base.b, new_x))>;
                     return V{};
                 }
             }
