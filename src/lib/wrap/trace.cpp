@@ -41,6 +41,17 @@ namespace utils::wrap {
             }
         }
     }
+
+    static bool maybe_init() {
+        static auto sym = SymInitialize(GetCurrentProcess(), nullptr, true);
+        return sym;
+    }
+
+#else
+    static bool maybe_init() {
+        return true;
+    }
+
 #endif
 
     void stack_trace_entry::get_symbol(helper::IPushBacker<> pb) const {
@@ -56,11 +67,6 @@ namespace utils::wrap {
         const auto d = helper::defer([&] { free(t); });
         strutil::append(pb, t[0]);
 #endif
-    }
-
-    static bool maybe_init() {
-        static auto sym = SymInitialize(GetCurrentProcess(), nullptr, true);
-        return sym;
     }
 
     view::wspan<stack_trace_entry> STDCALL get_stack_trace(view::wspan<stack_trace_entry> entry) {
