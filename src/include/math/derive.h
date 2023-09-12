@@ -46,14 +46,14 @@ namespace utils::math {
         }
     };
 
-    template <FromFloat x>
+    template <FromFloat a>
     struct Const {
-        constexpr auto operator()(auto&& f) const {
-            return x.to_float();
+        constexpr auto operator()(auto&&... x) const {
+            return a.to_float();
         }
 
         constexpr auto raw() const {
-            return x;
+            return a;
         }
 
         constexpr auto derive() const {
@@ -61,7 +61,7 @@ namespace utils::math {
         }
 
         constexpr auto print(auto&& out) const {
-            auto f = x.to_float();
+            auto f = a.to_float();
             number::to_string(out, f);
         }
     };
@@ -325,8 +325,8 @@ namespace utils::math {
         static constexpr A a;
         static constexpr B b;
 
-        constexpr auto operator()(auto&& x) const {
-            return a(x) + b(x);
+        constexpr auto operator()(auto&&... x) const {
+            return a(x...) + b(x...);
         }
 
         constexpr auto derive() const {
@@ -347,8 +347,8 @@ namespace utils::math {
         static constexpr A a;
         static constexpr B b;
 
-        constexpr auto operator()(auto&& x) const {
-            return a(x) * b(x);
+        constexpr auto operator()(auto&&... x) const {
+            return a(x...) * b(x...);
         }
 
         constexpr auto derive() const {
@@ -369,8 +369,8 @@ namespace utils::math {
         static constexpr A a;
         static constexpr B b;
 
-        constexpr auto operator()(auto&& x) const {
-            return a(x) / b(x);
+        constexpr auto operator()(auto&&... x) const {
+            return a(x...) / b(x...);
         }
 
         constexpr auto derive() const {
@@ -401,12 +401,12 @@ namespace utils::math {
         static constexpr A a;
         static constexpr B b;
 
-        constexpr auto operator()(auto&& y) const {
+        constexpr auto operator()(auto&&... x) const {
             if constexpr (a.raw() == e.raw()) {
-                return std::log(b(y));
+                return std::log(b(x...));
             }
             else {
-                return std::log(b(y)) / std::log(a.raw());
+                return std::log(b(x...)) / std::log(a.raw());
             }
         }
 
@@ -434,13 +434,13 @@ namespace utils::math {
         static constexpr A a;
         static constexpr B b;
 
-        constexpr auto operator()(auto&& x) const {
+        constexpr auto operator()(auto&&... x) const {
             if constexpr (is_Const<A>) {
                 if (a.raw() == e.raw()) {
-                    return std::exp(b(x));
+                    return std::exp(b(x...));
                 }
             }
-            return std::pow(a(x), b(x));
+            return std::pow(a(x...), b(x...));
         }
 
         constexpr auto derive() const {
@@ -494,12 +494,12 @@ namespace utils::math {
     template <class A, double (*f1)(double), double (*f2)(double), int phase>
     struct Circler {
         static constexpr A a;
-        constexpr auto operator()(auto&& d) const {
+        constexpr auto operator()(auto&&... x) const {
             if constexpr (phase == 0 || phase == 1) {
-                return f1(a(d));
+                return f1(a(x...));
             }
             else {
-                return -f1(a(d));
+                return -f1(a(x...));
             }
         }
 

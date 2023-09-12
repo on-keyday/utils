@@ -6,6 +6,7 @@
 */
 
 #pragma once
+#include <type_traits>
 
 namespace utils::helper::either {
     constexpr auto push_back_to(auto& vec) {
@@ -29,7 +30,11 @@ namespace utils::helper::either {
 
     template <class T>
     constexpr auto empty_value() {
-        return [](auto&&...) { return T{}; };
+        return [](auto&&...) {
+            if constexpr (!std::is_void_v<T>) {
+                return T{};
+            }
+        };
     }
 
 }  // namespace utils::helper::either
