@@ -8,6 +8,7 @@
 #pragma once
 #include <type_traits>
 #include <tuple>
+#include <cstddef>
 
 namespace utils {
     namespace helper {
