@@ -50,8 +50,8 @@ namespace utils {
                 return false;
             }
             const auto s = seq.current();
-            auto needdpfx = any(flag & ReadFlag::need_prefix);
-            if (needdpfx) {
+            auto needpfx = any(flag & ReadFlag::need_prefix);
+            if (needpfx) {
                 key.push_back(s);
             }
             seq.consume();
@@ -66,7 +66,7 @@ namespace utils {
             if (seq.current() != s) {
                 return false;
             }
-            if (needdpfx) {
+            if (needpfx) {
                 key.push_back(s);
             }
             seq.consume();
