@@ -9,6 +9,8 @@
 #define UTILS_JSON_NO_EXTERN_TEMPLATE
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/json/json_export.h"
+namespace utils::json {
+}  // namespace utils::json
 
 template <class String, template <class...> class Vec, template <class...> class Object>
 void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
