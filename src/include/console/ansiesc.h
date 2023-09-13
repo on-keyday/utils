@@ -249,5 +249,8 @@ namespace utils {
         template <ColorPalette l>
         constexpr auto letter_color = color(l, ColorTarget::letter);
 
+        template <byte code>
+        constexpr auto letter_color_code = color_code(code, ColorTarget::letter);
+
     }  // namespace console::escape
 }  // namespace utils
