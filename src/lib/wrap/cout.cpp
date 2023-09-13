@@ -16,6 +16,7 @@
 #include "Windows.h"
 #else
 #define _O_U8TEXT 0
+#include <unistd.h>
 #endif
 
 namespace utils {
