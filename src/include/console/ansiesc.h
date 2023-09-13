@@ -23,6 +23,28 @@ namespace utils {
 
         constexpr auto escape_sequence_mark = '\x1b';
 
+        struct max_sequence_buffer {
+            char buf[2 + 19 + 1 + 19 + 1 + 1]{};
+            byte i = 0;
+
+            constexpr void push_back(byte c) {
+                buf[i] = c;
+                i++;
+            }
+
+            constexpr size_t size() const {
+                return i;
+            }
+
+            constexpr auto operator[](size_t i) const {
+                return buf[i];
+            }
+
+            constexpr const char* c_str() const {
+                return buf;
+            }
+        };
+
         template <class Out>
         constexpr void cursor(Out&& buf, CursorMove m, size_t n) {
             if (int(m) > int(CursorMove::from_left)) {
@@ -34,17 +56,28 @@ namespace utils {
             buf.push_back('A' + int(m));
         }
 
+        template <class Out = max_sequence_buffer>
+        constexpr Out cursor(CursorMove m, size_t n) {
+            Out o;
+            cursor(o, m, n);
+            return o;
+        }
+
         template <class Out>
         constexpr void cursor_abs(Out&& buf, size_t n, size_t m) {
-            if (int(m) >= int(CursorMove::from_left)) {
-                return;
-            }
             buf.push_back(escape_sequence_mark);
             buf.push_back('[');
             number::to_string(buf, n);
             buf.push_back(';');
             number::to_string(buf, m);
             buf.push_back('H');
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out cursor_abs(size_t n, size_t m) {
+            Out o;
+            cursor_abs(o, n, m);
+            return o;
         }
 
         enum class ConsoleScroll : byte {
@@ -61,6 +94,13 @@ namespace utils {
             buf.push_back('[');
             number::to_string(buf, n);
             buf.push_back('S' + int(s));
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out console_scroll(ConsoleScroll s, size_t n) {
+            Out o;
+            console_scroll(o, s, n);
+            return o;
         }
 
         enum class EraseMode : byte {
@@ -85,6 +125,13 @@ namespace utils {
             buf.push_back('J' + int(t));
         }
 
+        template <class Out = max_sequence_buffer>
+        constexpr Out console_scroll(EraseTarget t, EraseMode s) {
+            Out o;
+            erase(o, t, s);
+            return o;
+        }
+
         enum class LetterStyle : byte {
             none,
             bold,
@@ -106,6 +153,13 @@ namespace utils {
             buf.push_back('[');
             number::to_string(buf, int(s));
             buf.push_back('m');
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out letter_style(LetterStyle s) {
+            Out o;
+            letter_style(o, s);
+            return o;
         }
 
         enum class ColorPalette : byte {
@@ -135,6 +189,13 @@ namespace utils {
             buf.push_back('m');
         }
 
+        template <class Out = max_sequence_buffer>
+        constexpr Out color(ColorPalette p, ColorTarget t) {
+            Out o;
+            color(o, p, t);
+            return o;
+        }
+
         template <class Out>
         constexpr void color_code(Out&& buf, byte code, ColorTarget t) {
             if (int(t) > int(ColorTarget::background)) {
@@ -148,6 +209,13 @@ namespace utils {
             buf.push_back(';');
             number::to_string(buf, code);
             buf.push_back('m');
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out color_code(byte code, ColorTarget t) {
+            Out o;
+            color_code(o, code, t);
+            return o;
         }
 
         template <class Out>
@@ -168,6 +236,18 @@ namespace utils {
             number::to_string(buf, b);
             buf.push_back('m');
         }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out color_code(byte r, byte g, byte b, ColorTarget t) {
+            Out o;
+            color_rgb(o, r, g, b, t);
+            return o;
+        }
+
+        constexpr auto color_reset = letter_style(LetterStyle::none);
+
+        template <ColorPalette l>
+        constexpr auto letter_color = color(l, ColorTarget::letter);
 
     }  // namespace console::escape
 }  // namespace utils

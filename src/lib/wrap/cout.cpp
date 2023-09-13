@@ -54,6 +54,15 @@ namespace utils {
             }
         }
 
+        bool UtfOut::is_tty() const {
+#ifdef _WIN32
+            auto no = ::_fileno(std_handle);
+            return ::_isatty(no);
+#else
+            return isatty(fileno(std_handle));
+#endif
+        }
+
         UtfOut& UtfOut::operator<<(const path_string& p) {
             write(p);
             return *this;

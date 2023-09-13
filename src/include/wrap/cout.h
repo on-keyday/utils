@@ -40,6 +40,8 @@ namespace utils {
             void write(const path_string&);
 
             UtfOut& operator<<(internal::Pack&& pack);
+
+            bool is_tty() const;
         };
 
         DLL UtfOut& STDCALL cout_wrap();
