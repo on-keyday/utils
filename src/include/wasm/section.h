@@ -503,7 +503,8 @@ namespace utils::wasm::section {
     };
 
     struct Data {
-        std::variant<Data0, Data1, Data2> data;
+        using DataV = std::variant<Data0, Data1, Data2>;
+        DataV data;
 
         constexpr auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r).and_then([&](std::uint32_t i) -> result<void> {
@@ -511,13 +512,13 @@ namespace utils::wasm::section {
                     default:
                         return unexpect(Error::unexpected_instruction);
                     case 0:
-                        data = Data0{};
+                        data = DataV{Data0{}};
                         break;
                     case 1:
-                        data = Data1{};
+                        data = DataV{Data1{}};
                         break;
                     case 2:
-                        data = Data2{};
+                        data = DataV{Data2{}};
                         break;
                 }
                 return std::visit([&](auto&& data) -> result<void> {
