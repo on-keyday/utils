@@ -136,7 +136,7 @@ namespace utils::wasm::section {
 
     struct Imports {
         std::vector<Import> imports;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Import>(r, imports);
             });
@@ -145,7 +145,7 @@ namespace utils::wasm::section {
 
     struct Function {
         std::vector<Index> funcs;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_uint<std::uint32_t>(r).transform(push_back_to(funcs));
             });
@@ -154,7 +154,7 @@ namespace utils::wasm::section {
 
     struct Table {
         std::vector<type::TableType> tables;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return type::parse_table_type(r).transform(push_back_to(tables));
             });
@@ -163,7 +163,7 @@ namespace utils::wasm::section {
 
     struct Memory {
         std::vector<type::MemoryType> memories;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return type::parse_memory_type(r).transform(push_back_to(memories));
             });
@@ -173,7 +173,7 @@ namespace utils::wasm::section {
     struct Global {
         type::GlobalType type;
         code::Expr expr;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return type::parse_global_type(r)
                 .transform(assign_to(type))
                 .and_then([&] { return code::parse_expr(r); })
@@ -183,7 +183,7 @@ namespace utils::wasm::section {
 
     struct Globals {
         std::vector<Global> globals;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Global>(r, globals);
             });
@@ -213,7 +213,7 @@ namespace utils::wasm::section {
 
     struct Exports {
         std::vector<Export> exports;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Export>(r, exports);
             });
@@ -223,7 +223,7 @@ namespace utils::wasm::section {
     struct Exprs {
         std::vector<code::Expr> exprs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return code::parse_expr(r).transform(push_back_to(exprs));
             });
@@ -243,7 +243,7 @@ namespace utils::wasm::section {
         code::Expr expr;
         Function funcs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return code::parse_expr(r)
                 .and_then([&](code::Expr e) {
                     expr = std::move(e);
@@ -257,7 +257,7 @@ namespace utils::wasm::section {
         byte kind = 0;
         Function funcs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return read_byte(r)
                 .and_then([&](byte k) {
                     kind = k;
@@ -273,7 +273,7 @@ namespace utils::wasm::section {
         byte kind = 0;
         Function funcs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r)
                 .and_then([&](Index idx) {
                     table_index = idx;
@@ -295,7 +295,7 @@ namespace utils::wasm::section {
         byte kind = 0;
         Function funcs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return read_byte(r)
                 .and_then([&](byte k) {
                     kind = k;
@@ -309,7 +309,7 @@ namespace utils::wasm::section {
         code::Expr expr;
         Exprs exprs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return code::parse_expr(r)
                 .and_then([&](code::Expr e) {
                     expr = std::move(e);
@@ -323,7 +323,7 @@ namespace utils::wasm::section {
         type::Type reftype;
         Exprs exprs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return type::parse_reftype(r)
                 .and_then([&](type::Type t) {
                     reftype = std::move(t);
@@ -339,7 +339,7 @@ namespace utils::wasm::section {
         type::Type reftype;
         Exprs exprs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r)
                 .and_then([&](Index idx) {
                     table_index = idx;
@@ -361,7 +361,7 @@ namespace utils::wasm::section {
         type::Type reftype;
         Exprs exprs;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return type::parse_reftype(r)
                 .and_then([&](type::Type t) {
                     reftype = std::move(t);
@@ -372,7 +372,7 @@ namespace utils::wasm::section {
 
     struct Element {
         std::variant<Element0, Element1, Element2, Element3, Element4, Element5, Element6, Element7> element;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r).and_then([&](std::uint32_t i) -> result<void> {
                 switch (i) {
                     default:
@@ -412,7 +412,7 @@ namespace utils::wasm::section {
 
     struct Elements {
         std::vector<Element> elements;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Element>(r, elements);
             });
@@ -434,7 +434,7 @@ namespace utils::wasm::section {
         std::vector<Locals> locals;
         code::Expr expr;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                        return parse_vec_elm<Locals>(r, locals);
                    })
@@ -447,7 +447,7 @@ namespace utils::wasm::section {
         std::uint32_t len = 0;
         Func func;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_uint(r, len).and_then([&] {
                 binary::reader s{r.remain().substr(0, len)};
                 return func.parse(s).and_then([&]() -> result<void> {
@@ -464,7 +464,7 @@ namespace utils::wasm::section {
     struct Codes {
         std::vector<Code> codes;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Code>(r, codes);
             });
@@ -474,7 +474,7 @@ namespace utils::wasm::section {
     struct Data0 {
         code::Expr expr;
         view::rvec data;
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return code::parse_expr(r)
                 .transform(assign_to(expr))
                 .and_then([&] { return parse_byte_vec(r, data); });
@@ -494,7 +494,7 @@ namespace utils::wasm::section {
         code::Expr expr;
         view::rvec data;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r, mem_index)
                 .and_then([&] { return code::parse_expr(r); })
                 .transform(assign_to(expr))
@@ -531,7 +531,7 @@ namespace utils::wasm::section {
     struct DataList {
         std::vector<Data> data;
 
-        constexpr auto parse(binary::reader& r) {
+        auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Data>(r, data);
             });
