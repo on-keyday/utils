@@ -79,6 +79,7 @@ namespace utils::comb2::composite {
             test(hex_float, "0x.01p20");
             test(dec_float, "0.012");
             test(dec_float, ".02E+2");
+            test(dec_float, "1.");
             test(not_dec_float, "12030");
             test(not_dec_float, ".12030", Status::not_match);
             test(not_hex_float, "0x0200");

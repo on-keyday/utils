@@ -254,9 +254,11 @@ namespace utils {
                 using T = std::decay_t<decltype(value)>;
                 if constexpr (std::is_same_v<T, Stringer>) {
                     write(value.buf);
+                    prev_colon = false;
                 }
                 else if constexpr (is_raw_json<T, StringView>) {
                     write(value.raw);
+                    prev_colon = false;
                 }
                 else if constexpr (std::invocable<T, Stringer&>) {
                     std::invoke(value, *this);
