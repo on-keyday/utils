@@ -1,6 +1,7 @@
 # utils
 this library is developing only for my fun and study.
-this library need no dependency except standard library to build.
+this library need no dependency ,except standard library, to build.
+almost code are header only.
 I don't provide guarantee for your problem if you use code in this repository.
 
 # warning
