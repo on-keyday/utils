@@ -16,18 +16,19 @@ But, this library doesn't contains any source code or binary written by OpenSSL.
 Somehow the note above sounds like a joke.
 
 
-# what is included (2023/4/14)
-+ async - fiber/ucontext based coroutine
-+ bnf - bnf parser (stop developing)
+# what is included (2023/9/14)
++ binary - binary reader/writer/endian util/bit flags helper/IEEE float (stable)
 + cmdline - command line parser (stable)
-+ comb2 - parser combinator library (developing)
++ code - source code writer/error format utility (indented writer) (stable)
++ comb2 - parser combinator library (stable)
 + core - Sequencer class (base of parsers)/define byte type (stable)
-+ deprecated - dust box (Because I cannot determine mind throwing away the code, this is remaining yet.)
++ coro  - fiber/ucontext based coroutine
++ env - environment variable (stable)
 + fnet - networking library (active developing)
   + socket wrapper
     + because my main developing platform is windows, epoll developing is put off
     + IOCP (stable)
-    + epoll (maybe can build)  
+    + epoll (can build, behaviour is not enough tested)  
   + getaddrinfo wrapper
   + tls wrapper (OpenSSL/BoringSSL)
     + this wrapper can be built without OpenSSL/BroginSSL headers
@@ -44,23 +45,27 @@ Somehow the note above sounds like a joke.
     + have path MTU discovery
     + have Retry handling 
     + have stream
-+ endian - endian util/IEEE float (stable)
+  + util - network utility (base64/punycode/hpack/qpack/URI/URLencoding/cookie/date/sha1/ipaddress etc...) (stable)
 + escape - string escapes (stable)
 + file - file util (stable)
   + gzip - gzip decoder (no encoder)
 + helper - implementation helper library
   + I think this is actual 'utility' library
 + json - JSON parser/renderer (stable)
-+ minilang - lambda combination based mini programing language parser (stable/future deprecated)
-+ net_util - network utility (base64/punycode/hpack/URI/URLencoding/cookie/date/sha1/ipaddress etc...) (stable)
++ langc - too tiny c lang compiler (not full feature supported)
++ math - mathematical utility (this is toy level)
 + number - number parser/renderer (stable)
-+ platform - plarform dependent (deprecated but because code using this is too many,remaining)
++ platform/windows - windows platform dependent (deprecated but because code using this is too many,remaining)
++ reflect - reflection `like` library (not complete reflection)
++ strutil - string treatment utility
 + testutil - test utility (stop developing/stable)
 + thread - thread utility (channel) (stable)
++  unicode
+   + data - unicodedata.txt treatment  
+   + utf - utf converter (stable)
 + view - view helper (access like array, has operator[] and size())
   + iovec,expand_iovec - byte vector like std::string_view and std::string (reinventing the wheel)
-+ io - byte reader/writer (based view/iovec)
-+ unicode/utf - utf converter (stable)
++ wasm - WebAssembly binary parser 
 + wrap - wrapper (argv/cout/cin/pair_iter) (stable)
 + yaml - YAML parser (incomplete)
 
@@ -71,7 +76,7 @@ API compatibility is often broken among each large commits. (yes, I throw stabil
 # how to build
 1. install cmake (https://cmake.org/), ninja (https://ninja-build.org/) and clang (https://clang.llvm.org/) on your platform.
 2. run `. build` (on linux) or `build.bat` (on windows)
-3. `libutils`,`libfnet`,`libfnetserv` will be built on `lib/`, test program (it's too presumptuous to explain as test) will be built on `test/`, tool will be built on `tool/`
+3. `libutils`,`libfnet`,`libfnetserv`, `libcoro` will be built on `lib/`, test program (it's too presumptuous to explain as test) will be built on `test/`, tool will be built on `tool/`
 
 # std version
 C++20
