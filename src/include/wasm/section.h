@@ -549,57 +549,58 @@ namespace utils::wasm::section {
 
     struct Section {
         SectionHeader hdr;
-        std::variant<Unspec,
-                     Custom, Type, Imports, Function,
-                     Table, Memory, Globals, Exports,
-                     Start, Elements, Codes, DataList,
-                     DataCount>
-            body;
+        using SectionV =
+            std::variant<Unspec,
+                         Custom, Type, Imports, Function,
+                         Table, Memory, Globals, Exports,
+                         Start, Elements, Codes, DataList,
+                         DataCount>;
+        SectionV body;
 
         constexpr auto parse(binary::reader& r) {
             return hdr.parse(r).and_then([&]() -> result<void> {
                 switch (hdr.id) {
                     case ID::custom:
-                        body = Custom{};
+                        body = SectionV{std::in_place_type<Custom>};
                         break;
                     case ID::type:
-                        body = Type{};
+                        body = SectionV{std::in_place_type<Type>};
                         break;
                     case ID::import_:
-                        body = Imports{};
+                        body = SectionV{std::in_place_type<Imports>};
                         break;
                     case ID::function:
-                        body = Function{};
+                        body = SectionV{std::in_place_type<Function>};
                         break;
                     case ID::table:
-                        body = Table{};
+                        body = SectionV{std::in_place_type<Table>};
                         break;
                     case ID::memory:
-                        body = Memory{};
+                        body = SectionV{std::in_place_type<Memory>};
                         break;
                     case ID::global:
-                        body = Globals{};
+                        body = SectionV{std::in_place_type<Globals>};
                         break;
                     case ID::export_:
-                        body = Exports{};
+                        body = SectionV{std::in_place_type<Exports>};
                         break;
                     case ID::start:
-                        body = Start{};
+                        body = SectionV{std::in_place_type<Start>};
                         break;
                     case ID::element:
-                        body = Elements{};
+                        body = SectionV{std::in_place_type<Elements>};
                         break;
                     case ID::code:
-                        body = Codes{};
+                        body = SectionV{std::in_place_type<Codes>};
                         break;
                     case ID::data:
-                        body = DataList{};
+                        body = SectionV{std::in_place_type<DataList>};
                         break;
                     case ID::data_count:
-                        body = DataCount{};
+                        body = SectionV{std::in_place_type<DataCount>};
                         break;
                     default:
-                        body = Unspec{};
+                        body = SectionV{std::in_place_type<Unspec>};
                         break;
                 }
                 auto [data, ok] = r.read(hdr.len);
