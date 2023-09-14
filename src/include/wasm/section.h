@@ -512,13 +512,13 @@ namespace utils::wasm::section {
                     default:
                         return unexpect(Error::unexpected_instruction);
                     case 0:
-                        data = DataV{Data0{}};
+                        data = DataV{std::in_place_type<Data0>};
                         break;
                     case 1:
-                        data = DataV{Data1{}};
+                        data = DataV{std::in_place_type<Data1>};
                         break;
                     case 2:
-                        data = DataV{Data2{}};
+                        data = DataV{std::in_place_type<Data2>};
                         break;
                 }
                 return std::visit([&](auto&& data) -> result<void> {
