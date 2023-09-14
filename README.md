@@ -68,7 +68,7 @@ Somehow the note above sounds like a joke.
 + yaml - YAML parser (incomplete)
 
 no documentation is here so you should read source code (yes I'm not kind)
-also no code uniformity may be among directories (yes, may be among codes in same directory too)
+also no code uniformity may be among directories (yes, it may not be among codes in same directory too)
 API compatibility is often broken among each large commits. (yes, I throw stability away)
 
 # how to build
