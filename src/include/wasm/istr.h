@@ -397,7 +397,7 @@ namespace utils::wasm::code {
         return b;
     }
 
-    constexpr result<Block> parse_block(binary::reader& r, bool detect_else = false) {
+    inline result<Block> parse_block(binary::reader& r, bool detect_else = false) {
         return type::parse_block_type(r).and_then([&](type::BlockType&& typ) -> result<Block> {
             auto expr = parse_expr(r, detect_else);
             if (!expr) {
