@@ -57,15 +57,15 @@ namespace utils::comb2::composite {
         ctxs::context_error(seq, ctx, "unexpected EOF while parsing comment. expect */");
     });
 
-    constexpr auto shell_comment = comment(ops::lit("#"), ops::any, eol | eos, false, [](auto&& seq, auto&& ctx, auto&& rec) {
+    constexpr auto shell_comment = comment(ops::lit("#"), ops::any, peek(eol | eos), false, [](auto&& seq, auto&& ctx, auto&& rec) {
         ctxs::context_error(seq, ctx, "unexpected error");
     });
 
-    constexpr auto cpp_comment = comment(ops::lit("//"), ops::any, eol | eos, false, [](auto&& seq, auto&& ctx, auto&& rec) {
+    constexpr auto cpp_comment = comment(ops::lit("//"), ops::any, peek(eol | eos), false, [](auto&& seq, auto&& ctx, auto&& rec) {
         ctxs::context_error(seq, ctx, "unexpected error");
     });
 
-    constexpr auto asm_comment = comment(ops::lit(";"), ops::any, eol | eos, false, [](auto&& seq, auto&& ctx, auto&& rec) {
+    constexpr auto asm_comment = comment(ops::lit(";"), ops::any, peek(eol | eos), false, [](auto&& seq, auto&& ctx, auto&& rec) {
         ctxs::context_error(seq, ctx, "unexpected error");
     });
 
