@@ -427,8 +427,8 @@ namespace utils::wasm::code {
     inline result<void> render_instr(const Op& op, binary::writer& w);
     inline result<void> render_expr(const Expr& expr, binary::writer& w, bool should_be_else = false) {
         if (expr.ops.size() == 0 ||
-            (should_be_else ? expr.ops.back().instr != Instruction::end
-                            : expr.ops.back().instr != Instruction::else_)) {
+            (should_be_else ? expr.ops.back().instr != Instruction::else_
+                            : expr.ops.back().instr != Instruction::end)) {
             return unexpect(Error::unexpected_instruction);
         }
         for (auto& op : expr.ops) {
