@@ -29,9 +29,9 @@ namespace utils {
 #if defined(_DEBUG) && defined(_WIN32)
 
         using Hooker = void (*)(HookInfo info);
-        DLL extern Hooker log_hooker;
-        DLL bool STDCALL set_log_file(const char* file);
-        DLL void STDCALL set_alloc_hook(bool on);
+        utils_DLL_EXPORT extern Hooker log_hooker;
+        utils_DLL_EXPORT bool STDCALL set_log_file(const char* file);
+        utils_DLL_EXPORT void STDCALL set_alloc_hook(bool on);
 #else
 
         struct fake_assign {

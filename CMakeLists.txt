@@ -180,13 +180,25 @@ if(WIN32)
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 endif()
 
-option(UTILS_BUILD_SHARED_LIBS "build utils as a shared library" ON)
+if(NOT UTILS_BUILD_TYPE)
+set(UTILS_BUILD_TYPE "shared")
+endif()
 
 # libraries
+if(UTILS_BUILD_TYPE STREQUAL "shared")
 add_library(utils SHARED)
 add_library(fnet SHARED)
 add_library(fnetserv SHARED)
 add_library(coro SHARED)
+elseif(UTILS_BUILD_TYPE STREQUAL "static")
+add_library(utils STATIC)
+add_library(fnet STATIC)
+add_library(fnetserv STATIC)
+add_library(coro STATIC)
+add_compile_definitions(UTILS_AS_STATIC)
+else()
+message(FATAL_ERROR "UTILS_BUILD_TYPE must be shared or static")
+endif()
 
 # libutils
 target_sources(utils

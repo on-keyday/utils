@@ -12,15 +12,15 @@
 
 namespace utils {
     namespace wrap {
-        DLL extern int stdinmode;
-        DLL extern int stdoutmode;
-        DLL extern int stderrmode;
-        DLL extern bool sync_stdio;
-        DLL extern bool no_change_mode;
-        DLL extern bool out_virtual_terminal;
-        DLL extern bool need_cr_for_return;
-        DLL extern bool in_virtual_terminal;
-        DLL extern bool handle_input_self;
-        DLL void STDCALL force_init_io();
+        utils_DLL_EXPORT extern int stdinmode;
+        utils_DLL_EXPORT extern int stdoutmode;
+        utils_DLL_EXPORT extern int stderrmode;
+        utils_DLL_EXPORT extern bool sync_stdio;
+        utils_DLL_EXPORT extern bool no_change_mode;
+        utils_DLL_EXPORT extern bool out_virtual_terminal;
+        utils_DLL_EXPORT extern bool need_cr_for_return;
+        utils_DLL_EXPORT extern bool in_virtual_terminal;
+        utils_DLL_EXPORT extern bool handle_input_self;
+        utils_DLL_EXPORT void STDCALL force_init_io();
     }  // namespace wrap
 }  // namespace utils

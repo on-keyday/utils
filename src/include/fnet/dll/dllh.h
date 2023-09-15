@@ -6,8 +6,9 @@
 */
 
 #pragma once
+#include <platform/windows/dllexport.h>
 #ifndef fnet_dll_export
-#ifdef _WIN32
+#if defined(UTILS_AS_DLL)
 #define fnet_dll_export(...) __declspec(dllimport) __VA_ARGS__ __stdcall
 #define fnet_class_export __declspec(dllimport)
 #else

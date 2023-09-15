@@ -11,7 +11,7 @@
 #include <view/span.h>
 
 namespace utils::wrap {
-    struct DLL stack_trace_entry {
+    struct utils_DLL_EXPORT stack_trace_entry {
        private:
         void* addr = nullptr;
 
@@ -25,10 +25,10 @@ namespace utils::wrap {
         void get_symbol(utils::helper::IPushBacker<> pb) const;
     };
 
-    DLL view::wspan<stack_trace_entry> STDCALL get_stack_trace(view::wspan<stack_trace_entry> entry);
+    utils_DLL_EXPORT view::wspan<stack_trace_entry> STDCALL get_stack_trace(view::wspan<stack_trace_entry> entry);
 
     // if native is true, when windows info become pointer to SYMBOL_INFO
-    DLL void STDCALL get_symbols(view::rspan<stack_trace_entry> entry, void* p, void (*cb)(void* p, const char* info), bool native = false);
+    utils_DLL_EXPORT void STDCALL get_symbols(view::rspan<stack_trace_entry> entry, void* p, void (*cb)(void* p, const char* info), bool native = false);
 
     template <class F>
     void get_symbols(view::rspan<stack_trace_entry> entry, F&& f, bool native = false) {

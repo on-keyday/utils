@@ -6,7 +6,8 @@
 */
 
 #pragma once
-#ifdef _WIN32
+#include <platform/windows/dllexport.h>
+#if defined(UTILS_AS_DLL)
 #define fnetserv_dll_export(type) __declspec(dllexport) type __stdcall
 #define fnetserv_dll_internal(type) type __stdcall
 #define fnetserv_class_export __declspec(dllexport)

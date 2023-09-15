@@ -6,8 +6,9 @@
 */
 
 #pragma once
+#include <platform/windows/dllexport.h>
 #ifndef coro_DLL_EXPORT
-#ifdef _WIN32
+#if defined(UTILS_AS_DLL)
 #define coro_DLL_EXPORT(Type) __declspec(dllimport) Type
 #else
 #define coro_DLL_EXPORT(Type) Type

@@ -175,8 +175,8 @@ namespace utils {
             static_assert(check_setter_getter());
         }  // namespace test
 
-        DLL EnvGetter STDCALL env_getter();
-        DLL EnvSetter STDCALL env_setter();
+        utils_DLL_EXPORT EnvGetter STDCALL env_getter();
+        utils_DLL_EXPORT EnvSetter STDCALL env_setter();
 
         template <class BufType, class Convert = wrap::path_string>
         constexpr auto expand_sys() {

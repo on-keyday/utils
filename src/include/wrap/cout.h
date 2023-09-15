@@ -20,7 +20,7 @@
 namespace utils {
     namespace wrap {
 
-        struct DLL UtfOut {
+        struct utils_DLL_EXPORT UtfOut {
            private:
             ostream& out;
             stringstream ss;
@@ -44,8 +44,8 @@ namespace utils {
             bool is_tty() const;
         };
 
-        DLL UtfOut& STDCALL cout_wrap();
-        DLL UtfOut& STDCALL cerr_wrap();
+        utils_DLL_EXPORT UtfOut& STDCALL cout_wrap();
+        utils_DLL_EXPORT UtfOut& STDCALL cerr_wrap();
 
     }  // namespace wrap
 }  // namespace utils

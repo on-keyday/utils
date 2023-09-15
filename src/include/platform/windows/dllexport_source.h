@@ -9,4 +9,8 @@
 // dllexport_source - dllexport included by source
 #pragma once
 #include "dllexport.h"
-#define DLL __declspec(dllexport)
+#if defined(UTILS_AS_DLL)
+#define utils_DLL_EXPORT __declspec(dllexport)
+#else
+#define utils_DLL_EXPORT
+#endif

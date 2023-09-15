@@ -68,7 +68,7 @@ namespace utils {
             }
         };
 
-        struct DLL U8Arg {
+        struct utils_DLL_EXPORT U8Arg {
 #ifdef _WIN32
            private:
             ArgvVector<> replaced;

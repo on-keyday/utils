@@ -19,22 +19,22 @@ namespace utils {
 #if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
-            template struct DLL JSONBase<wrap::string, wrap::vector, wrap::map>;
+            template struct utils_DLL_EXPORT JSONBase<wrap::string, wrap::vector, wrap::map>;
 #if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
-            template struct DLL JSONBase<wrap::string, wrap::vector, ordered_map>;
+            template struct utils_DLL_EXPORT JSONBase<wrap::string, wrap::vector, ordered_map>;
 
 #if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
-            template DLL JSON
+            template utils_DLL_EXPORT JSON
             parse<JSON, view::CharVec<const char>>(view::CharVec<const char>&&, bool);
 
 #if !defined(UTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
-            template DLL OrderedJSON
+            template utils_DLL_EXPORT OrderedJSON
             parse<OrderedJSON, view::CharVec<const char>>(view::CharVec<const char>&&, bool);
     }  // namespace json
 

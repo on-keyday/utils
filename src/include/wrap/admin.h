@@ -16,5 +16,5 @@ namespace utils::wrap {
         already_admin,
     };
 
-    DLL RunResult run_this_as_admin();
+    utils_DLL_EXPORT RunResult run_this_as_admin();
 }  // namespace utils::wrap

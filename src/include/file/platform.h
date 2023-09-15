@@ -24,7 +24,7 @@ namespace utils {
     namespace file {
         namespace platform {
 
-            struct DLL ReadFileInfo {
+            struct utils_DLL_EXPORT ReadFileInfo {
                 ::FILE* file = nullptr;
                 int fd = -1;
                 char* mapptr = nullptr;

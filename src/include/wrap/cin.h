@@ -18,7 +18,7 @@
 
 namespace utils {
     namespace wrap {
-        struct DLL UtfIn {
+        struct utils_DLL_EXPORT UtfIn {
            private:
             istream& in;
             ::FILE* std_handle = nullptr;
@@ -48,8 +48,8 @@ namespace utils {
             bool peek_buffer(path_string& buf, bool no_cin = false, bool* updated = nullptr);
         };
 
-        DLL UtfIn& STDCALL cin_wrap();
-        DLL bool STDCALL input(wrap::path_string& buf, bool non_block = false, bool no_echo = false);
-        DLL void STDCALL enable_ctrl_c(bool en, unsigned int& flag);
+        utils_DLL_EXPORT UtfIn& STDCALL cin_wrap();
+        utils_DLL_EXPORT bool STDCALL input(wrap::path_string& buf, bool non_block = false, bool no_echo = false);
+        utils_DLL_EXPORT void STDCALL enable_ctrl_c(bool en, unsigned int& flag);
     }  // namespace wrap
 }  // namespace utils

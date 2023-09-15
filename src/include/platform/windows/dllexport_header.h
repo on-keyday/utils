@@ -9,16 +9,16 @@
 // dllexport_header - dllexport included by header
 #pragma once
 #include "dllexport.h"
-#if defined(_WIN32) && defined(UTILS_AS_DLL)
-#ifndef DLL
-#define DLL __declspec(dllimport)
+#if defined(UTILS_AS_DLL)
+#ifndef utils_DLL_EXPORT
+#define utils_DLL_EXPORT __declspec(dllimport)
 #endif
 #ifndef STDCALL
 #define STDCALL __stdcall
 #endif
 #else
-#undef DLL
+#undef utils_DLL_EXPORT
 #undef STDCALL
-#define DLL
+#define utils_DLL_EXPORT
 #define STDCALL
 #endif
