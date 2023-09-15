@@ -29,4 +29,7 @@ rem     call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\A
 rem     cmake -D CMAKE_CXX_COMPILER=cl -G Ninja -D CMAKE_BUILD_TYPE=%BUILD_TYPE% .
 rem )
 ninja -C built/%UTILS_BUILD_TYPE%/%BUILD_TYPE% %TARGET%
+if not %ERRORLEVEL% == 0 (
+    exit /b
+)
 ninja -C built/%UTILS_BUILD_TYPE%/%BUILD_TYPE% install

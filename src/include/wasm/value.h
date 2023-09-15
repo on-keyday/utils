@@ -167,6 +167,18 @@ namespace utils::wasm {
         });
     }
 
+    constexpr result<void> render_byte_vec(binary::writer& w, view::rvec elem) {
+        if (elem.size() > ~std::uint32_t(0)) {
+            return unexpect(Error::large_input);
+        }
+        return render_uint(w, std::uint32_t(elem.size())).and_then([&]() -> result<void> {
+            if (!w.write(elem)) {
+                return unexpect(Error::short_buffer);
+            }
+            return {};
+        });
+    }
+
     constexpr result<void> parse_byte_vec(binary::reader& r, view::rvec& elem) {
         return parse_uint<std::uint32_t>(r).and_then([&](auto len) -> result<void> {
             if (!r.read(elem, len)) {

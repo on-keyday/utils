@@ -9,6 +9,7 @@
 #include "type.h"
 #include "error.h"
 #include "value.h"
+#include <helper/expected_op.h>
 
 namespace utils::wasm::code {
     enum class Instruction {
@@ -366,8 +367,25 @@ namespace utils::wasm::code {
         std::uint32_t offset = 0;
     };
 
+    result<void> parse_2uint(binary::reader& r, std::uint32_t& a, std::uint32_t& b) {
+        return parse_uint(r, a).and_then([&] { return parse_uint(r, b); });
+    }
+
+    result<void> render_2uint(binary::writer& w, std::uint32_t a, std::uint32_t b) {
+        return render_uint(w, a).and_then([&] { return render_uint(w, b); });
+    }
+
     struct Literal {
         std::variant<std::int32_t, std::int64_t, Float32, Float64> literal;
+
+        template <class T>
+        result<const T*> as() const {
+            auto res = std::get_if<T>(&literal);
+            if (!res) {
+                return unexpect(Error::unexpected_instruction_arg);
+            }
+            return res;
+        }
     };
 
     using Arg = std::variant<std::monostate, Block, If,
@@ -377,6 +395,15 @@ namespace utils::wasm::code {
     struct Op {
         Instruction instr = Instruction::nop;
         Arg arg;
+
+        template <class T>
+        result<const T*> as() const {
+            auto res = std::get_if<T>(&arg);
+            if (!res) {
+                return unexpect(Error::unexpected_instruction_arg);
+            }
+            return res;
+        }
     };
 
     inline result<Op> parse_instr(binary::reader& r);
@@ -397,6 +424,25 @@ namespace utils::wasm::code {
         return b;
     }
 
+    inline result<void> render_instr(const Op& op, binary::writer& w);
+    inline result<void> render_expr(const Expr& expr, binary::writer& w, bool should_be_else = false) {
+        if (expr.ops.size() == 0 ||
+            (should_be_else ? expr.ops.back().instr != Instruction::end
+                            : expr.ops.back().instr != Instruction::else_)) {
+            return unexpect(Error::unexpected_instruction);
+        }
+        for (auto& op : expr.ops) {
+            if (auto res = render_instr(op, w); !res) {
+                return res;
+            }
+        }
+        return {};
+    }
+
+    inline result<void> render_block(const Block& b, binary::writer& w, bool should_be_else = false) {
+        return b.type.render(w).and_then([&] { return render_expr(b.body, w, should_be_else); });
+    }
+
     inline result<Block> parse_block(binary::reader& r, bool detect_else = false) {
         return type::parse_block_type(r).and_then([&](type::BlockType&& typ) -> result<Block> {
             auto expr = parse_expr(r, detect_else);
@@ -407,10 +453,415 @@ namespace utils::wasm::code {
         });
     }
 
+    inline result<void> render_if(const If& b, binary::writer& w) {
+        return b.type.render(w)
+            .and_then([&] { return render_expr(b.block, w, b.else_.has_value()); })
+            .and_then([&] {
+                if (!b.else_) {
+                    return result<void>{};
+                }
+                return render_expr(*b.else_, w);
+            });
+    }
+
+    inline result<If> parse_if(binary::reader& r) {
+        return parse_block(r, true)
+            .and_then([&](Block&& b) -> result<If> {
+                if (b.body.ops.back().instr == Instruction::else_) {
+                    auto res = parse_expr(r);
+                    if (!res) {
+                        return res.transform(empty_value<If>());
+                    }
+                    return If{std::move(b.type), std::move(b.body), std::move(*res)};
+                }
+                return If{std::move(b.type), std::move(b.body)};
+            });
+    }
+
+    inline result<LabelTable> parse_label_table(binary::reader& r) {
+        LabelTable table;
+        return parse_vec(r, [&](auto i) {
+                   return parse_uint<std::uint32_t>(r).transform(push_back_to(table.labels));
+               })
+            .and_then([&] { return parse_uint(r, table.label); })
+            .transform([&] { return table; });
+    }
+
+    inline result<void> render_label_table(const LabelTable& l, binary::writer& w) {
+        return render_vec(w, l.labels.size(), [&](auto i) {
+                   return render_uint(w, l.labels[i]);
+               })
+            .and_then([&] {
+                return render_uint(w, l.label);
+            });
+    }
+
+    // these instruction have reserved for future area
+    inline result<Op> parse_memory_xxx_instruction_arg(Instruction instr, binary::reader& r) {
+        switch (instr) {
+            case Instruction::memory_size:
+            case Instruction::memory_grow:
+            case Instruction::memory_fill: {
+                return read_byte(r).and_then([&](byte v) -> result<Op> {
+                    if (v != 0) {
+                        return unexpect(Error::unexpected_instruction_arg);
+                    }
+                    return Op{instr};
+                });
+            }
+            case Instruction::memory_copy: {
+                return read_byte(r)
+                    .and_then([&](byte v) -> result<byte> {
+                        if (v != 0) {
+                            return unexpect(Error::unexpected_instruction_arg);
+                        }
+                        return read_byte(r);
+                    })
+                    .and_then([&](byte v) -> result<Op> {
+                        if (v != 0) {
+                            return unexpect(Error::unexpected_instruction);
+                        }
+                        return Op{instr};
+                    });
+            }
+            case Instruction::memory_init: {
+                std::uint32_t index = 0;
+                return parse_uint(r, index)
+                    .and_then([&] {
+                        return read_byte(r);
+                    })
+                    .and_then([&](byte b) -> result<Op> {
+                        if (b != 0) {
+                            return unexpect(Error::unexpected_instruction_arg);
+                        }
+                        return Op{instr, index};
+                    });
+            }
+            default:
+                return unexpect(Error::unexpected_instruction);
+        }
+    }
+
+    // these instruction have reserved for future area
+    inline result<void> render_memory_xxx_instruction_arg(const Op& op, binary::writer& w) {
+        auto write_zero = [&] { return write_byte(w, 0); };
+        switch (op.instr) {
+            case Instruction::memory_size:
+            case Instruction::memory_grow:
+            case Instruction::memory_fill: {
+                return write_zero();
+            }
+            case Instruction::memory_copy: {
+                return write_zero() & write_zero;
+            }
+            case Instruction::memory_init: {
+                op.as<Index>().and_then([&](auto b) {
+                    return render_uint(w, *b) & write_zero;
+                });
+            }
+            default:
+                return unexpect(Error::unexpected_instruction);
+        }
+    }
+
     constexpr auto convert_to_Op(Instruction instr) {
         return [=](auto&& v) {
             return Op{instr, std::move(v)};
         };
+    }
+
+    constexpr result<Literal> parse_literal(Instruction instr, binary::reader& r) {
+        auto to_literal = [](auto v) { return Literal{v}; };
+        switch (instr) {
+            case Instruction::i32_const: {
+                return parse_int<std::int32_t>(r) & to_literal;
+            }
+            case Instruction::i64_const: {
+                return parse_int<std::int64_t>(r) & to_literal;
+            }
+            case Instruction::f32_const: {
+                return parse_float32(r) & to_literal;
+            }
+            case Instruction::f64_const: {
+                return parse_float64(r) & to_literal;
+            }
+            default: {
+                return unexpect(Error::unexpected_instruction);
+            }
+        }
+    }
+
+    constexpr result<void> render_literal(const Op& op, binary::writer& w) {
+        return op.as<Literal>().and_then([&](const Literal* l) -> result<void> {
+            switch (op.instr) {
+                case Instruction::i32_const: {
+                    return l->as<std::int32_t>().and_then([&](auto v) {
+                        return render_int(w, *v);
+                    });
+                }
+                case Instruction::i64_const: {
+                    return l->as<std::int64_t>().and_then([&](auto v) {
+                        return render_int(w, *v);
+                    });
+                }
+                case Instruction::f32_const: {
+                    return l->as<Float32>().and_then([&](auto v) {
+                        return render_float32(w, *v);
+                    });
+                }
+                case Instruction::f64_const: {
+                    return l->as<Float64>().and_then([&](auto v) {
+                        return render_float64(w, *v);
+                    });
+                }
+                default: {
+                    return unexpect(Error::unexpected_instruction);
+                }
+            }
+        });
+    }
+
+#define NO_ARG_CASE                                   \
+    Instruction::unreachable : case Instruction::nop: \
+    case Instruction::return_:                        \
+    case Instruction::end:                            \
+    case Instruction::else_:                          \
+    case Instruction::ref_is_null:                    \
+    case Instruction::drop:                           \
+    case Instruction::select:                         \
+    case Instruction::i32_eqz:                        \
+    case Instruction::i32_eq:                         \
+    case Instruction::i32_ne:                         \
+    case Instruction::i32_lt_s:                       \
+    case Instruction::i32_lt_u:                       \
+    case Instruction::i32_gt_s:                       \
+    case Instruction::i32_gt_u:                       \
+    case Instruction::i32_le_s:                       \
+    case Instruction::i32_le_u:                       \
+    case Instruction::i32_ge_s:                       \
+    case Instruction::i32_ge_u:                       \
+    case Instruction::i64_eqz:                        \
+    case Instruction::i64_eq:                         \
+    case Instruction::i64_ne:                         \
+    case Instruction::i64_lt_s:                       \
+    case Instruction::i64_lt_u:                       \
+    case Instruction::i64_gt_s:                       \
+    case Instruction::i64_gt_u:                       \
+    case Instruction::i64_le_s:                       \
+    case Instruction::i64_le_u:                       \
+    case Instruction::i64_ge_s:                       \
+    case Instruction::i64_ge_u:                       \
+    case Instruction::f32_eq:                         \
+    case Instruction::f32_ne:                         \
+    case Instruction::f32_lt:                         \
+    case Instruction::f32_gt:                         \
+    case Instruction::f32_le:                         \
+    case Instruction::f32_ge:                         \
+    case Instruction::f64_eq:                         \
+    case Instruction::f64_ne:                         \
+    case Instruction::f64_lt:                         \
+    case Instruction::f64_gt:                         \
+    case Instruction::f64_le:                         \
+    case Instruction::f64_ge:                         \
+    case Instruction::i32_clz:                        \
+    case Instruction::i32_ctz:                        \
+    case Instruction::i32_popcnt:                     \
+    case Instruction::i32_add:                        \
+    case Instruction::i32_sub:                        \
+    case Instruction::i32_mul:                        \
+    case Instruction::i32_div_s:                      \
+    case Instruction::i32_div_u:                      \
+    case Instruction::i32_rem_s:                      \
+    case Instruction::i32_rem_u:                      \
+    case Instruction::i32_and:                        \
+    case Instruction::i32_or:                         \
+    case Instruction::i32_xor:                        \
+    case Instruction::i32_shl:                        \
+    case Instruction::i32_shr_s:                      \
+    case Instruction::i32_shr_u:                      \
+    case Instruction::i32_rotl:                       \
+    case Instruction::i32_rotr:                       \
+    case Instruction::i64_clz:                        \
+    case Instruction::i64_ctz:                        \
+    case Instruction::i64_popcnt:                     \
+    case Instruction::i64_add:                        \
+    case Instruction::i64_sub:                        \
+    case Instruction::i64_mul:                        \
+    case Instruction::i64_div_s:                      \
+    case Instruction::i64_div_u:                      \
+    case Instruction::i64_rem_s:                      \
+    case Instruction::i64_rem_u:                      \
+    case Instruction::i64_and:                        \
+    case Instruction::i64_or:                         \
+    case Instruction::i64_xor:                        \
+    case Instruction::i64_shl:                        \
+    case Instruction::i64_shr_s:                      \
+    case Instruction::i64_shr_u:                      \
+    case Instruction::i64_rotl:                       \
+    case Instruction::i64_rotr:                       \
+    case Instruction::f32_abs:                        \
+    case Instruction::f32_neg:                        \
+    case Instruction::f32_ceil:                       \
+    case Instruction::f32_floor:                      \
+    case Instruction::f32_trunc:                      \
+    case Instruction::f32_nearest:                    \
+    case Instruction::f32_sqrt:                       \
+    case Instruction::f32_add:                        \
+    case Instruction::f32_sub:                        \
+    case Instruction::f32_mul:                        \
+    case Instruction::f32_div:                        \
+    case Instruction::f32_min:                        \
+    case Instruction::f32_max:                        \
+    case Instruction::f32_copysign:                   \
+    case Instruction::f64_abs:                        \
+    case Instruction::f64_neg:                        \
+    case Instruction::f64_ceil:                       \
+    case Instruction::f64_floor:                      \
+    case Instruction::f64_trunc:                      \
+    case Instruction::f64_nearest:                    \
+    case Instruction::f64_sqrt:                       \
+    case Instruction::f64_add:                        \
+    case Instruction::f64_sub:                        \
+    case Instruction::f64_mul:                        \
+    case Instruction::f64_div:                        \
+    case Instruction::f64_min:                        \
+    case Instruction::f64_max:                        \
+    case Instruction::f64_copysign:                   \
+    case Instruction::i32_wrap_i64:                   \
+    case Instruction::i32_trunc_f32_s:                \
+    case Instruction::i32_trunc_f32_u:                \
+    case Instruction::i32_trunc_f64_s:                \
+    case Instruction::i32_trunc_f64_u:                \
+    case Instruction::i64_extend_i32_s:               \
+    case Instruction::i64_extend_i32_u:               \
+    case Instruction::i64_trunc_f32_s:                \
+    case Instruction::i64_trunc_f32_u:                \
+    case Instruction::i64_trunc_f64_s:                \
+    case Instruction::i64_trunc_f64_u:                \
+    case Instruction::f32_convert_i32_s:              \
+    case Instruction::f32_convert_i32_u:              \
+    case Instruction::f32_convert_i64_s:              \
+    case Instruction::f32_convert_i64_u:              \
+    case Instruction::f32_demote_f64:                 \
+    case Instruction::f64_convert_i32_s:              \
+    case Instruction::f64_convert_i32_u:              \
+    case Instruction::f64_convert_i64_s:              \
+    case Instruction::f64_convert_i64_u:              \
+    case Instruction::f64_promote_f32:                \
+    case Instruction::i32_reinterpret_f32:            \
+    case Instruction::i64_reinterpret_f64:            \
+    case Instruction::f32_reinterpret_i32:            \
+    case Instruction::f64_reinterpret_i64:            \
+    case Instruction::i32_extend8_s:                  \
+    case Instruction::i32_extend16_s:                 \
+    case Instruction::i64_extend8_s:                  \
+    case Instruction::i64_extend16_s:                 \
+    case Instruction::i64_extend32_s
+
+#define INDEX_ARG_CASE                         \
+    Instruction::br : case Instruction::br_if: \
+    case Instruction::call:                    \
+    case Instruction::ref_func:                \
+    case Instruction::local_get:               \
+    case Instruction::local_set:               \
+    case Instruction::local_tee:               \
+    case Instruction::global_get:              \
+    case Instruction::global_set:              \
+    case Instruction::table_set:               \
+    case Instruction::table_get:               \
+    case Instruction::elem_drop:               \
+    case Instruction::table_grow:              \
+    case Instruction::table_size:              \
+    case Instruction::table_fill:              \
+    case Instruction::data_drop
+
+#define MEM_ARG_CASE                                    \
+    Instruction::i32_load : case Instruction::i64_load: \
+    case Instruction::f32_load:                         \
+    case Instruction::f64_load:                         \
+    case Instruction::i32_load8_s:                      \
+    case Instruction::i32_load8_u:                      \
+    case Instruction::i32_load16_s:                     \
+    case Instruction::i32_load16_u:                     \
+    case Instruction::i64_load8_s:                      \
+    case Instruction::i64_load8_u:                      \
+    case Instruction::i64_load16_s:                     \
+    case Instruction::i64_load16_u:                     \
+    case Instruction::i64_load32_s:                     \
+    case Instruction::i64_load32_u:                     \
+    case Instruction::i32_store:                        \
+    case Instruction::i64_store:                        \
+    case Instruction::f32_store:                        \
+    case Instruction::f64_store:                        \
+    case Instruction::i32_store8:                       \
+    case Instruction::i32_store16:                      \
+    case Instruction::i64_store8:                       \
+    case Instruction::i64_store16:                      \
+    case Instruction::i64_store32
+
+#define TWO_INDEX_ARG_CASE                                     \
+    Instruction::call_indirect : case Instruction::table_init: \
+    case Instruction::table_copy
+
+#define BLOCK_ARG_CASE \
+    Instruction::block : case Instruction::loop
+
+#define MEMORY_RESERVED_CASE                                  \
+    Instruction::memory_size : case Instruction::memory_grow: \
+    case Instruction::memory_fill:                            \
+    case Instruction::memory_copy:                            \
+    case Instruction::memory_init
+
+#define LITERAL_ARG_CASE                                  \
+    Instruction::i32_const : case Instruction::i64_const: \
+    case Instruction::f32_const:                          \
+    case Instruction::f64_const
+
+    inline result<void> render_instr(const Op& op, binary::writer& w) {
+        auto val = std::uint32_t(op.instr);
+        if (val > 0xff) {
+            return write_byte(w, byte(val >> 8)) &
+                   [&] { return render_uint(w, std::uint32_t(val & 0xff)); };
+        }
+        else {
+            return write_byte(w, byte(val));
+        }
+        switch (op.instr) {
+            default:
+                return unexpect(Error::unexpected_instruction);
+            case NO_ARG_CASE:
+                return {};
+            // block
+            case BLOCK_ARG_CASE:
+                return op.as<Block>().and_then([&](auto b) { return render_block(*b, w); });
+            // block or block else block
+            case Instruction::if_:
+                return op.as<If>().and_then([&](auto b) { return render_if(*b, w); });
+            case INDEX_ARG_CASE:
+                return op.as<Index>().and_then([&](auto b) { return render_uint<std::uint32_t>(w, *b); });
+            case Instruction::br_table: {
+                return op.as<LabelTable>().and_then([&](auto b) { return render_label_table(*b, w); });
+            }
+            case TWO_INDEX_ARG_CASE: {
+                return op.as<Index2>().and_then([&](auto b) { return render_2uint(w, b->index1, b->index2); });
+            }
+            case MEM_ARG_CASE: {
+                return op.as<Mem>().and_then([&](auto b) { return render_2uint(w, b->align, b->offset); });
+            }
+            case MEMORY_RESERVED_CASE: {
+                return render_memory_xxx_instruction_arg(op, w);
+            }
+            // reftype
+            case Instruction::ref_null:
+                return op.as<type::Type>().and_then([&](auto b) { return type::render_reftype(w, *b); });
+            // vec<valtype>
+            case Instruction::select_t:
+                return op.as<type::ResultType>().and_then([&](auto b) { return type::render_result_type(w, *b); });
+
+            case LITERAL_ARG_CASE: {
+                return render_literal(op, w);
+            }
+        }
     }
 
     inline result<Op> parse_instr(binary::reader& r) {
@@ -429,312 +880,56 @@ namespace utils::wasm::code {
             return instr;
         });
         if (!t) {
-            return t.transform(empty_value<Op>());
+            return t & empty_value<Op>();
         }
         auto& instr = *t;
         switch (instr) {
             default:
                 return unexpect(Error::unexpected_instruction);
-            // control
-            case Instruction::unreachable:
-            case Instruction::nop:
-            case Instruction::return_:
-            case Instruction::end:
-            case Instruction::else_:
-            case Instruction::ref_is_null:
-            case Instruction::drop:
-            case Instruction::select:
-            // arithmetic
-            case Instruction::i32_eqz:
-            case Instruction::i32_eq:
-            case Instruction::i32_ne:
-            case Instruction::i32_lt_s:
-            case Instruction::i32_lt_u:
-            case Instruction::i32_gt_s:
-            case Instruction::i32_gt_u:
-            case Instruction::i32_le_s:
-            case Instruction::i32_le_u:
-            case Instruction::i32_ge_s:
-            case Instruction::i32_ge_u:
-            case Instruction::i64_eqz:
-            case Instruction::i64_eq:
-            case Instruction::i64_ne:
-            case Instruction::i64_lt_s:
-            case Instruction::i64_lt_u:
-            case Instruction::i64_gt_s:
-            case Instruction::i64_gt_u:
-            case Instruction::i64_le_s:
-            case Instruction::i64_le_u:
-            case Instruction::i64_ge_s:
-            case Instruction::i64_ge_u:
-            case Instruction::f32_eq:
-            case Instruction::f32_ne:
-            case Instruction::f32_lt:
-            case Instruction::f32_gt:
-            case Instruction::f32_le:
-            case Instruction::f32_ge:
-            case Instruction::f64_eq:
-            case Instruction::f64_ne:
-            case Instruction::f64_lt:
-            case Instruction::f64_gt:
-            case Instruction::f64_le:
-            case Instruction::f64_ge:
-            case Instruction::i32_clz:
-            case Instruction::i32_ctz:
-            case Instruction::i32_popcnt:
-            case Instruction::i32_add:
-            case Instruction::i32_sub:
-            case Instruction::i32_mul:
-            case Instruction::i32_div_s:
-            case Instruction::i32_div_u:
-            case Instruction::i32_rem_s:
-            case Instruction::i32_rem_u:
-            case Instruction::i32_and:
-            case Instruction::i32_or:
-            case Instruction::i32_xor:
-            case Instruction::i32_shl:
-            case Instruction::i32_shr_s:
-            case Instruction::i32_shr_u:
-            case Instruction::i32_rotl:
-            case Instruction::i32_rotr:
-            case Instruction::i64_clz:
-            case Instruction::i64_ctz:
-            case Instruction::i64_popcnt:
-            case Instruction::i64_add:
-            case Instruction::i64_sub:
-            case Instruction::i64_mul:
-            case Instruction::i64_div_s:
-            case Instruction::i64_div_u:
-            case Instruction::i64_rem_s:
-            case Instruction::i64_rem_u:
-            case Instruction::i64_and:
-            case Instruction::i64_or:
-            case Instruction::i64_xor:
-            case Instruction::i64_shl:
-            case Instruction::i64_shr_s:
-            case Instruction::i64_shr_u:
-            case Instruction::i64_rotl:
-            case Instruction::i64_rotr:
-            case Instruction::f32_abs:
-            case Instruction::f32_neg:
-            case Instruction::f32_ceil:
-            case Instruction::f32_floor:
-            case Instruction::f32_trunc:
-            case Instruction::f32_nearest:
-            case Instruction::f32_sqrt:
-            case Instruction::f32_add:
-            case Instruction::f32_sub:
-            case Instruction::f32_mul:
-            case Instruction::f32_div:
-            case Instruction::f32_min:
-            case Instruction::f32_max:
-            case Instruction::f32_copysign:
-            case Instruction::f64_abs:
-            case Instruction::f64_neg:
-            case Instruction::f64_ceil:
-            case Instruction::f64_floor:
-            case Instruction::f64_trunc:
-            case Instruction::f64_nearest:
-            case Instruction::f64_sqrt:
-            case Instruction::f64_add:
-            case Instruction::f64_sub:
-            case Instruction::f64_mul:
-            case Instruction::f64_div:
-            case Instruction::f64_min:
-            case Instruction::f64_max:
-            case Instruction::f64_copysign:
-            case Instruction::i32_wrap_i64:
-            case Instruction::i32_trunc_f32_s:
-            case Instruction::i32_trunc_f32_u:
-            case Instruction::i32_trunc_f64_s:
-            case Instruction::i32_trunc_f64_u:
-            case Instruction::i64_extend_i32_s:
-            case Instruction::i64_extend_i32_u:
-            case Instruction::i64_trunc_f32_s:
-            case Instruction::i64_trunc_f32_u:
-            case Instruction::i64_trunc_f64_s:
-            case Instruction::i64_trunc_f64_u:
-            case Instruction::f32_convert_i32_s:
-            case Instruction::f32_convert_i32_u:
-            case Instruction::f32_convert_i64_s:
-            case Instruction::f32_convert_i64_u:
-            case Instruction::f32_demote_f64:
-            case Instruction::f64_convert_i32_s:
-            case Instruction::f64_convert_i32_u:
-            case Instruction::f64_convert_i64_s:
-            case Instruction::f64_convert_i64_u:
-            case Instruction::f64_promote_f32:
-            case Instruction::i32_reinterpret_f32:
-            case Instruction::i64_reinterpret_f64:
-            case Instruction::f32_reinterpret_i32:
-            case Instruction::f64_reinterpret_i64:
-            case Instruction::i32_extend8_s:
-            case Instruction::i32_extend16_s:
-            case Instruction::i64_extend8_s:
-            case Instruction::i64_extend16_s:
-            case Instruction::i64_extend32_s:
+            case NO_ARG_CASE:
                 return Op{instr};
             // block
-            case Instruction::block:
-            case Instruction::loop:
+            case BLOCK_ARG_CASE:
                 return parse_block(r).transform(convert_to_Op(instr));
             // block or block else block
             case Instruction::if_:
-                return parse_block(r, true)
-                    .and_then([&](Block&& b) -> result<If> {
-                        if (b.body.ops.back().instr == Instruction::else_) {
-                            auto res = parse_expr(r);
-                            if (!res) {
-                                return res.transform(empty_value<If>());
-                            }
-                            return If{std::move(b.type), std::move(b.body), std::move(*res)};
-                        }
-                        return If{std::move(b.type), std::move(b.body)};
-                    })
-                    .transform(convert_to_Op(instr));
+                return parse_if(r).transform(convert_to_Op(instr));
             // index
-            case Instruction::br:
-            case Instruction::br_if:
-            case Instruction::call:
-            case Instruction::ref_func:
-            case Instruction::local_get:
-            case Instruction::local_set:
-            case Instruction::local_tee:
-            case Instruction::global_get:
-            case Instruction::global_set:
-            case Instruction::table_set:
-            case Instruction::table_get:
-            case Instruction::elem_drop:
-            case Instruction::table_grow:
-            case Instruction::table_size:
-            case Instruction::table_fill:
-            case Instruction::data_drop:
+            case INDEX_ARG_CASE:
                 return parse_uint<std::uint32_t>(r).transform(convert_to_Op(instr));
             // vec<label> label
             case Instruction::br_table: {
-                LabelTable table;
-                return parse_vec(r, [&](auto i) {
-                           return parse_uint<std::uint32_t>(r).transform(push_back_to(table.labels));
-                       })
-                    .and_then([&] { return parse_uint(r, table.label); })
-                    .transform([&] { return Op{instr, std::move(table)}; });
+                return parse_label_table(r).transform(convert_to_Op(instr));
             }
             // xx_index xx_index
-            case Instruction::call_indirect:
-            case Instruction::table_init:
-            case Instruction::table_copy: {
+            case TWO_INDEX_ARG_CASE: {
                 Index2 indir;
-                return parse_uint(r, indir.index1)
-                    .and_then([&] {
-                        return parse_uint(r, indir.index2);
-                    })
-                    .transform([&] { return Op{instr, indir}; });
+                return parse_2uint(r, indir.index1, indir.index2).transform([&] { return Op{instr, indir}; });
             }
             // memarg
-            case Instruction::i32_load:
-            case Instruction::i64_load:
-            case Instruction::f32_load:
-            case Instruction::f64_load:
-            case Instruction::i32_load8_s:
-            case Instruction::i32_load8_u:
-            case Instruction::i32_load16_s:
-            case Instruction::i32_load16_u:
-            case Instruction::i64_load8_s:
-            case Instruction::i64_load8_u:
-            case Instruction::i64_load16_s:
-            case Instruction::i64_load16_u:
-            case Instruction::i64_load32_s:
-            case Instruction::i64_load32_u:
-            case Instruction::i32_store:
-            case Instruction::i64_store:
-            case Instruction::f32_store:
-            case Instruction::f64_store:
-            case Instruction::i32_store8:
-            case Instruction::i32_store16:
-            case Instruction::i64_store8:
-            case Instruction::i64_store16:
-            case Instruction::i64_store32: {
+            case MEM_ARG_CASE: {
                 Mem mem;
-                return parse_uint(r, mem.align)
-                    .and_then([&] {
-                        return parse_uint(r, mem.offset);
-                    })
-                    .transform([&] { return Op{instr, mem}; });
+                return parse_2uint(r, mem.align, mem.offset).transform([&] { return Op{instr, mem}; });
             }
-            case Instruction::memory_size:
-            case Instruction::memory_grow:
-            case Instruction::memory_fill: {
-                return read_byte(r).and_then([&](byte v) -> result<Op> {
-                    if (v != 0) {
-                        return unexpect(Error::unexpected_instruction);
-                    }
-                    return Op{instr};
-                });
+            case MEMORY_RESERVED_CASE: {
+                return parse_memory_xxx_instruction_arg(instr, r);
             }
-            case Instruction::memory_copy: {
-                return read_byte(r)
-                    .and_then([&](byte v) -> result<byte> {
-                        if (v != 0) {
-                            return unexpect(Error::unexpected_instruction);
-                        }
-                        return read_byte(r);
-                    })
-                    .and_then([&](byte v) -> result<Op> {
-                        if (v != 0) {
-                            return unexpect(Error::unexpected_instruction);
-                        }
-                        return Op{instr};
-                    });
-            }
-            case Instruction::memory_init: {
-                Index2 indir;
-                return parse_uint(r, indir.index1)
-                    .and_then([&] {
-                        return read_byte(r);
-                    })
-                    .and_then([&](byte b) -> result<Op> {
-                        if (b != 0) {
-                            return unexpect(Error::unexpected_instruction);
-                        }
-                        return Op{instr, indir};
-                    });
-            }
-
             // reftype
             case Instruction::ref_null:
                 return type::parse_reftype(r).transform(convert_to_Op(instr));
             // vec<valtype>
             case Instruction::select_t:
                 return type::parse_result_type(r).transform(convert_to_Op(instr));
-
-            case Instruction::i32_const: {
-                return parse_int<std::int32_t>(r)
-                    .transform([&](std::int32_t v) {
-                        return Literal{v};
-                    })
-                    .transform(convert_to_Op(instr));
-            }
-            case Instruction::i64_const: {
-                return parse_int<std::int64_t>(r)
-                    .transform([&](std::int64_t v) {
-                        return Literal{v};
-                    })
-                    .transform(convert_to_Op(instr));
-            }
-            case Instruction::f32_const: {
-                return parse_float32(r)
-                    .transform([&](Float32 v) {
-                        return Literal{v};
-                    })
-                    .transform(convert_to_Op(instr));
-            }
-            case Instruction::f64_const: {
-                return parse_float64(r)
-                    .transform([&](Float64 v) {
-                        return Literal{v};
-                    })
-                    .transform(convert_to_Op(instr));
-            }
+            case LITERAL_ARG_CASE:
+                return parse_literal(instr, r).transform(convert_to_Op(instr));
         }
     }
+
+#undef NO_ARG_CASE
+#undef INDEX_ARG_CASE
+#undef MEM_ARG_CASE
+#undef TWO_INDEX_ARG_CASE
+#undef BLOCK_ARG_CASE
+#undef MEMORY_RESERVED_CASE
+#undef LITERAL_ARG_CASE
 }  // namespace utils::wasm::code

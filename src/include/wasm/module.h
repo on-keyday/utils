@@ -31,5 +31,21 @@ namespace utils::wasm {
             }
             return {};
         }
+
+        result<void> render(binary::writer& w) const {
+            if (!w.write(magic)) {
+                return unexpect(Error::short_buffer);
+            }
+            if (!binary::write_num(w, version, false)) {
+                return unexpect(Error::short_buffer);
+            }
+            for (auto& sec : sections) {
+                auto res = sec.render(w);
+                if (!res) {
+                    return res;
+                }
+            }
+            return {};
+        }
     };
 }  // namespace utils::wasm

@@ -52,7 +52,7 @@ namespace utils::wasm::section {
             });
         }
 
-        constexpr result<void> render(binary::writer& w) {
+        constexpr result<void> render(binary::writer& w) const {
             return render_vec(w, funcs.size(), [&](std::uint32_t i) {
                 return funcs[i].render(w);
             });
@@ -69,6 +69,15 @@ namespace utils::wasm::section {
                 return {};
             });
         }
+
+        constexpr result<void> render(binary::writer& w) const {
+            return render_name(w, name).and_then([&]() -> result<void> {
+                if (!w.write(data)) {
+                    return unexpect(Error::short_buffer);
+                }
+                return {};
+            });
+        }
     };
 
     struct Unspec {
@@ -76,6 +85,13 @@ namespace utils::wasm::section {
 
         constexpr result<void> parse(binary::reader& r) {
             r.read(data, r.remain().size());
+            return {};
+        }
+
+        constexpr result<void> render(binary::writer& w) const {
+            if (!w.write(data)) {
+                return unexpect(Error::short_buffer);
+            }
             return {};
         }
     };
@@ -90,6 +106,14 @@ namespace utils::wasm::section {
     struct ImportDesc {
         PortType type;
         std::variant<Index, type::TableType, type::MemoryType, type::GlobalType> desc;
+        template <class T>
+        result<const T*> as() const {
+            auto res = std::get_if<T>(&desc);
+            if (!res) {
+                return unexpect(Error::unexpected_import_desc);
+            }
+            return res;
+        }
 
         constexpr result<void> parse(binary::reader& r) {
             return read_byte(r).and_then([&](byte t) -> result<void> {
@@ -103,6 +127,23 @@ namespace utils::wasm::section {
                         return type::parse_memory_type(r).transform(assign_to(desc));
                     case PortType::global:
                         return type::parse_global_type(r).transform(assign_to(desc));
+                    default:
+                        return unexpect(Error::unexpected_import_desc);
+                }
+            });
+        }
+
+        constexpr result<void> render(binary::writer& w) const {
+            return write_byte(w, byte(type)).and_then([&]() -> result<void> {
+                switch (type) {
+                    case PortType::func:
+                        return as<Index>().and_then([&](auto v) { return render_uint(w, *v); });
+                    case PortType::table:
+                        return as<type::TableType>().and_then([&](auto v) { return v->render(w); });
+                    case PortType::mem:
+                        return as<type::MemoryType>().and_then([&](auto v) { return v->render(w); });
+                    case PortType::global:
+                        return as<type::GlobalType>().and_then([&](auto v) { return v->render(w); });
                     default:
                         return unexpect(Error::unexpected_import_desc);
                 }
@@ -124,6 +165,12 @@ namespace utils::wasm::section {
                     return desc.parse(r);
                 });
         }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_name(w, mod)
+                .and_then([&] { return render_name(w, name); })
+                .and_then([&] { return desc.render(w); });
+        }
     };
 
     template <class T>
@@ -141,6 +188,12 @@ namespace utils::wasm::section {
                 return parse_vec_elm<Import>(r, imports);
             });
         }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, imports.size(), [&](auto i) {
+                return imports[i].render(w);
+            });
+        }
     };
 
     struct Function {
@@ -148,6 +201,12 @@ namespace utils::wasm::section {
         auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_uint<std::uint32_t>(r).transform(push_back_to(funcs));
+            });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, funcs.size(), [&](auto i) {
+                return render_uint(w, funcs[i]);
             });
         }
     };
@@ -159,6 +218,12 @@ namespace utils::wasm::section {
                 return type::parse_table_type(r).transform(push_back_to(tables));
             });
         }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, tables.size(), [&](auto i) {
+                return tables[i].render(w);
+            });
+        }
     };
 
     struct Memory {
@@ -166,6 +231,12 @@ namespace utils::wasm::section {
         auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return type::parse_memory_type(r).transform(push_back_to(memories));
+            });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, memories.size(), [&](auto i) {
+                return memories[i].render(w);
             });
         }
     };
@@ -179,6 +250,12 @@ namespace utils::wasm::section {
                 .and_then([&] { return code::parse_expr(r); })
                 .transform(assign_to(expr));
         }
+
+        auto render(binary::writer& w) const {
+            return type.render(w).and_then([&] {
+                return code::render_expr(expr, w);
+            });
+        }
     };
 
     struct Globals {
@@ -186,6 +263,12 @@ namespace utils::wasm::section {
         auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Global>(r, globals);
+            });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, globals.size(), [&](auto i) {
+                return globals[i].render(w);
             });
         }
     };
@@ -200,6 +283,10 @@ namespace utils::wasm::section {
                 .and_then([&] { return parse_uint<std::uint32_t>(r); })
                 .transform(assign_to(index));
         }
+
+        constexpr auto render(binary::writer& w) const {
+            return write_byte(w, byte(port)).and_then([&] { return render_uint(w, index); });
+        }
     };
 
     struct Export {
@@ -209,6 +296,10 @@ namespace utils::wasm::section {
         constexpr auto parse(binary::reader& r) {
             return parse_name(r, name).and_then([&] { return desc.parse(r); });
         }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_name(w, name).and_then([&] { return desc.render(w); });
+        }
     };
 
     struct Exports {
@@ -216,6 +307,12 @@ namespace utils::wasm::section {
         auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Export>(r, exports);
+            });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, exports.size(), [&](auto i) {
+                return exports[i].render(w);
             });
         }
     };
@@ -228,13 +325,22 @@ namespace utils::wasm::section {
                 return code::parse_expr(r).transform(push_back_to(exprs));
             });
         }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, exprs.size(), [&](auto i) {
+                return code::render_expr(exprs[i], w);
+            });
+        }
     };
 
     struct Start {
         Index func = 0;
         constexpr auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r, func);
-            type::parse_reftype(r);
+        }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_uint(w, func);
         }
     };
 
@@ -250,6 +356,12 @@ namespace utils::wasm::section {
                     return funcs.parse(r);
                 });
         }
+
+        auto render(binary::writer& w) const {
+            return code::render_expr(expr, w).and_then([&] {
+                return funcs.render(w);
+            });
+        }
     };
 
     // Element1
@@ -263,6 +375,12 @@ namespace utils::wasm::section {
                     kind = k;
                     return funcs.parse(r);
                 });
+        }
+
+        auto render(binary::writer& w) const {
+            return write_byte(w, kind).and_then([&] {
+                return funcs.render(w);
+            });
         }
     };
 
@@ -288,6 +406,19 @@ namespace utils::wasm::section {
                     return funcs.parse(r);
                 });
         }
+
+        auto render(binary::writer& w) const {
+            return render_uint(w, table_index)
+                .and_then([&] {
+                    return code::render_expr(expr, w);
+                })
+                .and_then([&] {
+                    return write_byte(w, kind);
+                })
+                .and_then([&] {
+                    return funcs.render(w);
+                });
+        }
     };
 
     // Element3
@@ -301,6 +432,12 @@ namespace utils::wasm::section {
                     kind = k;
                     return funcs.parse(r);
                 });
+        }
+
+        auto render(binary::writer& w) const {
+            return write_byte(w, kind).and_then([&] {
+                return funcs.render(w);
+            });
         }
     };
 
@@ -316,6 +453,12 @@ namespace utils::wasm::section {
                     return exprs.parse(r);
                 });
         }
+
+        auto render(binary::writer& w) const {
+            return code::render_expr(expr, w).and_then([&] {
+                return exprs.render(w);
+            });
+        }
     };
 
     // Element5
@@ -329,6 +472,12 @@ namespace utils::wasm::section {
                     reftype = std::move(t);
                     return exprs.parse(r);
                 });
+        }
+
+        auto render(binary::writer& w) const {
+            return type::render_reftype(w, reftype).and_then([&] {
+                return exprs.render(w);
+            });
         }
     };
 
@@ -354,6 +503,19 @@ namespace utils::wasm::section {
                     return exprs.parse(r);
                 });
         }
+
+        auto render(binary::writer& w) const {
+            return render_uint(w, table_index)
+                .and_then([&] {
+                    return code::render_expr(expr, w);
+                })
+                .and_then([&] {
+                    return type::render_reftype(w, reftype);
+                })
+                .and_then([&] {
+                    return exprs.render(w);
+                });
+        }
     };
 
     // Element7
@@ -367,6 +529,12 @@ namespace utils::wasm::section {
                     reftype = std::move(t);
                     return exprs.parse(r);
                 });
+        }
+
+        auto render(binary::writer& w) const {
+            return type::render_reftype(w, reftype).and_then([&] {
+                return exprs.render(w);
+            });
         }
     };
 
@@ -408,6 +576,15 @@ namespace utils::wasm::section {
                                   element);
             });
         }
+
+        auto render(binary::writer& w) const {
+            return render_uint(w, element.index()).and_then([&] {
+                return std::visit([&](auto& e) {
+                    return e.render(w);
+                },
+                                  element);
+            });
+        }
     };
 
     struct Elements {
@@ -415,6 +592,12 @@ namespace utils::wasm::section {
         auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Element>(r, elements);
+            });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, elements.size(), [&](auto i) {
+                return elements[i].render(w);
             });
         }
     };
@@ -427,6 +610,12 @@ namespace utils::wasm::section {
             return parse_uint(r, count)
                 .and_then([&] { return type::parse_valtype(r); })
                 .transform(assign_to(valtype));
+        }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_uint(w, count).and_then([&] {
+                return type::render_valtype(w, valtype);
+            });
         }
     };
 
@@ -441,7 +630,35 @@ namespace utils::wasm::section {
                 .and_then([&] { return code::parse_expr(r); })
                 .transform(assign_to(expr));
         }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_vec(w, locals.size(), [&](auto i) {
+                       return locals[i].render(w);
+                   })
+                .and_then([&] { return code::render_expr(expr, w); });
+        }
     };
+
+    constexpr auto render_with_payload_length(binary::writer& w, auto&& render) {
+        auto buffer = w.remain();
+        auto offset = w.offset();
+        return render(w).and_then([&]() -> result<void> {
+            auto len = w.offset() - offset;
+            if (len > ~std::uint32_t(0)) {
+                return unexpect(Error::large_output);
+            }
+            auto len_len = binary::len_leb128_uint(len);
+            if (w.remain().size() < len_len) {
+                return unexpect(Error::short_buffer);
+            }
+            view::shift(buffer.substr(0, len_len + len), len_len, 0, len);
+            binary::writer tmpw{buffer.substr(0, len_len)};
+            return render_uint(tmpw, std::uint32_t(len)).transform([&] {
+                assert(tmpw.full());
+                w.offset(len_len);
+            });
+        });
+    }
 
     struct Code {
         std::uint32_t len = 0;
@@ -459,6 +676,12 @@ namespace utils::wasm::section {
                     .transform([&] { r.offset(len); });
             });
         }
+
+        auto render(binary::writer& w) const {
+            return render_with_payload_length(w, [&](binary::writer& w) {
+                return func.render(w);
+            });
+        }
     };
 
     struct Codes {
@@ -467,6 +690,12 @@ namespace utils::wasm::section {
         auto parse(binary::reader& r) {
             return parse_vec(r, [&](auto i) {
                 return parse_vec_elm<Code>(r, codes);
+            });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, codes.size(), [&](auto i) {
+                return codes[i].render(w);
             });
         }
     };
@@ -479,6 +708,11 @@ namespace utils::wasm::section {
                 .transform(assign_to(expr))
                 .and_then([&] { return parse_byte_vec(r, data); });
         }
+
+        auto render(binary::writer& w) const {
+            return code::render_expr(expr, w)
+                .and_then([&] { return render_byte_vec(w, data); });
+        }
     };
 
     struct Data1 {
@@ -486,6 +720,10 @@ namespace utils::wasm::section {
 
         constexpr auto parse(binary::reader& r) {
             return parse_byte_vec(r, data);
+        }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_byte_vec(w, data);
         }
     };
 
@@ -499,6 +737,12 @@ namespace utils::wasm::section {
                 .and_then([&] { return code::parse_expr(r); })
                 .transform(assign_to(expr))
                 .and_then([&] { return parse_byte_vec(r, data); });
+        }
+
+        auto render(binary::writer& w) const {
+            return render_uint(w, mem_index)
+                .and_then([&] { return code::render_expr(expr, w); })
+                .and_then([&] { return render_byte_vec(w, data); });
         }
     };
 
@@ -527,6 +771,15 @@ namespace utils::wasm::section {
                                   data);
             });
         }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_uint(w, std::uint32_t(data.index())).and_then([&] {
+                return std::visit([&](auto&& data) -> result<void> {
+                    return data.render(w);
+                },
+                                  data);
+            });
+        }
     };
 
     struct DataList {
@@ -537,6 +790,12 @@ namespace utils::wasm::section {
                 return parse_vec_elm<Data>(r, data);
             });
         }
+
+        auto render(binary::writer& w) const {
+            return render_vec(w, data.size(), [&](auto i) {
+                return data[i].render(w);
+            });
+        }
     };
 
     struct DataCount {
@@ -544,6 +803,10 @@ namespace utils::wasm::section {
 
         constexpr auto parse(binary::reader& r) {
             return parse_uint<std::uint32_t>(r, count);
+        }
+
+        constexpr auto render(binary::writer& w) const {
+            return render_uint(w, count);
         }
     };
 
@@ -621,6 +884,18 @@ namespace utils::wasm::section {
                 }
                 return {};
             });
+        }
+
+        constexpr auto render(binary::writer& w) const {
+            return write_byte(w, byte(ID(body.index())))
+                .and_then([&] {
+                    return render_with_payload_length(w, [&](binary::writer& w) {
+                        return std::visit([&](auto&& obj) {
+                            return obj.render(w);
+                        },
+                                          body);
+                    });
+                });
         }
     };
 }  // namespace utils::wasm::section

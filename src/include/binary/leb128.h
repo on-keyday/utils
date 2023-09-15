@@ -52,6 +52,18 @@ namespace utils::binary {
         return true;
     }
 
+    template <class T>
+    constexpr size_t len_leb128_uint(T value) {
+        using U = uns_t<T>;
+        U v = value;
+        size_t i = 0;
+        do {
+            v >>= 7;
+            i++;
+        } while (v != 0);
+        return i;
+    }
+
     template <class T, class C>
     constexpr bool read_leb128_int(basic_reader<C>& r, T& result) {
         using U = uns_t<T>;
@@ -106,6 +118,30 @@ namespace utils::binary {
             }
             if (!w.write(t, 1)) {
                 return false;
+            }
+        }
+        return true;
+    }
+
+    template <class T>
+    constexpr size_t len_leb128_int(T value) {
+        using U = uns_t<T>;
+        int shift = 0;
+        constexpr auto size = sizeof(T) * bit_per_byte;
+        bool sign = (value < 0);
+        bool more = true;
+        U v = value;
+        size_t i = 0;
+        while (more) {
+            auto t = byte(v & 0x7f);
+            v >>= 7;
+            i++;
+            if (sign) {
+                v |= (~U(0) << size - 7);
+            }
+            if ((v == 0 && (t & 0x40) == 0) ||
+                (v == ~U(0) && (t & 0x40) != 0)) {
+                more = false;
             }
         }
         return true;

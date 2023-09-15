@@ -74,8 +74,31 @@ namespace utils::wasm::type {
         });
     }
 
+    constexpr result<Type> parse_reftype(binary::reader& r) {
+        return read_byte(r).and_then([&](byte typ) -> result<Type> {
+            if (!is_reftype(typ)) {
+                return unexpect(Error::unexpected_type);
+            }
+            return Type(typ);
+        });
+    }
+
     constexpr result<void> render_type(binary::writer& w, Type t) {
         return w.write(byte(t), 1) ? result<void>{} : unexpect(Error::short_buffer);
+    }
+
+    constexpr result<void> render_valtype(binary::writer& w, Type t) {
+        if (!is_valtype(t)) {
+            return unexpect(Error::unexpected_type);
+        }
+        return write_byte(w, byte(t));
+    }
+
+    constexpr result<void> render_reftype(binary::writer& w, Type t) {
+        if (!is_reftype(t)) {
+            return unexpect(Error::unexpected_type);
+        }
+        return write_byte(w, byte(t));
     }
 
     using ResultType = view::rspan<Type>;
@@ -120,7 +143,7 @@ namespace utils::wasm::type {
         ResultType params;
         ResultType results;
 
-        constexpr auto render(binary::writer& w) {
+        constexpr auto render(binary::writer& w) const {
             return render_type(w, Type::func)
                 .and_then([&] { return render_result_type(w, params); })
                 .and_then([&] { return render_result_type(w, results); });
@@ -151,7 +174,7 @@ namespace utils::wasm::type {
         std::uint32_t maximum = 0xffffffff;
         bool omit_max = false;
 
-        constexpr result<void> render(binary::writer& w) {
+        constexpr result<void> render(binary::writer& w) const {
             return render_uint(w, minimum).and_then([&]() -> result<void> {
                 if (omit_max) {
                     return {};
@@ -193,19 +216,10 @@ namespace utils::wasm::type {
         Type reftype;
         Limits limits;
 
-        constexpr bool render(binary::writer& w) {
-            return is_reftype(reftype) && w.write(byte(reftype), 1) && limits.render(w);
+        constexpr result<void> render(binary::writer& w) const noexcept {
+            return render_reftype(w, reftype).and_then([&] { return limits.render(w); });
         }
     };
-
-    constexpr result<Type> parse_reftype(binary::reader& r) {
-        return read_byte(r).and_then([&](byte typ) -> result<Type> {
-            if (!is_reftype(typ)) {
-                return unexpect(Error::unexpected_type);
-            }
-            return Type(typ);
-        });
-    }
 
     constexpr result<TableType> parse_table_type(binary::reader& r) {
         auto t = parse_reftype(r);
@@ -221,9 +235,10 @@ namespace utils::wasm::type {
         Type valtype;
         bool mut = false;
 
-        constexpr bool render(binary::writer& w) {
-            return is_valtype(valtype) && w.write(byte(valtype), 1) &&
-                   w.write(byte(mut ? 1 : 0), 1);
+        constexpr result<void> render(binary::writer& w) const {
+            return render_valtype(w, valtype).and_then([&] {
+                return write_byte(w, mut ? 1 : 0);
+            });
         }
     };
 

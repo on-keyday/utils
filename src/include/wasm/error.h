@@ -12,6 +12,7 @@ namespace utils::wasm {
     enum class Error {
         short_input,
         large_input,
+        large_output,
         short_buffer,
         encode_uint,
         encode_int,
@@ -24,6 +25,7 @@ namespace utils::wasm {
         large_int,
         unexpected_type,
         unexpected_instruction,
+        unexpected_instruction_arg,
         unexpected_import_desc,
 
         magic_mismatch,
