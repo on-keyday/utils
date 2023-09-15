@@ -46,15 +46,6 @@ namespace utils::wrap {
     }
 #else
     RunResult run_this_as_admin() {
-        auto res = open("/proc/self/cmdline", O_RDONLY);
-        if (res == -1) {
-            return RunResult::failed;
-        }
-        const auto d = helper::defer([&] {
-            close(res);
-        });
-        struct stat s;
-        fstatat(res, ".", &s, 0);
         return RunResult::failed;
     }
 #endif
