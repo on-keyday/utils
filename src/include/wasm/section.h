@@ -813,11 +813,10 @@ namespace utils::wasm::section {
     struct Section {
         SectionHeader hdr;
         using SectionV =
-            std::variant<Unspec,
-                         Custom, Type, Imports, Function,
+            std::variant<Custom, Type, Imports, Function,
                          Table, Memory, Globals, Exports,
                          Start, Elements, Codes, DataList,
-                         DataCount>;
+                         DataCount, Unspec>;
         SectionV body;
 
         constexpr auto parse(binary::reader& r) {
@@ -887,7 +886,9 @@ namespace utils::wasm::section {
         }
 
         constexpr auto render(binary::writer& w) const {
-            return write_byte(w, byte(ID(body.index())))
+            return write_byte(w, std::holds_alternative<Unspec>(body)
+                                     ? byte(hdr.id)
+                                     : byte(ID(body.index())))
                 .and_then([&] {
                     return render_with_payload_length(w, [&](binary::writer& w) {
                         return std::visit([&](auto&& obj) {
