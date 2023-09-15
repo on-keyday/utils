@@ -53,8 +53,8 @@ namespace utils::wrap {
         const auto d = helper::defer([&] {
             close(res);
         });
-        struct stat64 s;
-        fstatat64(res, ".", &s, 0);
+        struct stat s;
+        fstatat(res, ".", &s, 0);
         return RunResult::failed;
     }
 #endif
