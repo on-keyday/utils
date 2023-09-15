@@ -13,8 +13,10 @@
 #include <mutex>
 #include <helper/lock.h>
 #pragma comment(lib, "imagehlp.lib")
-#else
+#elif __has_include(<execinfo.h>)
 #include <execinfo.h>
+#else
+#define NO_TRACE_LIB
 #endif
 #include <strutil/append.h>
 
@@ -59,6 +61,8 @@ namespace utils::wrap {
         SymInfo info;
         get_with_syminfo(info, addr);
         strutil::append(pb, info.info.Name);
+#elif defined(NO_TRACE_LIB)
+        // nothing to do
 #else
         auto t = backtrace_symbols(&addr, 1);
         if (!t) {
@@ -75,6 +79,9 @@ namespace utils::wrap {
         }
 #ifdef _WIN32
         auto len = RtlCaptureStackBackTrace(0, entry.size(), (void**)entry.data(), 0);
+#elif defined(NO_TRACE_LIB)
+        auto len = 0;
+        // nothing to do
 #else
         auto len = backtrace((void**)entry.data(), entry.size());
 #endif
@@ -98,6 +105,8 @@ namespace utils::wrap {
                 cb(p, info.info.Name);
             }
         }
+#elif defined(NO_TRACE_LIB)
+        // nothing to do
 #else
         auto t = backtrace_symbols((void**)entry.data(), entry.size());
         if (!t) {
