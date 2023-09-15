@@ -36,7 +36,7 @@ namespace utils::wasm {
             if (!w.write(magic)) {
                 return unexpect(Error::short_buffer);
             }
-            if (!binary::write_num(w, version, false)) {
+            if (!binary::write_num(w, std::uint32_t(1), false)) {
                 return unexpect(Error::short_buffer);
             }
             for (auto& sec : sections) {
