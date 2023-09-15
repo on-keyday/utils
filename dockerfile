@@ -2,7 +2,7 @@
 #    Copyright (c) 2021-2023 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
-FROM ubuntu:latest
+FROM ubuntu:devel
 
 RUN mkdir -p /usr/utilsdev/workspace
 
@@ -50,7 +50,7 @@ RUN ln -s /lib/llvm-15/lib/libc++abi.so.1.0 /lib/llvm-15/lib/libc++abi.so
 RUN ln -s /usr/bin/lldb-server-15 /usr/bin/lldb-server-15.0.7
 RUN ln -s /bin/g++-11 /bin/g++
 RUN unlink /usr/bin/ld
-RUN ln -s /lib/llvm-14/bin/lld /usr/bin/ld
+RUN ln -s /usr/bin/ld.lld /usr/bin/ld
 
 RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
     -o /usr/utilsdev/lldb-mi.zip -L

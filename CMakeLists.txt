@@ -390,3 +390,7 @@ if(WIN32)
 
   endif()
 endif()
+
+install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION ".")
+install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION ".")
+install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION ".")
