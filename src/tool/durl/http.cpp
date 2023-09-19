@@ -8,7 +8,6 @@
 #include "durl.h"
 #include <fnet/socket.h>
 #include <fnet/addrinfo.h>
-#include <fnet/plthead.h>
 #include <thread>
 #include <fnet/connect.h>
 

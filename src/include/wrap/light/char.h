@@ -8,10 +8,11 @@
 
 // char - char aliases
 #pragma once
+#include <platform/detect.h>
 
 namespace utils {
     namespace wrap {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         using path_char = wchar_t;
 #define TO_TCHAR(c) L##c
 #else

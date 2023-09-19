@@ -134,8 +134,8 @@ namespace utils::wasm::section {
         }
 
         constexpr result<void> render(binary::writer& w) const {
-            return write_byte(w, byte(type)).and_then([&]() -> result<void> {
-                switch (type) {
+            return write_byte(w, byte(desc.index())).and_then([&]() -> result<void> {
+                switch (PortType(desc.index())) {
                     case PortType::func:
                         return as<Index>().and_then([&](auto v) { return render_uint(w, *v); });
                     case PortType::table:
@@ -631,7 +631,7 @@ namespace utils::wasm::section {
                 .transform(assign_to(expr));
         }
 
-        constexpr auto render(binary::writer& w) const {
+        auto render(binary::writer& w) const {
             return render_vec(w, locals.size(), [&](auto i) {
                        return locals[i].render(w);
                    })
@@ -639,18 +639,27 @@ namespace utils::wasm::section {
         }
     };
 
-    constexpr auto render_with_payload_length(binary::writer& w, auto&& render) {
+    constexpr result<void> render_with_payload_length(binary::writer& w, auto&& render) {
         auto buffer = w.remain();
         auto offset = w.offset();
-        return render(w).and_then([&]() -> result<void> {
+        return render(w).and_then([&](auto... val) -> result<void> {
             auto len = w.offset() - offset;
             if (len > ~std::uint32_t(0)) {
                 return unexpect(Error::large_output);
+            }
+            if constexpr (sizeof...(val) == 1) {
+                auto do_ = [&](auto l, auto v) {
+                    if (l != v) {
+                        return 0;
+                    }
+                    return 1;
+                }(len, val...);
             }
             auto len_len = binary::len_leb128_uint(len);
             if (w.remain().size() < len_len) {
                 return unexpect(Error::short_buffer);
             }
+            // allocate space for payload length
             view::shift(buffer.substr(0, len_len + len), len_len, 0, len);
             binary::writer tmpw{buffer.substr(0, len_len)};
             return render_uint(tmpw, std::uint32_t(len)).transform([&] {
@@ -679,7 +688,9 @@ namespace utils::wasm::section {
 
         auto render(binary::writer& w) const {
             return render_with_payload_length(w, [&](binary::writer& w) {
-                return func.render(w);
+                return func.render(w).transform([&] {
+                    return len; /*for debug*/
+                });
             });
         }
     };
@@ -892,7 +903,7 @@ namespace utils::wasm::section {
                 .and_then([&] {
                     return render_with_payload_length(w, [&](binary::writer& w) {
                         return std::visit([&](auto&& obj) {
-                            return obj.render(w);
+                            return obj.render(w).transform([&] { return hdr.len; /*for debug*/ });
                         },
                                           body);
                     });

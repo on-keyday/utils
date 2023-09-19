@@ -19,6 +19,7 @@
 #include "../wrap/light/char.h"
 #include <utility>
 #include <core/byte.h>
+#include <platform/detect.h>
 
 namespace utils {
     namespace file {
@@ -28,7 +29,7 @@ namespace utils {
                 ::FILE* file = nullptr;
                 int fd = -1;
                 char* mapptr = nullptr;
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                 using stat_type = struct ::_stat64;
                 void* maphandle = nullptr;
 #else
@@ -44,7 +45,7 @@ namespace utils {
                     file = std::exchange(in.file, nullptr);
                     fd = std::exchange(in.fd, -1);
                     mapptr = std::exchange(in.mapptr, nullptr);
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                     maphandle = std::exchange(in.maphandle, nullptr);
 #else
                     maplen = std::exchange(in.maplen, 0);

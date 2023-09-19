@@ -14,6 +14,7 @@
 #include <fnet/dll/errno.h>
 #include <fnet/sock_internal.h>
 #include <fnet/event/io.h>
+#include <platform/detect.h>
 
 namespace utils {
     namespace fnet {
@@ -26,7 +27,7 @@ namespace utils {
             if (err.type() != error::ErrorType::number) {
                 return false;
             }
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             return err.errnum() == WSAEMSGSIZE;
 #else
             return err.errnum() == EMSGSIZE;
@@ -43,7 +44,7 @@ namespace utils {
             if (err.type() != error::ErrorType::number) {
                 return false;
             }
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             return err.errnum() == WSAEWOULDBLOCK;
 #else
             return err.errnum() == EINPROGRESS || err.errnum() == EWOULDBLOCK;
@@ -86,7 +87,7 @@ namespace utils {
             if (res == -1) {
                 return unexpect(error::Errno());
             }
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             if (lazy::__WSAFDIsSet_(sock, &excset)) {
                 return unexpect(error::Errno());
             }
@@ -176,7 +177,7 @@ namespace utils {
             });
         }
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         constexpr auto shutdown_recv = SD_RECEIVE;
         constexpr auto shutdown_send = SD_SEND;
         constexpr auto shutdown_both = SD_BOTH;
@@ -294,7 +295,7 @@ namespace utils {
                 }
                 event = events.value_ptr();
             }
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             auto sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #else
             auto sock = lazy::socket_(attr.address_family, attr.socket_type, attr.protocol);

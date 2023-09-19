@@ -12,7 +12,8 @@
 #include <cstdio>
 #include <iostream>
 #include <cassert>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <fcntl.h>
 #include <io.h>
 #include "Windows.h"
@@ -25,9 +26,9 @@ namespace utils {
         static thread::LiteLock gllock;
         static bool initialized = false;
 
-        int stdinmode = _O_U8TEXT;
-        int stdoutmode = _O_U8TEXT;
-        int stderrmode = _O_U8TEXT;
+        int stdin_mode = _O_U8TEXT;
+        int stdout_mode = _O_U8TEXT;
+        int stderr_mode = _O_U8TEXT;
         bool sync_stdio = false;
         bool out_virtual_terminal = false;
         bool need_cr_for_return = false;
@@ -35,43 +36,35 @@ namespace utils {
         bool no_change_mode = false;
         bool handle_input_self = false;
 
-        ::FILE* is_std(istream& in) {
-            auto addr = std::addressof(in);
-#ifdef _WIN32
-            if (addr == std::addressof(std::wcin))
-#else
-            if (addr == std::addressof(std::cin))
-#endif
-            {
+        ::FILE* is_std(std::ios_base& io) {
+            auto addr = std::addressof(io);
+#ifdef UTILS_PLATFORM_WINDOWS
+            if (addr == std::addressof(std::wcin)) {
                 return stdin;
             }
-            return nullptr;
-        }
-
-        ::FILE* is_std(ostream& out) {
-            auto addr = std::addressof(out);
-#ifdef _WIN32
-            if (addr == std::addressof(std::wcout))
-#else
-            if (addr == std::addressof(std::cout))
-#endif
-            {
+            else if (addr == std::addressof(std::wcout)) {
                 return stdout;
             }
-#ifdef _WIN32
             else if (addr == std::addressof(std::wcerr) ||
-                     addr == std::addressof(std::wclog))
-#else
-            else if (addr == std::addressof(std::cerr) ||
-                     addr == std::addressof(std::clog))
-#endif
-            {
+                     addr == std::addressof(std::wclog)) {
                 return stderr;
             }
+#else
+            if (addr == std::addressof(std::cin)) {
+                return stdin;
+            }
+            else if (addr == std::addressof(std::cout)) {
+                return stdout;
+            }
+            else if (addr == std::addressof(std::cerr) ||
+                     addr == std::addressof(std::clog)) {
+                return stderr;
+            }
+#endif
             return nullptr;
         }
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         static bool change_output_mode(auto handle) {
             ::DWORD original;
             if (!GetConsoleMode(handle, &original)) {
@@ -104,68 +97,68 @@ namespace utils {
 
         static bool change_console_mode(bool out) {
             if (out && out_virtual_terminal) {
-                auto outhandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
-                auto errhandle = ::GetStdHandle(STD_ERROR_HANDLE);
-                if (!outhandle || !errhandle ||
-                    outhandle == INVALID_HANDLE_VALUE ||
-                    errhandle == INVALID_HANDLE_VALUE) {
+                auto out_handle = ::GetStdHandle(STD_OUTPUT_HANDLE);
+                auto err_handle = ::GetStdHandle(STD_ERROR_HANDLE);
+                if (!out_handle || !err_handle ||
+                    out_handle == INVALID_HANDLE_VALUE ||
+                    err_handle == INVALID_HANDLE_VALUE) {
                     return false;
                 }
-                auto res = change_output_mode(outhandle) && change_output_mode(errhandle);
+                auto res = change_output_mode(out_handle) && change_output_mode(err_handle);
                 if (!res) {
                     return false;
                 }
             }
             if (!out && in_virtual_terminal) {
-                auto inhandle = ::GetStdHandle(STD_INPUT_HANDLE);
-                if (!inhandle || inhandle == INVALID_HANDLE_VALUE) {
+                auto in_handle = ::GetStdHandle(STD_INPUT_HANDLE);
+                if (!in_handle || in_handle == INVALID_HANDLE_VALUE) {
                     return false;
                 }
-                auto res = change_input_mode(inhandle);
+                auto res = change_input_mode(in_handle);
                 if (!res) {
                     return false;
                 }
             }
             return true;
         }
-#endif
+
         static bool out_init() {
-#ifdef _WIN32
             change_console_mode(true);
             if (!no_change_mode) {
-                if (_setmode(_fileno(stdout), stdoutmode) == -1) {
+                if (_setmode(_fileno(stdout), stdout_mode) == -1) {
                     // err = "error:text output mode change failed\n";
                     return false;
                 }
-                if (_setmode(_fileno(stderr), stderrmode) == -1) {
+                if (_setmode(_fileno(stderr), stderr_mode) == -1) {
                     // err = "error:text error mode change failed\n";
                     return false;
                 }
             }
-#endif
+
             return true;
         }
 
         static bool in_init() {
-#ifdef _WIN32
             if (handle_input_self) {
                 return true;
             }
             change_console_mode(false);
             if (!no_change_mode) {
-                if (_setmode(_fileno(stdin), stdinmode) == -1) {
+                if (_setmode(_fileno(stdin), stdin_mode) == -1) {
                     // err = "error:text input mode change failed";
                     return false;
                 }
             }
-#endif
+
             return true;
         }
-
+#endif
         static bool io_init() {
+#ifdef UTILS_PLATFORM_WINDOWS
             if (!in_init() || !out_init()) {
                 return false;
             }
+#endif
             std::ios_base::sync_with_stdio(sync_stdio);
             initialized = true;
             return true;

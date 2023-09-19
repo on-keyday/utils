@@ -8,18 +8,17 @@
 #include <fnet/stun.h>
 #include <fnet/socket.h>
 #include <fnet/addrinfo.h>
-#include <fnet/plthead.h>
 #include <string>
 #include <thread>
 #include <fnet/connect.h>
 
-void test_fnet_stun_run(utils::binary::writer& w, int af) {
+void test_fnet_stun_run(utils::binary::writer& w, utils::fnet::ip::Version version) {
     using namespace utils::fnet;
     using namespace std::chrono_literals;
     stun::StunContext ctx;
     SockAddr resolv;
     constexpr auto stun_sever = "stun.l.google.com";
-    auto [sock, addr] = connect(stun_sever, "19302", sockattr_udp(), false).value();
+    auto [sock, addr] = connect(stun_sever, "19302", sockattr_udp(version), false).value();
     auto local = sock.get_local_addr().value();
     auto str = local.to_string<std::string>();
     ctx.original_address.family = local.addr.type() == NetAddrType::ipv6 ? stun::family_ipv6 : stun::family_ipv4;
@@ -64,7 +63,7 @@ void test_fnet_stun_run(utils::binary::writer& w, int af) {
 void test_fnet_stun() {
     utils::byte buf[2500];
     utils::binary::writer w{buf};
-    test_fnet_stun_run(w, AF_INET);
+    test_fnet_stun_run(w, utils::fnet::ip::Version::ipv4);
 }
 
 int main() {

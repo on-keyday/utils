@@ -12,7 +12,8 @@
 #include "../../include/unicode/utf/convert.h"
 #include <cstdio>
 #include <iostream>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <conio.h>
 #include <io.h>
 #include "Windows.h"
@@ -25,7 +26,7 @@
 
 namespace utils {
     namespace wrap {
-        ::FILE* is_std(istream&);
+        ::FILE* is_std(std::ios_base&);
 
         UtfIn::UtfIn(istream& i)
             : in(i) {
@@ -33,7 +34,7 @@ namespace utils {
         }
         static path_string glbuf;
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         bool load_to_buf(path_string* prvbuf, thread::LiteLock* lock, bool* updated = nullptr) {
             force_init_io();
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
@@ -130,7 +131,7 @@ namespace utils {
 #endif
 
         bool UtfIn::peek_buffer(path_string& buf, bool no_cin, bool* updated) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             if (std_handle && ::_isatty(0)) {
                 return load_to_buf(&buf, no_cin ? nullptr : &lock, updated);
             }
@@ -162,7 +163,7 @@ namespace utils {
 
         bool UtfIn::has_input() {
             if (std_handle) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                 if (::_isatty(0)) {
                     return load_to_buf(nullptr, &lock);
                 }
@@ -179,7 +180,7 @@ namespace utils {
         }
 
         UtfIn& STDCALL cin_wrap() {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             static UtfIn cin{std::wcin};
 #else
             static UtfIn cin{std::cin};

@@ -7,7 +7,8 @@
 
 // errno - errno wrap
 #pragma once
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #else
 #include <cerrno>
@@ -16,7 +17,7 @@
 namespace utils {
     namespace fnet {
         inline auto get_error() {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             return GetLastError();
 #else
             return errno;
@@ -24,7 +25,7 @@ namespace utils {
         }
 
         void set_error(auto err) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             SetLastError(err);
 #else
             errno = err;

@@ -6,10 +6,10 @@
 */
 
 #pragma once
-
+#include <platform/detect.h>
 namespace utils {
     namespace fnet::lazy {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         using dll_path = const wchar_t*;
 #define fnet_lazy_dll_path(path) (L##path)
 #else

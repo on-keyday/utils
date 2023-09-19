@@ -6,21 +6,24 @@
 */
 
 
-#include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/file/platform.h"
-#ifdef _WIN32
+#include <platform/windows/dllexport_source.h>
+#include <file/platform.h>
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #include <io.h>
 #include <fcntl.h>
 #else
 #include <unistd.h>
+#ifndef UTILS_PLATFORM_WASI
 #include <sys/mman.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #endif
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 #define _sopen_s(fd, path, mode, share, perm) ::_wsopen_s(fd, path, mode, share, perm)
 #define _close(fd) ::_close(fd)
 #undef _stat
@@ -41,7 +44,7 @@ using namespace utils::file::platform;
 namespace utils {
     namespace file {
         namespace platform {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             static bool try_get_map(ReadFileInfo* info) {
                 auto filehandle = reinterpret_cast<::HANDLE>(::_get_osfhandle(info->fd));
                 if (filehandle == INVALID_HANDLE_VALUE) {
@@ -59,6 +62,19 @@ namespace utils {
                 }
                 return true;
             }
+
+            static void clean_map(ReadFileInfo* info) {
+                ::UnmapViewOfFile(info->mapptr);
+                info->mapptr = nullptr;
+                ::CloseHandle(info->maphandle);
+                info->maphandle = nullptr;
+            }
+#elif defined(UTILS_PLATFORM_WASI)
+            static bool try_get_map(ReadFileInfo* info) {
+                return false;
+            }
+
+            static void clean_map(ReadFileInfo* info) {}
 #else
             static bool try_get_map(ReadFileInfo* info) {
                 long pagesize = ::getpagesize(), mapsize = 0;
@@ -70,7 +86,14 @@ namespace utils {
                 info->maplen = mapsize;
                 return true;
             }
+
+            static void clean_map(ReadFileInfo* info) {
+                ::munmap(info->mapptr, info->maplen);
+                info->mapptr = nullptr;
+                info->maplen = 0;
+            }
 #endif
+
             static bool open_impl(ReadFileInfo* info, const wrap::path_char* path) {
                 _sopen_s(&info->fd, path, _O_RDONLY, _SH_DENYWR, _S_IREAD);
                 if (info->fd == -1) {
@@ -112,20 +135,6 @@ namespace utils {
                 }
                 return true;
             }
-#ifdef _WIN32
-            static void clean_map(ReadFileInfo* info) {
-                ::UnmapViewOfFile(info->mapptr);
-                info->mapptr = nullptr;
-                ::CloseHandle(info->maphandle);
-                info->maphandle = nullptr;
-            }
-#else
-            static void clean_map(ReadFileInfo* info) {
-                ::munmap(info->mapptr, info->maplen);
-                info->mapptr = nullptr;
-                info->maplen = 0;
-            }
-#endif
 
             void ReadFileInfo::close() {
                 if (this->mapptr) {

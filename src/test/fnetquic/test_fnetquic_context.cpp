@@ -10,7 +10,6 @@
 #include <fnet/quic/version.h>
 #include <chrono>
 #include <fnet/socket.h>
-#include <fnet/plthead.h>
 #include <fnet/addrinfo.h>
 #include <thread>
 #include <fnet/quic/quic.h>

@@ -5,22 +5,24 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/unicode/utf/convert.h"
-#include "../../include/wrap/light/char.h"
-#include "../../include/testutil/alloc_hook.h"
-#include "../../include/testutil/timer.h"
-#include "../../include/strutil/append.h"
-#include "../../include/number/to_string.h"
-#include "../../include/number/insert_space.h"
-#ifdef _WIN32
+// rewrite include path below using <> instead of ""
+#include <platform/windows/dllexport_source.h>
+#include <unicode/utf/convert.h>
+#include <wrap/light/char.h>
+#include <testutil/alloc_hook.h>
+#include <testutil/timer.h>
+#include <strutil/append.h>
+#include <number/to_string.h>
+#include <number/insert_space.h>
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <crtdbg.h>
 #include <windows.h>
 #endif
 
 namespace utils {
     namespace test {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 #ifdef _DEBUG
         _CRT_ALLOC_HOOK base_alloc_hook;
         std::int64_t total_alloced;

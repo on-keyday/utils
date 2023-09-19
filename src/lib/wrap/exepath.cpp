@@ -9,7 +9,8 @@
 #include <wrap/exepath.h>
 #include <strutil/append.h>
 #include <unicode/utf/convert.h>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -18,7 +19,7 @@
 
 namespace utils {
     namespace wrap {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         void STDCALL get_exepath(helper::IPushBacker<> pb) {
             {
                 wchar_t buf[1024]{};

@@ -80,7 +80,7 @@ namespace utils {
             return ~0;
         }
 
-        constexpr expected<WireVal> encode(std::uint64_t pn, size_t largest_ack) noexcept {
+        constexpr expected<WireVal> encode(std::uint64_t pn, std::uint64_t largest_ack) noexcept {
             size_t num_unacked = 0;
             if (largest_ack == ~0) {
                 num_unacked = pn + 1;

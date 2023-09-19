@@ -2,7 +2,7 @@
 #    Copyright (c) 2021-2023 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.26)
 project(utils)
 include_directories("src/include")
 
@@ -31,6 +31,10 @@ else()
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fcoroutines-ts -fsanitize=address -fsanitize=undefined -Wunused-variable")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
+    if(WASI_SDK_PREFIX)
+      add_compile_definitions(_WASI_EMULATED_MMAN)
+      set("${CMAKE_CXX_FLAGS} -lwasi-emulated-mman")
+    endif()
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "-nostdinc++ -nodefaultlibs -isystem /lib/llvm-12/include/c++/v1 -fuse-ld=lld")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++ -lc++abi -lm -lc -lgcc_s -lgcc -lpthread -fcoroutines")
@@ -95,7 +99,7 @@ add_executable(unicode_data "src/test/unicode/test_unicode_data.cpp")
 add_executable(quic_coro "src/test/coro/test_quic_coro.cpp")
 add_executable(coro_nest "src/test/coro/test_coro_nest.cpp")
 add_executable(base64 "src/test/fnet_util/test_base64.cpp")
-add_executable(sha1 "src/test/fnet_util/test_sha1.cpp")
+add_executable(lhash "src/test/fnet_util/test_lhash.cpp")
 add_executable(env_expand "src/test/env/test_env_expand.cpp")
 add_executable(exepath "src/test/wrap/test_exepath.cpp")
 add_executable(json_stringer "src/test/json/test_json_stringer.cpp")
@@ -112,7 +116,7 @@ add_executable(fnet_tls "src/test/fnet/test_fnet_tls.cpp")
 add_executable(fnet_http "src/test/fnet/test_fnet_http.cpp")
 # add_executable(fnet_http2 "src/test/fnet/test_fnet_http2.cpp")
 add_executable(fnet_http2 "src/test/fnet/test_fnet_http2_state.cpp")
-add_executable(fnetquic_initial "src/test/fnetquic/test_fnetquic_initial.cpp")
+# add_executable(fnetquic_initial "src/test/fnetquic/test_fnetquic_initial.cpp")
 add_executable(fnetquic_context "src/test/fnetquic/test_fnetquic_context.cpp")
 add_executable(fnet_error "src/test/fnet/test_fnet_error.cpp")
 add_executable(fnet_stun "src/test/fnet/test_fnet_stun.cpp")
@@ -220,6 +224,7 @@ target_sources(utils
   "src/lib/env/env_sys.cpp"
   "src/lib/wrap/admin.cpp"
   "src/lib/wrap/trace.cpp"
+  "src/lib/wrap/wasi_stub.cpp"
 )
 
 
@@ -250,7 +255,7 @@ if(WIN32)
   target_sources(fnet PRIVATE
     "src/lib/fnet/winsock2.cpp"
   )
-else()
+elseif(LINUX)
   target_sources(fnet PRIVATE
     "src/lib/fnet/epoll2.cpp"
   )
@@ -310,7 +315,7 @@ target_link_libraries(fnet_socket fnet)
 target_link_libraries(fnet_tls fnet)
 target_link_libraries(fnet_http fnet utils)
 # target_link_libraries(fnet_http2 fnet)
-target_link_libraries(fnetquic_initial fnet)
+# target_link_libraries(fnetquic_initial fnet)
 target_link_libraries(fnetquic_context fnet)
 target_link_libraries(fnet_error fnet)
 target_link_libraries(fnet_stun fnet)

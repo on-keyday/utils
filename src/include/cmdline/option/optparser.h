@@ -12,9 +12,10 @@
 #include "../../helper/deref.h"
 #include "flag.h"
 #include "../../wrap/light/string.h"
+#include <platform/detect.h>
 
 #ifndef NOVTABLE__
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 #define NOVTABLE__ __declspec(novtable)
 #else
 #define NOVTABLE__

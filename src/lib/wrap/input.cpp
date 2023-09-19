@@ -9,13 +9,15 @@
 #include <platform/windows/dllexport_source.h>
 #include <wrap/cin.h>
 #include <wrap/cout.h>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #endif
 #include <unicode/utf/convert.h>
 #include <helper/defer.h>
 using namespace utils;
-#ifdef _WIN32
+
+#ifdef UTILS_PLATFORM_WINDOWS
 static bool read_record(wrap::path_string& buf, INPUT_RECORD& rec, bool& zero_input, bool no_echo) {
     auto& cout = wrap::cout_wrap();
     bool ret = true;

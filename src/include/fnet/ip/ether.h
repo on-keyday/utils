@@ -7,7 +7,7 @@
 
 #pragma once
 #include "../binary/number.h"
-#include "crc.h"
+#include "../util/crc.h"
 
 namespace utils {
     namespace fnet::ether {

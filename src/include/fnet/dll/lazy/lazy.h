@@ -310,11 +310,7 @@ namespace utils {
             inline void a(int, int*, bool){};
 
             inline void check_instance() {
-#ifdef _WIN32
-                DLL dll(L"path", false);
-#else
-                DLL dll("path", false);
-#endif
+                DLL dll(fnet_lazy_dll_path("path"), false);
 
                 Func<decltype(a)> a_(dll, "a");
             }

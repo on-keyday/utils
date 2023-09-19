@@ -10,9 +10,10 @@
 #pragma once
 
 #include <iosfwd>
+#include <platform/detect.h>
 namespace utils {
     namespace wrap {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         using ostream = std::wostream;
         using istream = std::wistream;
         using stringstream = std::wstringstream;

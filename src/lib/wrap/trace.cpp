@@ -6,8 +6,9 @@
 */
 
 #include <platform/windows/dllexport_source.h>
+#include <platform/detect.h>
 #include <wrap/trace.h>
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #include <ImageHlp.h>
 #include <mutex>
@@ -21,7 +22,7 @@
 #include <strutil/append.h>
 
 namespace utils::wrap {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
     static std::mutex m;  // for multi thread DbgHelp func call
 
     static auto lock() {
@@ -57,7 +58,7 @@ namespace utils::wrap {
 #endif
 
     void stack_trace_entry::get_symbol(helper::IPushBacker<> pb) const {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         SymInfo info;
         get_with_syminfo(info, addr);
         strutil::append(pb, info.info.Name);
@@ -77,7 +78,7 @@ namespace utils::wrap {
         if (!maybe_init() || entry.size() == 0) {
             return {};
         }
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         auto len = RtlCaptureStackBackTrace(0, entry.size(), (void**)entry.data(), 0);
 #elif defined(NO_TRACE_LIB)
         auto len = 0;
@@ -89,7 +90,7 @@ namespace utils::wrap {
     }
 
     void STDCALL get_symbols(view::rspan<stack_trace_entry> entry, void* p, void (*cb)(void* p, const char* info), bool native) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         for (auto ent : entry) {
             auto addr = ent.address();
             if (!addr) {

@@ -11,6 +11,7 @@
 
 #if !defined(UTILS_WRAP_STRING_TYPE) || !defined(UTILS_WRAP_U16STRING_TYPE) || !defined(UTILS_WRAP_U32STRING_TYPE) || !defined(UTILS_WRAP_PATHSTRING_TYPE)
 #include <string>
+#include <platform/detect.h>
 #ifndef UTILS_WRAP_STRING_TYPE
 #define UTILS_WRAP_STRING_TYPE std::string
 #endif
@@ -20,7 +21,7 @@
 #ifndef UTILS_WRAP_U32STRING_TYPE
 #define UTILS_WRAP_U32STRING_TYPE std::u32string
 #ifndef UTILS_WRAP_PATHSTRING_TYPE
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 #define UTILS_WRAP_PATHSTRING_TYPE std::wstring
 #else
 #define UTILS_WRAP_PATHSTRING_TYPE std::string

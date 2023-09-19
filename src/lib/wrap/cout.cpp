@@ -10,7 +10,8 @@
 #include "../../include/wrap/cout.h"
 #include <cstdio>
 #include <iostream>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <fcntl.h>
 #include <io.h>
 #include "Windows.h"
@@ -21,7 +22,7 @@
 
 namespace utils {
     namespace wrap {
-        ::FILE* is_std(ostream& out);
+        ::FILE* is_std(std::ios_base& out);
 
         UtfOut::UtfOut(ostream& out)
             : out(out) {
@@ -31,7 +32,7 @@ namespace utils {
         void UtfOut::write(const path_string& p) {
             if (std_handle) {
                 force_init_io();
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                 auto no = ::_fileno(std_handle);
                 if (::_isatty(no)) {
                     auto h = ::GetStdHandle(no == 1 ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
@@ -56,7 +57,7 @@ namespace utils {
         }
 
         bool UtfOut::is_tty() const {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             auto no = ::_fileno(std_handle);
             return ::_isatty(no);
 #else
@@ -75,7 +76,7 @@ namespace utils {
         }
 
         UtfOut& cout_wrap() {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             static UtfOut cout(std::wcout);
 #else
             static UtfOut cout(std::cout);
@@ -84,7 +85,7 @@ namespace utils {
         }
 
         UtfOut& cerr_wrap() {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             static UtfOut cerr(std::wcerr);
 #else
             static UtfOut cerr(std::cerr);

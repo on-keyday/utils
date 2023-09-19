@@ -10,7 +10,8 @@
 #include <cstdlib>
 #include "heap.h"
 #include "../helper/defer.h"
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <crtdbg.h>
 #endif
 
@@ -27,7 +28,7 @@ namespace utils {
         template <class T = void>
         constexpr Allocs allocs(T* cb = nullptr) {
             utils::fnet::Allocs allocs;
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             allocs.alloc_ptr = [](void* cb, size_t size, size_t, utils::fnet::DebugInfo* info) {
                 do_callback<T>(cb, 1, info);
                 return _malloc_dbg(size, _NORMAL_BLOCK, info->file, info->line);

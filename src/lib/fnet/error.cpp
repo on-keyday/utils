@@ -10,8 +10,8 @@
 #include <helper/defer.h>
 #include <unicode/utf/convert.h>
 #include <fnet/dll/errno.h>
-
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #endif
 namespace utils {
@@ -110,7 +110,7 @@ namespace utils {
                 });
             }
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 
             static auto d = helper::init([]() {
                 register_categspec_nummsg(ErrorCategory::syserr, NumErrMode::use_nothing, [](helper::IPushBacker<> pn, std::uint64_t code) {

@@ -6,12 +6,13 @@
 */
 
 #pragma once
+#include <platform/detect.h>
 #include "lazy.h"
 #include "../../plthead.h"
 
 namespace utils {
     namespace fnet::lazy {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         extern DLL ws2_32;
         extern DLL kernel32;
 
@@ -25,14 +26,6 @@ namespace utils {
 
 #define LAZY(func) inline Func<decltype(func)> func##_{ws2_32, #func};
 #else
-        extern DLL libanl;
-        constexpr bool load_socket() {
-            return true;
-        }
-
-        inline bool load_addrinfo() {
-            return libanl.load();
-        }
 
 #define LAZY(func) inline decltype(func)* const func##_ = func;
 #endif
@@ -52,7 +45,7 @@ namespace utils {
         LAZY(getsockname)
         LAZY(getpeername)
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         LAZY(closesocket)
         LAZY(ioctlsocket)
         LAZY(WSAStartup)
@@ -82,15 +75,31 @@ namespace utils {
         LAZY(freeaddrinfo)
         LAZY(close)
         LAZY(ioctl)
+        LAZY(getaddrinfo)
+#ifdef UTILS_PLATFORM_LINUX
         LAZY(epoll_create1)
         LAZY(epoll_ctl)
         LAZY(epoll_pwait)
+#endif
 #undef LAZY
+
+        extern DLL libanl;
+        constexpr bool load_socket() {
+            return true;
+        }
+
+        inline bool load_addrinfo() {
+            return libanl.load();
+        }
+
 #define LAZY(func) inline Func<decltype(func)> func##_(libanl, #func);
+
+#ifdef FNET_HAS_ASYNC_GETADDRINFO
         LAZY(getaddrinfo_a)
         LAZY(gai_error)
         LAZY(gai_cancel)
         LAZY(gai_strerror)
+#endif
 #endif
 
 #undef LAZY

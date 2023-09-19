@@ -9,7 +9,7 @@
 // date - http date parser
 // almost copied from socklib
 #pragma once
-
+#include <platform/detect.h>
 #include <core/sequencer.h>
 #include <wrap/light/enum.h>
 #include <strutil/append.h>
@@ -238,7 +238,7 @@ namespace utils {
                         }
                         return true;
                     }
-#ifndef _WIN32
+#ifndef UTILS_PLATFORM_WINDOWS
 #define gettime_s(tm, time) (*tm = gmtime(time))
 #define gmtime_s(info, time) gmtime_r(time, info)
 #endif

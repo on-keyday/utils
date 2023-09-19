@@ -9,7 +9,10 @@ if [ ! $UTILS_BUILD_TYPE ]; then
 UTILS_BUILD_TYPE=shared
 fi
 INSTALL_PREFIX=$(pwd)
-if [ $UTILS_BUILD_TYPE = "wasm" ]; then
+if [ $UTILS_BUILD_TYPE = "wasm-rt" ]; then
+# wasimake must be enabled on this context
+cmake -D CMAKE_TOOLCHAIN_FILE=$WASI_SDK_PREFIX/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=$WASI_SDK_PREFIX -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -D UTILS_BUILD_TYPE=static -S . -B built/$UTILS_BUILD_TYPE/$BUILD_TYPE 
+elif [ $UTILS_BUILD_TYPE = "wasm-em" ]; then
 # emcmake must be enabled on this context
 emcmake cmake -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_TYPE=static -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B built/$UTILS_BUILD_TYPE/$BUILD_TYPE
 else

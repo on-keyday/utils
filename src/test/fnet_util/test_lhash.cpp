@@ -10,6 +10,7 @@
 #include <fnet/util/base64.h>
 #include <strutil/equal.h>
 #include <helper/pushbacker.h>
+#include <fnet/util/md5.h>
 
 constexpr auto make_sample(auto sample) {
     utils::helper::FixedPushBacker<char[21], 21> result;
@@ -34,4 +35,5 @@ void test_sha1() {
 
 int main() {
     test_sha1();
+    utils::md5::test::check_md5();
 }

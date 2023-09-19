@@ -13,7 +13,8 @@
 #include <wrap/admin.h>
 #include <coro/coro.h>
 #include <chrono>
-#if _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <format>
 #define HAS_FORMAT
 #endif

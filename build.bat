@@ -16,7 +16,10 @@ set LLVM_DIR=D:\llvm-project\%BUILD_TYPE%
 set INSTALL_PREFIX=%CD%
 rem -D CMAKE_CXX_CLANG_TIDY=clang-tidy;-header-filter=src/include;--checks=-*
 rem if "%CLANG%"=="true" (
-if "%UTILS_BUILD_TYPE%" == "wasm" (
+if "%UTILS_BUILD_TYPE%" == "wasm-rt" (
+    rem WASI_SDK_PATH must be enabled on this context
+    cmake -D CMAKE_TOOLCHAIN_FILE=%WASI_SDK_PREFIX%/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=%WASI_SDK_PREFIX%  -G Ninja -D CMAKE_BUILD_TYPE=%BUILD_TYPE% -D CMAKE_INSTALL_PREFIX=%INSTALL_PREFIX% -D UTILS_BUILD_TYPE=static -S . -B built/%UTILS_BUILD_TYPE%/%BUILD_TYPE%  
+) else if "%UTILS_BUILD_TYPE%" == "wasm-em" (
     rem emcmake must be enabled on this context
     call emcmake cmake -G Ninja -D CMAKE_BUILD_TYPE=%BUILD_TYPE% -D CMAKE_INSTALL_PREFIX=%INSTALL_PREFIX% -D UTILS_BUILD_TYPE=static -S . -B built/%UTILS_BUILD_TYPE%/%BUILD_TYPE%
 ) else (

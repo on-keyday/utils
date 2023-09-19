@@ -8,7 +8,8 @@
 #include <platform/windows/dllexport_source.h>
 #include <wrap/admin.h>
 #include <wrap/exepath.h>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <ShlObj.h>
 #else
@@ -19,7 +20,7 @@
 #endif
 
 namespace utils::wrap {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
     RunResult run_this_as_admin() {
         if (IsUserAnAdmin()) {
             return RunResult::already_admin;

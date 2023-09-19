@@ -10,9 +10,10 @@
 #include <fnet/dll/lazy/sockdll.h>
 #include <fnet/dll/allocator.h>
 #include <fnet/plthead.h>
+#include <platform/detect.h>
 
 namespace utils::fnet::event {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
     fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*, void*), void* rt) {
         if (!f) {
             return unexpect(error::Error("need non-null pointer handler", error::ErrorCategory::validationerr));
@@ -67,8 +68,8 @@ namespace utils::fnet::event {
         fnet_handle_completion(&ent, nullptr);
     }
 
-#else
-    fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*,void*), void* rt) {
+#elif UTILS_PLATFORM_LINUX
+    fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*, void*), void* rt) {
         if (!f) {
             return unexpect(error::Error("need non-null pointer handler", error::ErrorCategory::validationerr));
         }

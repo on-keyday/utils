@@ -8,7 +8,8 @@
 #include <fnet/dll/dllcpp.h>
 #include <fnet/heap.h>
 #include <fnet/dll/glheap.h>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #else
 #include <cstdlib>
@@ -16,7 +17,7 @@
 
 namespace utils {
     namespace fnet {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         void* simple_heap_alloc(void*, size_t size, size_t, DebugInfo*) {
             return HeapAlloc(GetProcessHeap(), 0, size);
         }

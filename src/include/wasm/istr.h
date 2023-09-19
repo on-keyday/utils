@@ -819,12 +819,16 @@ namespace utils::wasm::code {
 
     inline result<void> render_instr(const Op& op, binary::writer& w) {
         auto val = std::uint32_t(op.instr);
+        result<void> res;
         if (val > 0xff) {
-            return write_byte(w, byte(val >> 8)) &
-                   [&] { return render_uint(w, std::uint32_t(val & 0xff)); };
+            res = write_byte(w, byte(val >> 8)) &
+                  [&] { return render_uint(w, std::uint32_t(val & 0xff)); };
         }
         else {
-            return write_byte(w, byte(val));
+            res = write_byte(w, byte(val));
+        }
+        if (!res) {
+            return res;
         }
         switch (op.instr) {
             default:

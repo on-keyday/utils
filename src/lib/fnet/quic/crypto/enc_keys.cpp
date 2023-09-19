@@ -71,7 +71,7 @@ namespace utils {
                 });
                 lazy::crypto::ossl::sp::EVP_KDF_free_(kdf);
                 ssl_import::ls::open_ssl::crypto::OSSL_PARAM params[5];
-                static_assert(sizeof(params[0]) == 40);
+                static_assert(sizeof(params[0]) == sizeof(void*) * 5);
                 params[0] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_utf8_string_("mode", const_cast<char*>("EXPAND_ONLY"), 11);
                 params[1] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_octet_string_("key", const_cast<byte*>(secret.data()), secret.size());
                 params[2] = lazy::crypto::ossl::sp::OSSL_PARAM_construct_octet_string_("info", const_cast<byte*>(label.data()), label.size());

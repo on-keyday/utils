@@ -9,6 +9,9 @@
 #include <coro/coro_platform.h>
 #include <view/iovec.h>
 #include <unistd.h>
+#ifdef __wasi__
+#define _WASI_EMULATED_MMAN
+#endif
 #include <sys/mman.h>
 
 namespace utils {

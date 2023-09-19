@@ -10,6 +10,7 @@
 #include <fnet/plthead.h>
 #include <fnet/dll/lazy/sockdll.h>
 #include <fnet/sock_internal.h>
+#include <platform/detect.h>
 
 namespace utils {
     namespace fnet {
@@ -103,7 +104,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_exclusive_use(bool exclusive) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             int yes = exclusive ? 1 : 0;
             return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
 #else
@@ -114,7 +115,7 @@ namespace utils {
         expected<void> Socket::set_mtu_discover(MTUConfig conf) {
             int val = 0;
             if (conf == mtu_default) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                 val = IP_PMTUDISC_NOT_SET;
 #else
                 val = IP_PMTUDISC_WANT;
@@ -138,7 +139,7 @@ namespace utils {
         expected<void> Socket::set_mtu_discover_v6(MTUConfig conf) {
             int val = 0;
             if (conf == mtu_default) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                 val = IP_PMTUDISC_NOT_SET;
 #else
                 val = IP_PMTUDISC_WANT;
@@ -171,7 +172,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_dont_fragment_v4(bool df) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
 #else
             return unexpect(error::Error("IP_DONTFRAGMENT is not supported on linux", error::ErrorCategory::fneterr));
@@ -183,7 +184,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_connreset(bool enable) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<void> {
                 std::int32_t flag = enable ? 1 : 0;
                 DWORD ret = 0;
@@ -199,7 +200,7 @@ namespace utils {
         }
 
         expected<SockAttr> Socket::get_sockattr() {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             WSAPROTOCOL_INFOW info{};
             return get_option(SOL_SOCKET, SO_PROTOCOL_INFOW, info).transform([&] {
                 return SockAttr{
@@ -222,7 +223,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_DF(bool df) {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             auto errv4 = set_dont_fragment_v6(df);
             auto errv6 = set_dont_fragment_v4(df);
 #else

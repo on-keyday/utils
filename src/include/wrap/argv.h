@@ -13,6 +13,7 @@
 #include "../unicode/utf/convert.h"
 #include "light/string.h"
 #include "light/vector.h"
+#include <platform/detect.h>
 
 namespace utils {
     namespace wrap {
@@ -69,7 +70,7 @@ namespace utils {
         };
 
         struct utils_DLL_EXPORT U8Arg {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
            private:
             ArgvVector<> replaced;
             int* argcplace = nullptr;

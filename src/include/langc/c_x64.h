@@ -10,6 +10,7 @@
 #include "c_ast.h"
 #include <code/code_writer.h>
 #include <variant>
+#include <platform/detect.h>
 
 // see also https://www.sigbus.info/compilerbook
 namespace utils::langc::gen {
@@ -362,10 +363,12 @@ namespace utils::langc::gen {
             }
 
             Platform platform =
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
                 Platform::win_x64;
-#else
+#elif UTILS_PLATFORM_LINUX
                 Platform::linux_x64;
+#else
+                return Platfrom::linux_x64;
 #endif
             Context(Writer& w, Errors& e)
                 : w(w), errs(e) {}

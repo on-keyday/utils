@@ -13,27 +13,30 @@
 #include <fnet/dll/glheap.h>
 #include <helper/defer.h>
 #include <fnet/sock_internal.h>
-// #include <strutil/strutil.h>
 #include <bit>
 #include <cstring>
 #include <fnet/dll/errno.h>
 #include <fnet/util/ipaddr.h>
 #include <view/charvec.h>
-#ifndef _WIN32
+#include <platform/detect.h>
+#ifndef UTILS_PLATFORM_WINDOWS
+#ifdef UTILS_PLATFORM_WASI
+#define _WASI_EMULATED_SIGNAL
+#endif
 #include <signal.h>
 #include <thread>
 #endif
 
 namespace utils {
     namespace fnet {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         using raw_paddrinfo = PADDRINFOEXW;
         void free_addr(void* p) {
             lazy::FreeAddrInfoExW_(raw_paddrinfo(p));
         }
         using Host = number::Array<wchar_t, 255, true>;
         using Port = number::Array<wchar_t, 20, true>;
-        constexpr auto cancel_ok = 0;
+
 #else
         using raw_paddrinfo = addrinfo*;
         void free_addr(void* p) {
@@ -41,7 +44,7 @@ namespace utils {
         }
         using Host = number::Array<char, 255, true>;
         using Port = number::Array<char, 20, true>;
-        constexpr auto cancel_ok = EAI_CANCELED;
+
 #endif
 
         AddrInfo::~AddrInfo() {
@@ -71,7 +74,7 @@ namespace utils {
 
         struct WaitObject {
             raw_paddrinfo info;
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             OVERLAPPED ol;
             HANDLE cancel;
             bool done_immediate = false;
@@ -79,7 +82,7 @@ namespace utils {
                 lazy::GetAddrInfoExCancel_(&cancel);
             }
 
-#else
+#elif defined(FNET_HAS_ASYNC_GETADDRINFO)
             addrinfo hint;
             gaicb cb;
             Host host;
@@ -102,6 +105,8 @@ namespace utils {
                 }
             }
 
+#else  // use sync getaddrinfo
+            void plt_clean() {}
 #endif
             ~WaitObject() {
                 plt_clean();
@@ -111,7 +116,14 @@ namespace utils {
             }
         };
 
-#ifdef _WIN32
+        auto alloc_wait_object(WaitObject*& obj) {
+            obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+            return helper::defer([&] {
+                delete_glheap(obj);
+            });
+        }
+
+#ifdef UTILS_PLATFORM_WINDOWS
 
         static bool platform_cancel(WaitObject* obj, error::Error& err) {
             auto res = lazy::GetAddrInfoExCancel_(&obj->cancel);
@@ -141,7 +153,7 @@ namespace utils {
                 err = error::block;
                 return false;
             }
-            err = error::Error(get_error(), error::ErrorCategory::syserr);
+            err = error::Errno();
             return false;
         }
 
@@ -154,14 +166,12 @@ namespace utils {
             timeval timeout;
             timeout.tv_sec = 60;
             timeout.tv_usec = 0;
-            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+            WaitObject* obj = nullptr;
+            auto r = alloc_wait_object(obj);
             if (!obj) {
                 err = error::memory_exhausted;
                 return nullptr;
             }
-            auto r = helper::defer([&] {
-                delete_glheap(obj);
-            });
             auto event = CreateEventW(nullptr, true, false, nullptr);
             if (!event) {
                 err = error::Error("CreateEventW failed");
@@ -172,14 +182,14 @@ namespace utils {
             auto port_str = port ? port->c_str() : nullptr;
             auto res = lazy::GetAddrInfoExW_(host_str, port_str, 0, nullptr, &hint, &obj->info, &timeout, &obj->ol, nullptr, &obj->cancel);
             if (res != 0 && res != WSA_IO_PENDING) {
-                err = error::Error(get_error(), error::ErrorCategory::syserr);
+                err = error::Errno();
                 return nullptr;
             }
             obj->done_immediate = res == 0;
             r.cancel();
             return obj;
         }
-#else
+#elif defined(FNET_HAS_ASYNC_GETADDRINFO)
         void map_error(int res, error::Error& err) {
             auto str = lazy::gai_strerror_(res);
             if (str) {
@@ -222,14 +232,12 @@ namespace utils {
         }
 
         static WaitObject* platform_resolve_address(const SockAttr& addr, error::Error& err, Host* host, Port* port) {
-            auto obj = new_from_global_heap<WaitObject>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(WaitObject), alignof(WaitObject)));
+            WaitObject* obj = nullptr;
+            auto r = alloc_wait_object(obj);
             if (!obj) {
                 err = error::memory_exhausted;
                 return nullptr;
             }
-            auto r = helper::defer([&] {
-                delete_glheap(obj);
-            });
             obj->hint.ai_family = addr.address_family;
             obj->hint.ai_socktype = addr.socket_type;
             obj->hint.ai_protocol = addr.protocol;
@@ -255,6 +263,36 @@ namespace utils {
             auto res = lazy::getaddrinfo_a_(GAI_NOWAIT, list, 1, &obj->sig);
             if (res != 0) {
                 map_error(res, err);
+                return nullptr;
+            }
+            r.cancel();
+            return obj;
+        }
+#else  // use sync getaddrinfo instead
+        static bool platform_cancel(WaitObject* obj, error::Error& err) {
+            return true;
+        }
+        static bool platform_wait(WaitObject* obj, error::Error& err, std::uint32_t mili) {
+            return true;
+        }
+
+        static WaitObject* platform_resolve_address(const SockAttr& addr, error::Error& err, Host* host, Port* port) {
+            WaitObject* obj = nullptr;
+            auto r = alloc_wait_object(obj);
+            if (!obj) {
+                err = error::memory_exhausted;
+                return nullptr;
+            }
+            addrinfo hint{};
+            hint.ai_family = addr.address_family;
+            hint.ai_socktype = addr.socket_type;
+            hint.ai_protocol = addr.protocol;
+            hint.ai_flags = addr.flag;
+            auto host_str = host ? host->c_str() : nullptr;
+            auto port_str = port ? port->c_str() : nullptr;
+            auto res = lazy::getaddrinfo_(host_str, port_str, &hint, &obj->info);
+            if (res != 0) {
+                err = error::Errno();
                 return nullptr;
             }
             r.cancel();
@@ -301,7 +339,7 @@ namespace utils {
             Host host{};
             Port port_{};
             if (!hostname.null()) {
-                utf::convert(view::rvec(hostname), host);
+                utf::convert(hostname, host);
             }
             if (!port.null()) {
                 utf::convert(port, port_);

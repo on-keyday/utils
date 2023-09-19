@@ -7,30 +7,27 @@
 
 // plthead - platform depended headers
 #pragma once
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <WinSock2.h>
 #include <MSWSock.h>
 #include <WS2tcpip.h>
-
 #include <afunix.h>
-#else
+#elif defined(UTILS_PLATFORM_WASI)
+#include <stub/network.h>
+#elif defined(UTILS_PLATFORM_UNIX)
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
-#include <sys/epoll.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <sys/un.h>
+#ifdef UTILS_PLATFORM_LINUX
+#include <sys/epoll.h>
 #endif
-
-namespace utils {
-    namespace fnet {
-#ifdef _WIN32
-        using raw_addrinfo = ADDRINFOEXW;
-#else
-        using raw_addrinfo = addrinfo;
+#ifdef GAI_WAIT  // XXX(on-keyday): hack for getaddrinfo_a
+#define FNET_HAS_ASYNC_GETADDRINFO
 #endif
-    }  // namespace fnet
-}  // namespace utils
+#endif

@@ -8,8 +8,8 @@
 
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/file/file_view.h"
-
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #define _fseek(file, pos, origin) ::_fseeki64(file, static_cast<long long>(pos), origin)
 #else
 #define _fseek(file, pos, origin) ::fseek(file, pos, origin)

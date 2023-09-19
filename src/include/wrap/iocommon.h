@@ -12,9 +12,9 @@
 
 namespace utils {
     namespace wrap {
-        utils_DLL_EXPORT extern int stdinmode;
-        utils_DLL_EXPORT extern int stdoutmode;
-        utils_DLL_EXPORT extern int stderrmode;
+        utils_DLL_EXPORT extern int stdin_mode;
+        utils_DLL_EXPORT extern int stdout_mode;
+        utils_DLL_EXPORT extern int stderr_mode;
         utils_DLL_EXPORT extern bool sync_stdio;
         utils_DLL_EXPORT extern bool no_change_mode;
         utils_DLL_EXPORT extern bool out_virtual_terminal;

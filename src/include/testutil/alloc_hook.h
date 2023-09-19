@@ -10,6 +10,7 @@
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include <cstddef>
+#include <platform/detect.h>
 
 namespace utils {
     namespace test {
@@ -26,7 +27,7 @@ namespace utils {
             HookType type;
         };
 
-#if defined(_DEBUG) && defined(_WIN32)
+#if defined(_DEBUG) && defined(UTILS_PLATFORM_WINDOWS)
 
         using Hooker = void (*)(HookInfo info);
         utils_DLL_EXPORT extern Hooker log_hooker;

@@ -15,6 +15,7 @@
 #include "address.h"
 #include "socket.h"
 #include "event/io.h"
+#include <platform/detect.h>
 
 namespace utils::fnet {
     struct SockTable;
@@ -108,7 +109,7 @@ namespace utils::fnet {
         }
     };
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 
     struct WinSockTable;
 
@@ -141,7 +142,7 @@ namespace utils::fnet {
         WinSockWriteTable w;
         bool skip_notif = false;
     };
-#else
+#elif defined(UTILS_PLATFORM_LINUX)
     struct EpollTable;
     struct EpollIOTableHeader {
         NotifyCallback cb;

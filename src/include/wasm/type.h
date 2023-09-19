@@ -104,39 +104,28 @@ namespace utils::wasm::type {
     using ResultType = view::rspan<Type>;
 
     constexpr result<ResultType> parse_result_type(binary::reader& r) {
-        auto n = parse_uint<std::uint32_t>(r);
-        if (!n) {
-            return n.transform(empty_value<ResultType>());
-        }
-        auto [data, ok] = r.read(*n);
-        if (!ok) {
-            return unexpect(Error::short_input);
-        }
-        for (auto c : data) {
-            if (!is_valtype(Type(c))) {
-                return unexpect(Error::unexpected_type);
-            }
-        }
-        return ResultType(std::bit_cast<const Type*>(data.data()), data.size());
+        view::rvec data;
+        return parse_byte_vec(r, data)
+            .and_then([&]() -> result<ResultType> {
+                for (auto i : data) {
+                    if (!is_valtype(Type(i))) {
+                        return unexpect(Error::unexpected_type);
+                    }
+                }
+                return ResultType(std::bit_cast<const Type*>(data.data()), data.size());
+            });
     }
 
     constexpr result<void> render_result_type(binary::writer& w, ResultType typ) {
         if (typ.size() > 0xffffffff) {
             return unexpect(Error::large_input);
         }
-        auto res = render_uint(w, typ.size());
-        if (!res) {
-            return res;
-        }
         for (auto c : typ) {
             if (!is_valtype(Type(c))) {
                 return unexpect(Error::unexpected_type);
             }
-            if (!w.write(byte(c), 1)) {
-                return unexpect(Error::short_buffer);
-            }
         }
-        return {};
+        return render_byte_vec(w, view::rvec(std::bit_cast<const byte*>(typ.data()), typ.size()));
     }
 
     struct FunctionType {
@@ -170,17 +159,27 @@ namespace utils::wasm::type {
     }
 
     struct Limits {
-        std::uint32_t minimum = 0;
-        std::uint32_t maximum = 0xffffffff;
-        bool omit_max = false;
+        std::uint64_t minimum = 0;
+        std::uint64_t maximum = 0xffffffffffffffff;
+        byte flags = 0;
+
+        enum : byte {
+            limits_exist_max = 1,
+            shared_memory = 2,
+            memory_64 = 4,
+        };
 
         constexpr result<void> render(binary::writer& w) const {
-            return render_uint(w, minimum).and_then([&]() -> result<void> {
-                if (omit_max) {
-                    return {};
-                }
-                return render_uint(w, maximum);
-            });
+            return write_byte(w, flags)
+                .and_then([&] {
+                    return render_uint(w, minimum);
+                })
+                .and_then([&]() -> result<void> {
+                    if (!(flags & limits_exist_max)) {
+                        return {};
+                    }
+                    return render_uint(w, maximum);
+                });
         }
     };
 
@@ -188,22 +187,29 @@ namespace utils::wasm::type {
         if (r.empty()) {
             return unexpect(Error::short_input);
         }
-        auto lim = r.top();
-        if (lim != 0 && lim != 1) {
-            return unexpect(Error::unexpected_type);
-        }
-        r.offset(1);
         Limits l;
-        parse_uint(r, l.minimum)
+        l.flags = r.top();
+        r.offset(1);
+        if (l.flags & Limits::memory_64) {
+            return parse_uint(r, l.minimum)
+                .and_then([&]() -> result<void> {
+                    if (!(l.flags & Limits::limits_exist_max)) {
+                        return {};
+                    }
+                    return parse_uint(r, l.maximum);
+                })
+                .transform([&] { return l; });
+        }
+        std::uint32_t mi, mx;
+        return parse_uint(r, mi)
             .and_then([&]() -> result<void> {
-                if (lim == 0) {
-                    l.omit_max = true;
+                l.minimum = mi;
+                if (!(l.flags & Limits::limits_exist_max)) {
                     return {};
                 }
-                return parse_uint(r, l.maximum);
+                return parse_uint(r, mx);
             })
-            .transform([&] { return l; });
-        return l;
+            .transform([&] { l.maximum=mx; return l; });
     }
 
     using MemoryType = Limits;

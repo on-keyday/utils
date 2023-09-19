@@ -14,10 +14,13 @@
 #include <fnet/dll/glheap.h>
 #include <helper/pushbacker.h>
 #include <strutil/append.h>
+#include <platform/detect.h>
 
-#ifndef _WIN32
+#ifndef UTILS_PLATFORM_WINDOWS
+#if __has_include(<dlfcn.h>)
 #include <dlfcn.h>
-#include <sys/stat.h>
+#define FNET_HAS_DLOPEN
+#endif
 #endif
 
 namespace utils {
@@ -89,12 +92,12 @@ namespace utils {
             char buf[120]{};
             helper::CharVecPushbacker<char> pb{buf, 119};
             strutil::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
             OutputDebugStringA(buf);
 #endif
         }
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         bool DLL::load_platform() {
             if (sys) {
                 target = LoadLibraryExW(path, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -198,7 +201,7 @@ namespace utils {
         DLL kernel32{L"kernel32.dll", true, nullptr, kernel32_lookup};
         DLL libssl{L"libssl.dll", false};
         DLL libcrypto{L"libcrypto.dll", false, libcrypto_init};
-#else
+#elif defined(FNET_HAS_DLOPEN)
         DLL libanl{"libanl.so", false};
         DLL libssl{"libssl.so", false};
         DLL libcrypto{"libcrypto.so", false, libcrypto_init};
@@ -219,6 +222,17 @@ namespace utils {
 
         func_t DLL::lookup_platform(const char* func) {
             return func_t(dlsym(target, func));
+        }
+#else  // no dynamic loading
+        bool DLL::load_platform() {
+            return false;
+        }
+
+        void DLL::unload_platform() {
+        }
+
+        func_t DLL::lookup_platform(const char* func) {
+            return nullptr;
         }
 #endif
 

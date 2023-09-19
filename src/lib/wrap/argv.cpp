@@ -5,15 +5,16 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#include "../../include/platform/windows/dllexport_source.h"
-#include "../../include/wrap/argv.h"
-#ifdef _WIN32
+#include <platform/windows/dllexport_source.h>
+#include <wrap/argv.h>
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #endif
 
 namespace utils {
     namespace wrap {
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
 
         static bool get_warg(int* wargc, wchar_t*** wargv) {
             return static_cast<bool>((*wargv = ::CommandLineToArgvW(::GetCommandLineW(), wargc)));

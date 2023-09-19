@@ -10,7 +10,8 @@
 #include <env/env.h>
 #include <helper/defer.h>
 #include <binary/term.h>
-#ifdef _WIN32
+#include <platform/detect.h>
+#ifdef UTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #else
 extern char** environ;
@@ -60,7 +61,7 @@ namespace utils {
             return visit(cb);
         }
 
-#ifdef _WIN32
+#ifdef UTILS_PLATFORM_WINDOWS
         struct WinEnv {
             bool get_environ(EnvSetter s) {
                 auto f = GetEnvironmentStringsW();
