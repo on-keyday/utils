@@ -40,15 +40,10 @@ namespace utils {
         };
 
         template <class T>
-        concept has_get2 = requires(T t) {
-            { get<2>(t.begin()) };
-        };
-
-        template <class T>
         concept is_object_like = std::ranges::range<T> && requires(T t) {
-            { get<0>(t.begin()) } -> std::convertible_to<std::string_view>;
-            { get<1>(t.begin()) };
-        } && !has_get2<T>;
+            { get<0>(*t.begin()) } -> std::convertible_to<std::string_view>;
+            { get<1>(*t.begin()) };
+        };
 
         constexpr auto json_int_min = -9007199254740991;
         constexpr auto json_int_max = 9007199254740991;
