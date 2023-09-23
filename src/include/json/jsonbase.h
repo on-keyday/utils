@@ -25,7 +25,9 @@ namespace utils {
         namespace internal {
             template <class S, class Str, template <class...> class V, template <class...> class O>
             JSONErr to_string_detail(S& out, const JSONBase<Str, V, O>& json, FmtFlag flag);
-        }
+            template <class T, class Str, template <class...> class V, template <class...> class O>
+            JSONErr parse_impl(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
+        }  // namespace internal
 
         enum class IntTraits : byte;
 
@@ -42,7 +44,7 @@ namespace utils {
 
            private:
             template <class T, class Str, template <class...> class V, template <class...> class O>
-            friend JSONErr parse(Sequencer<T>& seq, JSONBase<Str, V, O>& json, bool eof);
+            friend JSONErr internal::parse_impl(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
             template <class S, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr internal::to_string_detail(S& out, const JSONBase<Str, V, O>& json, FmtFlag flag, IntTraits traits);
 
