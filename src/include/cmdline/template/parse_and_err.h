@@ -34,7 +34,12 @@ namespace utils {
                     err = option::parse_required(argc, argv, ctx, helper::nop, option::ParseFlag::assignable_mode);
                 }
                 if (perfect_parsed(err) && opt.help) {
-                    show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0]), false);
+                    if constexpr (has_args<decltype(opt)>) {
+                        show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0], "[option] args..."), false);
+                    }
+                    else {
+                        show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0]), false);
+                    }
                     return 1;
                 }
                 if (auto msg = error_msg(err)) {
