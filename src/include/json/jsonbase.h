@@ -89,7 +89,7 @@ namespace utils {
                     obj = nullptr;
                     return;
                 }
-                obj = p;
+                obj = String(p);
             }
             JSONBase(const object_t& o)
                 : obj(o) {}

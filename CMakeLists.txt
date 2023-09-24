@@ -401,4 +401,5 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION "." OPTIONAL)
 install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION "." OPTIONAL)
 install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION "." OPTIONAL)
 install(TARGETS utils coro fnet fnetserv DESTINATION "lib" OPTIONAL)
-
+install(TARGETS utils coro fnet fnetserv DESTINATION "test" OPTIONAL)
+install(TARGETS utils coro fnet fnetserv DESTINATION "tool" OPTIONAL)

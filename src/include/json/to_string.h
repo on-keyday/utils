@@ -13,7 +13,6 @@
 #include "../number/to_string.h"
 #include <strutil/append.h>
 #include "../escape/escape.h"
-#include "../code/code_writer.h"
 #include "stringer.h"
 
 namespace utils {
@@ -91,142 +90,6 @@ namespace utils {
                 return f(f, holder);
             }
 
-            /*
-            template <class Out, class String, template <class...> class Vec, template <class...> class Object>
-            JSONErr to_string_detail(const JSONBase<String, Vec, Object>& json, code::IndentWriter<Out, const char*>& out, FmtFlag flag) {
-                const internal::JSONHolder<String, Vec, Object>& holder = json.get_holder();
-                auto numtostr = [&](auto& j) -> JSONErr {
-                    auto e = number::to_string(out.t, j);
-                    if (!e) {
-                        return JSONError::invalid_number;
-                    }
-                    return true;
-                };
-                auto escflag = any(flag & FmtFlag::escape) ? escape::EscapeFlag::utf16 : escape::EscapeFlag::none;
-                auto line = !any(flag & FmtFlag::no_line);
-                auto write_comma = [&](bool& first) {
-                    if (first) {
-                        if (line) {
-                            out.write_ln();
-                            out.indent(1);
-                        }
-                        first = false;
-                    }
-                    else {
-                        out.write_raw(",");
-                        if (line) {
-                            out.write_ln();
-                            out.indent(1);
-                        }
-                    }
-                    if (line) {
-                        out.write_indent();
-                    }
-                };
-                auto write_tail = [&](bool& first) {
-                    if (!first) {
-                        if (line) {
-                            out.write_ln();
-                        }
-                    }
-                };
-                auto escape = [&](auto& str) {
-                    if (any(flag & FmtFlag::html)) {
-                        return escape::escape_str(str, out.t, escflag, escape::json_set(), escape::html_range());
-                    }
-                    else {
-                        if (any(flag & FmtFlag::unescape_slash)) {
-                            return escape::escape_str(str, out.t, escflag, escape::json_set_no_html());
-                        }
-                        else {
-                            return escape::escape_str(str, out.t, escflag, escape::json_set());
-                        }
-                    }
-                };
-                if (holder.is_undef()) {
-                    if (any(flag & FmtFlag::undef_as_null)) {
-                        strutil::append(out.t, "null");
-                        return true;
-                    }
-                    return JSONError::invalid_value;
-                }
-                else if (holder.is_null()) {
-                    strutil::append(out.t, "null");
-                    return true;
-                }
-                else if (auto b = holder.as_bool()) {
-                    strutil::append(out.t, *b ? "true" : "false");
-                    return true;
-                }
-                else if (auto i = holder.as_numi()) {
-                    return numtostr(*i);
-                }
-                else if (auto u = holder.as_numu()) {
-                    return numtostr(*u);
-                }
-                else if (auto f = holder.as_numf()) {
-                    return numtostr(*f);
-                }
-                else if (auto s = holder.as_str()) {
-                    out.t.push_back('\"');
-                    auto e = escape(*s);
-                    if (!e) {
-                        return JSONError::invalid_escape;
-                    }
-                    out.t.push_back('\"');
-                    return true;
-                }
-                else if (auto o = holder.as_obj()) {
-                    out.write_raw("{");
-                    bool first = true;
-                    for (auto& kv : *o) {
-                        write_comma(first);
-                        out.write_raw("\"");
-                        auto e1 = escape(get<0>(kv));
-                        if (!e1) {
-                            return JSONError::invalid_escape;
-                        }
-                        out.write_raw("\":");
-                        if (!any(flag & FmtFlag::no_space_key_value)) {
-                            out.t.push_back(' ');
-                        }
-                        auto e2 = to_string_detail(get<1>(kv), out, flag);
-                        if (!e2) {
-                            return e2;
-                        }
-                        if (line) {
-                            out.indent(-1);
-                        }
-                    }
-                    write_tail(first);
-                    if (!first && line) {
-                        out.write_indent();
-                    }
-                    out.write_raw("}");
-                    return true;
-                }
-                else if (auto a = holder.as_arr()) {
-                    out.write_raw("[");
-                    bool first = true;
-                    for (auto& v : *a) {
-                        write_comma(first);
-                        auto e2 = to_string_detail(v, out, flag);
-                        if (!e2) {
-                            return e2;
-                        }
-                        if (line) {
-                            out.indent(-1);
-                        }
-                    }
-                    write_tail(first);
-                    if (!first && line) {
-                        out.write_indent();
-                    }
-                    out.write_raw("]");
-                    return true;
-                }
-                return JSONError::not_json;
-            }*/
         }  // namespace internal
 
         template <class S, class String, template <class...> class Vec, template <class...> class Object>
@@ -242,7 +105,6 @@ namespace utils {
         template <class Out, class String, template <class...> class Vec, template <class...> class Object, class Indent = const char*>
             requires(!helper::is_template_instance_of<Out, Stringer>)
         JSONErr to_string(const JSONBase<String, Vec, Object>& json, Out& out, FmtFlag flag = FmtFlag::none, Indent indent = "    ", IntTraits traits = IntTraits::int_as_int) {
-            auto w = code::make_indent_writer(out, indent);
             Stringer<decltype(out), std::string_view, std::decay_t<Indent>> s{out};
             s.set_indent(indent);
             return to_string(json, s, flag, traits);

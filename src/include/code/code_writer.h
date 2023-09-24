@@ -6,7 +6,7 @@
 */
 
 
-// indent - indent utility
+// code_writer - a simple code writer
 #pragma once
 #include "../strutil/append.h"
 #include "../helper/defer.h"
