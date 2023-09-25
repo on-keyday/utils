@@ -18,8 +18,8 @@ namespace utils {
         template <class T, class Indent = const char*>
         struct IndentWriter {
             T t;
-            Indent indent_str;
             size_t ind = 0;
+            Indent indent_str;
 
             template <class V, class C>
             constexpr IndentWriter(V&& v, C&& c)
@@ -60,11 +60,6 @@ namespace utils {
                 ind += i;
             }
         };
-
-        template <class T, class Indent = const char*>
-        constexpr auto make_indent_writer(T&& t, Indent&& i = "  ") {
-            return IndentWriter<std::decay_t<T>&, std::decay_t<Indent>>{t, i};
-        }
 
         namespace internal {
             template <class T>
