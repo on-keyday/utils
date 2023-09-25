@@ -14,7 +14,7 @@
 
 // see also https://www.sigbus.info/compilerbook
 namespace utils::langc::gen {
-    using Writer = code::CodeWriter<std::string, std::string_view>;
+    using Writer = code::CodeWriter<std::string>;
     namespace x64 {
 
         enum class OptIstr {

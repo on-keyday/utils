@@ -77,7 +77,7 @@ namespace oslbgen {
     namespace node = utils::comb2::tree::node;
     constexpr auto npos = utils::comb2::npos;
     Pos node_root(DataSet& db, std::shared_ptr<node::Node> tok);
-    using Out = utils::code::CodeWriter<std::string, std::string_view>;
+    using Out = utils::code::CodeWriter<std::string>;
 
     Pos write_code(Out& out, DataSet& db);
 }  // namespace oslbgen

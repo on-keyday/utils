@@ -11,6 +11,7 @@
 #include "../strutil/append.h"
 #include "../helper/defer.h"
 #include <memory>
+#include <string_view>
 
 namespace utils {
     namespace code {
@@ -30,7 +31,14 @@ namespace utils {
 
             constexpr void write_indent() {
                 for (size_t i = 0; i < ind; i++) {
-                    strutil::append(t, indent_str);
+                    if constexpr (std::is_integral_v<Indent>) {
+                        for (size_t i = 0; i < indent_str; i++) {
+                            t.push_back(' ');
+                        }
+                    }
+                    else {
+                        strutil::append(t, indent_str);
+                    }
                 }
             }
 
@@ -58,18 +66,35 @@ namespace utils {
             return IndentWriter<std::decay_t<T>&, std::decay_t<Indent>>{t, i};
         }
 
-        template <class String, class View>
+        namespace internal {
+            template <class T>
+            struct DefaultIndent;
+            template <class T>
+                requires std::convertible_to<const char*, T>
+            struct DefaultIndent<T> {
+                static constexpr auto indent = "    ";
+            };
+
+            template <class T>
+                requires std::is_integral_v<T>
+            struct DefaultIndent<T> {
+                static constexpr auto indent = 4;
+            };
+
+        }  // namespace internal
+
+        template <class String, class Indent = const char*>
         struct CodeWriter {
            private:
             IndentWriter<String> w;
             bool should_indent = false;
 
            public:
-            constexpr CodeWriter(const char* indent = "    ")
+            constexpr CodeWriter(Indent indent = internal::DefaultIndent<Indent>::indent)
                 : w(String{}, indent) {}
 
             template <class V>
-            constexpr CodeWriter(V&& s, const char* indent = "    ")
+            constexpr CodeWriter(V&& s, Indent indent = internal::DefaultIndent<Indent>::indent)
                 : w(std::forward<V>(s), indent) {}
 
             constexpr const String& out() const {
@@ -77,6 +102,7 @@ namespace utils {
             }
 
            private:
+            template <class View>
             constexpr static int count_indent(View view) {
                 int count = 0;
                 for (auto c : view) {
@@ -89,6 +115,7 @@ namespace utils {
             }
 
            public:
+            template <class View = std::string_view>
             constexpr void write_unformatted(auto&& v) {
                 auto cur = View(v);
                 auto iter = [&](View cur, auto&& apply, auto&& add_line) {
@@ -183,7 +210,7 @@ namespace utils {
                 return std::unique_ptr<D, del>{ptr};
             }
 
-            void indent_writeln(auto&& a, auto&&... s) {
+            constexpr void indent_writeln(auto&& a, auto&&... s) {
                 if constexpr (std::is_integral_v<std::decay_t<decltype(a)>>) {
                     auto ind = indent_scope(a);
                     writeln(s...);
