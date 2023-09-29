@@ -15,6 +15,7 @@ namespace utils {
             enum Version : std::uint32_t {
                 version_negotiation = 0x00000000,
                 version_1 = 0x00000001,
+                version_2 = 0x6b3343cf,
             };
         }
     }  // namespace fnet

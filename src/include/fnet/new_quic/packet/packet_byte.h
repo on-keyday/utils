@@ -10,10 +10,10 @@
 #include <binary/flags.h>
 #include "version.h"
 #include "packet_type.h"
+#include <binary/reader.h>
+#include <binary/writer.h>
 
 namespace utils::fnet::quic::packet {
-
-    struct PacketByte;
 
     struct ShortPacketByte {
        private:
@@ -76,11 +76,18 @@ namespace utils::fnet::quic::packet {
         bits_flag_alias_method(long_hdr, 4, packet_number_length_raw);
 
        public:
-        constexpr auto packet_number_length() const noexcept {
+        // returns 0 if invalid
+        constexpr byte packet_number_length(Version v) const noexcept {
+            if (type(v) == packet::Type::Retry) {
+                return 0;
+            }
             return packet_number_length_raw() + 1;
         }
 
-        constexpr bool set_packet_number_length(byte len) noexcept {
+        constexpr bool set_packet_number_length(Version v, byte len) noexcept {
+            if (type(v) == packet::Type::Retry) {
+                return false;
+            }
             if (len < 1 || 4 < len) {
                 return false;
             }
@@ -88,10 +95,6 @@ namespace utils::fnet::quic::packet {
         }
 
         static constexpr byte protect_mask = LongBits::get_mask<3>() | LongBits::get_mask<4>();
-
-        constexpr Type type() const noexcept {
-            return Type(type_bits());
-        }
 
         constexpr bool valid() const {
             return long_hdr.get<0>();
@@ -131,6 +134,16 @@ namespace utils::fnet::quic::packet {
 
         constexpr byte protect_mask() const {
             return is_long() ? LongPacketByte::protect_mask : ShortPacketByte::protect_mask;
+        }
+
+        // returns 0 if invalid
+        constexpr byte packet_number_length(Version version) const noexcept {
+            if (is_long()) {
+                return LongPacketByte(data).packet_number_length(version);
+            }
+            else {
+                return ShortPacketByte(data).packet_number_length();
+            }
         }
     };
 }  // namespace utils::fnet::quic::packet

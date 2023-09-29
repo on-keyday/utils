@@ -7,7 +7,7 @@
 
 #pragma once
 #include <core/byte.h>
-#include "version.h"
+#include "../version.h"
 
 namespace utils::fnet::quic::packet {
 
