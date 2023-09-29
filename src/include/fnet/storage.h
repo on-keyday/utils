@@ -29,6 +29,8 @@ namespace utils {
 
         using storage = view::storage_vec<internal::Delete>;
 
+        constexpr auto sizeof_storage = sizeof(storage);
+
         inline storage make_storage(size_t size) {
             auto dst = (byte*)alloc_normal(size, alignof(byte), DNET_DEBUG_MEMORY_LOCINFO(true, size, alignof(byte)));
             if (!dst) {
@@ -36,7 +38,7 @@ namespace utils {
                 memory_exhausted_traits(DNET_DEBUG_MEMORY_LOCINFO(true, size, alignof(byte)));
                 return {};
             }
-            return storage(dst, size);
+            return storage(view::wvec(dst, size));
         }
 
         inline storage make_storage(view::rvec src) {
@@ -49,6 +51,8 @@ namespace utils {
         }
 
         using flex_storage = view::expand_storage_vec<glheap_allocator<byte>>;
+
+        constexpr auto sizeof_flex = sizeof(flex_storage);
 
     }  // namespace fnet
 }  // namespace utils

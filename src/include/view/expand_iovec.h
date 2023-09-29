@@ -8,14 +8,16 @@
 // expand_iovec - expanded io vector
 #pragma once
 #include "../core/byte.h"
+#include "../binary/flags.h"
 #include "iovec.h"
 #include <memory>
+#include <new>
 
 namespace utils {
     namespace view {
         namespace internal {
             enum class sso_state : byte {
-                sta,
+                sta = 0,
                 dyn,
             };
 
@@ -24,32 +26,85 @@ namespace utils {
                 C data[size_]{};
             };
 
-            template <class Alloc, class C, class U>
-            struct basic_sso_storage {
+            template <class A>
+            struct alloc_system {
+                A alloc_;
+
+                constexpr alloc_system() = default;
+
+                constexpr alloc_system(A&& a) noexcept
+                    : alloc_(std::move(a)) {}
+
+                constexpr alloc_system(const A& a)
+                    : alloc_(a) {}
+
+                constexpr A& alloc() noexcept {
+                    return alloc_;
+                }
+
+                constexpr const A& alloc() const noexcept {
+                    return alloc_;
+                }
+
+                constexpr void move_alloc(A&& a) noexcept {
+                    alloc_ = std::move(a);
+                }
+
+                constexpr void copy_alloc(const A& a) noexcept {
+                    alloc_ = a;
+                }
+            };
+
+            template <class A>
+                requires std::is_empty_v<A>
+            struct alloc_system<A> {
+                constexpr alloc_system() = default;
+
+                constexpr alloc_system(A&&) noexcept {}
+                constexpr alloc_system(const A&) noexcept {}
+
+                constexpr A alloc() const noexcept {
+                    return A{};
+                }
+
+                constexpr void move_alloc(A&&) noexcept {}
+                constexpr void copy_alloc(const A&) noexcept {}
+            };
+
+            template <class Alloc, class C>
+            struct basic_sso_storage : alloc_system<Alloc> {
                private:
                 union {
                     native_array<C, sizeof(basic_wvec<C>)> sta{};
                     basic_wvec<C> dyn;
                 };
-                sso_state state = sso_state::sta;
+                binary::flags_t<size_t, 1, sizeof(size_t) * bit_per_byte - 1> state_;
+
+                bits_flag_alias_method_with_enum(state_, 0, state, sso_state);
 
                 constexpr void move(basic_sso_storage& sso) noexcept {
-                    alloc = std::move(sso.alloc);
-                    if (sso.state == sso_state::dyn) {
+                    this->move_alloc(std::move(sso.alloc()));
+                    if (sso.state() == sso_state::dyn) {
                         dyn = sso.dyn;
                     }
                     else {
                         sta = sso.sta;
                     }
-                    state = sso.state;
+                    state_ = sso.state_;
                     sso.sta = {};
-                    sso.state = sso_state::sta;
+                    sso.state_ = 0;
                 }
 
                public:
-                Alloc alloc{};
+                constexpr basic_sso_storage(Alloc&& alloc) noexcept
+                    : alloc_system<Alloc>{std::move(alloc)} {}
+
+                constexpr basic_sso_storage(const Alloc& alloc)
+                    : alloc_system<Alloc>{alloc} {}
 
                 constexpr basic_sso_storage() {}
+
+                bits_flag_alias_method(state_, 1, size);
 
                 constexpr basic_sso_storage(basic_sso_storage&& sso) {
                     move(sso);
@@ -61,12 +116,12 @@ namespace utils {
                 }
 
                 constexpr bool is_dyn() const {
-                    return state == sso_state::dyn;
+                    return state() == sso_state::dyn;
                 }
 
                 constexpr void set_dyn(C* dat, size_t size) noexcept {
                     dyn = basic_wvec<C>{dat, size};
-                    state = sso_state::dyn;
+                    set_state(sso_state::dyn);
                 }
 
                 constexpr bool set_sta(const C* dat, size_t size) noexcept {
@@ -76,12 +131,12 @@ namespace utils {
                     for (auto i = 0; i < size; i++) {
                         sta.data[i] = dat[i];
                     }
-                    state = sso_state::sta;
+                    set_state(sso_state::sta);
                     return true;
                 }
 
                 constexpr basic_wvec<C> wbuf() noexcept {
-                    if (state == sso_state::dyn) {
+                    if (state() == sso_state::dyn) {
                         return dyn;
                     }
                     else {
@@ -90,7 +145,7 @@ namespace utils {
                 }
 
                 constexpr basic_rvec<C> rbuf() const noexcept {
-                    if (state == sso_state::dyn) {
+                    if (state() == sso_state::dyn) {
                         return dyn;
                     }
                     else {
@@ -101,29 +156,59 @@ namespace utils {
                 constexpr ~basic_sso_storage() {}
             };
 
+            template <class T>
+            concept has_too_large_error = requires(T t) {
+                t.too_large_error();
+            };
+
         }  // namespace internal
 
-        template <class Alloc, class C, class U>
+        template <class Alloc, class C>
         struct basic_expand_storage_vec {
            private:
-            internal::basic_sso_storage<Alloc, C, U> data_;
-            size_t size_ = 0;
+            using storage = internal::basic_sso_storage<Alloc, C>;
+            storage data_;
             using traits = std::allocator_traits<Alloc>;
 
-            constexpr void copy_from_rvec(basic_rvec<C> input, const Alloc& inalloc) {
-                size_ = input.size();
-                data_.alloc = inalloc;
-                if (data_.set_sta(input.data(), size_)) {
+            [[noreturn]] void handle_too_large() {
+                if constexpr (internal::has_too_large_error<Alloc>) {
+                    data_.alloc().too_large_error();
+                }
+                auto handler = std::get_new_handler();
+                if (!handler) {
+                    throw std::bad_alloc();
+                }
+                handler();
+                throw std::bad_alloc();
+                __builtin_unreachable();
+            }
+
+            C* alloc_(size_t size) {
+                decltype(data_.alloc()) alloc = data_.alloc();
+                // ptr must not be nullptr
+                return traits::allocate(alloc, size);
+            }
+
+            void dealloc_(C* c, size_t size) {
+                decltype(data_.alloc()) alloc = data_.alloc();
+                traits::deallocate(alloc, c, size);
+            }
+
+            constexpr void copy_from_rvec(basic_rvec<C> input) {
+                if (!data_.set_size(input.size())) {
+                    handle_too_large();
+                }
+                if (data_.set_sta(input.data(), input.size())) {
                     return;
                 }
                 // ptr must not be nullptr
-                C* ptr = traits::allocate(data_.alloc, size_);
+                C* ptr = alloc_(input.size());
                 auto p = ptr;
                 for (auto d : input) {
                     *p = d;
                     p++;
                 }
-                data_.set_dyn(ptr, size_);
+                data_.set_dyn(ptr, input.size());
             }
 
             constexpr void copy_in_place(basic_rvec<C> src) {
@@ -137,7 +222,7 @@ namespace utils {
             constexpr void free_dyn() {
                 if (data_.is_dyn()) {
                     auto wbuf = data_.wbuf();
-                    traits::deallocate(data_.alloc, wbuf.data(), wbuf.size());
+                    dealloc_(wbuf.data(), wbuf.size());
                 }
             }
 
@@ -148,29 +233,30 @@ namespace utils {
                 copy_in_place(r);
             }
 
-            constexpr basic_expand_storage_vec(Alloc&& al, basic_rvec<C> r) {
-                data_.alloc = std::move(al);
+            constexpr basic_expand_storage_vec(Alloc&& al, basic_rvec<C> r)
+                : data_(std::move(al)) {
                 copy_in_place(r);
             }
 
             constexpr basic_expand_storage_vec(basic_expand_storage_vec&& in)
-                : data_(std::exchange(in.data_, internal::basic_sso_storage<Alloc, C, U>{})),
-                  size_(std::exchange(in.size_, 0)) {}
+                : data_(std::exchange(in.data_, storage{})) {}
 
-            constexpr basic_expand_storage_vec(const basic_expand_storage_vec& in) {
-                copy_from_rvec(in.data_.rbuf().substr(0, in.size_), in.data_.alloc);
+            constexpr basic_expand_storage_vec(const basic_expand_storage_vec& in)
+                : data_(in.data_.alloc()) {
+                copy_from_rvec(in.rvec());
             }
 
             constexpr basic_expand_storage_vec& operator=(const basic_expand_storage_vec& in) {
                 if (this == &in) {
                     return *this;
                 }
-                if (data_.alloc != in.data_.alloc) {
+                if (data_.alloc() != in.data_.alloc()) {
                     free_dyn();
-                    copy_from_rvec(in.data_.rbuf().substr(0, in.size_), in.data_.alloc);
+                    data_.copy_alloc(in.data_.alloc());
+                    copy_from_rvec(in.rvec());
                     return *this;
                 }
-                copy_in_place(in.data_.rbuf().substr(0, in.size_));
+                copy_in_place(in.rvec());
                 return *this;
             }
 
@@ -178,8 +264,7 @@ namespace utils {
                 if (this == &in) {
                     return *this;
                 }
-                data_ = std::exchange(in.data_, internal::basic_sso_storage<Alloc, C, U>{});
-                size_ = std::exchange(in.size_, 0);
+                data_ = std::exchange(in.data_, storage{});
                 return *this;
             }
 
@@ -196,8 +281,8 @@ namespace utils {
                 if (new_cap <= buf.size()) {
                     return;  // already exists
                 }
-                C* new_ptr = traits::allocate(data_.alloc, new_cap);
-                for (size_t i = 0; i < size_; i++) {
+                C* new_ptr = alloc_(new_cap);
+                for (size_t i = 0; i < data_.size(); i++) {
                     new_ptr[i] = buf[i];
                 }
                 free_dyn();
@@ -209,30 +294,33 @@ namespace utils {
                     return;
                 }
                 auto buf = data_.wbuf();
-                if (buf.size() == size_) {
+                if (buf.size() == data_.size()) {
                     return;
                 }
-                if (!data_.set_sta(buf.data(), size_)) {
-                    C* new_ptr = traits::allocate(data_.alloc, size_);
-                    for (auto i = 0; i < size_; i++) {
+                if (!data_.set_sta(buf.data(), data_.size())) {
+                    C* new_ptr = alloc_(data_.size());
+                    for (auto i = 0; i < data_.size(); i++) {
                         new_ptr[i] = buf[i];
                     }
-                    data_.set_dyn(new_ptr, size_);
+                    data_.set_dyn(new_ptr, data_.size());
                 }
-                traits::deallocate(data_.alloc, buf.data(), buf.size());
+                dealloc_(buf.data(), buf.size());
             }
 
            private:
             constexpr size_t resize_nofill(size_t new_size) {
-                auto old_size = size_;
-                if (new_size <= size_) {
-                    size_ = new_size;
-                    return old_size;  // already exists
+                if (new_size > data_.size_max) {
+                    handle_too_large();
+                }
+                auto old_size = data_.size();
+                if (new_size <= old_size) {
+                    data_.set_size(new_size);  // must return true
+                    return old_size;           // already exists
                 }
                 if (capacity() < new_size) {
-                    reserve(size_ * 2 > new_size ? size_ * 2 : new_size);
+                    reserve(data_.size() * 2 > new_size ? data_.size() * 2 : new_size);
                 }
-                size_ = new_size;
+                data_.set_size(new_size);  // must return true
                 return old_size;
             }
 
@@ -246,7 +334,11 @@ namespace utils {
             }
 
             constexpr size_t size() const noexcept {
-                return size_;
+                return data_.size();
+            }
+
+            static constexpr size_t max_size() noexcept {
+                return storage::size_max;
             }
 
             constexpr const C* data() const noexcept {
@@ -261,10 +353,12 @@ namespace utils {
                 return data_.wbuf().data();
             }
 
+            template <class U = internal::default_as_char<C>>
             const U* as_char() const noexcept {
                 return data_.rbuf().as_char();
             }
 
+            template <class U = internal::default_as_char<C>>
             U* as_char() noexcept {
                 return data_.wbuf().as_char();
             }
@@ -274,7 +368,7 @@ namespace utils {
             }
 
             constexpr const C* end() const noexcept {
-                return begin() + size_;
+                return begin() + size();
             }
 
             constexpr const C* cbegin() const noexcept {
@@ -282,7 +376,7 @@ namespace utils {
             }
 
             constexpr const C* cend() const noexcept {
-                return cbegin() + size_;
+                return cbegin() + size();
             }
 
             constexpr C* begin() noexcept {
@@ -290,7 +384,7 @@ namespace utils {
             }
 
             constexpr C* end() noexcept {
-                return begin() + size_;
+                return begin() + size();
             }
 
             constexpr C& operator[](size_t i) {
@@ -302,27 +396,28 @@ namespace utils {
             }
 
             constexpr basic_wvec<C> wvec() {
-                return data_.wbuf().substr(0, size_);
+                return data_.wbuf().substr(0, size());
             }
 
             constexpr basic_rvec<C> rvec() const {
-                return data_.rbuf().substr(0, size_);
+                return data_.rbuf().substr(0, size());
             }
 
             constexpr void push_back(C c) {
-                resize_nofill(size_ + 1);
+                resize_nofill(size() + 1);
                 *(end() - 1) = c;
             }
 
             constexpr basic_expand_storage_vec& append(auto&& in) {
-                auto old_size = resize_nofill(size_ + std::size(in));
+                auto old_size = resize_nofill(size() + std::size(in));
                 auto wbuf = data_.wbuf();
-                for (size_t i = old_size; i < size_; i++) {
+                for (size_t i = old_size; i < size(); i++) {
                     wbuf[i] = in[i - old_size];
                 }
                 return *this;
             }
 
+            template <class U = internal::default_as_char<C>>
             constexpr basic_expand_storage_vec& append(const U* ptr) {
                 struct {
                     const U* p = nullptr;
@@ -366,7 +461,7 @@ namespace utils {
             }
 
             constexpr bool shift_front(size_t n) {
-                constexpr auto shift_fn = view::make_shift_fn<C, U>();
+                constexpr auto shift_fn = view::make_shift_fn<C>();
                 auto range = wvec();
                 if (!shift_fn(range, 0, n, range.size() - n)) {
                     return false;
@@ -377,8 +472,8 @@ namespace utils {
 
             // call resize(size()+add) then return old size()
             constexpr size_t expand(size_t add) {
-                const auto old = size_;
-                resize(size_ + add);
+                const auto old = size();
+                resize(size() + add);
                 return old;
             }
 
@@ -400,7 +495,7 @@ namespace utils {
         };
 
         template <class Alloc>
-        using expand_storage_vec = basic_expand_storage_vec<Alloc, byte, char>;
+        using expand_storage_vec = basic_expand_storage_vec<Alloc, byte>;
 
     }  // namespace view
 }  // namespace utils

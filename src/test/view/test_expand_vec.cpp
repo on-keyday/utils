@@ -26,4 +26,5 @@ int main() {
     auto move = std::move(data);
     copy.append(" world");
     move.shrink_to_fit();
+    copy.append("because of my own policy");
 }

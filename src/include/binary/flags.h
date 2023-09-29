@@ -89,6 +89,11 @@ namespace utils {
             }
 
            public:
+            constexpr Flags() = default;
+
+            constexpr Flags(U v)
+                : flags(v) {}
+
             template <byte i>
             static constexpr T get_mask() {
                 return mask_for_index<0, i, masks...>();

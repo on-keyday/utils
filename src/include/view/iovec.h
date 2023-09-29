@@ -287,29 +287,61 @@ namespace utils {
             }
         };
 
-        template <class D, class C, class U>
-        struct basic_storage_vec : public basic_wvec<C> {
-           private:
-            D del{};
+        namespace internal {
+            template <class D, class C>
+            struct deleter_storage : public basic_wvec<C> {
+                D del;
+                constexpr deleter_storage() = default;
 
+                constexpr deleter_storage(basic_wvec<C> c)
+                    : basic_wvec<C>(c) {}
+
+                constexpr deleter_storage(basic_wvec<C> c, D&& d)
+                    : del(std::move(d)), basic_wvec<C>(c) {}
+
+                constexpr void move_deleter(D&& d) {
+                    del = std::move(d);
+                }
+
+               protected:
+                constexpr D& deleter() noexcept {
+                    return del;
+                }
+            };
+
+            template <class D, class C>
+                requires std::is_empty_v<D>
+            struct deleter_storage<D, C> : public basic_wvec<C> {
+                constexpr deleter_storage() = default;
+
+                constexpr deleter_storage(basic_wvec<C> c)
+                    : basic_wvec<C>(c) {}
+
+                constexpr deleter_storage(basic_wvec<C> c, D&& d)
+                    : basic_wvec<C>(c) {}
+
+                constexpr void move_deleter(D&& d) {}
+
+               protected:
+                constexpr D deleter() noexcept {
+                    return D{};
+                }
+            };
+        }  // namespace internal
+
+        template <class D, class C>
+        struct basic_storage_vec : public internal::deleter_storage<D, C> {
            public:
             constexpr basic_storage_vec() noexcept(noexcept(D{})) = default;
 
-            constexpr basic_storage_vec(C* c, size_t s, D&& d) noexcept(noexcept(D{}))
-                : del(std::move(d)), basic_wvec<C>(c, s) {}
+            constexpr basic_storage_vec(basic_wvec<C> c, D&& d) noexcept(noexcept(D{}))
+                : internal::deleter_storage<D, C>(c, std::move(d)) {}
 
-            basic_storage_vec(U* c, size_t s, D&& d) noexcept(noexcept(D{}))
-                : del(std::move(d)), basic_wvec<C>(c, s) {}
-
-            constexpr basic_storage_vec(C* c, size_t s) noexcept(noexcept(D{}))
-                : basic_wvec<C>(c, s) {}
-
-            basic_storage_vec(U* c, size_t s) noexcept(noexcept(D{}))
-                : basic_wvec<C>(c, s) {}
+            constexpr explicit basic_storage_vec(basic_wvec<C> c) noexcept(noexcept(D{}))
+                : internal::deleter_storage<D, C>(c) {}
 
             constexpr basic_storage_vec(basic_storage_vec&& in)
-                : del(std::exchange(in.del, D{})),
-                  basic_wvec<C>(const_cast<byte*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)) {}
+                : internal::deleter_storage<D, C>(view::basic_wvec<C>(const_cast<C*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)), std::move(in.deleter())) {}
 
             constexpr basic_storage_vec& operator=(basic_storage_vec&& in) {
                 if (this == &in) {
@@ -318,13 +350,13 @@ namespace utils {
                 this->~basic_storage_vec();
                 this->data_ = std::exchange(in.data_, nullptr);
                 this->size_ = std::exchange(in.size_, 0);
-                this->del = std::exchange(in.del, {});
+                this->move_deleter(std::move(in.deleter()));
                 return *this;
             }
 
             constexpr void clear() {
                 if (!this->null()) {
-                    del(this->data(), this->size_);
+                    this->deleter()(this->data(), this->size_);
                     this->data_ = nullptr;
                     this->size_ = 0;
                 }
@@ -338,7 +370,7 @@ namespace utils {
         using rvec = basic_rvec<byte>;
         using wvec = basic_wvec<byte>;
         template <class D>
-        using storage_vec = basic_storage_vec<D, byte, char>;
+        using storage_vec = basic_storage_vec<D, byte>;
 
         template <class C>
         constexpr auto make_copy_fn() {
@@ -361,7 +393,7 @@ namespace utils {
         // -1 if dst.size() >  src.size()
         constexpr auto copy = make_copy_fn<byte>();
 
-        template <class C, class U>
+        template <class C>
         constexpr auto make_shift_fn() {
             return [](basic_wvec<C> range, size_t to, size_t from, size_t len) {
                 const auto size = range.size();
@@ -385,7 +417,7 @@ namespace utils {
             };
         }
 
-        constexpr auto shift = make_shift_fn<byte, char>();
+        constexpr auto shift = make_shift_fn<byte>();
 
         // for test
         template <class T, size_t len>

@@ -16,6 +16,9 @@
 #include <initializer_list>
 #include <exception>
 #include <functional>
+#ifdef _DEBUG
+#include <cassert>
+#endif
 
 namespace utils {
     namespace helper::either {
@@ -118,6 +121,12 @@ namespace utils {
             };
 
         }  // namespace internal
+
+#ifdef _DEBUG
+#define UTILS_EXPECTED_ASSERT(x) assert(x)
+#else
+#define UTILS_EXPECTED_ASSERT(x)
+#endif
 
         struct unexpect_t {
             explicit unexpect_t() = default;
@@ -412,7 +421,7 @@ namespace utils {
                 return *construct_T(std::forward<Args>(args)...);
             }
 
-            constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_swappable_v<T>&& std::is_nothrow_move_constructible_v<E>&& std::is_nothrow_swappable_v<E>)
+            constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_swappable_v<T> && std::is_nothrow_move_constructible_v<E> && std::is_nothrow_swappable_v<E>)
                 requires std::is_swappable_v<T> && std::is_swappable_v<E> &&
                          (std::is_move_constructible_v<T> &&
                           std::is_move_constructible_v<E>) &&
@@ -622,7 +631,7 @@ namespace utils {
             }
 
             constexpr expected& operator=(expected&& rhs) noexcept(
-                std::is_nothrow_move_assignable_v<T>&& std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_move_assignable_v<E>&& std::is_nothrow_move_constructible_v<E>)
+                std::is_nothrow_move_assignable_v<T> && std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<E> && std::is_nothrow_move_constructible_v<E>)
                 requires std::is_move_constructible_v<T> &&
                          std::is_move_assignable_v<T> &&
                          std::is_move_constructible_v<E> &&
@@ -709,17 +718,21 @@ namespace utils {
             }
 
             constexpr const E& error() const& noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
 
             constexpr E& error() & noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
             constexpr const E&& error() const&& noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
             constexpr E&& error() && noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
@@ -770,16 +783,20 @@ namespace utils {
             }
 
             constexpr const T& operator*() const& noexcept {
+                UTILS_EXPECTED_ASSERT(has_value());
                 return t_val;
             }
             constexpr T& operator*() & noexcept {
+                UTILS_EXPECTED_ASSERT(has_value());
                 return t_val;
             }
             constexpr T&& operator*() && noexcept {
+                UTILS_EXPECTED_ASSERT(has_value());
                 return std::move(t_val);
             }
 
             constexpr const T&& operator*() const&& noexcept {
+                UTILS_EXPECTED_ASSERT(has_value());
                 return std::move(t_val);
             }
 
@@ -854,8 +871,8 @@ namespace utils {
 #define do_nothing(x) x
 
             template <class F>
-                constexpr auto and_then(F&& f) &
-                    requires std::is_copy_constructible_v<E> && internal::is_and_then_monad<F, decltype(value()), E>
+            constexpr auto and_then(F&& f) &
+                requires std::is_copy_constructible_v<E> && internal::is_and_then_monad<F, decltype(value()), E>
             {
                 do_and_then(do_nothing);
             }
@@ -868,8 +885,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto and_then(F&& f) &&
-                    requires std::is_move_constructible_v<E> && internal::is_and_then_monad<F, decltype(std::move(value())), E>
+            constexpr auto and_then(F&& f) &&
+                requires std::is_move_constructible_v<E> && internal::is_and_then_monad<F, decltype(std::move(value())), E>
             {
                 do_and_then(std::move);
             }
@@ -882,8 +899,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto or_else(F&& f) &
-                    requires std::is_copy_constructible_v<T> && internal::is_or_else_monad<F, decltype(error()), T>
+            constexpr auto or_else(F&& f) &
+                requires std::is_copy_constructible_v<T> && internal::is_or_else_monad<F, decltype(error()), T>
             {
                 do_or_else(do_nothing);
             }
@@ -896,8 +913,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto or_else(F&& f) &&
-                    requires std::is_move_constructible_v<T> && internal::is_or_else_monad<F, decltype(std::move(error())), T>
+            constexpr auto or_else(F&& f) &&
+                requires std::is_move_constructible_v<T> && internal::is_or_else_monad<F, decltype(std::move(error())), T>
             {
                 do_or_else(std::move);
             }
@@ -925,8 +942,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto transform(F&& f) &&
-                    requires std::is_move_constructible_v<E> && internal::is_transform_monad<F, decltype(std::move(value())), E>
+            constexpr auto transform(F&& f) &&
+                requires std::is_move_constructible_v<E> && internal::is_transform_monad<F, decltype(std::move(value())), E>
             {
                 do_transform(std::move);
             }
@@ -940,8 +957,8 @@ namespace utils {
 
             template <class F>
 
-                constexpr auto transform_error(F&& f) &
-                    requires std::is_copy_constructible_v<T> && internal::is_transform_error_monad<F, decltype(error())>
+            constexpr auto transform_error(F&& f) &
+                requires std::is_copy_constructible_v<T> && internal::is_transform_error_monad<F, decltype(error())>
             {
                 do_transform_error(do_nothing);
             }
@@ -954,8 +971,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto transform_error(F&& f) &&
-                    requires std::is_move_constructible_v<T> && internal::is_transform_error_monad<F, decltype(std::move(error()))>
+            constexpr auto transform_error(F&& f) &&
+                requires std::is_move_constructible_v<T> && internal::is_transform_error_monad<F, decltype(std::move(error()))>
             {
                 do_transform_error(std::move);
             }
@@ -1072,7 +1089,7 @@ namespace utils {
                 construct_T();
             }
 
-            constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible_v<E>&& std::is_nothrow_swappable_v<E>)
+            constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible_v<E> && std::is_nothrow_swappable_v<E>)
                 requires std::is_swappable_v<E> && std::is_move_constructible_v<E>
             {
                 if (has_value() == rhs.has_value()) {
@@ -1189,7 +1206,7 @@ namespace utils {
             }
 
             constexpr expected& operator=(expected&& rhs) noexcept(
-                std::is_nothrow_move_assignable_v<E>&& std::is_nothrow_move_constructible_v<E>)
+                std::is_nothrow_move_assignable_v<E> && std::is_nothrow_move_constructible_v<E>)
                 requires std::is_move_constructible_v<E> &&
                          std::is_move_assignable_v<E>
             {
@@ -1229,17 +1246,22 @@ namespace utils {
             }
 
             constexpr const E& error() const& noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
 
             constexpr E& error() & noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
+
             constexpr const E&& error() const&& noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
             constexpr E&& error() && noexcept {
+                UTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
@@ -1260,7 +1282,7 @@ namespace utils {
             }
 
             constexpr void operator*() const noexcept {
-                /*nop*/
+                UTILS_EXPECTED_ASSERT(has_value());
             }
 
             constexpr explicit operator bool() const noexcept {
@@ -1320,8 +1342,8 @@ namespace utils {
     }
 
             template <class F>
-                constexpr auto and_then(F&& f) &
-                    requires std::is_copy_constructible_v<E> && internal::is_and_then_monad<F, decltype(value()), E>
+            constexpr auto and_then(F&& f) &
+                requires std::is_copy_constructible_v<E> && internal::is_and_then_monad<F, decltype(value()), E>
             {
                 do_and_then(do_nothing);
             }
@@ -1334,8 +1356,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto and_then(F&& f) &&
-                    requires std::is_move_constructible_v<E> && internal::is_and_then_monad<F, decltype(value()), E>
+            constexpr auto and_then(F&& f) &&
+                requires std::is_move_constructible_v<E> && internal::is_and_then_monad<F, decltype(value()), E>
             {
                 do_and_then(std::move);
             }
@@ -1348,8 +1370,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto or_else(F&& f) &
-                    requires internal::is_or_else_monad<F, decltype(error()), T>
+            constexpr auto or_else(F&& f) &
+                requires internal::is_or_else_monad<F, decltype(error()), T>
             {
                 do_or_else(do_nothing);
             }
@@ -1362,8 +1384,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto or_else(F&& f) &&
-                    requires internal::is_or_else_monad<F, decltype(std::move(error())), T>
+            constexpr auto or_else(F&& f) &&
+                requires internal::is_or_else_monad<F, decltype(std::move(error())), T>
             {
                 do_or_else(std::move);
             }
@@ -1391,8 +1413,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto transform(F&& f) &&
-                    requires std::is_move_constructible_v<E> && internal::is_transform_monad<F, decltype(value()), E>
+            constexpr auto transform(F&& f) &&
+                requires std::is_move_constructible_v<E> && internal::is_transform_monad<F, decltype(value()), E>
             {
                 do_transform(std::move);
             }
@@ -1406,8 +1428,8 @@ namespace utils {
 
             template <class F>
 
-                constexpr auto transform_error(F&& f) &
-                    requires internal::is_transform_error_monad<F, decltype(error())>
+            constexpr auto transform_error(F&& f) &
+                requires internal::is_transform_error_monad<F, decltype(error())>
             {
                 do_transform_error(do_nothing);
             }
@@ -1420,8 +1442,8 @@ namespace utils {
             }
 
             template <class F>
-                constexpr auto transform_error(F&& f) &&
-                    requires internal::is_transform_error_monad<F, decltype(std::move(error()))>
+            constexpr auto transform_error(F&& f) &&
+                requires internal::is_transform_error_monad<F, decltype(std::move(error()))>
             {
                 do_transform_error(std::move);
             }
@@ -1460,6 +1482,7 @@ namespace utils {
 #undef do_nothing
 #undef must_move
 #undef must_copy
+#undef UTILS_EXPECTED_ASSERT
 
     }  // namespace helper::either
 }  // namespace utils
