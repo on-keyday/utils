@@ -96,6 +96,10 @@ namespace utils {
                 return w.t;
             }
 
+            constexpr String& out() {
+                return w.t;
+            }
+
            private:
             template <class View>
             constexpr static int count_indent(View view) {

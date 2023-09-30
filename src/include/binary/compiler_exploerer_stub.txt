@@ -1,0 +1,9 @@
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/core/strlen.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/core/byte.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/view/iovec.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/binary/reader.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/binary/writer.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/binary/int128.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/binary/signint.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/binary/buf.h>
+#include<https://raw.githubusercontent.com/on-keyday/utils/main/src/include/binary/number.h>
