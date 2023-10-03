@@ -11,6 +11,7 @@
 #include "../core/byte.h"
 #include <bit>
 #include "signint.h"
+#include <cstddef>
 
 namespace utils {
     namespace binary {

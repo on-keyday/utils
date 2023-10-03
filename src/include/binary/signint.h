@@ -10,7 +10,6 @@
 #include <type_traits>
 #include "../core/byte.h"
 #include <cstdint>
-#include <cstddef>
 
 namespace utils::binary {
 
