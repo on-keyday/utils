@@ -10,6 +10,7 @@
 #include "../core/strlen.h"
 #include "../core/byte.h"
 #include <cstddef>
+#include <cstdint>
 #include <concepts>
 #include <iterator>
 #include <compare>
