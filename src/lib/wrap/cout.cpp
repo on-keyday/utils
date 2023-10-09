@@ -58,8 +58,7 @@ namespace utils {
 
         bool UtfOut::is_tty() const {
 #ifdef UTILS_PLATFORM_WINDOWS
-            auto no = ::_fileno(std_handle);
-            return ::_isatty(no);
+            return ::_isatty(::_fileno(std_handle));
 #else
             return isatty(fileno(std_handle));
 #endif

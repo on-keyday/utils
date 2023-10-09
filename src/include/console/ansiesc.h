@@ -252,5 +252,106 @@ namespace utils {
         template <byte code>
         constexpr auto letter_color_code = color_code(code, ColorTarget::letter);
 
+        constexpr auto bell = "\a";
+        constexpr auto back_space = "\b";
+        constexpr auto tab = "\t";
+        constexpr auto line_feed = "\n";
+        constexpr auto carriage_return = "\r";
+
+        constexpr auto save_cursor = "\e7";
+        constexpr auto restore_cursor = "\e8";
+
+        enum class TextModify : byte {
+            insert_char,
+            delete_char,
+            erase_char,
+            insert_line,
+            delete_line,
+        };
+
+        template <class Out>
+        constexpr void text_modify(Out&& buf, TextModify m, size_t n) {
+            if (int(m) > int(TextModify::delete_line)) {
+                return;
+            }
+            buf.push_back(escape_sequence_mark);
+            buf.push_back('[');
+            number::to_string(buf, n);
+            switch (m) {
+                case TextModify::insert_char:
+                    buf.push_back('@');
+                    break;
+                case TextModify::delete_char:
+                    buf.push_back('P');
+                    break;
+                case TextModify::erase_char:
+                    buf.push_back('X');
+                    break;
+                case TextModify::insert_line:
+                    buf.push_back('L');
+                    break;
+                case TextModify::delete_line:
+                    buf.push_back('M');
+                    break;
+            }
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out text_modify(TextModify m, size_t n) {
+            Out o;
+            text_modify(o, m, n);
+            return o;
+        }
+
+        enum class CursorVisibility : byte {
+            hide,
+            show,
+        };
+
+        template <class Out>
+        constexpr void cursor_visibility(Out&& buf, CursorVisibility v) {
+            if (int(v) > int(CursorVisibility::show)) {
+                return;
+            }
+            buf.push_back(escape_sequence_mark);
+            buf.push_back('[');
+            buf.push_back('?');
+            buf.push_back('2');
+            buf.push_back('5');
+            buf.push_back(v == CursorVisibility::hide ? 'l' : 'h');
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out cursor_visibility(CursorVisibility v) {
+            Out o;
+            cursor_visibility(o, v);
+            return o;
+        }
+
+        enum class CursorBlink : byte {
+            disable,
+            enable,
+        };
+
+        template <class Out>
+        constexpr void cursor_blink(Out&& buf, CursorBlink b) {
+            if (int(b) > int(CursorBlink::enable)) {
+                return;
+            }
+            buf.push_back(escape_sequence_mark);
+            buf.push_back('[');
+            buf.push_back('?');
+            buf.push_back('1');
+            buf.push_back('2');
+            buf.push_back(b == CursorBlink::disable ? 'l' : 'h');
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out cursor_blink(CursorBlink b) {
+            Out o;
+            cursor_blink(o, b);
+            return o;
+        }
+
     }  // namespace console::escape
 }  // namespace utils

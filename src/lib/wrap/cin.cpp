@@ -35,6 +35,12 @@ namespace utils {
         static path_string glbuf;
 
 #ifdef UTILS_PLATFORM_WINDOWS
+        void echo_back(auto&& buf) {
+            if (cout_wrap().is_tty()) {
+                cout_wrap() << buf;
+            }
+        }
+
         bool load_to_buf(path_string* prvbuf, thread::LiteLock* lock, bool* updated = nullptr) {
             force_init_io();
             auto h = ::GetStdHandle(STD_INPUT_HANDLE);
@@ -78,7 +84,7 @@ namespace utils {
                                 }
                             }
                             if (poped) {
-                                wrap::cout_wrap() << L"\b \b";
+                                echo_back(L"\b \b");
                             }
                         }
                         else {
@@ -87,7 +93,7 @@ namespace utils {
                             }
                             else if (unicode::utf16::is_low_surrogate(c)) {
                                 surrogatebuf[1] = c;
-                                wrap::cout_wrap() << surrogatebuf;
+                                echo_back(surrogatebuf);
                                 surrogatebuf[0] = 0;
                                 surrogatebuf[1] = 0;
                             }
@@ -133,7 +139,16 @@ namespace utils {
         bool UtfIn::peek_buffer(path_string& buf, bool no_cin, bool* updated) {
 #ifdef UTILS_PLATFORM_WINDOWS
             if (std_handle && ::_isatty(0)) {
-                return load_to_buf(&buf, no_cin ? nullptr : &lock, updated);
+                InputState state;
+                state.non_block = true;
+                if (!no_cin) {
+                    state.edit_buffer = &glbuf;  // TODO(on-keyday): thread unsafe
+                }
+                bool res = input(buf, &state);
+                if (updated) {
+                    *updated = state.buffer_update;
+                }
+                return res;
             }
 #endif
             return true;
@@ -151,6 +166,7 @@ namespace utils {
                         std::getline(in, out);
                         break;
                     }
+                    out.push_back('\n');
                     break;
                 }
                 lock.unlock();
@@ -186,6 +202,14 @@ namespace utils {
             static UtfIn cin{std::cin};
 #endif
             return cin;
+        }
+
+        bool UtfIn::is_tty() const {
+#ifdef UTILS_PLATFORM_WINDOWS
+            return ::_isatty(::_fileno(std_handle));
+#else
+            return isatty(fileno(std_handle));
+#endif
         }
 
     }  // namespace wrap

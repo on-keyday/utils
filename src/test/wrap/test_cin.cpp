@@ -9,6 +9,7 @@
 #include "../../include/wrap/cin.h"
 #include "../../include/wrap/cout.h"
 #include "../../include/wrap/iocommon.h"
+#include <console/ansiesc.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -26,8 +27,9 @@ void test_cin() {
     size_t i = 0;
     size_t count = 0;
     utils::wrap::path_string peek, prev;
+    namespace ces = utils::console::escape;
     bool updated = false;
-    cout << "\e[?25l";
+    cout << ces::cursor_visibility(ces::CursorVisibility::hide);
     while (!cin.peek_buffer(peek, false, &updated)) {
         Sleep(1);
         auto update_progress = [&] {
@@ -58,21 +60,22 @@ void test_cin() {
         };
 
         if (updated) {
-            cout << "\e[1M";
+            cout << ces::text_modify(ces::TextModify::delete_line, 1);
             update_progress();
             cout << ">> ";
             cout << peek;
             prev = peek;
         }
         else {
-            cout << "\e[0G";
+            cout << ces::cursor(ces::CursorMove::from_left, 0);
             update_progress();
         }
     }
     utils::wrap::string str;
     cin >> str;
-    cout << str;
-    cout << "\e[?25h";
+    cout << "\n"
+         << str;
+    cout << ces::cursor_visibility(ces::CursorVisibility::show);
 }
 
 int main() {
