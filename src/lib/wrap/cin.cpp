@@ -22,6 +22,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #define _O_U8TEXT 0
+#include <unistd.h>
 #endif
 
 namespace utils {
@@ -181,7 +182,9 @@ namespace utils {
             if (std_handle) {
 #ifdef UTILS_PLATFORM_WINDOWS
                 if (::_isatty(0)) {
-                    return load_to_buf(nullptr, &lock);
+                    DWORD num = 0;
+                    return ::GetNumberOfConsoleInputEvents(::GetStdHandle(STD_INPUT_HANDLE), &num) != 0 &&
+                           num != 0;
                 }
 #else
                 ::fd_set set{0};
