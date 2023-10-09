@@ -195,7 +195,7 @@ namespace utils {
             }
 
             constexpr void copy_from_rvec(basic_rvec<C> input) {
-                if (!data_.set_size(input.size())) {
+                while (!data_.set_size(input.size())) {
                     handle_too_large();
                 }
                 if (data_.set_sta(input.data(), input.size())) {
