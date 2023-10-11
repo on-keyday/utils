@@ -110,7 +110,7 @@ int main() {
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_peer->recv(f);
-        assert(res && e.is_noerr());
+        assert(res && e.has_no_error());
         auto stream_1_peer = q.accept();
         assert(stream_1_peer && stream_1_peer->receiver.id() == 0);
         res = stream_1_peer->receiver.request_stop_sending(23);
@@ -129,7 +129,7 @@ int main() {
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_local->recv(f);
-        assert(res && e.is_noerr());
+        assert(res && e.has_no_error());
         w.reset();
         auto ok = conn_local->send(fw, locals);
         assert(ok == IOResult::ok);
@@ -142,7 +142,7 @@ int main() {
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_peer->recv(f);
-        assert(res && e.is_noerr());
+        assert(res && e.has_no_error());
     });
     locals.get()->ack();
     res = stream_1->sender.detect_ack_lost();

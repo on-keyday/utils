@@ -290,75 +290,82 @@ namespace utils {
         };
 
         namespace internal {
-            template <class D, class C>
-            struct deleter_storage : public basic_wvec<C> {
-                D del;
-                constexpr deleter_storage() = default;
 
-                constexpr deleter_storage(basic_wvec<C> c)
-                    : basic_wvec<C>(c) {}
+            template <class A>
+            struct alloc_system {
+                A alloc_;
 
-                constexpr deleter_storage(basic_wvec<C> c, D&& d)
-                    : del(std::move(d)), basic_wvec<C>(c) {}
+                constexpr alloc_system() = default;
 
-                constexpr void move_deleter(D&& d) {
-                    del = std::move(d);
+                constexpr alloc_system(A&& a) noexcept
+                    : alloc_(std::move(a)) {}
+
+                constexpr alloc_system(const A& a)
+                    : alloc_(a) {}
+
+                constexpr A& alloc() noexcept {
+                    return alloc_;
                 }
 
-               protected:
-                constexpr D& deleter() noexcept {
-                    return del;
+                constexpr const A& alloc() const noexcept {
+                    return alloc_;
+                }
+
+                constexpr void move_alloc(A&& a) noexcept {
+                    alloc_ = std::move(a);
+                }
+
+                constexpr void copy_alloc(const A& a) noexcept {
+                    alloc_ = a;
                 }
             };
 
-            template <class D, class C>
-                requires std::is_empty_v<D>
-            struct deleter_storage<D, C> : public basic_wvec<C> {
-                constexpr deleter_storage() = default;
+            template <class A>
+                requires std::is_empty_v<A>
+            struct alloc_system<A> {
+                constexpr alloc_system() = default;
 
-                constexpr deleter_storage(basic_wvec<C> c)
-                    : basic_wvec<C>(c) {}
+                constexpr alloc_system(A&&) noexcept {}
+                constexpr alloc_system(const A&) noexcept {}
 
-                constexpr deleter_storage(basic_wvec<C> c, D&& d)
-                    : basic_wvec<C>(c) {}
-
-                constexpr void move_deleter(D&& d) {}
-
-               protected:
-                constexpr D deleter() noexcept {
-                    return D{};
+                constexpr A alloc() const noexcept {
+                    return A{};
                 }
+
+                constexpr void move_alloc(A&&) noexcept {}
+                constexpr void copy_alloc(const A&) noexcept {}
             };
         }  // namespace internal
 
         template <class D, class C>
-        struct basic_storage_vec : public internal::deleter_storage<D, C> {
+        struct basic_storage_vec : public basic_wvec<C>, private internal::alloc_system<D> {
            public:
             constexpr basic_storage_vec() noexcept(noexcept(D{})) = default;
 
             constexpr basic_storage_vec(basic_wvec<C> c, D&& d) noexcept(noexcept(D{}))
-                : internal::deleter_storage<D, C>(c, std::move(d)) {}
+                : basic_wvec<C>(c), internal::alloc_system<D>(std::move(d)) {}
 
             constexpr explicit basic_storage_vec(basic_wvec<C> c) noexcept(noexcept(D{}))
-                : internal::deleter_storage<D, C>(c) {}
+                : basic_wvec<C>(c) {}
 
             constexpr basic_storage_vec(basic_storage_vec&& in)
-                : internal::deleter_storage<D, C>(view::basic_wvec<C>(const_cast<C*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)), std::move(in.deleter())) {}
+                : basic_wvec<C>(const_cast<C*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)),
+                  internal::alloc_system<D>(std::move(in.alloc())) {}
 
             constexpr basic_storage_vec& operator=(basic_storage_vec&& in) {
                 if (this == &in) {
                     return *this;
                 }
-                this->~basic_storage_vec();
+                clear();
                 this->data_ = std::exchange(in.data_, nullptr);
                 this->size_ = std::exchange(in.size_, 0);
-                this->move_deleter(std::move(in.deleter()));
+                this->move_alloc(std::move(in.alloc()));
                 return *this;
             }
 
             constexpr void clear() {
                 if (!this->null()) {
-                    this->deleter()(this->data(), this->size_);
+                    this->alloc()(this->data(), this->size_);
                     this->data_ = nullptr;
                     this->size_ = 0;
                 }

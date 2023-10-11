@@ -9,8 +9,8 @@
 using namespace utils;
 
 int main() {
-    fnet::error::Error err(errno);
-    assert(err.category() == fnet::error::ErrorCategory::syserr);
+    fnet::error::Error err(errno, utils::fnet::error::Category::os);
+    assert(err.category() == fnet::error::Category::os);
     struct LocalError {
         int val = 0;
         void error(helper::IPushBacker<> pb) {
@@ -26,13 +26,13 @@ int main() {
         }
     };
     err = fnet::error::Error(LocalError{});
-    assert(err.type() == fnet::error::ErrorType::wrap);
-    err = fnet::error::Error("EOF");
-    assert(err == fnet::error::Error("EOF"));
+    assert(err.type() == fnet::error::ErrorType::ptr);
+    err = fnet::error::Error("EOF", fnet::error::Category::os);
+    assert(err == fnet::error::Error("EOF", fnet::error::Category::os));
     err = fnet::error::Error(LocalError{.val = 1});
     assert(err == fnet::error::Error(LocalError{}));
-    constexpr auto EEOF = fnet::error::Error("EOF", fnet::error::ErrorCategory::syserr);
-    constexpr auto numerr = fnet::error::Error(2, fnet::error::ErrorCategory::liberr);
+    constexpr auto EEOF = fnet::error::Error("EOF", fnet::error::Category::os);
+    constexpr auto numerr = fnet::error::Error(2, fnet::error::Category::lib);
     auto ptr = err.as<LocalError>();
     assert(ptr->val == 1);
     err = err.unwrap();

@@ -8,23 +8,16 @@
 // error - error type
 #pragma once
 #include "dll/dllh.h"
-#include "dll/glheap.h"
-#include <concepts>
-#include <view/iovec.h>
-#include <helper/defer.h>
-#include <helper/pushbacker.h>
-#include <strutil/append.h>
-#include <number/to_string.h>
-#include <atomic>
-#include <helper/expected.h>
-#include <string>
+#include <error/error.h>
 #include "dll/allocator.h"
+#include <string>
+#include <helper/expected.h>
 
 namespace utils {
     namespace fnet {
 
         namespace error {
-
+            /*
             enum class ErrorType : byte {
                 null,
                 memexh,
@@ -79,34 +72,39 @@ namespace utils {
                 bool has_errnum = false;
                 bool has_unwrap = false;
             };
+            */
 
             enum class NumErrMode {
-                // print "code=val,categoly=categ"
+                // print "code=val,category=category"
                 use_default,
-                // print "code=val,categoly="
+                // print "code=val,category="
                 use_code,
                 // print ""
                 use_nothing,
             };
 
-            fnet_dll_export(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code));
+            fnet_dll_export(bool) register_categspec_nummsg(utils::error::Category categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code));
 
             namespace internal {
-                fnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, ErrorCategory categ, std::uint64_t val);
-                fnet_dll_export(NumErrMode) categspec_mode(ErrorCategory categ);
+                fnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, utils::error::Category categ, std::uint64_t val);
+                fnet_dll_export(NumErrMode) categspec_mode(utils::error::Category categ);
 
-                constexpr void categ_spec_error(auto& out, ErrorCategory categ, std::uint64_t val) {
+                constexpr void categ_spec_error(auto& out, utils::error::Category categ, std::uint64_t val) {
                     if (!std::is_constant_evaluated()) {
                         invoke_categspec(out, categ, val);
                     }
                 }
 
-                constexpr NumErrMode categ_spec_mode(ErrorCategory categ) {
+                constexpr NumErrMode categ_spec_mode(utils::error::Category categ) {
                     if (std::is_constant_evaluated()) {
                         return NumErrMode::use_default;
                     }
                     return categspec_mode(categ);
                 }
+            }  // namespace internal
+
+            /*
+            namespace internal {
 
                 template <class T>
                 concept has_error = requires(T t) {
@@ -261,7 +259,7 @@ namespace utils {
                 };
             }  // namespace internal
 
-            /* Error is golang like error interface
+            * Error is golang like error interface
                object should implement void error(helper::IPushBacker<>)
                specialized to number and const char*
                support Error copy by reference count of internal pointer
@@ -274,7 +272,7 @@ namespace utils {
                + error::Error unwrap()
                + ErrorCategory category()
                + std::uint64_t errnum()
-            */
+            *
             struct Error {
                 using error_buffer_type = std::basic_string<char, std::char_traits<char>, glheap_allocator<char>>;
 
@@ -551,21 +549,71 @@ namespace utils {
                     return {};
                 }
             };
+            */
 
-            constexpr auto none = internal::None{};
+            using Error = utils::error::Error<glheap_allocator<byte>, std::string>;
 
-            static_assert(Error(none).type() == ErrorType::null);
+            using Category = utils::error::Category;
+            using ErrorType = utils::error::ErrorType;
 
-            constexpr auto eof = Error("EOF", ErrorCategory::syserr);
+            constexpr auto none = Error();
+
+            static_assert(Error(none).type() == utils::error::ErrorType::null);
+
+            enum {
+                fnet_generic_error = 0x100,
+                fnet_address_error = 0x101,
+                fnet_network_error = 0x102,
+                fnet_async_error = 0x103,
+                fnet_usage_error = 0x104,
+                fnet_lib_load_error = 0x105,
+
+                fnet_quic_error = 0x1000,
+                fnet_quic_transport_error = 0x1001,
+                fnet_quic_version_error = 0x1002,
+                fnet_quic_implementation_bug = 0x1003,
+                fnet_quic_user_arg_error = 0x1004,
+
+                fnet_quic_crypto_arg_error = 0x1102,
+                fnet_quic_crypto_op_error = 0x1103,
+
+                fnet_quic_packet_number_error = 0x1201,
+                fnet_quic_packet_number_decode_error = 0x1202,
+                fnet_quic_packet_number_encode_error = 0x1203,
+
+                fnet_quic_packet_error = 0x1301,
+
+                fnet_quic_connection_id_error = 0x1401,
+
+                fnet_quic_stream_error = 0x1501,
+
+                fnet_quic_transport_parameter_error = 0x1601,
+
+                fnet_tls_error = 0x2000,
+                fnet_tls_SSL_library_error = 0x2001,
+                fnet_tls_implementation_bug = 0x2002,
+                fnet_tls_not_supported = 0x2003,
+                fnet_tls_usage_error = 0x2004,
+                fnet_tls_lib_type_error = 0x2005,
+
+                fnet_ip_error = 0x3000,
+                fnet_ip_header_error = 0x3001,
+                fnet_ip_checksum_error = 0x3002,
+
+                fnet_icmp_error = 0x4000,
+
+            };
+
+            constexpr auto eof = Error("EOF", Category::lib, fnet_generic_error);
 
             // memory_exhausted is an emrgency error
             // avoid heap allocation and free memory if this occurred.
             // this is common and exceptional error in program so that this has special ErrorType.
             // if memory exhausting is occurred while Error object construction,
             // Error object will replaced with this
-            constexpr auto memory_exhausted = internal::Memexh{};
+            constexpr auto memory_exhausted = Error(Category::bad_alloc);
 
-            constexpr auto block = Error("BLOCK", ErrorCategory::syserr);
+            constexpr auto block = Error("BLOCK", Category::lib, fnet_generic_error);
 
             fnet_dll_export(Error) Errno();
 

@@ -235,18 +235,18 @@ namespace utils::fnet::icmp {
     constexpr expected<void> render_icmp_with_checksum(binary::writer& w, auto&& render) noexcept {
         auto cur = w.offset();
         if (!render(w)) {
-            return unexpect("cannot render; maybe too short buffer");
+            return unexpect("cannot render; maybe too short buffer", error::Category::lib, error::fnet_icmp_error);
         }
         if (cur >= w.offset()) {
-            return unexpect("cannot make offset backward");
+            return unexpect("cannot make offset backward", error::Category::lib, error::fnet_icmp_error);
         }
         size_t size = w.offset() - cur;
         if (size < 4) {
-            return unexpect("too short icmp header");
+            return unexpect("too short icmp header", error::Category::lib, error::fnet_icmp_error);
         }
         auto data = w.written().substr(cur, size);
         if (data[2] != 0 || data[3] != 0) {
-            return unexpect("check sum field is not zero");
+            return unexpect("check sum field is not zero", error::Category::lib, error::fnet_icmp_error);
         }
         return ip::checksum(data, 0, true).transform([&](std::uint16_t v) {
             binary::writer w{data};
@@ -258,19 +258,19 @@ namespace utils::fnet::icmp {
     constexpr expected<void> parse_icmp_with_checksum(binary::reader& r, auto&& parse) noexcept {
         auto cur = r.offset();
         if (!parse(r)) {
-            return unexpect("cannot render; maybe too short buffer");
+            return unexpect("cannot render; maybe too short buffer", error::Category::lib, error::fnet_icmp_error);
         }
         if (cur >= r.offset()) {
-            return unexpect("cannot make offset backward");
+            return unexpect("cannot make offset backward", error::Category::lib, error::fnet_icmp_error);
         }
         size_t size = r.offset() - cur;
         if (size < 4) {
-            return unexpect("too short icmp header");
+            return unexpect("too short icmp header", error::Category::lib, error::fnet_icmp_error);
         }
         auto data = r.read().substr(cur, size);
         return ip::checksum(data, 0, true).and_then([&](std::uint16_t v) -> expected<void> {
             if (v != 0) {
-                return unexpect("checksum failure");
+                return unexpect("checksum failure", error::Category::lib, error::fnet_icmp_error);
             }
             return {};
         });

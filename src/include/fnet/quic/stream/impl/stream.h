@@ -497,7 +497,7 @@ namespace utils {
                 if (frame.type.type_detail() == FrameType::STREAM_DATA_BLOCKED) {
                     return error::none;
                 }
-                return error::Error("unexpected frame type");
+                return error::Error("unexpected frame type", error::Category::lib, error::fnet_quic_implementation_bug);
             }
 
             IOResult send(frame::fwriter& w, auto&& observer) {

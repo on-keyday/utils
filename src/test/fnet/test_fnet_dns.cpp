@@ -51,7 +51,7 @@ int main() {
         view::wvec(buf),
     };
     bool end = false;
-    auto result = sock.readfrom_async(d, [&](fnet::Socket&& s, fnet::BufferManager<view::wvec>& w, fnet::NetAddrPort&& addr, fnet::NotifyResult result) {
+    auto result = sock.readfrom_async(fnet::async_addr_then(d, [&](fnet::Socket&& s, fnet::BufferManager<view::wvec>& w, fnet::NetAddrPort&& addr, fnet::NotifyResult result) {
                           view::wvec data;
                           std::tie(data, addr) = result.readfrom_unwrap(w.buffer, addr, [&] { return s.readfrom(w.buffer); }).value();
                           utils::binary::reader r{data};
@@ -62,7 +62,7 @@ int main() {
                           res = dns::resolve_name(resolv, msg.answer[0].name, data, true);
                           assert(res);
                           end = true;
-                      })
+                      }))
                       .value();
     if (result.state == fnet::NotifyState::done) {
         return 0;  // done

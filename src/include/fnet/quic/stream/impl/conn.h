@@ -324,7 +324,7 @@ namespace utils {
                         auto s = internal::make_ptr<BidiStream<TConfig>>(id, borrow_control());
                         auto [_, ok] = remote_bidi.try_emplace(id, s);
                         if (!ok) {
-                            oerr = error::Error("unexpected cration failure on bidi stream!");
+                            oerr = error::Error("unexpected creation failure on bidi stream!", error::Category::lib, error::fnet_quic_implementation_bug);
                             return;
                         }
                         /*
@@ -338,7 +338,7 @@ namespace utils {
                         auto s = internal::make_ptr<RecvUniStream<TConfig>>(id, borrow_control());
                         auto [_, ok] = remote_uni.try_emplace(id, s);
                         if (!ok) {
-                            oerr = error::Error("unexpected creation failure on uni stream!");
+                            oerr = error::Error("unexpected creation failure on uni stream!", error::Category::lib, error::fnet_quic_implementation_bug);
                             return;
                         }
                         /*
@@ -360,7 +360,7 @@ namespace utils {
                 auto maybe_remove = [&](auto&& s) -> error::Error {
                     if (remove_auto && s->is_removable()) {
                         if (auto fat = remove(id); fat == IOResult::fatal) {
-                            return error::Error("unexpected error on removing stream");
+                            return error::Error("unexpected error on removing stream", error::Category::lib, error::fnet_quic_stream_error);
                         }
                     }
                     return error::none;

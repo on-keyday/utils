@@ -73,7 +73,7 @@ void do_ping(utils::coro::C* ctx, Data* p) {
     BufferManager<std::string> buf_mgr;
     buf_mgr.buffer.resize(1200);
     auto res = p->sock.readfrom_async(
-        buf_mgr, [=](Socket&& s, BufferManager<std::string> buf_mgr, NetAddrPort&& remote, NotifyResult&& r) {
+        utils::fnet::async_addr_then(buf_mgr, [=](Socket&& s, BufferManager<std::string> buf_mgr, NetAddrPort&& remote, NotifyResult&& r) {
             auto d = utils::helper::defer([&] {
                 p->period.back().end = now();
                 if (p->count + 1 < wk->limit) {
@@ -108,7 +108,7 @@ void do_ping(utils::coro::C* ctx, Data* p) {
             p->period.back().ttl = hdr.ttl;
             auto text = ipv4(hdr.src_addr.addr, 0).addr.to_string<std::string>();
             cout << utils::wrap::packln("ping to ", p->target, " (", text, ")", " succeeded");
-        });
+        }));
     if (!res) {
         cerr << res.error().error<std::string>() << "\n";
         return;

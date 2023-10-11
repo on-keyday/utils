@@ -25,7 +25,7 @@ namespace utils {
                 }
                 auto [plain, ok] = packet::convert_cipher_to_plain(parsed, packet, authentication_tag_length);
                 if (!ok) {
-                    return err_cb(type, packet, parsed, error::Error("failed to parse as plain packet"), true);
+                    return err_cb(type, packet, parsed, error::Error("failed to parse as plain packet", error::Category::lib, error::fnet_quic_packet_error), true);
                 }
                 return plain_cb(parsed.packet_number, plain, parsed.src);
             };

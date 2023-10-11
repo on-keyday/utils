@@ -30,14 +30,14 @@ namespace utils::fnet {
 
     expected<void> Canceler::cancel() {
         if (!b) {
-            return unexpect("operation completed");
+            return unexpect("operation completed", error::Category::lib, error::fnet_async_error);
         }
         auto t = static_cast<WinSockTable*>(b);
         WinSockIOTableHeader& io = w ? static_cast<WinSockIOTableHeader&>(t->w) : t->r;
         return io.l.interrupt(cancel_code, [&]() -> expected<void> {
             if (!lazy::CancelIoEx_(HANDLE(io.base->sock), &io.ol)) {
                 if (get_error() == ERROR_NOT_FOUND) {
-                    return unexpect("operation not found");
+                    return unexpect("operation not found", error::Category::os);
                 }
                 else {
                     return unexpect(error::Errno());
@@ -143,7 +143,7 @@ namespace utils::fnet {
                 auto [addr, len] = get_addr(io);
                 if (!addr) {
                     io.l.unlock();
-                    return unexpect(error::Error("unsupported address type", error::ErrorCategory::validationerr));
+                    return unexpect(error::Error("unsupported address type", error::Category::lib, error::fnet_usage_error));
                 }
                 io.set_buffer(buffer);
                 if (is_write) {
@@ -166,7 +166,7 @@ namespace utils::fnet {
 
     expected<WinSockTable*> get_tbl(void* a) {
         if (!a) {
-            return unexpect("socket not initialized");
+            return unexpect("socket not initialized", error::Category::lib, error::fnet_usage_error);
         }
         return static_cast<WinSockTable*>(a);
     }
@@ -217,11 +217,11 @@ namespace utils::fnet {
 
     expected<void> Socket::set_skipnotify(bool skip_notif, bool skip_event) {
         if (!lazy::SetFileCompletionNotificationModes_.find()) {
-            return unexpect(error::Error("SetFileCompletionNotificationModes are not supported in this platform", error::ErrorCategory::fneterr));
+            return unexpect(error::Error("SetFileCompletionNotificationModes are not supported in this platform", error::Category::os));
         }
         auto tbl = static_cast<WinSockTable*>(ctx);
         if (!tbl) {
-            return unexpect("socket not initialized");
+            return unexpect("socket not initialized", error::Category::lib, error::fnet_usage_error);
         }
         byte flag = 0;
         if (skip_event) {

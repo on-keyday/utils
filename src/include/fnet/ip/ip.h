@@ -17,7 +17,7 @@ namespace utils::fnet::ip {
 
     constexpr expected<std::uint16_t> checksum(view::rvec data, std::uint16_t initial = 0, bool fill_zero_if_non_2 = false) {
         if (!fill_zero_if_non_2 && data.size() & 0x1) {
-            return unexpect("not 2 byte aligned");
+            return unexpect("not 2 byte aligned", error::Category::lib);
         }
         std::uint32_t sum = initial;
         auto add_sum = [&](std::uint16_t val) {
@@ -54,7 +54,7 @@ namespace utils::fnet::ip {
             checksum(pkt)
                 .and_then([](std::uint16_t val) -> expected<void> {
                     if (val != 0xf7eb) {
-                        return unexpect(error::Error(val));
+                        return unexpect(error::Error(val, error::Category::lib));
                     }
                     return {};
                 })
@@ -65,7 +65,7 @@ namespace utils::fnet::ip {
             checksum(pkt)
                 .and_then([](std::uint16_t val) -> expected<void> {
                     if (val != 0) {
-                        return unexpect(error::Error(val));
+                        return unexpect(error::Error(val, error::Category::lib));
                     }
                     return {};
                 })
@@ -136,7 +136,7 @@ namespace utils::fnet::ip {
             auto cs = r.remain();
             auto cur = r.offset();
             if (!parse(r)) {
-                return unexpect("not enough length for IPv4 header");
+                return unexpect("not enough length for IPv4 header", error::Category::lib, error::fnet_ip_header_error);
             }
             auto target = cs.substr(0, r.offset() - cur);
             if (check_sum == 0) {  // validation disabled
@@ -145,7 +145,7 @@ namespace utils::fnet::ip {
             return checksum(target)
                 .and_then([](std::uint16_t val) -> expected<void> {
                     if (val != 0) {
-                        return unexpect("checksum is not zero");
+                        return unexpect("checksum is not zero", error::Category::lib, error::fnet_ip_checksum_error);
                     }
                     return {};
                 });
@@ -157,7 +157,7 @@ namespace utils::fnet::ip {
             auto pkt = *this;   // copy
             pkt.check_sum = 0;  // currently set checksum 0
             if (!pkt.render(w)) {
-                return unexpect("not enough length for IPv4 header");
+                return unexpect("not enough length for IPv4 header", error::Category::lib, error::fnet_ip_header_error);
             }
             auto target = cs.substr(0, w.offset() - cur);
             return checksum(target)

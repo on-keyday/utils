@@ -34,8 +34,8 @@ namespace utils {
             std_handle = is_std(i);
         }
         static path_string glbuf;
-
 #ifdef UTILS_PLATFORM_WINDOWS
+/*
         void echo_back(auto&& buf) {
             if (cout_wrap().is_tty()) {
                 cout_wrap() << buf;
@@ -135,7 +135,12 @@ namespace utils {
             }
             return tr;
         }
+          */
 #endif
+
+        size_t UtfIn::read(path_string& out, bool line) {
+            std::getline(in, out);
+        }
 
         bool UtfIn::peek_buffer(path_string& buf, bool no_cin, bool* updated) {
 #ifdef UTILS_PLATFORM_WINDOWS

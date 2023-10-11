@@ -300,7 +300,7 @@ namespace utils {
         constexpr expected<NetAddrPort> to_ipv4(auto&& addr, std::uint16_t port) {
             auto d = ipaddr::to_ipv4(addr);
             if (!d.second) {
-                return unexpect("not valid IPv4 address");
+                return unexpect("not valid IPv4 address", error::Category::lib, error::fnet_address_error);
             }
             return ipv4(d.first.addr, port);
         }
@@ -308,7 +308,7 @@ namespace utils {
         constexpr expected<NetAddrPort> to_ipv6(auto&& addr, std::uint16_t port) {
             auto d = ipaddr::to_ipv6(addr);
             if (!d.second) {
-                return unexpect("not valid IPv6 address");
+                return unexpect("not valid IPv6 address", error::Category::lib, error::fnet_address_error);
             }
             return ipv6(d.first.addr);
         }

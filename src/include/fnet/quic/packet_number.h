@@ -37,7 +37,7 @@ namespace utils {
 
         constexpr expected<Value> decode(std::uint32_t value, byte len, std::uint64_t largest_pn) noexcept {
             if (!is_wire_len(len)) {
-                return unexpect("unexpected wire len");
+                return unexpect("unexpected wire len", error::Category::lib, error::fnet_quic_packet_number_error);
             }
             auto expected_pn = largest_pn + 1;
             auto pn_win = 1 << (len << 3);
@@ -105,7 +105,7 @@ namespace utils {
             if (min_bytes == 4) {
                 return wire(0xffffffff, 4);
             }
-            return unexpect("expect value must be in range 1-4");
+            return unexpect("expect value must be in range 1-4", error::Category::lib, error::fnet_quic_packet_number_encode_error);
         }
 
         constexpr bool write(binary::writer& w, const WireVal& value) noexcept {

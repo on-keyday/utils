@@ -12,7 +12,7 @@
 
 namespace utils {
     namespace fnet::quic::crypto {
-        constexpr auto err_not_installed = error::Error("secret is not installed");
+        constexpr auto err_not_installed = error::Error("secret is not installed", error::Category::lib, error::fnet_quic_crypto_op_error);
 
         struct Secret {
            private:

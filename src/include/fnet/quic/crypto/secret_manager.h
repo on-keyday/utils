@@ -153,7 +153,7 @@ namespace utils {
                     case PacketType::OneRTT:
                         return onertt.enc_suite(version, mode);
                     default:
-                        return {{}, error::Error("invalid packet type")};
+                        return {{}, error::Error("invalid packet type", error::Category::lib, error::fnet_quic_implementation_bug)};
                 }
             }
 
@@ -168,7 +168,7 @@ namespace utils {
                     case PacketType::OneRTT:
                         return onertt.dec_suite(version, mode);
                     default:
-                        return {{}, error::Error("unexpect packet type for hp")};
+                        return {{}, error::Error("unexpect packet type for hp", error::Category::lib, error::fnet_quic_implementation_bug)};
                 }
             }
 

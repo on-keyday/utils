@@ -18,8 +18,8 @@
 #include "error.h"
 #include "../thread/waker.h"
 #include "storage.h"
-#include <optional>
 #include "event/io.h"
+#include "async.h"
 
 namespace utils {
     namespace fnet {
@@ -65,190 +65,7 @@ namespace utils {
             }
         };
 
-        enum class NotifyState {
-            wait,  // waiting notification, callback will be called
-            done,  // operation done, callback will not be called
-        };
-
-        struct fnet_class_export Canceler {
-           private:
-            std::uint64_t cancel_code = 0;
-            bool w = false;
-            void* b = nullptr;
-            friend Canceler make_canceler(std::uint64_t code, bool w, void* b);
-
-           public:
-            constexpr Canceler() = default;
-
-            constexpr Canceler(Canceler&& c)
-                : cancel_code(c.cancel_code), w(c.w), b(std::exchange(c.b, nullptr)) {}
-
-            constexpr Canceler& operator=(Canceler&& c) {
-                if (this == &c) {
-                    return *this;
-                }
-                this->~Canceler();
-                cancel_code = c.cancel_code;
-                w = c.w;
-                b = std::exchange(c.b, nullptr);
-                return *this;
-            }
-
-            expected<void> cancel();
-
-            ~Canceler();
-        };
-
-        struct AsyncResult {
-            Canceler cancel;
-            NotifyState state;
-            size_t processed_bytes;
-        };
-
-        template <typename T>
-        struct BufferManager {
-            T buffer;
-            NetAddrPort address;
-
-            BufferManager() = default;
-
-            explicit BufferManager(T&& buf)
-                : buffer(std::move(buf)) {}
-
-            BufferManager(T&& buf, NetAddrPort&& addr)
-                : buffer(std::move(buf)), address(std::move(addr)) {}
-
-            T& get_buffer() {
-                return buffer;
-            }
-
-            NetAddrPort& get_address() {
-                return address;
-            }
-        };
-
-        struct DeferredNotification {
-           private:
-            friend struct Socket;
-            void* task_ptr = nullptr;
-            void (*call)(void*, bool) = nullptr;
-
-            constexpr DeferredNotification(void* p, void (*c)(void*, bool del_only))
-                : task_ptr(p), call(c) {}
-
-           public:
-            constexpr DeferredNotification() = default;
-            constexpr DeferredNotification(DeferredNotification&& i)
-                : task_ptr(std::exchange(i.task_ptr, nullptr)), call(std::exchange(i.call, nullptr)) {}
-
-            constexpr DeferredNotification& operator=(DeferredNotification&& i) {
-                if (this == &i) {
-                    return *this;
-                }
-                task_ptr = std::exchange(i.task_ptr, nullptr);
-                call = std::exchange(i.call, nullptr);
-                return *this;
-            }
-
-            void invoke() {
-                if (call) {
-                    const auto d = helper::defer([&] {
-                        call = nullptr;
-                        task_ptr = nullptr;
-                    });
-                    call(task_ptr, false);
-                }
-            }
-
-            void cancel() {
-                if (call) {
-                    const auto d = helper::defer([&] {
-                        call = nullptr;
-                        task_ptr = nullptr;
-                    });
-                    call(task_ptr, true);
-                }
-            }
-
-            ~DeferredNotification() {
-                cancel();
-            }
-        };
-
-        template <typename T>
-        concept AsyncBufferType = requires(T t) {
-            { t.get_buffer() } -> std::convertible_to<view::wvec>;
-            { t.get_address() } -> std::convertible_to<NetAddrPort&>;
-        };
-
-        using NotifyResult_v = expected<std::optional<size_t>>;
-
-        struct NotifyResult {
-           private:
-            NotifyResult_v result;
-
-           public:
-            constexpr NotifyResult(auto&& v)
-                : result(std::move(v)) {}
-            constexpr NotifyResult() = default;
-
-            NotifyResult_v& value() {
-                return result;
-            }
-
-            expected<view::wvec> read_unwrap(view::wvec buf, auto&& read_op) {
-                if (!result) {
-                    return result.transform([&](auto) { return buf; });
-                }
-                if (*result) {
-                    return buf.substr(0, **result);
-                }
-                else {
-                    auto res = read_op();
-                    if (!res) {
-                        return res.transform([&](auto) { return buf; });
-                    }
-                    return *res;
-                }
-            }
-
-            expected<std::pair<view::wvec, NetAddrPort>> readfrom_unwrap(view::wvec buf, NetAddrPort& addr, auto&& read_op) {
-                if (!result) {
-                    return result.transform([&](auto) { return std::make_pair(buf, addr); });
-                }
-                if (*result) {
-                    return std::make_pair(buf.substr(0, **result), std::move(addr));
-                }
-                else {
-                    auto res = read_op();
-                    if (!res) {
-                        return res.transform([&](auto) { return std::make_pair(buf, addr); });
-                    }
-                    return *res;
-                }
-            }
-
-            expected<view::rvec> write_unwrap(view::rvec buf, auto&& write_op) {
-                if (!result) {
-                    return result.transform([&](auto) { return buf; });
-                }
-                if (*result) {
-                    return buf.substr(**result);
-                }
-                else {
-                    auto res = write_op();
-                    if (!res) {
-                        return res.transform([&](auto) { return buf; });
-                    }
-                    return *res;
-                }
-            }
-        };
-
-        using stream_notify_t = void (*)(Socket&&, void*, NotifyResult&& err);
-        using recvfrom_notify_t = void (*)(Socket&&, NetAddrPort&&, void*, NotifyResult&& err);
-
-        // Socket is wrappper class of native socket
+        // Socket is wrapper class of native socket
         struct fnet_class_export Socket {
            private:
             void* ctx = nullptr;
@@ -435,22 +252,19 @@ namespace utils {
             // async I/O methods with lambda
             // these are wrappers of above
 
-            expected<AsyncResult> read_async(auto&& buffer_mgr, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Fn, class BufMgr, class Del>
+            expected<AsyncResult> read_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
                 auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
-                    const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
                     (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
                 };
 
@@ -462,34 +276,30 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
-
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> read_async_deferred(auto&& buffer_mgr, auto&& notify, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(notify)> notify;          // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                    Socket socket;
-                    NotifyResult result;
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Notify, class Fn, class BufMgr, class Del>
+            expected<AsyncResult> read_async_deferred(AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(notify)>(notify), std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
 
                 auto lambda = [](Socket&& socket, void* ptr, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(ptr);
+                    HeapData* data_ptr = static_cast<HeapData*>(ptr);
                     const auto deferred = [](void* ptr, bool del_only) {
                         auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
                         if (!del_only) {
                             (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
                         }
@@ -507,29 +317,28 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
-
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> write_async(auto&& buffer_mgr, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Fn, class BufMgr, class Del>
+            expected<AsyncResult> write_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
                 auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
-                    const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
                     (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
                 };
 
@@ -541,37 +350,30 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
-
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> write_async_deferred(auto&& buffer_mgr, auto&& notify, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(notify)> notify;          // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                    Socket socket;
-                    NotifyResult result;
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Notify, class Fn, class BufMgr, class Del>
+            expected<AsyncResult> write_async_deferred(AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{
-                    std::forward<decltype(buffer_mgr)>(buffer_mgr),
-                    std::forward<decltype(notify)>(notify),
-                    std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
 
                 auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
                     const auto deferred = [&](void* ptr, bool del_only) {
                         auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
                         if (!del_only) {
                             (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
                         }
@@ -589,29 +391,29 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
 
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> readfrom_async(auto&& buffer_mgr, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Fn, class BufMgr, class Del>
+            expected<AsyncResult> readfrom_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
                 auto lambda = [](Socket&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
-                    const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
 
                     (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(addr), std::move(result));
                 };
@@ -624,38 +426,30 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
-
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> readfrom_async_deferred(auto&& buffer_mgr, auto&& notify, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(notify)> notify;          // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                    Socket socket;                                  // Added Socket capture
-                    NotifyResult result;                            // Added NotifyResult capture
-                    NetAddrPort address;                            // Added NetAddrPort capture
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Notify, class Fn, class BufMgr, class Del>
+            expected<AsyncResult> readfrom_async_deferred(AsyncContDataWithAddress<AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{
-                    std::forward<decltype(buffer_mgr)>(buffer_mgr),
-                    std::forward<decltype(notify)>(notify),
-                    std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContDataWithAddress<AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>>;
 
                 auto lambda = [](Socket&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
                     const auto deferred = [&](void* ptr, bool del_only) {
                         auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
                         if (!del_only) {
                             (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->address), std::move(data_ptr->result));
                         }
@@ -674,30 +468,29 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
-
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> writeto_async(auto&& buffer_mgr, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Fn, class BufMgr, class Del>
+            expected<AsyncResult> writeto_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
                 auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
 
-                    const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
 
                     (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
                 };
@@ -710,37 +503,30 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
-
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
                         return unexpect(std::move(err));
                     });
             }
 
-            expected<AsyncResult> writeto_async_deferred(auto&& buffer_mgr, auto&& notify, auto&& fn, std::uint32_t flag = 0) {
-                struct HeapData {
-                    std::decay_t<decltype(buffer_mgr)> buffer_mgr;  // Decay applied here
-                    std::decay_t<decltype(notify)> notify;          // Decay applied here
-                    std::decay_t<decltype(fn)> fn;                  // Decay applied here
-                    Socket socket;                                  // Added Socket capture
-                    NotifyResult result;                            // Added NotifyResult capture
-                };
-
-                auto ptr = alloc_normal(sizeof(HeapData), alignof(HeapData), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(HeapData), alignof(HeapData)));
-                if (!ptr) {
-                    return unexpect("cannot allocate memory");
+            template <class Notify, class Fn, class BufMgr, class Del>
+            expected<AsyncResult> writeto_async_deferred(AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                auto* data_ptr = new (ptr) HeapData{
-                    std::forward<decltype(buffer_mgr)>(buffer_mgr),
-                    std::forward<decltype(notify)>(notify),
-                    std::forward<decltype(fn)>(fn)};
+                using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
 
                 auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    auto* data_ptr = static_cast<HeapData*>(c);
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
                     const auto deferred = [&](void* ptr, bool del_only) {
                         auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
                         if (!del_only) {
                             (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
                         }
@@ -758,8 +544,11 @@ namespace utils {
                         return std::move(r);
                     })
                     .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] { delete_glheap(data_ptr); });
-                        buffer_mgr = std::move(data_ptr->buffer_mgr);
+                        const auto d = helper::defer([&] {
+                            if (!no_del_if_error) {
+                                data_ptr->del(data_ptr);
+                            }
+                        });
 
                         return unexpect(std::move(err));
                     });

@@ -21,44 +21,32 @@ namespace utils {
             void (*fn)(helper::IPushBacker<> pb, std::uint64_t code) = nullptr;
         };
         struct Record {
-            ErrorCategory categ = ErrorCategory::noerr;
+            Category categ = Category::none;
             Defined def;
         };
 
-        static Defined defined_error[9];
+        static Defined defined_error[3];
 
         constexpr auto storage_size = 255;
 
         static Record spec_record[storage_size];
         std::uint32_t count = 0;
 
-        static int convert_index(ErrorCategory categ) {
+        static int convert_index(Category categ) {
             switch (categ) {
-                case ErrorCategory::syserr:
+                case Category::os:
                     return 0;
-                case ErrorCategory::liberr:
+                case Category::lib:
                     return 1;
-                case ErrorCategory::sslerr:
+                case Category::app:
                     return 2;
-                case ErrorCategory::cryptoerr:
-                    return 3;
-                case ErrorCategory::fneterr:
-                    return 4;
-                case ErrorCategory::quicerr:
-                    return 5;
-                case ErrorCategory::apperr:
-                    return 6;
-                case ErrorCategory::internalerr:
-                    return 7;
-                case ErrorCategory::validationerr:
-                    return 8;
                 default:
                     return -1;
             }
         }
 
-        fnet_dll_implement(bool) register_categspec_nummsg(ErrorCategory categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code)) {
-            if (categ == ErrorCategory::noerr || !fn) {
+        fnet_dll_implement(bool) register_categspec_nummsg(Category categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code)) {
+            if (categ == Category::none || !fn) {
                 return false;
             }
             if (auto index = convert_index(categ); index >= 0) {
@@ -84,7 +72,7 @@ namespace utils {
         }
 
         namespace internal {
-            auto fetch_categ(ErrorCategory categ, auto&& cb) {
+            auto fetch_categ(Category categ, auto&& cb) {
                 if (auto index = convert_index(categ); index >= 0) {
                     return cb(defined_error[index]);
                 }
@@ -96,7 +84,7 @@ namespace utils {
                 return cb(Defined{});
             }
 
-            fnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, ErrorCategory categ, std::uint64_t val) {
+            fnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, Category categ, std::uint64_t val) {
                 fetch_categ(categ, [&](Defined def) {
                     if (def.fn) {
                         def.fn(pb, val);
@@ -104,7 +92,7 @@ namespace utils {
                 });
             }
 
-            fnet_dll_export(NumErrMode) categspec_mode(ErrorCategory categ) {
+            fnet_dll_export(NumErrMode) categspec_mode(Category categ) {
                 return fetch_categ(categ, [&](Defined def) {
                     return def.mode;
                 });
@@ -113,7 +101,7 @@ namespace utils {
 #ifdef UTILS_PLATFORM_WINDOWS
 
             static auto d = helper::init([]() {
-                register_categspec_nummsg(ErrorCategory::syserr, NumErrMode::use_nothing, [](helper::IPushBacker<> pn, std::uint64_t code) {
+                register_categspec_nummsg(Category::os, NumErrMode::use_nothing, [](helper::IPushBacker<> pn, std::uint64_t code) {
                     LPWSTR lpMsgBuf;
                     FormatMessageW(
                         FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -139,7 +127,7 @@ namespace utils {
 
         }  // namespace internal
         fnet_dll_implement(Error) Errno() {
-            return Error(get_error(), ErrorCategory::syserr);
+            return Error(get_error(), Category::os);
         }
     }  // namespace fnet::error
 }  // namespace utils

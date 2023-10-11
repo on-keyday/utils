@@ -144,11 +144,11 @@ namespace utils {
             fnet_dll_export(error::Error) make_key_and_iv(KeyIV& keys, const fnet::tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
                 auto suite = judge_cipher(cipher);
                 if (suite == tls::QUICCipherSuite::Unsupported) {
-                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
+                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 auto hash_len = tls::hash_len(suite);
                 if (hash_len != 16 && hash_len != 32) {
-                    return error::Error("key: invalid hash length. expect 16 or 32.", error::ErrorCategory::validationerr);
+                    return error::Error("key: invalid hash length. expect 16 or 32.", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 keys.hash_len = hash_len;
                 byte tmp[100];
@@ -156,42 +156,42 @@ namespace utils {
                     auto ok = HKDF_Expand_label(tmp, keys.key(), secret, quic_key.material) &&
                               HKDF_Expand_label(tmp, keys.iv(), secret, quic_iv.material);
                     if (!ok) {
-                        return error::Error("key: failed to generate encryption key");
+                        return error::Error("key: failed to generate encryption key", error::Category::lib, error::fnet_quic_crypto_op_error);
                     }
                     return error::none;
                 }
-                return error::Error("key: unknown QUIC version", error::ErrorCategory::quicerr);
+                return error::Error("key: unknown QUIC version", error::Category::lib, error::fnet_quic_version_error);
             }
 
             fnet_dll_export(error::Error) make_hp(HP& hp, const fnet::tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
                 auto suite = judge_cipher(cipher);
                 if (suite == tls::QUICCipherSuite::Unsupported) {
-                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
+                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 auto hash_len = tls::hash_len(suite);
                 if (hash_len != 16 && hash_len != 32) {
-                    return error::Error("key: invalid hash length. expect 16 or 32.", error::ErrorCategory::validationerr);
+                    return error::Error("key: invalid hash length. expect 16 or 32.", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 hp.hash_len = hash_len;
                 byte tmp[100];
                 if (version == version_1) {
                     auto ok = HKDF_Expand_label(tmp, hp.hp(), secret, quic_hp.material);
                     if (!ok) {
-                        return error::Error("key: failed to generate encryption key");
+                        return error::Error("key: failed to generate encryption key", error::Category::lib, error::fnet_quic_crypto_op_error);
                     }
                     return error::none;
                 }
-                return error::Error("key: unknown QUIC version", error::ErrorCategory::quicerr);
+                return error::Error("key: unknown QUIC version", error::Category::lib, error::fnet_quic_version_error);
             }
 
             fnet_dll_export(error::Error) make_keys_from_secret(Keys& keys, const tls::TLSCipher& cipher, std::uint32_t version, view::rvec secret) {
                 auto suite = judge_cipher(cipher);
                 if (suite == tls::QUICCipherSuite::Unsupported) {
-                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
+                    return error::Error("cipher spec is not AES based or CHACHA20 based", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 auto hash_len = tls::hash_len(suite);
                 if (hash_len != 16 && hash_len != 32) {
-                    return error::Error("key: invalid hash length. expect 16 or 32.", error::ErrorCategory::validationerr);
+                    return error::Error("key: invalid hash length. expect 16 or 32.", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 keys.hash_len = hash_len;
                 byte tmp[100];
@@ -200,25 +200,25 @@ namespace utils {
                               HKDF_Expand_label(tmp, keys.iv(), secret, quic_iv.material) &&
                               HKDF_Expand_label(tmp, keys.hp(), secret, quic_hp.material);
                     if (!ok) {
-                        return error::Error("key: failed to generate encryption key");
+                        return error::Error("key: failed to generate encryption key", error::Category::lib, error::fnet_quic_crypto_op_error);
                     }
                     return error::none;
                 }
-                return error::Error("key: unknown QUIC version", error::ErrorCategory::quicerr);
+                return error::Error("key: unknown QUIC version", error::Category::lib, error::fnet_quic_version_error);
             }
 
             fnet_dll_implement(error::Error) make_updated_key(view::wvec new_secret, view::rvec secret, std::uint64_t version) {
                 if (new_secret.size() != secret.size()) {
-                    return error::Error("new_secret size is not same as old secret size");
+                    return error::Error("new_secret size is not same as old secret size", error::Category::lib, error::fnet_quic_crypto_arg_error);
                 }
                 if (version == version_1) {
                     byte tmp[100];
                     if (!HKDF_Expand_label(tmp, new_secret, secret, quic_ku.material)) {
-                        return error::Error("key: failed to generate encryption key");
+                        return error::Error("key: failed to generate encryption key", error::Category::lib, error::fnet_quic_crypto_op_error);
                     }
                     return error::none;
                 }
-                return error::Error("key: unknown QUIC version", error::ErrorCategory::quicerr);
+                return error::Error("key: unknown QUIC version", error::Category::lib, error::fnet_quic_version_error);
             }
 
         }  // namespace quic::crypto

@@ -128,7 +128,7 @@ namespace utils {
         static bool platform_cancel(WaitObject* obj, error::Error& err) {
             auto res = lazy::GetAddrInfoExCancel_(&obj->cancel);
             if (res != 0) {
-                err = error::Error(res, error::ErrorCategory::syserr);
+                err = error::Error(res, error::Category::os);
                 return false;
             }
             return true;
@@ -144,7 +144,7 @@ namespace utils {
                 ResetEvent(obj->ol.hEvent);
                 CloseHandle(obj->ol.hEvent);
                 if (!obj->done_immediate && res != 0) {
-                    err = error::Error(res, error::ErrorCategory::syserr);
+                    err = error::Error(res, error::Category::os);
                     return false;
                 }
                 return true;
@@ -174,7 +174,7 @@ namespace utils {
             }
             auto event = CreateEventW(nullptr, true, false, nullptr);
             if (!event) {
-                err = error::Error("CreateEventW failed");
+                err = error::Errno();
                 return nullptr;
             }
             obj->ol.hEvent = event;
@@ -190,13 +190,21 @@ namespace utils {
             return obj;
         }
 #elif defined(FNET_HAS_ASYNC_GETADDRINFO)
+        struct UnexpectedCode {
+            int code;
+            void error(auto&& pb) {
+                strutil::append(pb, "unexpected getaddrinfo error code: ");
+                number::to_string(pb, code);
+            }
+        };
+
         void map_error(int res, error::Error& err) {
             auto str = lazy::gai_strerror_(res);
             if (str) {
-                err = error::Error(str, error::ErrorCategory::syserr);
+                err = error::Error(str, error::Category::os);
             }
             else {
-                err = error::Error("unexpected getaddrinfo error code", error::ErrorCategory::syserr);
+                err = error::Error(UnexpectedCode{.code = res}, error::Category::os);
             }
         }
 
@@ -299,7 +307,7 @@ namespace utils {
             return obj;
         }
 #endif
-        constexpr auto errNotInitialized = error::Error("WaitAddrInfo is not initialized", error::ErrorCategory::validationerr);
+        constexpr auto errNotInitialized = error::Error("WaitAddrInfo is not initialized", error::Category::lib, error::fnet_usage_error);
 
         error::Error WaitAddrInfo::wait(AddrInfo& info, std::uint32_t time) {
             if (!opt) {
@@ -334,7 +342,7 @@ namespace utils {
 
         fnet_dll_implement(expected<WaitAddrInfo>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr) {
             if (!lazy::load_addrinfo()) {
-                return unexpect(error::Error("socket library not loaded", error::ErrorCategory::syserr));
+                return unexpect(error::Error("socket library not loaded", error::Category::lib, error::fnet_lib_load_error));
             }
             Host host{};
             Port port_{};
@@ -359,7 +367,7 @@ namespace utils {
 
         fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr) {
             if (!lazy::load_addrinfo()) {
-                return unexpect(error::Error("socket library not loaded", error::ErrorCategory::syserr));
+                return unexpect(error::Error("socket library not loaded", error::Category::lib, error::fnet_lib_load_error));
             }
             char host[256]{0};
             auto err = lazy::gethostname_(host, sizeof(host));

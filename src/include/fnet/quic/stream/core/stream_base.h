@@ -317,7 +317,7 @@ namespace utils {
             StreamID id, RecvUniStreamState& state,
             auto&& deliver_data) {
             if (frame.streamID != id) {
-                return {IOResult::id_mismatch, error::Error("unexpected streamID on StreamFrame. library bug!!")};  // library bug
+                return {IOResult::id_mismatch, error::Error("unexpected streamID on StreamFrame. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug)};  // library bug
             }
             if (!state.can_recv()) {
                 return {IOResult::not_in_io_state, error::none};  // ignore frame
@@ -433,7 +433,7 @@ namespace utils {
             constexpr std::pair<IOResult, error::Error> recv_reset(ConnectionBase<ConnLock>& conn, const frame::ResetStreamFrame& reset) {
                 // check id
                 if (id != reset.streamID) {
-                    return {IOResult::id_mismatch, error::Error("unexpected stream id on ResetFrame. library bug!!")};  // libary bug!!
+                    return {IOResult::id_mismatch, error::Error("unexpected stream id on ResetFrame. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug)};  // libary bug!!
                 }
 
                 auto prev_used = state.recv_bytes();

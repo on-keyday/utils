@@ -93,7 +93,7 @@ namespace utils {
                         !secrets.is_installed(PacketType::Initial, false)) {
                         view::rvec dstID = base.dstID;
                         if (!secrets.install_initial_secrets(version, true, dstID)) {
-                            return error::Error("failed to generate initial secret");
+                            return error::Error("failed to generate initial secret", error::Category::lib, error::fnet_quic_implementation_bug);
                         }
                     }
                     auto [dec, err] = secrets.dec_suite(type, version, KeyMode::current);

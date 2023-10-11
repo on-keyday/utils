@@ -200,17 +200,12 @@ namespace utils {
                 }
 
                private:
-                // fn is void(Socket&& sock,auto&& context,StateContext&&)
-                // context.get_buffer() returns view::wvec for reading buffer
-                // context.add_data(view::rvec) appends application data
-                bool read_async(Socket& sock, auto fn, auto&& context) {
-                    // use explicit clone
-                    // context may contains sock self, and then read_async moves sock into heap and
-                    // finally fails to call read_async
-                    // so use cloned sock
-                    auto s = sock.clone();
-                    auto result = s.read_async_deferred(
-                        std::forward<decltype(context)>(context), [th = shared_from_this()](DeferredNotification&& n) { th->enque_object(std::move(n)); },
+                auto async_callback(auto&& fn, auto&& context) {
+                    return async_notify_then(
+                        std::forward<decltype(context)>(context),
+                        // HACK(on-keyday): in this case, this pointer is valid via th of runner function
+                        // so use this pointer instead of shared_from_this()
+                        [this](DeferredNotification&& n) { this->enque_object(std::move(n)); },
                         [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& r) {
                             th->count.waiting_async_read--;
                             Enter ent{th->count.current_handling_handler_thread};
@@ -235,6 +230,18 @@ namespace utils {
                             }
                             fn(std::move(s), std::move(context), {th}, result.error_ptr());
                         });
+                }
+
+                // fn is void(Socket&& sock,auto&& context,StateContext&&)
+                // context.get_buffer() returns view::wvec for reading buffer
+                // context.add_data(view::rvec) appends application data
+                bool read_async(Socket& sock, auto fn, auto&& context) {
+                    // use explicit clone
+                    // context may contains sock self, and then read_async moves sock into heap and
+                    // finally fails to call read_async
+                    // so use cloned sock
+                    auto s = sock.clone();
+                    auto result = s.read_async_deferred(async_callback(std::forward<decltype(fn)>(fn), std::forward<decltype(context)>(context)));
                     if (!result) {
                         count.total_failed_async++;
                         auto addr = s.get_remote_addr();
@@ -275,7 +282,7 @@ namespace utils {
                 }
 
                 void log(log_level level, const char* msg, NetAddrPort& addr) {
-                    log(level, &addr, error::Error(msg));
+                    log(level, &addr, error::Error(msg, error::Category::app));
                 }
 
                 void enque_object(auto fn, auto&& obj) {

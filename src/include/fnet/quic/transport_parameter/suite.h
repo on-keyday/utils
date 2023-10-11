@@ -60,7 +60,7 @@ namespace utils {
                         return QUICError{
                             .msg = "TransportParameter contract is not satisfied",
                             .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
-                            .base = error::Error(err),
+                            .base = error::Error(err, error::Category::lib, error::fnet_quic_transport_parameter_error),
                         };
                     }
                     if (!box.boxing(params)) {

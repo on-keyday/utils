@@ -21,17 +21,17 @@ namespace utils {
                 if (gen_calllback) {
                     return gen_calllback(arg, rand, version, len, connID, stateless_reset);
                 }
-                return error::Error("no connID generator");
+                return error::Error("no connID generator", error::Category::lib, error::fnet_quic_user_arg_error);
             }
         };
 
         inline error::Error default_generator(std::shared_ptr<void>& arg, Random& rand, std::uint32_t version, byte len, view::wvec connID, view::wvec stateless_reset) {
             if (!rand.valid()) {
-                return error::Error("invalid random");
+                return error::Error("invalid random", error::Category::lib, error::fnet_quic_user_arg_error);
             }
             if (!rand.gen_random(connID) ||
                 !rand.gen_random(stateless_reset)) {
-                return error::Error("gen_random failed");
+                return error::Error("gen_random failed", error::Category::lib, error::fnet_quic_user_arg_error);
             }
             return error::none;
         }

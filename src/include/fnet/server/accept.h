@@ -68,7 +68,7 @@ namespace utils {
                             return std::make_pair(std::move(*sock), std::move(resolved));
                         }
                         if (!err) {
-                            return unexpect("no socket address found");
+                            return unexpect("no socket address found", error::Category::lib, error::fnet_address_error);
                         }
                         return unexpect(std::move(err));
                     });

@@ -27,6 +27,7 @@ namespace utils {
            public:
             UtfIn(istream& i);
             UtfIn& operator>>(path_string& out);
+            size_t read(path_string& out, bool line = true);
 
             template <class T>
             UtfIn& operator>>(T& out) {

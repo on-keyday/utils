@@ -82,15 +82,15 @@ namespace utils {
 
             std::pair<ConnID, error::Error> issue(CommonParam& cparam, bool enque_wait) {
                 if (connID_len == 0) {
-                    return {{}, error::Error("using zero length")};
+                    return {{}, error::Error("using zero length", error::Category::lib, error::fnet_quic_connection_id_error)};
                 }
                 if (!cparam.random.valid()) {
-                    return {{}, error::Error("invalid random")};
+                    return {{}, error::Error("invalid random", error::Category::lib, error::fnet_quic_user_arg_error)};
                 }
                 std::int64_t retire_proior_to = 0;
                 if (srcids.size() >= max_active_conn_id) {
                     if (retire_proior_to_id != current_seq) {
-                        return {{}, error::Error("id generation limit")};
+                        return {{}, error::Error("id generation limit", error::Category::lib, error::fnet_quic_connection_id_error)};
                     }
                     retire_proior_to_id = current_seq + 1;
                     retire_proior_to = current_seq;
@@ -105,7 +105,7 @@ namespace utils {
                 IDStorage& new_issued = srcids[id.seq];
                 if (new_issued.seq.valid()) {
                     // library bug!!
-                    return {{}, error::Error("invalid sequence id for new connection id. libary bug!!")};
+                    return {{}, error::Error("invalid sequence id for new connection id. libary bug!!", error::Category::lib, error::fnet_quic_implementation_bug)};
                 }
                 issued_seq++;
                 if (issued_seq == 0) {

@@ -26,51 +26,6 @@ namespace utils {
                 C data[size_]{};
             };
 
-            template <class A>
-            struct alloc_system {
-                A alloc_;
-
-                constexpr alloc_system() = default;
-
-                constexpr alloc_system(A&& a) noexcept
-                    : alloc_(std::move(a)) {}
-
-                constexpr alloc_system(const A& a)
-                    : alloc_(a) {}
-
-                constexpr A& alloc() noexcept {
-                    return alloc_;
-                }
-
-                constexpr const A& alloc() const noexcept {
-                    return alloc_;
-                }
-
-                constexpr void move_alloc(A&& a) noexcept {
-                    alloc_ = std::move(a);
-                }
-
-                constexpr void copy_alloc(const A& a) noexcept {
-                    alloc_ = a;
-                }
-            };
-
-            template <class A>
-                requires std::is_empty_v<A>
-            struct alloc_system<A> {
-                constexpr alloc_system() = default;
-
-                constexpr alloc_system(A&&) noexcept {}
-                constexpr alloc_system(const A&) noexcept {}
-
-                constexpr A alloc() const noexcept {
-                    return A{};
-                }
-
-                constexpr void move_alloc(A&&) noexcept {}
-                constexpr void copy_alloc(const A&) noexcept {}
-            };
-
             template <class Alloc, class C>
             struct basic_sso_storage : alloc_system<Alloc> {
                private:

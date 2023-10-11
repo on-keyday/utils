@@ -16,7 +16,7 @@
 namespace utils::fnet {
 
     expected<void> Socket::set_skipnotify(bool skip_notif, bool skip_event) {
-        return unexpect(error::Error("not supported on linux", error::ErrorCategory::fneterr));
+        return unexpect(error::Error("not supported on linux", error::Category::lib, error::fnet_usage_error));
     }
 
     Canceler::~Canceler() {
@@ -24,7 +24,7 @@ namespace utils::fnet {
     }
 
     expected<void> Canceler::cancel() {
-        return unexpect("operation not supported");
+        return unexpect("operation not supported", error::Category::lib, error::fnet_async_error);
     }
 
     namespace event {
@@ -139,7 +139,7 @@ namespace utils::fnet {
                 auto [addr, len] = get_addr(io);
                 if (!addr) {
                     io.l.unlock();
-                    return unexpect(error::Error("unsupported address type", error::ErrorCategory::validationerr));
+                    return unexpect(error::Error("unsupported address type", error::Category::lib, error::fnet_usage_error));
                 }
                 io.epoll_lock = true;
                 const auto d = helper::defer([&] { io.epoll_lock = false; });  // anyway, release finally
@@ -161,7 +161,7 @@ namespace utils::fnet {
 
     expected<EpollTable*> get_tbl(void* a) {
         if (!a) {
-            return unexpect("socket not initialized");
+            return unexpect("socket not initialized", error::Category::lib, error::fnet_usage_error);
         }
         return static_cast<EpollTable*>(a);
     }

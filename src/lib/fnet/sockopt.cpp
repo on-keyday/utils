@@ -17,7 +17,7 @@ namespace utils {
 
         expected<std::uintptr_t> Socket::get_raw() {
             if (!ctx) {
-                return unexpect("socket not initialized");
+                return unexpect("socket not initialized", error::Category::lib, error::fnet_usage_error);
             }
             return static_cast<SockTable*>(ctx)->sock;
         }
@@ -108,7 +108,7 @@ namespace utils {
             int yes = exclusive ? 1 : 0;
             return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
 #else
-            return unexpect(error::Error("SO_EXCLUSIVEADDRUSE is not supported on linux", error::ErrorCategory::fneterr));
+            return unexpect(error::Error("SO_EXCLUSIVEADDRUSE is not supported on linux", error::Category::lib, error::fnet_usage_error));
 #endif
         }
 
@@ -131,7 +131,7 @@ namespace utils {
                 val = IP_PMTUDISC_PROBE;
             }
             else {
-                return unexpect(error::Error("invalid MTUConfig", error::ErrorCategory::validationerr));
+                return unexpect(error::Error("invalid MTUConfig", error::Category::lib, error::fnet_usage_error));
             }
             return set_option(IPPROTO_IP, IP_MTU_DISCOVER, val);
         }
@@ -155,7 +155,7 @@ namespace utils {
                 val = IP_PMTUDISC_PROBE;
             }
             else {
-                return unexpect(error::Error("invalid MTUConfig", error::ErrorCategory::validationerr));
+                return unexpect(error::Error("invalid MTUConfig", error::Category::lib, error::fnet_usage_error));
             }
             return set_option(IPPROTO_IPV6, IPV6_MTU_DISCOVER, val);
         }
@@ -175,7 +175,7 @@ namespace utils {
 #ifdef UTILS_PLATFORM_WINDOWS
             return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
 #else
-            return unexpect(error::Error("IP_DONTFRAGMENT is not supported on linux", error::ErrorCategory::fneterr));
+            return unexpect(error::Error("IP_DONTFRAGMENT is not supported on linux", error::Category::lib, error::fnet_usage_error));
 #endif
         }
 
@@ -195,7 +195,7 @@ namespace utils {
                 return {};
             });
 #else
-            return unexpect(error::Error("SIO_UDP_CONNRESET is not supported", error::ErrorCategory::fneterr));
+            return unexpect(error::Error("SIO_UDP_CONNRESET is not supported", error::Category::lib, error::fnet_usage_error));
 #endif
         }
 

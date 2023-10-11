@@ -365,7 +365,7 @@ namespace utils::langc::gen {
             Platform platform =
 #ifdef UTILS_PLATFORM_WINDOWS
                 Platform::win_x64;
-#elif UTILS_PLATFORM_LINUX
+#elif defined(UTILS_PLATFORM_LINUX)
                 Platform::linux_x64;
 #else
                 return Platfrom::linux_x64;

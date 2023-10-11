@@ -52,9 +52,9 @@ namespace utils {
             return std::uint32_t(a) & std::uint32_t(b);
         }
 
-        constexpr auto err_creation = error::Error("error on creating packet. library bug!!");
-        constexpr auto err_idle_timeout = error::Error("IDLE_TIMEOUT");
-        constexpr auto err_handshake_timeout = error::Error("HANDSHAKE_TIMEOUT");
+        constexpr auto err_creation = error::Error("error on creating packet. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug);
+        constexpr auto err_idle_timeout = error::Error("IDLE_TIMEOUT", error::Category::lib, error::fnet_quic_transport_error);
+        constexpr auto err_handshake_timeout = error::Error("HANDSHAKE_TIMEOUT", error::Category::lib, error::fnet_quic_transport_error);
 
         // Context is QUIC connection context suite
         // this class handles single connection both client and server
@@ -372,7 +372,7 @@ namespace utils {
                 // get packet number space
                 auto pn_space = status::from_packet_type(summary.type);
                 if (pn_space == status::PacketNumberSpace::no_space) {
-                    set_error(error::Error("invalid packet type"));
+                    set_error(error::Error("invalid packet type", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
 
@@ -467,7 +467,7 @@ namespace utils {
                         break;
                     }
                     default: {
-                        set_error(error::Error("unexpected write mode. library bug!!"));
+                        set_error(error::Error("unexpected write mode. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug));
                         return false;
                     }
                 }
@@ -753,7 +753,7 @@ namespace utils {
                 packet_creation_buffer.resize(1200);
                 binary::writer w{packet_creation_buffer};
                 if (!params.render_local(w, status.is_server(), status.has_sent_retry())) {
-                    set_quic_runtime_error(error::Error("failed to render transport params"));
+                    set_quic_runtime_error(error::Error("failed to render transport params", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
                 auto p = w.written();
@@ -882,7 +882,7 @@ namespace utils {
                     zero_rtt_token.store(token::Token{.token = token});
                     return true;
                 }
-                set_quic_runtime_error(error::Error("unexpected frame type!"));
+                set_quic_runtime_error(error::Error("unexpected frame type!", error::Category::lib, error::fnet_quic_implementation_bug));
                 return false;
             }
 
@@ -922,14 +922,16 @@ namespace utils {
             }
 
             bool check_connID(packet::PacketSummary& prev, packet::PacketSummary sum, view::rvec raw_packet) {
+                constexpr auto invalid_src_id = error::Error("invalid srcID", error::Category::lib, error::fnet_quic_connection_id_error);
+                constexpr auto invalid_dst_id = error::Error("invalid dstID", error::Category::lib, error::fnet_quic_connection_id_error);
                 if (prev.type != PacketType::Unknown) {
                     if (sum.dstID != prev.dstID) {
-                        logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same dstID"), raw_packet, false);
+                        logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same dstID", error::Category::lib, error::fnet_quic_connection_id_error), raw_packet, false);
                         return false;
                     }
                     if (sum.type != PacketType::OneRTT) {
                         if (sum.srcID != prev.srcID) {
-                            logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same srcID"), raw_packet, false);
+                            logger.drop_packet(sum.type, sum.packet_number, error::Error("using not same srcID", error::Category::lib, error::fnet_quic_connection_id_error), raw_packet, false);
                             return false;
                         }
                     }
@@ -940,12 +942,12 @@ namespace utils {
                             (sum.type != PacketType::Initial ||
                              connIDs.initial_conn_id_accepted())) {
                             if (!connIDs.has_dstID(sum.srcID)) {
-                                logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid srcID"), raw_packet, false);
+                                logger.drop_packet(sum.type, sum.packet_number, invalid_src_id, raw_packet, false);
                                 return false;
                             }
                         }
                         if (!connIDs.has_srcID(sum.dstID)) {
-                            logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid dstID"), raw_packet, false);
+                            logger.drop_packet(sum.type, sum.packet_number, invalid_dst_id, raw_packet, false);
                             return false;
                         }
                     }
@@ -954,12 +956,12 @@ namespace utils {
                             connIDs.initial_conn_id_accepted()) {
                             if (sum.type != PacketType::OneRTT) {
                                 if (!connIDs.has_dstID(sum.srcID)) {
-                                    logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid srcID"), raw_packet, false);
+                                    logger.drop_packet(sum.type, sum.packet_number, invalid_dst_id, raw_packet, false);
                                     return false;
                                 }
                             }
                             if (!connIDs.has_srcID(sum.dstID)) {
-                                logger.drop_packet(sum.type, sum.packet_number, error::Error("invalid dstID"), raw_packet, false);
+                                logger.drop_packet(sum.type, sum.packet_number, invalid_src_id, raw_packet, false);
                                 return false;
                             }
                         }
@@ -1019,15 +1021,15 @@ namespace utils {
 
             bool handle_retry_packet(packet::RetryPacket retry, view::rvec raw_packet) {
                 if (status.is_server()) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("received Retry packet at server"), raw_packet, true);
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("received Retry packet at server", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
                 }
                 if (status.handshake_status().has_received_packet()) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiveing packet"), raw_packet, true);
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiving packet", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
                 }
                 if (status.has_received_retry()) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiveing Retry"), raw_packet, true);
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiving Retry", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
                 }
                 packet::RetryPseduoPacket pseduo;
@@ -1035,7 +1037,7 @@ namespace utils {
                 packet_creation_buffer.resize(pseduo.len());
                 binary::writer w{packet_creation_buffer};
                 if (!pseduo.render(w)) {
-                    set_quic_runtime_error(error::Error("failed to render Retry packet. library bug!!"));
+                    set_quic_runtime_error(error::Error("failed to render Retry packet. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
                 byte output[16];
@@ -1045,7 +1047,7 @@ namespace utils {
                     return false;
                 }
                 if (view::rvec(retry.retry_integrity_tag) != output) {
-                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("retry integrity tags are not matched. maybe observer exists or packet broken"), raw_packet, true);
+                    logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("retry integrity tags are not matched. maybe observer exists or packet broken", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
                 }
                 ackh.on_retry_received(status);
@@ -1062,7 +1064,7 @@ namespace utils {
                     return false;
                 }
                 if (issued.seq != 0) {
-                    set_quic_runtime_error(error::Error("failed to issue connection ID with sequence number 0. library bug!!"));
+                    set_quic_runtime_error(error::Error("failed to issue connection ID with sequence number 0. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
                 if (first) {
@@ -1241,7 +1243,7 @@ namespace utils {
                 }
 
                 if (!connIDs.gen_initial_random()) {
-                    set_quic_runtime_error(error::Error("failed to generate client destination connection ID. library bug!!"));
+                    set_quic_runtime_error(error::Error("failed to generate client destination connection ID. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
                 if (!crypto.install_initial_secret(version, connIDs.get_initial())) {
@@ -1351,7 +1353,7 @@ namespace utils {
                 auto crypto_cb = [&](packetnum::Value pn, auto&& packet, view::wvec raw_packet) {
                     packet::PacketSummary sum = packet::summarize(packet, pn);
                     if (unacked.is_duplicated(status::from_packet_type(sum.type), pn)) {
-                        logger.drop_packet(sum.type, pn, error::Error("duplicated packet"), raw_packet, true);
+                        logger.drop_packet(sum.type, pn, error::Error("duplicated packet", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                         return true;  // ignore
                     }
                     return handle_single_packet(sum, packet.payload, path);
@@ -1383,7 +1385,7 @@ namespace utils {
                     return true;
                 };
                 auto plain_err = [&](PacketType type, auto&& packet, view::wvec src, bool err, bool valid_type) {
-                    logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure"), src, !is_ProtectedPacket(type));
+                    logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure", error::Category::lib, error::fnet_quic_packet_error), src, !is_ProtectedPacket(type));
                     return true;  // ignore error
                 };
                 auto ok = crypto::parse_with_decrypt<slib::vector>(

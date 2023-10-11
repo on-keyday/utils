@@ -40,7 +40,7 @@ namespace utils::fnet {
                         return s;
                     }
                 }
-                return unexpect("cannot connect");
+                return unexpect("cannot connect", error::Category::lib, error::fnet_network_error);
             });
     }
 
@@ -81,7 +81,7 @@ namespace utils::fnet {
                         return s;
                     }
                 }
-                return unexpect("cannot connect");
+                return unexpect("cannot connect", error::Category::lib, error::fnet_network_error);
             });
     }
 }  // namespace utils::fnet

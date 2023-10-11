@@ -20,15 +20,15 @@ namespace utils {
     }
 
     namespace fnet::tls {
-        constexpr error::Error errConfigNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
-        constexpr error::Error errNotInitialized = error::Error("TLS object is not initialized. use create_tls() for initialize object", error::ErrorCategory::validationerr);
-        constexpr error::Error errInvalid = error::Error("TLS object has invalid state. maybe library bug!!", error::ErrorCategory::validationerr);
-        constexpr error::Error errNoTLS = error::Error("TLS object is not initialized for TLS connection. maybe initialzed for QUIC connection", error::ErrorCategory::validationerr);
-        constexpr error::Error errNoQUIC = error::Error("TLS object is not initialized for QUIC connection. maybe initialized for TLS connection", error::ErrorCategory::validationerr);
-        constexpr error::Error errSSLNotInitialized = error::Error("TLS object is not set up for connection. call setup_ssl() or setup_quic() before", error::ErrorCategory::validationerr);
-        // constexpr error::Error errAlready = error::Error("TLS object is already set up", error::ErrorCategory::sslerr);
-        constexpr error::Error errNotSupport = error::Error("not supported", error::ErrorCategory::fneterr);
-        constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
+        constexpr error::Error errConfigNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::Category::lib, error::fnet_tls_error);
+        constexpr error::Error errNotInitialized = error::Error("TLS object is not initialized. use create_tls() for initialize object", error::Category::lib, error::fnet_tls_error);
+        constexpr error::Error errInvalid = error::Error("TLS object has invalid state. maybe library bug!!", error::Category::lib, error::fnet_tls_implementation_bug);
+        constexpr error::Error errNoTLS = error::Error("TLS object is not initialized for TLS connection. maybe initialzed for QUIC connection", error::Category::lib, error::fnet_tls_usage_error);
+        constexpr error::Error errNoQUIC = error::Error("TLS object is not initialized for QUIC connection. maybe initialized for TLS connection", error::Category::lib, error::fnet_tls_usage_error);
+        constexpr error::Error errSSLNotInitialized = error::Error("TLS object is not set up for connection. call setup_ssl() or setup_quic() before", error::Category::lib, error::fnet_tls_usage_error);
+        // constexpr error::Error errAlready = error::Error("TLS object is already set up", error::Category::sslerr);
+        constexpr error::Error errNotSupport = error::Error("not supported", error::Category::lib, error::fnet_tls_not_supported);
+        constexpr error::Error errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::Category::lib, error::fnet_tls_implementation_bug);
 
         fnet_dll_implement(bool) load_crypto() {
             return lazy::libcrypto.load();
@@ -104,7 +104,7 @@ namespace utils {
                 return {TLS{}, errConfigNotInitialized};
             }
             if (!cb) {
-                return {TLS{}, error::Error("QUIC callback MUST NOT be null", error::ErrorCategory::validationerr)};
+                return {TLS{}, error::Error("QUIC callback MUST NOT be null", error::Category::lib, error::fnet_tls_usage_error)};
             }
             TLS tls;
             auto c = new_from_global_heap<SSLContexts>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(SSLContexts), alignof(SSLContexts)));
@@ -126,7 +126,7 @@ namespace utils {
                 return {TLS{}, libError("SSL_set_ex_data", "failed to set SSL ex data", ssl, 0)};
             }
             if (!quic::crypto::set_quic_method(ssl)) {
-                return {TLS{}, error::Error("library has no QUIC extensions", error::ErrorCategory::sslerr)};
+                return {TLS{}, error::Error("library has no QUIC extensions", error::Category::lib, error::fnet_tls_not_supported)};
             }
             c->ssl = ssl;
             c->quic_cb = cb;
@@ -294,7 +294,7 @@ namespace utils {
         error::Error TLS::set_quic_eraly_data_context(view::rvec data) {
             CHECK_QUIC_CONN(c);
             if (!lazy::ssl::SSL_set_quic_early_data_context_(c->ssl, data.data(), data.size())) {
-                return error::Error("set_erary_data_context failed");
+                return error::Error("set_erary_data_context failed", error::Category::lib, error::fnet_tls_error);
             }
             return error::none;
         }
@@ -403,8 +403,9 @@ namespace utils {
 
         fnet_dll_implement(bool) isTLSBlock(const error::Error& err) {
             return err == error::block ||
-                   (err.category() == error::ErrorCategory::sslerr &&
-                    err.errnum() == ssl_import::SSL_ERROR_WANT_READ_);
+                   (err.category() == error::Category::lib &&
+                    err.sub_category() == error::fnet_tls_SSL_library_error &&
+                    err.code() == ssl_import::SSL_ERROR_WANT_READ_);
         }
 
         error::Error TLS::connect() {

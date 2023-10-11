@@ -19,15 +19,15 @@ namespace utils {
     namespace fnet {
         namespace quic::crypto {
 
-            static constexpr auto err_packet_format = error::Error("CryptoPacket: QUIC packet format is not valid", error::ErrorCategory::validationerr);
-            static constexpr auto err_cipher_spec = error::Error("cipher spec is not AES based or CHACHA20 based", error::ErrorCategory::validationerr);
-            static constexpr auto err_aes_mask = error::Error("failed to generate header mask AES-based", error::ErrorCategory::cryptoerr);
-            static constexpr auto err_chacha_mask = error::Error("failed to generate header mask ChaCha20-based", error::ErrorCategory::cryptoerr);
-            static constexpr auto err_not_enough_paylaod = error::Error("not enough CryptoPacket.processed_payload length", error::ErrorCategory::validationerr);
-            static constexpr auto err_too_short_payload = error::Error("not enough payload length. least 20 byte required", error::ErrorCategory::cryptoerr);
-            static constexpr auto err_unknown = error::Error("unknown packet parser error. library bug!", error::ErrorCategory::fneterr);
-            static constexpr auto err_decode_pn = error::Error("failed to decode packet number", error::ErrorCategory::quicerr);
-            static constexpr auto err_header_not_decrypted = error::Error("header is not decyrpted. call decrypt_header() before call decrypt_payload()", error::ErrorCategory::quicerr);
+            static constexpr auto err_packet_format = error::Error("CryptoPacket: QUIC packet format is not valid", error::Category::lib, error::fnet_quic_crypto_arg_error);
+            static constexpr auto err_cipher_spec = error::Error("cipher spec is not AES based or ChaCha20 based", error::Category::lib, error::fnet_quic_crypto_arg_error);
+            static constexpr auto err_aes_mask = error::Error("failed to generate header mask AES-based", error::Category::lib, error::fnet_quic_crypto_op_error);
+            static constexpr auto err_cha_cha_mask = error::Error("failed to generate header mask ChaCha20-based", error::Category::lib, error::fnet_quic_crypto_arg_error);
+            static constexpr auto err_not_enough_payload = error::Error("not enough CryptoPacket.processed_payload length", error::Category::lib, error::fnet_quic_crypto_arg_error);
+            static constexpr auto err_too_short_payload = error::Error("not enough payload length. least 20 byte required", error::Category::lib, error::fnet_quic_crypto_arg_error);
+            static constexpr auto err_unknown = error::Error("unknown packet parser error. library bug!", error::Category::lib, error::fnet_quic_implementation_bug);
+            static constexpr auto err_decode_pn = error::Error("failed to decode packet number", error::Category::lib, error::fnet_quic_packet_number_error);
+            static constexpr auto err_header_not_decrypted = error::Error("header is not decrypted. call decrypt_header() before call decrypt_payload()", error::Category::lib, error::fnet_quic_crypto_arg_error);
 
             tls::QUICCipherSuite judge_cipher(const tls::TLSCipher& cipher) {
                 if (cipher == tls::TLSCipher{}) {
@@ -50,7 +50,7 @@ namespace utils {
                 }
                 else {
                     if (!generate_masks_chacha20_based(hp_key.data(), sample.data(), masks)) {
-                        return err_chacha_mask;
+                        return err_cha_cha_mask;
                     }
                 }
                 return error::none;
@@ -205,7 +205,7 @@ namespace utils {
                                           quic_v1_retry_integrity_tag_key.material,
                                           quic_v1_retry_integrity_tag_nonce.material, true);
                 }
-                return error::Error("unknown QUIC version", error::ErrorCategory::quicerr);
+                return error::Error("unknown QUIC version", error::Category::lib, error::fnet_quic_version_error);
             }
 
         }  // namespace quic::crypto

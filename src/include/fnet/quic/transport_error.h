@@ -88,8 +88,8 @@ namespace utils {
 
                 void error(auto&& pb) {
                     strutil::appends(pb,
-                                    "quic", is_app ? "(app)" : "", ": ",
-                                    msg);
+                                     "quic", is_app ? "(app)" : "", ": ",
+                                     msg);
                     if (by_peer) {
                         strutil::append(pb, " by peer");
                     }
@@ -154,15 +154,19 @@ namespace utils {
                     }
                 }
 
-                error::ErrorCategory category() {
-                    return error::ErrorCategory::quicerr;
+                error::Category category() {
+                    return error::Category::lib;
+                }
+
+                std::uint32_t sub_category() {
+                    return error::fnet_quic_transport_error;
                 }
 
                 error::Error unwrap() {
                     return base;
                 }
 
-                std::uint64_t errnum() const {
+                std::uint64_t code() const {
                     return (std::uint64_t)transport_error;
                 }
             };
@@ -171,9 +175,9 @@ namespace utils {
                 std::uint64_t error_code = 0;
                 error::Error msg;
                 constexpr AppError() = default;
-                constexpr AppError(std::uint64_t code,const char* v)
-                    :error_code(code),  msg(error::Error(v)) {}
-                constexpr AppError(std::uint64_t code,auto&& err)
+                constexpr AppError(std::uint64_t code, const char* v)
+                    : error_code(code), msg(error::Error(v, error::Category::app)) {}
+                constexpr AppError(std::uint64_t code, auto&& err)
                     : error_code(code), msg(std::forward<decltype(err)>(err)) {}
 
                 void error(auto&& pb) {

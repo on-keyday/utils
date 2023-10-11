@@ -21,16 +21,16 @@ namespace utils {
         void decr_table(void*);
 
         fnet_dll_implement(bool) isMsgSize(const error::Error& err) {
-            if (err.category() != error::ErrorCategory::syserr) {
+            if (err.category() != error::Category::os) {
                 return false;
             }
             if (err.type() != error::ErrorType::number) {
                 return false;
             }
 #ifdef UTILS_PLATFORM_WINDOWS
-            return err.errnum() == WSAEMSGSIZE;
+            return err.code() == WSAEMSGSIZE;
 #else
-            return err.errnum() == EMSGSIZE;
+            return err.code() == EMSGSIZE;
 #endif
         }
 
@@ -38,20 +38,20 @@ namespace utils {
             if (err == error::block) {
                 return true;
             }
-            if (err.category() != error::ErrorCategory::syserr) {
+            if (err.category() != error::Category::os) {
                 return false;
             }
             if (err.type() != error::ErrorType::number) {
                 return false;
             }
 #ifdef UTILS_PLATFORM_WINDOWS
-            return err.errnum() == WSAEWOULDBLOCK;
+            return err.code() == WSAEWOULDBLOCK;
 #else
-            return err.errnum() == EINPROGRESS || err.errnum() == EWOULDBLOCK;
+            return err.code() == EINPROGRESS || err.code() == EWOULDBLOCK;
 #endif
         }
 
-        constexpr auto errAddrNotSupport = error::Error("NetAddrPort type not supported by fnet", error::ErrorCategory::fneterr);
+        constexpr auto errAddrNotSupport = error::Error("NetAddrPort type not supported by fnet", error::Category::lib, error::fnet_usage_error);
 
         expected<void> Socket::connect(const NetAddrPort& addr) {
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<void> {
@@ -286,7 +286,7 @@ namespace utils {
 
         fnet_dll_implement(expected<Socket>) make_socket(SockAttr attr, event::IOEvent* event) {
             if (!lazy::load_socket()) {
-                return unexpect("cannot load socket dll");
+                return unexpect("cannot load socket dll", error::Category::lib, error::fnet_lib_load_error);
             }
             if (!event) {
                 auto& events = init_event();

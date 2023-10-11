@@ -280,7 +280,7 @@ namespace utils {
                         err = onertt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
                         break;
                     default:
-                        return error::Error("invalid packet type for crypto frame");
+                        return error::Error("invalid packet type for crypto frame", error::Category::lib, error::fnet_quic_implementation_bug);
                 }
                 if (err && (flags & flag_alert)) {
                     err = QUICError{

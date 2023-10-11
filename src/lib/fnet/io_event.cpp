@@ -16,7 +16,7 @@ namespace utils::fnet::event {
 #ifdef UTILS_PLATFORM_WINDOWS
     fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*, void*), void* rt) {
         if (!f) {
-            return unexpect(error::Error("need non-null pointer handler", error::ErrorCategory::validationerr));
+            return unexpect(error::Error("need non-null pointer handler", error::Category::lib, error::fnet_usage_error));
         }
         auto h = lazy::CreateIoCompletionPort_(INVALID_HANDLE_VALUE, nullptr, 0, 0);
         if (h == nullptr) {
@@ -68,10 +68,10 @@ namespace utils::fnet::event {
         fnet_handle_completion(&ent, nullptr);
     }
 
-#elif UTILS_PLATFORM_LINUX
+#elif defined(UTILS_PLATFORM_LINUX)
     fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*, void*), void* rt) {
         if (!f) {
-            return unexpect(error::Error("need non-null pointer handler", error::ErrorCategory::validationerr));
+            return unexpect(error::Error("need non-null pointer handler", error::Category::lib, error::fnet_usage_error));
         }
         auto h = lazy::epoll_create1_(EPOLL_CLOEXEC);
         if (h == -1) {

@@ -158,7 +158,7 @@ namespace utils {
                         phase = key_phase + 1;
                         break;
                     default:
-                        return {{}, error::Error("invalid key mode for encryption suite")};
+                        return {{}, error::Error("invalid key mode for encryption suite", error::Category::lib, error::fnet_quic_implementation_bug)};
                 }
                 if (err) {
                     return {{}, std::move(err)};
@@ -197,7 +197,7 @@ namespace utils {
                         phase = key_phase + 1;
                         break;
                     default:
-                        return {{}, error::Error("invalid key mode for encryption suite")};
+                        return {{}, error::Error("invalid key mode for encryption suite", error::Category::lib, error::fnet_quic_implementation_bug)};
                 }
                 if (err) {
                     return {{}, std::move(err)};

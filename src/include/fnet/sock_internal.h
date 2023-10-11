@@ -64,7 +64,7 @@ namespace utils::fnet {
         expected<std::uint64_t> try_lock() {
             LockState expect = LockState::unlocked;
             if (!l.compare_exchange_strong(expect, LockState::locked)) {
-                return unexpect("cannot get lock");
+                return unexpect("cannot get lock", error::Category::lib, error::fnet_async_error);
             }
             auto code = ++current;
             return code;
@@ -73,10 +73,10 @@ namespace utils::fnet {
         expected<void> interrupt(std::uint64_t value, auto&& cancel) {
             LockState expect = LockState::locked;
             if (!l.compare_exchange_strong(expect, LockState::canceling)) {
-                return unexpect("cannot get lock");
+                return unexpect("cannot get lock", error::Category::lib, error::fnet_async_error);
             }
             if (current != value) {
-                return unexpect("operation already done");
+                return unexpect("operation already done", error::Category::lib, error::fnet_async_error);
             }
             current++;
             auto d = helper::defer([&] {
@@ -89,7 +89,7 @@ namespace utils::fnet {
             LockState expect = LockState::locked;
             while (!l.compare_exchange_weak(expect, LockState::unlocked)) {
                 if (expect == LockState::unlocked) {
-                    return unexpect("unlocking non-locked lock");
+                    return unexpect("unlocking non-locked lock", error::Category::lib, error::fnet_async_error);
                 }
             }
             current++;

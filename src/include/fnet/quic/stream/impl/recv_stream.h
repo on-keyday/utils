@@ -275,14 +275,14 @@ namespace utils {
         template <class Locker, class TConfig>
         inline std::pair<bool, error::Error> reader_recv_handler(decltype(std::declval<typename TConfig::stream_handler::recv_buf>().get_specific())& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
             if (!arg) {
-                return {false, error::Error("unexpected arg")};
+                return {false, error::Error("unexpected arg", error::Category::lib, error::fnet_quic_implementation_bug)};
             }
             auto s = static_cast<RecvSorted<Locker>*>(std::to_address(arg));
             if (!s->id.valid()) {
                 s->id = id;
             }
             if (s->id != id) {
-                return {false, error::Error("unexpected bug!!")};
+                return {false, error::Error("unexpected bug!!", error::Category::lib, error::fnet_quic_implementation_bug)};
             }
             if (type == FrameType::RESET_STREAM) {
                 s->reset();

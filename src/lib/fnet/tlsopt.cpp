@@ -41,7 +41,7 @@ namespace utils {
             };
             err.code = get_error_code();
             if (cant_load) {
-                err.alt_err = error::Error("cannot decide OpenSSL/BoringSSL. maybe diffrent type library?", error::ErrorCategory::cryptoerr);
+                err.alt_err = error::Error("cannot decide OpenSSL/BoringSSL. maybe diffrent type library?", error::Category::lib, error::fnet_tls_lib_type_error);
                 return err;
             }
             if (err.code == 0) {
@@ -198,8 +198,8 @@ namespace utils {
             return *this;
         }
 
-        constexpr auto errNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::ErrorCategory::sslerr);
-        constexpr auto errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::ErrorCategory::fneterr);
+        constexpr auto errNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::Category::lib, error::fnet_tls_usage_error);
+        constexpr auto errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::Category::lib, error::fnet_tls_lib_type_error);
 
 #define CHECK_CTX(c)              \
     if (!ctx) {                   \
@@ -276,7 +276,7 @@ namespace utils {
 
         error::Error TLSConfig::set_alpn_select_callback(const ALPNCallback* cb) {
             if (!cb) {
-                return error::Error("invalid argument");
+                return error::Error("invalid argument", error::Category::lib, error::fnet_tls_usage_error);
             }
             CHECK_CTX(c)
             lazy::ssl::SSL_CTX_set_alpn_select_cb_(

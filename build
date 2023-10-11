@@ -20,6 +20,6 @@ cmake -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -G Ninja -D CMAKE_
 fi
 ninja -C built/$UTILS_BUILD_TYPE/$BUILD_TYPE $TARGET
 if [ $? -ne  0 ]; then
-exit 1
+return 1
 fi 
 ninja -C built/$UTILS_BUILD_TYPE/$BUILD_TYPE install

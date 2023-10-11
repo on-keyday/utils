@@ -17,8 +17,11 @@ namespace utils {
             std::uint32_t code = 0;
             error::Error alt_err;
             void error(helper::IPushBacker<> pb) const;
-            error::ErrorCategory category() const {
-                return error::ErrorCategory::sslerr;
+            error::Category category() const {
+                return error::Category::lib;
+            }
+            std::uint32_t sub_category() const {
+                return error::fnet_tls_SSL_library_error;
             }
             error::Error unwrap() const {
                 return alt_err;
@@ -41,8 +44,12 @@ namespace utils {
                 return alt_err;
             }
 
-            error::ErrorCategory category() const {
-                return error::ErrorCategory::sslerr;
+            error::Category category() const {
+                return error::Category::lib;
+            }
+
+            std::uint32_t sub_category() const {
+                return error::fnet_tls_SSL_library_error;
             }
         };
 
