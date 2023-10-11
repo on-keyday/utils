@@ -33,19 +33,6 @@ namespace utils {
                     });
             }
 
-            struct ErrList {
-                error::Error err;
-                error::Error before;
-
-                void error(auto&& pb) {
-                    if (before) {
-                        before.error(pb);
-                        pb.push_back(',');
-                    }
-                    err.error(pb);
-                }
-            };
-
             inline expected<std::pair<Socket, SockAddr>> prepare_listener(view::rvec port, int backlog = 10,
                                                                           bool reuse = true, bool ipv6only = false) {
                 return fnet::get_self_server_address(port, fnet::sockattr_tcp())
@@ -59,7 +46,7 @@ namespace utils {
                             auto sock = make_server_socket(resolved, backlog, reuse, ipv6only);
                             if (!sock) {
                                 if (err) {
-                                    err = ErrList{std::move(sock.error()), std::move(err)};
+                                    err = error::ErrList{std::move(sock.error()), std::move(err)};
                                 }
                                 else {
                                     err = std::move(sock.error());

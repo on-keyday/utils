@@ -198,15 +198,15 @@ namespace utils::fnet {
     // this is used to notify async operation result
     // pooling this object or of it storage is recommended if you use async operation frequently
     template <class Fn, class Buf, class Del>
-    struct AsyncContData : view::internal::alloc_system<Del> {
+    struct AsyncContData : helper::omit_empty<Del> {
         Fn fn;
         Buf buffer_mgr;
 
         constexpr AsyncContData(auto&& f, auto&& buf, auto&& del)
-            : view::internal::alloc_system<Del>(std::forward<decltype(del)>(del)), fn(std::forward<decltype(f)>(f)), buffer_mgr(std::forward<decltype(buf)>(buf)) {}
+            : helper::omit_empty<Del>(std::forward<decltype(del)>(del)), fn(std::forward<decltype(f)>(f)), buffer_mgr(std::forward<decltype(buf)>(buf)) {}
 
         void del(auto p) {
-            auto a = this->alloc();
+            auto a = this->om_value();
             a(p);
         }
     };

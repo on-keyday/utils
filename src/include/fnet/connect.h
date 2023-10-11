@@ -18,6 +18,7 @@ namespace utils::fnet {
                 return info.wait();
             })
             .and_then([&](AddrInfo&& info) -> expected<std::pair<Socket, SockAddr>> {
+                error::Error err;
                 while (info.next()) {
                     auto addr = info.sockaddr();
                     auto s = make_socket(addr.attr)
@@ -39,6 +40,15 @@ namespace utils::fnet {
                     if (s) {
                         return s;
                     }
+                    if (err) {
+                        err = error::ErrList{std::move(s.error()), std::move(err)};
+                    }
+                    else {
+                        err = std::move(s.error());
+                    }
+                }
+                if (err) {
+                    return unexpect(std::move(err));
                 }
                 return unexpect("cannot connect", error::Category::lib, error::fnet_network_error);
             });

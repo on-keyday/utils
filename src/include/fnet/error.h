@@ -77,10 +77,8 @@ namespace utils {
             enum class NumErrMode {
                 // print "code=val,category=category"
                 use_default,
-                // print "code=val,category="
-                use_code,
                 // print ""
-                use_nothing,
+                use_custom,
             };
 
             fnet_dll_export(bool) register_categspec_nummsg(utils::error::Category categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code));
@@ -551,9 +549,21 @@ namespace utils {
             };
             */
 
+            using Category = utils::error::Category;
+
+            struct FormatTraits : utils::error::DefaultFormatTraits<std::uint32_t> {
+                static constexpr void num_error(auto&& t, std::uint64_t val, Category c, std::uint32_t s) {
+                    auto mode = internal::categ_spec_mode(c);
+                    if (mode == NumErrMode::use_default) {
+                        utils::error::DefaultFormatTraits<std::uint32_t>::num_error(t, val, c, s);
+                        return;
+                    }
+                    internal::categ_spec_error(t, c, val);
+                }
+            };
+
             using Error = utils::error::Error<glheap_allocator<byte>, std::string>;
 
-            using Category = utils::error::Category;
             using ErrorType = utils::error::ErrorType;
 
             constexpr auto none = Error();
@@ -606,7 +616,7 @@ namespace utils {
 
             constexpr auto eof = Error("EOF", Category::lib, fnet_generic_error);
 
-            // memory_exhausted is an emrgency error
+            // memory_exhausted is an emergency error
             // avoid heap allocation and free memory if this occurred.
             // this is common and exceptional error in program so that this has special ErrorType.
             // if memory exhausting is occurred while Error object construction,
@@ -618,6 +628,19 @@ namespace utils {
             fnet_dll_export(Error) Errno();
 
             constexpr size_t sizeof_error = sizeof(Error);
+
+            struct ErrList {
+                error::Error err;
+                error::Error before;
+
+                void error(auto&& pb) {
+                    if (before) {
+                        before.error(pb);
+                        pb.push_back(',');
+                    }
+                    err.error(pb);
+                }
+            };
 
         }  // namespace error
         template <class T>

@@ -27,7 +27,7 @@ namespace utils {
             };
 
             template <class Alloc, class C>
-            struct basic_sso_storage : alloc_system<Alloc> {
+            struct basic_sso_storage : helper::omit_empty<Alloc> {
                private:
                 union {
                     native_array<C, sizeof(basic_wvec<C>)> sta{};
@@ -38,7 +38,7 @@ namespace utils {
                 bits_flag_alias_method_with_enum(state_, 0, state, sso_state);
 
                 constexpr void move(basic_sso_storage& sso) noexcept {
-                    this->move_alloc(std::move(sso.alloc()));
+                    this->move_om_value(std::move(sso.om_value()));
                     if (sso.state() == sso_state::dyn) {
                         dyn = sso.dyn;
                     }
@@ -52,10 +52,10 @@ namespace utils {
 
                public:
                 constexpr basic_sso_storage(Alloc&& alloc) noexcept
-                    : alloc_system<Alloc>{std::move(alloc)} {}
+                    : helper::omit_empty<Alloc>{std::move(alloc)} {}
 
                 constexpr basic_sso_storage(const Alloc& alloc)
-                    : alloc_system<Alloc>{alloc} {}
+                    : helper::omit_empty<Alloc>{alloc} {}
 
                 constexpr basic_sso_storage() {}
 
@@ -127,7 +127,7 @@ namespace utils {
 
             [[noreturn]] void handle_too_large() {
                 if constexpr (internal::has_too_large_error<Alloc>) {
-                    data_.alloc().too_large_error();
+                    data_.om_value().too_large_error();
                 }
                 auto handler = std::get_new_handler();
                 if (!handler) {
@@ -139,13 +139,13 @@ namespace utils {
             }
 
             C* alloc_(size_t size) {
-                decltype(data_.alloc()) alloc = data_.alloc();
+                decltype(data_.om_value()) alloc = data_.om_value();
                 // ptr must not be nullptr
                 return traits::allocate(alloc, size);
             }
 
             void dealloc_(C* c, size_t size) {
-                decltype(data_.alloc()) alloc = data_.alloc();
+                decltype(data_.om_value()) alloc = data_.om_value();
                 traits::deallocate(alloc, c, size);
             }
 
@@ -197,7 +197,7 @@ namespace utils {
                 : data_(std::exchange(in.data_, storage{})) {}
 
             constexpr basic_expand_storage_vec(const basic_expand_storage_vec& in)
-                : data_(in.data_.alloc()) {
+                : data_(in.data_.om_value()) {
                 copy_from_rvec(in.rvec());
             }
 
@@ -205,9 +205,9 @@ namespace utils {
                 if (this == &in) {
                     return *this;
                 }
-                if (data_.alloc() != in.data_.alloc()) {
+                if (data_.om_value() != in.data_.om_value()) {
                     free_dyn();
-                    data_.copy_alloc(in.data_.alloc());
+                    data_.copy_om_value(in.data_.om_value());
                     copy_from_rvec(in.rvec());
                     return *this;
                 }

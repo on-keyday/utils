@@ -101,7 +101,7 @@ namespace utils {
 #ifdef UTILS_PLATFORM_WINDOWS
 
             static auto d = helper::init([]() {
-                register_categspec_nummsg(Category::os, NumErrMode::use_nothing, [](helper::IPushBacker<> pn, std::uint64_t code) {
+                register_categspec_nummsg(Category::os, NumErrMode::use_custom, [](helper::IPushBacker<> pn, std::uint64_t code) {
                     LPWSTR lpMsgBuf;
                     FormatMessageW(
                         FORMAT_MESSAGE_ALLOCATE_BUFFER |

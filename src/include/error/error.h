@@ -17,6 +17,7 @@
 #include <helper/defer.h>
 #include <number/to_string.h>
 #include <strutil/append.h>
+#include <helper/disable_self.h>
 
 namespace utils::error {
 
@@ -159,7 +160,7 @@ namespace utils::error {
         template <class T, class E, class RefCount>
         struct WrapperT
             : WrapperBase,
-              view::internal::alloc_system<typename std::allocator_traits<
+              helper::omit_empty<typename std::allocator_traits<
                   typename E::allocator_type>::template rebind_alloc<WrapperT<T, E, RefCount>>> {
             using Alloc = typename std::allocator_traits<
                 typename E::allocator_type>::template rebind_alloc<WrapperT<T, E, RefCount>>;
@@ -181,7 +182,9 @@ namespace utils::error {
                         if constexpr (has_equal<T>) {
                             return *p1 == *p2;
                         }
-                        return false;
+                        else {
+                            return std::is_empty_v<T>;
+                        }
                     }
                     case ReflectorOp::error: {
                         helper::IPushBacker<>* pb = reinterpret_cast<helper::IPushBacker<>*>(arg1);
@@ -194,7 +197,7 @@ namespace utils::error {
                     }
                     case ReflectorOp::decref: {
                         if (--self->ref_count == 0) {
-                            auto alloc = std::move(self->alloc());
+                            auto alloc = std::move(self->om_value());
                             traits::destroy(alloc, self);
                             traits::deallocate(alloc, self, 1);
                         }
@@ -252,7 +255,7 @@ namespace utils::error {
             template <class A, class... Args>
             WrapperT(A&& alloc, Args&&... args)
                 : WrapperBase(reflectorT),
-                  view::internal::alloc_system<Alloc>(std::forward<A>(alloc)),
+                  helper::omit_empty<Alloc>(std::forward<A>(alloc)),
                   value(std::forward<Args>(args)...),
                   ref_count(1) {}
         };
@@ -279,11 +282,15 @@ namespace utils::error {
             number::to_string(out, val);
         }
 
+        static constexpr void str_error(auto&& out, const char* str, Category c, SubCategory s) {
+            strutil::append(out, str);
+        }
+
         static constexpr void categories(auto&& out, ErrorType t, Category c, SubCategory s) {
             if (t == ErrorType::ptr) {
                 return;
             }
-            strutil::append(out, "category=");
+            strutil::append(out, " category=");
             switch (c) {
                 case Category::none: {
                     strutil::append(out, "none");
@@ -312,44 +319,49 @@ namespace utils::error {
                     break;
                 }
             }
-            strutil::append(out, " sub_category=");
             if constexpr (internal::has_to_string<SubCategory>) {
                 if (auto str = to_string(s)) {
+                    strutil::append(out, " sub_category=");
                     strutil::append(out, str);
-                }
-                else {
-                    number::to_string(out, s);
+                    return;
                 }
             }
-            else {
-                number::to_string(out, s);
+            if (s != SubCategory()) {
+                strutil::append(out, " sub_category=");
+                number::to_string(out, static_cast<std::uint32_t>(s));
             }
         }
     };
 
-    /* Error is golang like error interface
-     object should implement void error(helper::IPushBacker<>)
-     specialized to number and const char*
-     support Error copy by reference count of internal pointer
-     also support Error unwrap() like golang errors.Unwrap()
-     reflection like T* as() function also support
+    /*** Error is a Golang-like error interface.
+     Objects should implement void error(helper::IPushBacker<>),
+     specialized to number and const char*.
+     Support Error copy by reference count of internal pointer.
+     Also supports Error unwrap() like Golang errors.Unwrap().
+     Reflection like T* as() function is also supported.
 
-     user defined Error MUST implement
-     + void error(helper::IPushbacker<>)
-     user defined Error MAY implement
-     + error::Error unwrap()
-     + error::Category category()
-     + std::uint32_t sub_category()
-     + std::uint64_t code()
+     User-defined Error MUST implement:
+       void error(helper::IPushBacker<>)
 
-     @param Alloc allocator for internal pointer
-     @param ErrorBuffer error buffer type. if use with helper::either::expected,
-            and when exception, ErrorBuffer is used to store error message
-            and what() return ErrorBuffer.c_str() if ErrorBuffer has c_str() method
-     @param SubCategory sub category type for error message
-     @param FormatTraits format traits for error message
-     @param RefCount reference count type for internal pointer
-  */
+     User-defined Error MAY implement:
+       error::Error unwrap()
+       error::Category category()
+       std::uint32_t sub_category()
+       std::uint64_t code()
+
+     @param Alloc Allocator for internal pointer.
+     @param ErrorBuffer Error buffer type. If used with helper::either::expected,
+               and when an exception occurs, ErrorBuffer is used to store the error message.
+               what() returns ErrorBuffer.c_str() if ErrorBuffer has a c_str() method.
+     @param SubCategory Sub-category type for error message.
+     @param FormatTraits Format traits for error message.
+         FormatTraits must implement:
+          static constexpr void null_error(auto&& out, Category c, SubCategory s)
+          static constexpr void num_error(auto&& out, std::uint64_t val, Category c, SubCategory s)
+          static constexpr void str_error(auto&& out, const char* str, Category c, SubCategory s)
+          static constexpr void categories(auto&& out, ErrorType t, Category c, SubCategory s)
+     @param RefCount Reference count type for internal pointer.
+    */
     template <class Alloc, class ErrorBuffer = void, class SubCategory = std::uint32_t, class FormatTraits = DefaultFormatTraits<SubCategory>, class RefCount = std::atomic_uint32_t>
     struct Error {
         using error_buffer_type = ErrorBuffer;
@@ -523,20 +535,20 @@ namespace utils::error {
         }
 
        public:
-        template <class T>
-            requires internal::has_error<T>
+        template <class T, helper_disable_self(Error, T)>
+            requires(internal::has_error<T> && !std::is_same_v<std::decay_t<T>, Error>)
         constexpr Error(T&& t) {
             construct_ptr(std::forward<T>(t), Alloc{});
         }
 
         template <class T, class A>
-            requires internal::has_error<T>
+            requires(internal::has_error<T> && !std::is_same_v<std::decay_t<T>, Error>)
         constexpr Error(T&& t, A&& a) {
             construct_ptr(std::forward<T>(t), std::forward<A>(a));
         }
 
-        template <class T, class A>
-            requires internal::has_error<T>
+        template <class T, class A, helper_disable_self(Error, T)>
+            requires(internal::has_error<T> && !std::is_same_v<std::decay_t<T>, Error>)
         constexpr Error(T&& t, Category category, SubCategory sub_category = SubCategory(), A&& a = Alloc{})
             : Error(std::forward<T>(t), std::forward<A>(a)) {
             this->category_ = category;
@@ -662,7 +674,7 @@ namespace utils::error {
                     break;
                 }
                 case ErrorType::c_str: {
-                    strutil::append(out, c_str);
+                    FormatTraits::str_error(out, c_str, category_, sub_category_);
                     break;
                 }
                 case ErrorType::number: {

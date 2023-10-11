@@ -15,6 +15,7 @@
 #include <iterator>
 #include <compare>
 #include <utility>
+#include <helper/omit_empty.h>
 
 namespace utils {
     namespace view {
@@ -289,68 +290,20 @@ namespace utils {
             }
         };
 
-        namespace internal {
-
-            template <class A>
-            struct alloc_system {
-                A alloc_;
-
-                constexpr alloc_system() = default;
-
-                constexpr alloc_system(A&& a) noexcept
-                    : alloc_(std::move(a)) {}
-
-                constexpr alloc_system(const A& a)
-                    : alloc_(a) {}
-
-                constexpr A& alloc() noexcept {
-                    return alloc_;
-                }
-
-                constexpr const A& alloc() const noexcept {
-                    return alloc_;
-                }
-
-                constexpr void move_alloc(A&& a) noexcept {
-                    alloc_ = std::move(a);
-                }
-
-                constexpr void copy_alloc(const A& a) noexcept {
-                    alloc_ = a;
-                }
-            };
-
-            template <class A>
-                requires std::is_empty_v<A>
-            struct alloc_system<A> {
-                constexpr alloc_system() = default;
-
-                constexpr alloc_system(A&&) noexcept {}
-                constexpr alloc_system(const A&) noexcept {}
-
-                constexpr A alloc() const noexcept {
-                    return A{};
-                }
-
-                constexpr void move_alloc(A&&) noexcept {}
-                constexpr void copy_alloc(const A&) noexcept {}
-            };
-        }  // namespace internal
-
         template <class D, class C>
-        struct basic_storage_vec : public basic_wvec<C>, private internal::alloc_system<D> {
+        struct basic_storage_vec : public basic_wvec<C>, private helper::omit_empty<D> {
            public:
             constexpr basic_storage_vec() noexcept(noexcept(D{})) = default;
 
             constexpr basic_storage_vec(basic_wvec<C> c, D&& d) noexcept(noexcept(D{}))
-                : basic_wvec<C>(c), internal::alloc_system<D>(std::move(d)) {}
+                : basic_wvec<C>(c), helper::omit_empty<D>(std::move(d)) {}
 
             constexpr explicit basic_storage_vec(basic_wvec<C> c) noexcept(noexcept(D{}))
                 : basic_wvec<C>(c) {}
 
             constexpr basic_storage_vec(basic_storage_vec&& in)
                 : basic_wvec<C>(const_cast<C*>(std::exchange(in.data_, nullptr)), std::exchange(in.size_, 0)),
-                  internal::alloc_system<D>(std::move(in.alloc())) {}
+                  helper::omit_empty<D>(std::move(in.om_value())) {}
 
             constexpr basic_storage_vec& operator=(basic_storage_vec&& in) {
                 if (this == &in) {
@@ -359,13 +312,13 @@ namespace utils {
                 clear();
                 this->data_ = std::exchange(in.data_, nullptr);
                 this->size_ = std::exchange(in.size_, 0);
-                this->move_alloc(std::move(in.alloc()));
+                this->move_om_value(std::move(in.om_value()));
                 return *this;
             }
 
             constexpr void clear() {
                 if (!this->null()) {
-                    this->alloc()(this->data(), this->size_);
+                    this->om_value()(this->data(), this->size_);
                     this->data_ = nullptr;
                     this->size_ = 0;
                 }
