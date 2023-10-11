@@ -77,7 +77,7 @@ namespace utils {
             enum class NumErrMode {
                 // print "code=val,category=category"
                 use_default,
-                // print ""
+                // print custom message
                 use_custom,
             };
 
@@ -562,7 +562,7 @@ namespace utils {
                 }
             };
 
-            using Error = utils::error::Error<glheap_allocator<byte>, std::string>;
+            using Error = utils::error::Error<glheap_allocator<byte>, std::string, std::uint32_t, FormatTraits>;
 
             using ErrorType = utils::error::ErrorType;
 

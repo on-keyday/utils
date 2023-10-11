@@ -18,6 +18,7 @@
 #include <number/to_string.h>
 #include <strutil/append.h>
 #include <helper/disable_self.h>
+#include <helper/template_instance.h>
 
 namespace utils::error {
 
@@ -56,11 +57,54 @@ namespace utils::error {
             code,
             traits,
             equal,
+            compare_fn,
         };
 
         struct WrapperBase;
 
         using reflector_t = std::uintptr_t (*)(WrapperBase* self, ReflectorOp, std::uintptr_t, std::uintptr_t);
+
+        using compare_t = bool (*)(const void* a, const void* b);
+
+        template <class T>
+        concept has_error = requires(T t) {
+            { t.error(std::declval<helper::IPushBacker<>>()) };
+        };
+
+        template <class T>
+        concept has_category = requires(T t) {
+            { t.category() } -> std::same_as<Category>;
+        };
+
+        template <class T>
+        concept has_sub_category = requires(T t) {
+            { t.sub_category() } -> std::convertible_to<std::uint32_t>;
+        };
+
+        template <class T>
+        concept has_code = requires(T t) {
+            { t.code() } -> std::convertible_to<std::uint64_t>;
+        };
+
+        template <class T>
+        concept has_equal = requires(const T& t) {
+            { t == t } -> std::convertible_to<bool>;
+        };
+
+        template <class T, class E>
+        concept has_unwrap = requires(T t) {
+            { t.unwrap() } -> std::convertible_to<E>;
+        };
+
+        template <class T>
+        constexpr bool compare(const void* a, const void* b) {
+            if constexpr (has_equal<T>) {
+                return *static_cast<const T*>(a) == *static_cast<const T*>(b);
+            }
+            else {
+                return std::is_empty_v<T>;
+            }
+        }
 
         struct WrapperBase {
            protected:
@@ -103,6 +147,8 @@ namespace utils::error {
             template <class E>
             E unwrap() {
                 E e;
+                // HACK(on-keyday): because all variant of Error template instance has same memory layout
+                //                  and same semantics of field, we can use this hack.
                 reflector(this, ReflectorOp::unwrap, std::bit_cast<std::uintptr_t>(&e), 0);
                 return e;
             }
@@ -112,49 +158,35 @@ namespace utils::error {
                 return std::bit_cast<T*>(reflector(this, ReflectorOp::pointer, 0, 0));
             }
 
+            template <class T>
+            const T* pointer() const {
+                return std::bit_cast<const T*>(reflector(const_cast<WrapperBase*>(this), ReflectorOp::pointer, 0, 0));
+            }
+
             reflector_t get_reflector() {
                 return reflector;
             }
 
-            bool operator==(const WrapperBase& other) const {
-                if (this == &other) {
+            compare_t get_compare() const {
+                compare_t cmp = nullptr;
+                reflector(nullptr, ReflectorOp::compare_fn, std::bit_cast<std::uintptr_t>(&cmp), 0);
+                return cmp;
+            }
+
+            friend bool operator==(const WrapperBase& a, const WrapperBase& b) {
+                if (&a == &b) {
                     return true;
                 }
-                if (reflector != other.reflector) {
-                    return false;
+                if (a.reflector != b.reflector) {
+                    auto cmp1 = a.get_compare();
+                    auto cmp2 = b.get_compare();
+                    if (cmp1 != cmp2) {
+                        return false;
+                    }
+                    return cmp1(a.pointer<void>(), b.pointer<void>());
                 }
-                return reflector(nullptr, ReflectorOp::equal, std::bit_cast<std::uintptr_t>(this), std::bit_cast<std::uintptr_t>(&other)) != 0;
+                return a.reflector(nullptr, ReflectorOp::equal, std::bit_cast<std::uintptr_t>(&a), std::bit_cast<std::uintptr_t>(&b)) != 0;
             }
-        };
-
-        template <class T>
-        concept has_error = requires(T t) {
-            { t.error(std::declval<helper::IPushBacker<>>()) };
-        };
-
-        template <class T>
-        concept has_category = requires(T t) {
-            { t.category() } -> std::same_as<Category>;
-        };
-
-        template <class T>
-        concept has_sub_category = requires(T t) {
-            { t.sub_category() } -> std::convertible_to<std::uint32_t>;
-        };
-
-        template <class T>
-        concept has_code = requires(T t) {
-            { t.code() } -> std::convertible_to<std::uint64_t>;
-        };
-
-        template <class T>
-        concept has_equal = requires(const T& t) {
-            { t == t } -> std::convertible_to<bool>;
-        };
-
-        template <class T, class E>
-        concept has_unwrap = requires(T t) {
-            { t.unwrap() } -> std::same_as<E>;
         };
 
         template <class T, class E, class RefCount>
@@ -180,11 +212,16 @@ namespace utils::error {
                         auto p1 = static_cast<const WrapperT*>(std::bit_cast<const void*>(arg1));
                         auto p2 = static_cast<const WrapperT*>(std::bit_cast<const void*>(arg2));
                         if constexpr (has_equal<T>) {
-                            return *p1 == *p2;
+                            return p1->value == p2->value;
                         }
                         else {
                             return std::is_empty_v<T>;
                         }
+                    }
+                    case ReflectorOp::compare_fn: {
+                        auto cmp = static_cast<compare_t*>(std::bit_cast<void*>(arg1));
+                        *cmp = compare<T>;
+                        return 0;
                     }
                     case ReflectorOp::error: {
                         helper::IPushBacker<>* pb = reinterpret_cast<helper::IPushBacker<>*>(arg1);
@@ -200,6 +237,7 @@ namespace utils::error {
                             auto alloc = std::move(self->om_value());
                             traits::destroy(alloc, self);
                             traits::deallocate(alloc, self, 1);
+                            return 1;
                         }
                         return 0;
                     }
@@ -369,6 +407,9 @@ namespace utils::error {
         using traits = std::allocator_traits<Alloc>;
 
        private:
+        template <class A, class B, class C, class F, class R>
+        friend struct Error;
+
         ErrorType type_ = ErrorType::null;
         Category category_ = Category::none;
         SubCategory sub_category_ = 0;  // implementation defined
@@ -378,7 +419,8 @@ namespace utils::error {
             internal::WrapperBase* ptr;
         };
 
-        constexpr void copy_data(const Error& other) {
+        template <class A, class B, class C, class F, class R>
+        constexpr void copy_data(const Error<A, B, C, F, R>& other) {
             type_ = other.type_;
             category_ = other.category_;
             sub_category_ = other.sub_category_;
@@ -402,7 +444,8 @@ namespace utils::error {
             }
         }
 
-        constexpr void move_data(Error&& other) {
+        template <class A, class B, class C, class F, class R>
+        constexpr void move_data(Error<A, B, C, F, R>&& other) {
             type_ = other.type_;
             category_ = other.category_;
             sub_category_ = other.sub_category_;
@@ -412,10 +455,12 @@ namespace utils::error {
                 }
                 case ErrorType::c_str: {
                     c_str = other.c_str;
+                    other.c_str = nullptr;
                     break;
                 }
                 case ErrorType::number: {
                     number = other.number;
+                    other.number = 0;
                     break;
                 }
                 case ErrorType::ptr: {
@@ -438,13 +483,16 @@ namespace utils::error {
                     break;
                 }
                 case ErrorType::c_str: {
+                    c_str = nullptr;
                     break;
                 }
                 case ErrorType::number: {
+                    number = 0;
                     break;
                 }
                 case ErrorType::ptr: {
                     ptr->decref();
+                    ptr = nullptr;
                     break;
                 }
             }
@@ -535,24 +583,36 @@ namespace utils::error {
         }
 
        public:
-        template <class T, helper_disable_self(Error, T)>
-            requires(internal::has_error<T> && !std::is_same_v<std::decay_t<T>, Error>)
+        template <class T>
+            requires(internal::has_error<T> && !helper::is_template_instance_of<std::decay_t<T>, Error>)
         constexpr Error(T&& t) {
             construct_ptr(std::forward<T>(t), Alloc{});
         }
 
         template <class T, class A>
-            requires(internal::has_error<T> && !std::is_same_v<std::decay_t<T>, Error>)
+            requires(internal::has_error<T> && !helper::is_template_instance_of<std::decay_t<T>, Error>)
         constexpr Error(T&& t, A&& a) {
             construct_ptr(std::forward<T>(t), std::forward<A>(a));
         }
 
-        template <class T, class A, helper_disable_self(Error, T)>
-            requires(internal::has_error<T> && !std::is_same_v<std::decay_t<T>, Error>)
+        template <class T, class A>
+            requires(internal::has_error<T> && !helper::is_template_instance_of<std::decay_t<T>, Error>)
         constexpr Error(T&& t, Category category, SubCategory sub_category = SubCategory(), A&& a = Alloc{})
             : Error(std::forward<T>(t), std::forward<A>(a)) {
             this->category_ = category;
             this->sub_category_ = sub_category;
+        }
+
+        template <class A, class B, class C, class F, class R>
+            requires(!std::is_same_v<Error, Error<A, B, C, F, R>>)
+        constexpr Error(const Error<A, B, C, F, R>& other) {
+            copy_data(other);
+        }
+
+        template <class A, class B, class C, class F, class R>
+            requires(!std::is_same_v<Error, Error<A, B, C, F, R>>)
+        constexpr Error(Error<A, B, C, F, R>&& other) {
+            move_data(std::move(other));
         }
 
         constexpr ErrorType type() const {
@@ -602,9 +662,12 @@ namespace utils::error {
             return ErrorTraits{};
         }
 
-        constexpr bool operator==(const Error& other) const {
-            if (this == &other) {
-                return true;
+        template <class A, class B, class C, class F, class R>
+        constexpr bool operator==(const Error<A, B, C, F, R>& other) const {
+            if constexpr (std::is_same_v<Error, Error<A, B, C, F, R>>) {
+                if (this == &other) {
+                    return true;
+                }
             }
             if (type_ != other.type_) {
                 return false;
@@ -639,6 +702,14 @@ namespace utils::error {
             return Error{};
         }
 
+        // as() is a reflection function like Golang's type assertion.
+        // It returns pointer to T if T is the same type as the internal pointer.
+        // Otherwise, it returns nullptr.
+        // HACK(on-keyday):
+        // because this Error class allows conversion between different template parameter types,
+        // and using internal::WrapperT<T, Error, RefCount>::reflectorT as a key to check if T is the same type as the internal pointer,
+        // we cannot get T if they are from different template parameter Error types.
+        // So, you should use a template parameter (A,B,C,F,R) to get T if you want to use mixture Error class template.
         template <class T>
         constexpr T* as() {
             if (type_ != ErrorType::ptr) {
@@ -646,14 +717,19 @@ namespace utils::error {
             }
             internal::reflector_t cmp_reflector = internal::WrapperT<T, Error, RefCount>::reflectorT;
             if (ptr->get_reflector() != cmp_reflector) {
-                return nullptr;
+                internal::compare_t cmp = nullptr;
+                cmp_reflector(nullptr, internal::ReflectorOp::compare_fn, std::bit_cast<std::uintptr_t>(&cmp), 0);
+                auto self = ptr->get_compare();
+                if (self != cmp) {
+                    return nullptr;
+                }
             }
-            return ptr->pointer<T>();
+            return ptr->template pointer<T>();
         }
 
         template <class T>
         constexpr const T* as() const {
-            return const_cast<const T*>(const_cast<Error*>(this)->as<T>());
+            return const_cast<const T*>(const_cast<Error*>(this)->template as<T>());
         }
 
         constexpr void* unsafe_ptr() {
