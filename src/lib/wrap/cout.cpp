@@ -22,6 +22,7 @@
 
 namespace utils {
     namespace wrap {
+        /*
         ::FILE* is_std(std::ios_base& out);
 
         UtfOut::UtfOut(ostream& out)
@@ -73,22 +74,15 @@ namespace utils {
             write(pack.impl.result);
             return *this;
         }
+        */
 
         UtfOut& cout_wrap() {
-#ifdef UTILS_PLATFORM_WINDOWS
-            static UtfOut cout(std::wcout);
-#else
-            static UtfOut cout(std::cout);
-#endif
+            static UtfOut cout(file::File::stdout_file());
             return cout;
         }
 
         UtfOut& cerr_wrap() {
-#ifdef UTILS_PLATFORM_WINDOWS
-            static UtfOut cerr(std::wcerr);
-#else
-            static UtfOut cerr(std::cerr);
-#endif
+            static UtfOut cerr(file::File::stderr_file());
             return cerr;
         }
     }  // namespace wrap

@@ -12,6 +12,7 @@
 
 namespace utils {
     namespace wrap {
+        /*
         utils_DLL_EXPORT extern int stdin_mode;
         utils_DLL_EXPORT extern int stdout_mode;
         utils_DLL_EXPORT extern int stderr_mode;
@@ -22,5 +23,6 @@ namespace utils {
         utils_DLL_EXPORT extern bool in_virtual_terminal;
         utils_DLL_EXPORT extern bool handle_input_self;
         utils_DLL_EXPORT void STDCALL force_init_io();
+        */
     }  // namespace wrap
 }  // namespace utils

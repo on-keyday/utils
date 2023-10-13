@@ -15,6 +15,7 @@
 #endif
 #include <unicode/utf/convert.h>
 #include <helper/defer.h>
+#include <file/file.h>
 
 namespace utils {
     namespace wrap {
@@ -156,12 +157,68 @@ namespace utils {
         }
 #endif
         bool STDCALL input(wrap::path_string& buf, InputState* state) {
-            if (state) {
-                return input_platform(buf, *state);
+            auto& fin = file::File::stdin_file();
+            if (!fin.is_tty()) {
+                return false;
             }
             InputState tmp;
-            return input_platform(buf, tmp);
+            if (!state) {
+                state = &tmp;
+            }
+            auto b = fin.interactive_console_read();
+            if (!b) {
+                return false;
+            }
+            struct Interact {
+                wrap::path_string& buf;
+                InputState* state;
+                bool end = false;
+                bool input = false;
+                void operator()(wrap::path_char c) {
+                    input = true;
+                    if (c == '\b') {
+                        if (buf.size()) {
+                            buf.pop_back();
+                            state->buffer_update = true;
+                        }
+                        if (state->edit_buffer && state->edit_buffer->size()) {
+                            state->edit_buffer->pop_back();
+                        }
+                        return;
+                    }
+                    buf.push_back(c);
+                    if (state->edit_buffer) {
+                        state->edit_buffer->push_back(c);
+                    }
+                    state->buffer_update = true;
+                    if (c == '\n') {
+                        end = true;
+                    }
+                    if (c == 3) {
+                        state->ctrl_c = true;
+                        end = true;
+                    }
+                }
+            } i_act{buf, state};
+            for (;;) {
+                auto err = b->interact(&i_act, [](wrap::path_char c, void* data) {
+                    auto& buf = *reinterpret_cast<Interact*>(data);
+                    buf(c);
+                });
+                if (!err) {
+                    return false;
+                }
+                if (i_act.end) {
+                    break;
+                }
+                if (state->non_block && !i_act.input) {
+                    return false;
+                }
+                i_act.input = false;
+            }
+            return true;
         }
+
         void STDCALL enable_ctrl_c(bool en, unsigned int& flag) {
             return enable_ctrl_c_platform(en, flag);
         }

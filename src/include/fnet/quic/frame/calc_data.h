@@ -93,8 +93,8 @@ namespace utils {
         // returns(frame_len,data_len,valid)
         constexpr std::tuple<std::uint64_t, std::uint64_t, bool> shrink_to_fit_no_len(std::uint64_t to_fit, StreamDataRange range) {
             // can write usage
-            const size_t to_write = range.length_no_max_len();
-            size_t& data_len = range.max_length;
+            const std::uint64_t to_write = range.length_no_max_len();
+            std::uint64_t& data_len = range.max_length;
             if (to_write > to_fit) {
                 if (data_len < to_write - to_fit) {
                     return {0, 0, false};  // cannot send

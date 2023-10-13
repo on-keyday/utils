@@ -39,9 +39,9 @@ struct TimePoint {
 };
 
 struct Data {
-    size_t i = 0;
+    std::uint64_t i = 0;
     std::string target;
-    size_t count = 0;
+    std::uint64_t count = 0;
     Socket sock;
     std::vector<TimePoint> period;
 };

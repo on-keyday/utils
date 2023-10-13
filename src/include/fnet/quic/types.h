@@ -467,14 +467,14 @@ namespace utils {
         }
 
         struct FrameFlags {
-            size_t value = 0;
+            std::uint64_t value = 0;
 
             constexpr FrameFlags() = default;
-            constexpr FrameFlags(size_t typ)
+            constexpr FrameFlags(std::uint64_t typ)
                 : value(typ) {}
 
             constexpr FrameFlags(FrameType typ)
-                : value(size_t(typ)) {}
+                : value(std::uint64_t(typ)) {}
 
             constexpr byte as_byte() const {
                 return value & 0xff;

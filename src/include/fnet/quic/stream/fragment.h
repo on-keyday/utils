@@ -11,7 +11,7 @@
 namespace utils {
     namespace fnet::quic::stream {
         struct Fragment {
-            size_t offset;
+            std::uint64_t offset;
             view::rvec fragment;
             bool fin = false;
         };

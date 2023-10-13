@@ -13,26 +13,13 @@
 #include <cstdio>
 #include <iostream>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
-#include <conio.h>
-#include <io.h>
-#include "Windows.h"
 #include "../../include/wrap/cout.h"
-#else
-#include <sys/select.h>
-#include <sys/time.h>
-#define _O_U8TEXT 0
-#include <unistd.h>
-#endif
+#include <unicode/utf/minibuffer.h>
 
 namespace utils {
     namespace wrap {
         ::FILE* is_std(std::ios_base&);
 
-        UtfIn::UtfIn(istream& i)
-            : in(i) {
-            std_handle = is_std(i);
-        }
         static path_string glbuf;
 #ifdef UTILS_PLATFORM_WINDOWS
 /*
@@ -138,13 +125,8 @@ namespace utils {
           */
 #endif
 
-        size_t UtfIn::read(path_string& out, bool line) {
-            std::getline(in, out);
-        }
-
         bool UtfIn::peek_buffer(path_string& buf, bool no_cin, bool* updated) {
-#ifdef UTILS_PLATFORM_WINDOWS
-            if (std_handle && ::_isatty(0)) {
+            if (is_tty()) {
                 InputState state;
                 state.non_block = true;
                 if (!no_cin) {
@@ -156,68 +138,85 @@ namespace utils {
                 }
                 return res;
             }
-#endif
             return true;
         }
 
         UtfIn& UtfIn::operator>>(path_string& out) {
-            force_init_io();
-            if (std_handle) {
-                while (true) {
-                    lock.lock();
-                    auto seq = make_ref_seq(glbuf);
-                    auto e = strutil::read_until(out, seq, "\n");
-                    if (!e) {
-                        lock.unlock();
-                        std::getline(in, out);
+            if (glbuf.size()) {
+                out.append(glbuf);
+                glbuf.clear();
+                return *this;
+            }
+            if (is_tty()) {
+                out.resize(1024);
+                view::basic_wvec<path_char> buf{out};
+                size_t len = 0;
+                for (;;) {
+                    auto f = file.read_console(buf);
+                    if (!f) {
+                        break;  // error but no way to handle
+                    }
+                    if (f->size() < out.size()) {
+                        len += f->size();
+                        out.resize(len);
                         break;
                     }
-                    out.push_back('\n');
-                    break;
+                    if (out.back() == '\n') {
+                        break;
+                    }
+                    out.resize(out.size() * 2);
+                    buf = view::basic_wvec<path_char>{out.data() + len, out.data() + out.size()};
+                    len += f->size();
                 }
-                lock.unlock();
             }
             else {
-                std::getline(in, out);
+                char u8_buf[4]{};
+                char input = 0;
+                auto read_one = [&] {
+                    auto c = file.read_file(view::wvec(&input, 1));
+                    if (!c) {
+                        return false;
+                    }
+                    if (c->size() != 1) {
+                        return false;
+                    }
+                    return true;
+                };
+                for (;;) {
+                    read_one();
+                    auto len = unicode::utf8::first_byte_to_len(input);
+                    if (len == 0) {
+                        utf::from_utf32(unicode::replacement_character, out);
+                        continue;
+                    }
+                    if (len == 1) {
+                        out.push_back(input);
+                        if (input == '\n') {
+                            break;
+                        }
+                        continue;
+                    }
+                    u8_buf[0] = input;
+                    for (auto i = 1; i < len; i++) {
+                        if (!read_one()) {
+                            break;
+                        }
+                        u8_buf[i] = input;
+                    }
+                    utf::Minibuffer<path_char> c;
+                    if (!utf::convert(view::wvec(u8_buf, u8_buf + len), c)) {
+                        utf::from_utf32(unicode::replacement_character, out);
+                        continue;
+                    }
+                    out.append(c.c_str(), c.size());
+                }
             }
             return *this;
         }
 
-        bool UtfIn::has_input() {
-            if (std_handle) {
-#ifdef UTILS_PLATFORM_WINDOWS
-                if (::_isatty(0)) {
-                    DWORD num = 0;
-                    return ::GetNumberOfConsoleInputEvents(::GetStdHandle(STD_INPUT_HANDLE), &num) != 0 &&
-                           num != 0;
-                }
-#else
-                ::fd_set set{0};
-                ::timeval tv{0};
-                FD_ZERO(&set);
-                FD_SET(0, &set);
-                auto e = ::select(1, &set, nullptr, nullptr, &tv);
-                return e != 0;
-#endif
-            }
-            return true;
-        }
-
         UtfIn& STDCALL cin_wrap() {
-#ifdef UTILS_PLATFORM_WINDOWS
-            static UtfIn cin{std::wcin};
-#else
-            static UtfIn cin{std::cin};
-#endif
+            static UtfIn cin(file::File::stdin_file());
             return cin;
-        }
-
-        bool UtfIn::is_tty() const {
-#ifdef UTILS_PLATFORM_WINDOWS
-            return ::_isatty(::_fileno(std_handle));
-#else
-            return isatty(fileno(std_handle));
-#endif
         }
 
     }  // namespace wrap

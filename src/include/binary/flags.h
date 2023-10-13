@@ -226,7 +226,8 @@ namespace utils {
     constexpr auto set_##name(decltype(flags.template get<num>()) val__) noexcept { \
         return flags.template set<num>(val__);                                      \
     }                                                                               \
-    static constexpr auto name##_max = decltype(flags)::template limit<num>();
+    static constexpr auto name##_max = decltype(flags)::template limit<num>();      \
+    static constexpr auto name##_mask = decltype(flags)::template get_mask<num>();
 
 #define bits_flag_alias_method_with_enum(flags, num, name, Enum)                    \
     constexpr auto name() const noexcept {                                          \
@@ -235,7 +236,8 @@ namespace utils {
     constexpr auto set_##name(Enum val__) noexcept {                                \
         return flags.template set<num>(decltype(flags.template get<num>())(val__)); \
     }                                                                               \
-    static constexpr auto name##_max = decltype(flags)::limit<num>();
+    static constexpr auto name##_max = decltype(flags)::limit<num>();               \
+    static constexpr auto name##_mask = decltype(flags)::template get_mask<num>();
 
         namespace test {
 #ifdef UTILS_BINARY_SUPPORT_INT128

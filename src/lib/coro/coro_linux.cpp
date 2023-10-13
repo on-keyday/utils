@@ -5,11 +5,12 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#include <platform/detect.h>
 #include <ucontext.h>
 #include <coro/coro_platform.h>
 #include <view/iovec.h>
 #include <unistd.h>
-#ifdef __wasi__
+#ifdef UTILS_PLATFORM_WASI
 #define _WASI_EMULATED_MMAN
 #endif
 #include <sys/mman.h>

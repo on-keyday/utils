@@ -111,7 +111,7 @@ namespace utils {
         }
 
         template <std::uint32_t n, class C>
-        constexpr HpkErr decode_integer(binary::basic_reader<C>& r, size_t& value, std::uint8_t* firstmask = nullptr) {
+        constexpr HpkErr decode_integer(binary::basic_reader<C>& r, std::uint64_t& value, std::uint8_t* firstmask = nullptr) {
             static_assert(n > 0 && n <= 8, "invalid range");
             constexpr byte msk = 0xff >> (8 - n);
             C tmp = 0;
@@ -126,9 +126,9 @@ namespace utils {
             if (tmp < msk) {
                 return true;
             }
-            size_t m = 0;
-            constexpr auto pow = [](size_t x) -> size_t {
-                return (size_t(0x1) << 63) >> ((sizeof(size_t) * 8 - 1) - x);
+            std::uint64_t m = 0;
+            constexpr auto pow = [](std::uint64_t x) -> std::uint64_t {
+                return (std::uint64_t(0x1) << 63) >> ((sizeof(std::uint64_t) * 8 - 1) - x);
             };
             do {
                 if (!r.read(view::basic_wvec<C>(&tmp, 1))) {
@@ -136,7 +136,7 @@ namespace utils {
                 }
                 value += (byte(tmp) & 0x7f) * pow(m);
                 m += 7;
-                if (m > (sizeof(size_t) * 8 - 1)) {
+                if (m > (sizeof(std::uint64_t) * 8 - 1)) {
                     return HpackError::too_large_number;
                 }
             } while (tmp & 0x80);
@@ -202,7 +202,7 @@ namespace utils {
 
         template <size_t prefixed = 7, class String, class C, class F1 = C>
         constexpr HpkErr decode_string(String& str, binary::basic_reader<C>& r, F1 flag_huffman = 0x80, C* first_mask = nullptr) {
-            size_t size = 0;
+            std::uint64_t size = 0;
             byte mask = 0;
             if (!first_mask) {
                 first_mask = &mask;

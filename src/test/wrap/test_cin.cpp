@@ -16,12 +16,12 @@
 #include <fcntl.h>
 #else
 #include <unistd.h>
-#define Sleep sleep
+#define Sleep(n) usleep(n * 1000)
 #endif
 
 void test_cin() {
-    utils::wrap::out_virtual_terminal = true;
     auto& cout = utils::wrap::cout_wrap();
+    cout.set_virtual_terminal(true);
     auto& cin = utils::wrap::cin_wrap();
     cout << "|>> ";
     size_t i = 0;

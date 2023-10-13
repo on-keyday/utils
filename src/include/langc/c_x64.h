@@ -368,7 +368,7 @@ namespace utils::langc::gen {
 #elif defined(UTILS_PLATFORM_LINUX)
                 Platform::linux_x64;
 #else
-                return Platfrom::linux_x64;
+                Platform::linux_x64;
 #endif
             Context(Writer& w, Errors& e)
                 : w(w), errs(e) {}

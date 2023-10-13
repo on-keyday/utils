@@ -62,7 +62,7 @@ namespace utils::error {
 
         struct WrapperBase;
 
-        using reflector_t = std::uintptr_t (*)(WrapperBase* self, ReflectorOp, std::uintptr_t, std::uintptr_t);
+        using reflector_t = std::uint64_t (*)(WrapperBase* self, ReflectorOp, std::uintptr_t, std::uintptr_t);
 
         using compare_t = bool (*)(const void* a, const void* b);
 
@@ -83,7 +83,7 @@ namespace utils::error {
 
         template <class T>
         concept has_code = requires(T t) {
-            { t.code() } -> std::convertible_to<std::uint64_t>;
+            { t.code() } -> std::convertible_to<std::int64_t>;
         };
 
         template <class T>
@@ -134,8 +134,8 @@ namespace utils::error {
                 return static_cast<std::uint32_t>(reflector(this, ReflectorOp::sub_category, 0, 0));
             }
 
-            std::uint64_t code() {
-                return static_cast<std::uint64_t>(reflector(this, ReflectorOp::code, 0, 0));
+            std::int64_t code() {
+                return static_cast<std::int64_t>(reflector(this, ReflectorOp::code, 0, 0));
             }
 
             ErrorTraits traits() {
@@ -155,12 +155,12 @@ namespace utils::error {
 
             template <class T>
             T* pointer() {
-                return std::bit_cast<T*>(reflector(this, ReflectorOp::pointer, 0, 0));
+                return std::bit_cast<T*>(std::uintptr_t(reflector(this, ReflectorOp::pointer, 0, 0)));
             }
 
             template <class T>
             const T* pointer() const {
-                return std::bit_cast<const T*>(reflector(const_cast<WrapperBase*>(this), ReflectorOp::pointer, 0, 0));
+                return std::bit_cast<const T*>(std::uintptr_t(reflector(const_cast<WrapperBase*>(this), ReflectorOp::pointer, 0, 0)));
             }
 
             reflector_t get_reflector() {
@@ -272,7 +272,7 @@ namespace utils::error {
                     }
                     case ReflectorOp::code: {
                         if constexpr (has_code<T>) {
-                            return static_cast<std::uintptr_t>(self->value.code());
+                            return static_cast<std::int64_t>(self->value.code());
                         }
                         else {
                             return 0;
@@ -315,7 +315,7 @@ namespace utils::error {
             strutil::append(out, "<null>");
         }
 
-        static constexpr void num_error(auto&& out, std::uint64_t val, Category c, SubCategory s) {
+        static constexpr void num_error(auto&& out, std::int64_t val, Category c, SubCategory s) {
             strutil::append(out, "code=");
             number::to_string(out, val);
         }
@@ -388,7 +388,9 @@ namespace utils::error {
        std::uint64_t code()
 
      @param Alloc Allocator for internal pointer.
-     @param ErrorBuffer Error buffer type. If used with helper::either::expected,
+     @param ErrorBuffer Error buffer type or void.
+               if set not void, simple error() returns ErrorBuffer object.
+               If used with helper::either::expected,
                and when an exception occurs, ErrorBuffer is used to store the error message.
                what() returns ErrorBuffer.c_str() if ErrorBuffer has a c_str() method.
      @param SubCategory Sub-category type for error message.
@@ -400,7 +402,7 @@ namespace utils::error {
           static constexpr void categories(auto&& out, ErrorType t, Category c, SubCategory s)
      @param RefCount Reference count type for internal pointer.
     */
-    template <class Alloc, class ErrorBuffer = void, class SubCategory = std::uint32_t, class FormatTraits = DefaultFormatTraits<SubCategory>, class RefCount = std::atomic_uint32_t>
+    template <class Alloc = std::allocator<byte>, class ErrorBuffer = void, class SubCategory = std::uint32_t, class FormatTraits = DefaultFormatTraits<SubCategory>, class RefCount = std::atomic_uint32_t>
     struct Error {
         using error_buffer_type = ErrorBuffer;
         using allocator_type = Alloc;
@@ -414,7 +416,7 @@ namespace utils::error {
         Category category_ = Category::none;
         SubCategory sub_category_ = 0;  // implementation defined
         union {
-            std::uint64_t number = 0;
+            std::int64_t number = 0;
             const char* c_str;
             internal::WrapperBase* ptr;
         };
@@ -627,7 +629,7 @@ namespace utils::error {
             return sub_category_;
         }
 
-        constexpr std::uint64_t code() const {
+        constexpr std::int64_t code() const {
             switch (type_) {
                 case ErrorType::null: {
                     return 0;

@@ -15,18 +15,20 @@
 #include "../thread/lite_lock.h"
 #include "pack.h"
 #include "light/stream.h"
+#include <file/file.h>
 
 namespace utils {
     namespace wrap {
         struct utils_DLL_EXPORT UtfIn {
            private:
-            istream& in;
-            ::FILE* std_handle = nullptr;
+            const file::File& file;
             thread::LiteLock lock;
 
            public:
-            UtfIn(istream& i);
+            UtfIn(const file::File& i)
+                : file(i) {}
             UtfIn& operator>>(path_string& out);
+
             size_t read(path_string& out, bool line = true);
 
             template <class T>
@@ -37,9 +39,9 @@ namespace utils {
                 return *this;
             }
 
-            bool has_input();
-
-            bool is_tty() const;
+            bool is_tty() const {
+                return file.is_tty();
+            }
 
             // this works on condition below
             // 1. on windows

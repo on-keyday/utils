@@ -90,7 +90,7 @@ namespace utils {
                        id.seq_count() < limit.curused();
             }
 
-            constexpr error::Error update_limit(size_t new_limit) {
+            constexpr error::Error update_limit(std::uint64_t new_limit) {
                 if (new_limit >= std::uint64_t(1) << 60) {
                     return QUICError{
                         .transport_error = TransportError::FRAME_ENCODING_ERROR,

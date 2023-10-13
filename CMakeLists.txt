@@ -208,8 +208,8 @@ endif()
 # libutils
 target_sources(utils
   PRIVATE
-  "src/lib/file/platform.cpp"
-  "src/lib/file/file_view.cpp"
+  # "src/lib/file/platform.cpp"
+  # "src/lib/file/file_view.cpp"
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
   "src/lib/json/json_object.cpp"
@@ -226,6 +226,8 @@ target_sources(utils
   "src/lib/wrap/admin.cpp"
   "src/lib/wrap/trace.cpp"
   "src/lib/wrap/wasi_stub.cpp"
+  "src/lib/file/file.cpp"
+  "src/lib/file/console.cpp"
 )
 
 
@@ -398,9 +400,10 @@ if(WIN32)
 endif()
 
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
-install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION "." OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION "." OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION "." OPTIONAL)
-install(TARGETS utils coro fnet fnetserv DESTINATION "lib" OPTIONAL)
+set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
+install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
+install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
+install(TARGETS utils coro fnet fnetserv DESTINATION "lib"  OPTIONAL)
 install(TARGETS utils coro fnet fnetserv DESTINATION "test" OPTIONAL)
 install(TARGETS utils coro fnet fnetserv DESTINATION "tool" OPTIONAL)

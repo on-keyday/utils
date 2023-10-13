@@ -342,10 +342,10 @@ namespace utils {
             if (!param.preferred_address.connectionID.null() && param.preferred_address.connectionID.size() < 1) {
                 return TransportParamError::zero_length_connid;
             }
-            if (param.initial_max_streams_bidi >= size_t(1) << 60) {
+            if (param.initial_max_streams_bidi >= std::uint64_t(1) << 60) {
                 return TransportParamError::too_large_max_streams_bidi;
             }
-            if (param.initial_max_streams_uni >= size_t(1) << 60) {
+            if (param.initial_max_streams_uni >= std::uint64_t(1) << 60) {
                 return TransportParamError::too_large_max_streams_uni;
             }
             return TransportParamError::none;

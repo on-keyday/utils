@@ -256,7 +256,7 @@ namespace utils {
                     return HpackError::invalid_mask;
                 }
                 case Field::index: {
-                    size_t index = 0;
+                    std::uint64_t index = 0;
                     err = decode_integer<7>(r, index);
                     if (err != HpackError::none) {
                         return err;
@@ -279,7 +279,7 @@ namespace utils {
                     return HpackError::none;
                 }
                 case Field::index_literal_insert: {
-                    size_t code = 0;
+                    std::uint64_t code = 0;
                     err = decode_integer<6>(r, code);
                     if (err != HpackError::none) {
                         return err;
@@ -303,7 +303,7 @@ namespace utils {
                 }
                 case Field::index_literal_no_insert:
                 case Field::index_literal_never_indexed: {
-                    size_t code = 0;
+                    std::uint64_t code = 0;
                     err = decode_integer<4>(r, code);
                     if (err != HpackError::none) {
                         return err;
@@ -321,7 +321,7 @@ namespace utils {
                     return HpackError::none;
                 }
                 case Field::dyn_table_update: {
-                    size_t code = 0;
+                    std::uint64_t code = 0;
                     err = decode_integer<5>(r, code);
                     if (err != HpackError::none) {
                         return err;
