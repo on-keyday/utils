@@ -37,15 +37,15 @@ namespace utils::file {
             return flags.as_value();
         }
 
-        bits_flag_alias_method(flags, 0, owner_read);
-        bits_flag_alias_method(flags, 1, owner_write);
-        bits_flag_alias_method(flags, 2, owner_execute);
-        bits_flag_alias_method(flags, 3, group_read);
-        bits_flag_alias_method(flags, 4, group_write);
-        bits_flag_alias_method(flags, 5, group_execute);
-        bits_flag_alias_method(flags, 6, other_read);
-        bits_flag_alias_method(flags, 7, other_write);
-        bits_flag_alias_method(flags, 8, other_execute);
+        bits_flag_alias_method(flags, 1, owner_read);
+        bits_flag_alias_method(flags, 2, owner_write);
+        bits_flag_alias_method(flags, 3, owner_execute);
+        bits_flag_alias_method(flags, 4, group_read);
+        bits_flag_alias_method(flags, 5, group_write);
+        bits_flag_alias_method(flags, 6, group_execute);
+        bits_flag_alias_method(flags, 7, other_read);
+        bits_flag_alias_method(flags, 8, other_write);
+        bits_flag_alias_method(flags, 9, other_execute);
 
         constexpr void set_write(bool value) {
             set_owner_write(value);
@@ -288,12 +288,16 @@ namespace utils::file {
         constexpr MMap() = default;
 
         constexpr MMap(MMap&& other)
-            : ptr(std::exchange(other.ptr, nullptr)), os_spec(std::exchange(os_spec, 0)), file_len(std::exchange(other.file_len, 0)), mode(std::exchange(other.mode, Mode())) {}
+            : ptr(std::exchange(other.ptr, nullptr)),
+              os_spec(std::exchange(other.os_spec, 0)),
+              file_len(std::exchange(other.file_len, 0)),
+              mode(std::exchange(other.mode, Mode())) {}
 
         constexpr MMap& operator=(MMap&& other) {
             if (this == &other) {
                 return *this;
             }
+            unmap();  // ignore result
             ptr = std::exchange(other.ptr, nullptr);
             os_spec = std::exchange(other.os_spec, 0);
             file_len = std::exchange(other.file_len, 0);

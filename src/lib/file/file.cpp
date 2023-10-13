@@ -284,10 +284,14 @@ namespace utils::file {
         if (ptr == nullptr) {
             return helper::either::unexpected(FileError{.method = "MapViewOfFile", .err_code = GetLastError()});
         }
+        d.cancel();
         return MMap(reinterpret_cast<byte*>(ptr), std::uintptr_t(m_handle), s->size, m);
     }
 
     file_result<void> MMap::unmap() {
+        if (!ptr) {
+            return helper::either::unexpected(FileError{.method = "MMap::unmap", .err_code = ERROR_INVALID_PARAMETER});
+        }
         if (!UnmapViewOfFile(ptr)) {
             return helper::either::unexpected(FileError{.method = "UnmapViewOfFile", .err_code = GetLastError()});
         }
@@ -802,6 +806,9 @@ namespace utils::file {
     }
 
     file_result<void> MMap::unmap() {
+        if (!ptr) {
+            return helper::either::unexpected(FileError{.method = "MMap::unmap", .err_code = ERROR_INVALID_PARAMETER});
+        }
         if (::munmap(ptr, os_spec) != 0) {
             return helper::either::unexpected(FileError{.method = "munmap", .err_code = errno});
         }

@@ -39,7 +39,7 @@ namespace utils {
                 info = std::move(s.value());
                 auto m = f.mmap(r_perm);
                 if (!m) {
-                    return helper::either::unexpected(m.error());
+                    return {};  // ignore and fallback
                 }
                 mmap = std::move(m.value());
                 return {};
