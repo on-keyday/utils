@@ -29,8 +29,6 @@ namespace utils {
                 : file(i) {}
             UtfIn& operator>>(path_string& out);
 
-            size_t read(path_string& out, bool line = true);
-
             template <class T>
             UtfIn& operator>>(T& out) {
                 path_string str;
@@ -51,6 +49,10 @@ namespace utils {
             // if above is not satisfied
             // this function always return true
             bool peek_buffer(path_string& buf, bool no_cin = false, bool* updated = nullptr);
+
+            const file::File& get_file() const {
+                return file;
+            }
         };
 
         utils_DLL_EXPORT UtfIn& STDCALL cin_wrap();
