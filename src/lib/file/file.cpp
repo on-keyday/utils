@@ -807,7 +807,7 @@ namespace utils::file {
 
     file_result<void> MMap::unmap() {
         if (!ptr) {
-            return helper::either::unexpected(FileError{.method = "MMap::unmap", .err_code = ERROR_INVALID_PARAMETER});
+            return helper::either::unexpected(FileError{.method = "MMap::unmap", .err_code = EINVAL});
         }
         if (::munmap(ptr, os_spec) != 0) {
             return helper::either::unexpected(FileError{.method = "munmap", .err_code = errno});
