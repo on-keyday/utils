@@ -52,6 +52,11 @@ namespace utils {
                 return true;
             }
 
+            bool push_back(String&& s) {
+                holder_.push_back(std::move(s));
+                return true;
+            }
+
             void clear() {
                 argv_.clear();
                 holder_.clear();

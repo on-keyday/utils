@@ -13,6 +13,7 @@
 #else
 #include <termios.h>
 #include <unistd.h>
+#include <sys/select.h>
 #endif
 
 namespace utils::file {

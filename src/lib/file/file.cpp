@@ -696,9 +696,9 @@ namespace utils::file {
 
     file_result<Stat> File::stat() const {
         Stat stat;
-        struct stat64 st {};
-        if (fstat64(handle, &st) < 0) {
-            return helper::either::unexpected(FileError{.method = "fstat64", .err_code = errno});
+        struct stat st {};
+        if (fstat(handle, &st) < 0) {
+            return helper::either::unexpected(FileError{.method = "fstat", .err_code = errno});
         }
         auto flag = fcntl(handle, F_GETFL, 0);
         if (flag < 0) {
@@ -744,8 +744,8 @@ namespace utils::file {
     }
 
     bool File::is_directory() const {
-        struct stat64 st {};
-        if (fstat64(handle, &st) < 0) {
+        struct stat st {};
+        if (fstat(handle, &st) < 0) {
             return false;
         }
         return S_ISDIR(st.st_mode);
@@ -756,8 +756,8 @@ namespace utils::file {
     }
 
     size_t File::size() const {
-        struct stat64 st {};
-        if (fstat64(handle, &st) < 0) {
+        struct stat st {};
+        if (fstat(handle, &st) < 0) {
             return 0;
         }
         return st.st_size;
@@ -861,14 +861,14 @@ namespace utils::file {
             default:
                 return helper::either::unexpected(FileError{.method = "File::seek", .err_code = EINVAL});
         }
-        if (::lseek64(handle, offset, seek_pos) < 0) {
+        if (::lseek(handle, offset, seek_pos) < 0) {
             return helper::either::unexpected(FileError{.method = "lseek64", .err_code = errno});
         }
         return {};
     }
 
     size_t File::pos() const {
-        auto pos = ::lseek64(handle, 0, SEEK_CUR);
+        auto pos = ::lseek(handle, 0, SEEK_CUR);
         if (pos < 0) {
             return 0;
         }

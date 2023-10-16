@@ -94,6 +94,13 @@ namespace utils {
             return res;
         }
 
+        template <class Out, class In, class F = void (*)(std::uint8_t)>
+        constexpr Out encode(In&& in, F&& no_escape = default_noescape(), bool upper = false) {
+            Out out;
+            encode(in, out, no_escape, upper);
+            return out;
+        }
+
         template <class T, class Out>
         constexpr bool decode(Sequencer<T>& seq, Out& out) {
             while (!seq.eos()) {
@@ -129,6 +136,13 @@ namespace utils {
                 return seq.eos();
             }
             return res;
+        }
+
+        template <class Out, class In>
+        constexpr Out decode(In&& in) {
+            Out out;
+            decode(in, out);
+            return out;
         }
     }  // namespace urlenc
 
