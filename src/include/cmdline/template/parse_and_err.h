@@ -23,7 +23,7 @@ namespace utils {
             // int then(Option opt,option::Context ctx)
             // opt.bind(ctx) is used
             template <class String>
-            int parse_or_err(int argc, char** argv, auto&& opt, auto&& show, auto&& then) {
+            int parse_or_err(int argc, char** argv, auto&& opt, auto&& show, auto&& then, bool disable_error_prefix = false) {
                 option::Context ctx;
                 opt.bind(ctx);
                 option::FlagType err;
@@ -44,7 +44,10 @@ namespace utils {
                 }
                 if (auto msg = error_msg(err)) {
                     String buf;
-                    strutil::appends(buf, "error: ", ctx.erropt(), ": ", msg, "\n");
+                    if (!disable_error_prefix) {
+                        strutil::append(buf, "error: ");
+                    }
+                    strutil::appends(buf, ctx.erropt(), ": ", msg, "\n");
                     show(std::move(buf), true);
                     return -1;
                 }
