@@ -61,6 +61,18 @@ void nan() {
     constexpr auto yes_nan2 = nan_with_sign.to_float();
     constexpr auto reconvert_nan = utils::binary::make_float(yes_nan);
     constexpr auto reconvert_nan2 = utils::binary::make_float(yes_nan2);
+    constexpr auto epsilon = utils::binary::make_float(FLT_EPSILON);
+    constexpr auto epsilon_exponent = epsilon.exponent();
+    constexpr auto epsilon_fraction = epsilon.fraction();
+    constexpr auto epsilon_biased_exponent = epsilon.biased_exponent();
+    constexpr auto epsilon_plus_1 = utils::binary::make_float(1.0f + FLT_EPSILON);
+    constexpr auto epsilon_plus_1_exponent = epsilon_plus_1.exponent();
+    constexpr auto epsilon_plus_1_fraction = epsilon_plus_1.fraction();
+    constexpr auto epsilon_plus_1_biased_exponent = epsilon_plus_1.biased_exponent();
+    constexpr auto epsilon2 = utils::binary::make_float(epsilon_plus_1.to_float() - 1.0f);
+    static_assert(epsilon2 == epsilon, "epsilon2 != epsilon");
+    constexpr auto frac_with_1 = epsilon_plus_1.fraction_with_implicit_1();
+    constexpr auto frac_with_1_epsilon = epsilon.fraction_with_implicit_1();
 }
 int main() {
     nan();
