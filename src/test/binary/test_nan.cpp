@@ -42,9 +42,9 @@ void nan() {
     fsNAN = n / n;
     auto val = fsNAN.is_indeterminate_nan();
     fsNAN.set_fraction(1);
-    fsNAN.set_fraction(fsNAN.frac_msb | 1);
+    fsNAN.set_fraction(fsNAN.fraction_msb | 1);
     fsNAN.set_sign(false);
-    fsNAN.set_fraction(fsNAN.frac_msb);
+    fsNAN.set_fraction(fsNAN.fraction_msb);
     fsNAN.set_sign(true);
     fsNAN = n * 0.0f;
     auto nan = utils::binary::make_float(NAN);
@@ -73,6 +73,8 @@ void nan() {
     static_assert(epsilon2 == epsilon, "epsilon2 != epsilon");
     constexpr auto frac_with_1 = epsilon_plus_1.fraction_with_implicit_1();
     constexpr auto frac_with_1_epsilon = epsilon.fraction_with_implicit_1();
+    constexpr auto ep = utils::binary::epsilon<float>;
+    static_assert(ep == epsilon, "ep != epsilon");
 }
 int main() {
     nan();

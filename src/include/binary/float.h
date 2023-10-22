@@ -32,35 +32,31 @@ namespace utils {
         using float64_t = double;
         using float128_t = void;
 #endif
-        // msb to lsb
-        template <class T>
-        constexpr T bit_range(byte start, byte size) {
-            T value = 0;
-            auto bit = indexed_mask<T>();
-            for (size_t i = 0; i < size; i++) {
-                value |= bit(start + i);
-            }
-            return value;
-        }
 
         template <class T, class F, byte exp_width, int bias_>
         struct Float {
             static_assert(std::is_void_v<F> || std::is_floating_point_v<F>);
             using float_t = F;
 
+            static constexpr auto float_bits_width = sizeof(T) * bit_per_byte;
+            static constexpr byte exponent_bits_width = exp_width;
+            static constexpr byte fraction_bits_width = float_bits_width - 1 - exponent_bits_width;
+
            private:
-            static constexpr auto t_bit = sizeof(T) * bit_per_byte;
-            flags_t<T, 1, exp_width, byte(t_bit - 1 - exp_width)> value;
+            using Rep = flags_t<T, 1, exponent_bits_width, fraction_bits_width>;
+            Rep value;
+
+            static_assert(1 + exponent_bits_width + fraction_bits_width == float_bits_width);
+
+            static constexpr byte exponent_shift = fraction_bits_width;
 
            public:
             using frac_t = T;
             using exp_t = decltype(value.template get<1>());
 
             static constexpr exp_t bias = bias_;
-            static constexpr byte exp_bits_width = exp_width;
-            static constexpr byte exp_shift = t_bit - 1 - exp_bits_width;
 
-            static constexpr T frac_msb = bit_range<T>(t_bit - exp_shift, 1);
+            static constexpr T fraction_msb = T(1) << (fraction_bits_width - 1);
 
             constexpr Float() = default;
             constexpr Float(T input) noexcept {
@@ -115,11 +111,11 @@ namespace utils {
             }
 
             constexpr bool is_quiet_nan() const noexcept {
-                return is_nan() && bool(fraction() & frac_msb);
+                return is_nan() && bool(fraction() & fraction_msb);
             }
 
             constexpr bool is_canonical_nan() const noexcept {
-                return exponent() == exponent_max && fraction() == frac_msb;
+                return exponent() == exponent_max && fraction() == fraction_msb;
             }
 
             constexpr bool is_indeterminate_nan() const noexcept {
@@ -127,7 +123,7 @@ namespace utils {
             }
 
             constexpr bool is_arithmetic_nan() const noexcept {
-                return bool(fraction() & frac_msb);
+                return bool(fraction() & fraction_msb);
             }
 
             constexpr bool is_signaling_nan() const noexcept {
@@ -136,17 +132,17 @@ namespace utils {
 
             constexpr bool make_quiet_signaling(frac_t bit = 1) {
                 if (is_quiet_nan()) {
-                    if (bit & frac_msb) {
+                    if (bit & fraction_msb) {
                         return false;
                     }
-                    return set_fraction((fraction() & ~frac_msb) | bit /*to be nan*/);
+                    return set_fraction((fraction() & ~fraction_msb) | bit /*to be nan*/);
                 }
                 return false;
             }
 
             constexpr bool make_signaling_quiet() {
                 if (is_signaling_nan()) {
-                    return set_fraction((fraction() | frac_msb));
+                    return set_fraction((fraction() | fraction_msb));
                 }
                 return true;
             }
@@ -160,7 +156,7 @@ namespace utils {
 
             constexpr T fraction_with_implicit_1() const noexcept {
                 if (has_implicit_1()) {
-                    return (T(1) << exp_shift) | fraction();
+                    return (T(1) << exponent_shift) | fraction();
                 }
                 return fraction();
             }
@@ -180,6 +176,8 @@ namespace utils {
             constexpr T& to_int() noexcept {
                 return value.as_value();
             }
+
+            // values
         };
 
         using HalfFloat = Float<std::uint16_t, float16_t, 5, 15>;
@@ -190,9 +188,21 @@ namespace utils {
         using ExtDoubleFloat = Float<uint128_t, float128_t, 15, 16383>;
 #endif
 
+        template <class F>
+        struct is_Float_type_t : std::false_type {};
+
+        template <class T, class F, byte exp, int bias>
+        struct is_Float_type_t<Float<T, F, exp, bias>> : std::true_type {};
+
+        template <class T>
+        concept is_Float_type = is_Float_type_t<T>::value;
+
         template <class T>
         constexpr auto make_float(T t) noexcept {
-            if constexpr (sizeof(T) == sizeof(HalfFloat)) {
+            if constexpr (is_Float_type<T>) {
+                return t;
+            }
+            else if constexpr (sizeof(T) == sizeof(HalfFloat)) {
                 if constexpr (std::is_same_v<T, bfloat16_t>) {
                     return BrainHalfFloat(t);
                 }
@@ -216,8 +226,44 @@ namespace utils {
             }
         }
 
+        // also canonical
+        template <class Float>
+        constexpr auto quiet_nan = [] {
+            auto f = make_float(Float());
+            f.set_exponent(f.exponent_max);
+            f.set_fraction(f.fraction_msb);
+            return f;
+        }();
+
+        template <class Float>
+        constexpr auto indeterminate_nan = [] {
+            auto f = make_float(Float());
+            f.set_exponent(f.exponent_max);
+            f.set_fraction(f.fraction_msb);
+            f.set_sign(true);
+            return f;
+        }();
+
+        template <class Float>
+        constexpr auto infinity = [] {
+            auto f = make_float(Float());
+            f.set_exponent(f.exponent_max);
+            return f;
+        }();
+
+        template <class Float>
+        constexpr auto zero = make_float(Float());
+
+        template <class Float>
+        constexpr auto epsilon = [] {
+            auto f = make_float(Float());
+            f.set_exponent(f.bias - f.fraction_bits_width);
+            return f;
+        }();
+
         namespace test {
-            static_assert(HalfFloat::exp_shift == 10 && SingleFloat::exp_shift == 23 && DoubleFloat::exp_shift == 52);
+            // static_assert(HalfFloat::exponent_shift == 10 && SingleFloat::exponent_shift == 23 && DoubleFloat::exponent_shift == 52);
+            static_assert(HalfFloat::fraction_bits_width == 10 && SingleFloat::fraction_bits_width == 23 && DoubleFloat::fraction_bits_width == 52);
             constexpr bool check_ieeefloat() {
                 SingleFloat single;
                 single = (0xc0000000);
