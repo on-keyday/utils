@@ -78,7 +78,10 @@ void nan() {
     static_assert(utils::binary::quiet_nan<float> == nanf, "qn != nanf");
     static_assert(utils::binary::indeterminate_nan<float> == nan_with_sign, "in != nan_with_sign");
     static_assert(utils::binary::infinity<float> == utils::binary::make_float(INFINITY), "inf != inf");
-    constexpr auto vas = utils::binary::min_denormalized<float>.biased_exponent();
+    constexpr auto vas = utils::binary::epsilon<double>.to_float();
+    constexpr auto vas2 = utils::binary::make_float(vas + 1.0);
+    constexpr auto vas3 = vas2.to_float();
+    constexpr auto vas4 = vas3 - 1.0;
 }
 int main() {
     nan();
