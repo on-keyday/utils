@@ -52,6 +52,15 @@ void nan() {
     constexpr auto f03 = utils::binary::make_float(0.2);
     constexpr auto nanf = utils::binary::make_float(__builtin_nanf(""));
     constexpr auto nanl = utils::binary::make_float(__builtin_nan(""));
+    constexpr auto nan_with_sign = [&] {
+        auto copy = nanf;
+        copy.set_sign(true);
+        return copy;
+    }();
+    constexpr auto yes_nan = nanf.to_float();
+    constexpr auto yes_nan2 = nan_with_sign.to_float();
+    constexpr auto reconvert_nan = utils::binary::make_float(yes_nan);
+    constexpr auto reconvert_nan2 = utils::binary::make_float(yes_nan2);
 }
 int main() {
     nan();
