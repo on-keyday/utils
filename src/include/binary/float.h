@@ -261,6 +261,14 @@ namespace utils {
             return f;
         }();
 
+        template <class Float>
+        constexpr auto min_denormalized = [] {
+            auto f = make_float(Float());
+            f.set_exponent(0);
+            f.set_fraction(1);
+            return f;
+        }();
+
         namespace test {
             // static_assert(HalfFloat::exponent_shift == 10 && SingleFloat::exponent_shift == 23 && DoubleFloat::exponent_shift == 52);
             static_assert(HalfFloat::fraction_bits_width == 10 && SingleFloat::fraction_bits_width == 23 && DoubleFloat::fraction_bits_width == 52);

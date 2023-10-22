@@ -73,8 +73,12 @@ void nan() {
     static_assert(epsilon2 == epsilon, "epsilon2 != epsilon");
     constexpr auto frac_with_1 = epsilon_plus_1.fraction_with_implicit_1();
     constexpr auto frac_with_1_epsilon = epsilon.fraction_with_implicit_1();
-    constexpr auto ep = utils::binary::epsilon<float>;
-    static_assert(ep == epsilon, "ep != epsilon");
+
+    static_assert(utils::binary::epsilon<float> == epsilon, "ep != epsilon");
+    static_assert(utils::binary::quiet_nan<float> == nanf, "qn != nanf");
+    static_assert(utils::binary::indeterminate_nan<float> == nan_with_sign, "in != nan_with_sign");
+    static_assert(utils::binary::infinity<float> == utils::binary::make_float(INFINITY), "inf != inf");
+    constexpr auto vas = utils::binary::min_denormalized<float>.biased_exponent();
 }
 int main() {
     nan();
