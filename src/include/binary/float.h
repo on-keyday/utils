@@ -190,6 +190,32 @@ namespace utils {
         using ExtDoubleFloat = Float<uint128_t, float128_t, 15, 16383>;
 #endif
 
+        template <class T>
+        constexpr auto make_float(T t) noexcept {
+            if constexpr (sizeof(T) == sizeof(HalfFloat)) {
+                if constexpr (std::is_same_v<T, bfloat16_t>) {
+                    return BrainHalfFloat(t);
+                }
+                else {
+                    return HalfFloat(t);
+                }
+            }
+            else if constexpr (sizeof(T) == sizeof(SingleFloat)) {
+                return SingleFloat(t);
+            }
+            else if constexpr (sizeof(T) == sizeof(DoubleFloat)) {
+                return DoubleFloat(t);
+            }
+#ifdef UTILS_BINARY_SUPPORT_INT128
+            else if constexpr (sizeof(T) == sizeof(ExtDoubleFloat)) {
+                return ExtDoubleFloat(t);
+            }
+#endif
+            else {
+                static_assert(sizeof(T) != sizeof(T), "unsupported float type");
+            }
+        }
+
         namespace test {
             static_assert(HalfFloat::exp_shift == 10 && SingleFloat::exp_shift == 23 && DoubleFloat::exp_shift == 52);
             constexpr bool check_ieeefloat() {
