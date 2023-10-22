@@ -82,6 +82,9 @@ void nan() {
     constexpr auto vas2 = utils::binary::make_float(vas + 1.0);
     constexpr auto vas3 = vas2.to_float();
     constexpr auto vas4 = vas3 - 1.0;
+    constexpr auto no_effect = vas - vas / 2.0000000000000;
+    constexpr auto effected = 1.0 + no_effect;
+    static_assert(effected == 1.0, "effected != 1.0");
 }
 int main() {
     nan();
