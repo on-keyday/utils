@@ -110,6 +110,7 @@ add_executable(derive "src/test/math/test_derive.cpp")
 add_executable(matrix "src/test/math/test_matrix.cpp")
 add_executable(stack_trace "src/test/wrap/test_stack_trace.cpp")
 add_executable(error_convert "src/test/error/test_error_convert.cpp")
+add_executable(nan "src/test/binary/test_nan.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
