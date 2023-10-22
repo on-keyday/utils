@@ -60,10 +60,6 @@ namespace utils {
             static constexpr byte exp_bits_width = exp_width;
             static constexpr byte exp_shift = t_bit - 1 - exp_bits_width;
 
-            static constexpr T sign_bit = bit_range<T>(0, 1);
-            static constexpr T exp_bits = bit_range<T>(1, exp_bits_width);
-            static constexpr T frac_bits = ~(sign_bit | exp_bits);
-
             static constexpr T frac_msb = bit_range<T>(t_bit - exp_shift, 1);
 
             constexpr Float() = default;
@@ -120,6 +116,18 @@ namespace utils {
 
             constexpr bool is_quiet_nan() const noexcept {
                 return is_nan() && bool(fraction() & frac_msb);
+            }
+
+            constexpr bool is_canonical_nan() const noexcept {
+                return exponent() == exponent_max && fraction() == frac_msb;
+            }
+
+            constexpr bool is_indeterminate_nan() const noexcept {
+                return is_canonical_nan() && sign();
+            }
+
+            constexpr bool is_arithmetic_nan() const noexcept {
+                return bool(fraction() & frac_msb);
             }
 
             constexpr bool is_signaling_nan() const noexcept {
