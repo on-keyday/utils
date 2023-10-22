@@ -50,6 +50,8 @@ void nan() {
     auto nan = utils::binary::make_float(NAN);
     fsNAN = (-(float)(((float)(1e+300 * 1e+300)) * 0.0F));
     constexpr auto f03 = utils::binary::make_float(0.2);
+    constexpr auto nanf = utils::binary::make_float(__builtin_nanf(""));
+    constexpr auto nanl = utils::binary::make_float(__builtin_nan(""));
 }
 int main() {
     nan();
