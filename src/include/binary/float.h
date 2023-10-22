@@ -261,11 +261,20 @@ namespace utils {
             return f;
         }();
 
+        // non zero minimum denormalized value (no sign)
         template <class Float>
         constexpr auto min_denormalized = [] {
             auto f = make_float(Float());
             f.set_exponent(0);
             f.set_fraction(1);
+            return f;
+        }();
+
+        // non zero minimum normalized value (no sign)
+        template <class Float>
+        constexpr auto min_normalized = [] {
+            auto f = make_float(Float());
+            f.set_exponent(1);
             return f;
         }();
 

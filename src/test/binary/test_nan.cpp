@@ -85,6 +85,9 @@ void nan() {
     constexpr auto no_effect = vas - vas / 2.0000000000000;
     constexpr auto effected = 1.0 + no_effect;
     static_assert(effected == 1.0, "effected != 1.0");
+    constexpr auto normalized_min = utils::binary::min_normalized<double>.to_float();
+    constexpr auto denormalized_min = utils::binary::min_denormalized<double>.to_float();
+    static_assert(normalized_min == DBL_MIN, "min_normalized != DBL_MIN");
 }
 int main() {
     nan();
