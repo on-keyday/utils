@@ -23,6 +23,7 @@ int main() {
 
     res = sin(utils::math::pi.raw().to_float());
     std::string val;
+    namespace m = utils::math;
     fd.print(val);
     val.push_back(',');
     fdd.print(val);

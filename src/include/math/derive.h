@@ -14,6 +14,37 @@
 
 namespace utils::math {
 
+    struct NumericXPrint {
+        constexpr auto operator()(auto&& out, size_t i) const {
+            strutil::append(out, "x");
+            number::to_string(out, i);
+        }
+    };
+
+    struct XYZWPrint {
+        constexpr auto operator()(auto&& out, size_t i) const {
+            switch (i) {
+                case 0:
+                    strutil::append(out, "x");
+                    break;
+                case 1:
+                    strutil::append(out, "y");
+                    break;
+                case 2:
+                    strutil::append(out, "z");
+                    break;
+                case 3:
+                    strutil::append(out, "w");
+                    break;
+                default:
+                    NumericXPrint{}(out, i);
+                    break;
+            }
+        }
+    };
+
+    using DefaultXPrint = XYZWPrint;
+
     struct FromFloat {
         std::uint64_t value = 0;
 
@@ -56,29 +87,47 @@ namespace utils::math {
             return a;
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
             return Const<0>{};
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& = XPrint{}) const {
             auto f = a.to_float();
             number::to_string(out, f);
         }
     };
 
+    template <size_t i>
     struct X {
-        constexpr auto operator()(auto&& x) const {
-            return x;
+        constexpr auto operator()(auto&&... x) const {
+            return std::get<i>(std::forward_as_tuple(x...));
         }
 
+        template <size_t c = 0>
         constexpr auto derive() const {
-            return Const<1>{};
+            if constexpr (i == c) {
+                return Const<1>{};
+            }
+            else {
+                return Const<0>{};
+            }
         }
 
-        constexpr auto print(auto&& out) const {
-            strutil::append(out, "x");
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
+            f(out, i);
         }
     };
+
+    template <class T>
+    struct is_X_t : std::false_type {};
+    template <size_t i>
+    struct is_X_t<X<i>> : std::true_type {};
+
+    template <class T>
+    concept is_X = is_X_t<T>::value;
 
     constexpr auto pi = Const<3.14159265358979323846264338327950288>{};
     constexpr auto e = Const<2.71828182845904523536028747135266249>{};
@@ -271,33 +320,37 @@ namespace utils::math {
             using instance = T<V, f1, f2, phase>;
         };
 
+        template <size_t i = 0>
         constexpr auto replace_x(auto base, auto new_x) {
             using T = Template<decltype(base)>;
             if constexpr (is_Const<decltype(base)>) {
                 return base;
             }
-            else if constexpr (std::is_same_v<decltype(base), X>) {
+            else if constexpr (std::is_same_v<decltype(base), X<i>>) {
                 return new_x;
+            }
+            else if constexpr (is_X<decltype(base)>) {
+                return base;
             }
             else if constexpr (T::value) {
                 if constexpr (T::count == 1) {
-                    using V = typename T::template instance<decltype(replace_x(base.a, new_x))>;
+                    using V = typename T::template instance<decltype(replace_x<i>(base.a, new_x))>;
                     return V{};
                 }
                 else if constexpr (T::count == 2) {
-                    using V = typename T::template instance<decltype(replace_x(base.a, new_x)), decltype(replace_x(base.b, new_x))>;
+                    using V = typename T::template instance<decltype(replace_x<i>(base.a, new_x)), decltype(replace_x<i>(base.b, new_x))>;
                     return V{};
                 }
             }
             else {
-                static_assert(std::is_same_v<decltype(base), X>);
+                static_assert(is_X<decltype(base)>);
             }
         }
     }  // namespace internal
 
-    template <derivable T, derivable U>
+    template <size_t i = 0, derivable T, derivable U>
     constexpr auto replace_x(T base, U new_x) {
-        return internal::replace_x(base, new_x);
+        return internal::replace_x<i>(base, new_x);
     }
 
     template <derivable T, derivable U>
@@ -329,15 +382,17 @@ namespace utils::math {
             return a(x...) + b(x...);
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
-            return internal::add(a.derive(), b.derive());
+            return internal::add(a.template derive<i>(), b.template derive<i>());
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "(");
-            a.print(out);
+            a.print(out, f);
             strutil::append(out, " + ");
-            b.print(out);
+            b.print(out, f);
             strutil::append(out, ")");
         }
     };
@@ -351,15 +406,17 @@ namespace utils::math {
             return a(x...) * b(x...);
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
-            return internal::add(internal::mul(a.derive(), b), internal::mul(a, b.derive()));
+            return internal::add(internal::mul(a.template derive<i>(), b), internal::mul(a, b.template derive<i>()));
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "(");
-            a.print(out);
+            a.print(out, f);
             strutil::append(out, " * ");
-            b.print(out);
+            b.print(out, f);
             strutil::append(out, ")");
         }
     };
@@ -373,17 +430,19 @@ namespace utils::math {
             return a(x...) / b(x...);
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
             return internal::div(
-                internal::sub(internal::mul(a.derive(), b), internal::mul(a, b.derive())),
+                internal::sub(internal::mul(a.template derive<i>(), b), internal::mul(a, b.template derive<i>())),
                 internal::mul(b, b));
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "(");
-            a.print(out);
+            a.print(out, f);
             strutil::append(out, " / ");
-            b.print(out);
+            b.print(out, f);
             strutil::append(out, ")");
         }
     };
@@ -393,7 +452,9 @@ namespace utils::math {
         return Const<x>{};
     }
 
-    constexpr auto x = X{};
+    constexpr auto x = X<0>{};
+
+    constexpr auto y = X<1>{};
 
     template <class A, class B>
     struct Log {
@@ -410,24 +471,31 @@ namespace utils::math {
             }
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
             if constexpr (std::is_same_v<decltype(a), decltype(e)>) {
                 // log(e) = 1
-                return internal::div(Const<1>{}, b) * b.derive();
+                return internal::div(Const<1>{}, b) * b.template derive<i>();
             }
             else {
-                return internal::div(Const<1>{}, internal::mul(b, Log{e, a})) * b.derive();
+                return internal::div(Const<1>{}, internal::mul(b, Log{e, a})) * b.template derive<i>();
             }
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "log(");
-            a.print(out);
+            a.print(out, f);
             strutil::append(out, " , ");
-            b.print(out);
+            b.print(out, f);
             strutil::append(out, ")");
         }
     };
+
+    template <class A, class B>
+    constexpr auto log(A a, B b) {
+        return Log<A, B>{};
+    }
 
     template <class A, class B>
     struct Pow {
@@ -443,25 +511,26 @@ namespace utils::math {
             return std::pow(a(x...), b(x...));
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
             if constexpr (is_Const<B>) {
                 auto n_ = internal::sub(b, Const<1>{});
                 if constexpr (std::is_same_v<decltype(n_), Const<0>>) {
-                    return internal::mul(b, a.derive());
+                    return internal::mul(b, a.template derive<i>());
                 }
                 else if constexpr (std::is_same_v<decltype(n_), Const<1>>) {
-                    return internal::mul(internal::mul(b, a), a.derive());
+                    return internal::mul(internal::mul(b, a), a.template derive<i>());
                 }
                 else {
-                    return internal::mul(internal::mul(b, Pow<A, decltype(n_)>{}), a.derive());
+                    return internal::mul(internal::mul(b, Pow<A, decltype(n_)>{}), a.template derive<i>());
                 }
             }
             else if constexpr (is_Const<A>) {
                 if constexpr (std::is_same_v<A, decltype(e)>) {
-                    return internal::mul(Pow{a, b}, b.derive());
+                    return internal::mul(Pow{a, b}, b.template derive<i>());
                 }
                 else {
-                    return internal::mul(internal::mul(Pow{a, b}, Log{e, a}), b.derive());
+                    return internal::mul(internal::mul(Pow{a, b}, Log{e, a}), b.template derive<i>());
                 }
             }
             else {
@@ -469,11 +538,12 @@ namespace utils::math {
             }
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "(");
-            a.print(out);
+            a.print(out, f);
             strutil::append(out, " ^ ");
-            b.print(out);
+            b.print(out, f);
             strutil::append(out, ")");
         }
     };
@@ -503,11 +573,13 @@ namespace utils::math {
             }
         }
 
+        template <size_t i = 0>
         constexpr auto derive() const {
-            return internal::mul(Circler<A, f2, f1, (phase + 1) % 4>{}, a.derive());
+            return internal::mul(Circler<A, f2, f1, (phase + 1) % 4>{}, a.template derive<i>());
         }
 
-        constexpr auto print(auto&& out) const {
+        template <class XPrint = DefaultXPrint>
+        constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             if constexpr (phase == 2 || phase == 3) {
                 strutil::append(out, "-");
             }
@@ -518,7 +590,7 @@ namespace utils::math {
                 strutil::append(out, "cos");
             }
             strutil::append(out, "(");
-            a.print(out);
+            a.print(out, f);
             strutil::append(out, ")");
         }
     };
@@ -527,8 +599,10 @@ namespace utils::math {
     constexpr auto sin(A x) {
         return Circler<A, std::sin, std::cos, 0>{};
     }
-    constexpr auto cos(auto x) {
-        return sin(x).derive();
+
+    template <class B>
+    constexpr auto cos(B x) {
+        return Circler<B, std::cos, std::sin, 1>{};
     }
 
     template <class A>
