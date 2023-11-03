@@ -347,7 +347,7 @@ namespace utils::file {
         size_t transferred() const;
     };
 
-    struct ConsoleBuffer {
+    struct utils_DLL_EXPORT ConsoleBuffer {
        private:
         std::uintptr_t handle = ~0;
 
@@ -366,6 +366,25 @@ namespace utils::file {
 
        public:
         file_result<void> interact(void*, void (*callback)(wrap::path_char, void*));
+        constexpr ConsoleBuffer() = default;
+        constexpr ConsoleBuffer(ConsoleBuffer&& in)
+            : handle(std::exchange(in.handle, ~0)),
+              base_flag(std::exchange(in.base_flag, 0)),
+              rec{std::exchange(in.rec[0], 0), std::exchange(in.rec[1], 0)},
+              zero_input(std::exchange(in.zero_input, false)) {}
+
+        constexpr ConsoleBuffer& operator=(ConsoleBuffer&& other) {
+            if (this == &other) {
+                return *this;
+            }
+            this->~ConsoleBuffer();
+            handle = std::exchange(other.handle, ~0);
+            base_flag = std::exchange(other.base_flag, 0);
+            rec[0] = std::exchange(other.rec[0], 0);
+            rec[1] = std::exchange(other.rec[1], 0);
+            zero_input = std::exchange(other.zero_input, false);
+            return *this;
+        }
         ~ConsoleBuffer();
     };
 

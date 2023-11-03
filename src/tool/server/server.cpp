@@ -119,6 +119,7 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     }
     auto& servstate = s->state();
     utils::wrap::path_string str;
+    auto _ = utils::file::File::stdin_file().interactive_console_read();
     auto input_callback = [&] {
         if (!servstate.busy() && m.try_lock()) {
             if (ac.size()) {
