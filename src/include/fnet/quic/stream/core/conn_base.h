@@ -67,7 +67,7 @@ namespace utils {
             // cb is std::uint64_t(std::uint64_t avail_size,std::uint64_t limit)
             constexpr bool use_send_credit(auto&& cb) {
                 const auto locked = helper::lock(send_locker);
-                std::uint64_t reqsize = cb(state.conn_flow.send.avail_size(), state.conn_flow.send.curlimit());
+                std::uint64_t reqsize = cb(state.conn_flow.send.avail_size(), state.conn_flow.send.current_limit());
                 if (reqsize == 0) {
                     return true;
                 }
@@ -123,7 +123,7 @@ namespace utils {
 
             constexpr IOResult send_max_data(frame::fwriter& w) {
                 frame::MaxDataFrame frame;
-                frame.max_data = state.conn_flow.recv.curlimit();
+                frame.max_data = state.conn_flow.recv.current_limit();
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
                 }
@@ -156,7 +156,7 @@ namespace utils {
             constexpr IOResult send_max_uni_streams(frame::fwriter& w) {
                 frame::MaxStreamsFrame frame;
                 frame.type = FrameType::MAX_STREAMS_UNI;
-                frame.max_streams = state.uni_acceptor.limit.curlimit();
+                frame.max_streams = state.uni_acceptor.limit.current_limit();
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
                 }
@@ -177,7 +177,7 @@ namespace utils {
             constexpr IOResult send_max_bidi_streams(frame::fwriter& w) {
                 frame::MaxStreamsFrame frame;
                 frame.type = FrameType::MAX_STREAMS_BIDI;
-                frame.max_streams = state.bidi_acceptor.limit.curlimit();
+                frame.max_streams = state.bidi_acceptor.limit.current_limit();
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
                 }
@@ -208,14 +208,14 @@ namespace utils {
 
             constexpr void accept_impl(StreamID id, auto& locker, auto& acceptor, auto&& cb) {
                 const auto locked = helper::lock(locker);
-                size_t curused = acceptor.limit.curused();
+                size_t current_usage = acceptor.limit.current_usage();
                 auto err = acceptor.accept(id);
                 if (err) {
                     cb(id, false, err);
                     return;
                 }
-                for (auto i = curused; i < acceptor.limit.curused(); i++) {
-                    cb(make_id(i, acceptor.dir, acceptor.type), i != id.seq_count(), error::none);
+                for (auto i = current_usage; i < acceptor.limit.current_usage(); i++) {
+                    cb(make_id(i, acceptor.origin, acceptor.type), i != id.seq_count(), error::none);
                 }
             }
 
@@ -255,7 +255,7 @@ namespace utils {
             }
 
             constexpr std::pair<bool, error::Error> check_recv_frame(FrameType type, StreamID id) {
-                if (id.dir() == state.local_dir()) {
+                if (id.origin() == state.local_origin()) {
                     if (id.type() == StreamType::bidi) {
                         const auto locked = helper::lock(open_bidi_locker);
                         // check whether id is already issued id
@@ -303,7 +303,7 @@ namespace utils {
                         return {true, error::none};
                     }
                 }
-                else if (id.dir() == state.peer_dir()) {
+                else if (id.origin() == state.peer_origin()) {
                     if (id.type() == StreamType::bidi) {
                         // check FrameType (this detect library user's bug)
                         if (!is_BidiStreamOK(type)) {

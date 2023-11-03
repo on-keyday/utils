@@ -75,7 +75,7 @@ namespace utils {
                 if (candidate < 0) {
                     return time::invalid;  // BUG overflow
                 }
-                return max_(candidate, config.clock.to_clock_granurarity(1));
+                return max_(candidate, config.clock.to_clock_granularity(1));
             }
 
             constexpr bool detect_and_remove_lost_packet(auto&& remove_lost_packets, PacketNumberSpace loss_space, bool must_lost) {
@@ -173,7 +173,7 @@ namespace utils {
 
             // on_transport_parameter_recived should be called when transport parameter is received
             constexpr void on_transport_parameter_received(std::uint64_t idle_timeout, std::uint64_t max_ack_delay, std::uint64_t ack_delay_exponent) {
-                rtt.apply_max_ack_delay(config.clock.to_clock_granurarity(max_ack_delay));
+                rtt.apply_max_ack_delay(config.clock.to_clock_granularity(max_ack_delay));
                 peer_ack_delay_exponent = ack_delay_exponent;
                 idle.apply_idle_timeout(config, idle_timeout);
             }
@@ -355,7 +355,7 @@ namespace utils {
                     after_call_once = 1;
                     if (largest_removed == largest_ack_pn && has_ack_eliciting) {
                         if (!rtt.sample_rtt(config, largest_removed_sent_time,
-                                            config.clock.to_clock_granurarity(decode_ack_delay(ack_delay_wire, peer_ack_delay_exponent)))) {
+                                            config.clock.to_clock_granularity(decode_ack_delay(ack_delay_wire, peer_ack_delay_exponent)))) {
                             return false;  // internal failure
                         }
                     }
@@ -442,7 +442,7 @@ namespace utils {
                 if (!creation_time.valid() || config.handshake_timeout == 0) {
                     return false;  // bug?
                 }
-                return config.clock.now() - creation_time >= config.clock.to_clock_granurarity(config.handshake_timeout);
+                return config.clock.now() - creation_time >= config.clock.to_clock_granularity(config.handshake_timeout);
             }
 
             constexpr bool is_loss_timeout() const {
@@ -499,6 +499,14 @@ namespace utils {
 
             constexpr bool handshake_confirmed() const {
                 return hs.handshake_confirmed();
+            }
+
+            constexpr void on_transport_parameter_read() {
+                hs.on_transport_parameter_read();
+            }
+
+            constexpr bool transport_parameter_read() const {
+                return hs.transport_parameter_read();
             }
 
             constexpr time::Time path_validation_deadline() const {

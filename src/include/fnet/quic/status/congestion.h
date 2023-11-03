@@ -121,7 +121,7 @@ namespace utils {
                 if (status.is_mtu_probe()) {  // MTU Probe packet loss MUST NOT affect congestion control
                     return;
                 }
-                sent_time_of_last_loss = max_(sent_time_of_last_loss, time_sent.value);
+                sent_time_of_last_loss = max_(sent_time_of_last_loss, time_sent.to_int());
             }
 
             constexpr void on_congestion_event(const InternalConfig& config, const PayloadSize& payload_size, time::time_t time_sent) {

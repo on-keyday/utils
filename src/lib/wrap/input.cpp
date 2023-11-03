@@ -174,7 +174,16 @@ namespace utils {
                 InputState* state;
                 bool end = false;
                 bool input = false;
+                size_t u16_index = 0;
+                wrap::path_char tmp[3]{};
+
                 void operator()(wrap::path_char c) {
+                    auto& cout = wrap::cout_wrap();
+                    auto echo_back = [&](auto&& buf) {
+                        if (!state->no_echo && cout.is_tty()) {
+                            cout << buf;
+                        }
+                    };
                     input = true;
                     if (c == '\b') {
                         if (buf.size()) {
@@ -184,6 +193,7 @@ namespace utils {
                         if (state->edit_buffer && state->edit_buffer->size()) {
                             state->edit_buffer->pop_back();
                         }
+                        echo_back("\b \b");
                         return;
                     }
                     buf.push_back(c);
@@ -192,11 +202,40 @@ namespace utils {
                     }
                     state->buffer_update = true;
                     if (c == '\n') {
+                        echo_back("\r\n");
                         end = true;
                     }
-                    if (c == 3) {
+                    else if (c == 3) {
+                        echo_back("^C\n");
                         state->ctrl_c = true;
                         end = true;
+                    }
+                    else {
+                        // NOTE: if path_char is not wchar_t,
+                        // this code is simply evaluated false and ignored
+                        if (utils::unicode::utf16::is_high_surrogate(c)) {
+                            if (u16_index == 0) {
+                                tmp[0] = c;
+                                u16_index++;
+                            }
+                            else {
+                                tmp[1] = c;
+                                tmp[2] = 0;
+                                echo_back(tmp);
+                                u16_index = 0;
+                            }
+                        }
+                        else if (u16_index == 1) {
+                            tmp[1] = c;
+                            tmp[2] = 0;
+                            echo_back(tmp);
+                            u16_index = 0;
+                        }
+                        else {
+                            tmp[0] = c;
+                            tmp[1] = 0;
+                            echo_back(tmp);
+                        }
                     }
                 }
             } i_act{buf, state};

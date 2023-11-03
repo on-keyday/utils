@@ -64,11 +64,11 @@ namespace utils {
                 return true;
             }
 
-            constexpr std::uint64_t curlimit() const {
+            constexpr std::uint64_t current_limit() const {
                 return limit;
             }
 
-            constexpr std::uint64_t curused() const {
+            constexpr std::uint64_t current_usage() const {
                 return used;
             }
         };

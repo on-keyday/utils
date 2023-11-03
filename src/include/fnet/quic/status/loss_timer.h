@@ -156,7 +156,7 @@ namespace utils {
                                                     time::Timer& ping_timer) {
                 auto set_ping = [&] {
                     if (config.ping_duration != 0) {
-                        ping_timer.set_timeout(config.clock, config.clock.to_clock_granurarity(config.ping_duration));
+                        ping_timer.set_timeout(config.clock, config.clock.to_clock_granularity(config.ping_duration));
                     }
                 };
                 auto [earliest_loss_time, space_1] = get_loss_time_and_space();

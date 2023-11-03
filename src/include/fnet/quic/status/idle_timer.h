@@ -21,7 +21,7 @@ namespace utils {
             time::Time first_ack_eliciting_packet_after_idle_sent_time = time::invalid;
 
             constexpr time::utime_t current_timeout(const InternalConfig& config, const HandshakeStatus& hs) const {
-                return hs.handshake_confirmed() ? idle_timeout : config.clock.to_clock_granurarity(config.handshake_idle_timeout);
+                return hs.handshake_confirmed() ? idle_timeout : config.clock.to_clock_granularity(config.handshake_idle_timeout);
             }
 
            public:
@@ -79,7 +79,7 @@ namespace utils {
                 else {
                     idle_timeout = min_(config.idle_timeout, peer_idle_timeout);
                 }
-                idle_timeout = config.clock.to_clock_granurarity(idle_timeout);
+                idle_timeout = config.clock.to_clock_granularity(idle_timeout);
             }
         };
     }  // namespace fnet::quic::status

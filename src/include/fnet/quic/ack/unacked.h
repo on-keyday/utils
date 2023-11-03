@@ -102,7 +102,7 @@ namespace utils {
                     if (space == status::PacketNumberSpace::application &&
                         ack_delay.not_working() && ack_eliciting_packet_since_last_ack() < config.delay_ack_packet_count) {
                         last_recv = config.clock.now();
-                        auto delay = last_recv + config.clock.to_clock_granurarity(config.local_max_ack_delay);
+                        auto delay = last_recv + config.clock.to_clock_granularity(config.local_max_ack_delay);
                         ack_delay.set_deadline(delay);
                     }
                 }

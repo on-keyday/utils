@@ -303,7 +303,7 @@ namespace utils {
             auto n = s->read();
             auto increment = n - s->prev_read();
             s->update_prev_read(n);
-            return lim.curlimit() + increment;
+            return lim.current_limit() + increment;
         }
     }  // namespace fnet::quic::stream::impl
 }  // namespace utils

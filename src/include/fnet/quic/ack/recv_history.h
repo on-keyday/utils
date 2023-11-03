@@ -240,7 +240,7 @@ namespace utils {
                         if (ack_delay.not_working() &&
                             app.ack_eliciting_packets_since_last_ack() < config.delay_ack_packet_count) {
                             last_recv = config.clock.now();
-                            auto delay = last_recv + config.clock.to_clock_granurarity(config.local_max_ack_delay);
+                            auto delay = last_recv + config.clock.to_clock_granularity(config.local_max_ack_delay);
                             ack_delay.set_deadline(delay);
                         }
                         return res;

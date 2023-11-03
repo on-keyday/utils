@@ -70,7 +70,7 @@ namespace utils {
                     return;
                 }
                 const auto deltaf = double(current_max_payload_size - budget_at_last_sent) * 1e9 / adjusted_bandwidth(config, cong, rtt);
-                const std::uint64_t delta = (deltaf / config.clock.to_nanosec(config.clock.to_clock_granurarity(1))) + 0.9;  // ceil
+                const std::uint64_t delta = (deltaf / config.clock.to_nanosec(config.clock.to_clock_granularity(1))) + 0.9;  // ceil
                 timer.set_deadline(last_sent_time + delta);
             }
 
@@ -80,15 +80,15 @@ namespace utils {
                     return max_burst_size(config, payload_size, cong, rtt);
                 }
                 auto next = budget_at_last_sent + ((adjusted_bandwidth(config, cong, rtt) *
-                                                    (now.value - last_sent_time.value)) /
-                                                   config.clock.to_clock_granurarity(1000));
+                                                    (now - last_sent_time)) /
+                                                   config.clock.to_clock_granularity(1000));
                 return min_(max_burst_size(config, payload_size, cong, rtt), next);
             }
 
             constexpr std::uint64_t max_burst_size(const InternalConfig& config, const PayloadSize& paylod_size, const Congestion<Alg>& cong, const RTT& rtt) const {
-                const auto a = (config.clock.to_clock_granurarity(2) *
+                const auto a = (config.clock.to_clock_granularity(2) *
                                 adjusted_bandwidth(config, cong, rtt)) /
-                               (config.clock.to_clock_granurarity(1000));
+                               (config.clock.to_clock_granularity(1000));
                 return max_(a, config.window_initial_factor * paylod_size.current_max_payload_size());
             }
 

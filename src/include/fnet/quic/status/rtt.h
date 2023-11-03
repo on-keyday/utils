@@ -35,7 +35,7 @@ namespace utils {
             constexpr bool reset(const InternalConfig& config) {
                 latest_rtt_ = 0;
                 min_rtt = 0;
-                smoothed_rtt_ = config.clock.to_clock_granurarity(config.initial_rtt);
+                smoothed_rtt_ = config.clock.to_clock_granularity(config.initial_rtt);
                 rttvar_ = smoothed_rtt_ >> 1;  // smoothed_rtt / 2
                 peer_max_ack_delay_ = time::invalid;
                 first_ack_sample_ = 0;
@@ -45,7 +45,7 @@ namespace utils {
             constexpr void on_connection_migrate(const InternalConfig& config) {
                 latest_rtt_ = 0;
                 min_rtt = 0;
-                smoothed_rtt_ = config.clock.to_clock_granurarity(config.initial_rtt);
+                smoothed_rtt_ = config.clock.to_clock_granularity(config.initial_rtt);
                 rttvar_ = smoothed_rtt_ >> 1;
             }
 

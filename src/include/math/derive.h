@@ -448,13 +448,12 @@ namespace utils::math {
     };
 
     template <FromFloat x>
-    constexpr auto c() {
-        return Const<x>{};
-    }
+    constexpr auto c = Const<x>{};
 
     constexpr auto x = X<0>{};
-
     constexpr auto y = X<1>{};
+    constexpr auto z = X<2>{};
+    constexpr auto w = X<3>{};
 
     template <class A, class B>
     struct Log {
@@ -485,8 +484,13 @@ namespace utils::math {
         template <class XPrint = DefaultXPrint>
         constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "log(");
-            a.print(out, f);
-            strutil::append(out, " , ");
+            if constexpr (std::is_same_v<decltype(a), decltype(e)>) {
+                // nothing to do
+            }
+            else {
+                a.print(out, f);
+                strutil::append(out, " , ");
+            }
             b.print(out, f);
             strutil::append(out, ")");
         }
@@ -527,10 +531,10 @@ namespace utils::math {
             }
             else if constexpr (is_Const<A>) {
                 if constexpr (std::is_same_v<A, decltype(e)>) {
-                    return internal::mul(Pow{a, b}, b.template derive<i>());
+                    return internal::mul(Pow<A, B>{}, b.template derive<i>());
                 }
                 else {
-                    return internal::mul(internal::mul(Pow{a, b}, Log{e, a}), b.template derive<i>());
+                    return internal::mul(internal::mul(Pow<A, B>{}, Log<std::decay_t<decltype(e)>, A>{}), b.template derive<i>());
                 }
             }
             else {

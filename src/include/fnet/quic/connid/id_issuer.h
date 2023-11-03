@@ -6,8 +6,7 @@
 */
 
 #pragma once
-#include "external/exporter.h"
-#include "external/id_generator.h"
+#include "external/id_exporter.h"
 #include "common_param.h"
 #include "../ack/ack_lost_record.h"
 #include "../frame/writer.h"
@@ -41,11 +40,10 @@ namespace utils {
             byte connID_len = 0;
             byte concurrent_limit = 0;
             ConnIDExporter exporter;
-            ConnIDGenerator connid_gen;
             std::int64_t retire_proior_to_id = 0;
 
            public:
-            void reset(const ConnIDExporter& exp, const ConnIDGenerator& gen, byte conn_id_len, byte conc_limit) {
+            void reset(const ConnIDExporter& exp, byte conn_id_len, byte conc_limit) {
                 srcids.clear();
                 waitlist.clear();
                 max_active_conn_id = default_max_active_conn_id;
@@ -54,7 +52,6 @@ namespace utils {
                 connID_len = conn_id_len;
                 concurrent_limit = conc_limit;
                 exporter = exp;
-                connid_gen = gen;
             }
 
             // expose_close_ids expose connIDs to close
@@ -97,7 +94,7 @@ namespace utils {
                 }
                 IDStorage id;
                 id.id = make_storage(connID_len);
-                auto err = connid_gen.generate(cparam.random, cparam.version, connID_len, id.id, id.stateless_reset_token);
+                auto err = exporter.generate(cparam.random, cparam.version, connID_len, id.id, id.stateless_reset_token);
                 if (err) {
                     return {{}, err};
                 }

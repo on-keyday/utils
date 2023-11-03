@@ -11,6 +11,7 @@
 #include "../view/expand_iovec.h"
 #include "dll/glheap.h"
 #include "dll/allocator.h"
+#include <binary/reader.h>
 
 namespace utils {
     namespace fnet {
@@ -53,6 +54,19 @@ namespace utils {
         using flex_storage = view::expand_storage_vec<glheap_allocator<byte>>;
 
         constexpr auto sizeof_flex = sizeof(flex_storage);
+
+        template <class C>
+        constexpr bool read_flex(binary::basic_reader<C>& r, flex_storage& s, size_t to_read) {
+            if (r.remain().size() < to_read) {
+                return false;
+            }
+            if (to_read > s.max_size()) {
+                return false;
+            }
+            s.resize(to_read);
+            s.shrink_to_fit();  // for sso optimization
+            return r.read(s);
+        }
 
     }  // namespace fnet
 }  // namespace utils

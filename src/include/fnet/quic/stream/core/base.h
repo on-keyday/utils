@@ -45,11 +45,11 @@ namespace utils {
             }
 
             constexpr std::uint64_t send_limit() const noexcept {
-                return limit.curlimit();
+                return limit.current_limit();
             }
 
             constexpr std::uint64_t sent_bytes() const noexcept {
-                return limit.curused();
+                return limit.current_usage();
             }
 
             constexpr bool update_send_limit(std::uint64_t credit) noexcept {
@@ -221,11 +221,11 @@ namespace utils {
             }
 
             constexpr std::uint64_t recv_limit() const noexcept {
-                return limit.curlimit();
+                return limit.current_limit();
             }
 
             constexpr std::uint64_t recv_bytes() const noexcept {
-                return limit.curused();
+                return limit.current_usage();
             }
 
             constexpr bool require_send_limit_update() const noexcept {
@@ -249,7 +249,7 @@ namespace utils {
 
             // recv_max is absolute value, StreamFrame.offset+StreamFrame.length
             constexpr bool recv(size_t recv_max) noexcept {
-                if (is_size_known() && recv_max > limit.curused()) {
+                if (is_size_known() && recv_max > limit.current_usage()) {
                     return false;
                 }
                 if (!can_recv() || !limit.update_use(recv_max)) {
@@ -294,7 +294,7 @@ namespace utils {
                 if (state == RecvState::data_read || state == RecvState::reset_read) {
                     return true;  // needless to reset
                 }
-                if (is_size_known() && fin_size != limit.curused()) {
+                if (is_size_known() && fin_size != limit.current_usage()) {
                     return false;
                 }
                 if (!limit.update_use(fin_size)) {

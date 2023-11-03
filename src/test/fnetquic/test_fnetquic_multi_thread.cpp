@@ -99,9 +99,9 @@ void thread(QCTX ctx, RecvChan c, int i) {
     while (true) {
         runi.s->update_recv_limit([](FlowLimiter limit, std::uint64_t) {
             if (limit.avail_size() < 10000) {
-                return limit.curlimit() + 10000;
+                return limit.current_limit() + 10000;
             }
-            return limit.curlimit();  // not update
+            return limit.current_limit();  // not update
         });
 
         bool is_eos = false;
@@ -196,9 +196,9 @@ void record_timer(std::shared_ptr<void>&, const utils::fnet::quic::status::LossT
     auto print = [&] {
 #ifdef HAS_FORMAT
         // #warning "what?"
-        utils::wrap::cout_wrap() << std::format("loss timer: {} {} until deadline {}ms\n", to_string(timer.current_space()), to_string(prev_state), prev_deadline.value - now.value);
+        utils::wrap::cout_wrap() << std::format("loss timer: {} {} until deadline {}ms\n", to_string(timer.current_space()), to_string(prev_state), prev_deadline.to_int() - now.to_int());
 #else
-        utils::wrap::cout_wrap() << "loss timer: " << to_string(timer.current_space()) << " " << to_string(prev_state) << " until deadline " << (prev_deadline.value - now.value) << "ms\n";
+        utils::wrap::cout_wrap() << "loss timer: " << to_string(timer.current_space()) << " " << to_string(prev_state) << " until deadline " << (prev_deadline.to_int() - now.to_int()) << "ms\n";
 #endif
     };
     if (timer.current_state() != prev_state ||
@@ -311,9 +311,9 @@ int main() {
         }
         streams->update_max_data([](FlowLimiter limit, std::uint64_t) {
             if (limit.avail_size() < 10000) {
-                return limit.curlimit() + 50000;
+                return limit.current_limit() + 50000;
             }
-            return limit.curlimit();
+            return limit.current_limit();
         });
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

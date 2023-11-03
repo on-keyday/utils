@@ -16,6 +16,7 @@
 #include "defined_id.h"
 #include "transport_param.h"
 #include "preferred_address.h"
+#include "../../storage.h"
 
 namespace utils {
     namespace fnet::quic::trsparam {
@@ -77,7 +78,7 @@ namespace utils {
         };
 
         struct DefinedTransportParams {
-            view::rvec original_dst_connection_id;
+            flex_storage original_dst_connection_id;
             std::uint64_t max_idle_timeout = 0;
             byte stateless_reset_token[16]{};
             std::uint64_t max_udp_payload_size = 65527;
@@ -92,8 +93,8 @@ namespace utils {
             bool disable_active_migration = false;
             PreferredAddress preferred_address;
             std::uint64_t active_connection_id_limit = 2;
-            view::rvec initial_src_connection_id;
-            view::rvec retry_src_connection_id;
+            flex_storage initial_src_connection_id;
+            flex_storage retry_src_connection_id;
             std::uint64_t max_datagram_frame_size = 0;
             bool grease_quic_bit = false;
 
@@ -129,7 +130,7 @@ namespace utils {
                     place = param.data.qvarint();
                     return true;
                 });
-                auto rdata = make_([&](view::rvec& id) {
+                auto rdata = make_([&](flex_storage& id) {
                     if (!param.data.as_bytes()) {
                         return false;
                     }
@@ -246,7 +247,7 @@ namespace utils {
                 enough_to_store_preferred_address tmp;
                 binary::writer tmpw{tmp};
                 preferred_address.render(tmpw);
-                if (!visit(index, make_transport_param(DefinedID::preferred_address, view::rvec{tmpw.written()}), !preferred_address.connectionID.null())) {
+                if (!visit(index, make_transport_param(DefinedID::preferred_address, view::rvec{tmpw.written()}), preferred_address.enable)) {
                     return false;
                 }
                 index++;
@@ -339,7 +340,7 @@ namespace utils {
             if (param.max_ack_delay > (1 << 14)) {
                 return TransportParamError::over_2pow14_max_ack_delay;
             }
-            if (!param.preferred_address.connectionID.null() && param.preferred_address.connectionID.size() < 1) {
+            if (!param.preferred_address.enable && param.preferred_address.connectionID.empty()) {
                 return TransportParamError::zero_length_connid;
             }
             if (param.initial_max_streams_bidi >= std::uint64_t(1) << 60) {

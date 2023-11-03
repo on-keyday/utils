@@ -171,7 +171,7 @@ namespace utils {
                 }
                 suite.hp = &whp;
                 suite.cipher = cur_wsecret.cipher();
-                suite.pharse = key_bit(phase) ? KeyPhase::one : KeyPhase::zero;
+                suite.phase = key_bit(phase) ? KeyPhase::one : KeyPhase::zero;
                 return {suite, error::none};
             }
 
@@ -210,7 +210,7 @@ namespace utils {
                 }
                 suite.hp = &rhp;
                 suite.cipher = cur_rsecret.cipher();
-                suite.pharse = key_bit(phase) ? KeyPhase::one : KeyPhase::zero;
+                suite.phase = key_bit(phase) ? KeyPhase::one : KeyPhase::zero;
                 return {suite, error::none};
             }
         };

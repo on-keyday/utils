@@ -142,7 +142,7 @@ namespace utils {
             SendUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TConfig>> c)
                 : uni(id) {
                 conn = c;
-                uni.set_initial(c->base.state.send_ini_limit, c->base.state.local_dir());
+                uni.set_initial(c->base.state.send_ini_limit, c->base.state.local_origin());
             }
 
             // called when initial limits updated
@@ -152,7 +152,7 @@ namespace utils {
                 if (!c) {
                     return;  // no meaning
                 }
-                uni.set_initial(c->base.state.send_ini_limit, c->base.state.local_dir());
+                uni.set_initial(c->base.state.send_ini_limit, c->base.state.local_origin());
             }
 
             // each methods
@@ -421,7 +421,7 @@ namespace utils {
             RecvUniStream(StreamID id, std::shared_ptr<ConnFlowControl<TConfig>> c)
                 : uni(id) {
                 conn = c;
-                set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
+                set_initial(c->base.state.recv_ini_limit, c->base.state.local_origin());
             }
 
             void apply_local_initial_limits() {
@@ -430,7 +430,7 @@ namespace utils {
                 if (!c) {
                     return;  // no meaning
                 }
-                set_initial(c->base.state.recv_ini_limit, c->base.state.local_dir());
+                set_initial(c->base.state.recv_ini_limit, c->base.state.local_origin());
             }
 
             // each methods
@@ -524,7 +524,7 @@ namespace utils {
 
             // update recv limit
             // decide_new_limit is std::uint64_t(Limiter current)
-            // if decide_new_limit returns number larger than current.curlimit(),
+            // if decide_new_limit returns number larger than current.current_limit(),
             // window will be increased
             bool update_recv_limit(auto&& decide_new_limit) {
                 const auto locked = uni.lock();

@@ -25,7 +25,7 @@ namespace std {
     template <>
     struct hash<utils::fnet::quic::stream::StreamID> {
         constexpr auto operator()(auto id) const noexcept {
-            return std::hash<decltype(id.id)>{}(id.id);
+            return std::hash<std::uint64_t>{}(id);
         }
     };
 

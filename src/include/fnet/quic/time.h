@@ -17,14 +17,20 @@ namespace utils {
         using utime_t = std::uint64_t;
 
         struct Time {
+           private:
             std::int64_t value = 0;
 
+           public:
             constexpr Time() noexcept = default;
 
             constexpr Time(std::int64_t v)
                 : value(v) {}
 
             constexpr operator std::int64_t() const noexcept {
+                return value;
+            }
+
+            constexpr std::int64_t to_int() const noexcept {
                 return value;
             }
 
@@ -55,7 +61,7 @@ namespace utils {
                 return now_fn ? now_fn(ptr) : invalid;
             }
 
-            constexpr time::time_t to_clock_granurarity(time::time_t millisec) const noexcept {
+            constexpr time::time_t to_clock_granularity(time::time_t millisec) const noexcept {
                 return millisec * millisecond;
             }
 

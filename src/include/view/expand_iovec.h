@@ -79,6 +79,10 @@ namespace utils {
                     set_state(sso_state::dyn);
                 }
 
+                static constexpr size_t sso_size() noexcept {
+                    return sizeof(sta);
+                }
+
                 constexpr bool set_sta(const C* dat, size_t size) noexcept {
                     if (sizeof(sta) < size) {
                         return false;
@@ -262,6 +266,10 @@ namespace utils {
                 dealloc_(buf.data(), buf.size());
             }
 
+            static constexpr size_t sso_size() noexcept {
+                return storage::sso_size();
+            }
+
            private:
             constexpr size_t resize_nofill(size_t new_size) {
                 if (new_size > data_.size_max) {
@@ -407,6 +415,14 @@ namespace utils {
                 return a.rvec() <=> b.rvec();
             }
 
+            constexpr friend bool operator==(const basic_expand_storage_vec& a, const basic_rvec<C>& b) {
+                return a.rvec() == b;
+            }
+
+            constexpr friend auto operator<=>(const basic_expand_storage_vec& a, const basic_rvec<C>& b) {
+                return a.rvec() <=> b;
+            }
+
             constexpr void fill(C c) {
                 wvec().fill(c);
             }
@@ -446,6 +462,10 @@ namespace utils {
 
             constexpr C& back() noexcept {
                 return wvec().back();
+            }
+
+            constexpr bool empty() const noexcept {
+                return size() == 0;
             }
         };
 

@@ -19,7 +19,7 @@ namespace utils {
         template <class T>
         constexpr bool is_separated(T v) {
             using U = uns_t<T>;
-            U t = v;
+            U t = uns(v);
             auto m = indexed_mask<U>();
             auto i = 0;
             for (; i < sizeof(T) * bit_per_byte; i++) {
@@ -76,7 +76,7 @@ namespace utils {
            private:
             using U = uns_t<T>;
             static_assert(is_flag_masks<U>(masks...));
-            U flags = U(0);
+            T flags = T(0);
 
             template <byte i, byte index, T m, T... o>
             static constexpr T mask_for_index() {
@@ -91,8 +91,12 @@ namespace utils {
            public:
             constexpr Flags() = default;
 
-            constexpr Flags(U v)
+            constexpr Flags(T v)
                 : flags(v) {}
+
+            constexpr Flags(U u)
+                requires(!std::is_same_v<T, U>)
+                : flags(T(u)) {}
 
             template <byte i>
             static constexpr T get_mask() {
@@ -117,10 +121,10 @@ namespace utils {
                 constexpr T mask = get_mask<i>();
                 if constexpr (is_one_bit(mask)) {
                     if (val) {
-                        flags |= uns(mask);
+                        flags = static_cast<T>(uns(flags) | uns(mask));
                     }
                     else {
-                        flags &= ~uns(mask);
+                        flags = static_cast<T>(uns(flags) | ~uns(mask));
                     }
                 }
                 else {
@@ -129,8 +133,7 @@ namespace utils {
                     if (uns(val) > lim) {
                         return false;
                     }
-                    flags &= ~uns(mask);
-                    flags |= (uns(T(val)) << sh);
+                    flags = T((uns(flags) & ~uns(mask)) | (uns(T(val)) << sh));
                     return true;
                 }
             }
@@ -139,20 +142,20 @@ namespace utils {
             constexpr auto get() const {
                 constexpr T mask = mask_for_index<0, i, masks...>();
                 if constexpr (is_one_bit(mask)) {
-                    return bool(flags & uns(mask));
+                    return bool(uns(flags) & uns(mask));
                 }
                 else {
                     constexpr auto sh = shift<i>();
                     constexpr auto lim = limit<i>();
-                    return value_max_uint_t<U, lim>((flags & uns(mask)) >> sh);
+                    return value_max_uint_t<U, lim>((uns(flags) & uns(mask)) >> sh);
                 }
             }
 
-            constexpr const U& as_value() const {
+            constexpr const T& as_value() const {
                 return flags;
             }
 
-            constexpr U& as_value() {
+            constexpr T& as_value() {
                 return flags;
             }
         };
@@ -186,7 +189,7 @@ namespace utils {
                         for (byte i = 0; i < s; i++) {
                             t |= m(sp + i);
                         }
-                        masks[idx] = t;
+                        masks[idx] = T(t);
                         idx++;
                         sp += s;
                     };

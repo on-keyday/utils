@@ -15,21 +15,21 @@ namespace utils {
         struct StreamIDAcceptor {
             Limiter limit;
             const StreamType type{};
-            Origin dir = Origin::unknown;
+            Origin origin = Origin::unknown;
             bool should_send_limit_update = false;
 
             constexpr StreamIDAcceptor(StreamType type)
                 : type(type) {}
 
             constexpr void set_dir(Origin dir) {
-                this->dir = dir;
+                this->origin = dir;
             }
 
             constexpr error::Error accept(StreamID new_id) {
                 if (!new_id.valid() || new_id.type() != type) {
                     return QUICError{.msg = "invalid stream_id or type not matched. library bug!"};
                 }
-                if (new_id.dir() != dir) {
+                if (new_id.origin() != origin) {
                     return QUICError{
                         .msg = "stream id provided by peer has not valid direction flag",
                         .transport_error = TransportError::STREAM_STATE_ERROR,
@@ -45,9 +45,9 @@ namespace utils {
             }
 
             constexpr bool is_accepted(StreamID id) {
-                return id.dir() == dir &&
+                return id.origin() == origin &&
                        id.type() == type &&
-                       id.seq_count() < limit.curused();
+                       id.seq_count() < limit.current_usage();
             }
 
             constexpr bool update_limit(size_t new_limit) {
@@ -60,17 +60,17 @@ namespace utils {
         struct StreamIDIssuer {
             Limiter limit;
             const StreamType type{};
-            Origin dir = Origin::unknown;
+            Origin origin = Origin::unknown;
 
             constexpr StreamIDIssuer(StreamType type)
                 : type(type) {}
 
             constexpr void set_dir(Origin dir) {
-                this->dir = dir;
+                this->origin = dir;
             }
 
             constexpr StreamID next() const {
-                return make_id(limit.curused(), dir, type);
+                return make_id(limit.current_usage(), origin, type);
             }
 
             constexpr StreamID issue() {
@@ -85,9 +85,9 @@ namespace utils {
             }
 
             constexpr bool is_issued(StreamID id) const {
-                return id.dir() == dir &&
+                return id.origin() == origin &&
                        id.type() == type &&
-                       id.seq_count() < limit.curused();
+                       id.seq_count() < limit.current_usage();
             }
 
             constexpr error::Error update_limit(std::uint64_t new_limit) {
@@ -128,19 +128,20 @@ namespace utils {
                   bidi_issuer(StreamType::bidi),
                   uni_acceptor(StreamType::uni),
                   bidi_acceptor(StreamType::bidi) {}
-            void set_dir(Origin dir) {
-                uni_issuer.set_dir(dir);
-                bidi_issuer.set_dir(dir);
-                uni_acceptor.set_dir(inverse(dir));
-                bidi_acceptor.set_dir(inverse(dir));
+
+            void set_dir(Origin orig) {
+                uni_issuer.set_dir(orig);
+                bidi_issuer.set_dir(orig);
+                uni_acceptor.set_dir(inverse(orig));
+                bidi_acceptor.set_dir(inverse(orig));
             }
 
-            Origin peer_dir() const {
-                return uni_acceptor.dir;
+            Origin peer_origin() const {
+                return uni_acceptor.origin;
             }
 
-            Origin local_dir() const {
-                return uni_issuer.dir;
+            Origin local_origin() const {
+                return uni_issuer.origin;
             }
 
             void set_send_initial_limit(InitialLimits lim) {

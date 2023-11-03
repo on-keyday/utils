@@ -10,13 +10,13 @@
 #include <wrap/cout.h>
 
 int main() {
-    constexpr auto c1 = utils::math::pow(utils::math::sin(utils::math::x), utils::math::c<2>()) +
-                        utils::math::pow(utils::math::cos(utils::math::x), utils::math::c<2>());
+    constexpr auto c1 = utils::math::pow(utils::math::sin(utils::math::x), utils::math::c<2>) +
+                        utils::math::pow(utils::math::cos(utils::math::x), utils::math::c<2>);
     utils::binary::DoubleFloat res = c1(10);
     auto derived = c1.derive();
     res = derived(10);
-    auto f = utils::math::pow(utils::math::x, utils::math::c<4>());
-    auto s = utils::math::sin(utils::math::x) + utils::math::c<32>();
+    auto f = utils::math::pow(utils::math::x, utils::math::c<4>);
+    auto s = utils::math::sin(utils::math::x) + utils::math::c<32>;
     auto sin = s.derive().derive().derive().derive();
     auto fd = (f.derive().derive() * sin / f);
     auto fdd = fd.derive();

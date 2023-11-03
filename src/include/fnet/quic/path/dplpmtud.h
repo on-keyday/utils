@@ -10,15 +10,18 @@
 #include "../ack/ack_lost_record.h"
 #include "config.h"
 #include "../resend/ack_handler.h"
+#include <binary/flags.h>
 
 namespace utils {
     namespace fnet::quic::path {
-        enum class State {
+        enum class State : byte {
             disabled,
             base,
             searching,
             error,
             search_complete,
+
+            transport_parameter_set = 0x80,
         };
 
         struct BinarySearcher {
@@ -98,14 +101,16 @@ namespace utils {
 
         struct MTU {
            private:
-            State state = State::disabled;
             Config config;
             size_t current_payload_size = 0;
             size_t probe_count = 0;
             BinarySearcher bin_search;
             resend::ACKHandler wait;
             std::uint64_t transport_param_value = 0;
-            bool transport_param_set = false;
+            binary::flags_t<State, 1, 7> flags;
+
+            bits_flag_alias_method(flags, 0, transport_parameter_set);
+            bits_flag_alias_method_with_enum(flags, 1, state, State);
 
            public:
             constexpr void reset(Config conf) {
@@ -120,8 +125,7 @@ namespace utils {
                     config.max_plpmtu = initial_udp_datagram_size;
                 }
                 current_payload_size = conf.base_plpmtu;
-                state = State::disabled;
-                transport_param_set = false;
+                flags = 0;
                 transport_param_value = 0;
                 probe_count = 0;
                 wait.reset();
@@ -133,13 +137,13 @@ namespace utils {
                     return false;
                 }
                 transport_param_value = value;
-                transport_param_set = true;
+                set_transport_parameter_set(true);
                 return true;
             }
 
            private:
             constexpr void on_searching() {
-                state = State::searching;
+                set_state(State::searching);
                 const auto max_mtu = transport_param_value < config.max_plpmtu ? transport_param_value : config.max_plpmtu;
                 bin_search.set(config.base_plpmtu, max_mtu);
             }
@@ -154,7 +158,7 @@ namespace utils {
             }
 
             constexpr std::pair<size_t, bool> probe_required(auto&& observer) {
-                if (state != State::searching) {
+                if (state() != State::searching) {
                     return {0, false};
                 }
                 if (wait.not_confirmed()) {
@@ -176,7 +180,7 @@ namespace utils {
                 }
                 if (bin_search.complete()) {
                     wait.confirm();
-                    state = State::search_complete;
+                    set_state(State::search_complete);
                     return {0, false};  // already done
                 }
                 wait.wait(observer);

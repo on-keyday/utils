@@ -77,9 +77,9 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
         s->s->update_recv_limit([&](FlowLimiter lim, std::uint64_t) {
             if (lim.avail_size() < 5000) {
                 utils::wrap::cout_wrap() << "update max stream data seq: " << s->s->id().seq_count() << "\n";
-                return lim.curlimit() + 100000;
+                return lim.current_limit() + 100000;
             }
-            return lim.curlimit();
+            return lim.current_limit();
         });
         c->suspend();
     }
@@ -165,9 +165,9 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
         s->update_max_data([&](FlowLimiter v, std::uint64_t) {
             if (v.avail_size() < 5000) {
                 utils::wrap::cout_wrap() << "update max data\n";
-                return v.curlimit() + 100000;
+                return v.current_limit() + 100000;
             }
-            return v.curlimit();
+            return v.current_limit();
         });
     }
 }

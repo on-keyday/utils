@@ -19,7 +19,7 @@ namespace utils {
 
         // this has two mode:
         // query_update = true: if this returns non-zero, then call update
-        // query_update = false: if this returns larger limit than lim.curlimit() then update limit
+        // query_update = false: if this returns larger limit than lim.current_limit() then update limit
         template <class Arg>
         using AutoUpdateCallback = std::uint64_t (*)(Arg&, core::Limiter lim, std::uint64_t initial_limit, bool query_update);
 

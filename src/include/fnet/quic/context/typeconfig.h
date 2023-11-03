@@ -21,7 +21,7 @@ namespace utils {
                   class CongestionAlgorithm = status::NewReno,
                   class RecvPacketHistory = ack::RecvPacketHistory,
                   class SentPacketHistory = ack::SentPacketHistory,
-                  class DatagramDrop = datagram::DatagrmDropNull>
+                  class DatagramDrop = datagram::DatagramDropNull>
         struct TypeConfig {
             using context_lock = CtxLock;
             using stream_type_config = StreamTypeConfig;

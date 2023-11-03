@@ -13,6 +13,7 @@
 #include "../time.h"
 #include <atomic>
 #include "../path/path.h"
+#include <binary/flags.h>
 
 namespace utils {
     namespace fnet::quic::close {
@@ -25,7 +26,7 @@ namespace utils {
             close_by_local_app,
         };
 
-        enum class ErrorType {
+        enum class ErrorType : byte {
             none,
             runtime,
             app,
@@ -33,49 +34,25 @@ namespace utils {
         };
 
         namespace flags {
-            enum CloserFlags : byte {
-                flag_sent = 0x01,
-                flag_received = 0x02,
-                flag_should_send_again = 0x04,
-            };
 
             struct CloseFlag {
                private:
-                byte flag = 0;
+                enum CloserFlags : byte {
+                    flag_sent = 0x04,
+                    flag_received = 0x02,
+                    flag_should_send_again = 0x01,
+                };
+
+                binary::flags_t<CloserFlags, 5, 1, 1, 1> flag;
 
                public:
                 constexpr void reset() {
                     flag = 0;
                 }
 
-                constexpr void set_sent() {
-                    flag |= flag_sent;
-                }
-
-                constexpr void set_received() {
-                    flag |= flag_received;
-                }
-
-                constexpr void set_should_send_again(bool f) {
-                    if (f) {
-                        flag |= flag_should_send_again;
-                    }
-                    else {
-                        flag &= ~flag_should_send_again;
-                    }
-                }
-
-                constexpr bool is_sent() const {
-                    return flag & flag_sent;
-                }
-
-                constexpr bool is_recevied() const {
-                    return flag & flag_received;
-                }
-
-                constexpr bool should_send_again() const {
-                    return flag & flag_should_send_again;
-                }
+                bits_flag_alias_method(flag, 1, sent);
+                bits_flag_alias_method(flag, 2, received);
+                bits_flag_alias_method(flag, 3, should_send_again);
             };
         }  // namespace flags
 
@@ -90,7 +67,7 @@ namespace utils {
                 if (close_timeout.timeout(clock)) {
                     return {{}, false};
                 }
-                if (flag.is_sent() && flag.should_send_again()) {
+                if (flag.sent() && flag.should_send_again()) {
                     flag.set_should_send_again(false);
                     return {payload, true};
                 }
@@ -98,7 +75,7 @@ namespace utils {
             }
 
             bool parse_udp_payload(view::rvec) {
-                if (flag.is_sent()) {
+                if (flag.sent()) {
                     flag.set_should_send_again(true);
                     return true;
                 }
@@ -108,26 +85,26 @@ namespace utils {
 
         struct Closer {
            private:
-            std::atomic<ErrorType> errtype;
+            std::atomic<ErrorType> err_type;
+            flags::CloseFlag flag;
             error::Error conn_err;
             storage close_data;
-            flags::CloseFlag flag;
 
            public:
             void reset() {
                 conn_err = error::none;
                 close_data.clear();
                 flag.reset();
-                errtype.store(ErrorType::none);
+                err_type.store(ErrorType::none);
             }
 
             void on_error(auto&& err, ErrorType reason) {
-                errtype.store(reason);
+                err_type.store(reason);
                 conn_err = std::forward<decltype(err)>(err);
             }
 
             view::rvec sent_packet() const {
-                if (!flag.is_sent()) {
+                if (!flag.sent()) {
                     return {};
                 }
                 return close_data;
@@ -139,20 +116,16 @@ namespace utils {
 
             // thread safe call
             ErrorType error_type() const {
-                return errtype;
+                return err_type;
             }
 
             // thread safe call
             bool has_error() const {
-                return errtype != ErrorType::none;
-            }
-
-            bool has_error(const auto& err) const {
-                return conn_err == err;
+                return err_type != ErrorType::none;
             }
 
             bool send(frame::fwriter& fw, PacketType type) {
-                if (flag.is_recevied()) {
+                if (flag.received()) {
                     return false;
                 }
                 frame::ConnectionCloseFrame cclose;
@@ -193,19 +166,19 @@ namespace utils {
             }
 
             void on_close_packet_sent(view::rvec close_packet) {
-                flag.set_sent();
+                flag.set_sent(true);
                 close_data = make_storage(close_packet);
             }
 
-            void on_close_retransmited() {
-                if (!flag.is_sent()) {
+            void on_close_retransmitted() {
+                if (!flag.sent()) {
                     return;
                 }
                 flag.set_should_send_again(false);
             }
 
             bool should_retransmit() const {
-                return flag.is_sent() && flag.should_send_again();
+                return flag.sent() && flag.should_send_again();
             }
 
             void on_recv_after_close_sent() {
@@ -214,11 +187,11 @@ namespace utils {
 
             // returns (accepted)
             bool recv(const frame::ConnectionCloseFrame& cclose) {
-                if (flag.is_recevied() || flag.is_sent()) {
+                if (flag.received() || flag.sent()) {
                     return false;  // ignore
                 }
-                flag.set_received();
-                errtype.store(ErrorType::remote);
+                flag.set_received(true);
+                err_type.store(ErrorType::remote);
                 close_data = make_storage(cclose.len() + 1);
                 close_data.fill(0);
                 binary::writer w{close_data};
@@ -237,19 +210,19 @@ namespace utils {
             }
 
             bool close_by_peer() const {
-                return flag.is_recevied();
+                return flag.received();
             }
 
             // expose_closed_context expose context required to close
             // after call this, Closer become invalid
             ClosedContext expose_closed_context(time::Clock clock, time::Time close_deadline) {
-                if (!flag.is_sent() && !flag.is_recevied()) {
+                if (!flag.sent() && !flag.received()) {
                     return {};
                 }
                 time::Timer t;
                 t.set_deadline(close_deadline);
                 return ClosedContext{
-                    .payload = flag.is_sent() ? std::move(close_data) : storage{},
+                    .payload = flag.sent() ? std::move(close_data) : storage{},
                     .close_timeout = t,
                     .flag = flag,
                     .clock = clock,

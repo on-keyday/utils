@@ -12,7 +12,7 @@
 
 int main() {
     namespace m = utils::math;
-    constexpr auto z = m::log(m::e, pow(m::x, m::c<2>()) + m::sin(m::x * m::y - m::x * m::c<32>()));
+    constexpr auto z = m::log(m::e, pow(m::x, m::c<2>) + m::sin(m::x * m::y - m::x * m::c<32>));
     std::string v;
     z.print(v, m::XYZWPrint{});
     utils::wrap::cout_wrap() << v << "\n";
@@ -50,5 +50,44 @@ int main() {
 
     v.clear();
     zd3.print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    auto zd4 = zd1 * zd2;
+
+    v.clear();
+    zd4.print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    auto z5 = zd4.derive<0>();
+
+    v.clear();
+    z5.print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    auto z6 = m::log(m::e, z5 / zd4);
+
+    v.clear();
+    z6.print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    auto z7 = z6.derive<0>();
+
+    v.clear();
+    z7.print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    v.clear();
+    auto vz = m::pow(m::x, m::c<2>) * m::pow(m::y * m::x, m::c<2>) / m::y;
+    vz.derive<0>().print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    auto z2 = m::sin(m::pow(m::c<2>, m::x + m::y));
+    v.clear();
+    z2.derive<0>().print(v);
+    utils::wrap::cout_wrap() << v << "\n";
+
+    auto z3 = m::pow(m::sin(m::x + m::y), m::c<2>) + m::pow(m::cos(m::x + m::y), m::c<2>);
+    v.clear();
+    z3.derive<0>().derive<0>().derive<0>().derive<0>().print(v);
     utils::wrap::cout_wrap() << v << "\n";
 }

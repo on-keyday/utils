@@ -10,7 +10,7 @@
 #include "defined_param.h"
 #include "../../error.h"
 #include "../transport_error.h"
-#include "boxing.h"
+#include "../stream/initial_limits.h"
 
 namespace utils {
     namespace fnet::quic::trsparam {
@@ -21,8 +21,8 @@ namespace utils {
             DuplicateSetChecker peer_checker;
 
            private:
-            TransportParamStorage local_box;
-            TransportParamStorage peer_box;
+            // TransportParamStorage local_box;
+            // TransportParamStorage peer_box;
 
            public:
            private:
@@ -38,7 +38,7 @@ namespace utils {
                 return error::none;
             }
 
-            error::Error set_(DefinedTransportParams& params, trsparam::TransportParamStorage& box, trsparam::DuplicateSetChecker* checker, trsparam::TransportParameter param, bool is_server, bool accept_zero_rtt) {
+            error::Error set_(DefinedTransportParams& params, trsparam::DuplicateSetChecker* checker, trsparam::TransportParameter param, bool is_server, bool accept_zero_rtt) {
                 if (auto err = check_recv(param.id.id, is_server)) {
                     return err;
                 }
@@ -63,28 +63,27 @@ namespace utils {
                             .base = error::Error(err, error::Category::lib, error::fnet_quic_transport_parameter_error),
                         };
                     }
-                    if (!box.boxing(params)) {
-                        return error::memory_exhausted;
-                    }
                 }
                 return error::none;
             }
 
            public:
             error::Error set_local(TransportParameter param) {
-                return set_(local, local_box, nullptr, param, false, false);
+                return set_(local, nullptr, param, false, false);
             }
 
+            /*
             void local_boxing() {
-                local_box.boxing(local);
+                // local_box.boxing(local);
             }
 
             void peer_boxing() {
-                peer_box.boxing(peer);
+                // peer_box.boxing(peer);
             }
+            */
 
             error::Error set_peer(TransportParameter param, bool is_server, bool accept_zero_rtt) {
-                return set_(peer, peer_box, &peer_checker, param, is_server, accept_zero_rtt);
+                return set_(peer, &peer_checker, param, is_server, accept_zero_rtt);
             }
 
             error::Error parse_peer(binary::reader& r, bool is_server, bool accept_zero_rtt) {
@@ -120,5 +119,16 @@ namespace utils {
                 });
             }
         };
+
+        constexpr stream::InitialLimits to_initial_limits(const auto& params) {
+            stream::InitialLimits limits;
+            limits.conn_data_limit = params.initial_max_data;
+            limits.bidi_stream_limit = params.initial_max_streams_bidi;
+            limits.uni_stream_limit = params.initial_max_streams_uni;
+            limits.bidi_stream_data_local_limit = params.initial_max_stream_data_bidi_local;
+            limits.bidi_stream_data_remote_limit = params.initial_max_stream_data_bidi_remote;
+            limits.uni_stream_data_limit = params.initial_max_stream_data_uni;
+            return limits;
+        }
     }  // namespace fnet::quic::trsparam
 }  // namespace utils

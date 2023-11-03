@@ -22,7 +22,7 @@ namespace utils {
             const HP* hp = nullptr;
             const KeyIV* keyiv = nullptr;
             const tls::TLSCipher* cipher = nullptr;
-            KeyPhase pharse = KeyPhase::none;
+            KeyPhase phase = KeyPhase::none;
         };
 
     }  // namespace fnet::quic::crypto

@@ -8,6 +8,7 @@
 // preferred_address - QUIC transport parameter preferred address
 #pragma once
 #include "../../../binary/number.h"
+#include "../../storage.h"
 
 namespace utils {
     namespace fnet::quic::trsparam {
@@ -15,10 +16,11 @@ namespace utils {
             byte ipv4_address[4]{};
             std::uint16_t ipv4_port = 0;
             byte ipv6_address[16]{};
-            std::uint16_t ipv6_port{};
-            byte connectionID_length;  // only parse
-            view::rvec connectionID;
+            std::uint16_t ipv6_port = 0;
+            byte connectionID_length = 0;  // only parse
+            flex_storage connectionID;
             byte stateless_reset_token[16];
+            bool enable = false;
 
             constexpr bool parse(binary::reader& r) {
                 return r.read(ipv4_address) &&
@@ -26,8 +28,9 @@ namespace utils {
                        r.read(ipv6_address) &&
                        binary::read_num(r, ipv6_port, true) &&
                        r.read(view::wvec(&connectionID_length, 1)) &&
-                       r.read(connectionID, connectionID_length) &&
-                       r.read(stateless_reset_token);
+                       read_flex(r, connectionID, connectionID_length) &&
+                       r.read(stateless_reset_token) &&
+                       (enable = true);
             }
 
             constexpr size_t len() const {
@@ -37,7 +40,7 @@ namespace utils {
             }
 
             constexpr bool render(binary::writer& w) const {
-                if (connectionID.size() > 0xff) {
+                if (connectionID.size() == 0 || connectionID.size() > 0xff) {
                     return false;
                 }
                 return w.write(ipv4_address) &&

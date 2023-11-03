@@ -16,10 +16,18 @@ namespace utils {
             size_t recv_buf_limit = ~0;
         };
 
-        struct DatagrmDropNull {
+        struct DatagramDropNull {
             void drop(auto& s, auto pn) {}
             void detect() {}
             void sent(auto&& observer, auto&& dgram) {}
+        };
+
+        template <template <class...> class List,
+                  class DropDatagram>
+        struct DatagramTypeConfig {
+            template <class T>
+            using list = List<T>;
+            using drop_datagram = DropDatagram;
         };
 
     }  // namespace fnet::quic::datagram

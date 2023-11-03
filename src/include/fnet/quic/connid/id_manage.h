@@ -32,7 +32,7 @@ namespace utils {
                 cparam.random = std::move(config.random);
                 cparam.version = version;
                 acceptor.reset(config.packet_per_id, config.max_packet_per_id, config.change_mode);
-                issuer.reset(std::move(config.exporter), std::move(config.generator), config.connid_len, config.concurrent_limit);
+                issuer.reset(std::move(config.exporter), config.connid_len, config.concurrent_limit);
                 iniret.reset();
             }
 

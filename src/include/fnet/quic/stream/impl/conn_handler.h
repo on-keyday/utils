@@ -31,26 +31,26 @@ namespace utils {
                     auto a = t->remote_bidi_avail();
                     t->update_max_bidi_streams([&](core::Limiter lim, std::uint64_t ini_size) {
                         if (lim.avail_size() + a < ini_size) {
-                            return lim.curlimit() + 1;
+                            return lim.current_limit() + 1;
                         }
-                        return lim.curlimit();
+                        return lim.current_limit();
                     });
                 }
                 if (auto_increase_uni_stream) {
                     auto a = t->remote_uni_avail();
                     t->update_max_bidi_streams([&](core::Limiter lim, std::uint64_t ini_size) {
                         if (lim.avail_size() + a < ini_size) {
-                            return lim.curlimit() + 1;
+                            return lim.current_limit() + 1;
                         }
-                        return lim.curlimit();
+                        return lim.current_limit();
                     });
                 }
                 if (auto_increase_max_data) {
                     t->update_max_data([&](core::Limiter lim, std::uint64_t ini_size) {
                         if (lim.avail_size() < ini_size) {
-                            return lim.curlimit() + ini_size - lim.avail_size();
+                            return lim.current_limit() + ini_size - lim.avail_size();
                         }
-                        return lim.curlimit();
+                        return lim.current_limit();
                     });
                 }
             }

@@ -48,7 +48,7 @@ namespace utils {
                 auto phase = PacketFlags{packet.src[0]}.key_phase() ? KeyPhase::one : KeyPhase::zero;
                 error::Error err;
                 KeyMode mode = KeyMode::current;
-                if (dec.pharse != phase) {
+                if (dec.phase != phase) {
                     if (secrets.maybe_use_prev_secret(packet.packet_number)) {
                         std::tie(dec, err) = secrets.dec_suite(PacketType::OneRTT, version, KeyMode::prev);
                         if (err) {

@@ -30,7 +30,7 @@ namespace utils {
 
             constexpr glheap_allocator() = default;
 
-            constexpr bool operator==(const glheap_allocator&) {
+            constexpr friend bool operator==(const glheap_allocator&, const glheap_allocator&) {
                 return true;
             }
         };

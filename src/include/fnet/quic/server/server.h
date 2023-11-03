@@ -263,6 +263,25 @@ namespace utils {
 
            private:
             context::Config config;
+            connid::ExporterFn exporter_fn = {
+                connid::default_generator,
+                +[](void* pmp, void* pop, view::rvec id, view::rvec sr) {
+                    if (!pmp || !pop) {
+                        return;
+                    }
+                    auto mp = static_cast<HandlerMap<TConfig>*>(pmp);
+                    auto op = static_cast<context::Context<TConfig>*>(pop);
+                    auto ptr = std::static_pointer_cast<Opened<TConfig>>(op->get_mux_ptr());
+                    mp->conn_ids.add_connID(id, std::move(ptr));
+                },
+                +[](void* pmp, void* pop, view::rvec id, view::rvec sr) {
+                    if (!pmp || !pop) {
+                        return;
+                    }
+                    auto mp = static_cast<HandlerMap<TConfig>*>(pmp);
+                    mp->conn_ids.remove_connID(id);
+                },
+            };
 
             bool is_supported(std::uint32_t ver) const {
                 return config.version == ver;
@@ -271,19 +290,6 @@ namespace utils {
             void setup_config() {
                 config.server = true;
                 config.connid_parameters.exporter.mux = this->weak_from_this();
-                config.connid_parameters.exporter.set_addConnID(+[](HandlerMap<TConfig>* mp, context::Context<TConfig>* op, view::rvec id) {
-                    if (!mp || !op) {
-                        return;
-                    }
-                    auto ptr = std::static_pointer_cast<Opened<TConfig>>(op->get_mux_ptr());
-                    mp->conn_ids.add_connID(id, std::move(ptr));
-                });
-                config.connid_parameters.exporter.set_retireConnID(+[](HandlerMap<TConfig>* mp, context::Context<TConfig>* op, view::rvec id) {
-                    if (!mp || !op) {
-                        return;
-                    }
-                    mp->conn_ids.remove_connID(id);
-                });
             }
 
             const context::Config& get_config(std::shared_ptr<context::Context<TConfig>> ptr, path::PathID id) {
@@ -295,6 +301,9 @@ namespace utils {
            public:
             void set_config(context::Config&& conf) {
                 config = std::move(conf);
+                if (config.connid_parameters.exporter.exporter) {
+                    exporter_fn.gen_callback = config.connid_parameters.exporter.exporter->gen_callback;
+                }
                 setup_config();
             }
 

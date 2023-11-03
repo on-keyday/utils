@@ -14,6 +14,7 @@
 #include "../../hash_fn.h"
 #include <atomic>
 #include "conn_handler_interface.h"
+#include "../../type_macro.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -53,22 +54,6 @@ namespace utils {
             using SendCB = IOResult (*)(SendeSchedArg<TConfig>, frame::fwriter& w, ack::ACKRecorder& observer);
             */
 
-            using ConnHandler = typename TConfig::template conn_handler<TConfig>;
-
-           private:
-            template <class K, class V>
-            using stream_map = typename TConfig::template stream_map<K, V>;
-
-            ConnFlowControl<TConfig> control;
-            stream_map<StreamID, std::shared_ptr<SendUniStream<TConfig>>> local_uni;
-            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> local_bidi;
-            stream_map<StreamID, std::shared_ptr<RecvUniStream<TConfig>>> remote_uni;
-            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> remote_bidi;
-            std::atomic_bool remove_auto = false;
-
-            // ConnHandler handler;
-            ConnHandlerInterface<ConnHandler> handler;
-
             /*
             UniOpenArg uniopenarg;
             BidiOpenArg bidiopenarg;
@@ -82,6 +67,21 @@ namespace utils {
 
             SendCB send_schedule = nullptr;
             */
+
+            QUIC_ctx_type(ConnHandler, TConfig, template conn_handler<TConfig>);
+
+           private:
+            QUIC_ctx_map_type(stream_map, TConfig, stream_map);
+
+            ConnFlowControl<TConfig> control;
+            stream_map<StreamID, std::shared_ptr<SendUniStream<TConfig>>> local_uni;
+            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> local_bidi;
+            stream_map<StreamID, std::shared_ptr<RecvUniStream<TConfig>>> remote_uni;
+            stream_map<StreamID, std::shared_ptr<BidiStream<TConfig>>> remote_bidi;
+            std::atomic_bool remove_auto = false;
+
+            // ConnHandler handler;
+            ConnHandlerInterface<ConnHandler> handler;
 
             auto borrow_control() {
                 return std::shared_ptr<ConnFlowControl<TConfig>>(
@@ -201,12 +201,12 @@ namespace utils {
                 return handler.impl_ptr();
             }
 
-            Origin local_dir() const {
-                return control.base.state.local_dir();
+            Origin local_origin() const {
+                return control.base.state.local_origin();
             }
 
-            Origin peer_dir() const {
-                return control.base.state.peer_dir();
+            Origin peer_origin() const {
+                return control.base.state.peer_origin();
             }
 
             size_t local_bidi_avail() {
@@ -285,7 +285,7 @@ namespace utils {
             // no_data - already deleted
             // not_in_io_state - stream is not closed yet
             IOResult remove(StreamID id) {
-                if (id.dir() == local_dir()) {
+                if (id.origin() == local_origin()) {
                     if (id.type() == StreamType::bidi) {
                         return remove_impl(id, control.base.open_bidi_lock(), local_bidi);
                     }
@@ -293,7 +293,7 @@ namespace utils {
                         return remove_impl(id, control.base.open_uni_lock(), local_uni);
                     }
                 }
-                else if (id.dir() == peer_dir()) {
+                else if (id.origin() == peer_origin()) {
                     if (id.type() == StreamType::bidi) {
                         return remove_impl(id, control.base.accept_bidi_lock(), remote_bidi);
                     }
@@ -490,19 +490,19 @@ namespace utils {
                 return handler.send_schedule(fw, observer, do_default);
             }
 
-            // update is std::uint64_t/*new_limit*/(Limiter)
+            // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
             // return value less than current limit has no effect to update limit
             bool update_max_uni_streams(auto&& update) {
                 return control.update_max_uni_streams(update);
             }
 
-            // update is std::uint64_t/*new_limit*/(Limiter)
+            // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
             // return value less than current limit has no effect to update limit
             bool update_max_bidi_streams(auto&& update) {
                 return control.update_max_uni_streams(update);
             }
 
-            // update is std::uint64_t/*new_limit*/(Limiter)
+            // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
             // return value less than current limit has no effect to update limit
             bool update_max_data(auto&& update) {
                 return control.update_max_data(update);

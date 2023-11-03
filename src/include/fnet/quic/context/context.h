@@ -30,6 +30,7 @@
 #include "../dgram/datagram.h"
 #include "config.h"
 #include <atomic>
+#include "../type_macro.h"
 
 namespace utils {
     namespace fnet::quic::context {
@@ -66,13 +67,13 @@ namespace utils {
             using UserDefinedTypesConfig = typename TConfig::user_defined_types_config;
 
            private:
-            using CongestionAlgorithm = typename TConfig::congestion_algorithm;
-            using Lock = typename TConfig::context_lock;
-            using DatagramDrop = typename TConfig::datagram_drop;
-            using StreamTypeConfig = typename TConfig::stream_type_config;
-            using ConnIDTypeConfig = typename TConfig::connid_type_config;
-            using RecvPacketHistory = typename TConfig::recv_packet_history;
-            using SentPacketHistory = typename TConfig::sent_packet_history;
+            QUIC_ctx_type(CongestionAlgorithm, TConfig, congestion_algorithm);
+            QUIC_ctx_type(Lock, TConfig, context_lock);
+            QUIC_ctx_type(DatagramDrop, TConfig, datagram_drop);
+            QUIC_ctx_type(StreamTypeConfig, TConfig, stream_type_config);
+            QUIC_ctx_type(ConnIDTypeConfig, TConfig, connid_type_config);
+            QUIC_ctx_type(RecvPacketHistory, TConfig, recv_packet_history);
+            QUIC_ctx_type(SentPacketHistory, TConfig, sent_packet_history);
 
             // QUIC runtime handlers
             Version version = version_negotiation;
@@ -85,7 +86,7 @@ namespace utils {
             token::RetryToken retry_token;
             token::ZeroRTTTokenManager zero_rtt_token;
             path::MTU mtu;
-            path::PathVerifier path_verifyer;
+            path::PathVerifier path_verifier;
             close::Closer closer;
             std::atomic<close::CloseReason> closed;
             Lock close_locker;
@@ -103,11 +104,9 @@ namespace utils {
 
             // internal parameters
             flex_storage packet_creation_buffer;
-            bool transport_param_read = false;
 
             void reset_internal() {
                 packet_creation_buffer.resize(0);
-                transport_param_read = false;
             }
 
             auto close_lock() {
@@ -129,9 +128,9 @@ namespace utils {
                 }
             }
 
-            // apply_transport_param applys transport parameter from peer to local settings
+            // apply_transport_param applies transport parameter from peer to local settings
             bool apply_transport_param(packet::PacketSummary summary) {
-                if (transport_param_read) {
+                if (status.transport_parameter_read()) {
                     return true;
                 }
                 auto data = crypto.tls().get_peer_quic_transport_params();
@@ -149,7 +148,7 @@ namespace utils {
                 // get registered initial_source_connection_id by peer
                 auto connID = connIDs.choose_dstID(0);
                 connIDs.on_transport_parameter_recieved(peer.active_connection_id_limit);
-                if (peer.initial_src_connection_id.null() || peer.initial_src_connection_id != connID.id) {
+                if (peer.initial_src_connection_id.empty() || peer.initial_src_connection_id != connID.id) {
                     set_quic_runtime_error(QUICError{
                         .msg = "initial_src_connection_id is not matched to id contained on initial packet",
                         .transport_error = TransportError::PROTOCOL_VIOLATION,
@@ -174,7 +173,7 @@ namespace utils {
                         }
                     }
                     connIDs.on_initial_stateless_reset_token_received(peer.stateless_reset_token);
-                    if (!peer.preferred_address.connectionID.null()) {
+                    if (!peer.preferred_address.connectionID.empty()) {
                         connIDs.on_preferred_address_received(peer.preferred_address.connectionID, peer.preferred_address.stateless_reset_token);
                     }
                 }
@@ -187,14 +186,13 @@ namespace utils {
                     set_quic_runtime_error(std::move(err));
                     return false;
                 }
-                transport_param_read = true;
+                status.on_transport_parameter_read();
                 logger.debug("apply transport parameter");
                 return true;
             }
 
             void reset_peer_transport_parameter() {
                 params.peer = {};
-                params.peer_boxing();
             }
 
             // RFC9000 says:
@@ -211,7 +209,6 @@ namespace utils {
                 status.on_0RTT_transport_parameter(peer.max_idle_timeout);
                 datagrams->on_transport_parameter(peer.max_datagram_frame_size);
                 params.peer = trsparam::from_0RTT(peer);
-                params.peer_boxing();
                 logger.debug("apply 0-RTT transport parameter");
             }
 
@@ -253,7 +250,7 @@ namespace utils {
                     return wrap_io(err);
                 }
                 if (summary.type == PacketType::OneRTT) {
-                    if (auto err = path_verifyer.send_path_response(fw);
+                    if (auto err = path_verifier.send_path_response(fw);
                         err == IOResult::fatal) {
                         return wrap_io(err);
                     }
@@ -287,20 +284,20 @@ namespace utils {
                     });
                     return false;
                 };
-                auto [err, id] = path_verifyer.send_path_challange(fw, waiters, connIDs.random(), status.path_validation_deadline(), status.clock());
+                auto [err, id] = path_verifier.send_path_challange(fw, waiters, connIDs.random(), status.path_validation_deadline(), status.clock());
                 if (err == IOResult::fatal) {
                     return wrap_io(err);
                 }
                 if (err != IOResult::ok) {
                     return true;  // nothing to write or no capacity
                 }
-                path_verifyer.set_writeing_path(id);
+                path_verifier.set_writeing_path(id);
                 if (should_be_non_probe) {
                     fw.write(frame::PingFrame{});  // must be non-probe
                     return write_frames(summary, waiters, fw);
                 }
                 else {
-                    err = path_verifyer.send_path_response(fw);
+                    err = path_verifier.send_path_response(fw);
                     if (err == IOResult::fatal) {
                         return wrap_io(err);
                     }
@@ -388,7 +385,7 @@ namespace utils {
                     return false;
                 }
                 if (summary.type == PacketType::OneRTT) {
-                    summary.key_bit = suite.pharse == crypto::KeyPhase::one;
+                    summary.key_bit = suite.phase == crypto::KeyPhase::one;
                 }
 
                 // define frame renderer arguments
@@ -670,9 +667,9 @@ namespace utils {
                     !status.can_send(status::PacketNumberSpace::application)) {
                     return {{}, true};  // can't do
                 }
-                if (!path_verifyer.has_probe_to_send()) {
+                if (!path_verifier.has_probe_to_send()) {
                     // detecting probe timeout
-                    path_verifyer.detect_path_probe_timeout(status.clock());
+                    path_verifier.detect_path_probe_timeout(status.clock());
                     return {{}, true};  // needless to do
                 }
                 // TODO(on-keyday):
@@ -725,7 +722,7 @@ namespace utils {
                     if (!closer.should_retransmit()) {
                         return {{}, true};  // nothing to do
                     }
-                    closer.on_close_retransmited();
+                    closer.on_close_retransmitted();
                     return {sent, true};
                 }
                 if (closer.close_by_peer()) {
@@ -858,7 +855,7 @@ namespace utils {
                 }
                 if (frame.type.type_detail() == FrameType::PATH_CHALLENGE ||
                     frame.type.type_detail() == FrameType::PATH_RESPONSE) {
-                    auto err = path_verifyer.recv(frame);
+                    auto err = path_verifier.recv(frame);
                     if (err) {
                         set_quic_runtime_error(std::move(err));
                         return false;
@@ -908,7 +905,6 @@ namespace utils {
                             else {
                                 params.local.initial_src_connection_id = srcID;
                             }
-                            params.local_boxing();
                             if (!set_transport_parameter()) {
                                 return false;  // failure
                             }
@@ -1014,7 +1010,7 @@ namespace utils {
                 }
                 unacked.on_packet_processed(pn_space, summary.packet_number, pstatus.is_ack_eliciting(), status.status_config());
                 status.on_packet_processed(pn_space, summary.packet_number);
-                path_verifyer.maybe_peer_migrated_path(path_id, pstatus.is_non_path_probe());
+                path_verifier.maybe_peer_migrated_path(path_id, pstatus.is_non_path_probe());
                 logger.loss_timer_state(status.loss_timer(), status.now());
                 return true;
             }
@@ -1098,7 +1094,6 @@ namespace utils {
             // if err is QUICError, use detail of it
             // otherwise wrap error
             void request_close(error::Error err) {
-                const auto d = close_lock();
                 if (closer.has_error()) {
                     return;  // already set
                 }
@@ -1185,14 +1180,14 @@ namespace utils {
 
                 // set transport parameters
                 params.local = std::move(config.transport_parameters);
-                params.local_boxing();
+
                 // now if we are client, remaining peer transport parameter for 0-RTT
                 // will reset when connect_start
                 params.peer_checker = {};
                 if (config.server) {
                     params.peer = {};  // reset when server; no 0-RTT exists
                 }
-                params.peer_boxing();
+
                 auto local = trsparam::to_initial_limits(params.local);
 
                 // create streams
@@ -1215,7 +1210,7 @@ namespace utils {
                 datagrams->reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
 
                 // setup path validation status
-                path_verifyer.reset(config.path_parameters.original_path);
+                path_verifier.reset(config.path_parameters.original_path);
 
                 // finalize initialization
                 closed.store(close::CloseReason::not_closed);
@@ -1290,7 +1285,6 @@ namespace utils {
                     params.local.initial_src_connection_id = before_retry_src_conn_id;
                     status.set_retry_sent();
                 }
-                params.local_boxing();
                 // needless to call tls.accept here
                 // because no handshake data is available here
                 return true;
@@ -1301,7 +1295,7 @@ namespace utils {
             std::tuple<view::rvec, path::PathID, bool> create_udp_payload(flex_storage* external_buffer = nullptr) {
                 auto create_close = [&] {
                     auto [payload, idle] = create_connection_close_packet(external_buffer);
-                    return std::tuple{payload, path_verifyer.get_writing_path(), idle};
+                    return std::tuple{payload, path_verifier.get_writing_path(), idle};
                 };
                 if (closer.has_error()) {
                     return create_close();
@@ -1313,7 +1307,7 @@ namespace utils {
                     // error on loss detection
                     return create_close();
                 }
-                path_verifyer.set_writing_path_to_active_path();
+                path_verifier.set_writing_path_to_active_path();
                 view::rvec packet;
                 bool ok;
                 std::tie(packet, ok) = create_path_probe_packet(external_buffer);
@@ -1321,22 +1315,22 @@ namespace utils {
                     return create_close();
                 }
                 if (packet.size()) {
-                    return {packet, path_verifyer.get_writing_path(), true};
+                    return {packet, path_verifier.get_writing_path(), true};
                 }
                 // reset path id for active path
-                path_verifyer.set_writing_path_to_active_path();
+                path_verifier.set_writing_path_to_active_path();
                 std::tie(packet, ok) = create_encrypted_packet(false, external_buffer);
                 if (!ok) {
                     return create_close();
                 }
                 if (packet.size()) {
-                    return {packet, path_verifyer.get_writing_path(), ok};
+                    return {packet, path_verifier.get_writing_path(), ok};
                 }
                 std::tie(packet, ok) = create_mtu_probe_packet(external_buffer);
                 if (!ok) {
                     return create_close();
                 }
-                return {packet, path_verifyer.get_writing_path(), true};
+                return {packet, path_verifier.get_writing_path(), true};
             }
 
             // thread unsafe call
@@ -1404,7 +1398,7 @@ namespace utils {
             bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
                 const auto l = close_lock();
                 connIDs.expose_close_ids(ids);
-                ctx.active_path = path_verifyer.get_writing_path();
+                ctx.active_path = path_verifier.get_writing_path();
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
                         return false;
@@ -1433,7 +1427,7 @@ namespace utils {
             // thread unsafe call
             // reprots whether migration is enabled for this connection
             constexpr bool migration_enabled() const {
-                return transport_param_read &&
+                return status.transport_parameter_read() &&
                        // RFC9000 9. Connection Migration says:
                        // An endpoint MUST NOT initiate connection migration before
                        // the handshake is confirmed, as defined in Section 4.1.2 of [QUIC-TLS].

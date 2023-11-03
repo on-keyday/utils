@@ -59,6 +59,9 @@ namespace utils {
             using RecvStream = stream::impl::RecvUniStream<DefaultStreamTypeConfig>;
             using SendStream = stream::impl::SendUniStream<DefaultStreamTypeConfig>;
             using BidiStream = stream::impl::BidiStream<DefaultStreamTypeConfig>;
+
+            constexpr auto sizeof_quic_Context = sizeof(Context);
+            constexpr auto sizeof_quic_stream_Conn = sizeof(Streams);
         }  // namespace smartptr
 
         // using raw (void*) pointer for open/accept callback argument object

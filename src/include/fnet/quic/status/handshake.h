@@ -32,6 +32,8 @@ namespace utils {
 
                 flag_started = 0x400,
                 flag_peer_validated_by_token = 0x800,
+
+                flag_transport_parameter_read = 0x1000,
             } flag;
 
             friend constexpr HandshakeFlag& operator|=(HandshakeFlag& f, HandshakeFlag flag) noexcept {
@@ -85,6 +87,10 @@ namespace utils {
 
             constexpr void on_retry_received() {
                 flag |= flag_retry_received;
+            }
+
+            constexpr void on_transport_parameter_read() {
+                flag |= flag_transport_parameter_read;
             }
 
             constexpr bool is_server() const {
@@ -170,6 +176,11 @@ namespace utils {
 
             constexpr bool handshake_started() const {
                 return flag & flag_started;
+            }
+
+            // already read transport parameter
+            constexpr bool transport_parameter_read() const {
+                return flag & flag_transport_parameter_read;
             }
         };
 

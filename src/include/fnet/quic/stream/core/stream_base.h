@@ -173,7 +173,7 @@ namespace utils {
                     state.set_send_limit(ini.uni_stream_data_limit);
                 }
                 else if (id.type() == StreamType::bidi) {
-                    if (id.dir() == self) {
+                    if (id.origin() == self) {
                         state.set_send_limit(ini.bidi_stream_data_remote_limit);
                     }
                     else {
@@ -197,7 +197,7 @@ namespace utils {
 
             constexpr IOResult send_reset(frame::fwriter& w) noexcept {
                 frame::ResetStreamFrame reset;
-                reset.streamID = id.id;
+                reset.streamID = id.to_int();
                 reset.application_protocol_error_code = state.get_error_code();
                 reset.final_size = state.sent_bytes();
                 if (w.remain().size() < reset.len()) {
@@ -221,7 +221,7 @@ namespace utils {
                     return IOResult::not_in_io_state;
                 }
                 frame::ResetStreamFrame reset;
-                reset.streamID = id.id;
+                reset.streamID = id.to_int();
                 reset.application_protocol_error_code = state.get_error_code();
                 reset.final_size = state.sent_bytes();
                 if (w.remain().size() < reset.len()) {
@@ -302,7 +302,7 @@ namespace utils {
                 return IOResult::invalid_data;
             }
             frame::StreamDataBlockedFrame blocked;
-            blocked.streamID = id.id;
+            blocked.streamID = id.to_int();
             blocked.max_stream_data = max_data;
             if (w.remain().size() < blocked.len()) {
                 return IOResult::no_capacity;
@@ -381,7 +381,7 @@ namespace utils {
                     state.set_recv_limit(ini.uni_stream_data_limit);
                 }
                 else if (id.type() == StreamType::bidi) {
-                    if (id.dir() == self) {
+                    if (id.origin() == self) {
                         state.set_recv_limit(ini.bidi_stream_data_local_limit);
                     }
                     else {
@@ -408,7 +408,7 @@ namespace utils {
                 }
                 // decide new limit by user callback
                 frame::MaxStreamDataFrame frame;
-                frame.streamID = id.id;
+                frame.streamID = id.to_int();
                 frame.max_stream_data = state.recv_limit();
                 // check capcacity
                 if (w.remain().size() < frame.len()) {
@@ -470,7 +470,7 @@ namespace utils {
                     return IOResult::not_in_io_state;
                 }
                 frame::StopSendingFrame frame;
-                frame.streamID = id.id;
+                frame.streamID = id.to_int();
                 frame.application_protocol_error_code = state.get_error_code();
                 if (w.remain().size() < frame.len()) {
                     return IOResult::no_capacity;
