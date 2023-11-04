@@ -41,7 +41,7 @@ namespace utils {
                 if (!m) {
                     return {};  // ignore and fallback
                 }
-                mmap = std::move(m.value());
+                mmap = std::move(*m);
                 return {};
             }
 

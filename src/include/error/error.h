@@ -707,11 +707,6 @@ namespace utils::error {
         // as() is a reflection function like Golang's type assertion.
         // It returns pointer to T if T is the same type as the internal pointer.
         // Otherwise, it returns nullptr.
-        // HACK(on-keyday):
-        // because this Error class allows conversion between different template parameter types,
-        // and using internal::WrapperT<T, Error, RefCount>::reflectorT as a key to check if T is the same type as the internal pointer,
-        // we cannot get T if they are from different template parameter Error types.
-        // So, you should use a template parameter (A,B,C,F,R) to get T if you want to use mixture Error class template.
         template <class T>
         constexpr T* as() {
             if (type_ != ErrorType::ptr) {
