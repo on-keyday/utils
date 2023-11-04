@@ -426,6 +426,7 @@ namespace utils::file {
         }
 
         template <class Buffer = wrap::path_string, class T>
+            requires(!internal::has_c_str_for_path<T>)
         static file_result<File> open(T&& filename, Flag flag = O_READ_DEFAULT, Mode mode = r_perm) {
             Buffer buffer;
             utf::convert<0, sizeof(wrap::path_char)>(filename, buffer);
