@@ -21,7 +21,7 @@ int main() {
     auto fd = (f.derive().derive() * sin / f);
     auto fdd = fd.derive();
 
-    res = sin(utils::math::pi.raw().to_float());
+    res = sin(utils::math::c_pi.raw().to_float());
     std::string val;
     namespace m = utils::math;
     fd.print(val);

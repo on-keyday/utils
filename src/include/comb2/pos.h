@@ -20,7 +20,11 @@ namespace utils::comb2 {
         constexpr bool npos() const {
             return begin == ~0 && end == ~0;
         }
-    };
+        };
+
+    constexpr bool operator==(const Pos& lhs, const Pos& rhs) {
+        return lhs.begin == rhs.begin && lhs.end == rhs.end;
+    }
 
     constexpr auto npos = Pos{~size_t(0), ~size_t(0)};
 }  // namespace utils::comb2

@@ -17,6 +17,7 @@ if(WIN32)
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options("-ftemplate-backtrace-limit=0")
+    add_compile_options("-fconstexpr-steps=2147483647")
   endif()
 else()
   # find_package(OPENSSL REQUIRED)
@@ -112,6 +113,7 @@ add_executable(stack_trace "src/test/wrap/test_stack_trace.cpp")
 add_executable(error_convert "src/test/error/test_error_convert.cpp")
 add_executable(nan "src/test/binary/test_nan.cpp")
 add_executable(derive2 "src/test/math/test_derive2.cpp")
+add_executable(fft "src/test/math/test_fft.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
@@ -132,6 +134,9 @@ add_executable(fnetquic_0rtt "src/test/fnetquic/test_fnetquic_0rtt.cpp")
 add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_Internet.cpp")
 add_executable(fnet_ip "src/test/fnet/test_fnet_ip.cpp")
 add_executable(fnet_telnet "src/test/fnet/test_fnet_telnet.cpp")
+
+#tests(low)
+add_executable(callstack "src/test/low/test_callstack.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 # tools
@@ -197,11 +202,13 @@ add_library(utils SHARED)
 add_library(fnet SHARED)
 add_library(fnetserv SHARED)
 add_library(coro SHARED)
+add_library(low SHARED)
 elseif(UTILS_BUILD_MODE STREQUAL "static")
 add_library(utils STATIC)
 add_library(fnet STATIC)
 add_library(fnetserv STATIC)
 add_library(coro STATIC)
+add_Library(low STATIC)
 add_compile_definitions(UTILS_AS_STATIC)
 else()
 message(FATAL_ERROR "UTILS_BUILD_MODE must be shared or static")
@@ -215,7 +222,7 @@ target_sources(utils
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
   "src/lib/json/json_object.cpp"
-  "src/lib/wrap/iocommon.cpp"
+  # "src/lib/wrap/iocommon.cpp"
   "src/lib/wrap/cin.cpp"
   "src/lib/testutil/alloc_hook.cpp"
   "src/lib/wrap/input.cpp"
@@ -273,6 +280,7 @@ target_sources(fnetserv PRIVATE
   "src/lib/fnet/server/httpserv.cpp"
 )
 
+# coro
 if(WIN32)
 target_sources(coro PRIVATE 
   "src/lib/coro/coro_win.cpp"
@@ -283,6 +291,10 @@ target_sources(coro PRIVATE
 )
 endif()
 
+# low
+target_sources(low PRIVATE
+  "src/lib/low/stack.cpp"
+)
 
 
 # test (utils)
@@ -315,6 +327,7 @@ target_link_libraries(exepath utils)
 target_link_libraries(derive utils)
 target_link_libraries(stack_trace utils)
 target_link_libraries(derive2 utils)
+target_link_libraries(fft utils)
 
 # test(libfnet)
 target_link_libraries(fnet_socket fnet)
@@ -340,6 +353,9 @@ target_link_libraries(fnetserv fnet)
 target_link_libraries(quic_coro coro fnet utils)
 target_link_libraries(coro_nest coro utils)
 
+# test(liblow)
+target_link_libraries(callstack low)
+
 # tools
 target_link_libraries(ifacegen utils)
 # target_link_libraries(binred utils)
@@ -348,7 +364,6 @@ target_link_libraries(durl utils fnet)
 target_link_libraries(server utils fnet fnetserv)
 if(LLVM_FOUND)
 target_link_libraries(combl utils)
-target_compile_options(combl PRIVATE "-fconstexpr-steps=2147483647")
 endif()
 # target_link_libraries(binp utils)
 target_link_libraries(unidump utils)
@@ -365,7 +380,7 @@ message(STATUS "LLVM not found")
 endif()
 
 
-
+#[[
 if(WIN32)
   if(UTILS_BUILD_SHARED_LIBS)
     add_custom_command(
@@ -401,12 +416,13 @@ if(WIN32)
 
   endif()
 endif()
+]]
 
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
 set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
 install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
 install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
-install(TARGETS utils coro fnet fnetserv DESTINATION "lib"  OPTIONAL)
-install(TARGETS utils coro fnet fnetserv DESTINATION "test" OPTIONAL)
-install(TARGETS utils coro fnet fnetserv DESTINATION "tool" OPTIONAL)
+install(TARGETS utils coro fnet fnetserv low DESTINATION "lib"  OPTIONAL)
+install(TARGETS utils coro fnet fnetserv low DESTINATION "test" OPTIONAL)
+install(TARGETS utils coro fnet fnetserv low DESTINATION "tool" OPTIONAL)

@@ -129,8 +129,8 @@ namespace utils::math {
     template <class T>
     concept is_X = is_X_t<T>::value;
 
-    constexpr auto pi = Const<3.14159265358979323846264338327950288>{};
-    constexpr auto e = Const<2.71828182845904523536028747135266249>{};
+    constexpr auto c_pi = Const<3.14159265358979323846264338327950288>{};
+    constexpr auto c_e = Const<2.71828182845904523536028747135266249>{};
 
     template <class T>
     struct derivable_t : std::false_type {};
@@ -462,7 +462,7 @@ namespace utils::math {
         static constexpr B b;
 
         constexpr auto operator()(auto&&... x) const {
-            if constexpr (a.raw() == e.raw()) {
+            if constexpr (a.raw() == c_e.raw()) {
                 return std::log(b(x...));
             }
             else {
@@ -472,19 +472,19 @@ namespace utils::math {
 
         template <size_t i = 0>
         constexpr auto derive() const {
-            if constexpr (std::is_same_v<decltype(a), decltype(e)>) {
+            if constexpr (std::is_same_v<decltype(a), decltype(c_e)>) {
                 // log(e) = 1
                 return internal::div(Const<1>{}, b) * b.template derive<i>();
             }
             else {
-                return internal::div(Const<1>{}, internal::mul(b, Log{e, a})) * b.template derive<i>();
+                return internal::div(Const<1>{}, internal::mul(b, Log{c_e, a})) * b.template derive<i>();
             }
         }
 
         template <class XPrint = DefaultXPrint>
         constexpr auto print(auto&& out, XPrint&& f = XPrint{}) const {
             strutil::append(out, "log(");
-            if constexpr (std::is_same_v<decltype(a), decltype(e)>) {
+            if constexpr (std::is_same_v<decltype(a), decltype(c_e)>) {
                 // nothing to do
             }
             else {
@@ -508,7 +508,7 @@ namespace utils::math {
 
         constexpr auto operator()(auto&&... x) const {
             if constexpr (is_Const<A>) {
-                if (a.raw() == e.raw()) {
+                if (a.raw() == c_e.raw()) {
                     return std::exp(b(x...));
                 }
             }
@@ -530,11 +530,11 @@ namespace utils::math {
                 }
             }
             else if constexpr (is_Const<A>) {
-                if constexpr (std::is_same_v<A, decltype(e)>) {
+                if constexpr (std::is_same_v<A, decltype(c_e)>) {
                     return internal::mul(Pow<A, B>{}, b.template derive<i>());
                 }
                 else {
-                    return internal::mul(internal::mul(Pow<A, B>{}, Log<std::decay_t<decltype(e)>, A>{}), b.template derive<i>());
+                    return internal::mul(internal::mul(Pow<A, B>{}, Log<std::decay_t<decltype(c_e)>, A>{}), b.template derive<i>());
                 }
             }
             else {
@@ -611,7 +611,7 @@ namespace utils::math {
 
     template <class A>
     constexpr auto exp(A x) {
-        return Pow<decltype(e), A>{};
+        return Pow<decltype(c_e), A>{};
     }
 
 }  // namespace utils::math

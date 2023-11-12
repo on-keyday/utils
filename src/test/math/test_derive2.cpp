@@ -12,7 +12,7 @@
 
 int main() {
     namespace m = utils::math;
-    constexpr auto z = m::log(m::e, pow(m::x, m::c<2>) + m::sin(m::x * m::y - m::x * m::c<32>));
+    constexpr auto z = m::log(m::c_e, pow(m::x, m::c<2>) + m::sin(m::x * m::y - m::x * m::c<32>));
     std::string v;
     z.print(v, m::XYZWPrint{});
     utils::wrap::cout_wrap() << v << "\n";
@@ -64,7 +64,7 @@ int main() {
     z5.print(v);
     utils::wrap::cout_wrap() << v << "\n";
 
-    auto z6 = m::log(m::e, z5 / zd4);
+    auto z6 = m::log(m::c_e, z5 / zd4);
 
     v.clear();
     z6.print(v);

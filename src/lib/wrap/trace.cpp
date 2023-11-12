@@ -11,7 +11,6 @@
 #ifdef UTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #include <ImageHlp.h>
-#include <mutex>
 #include <helper/lock.h>
 #pragma comment(lib, "imagehlp.lib")
 #elif __has_include(<execinfo.h>)
@@ -23,7 +22,24 @@
 
 namespace utils::wrap {
 #ifdef UTILS_PLATFORM_WINDOWS
-    static std::mutex m;  // for multi thread DbgHelp func call
+
+    struct CriticalSection {
+        CRITICAL_SECTION cs;
+
+        CriticalSection() {
+            InitializeCriticalSection(&cs);
+        }
+
+        void lock() {
+            EnterCriticalSection(&cs);
+        }
+
+        void unlock() {
+            LeaveCriticalSection(&cs);
+        }
+    };
+
+    static CriticalSection m;
 
     static auto lock() {
         return utils::helper::lock(m);
