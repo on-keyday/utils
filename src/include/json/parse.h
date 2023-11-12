@@ -201,7 +201,7 @@ namespace utils {
         JSONErr parse(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json, bool eof = false) {
             auto res = internal::parse_impl(seq, json);
             if (res && eof) {
-                while (strutil::parse_space(seq, true)) {
+                while (strutil::parse_space<true>(seq, true)) {
                 }
                 if (!seq.eos()) {
                     return JSONError::not_eof;
