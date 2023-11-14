@@ -27,8 +27,16 @@ namespace utils {
                                     std::is_const_v<std::remove_pointer_t<T>> == false;
 
             template <class T>
+            concept const_ptr = std::is_pointer_v<T>;
+
+            template <class T>
             concept is_not_const_data = requires(T t) {
                 { std::data(t) } -> non_const_ptr;
+            };
+
+            template <class T>
+            concept is_const_data = requires(T t) {
+                { std::data(t) } -> const_ptr;
             };
 
             template <class T>
@@ -95,6 +103,7 @@ namespace utils {
             }
 
             template <class T>
+                requires internal::is_const_data<T>
             constexpr basic_rvec(T&& t) noexcept
                 : basic_rvec(std::data(t), std::size(t)) {}
 

@@ -203,7 +203,7 @@ namespace utils {
                         }
                         u8_buf[i] = input;
                     }
-                    utf::Minibuffer<path_char> c;
+                    utf::MiniBuffer<path_char> c;
                     if (!utf::convert(view::wvec(u8_buf, u8_buf + len), c)) {
                         utf::from_utf32(unicode::replacement_character, out);
                         continue;

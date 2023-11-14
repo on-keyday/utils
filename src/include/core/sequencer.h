@@ -20,12 +20,17 @@ namespace utils {
         Buffer<T> buf;
         size_t rptr = 0;
 
-        template <class... Args>
-        constexpr Sequencer(Args&&... args)
-            : buf(std::forward<Args>(args)...) {}
+        template <class U, helper_disable_self(Sequencer, U)>
+        constexpr Sequencer(U&& args)
+            : buf(std::forward<U>(args)) {}
+
+        template <class Ptr>
+            requires std::is_pointer_v<Ptr>
+        constexpr Sequencer(Ptr ptr, size_t size)
+            : buf(ptr, size) {}
 
         constexpr Sequencer(Sequencer&& in)
-            : buf(std::forward<T>(in.buf)), rptr(in.rptr) {}
+            : buf(std::move(in.buf)), rptr(in.rptr) {}
 
        private:
         template <class String, class F>

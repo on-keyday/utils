@@ -13,42 +13,47 @@
 #include "../../core/sequencer.h"
 #include "minibuffer.h"
 #include "convert.h"
-#include "fallback_sequence.h"
+#include "retreat.h"
 
 namespace utils::unicode::utf {
 
     template <class Buf, class Char>
     class View {
-        mutable Sequencer<buffer_t<Buf>> sequence;
-        mutable Minibuffer<Char> view;
-        mutable size_t viewptr = 0;
+        mutable Sequencer<buffer_t<Buf>> seq;
+        mutable MiniBuffer<Char> view;
+        mutable size_t view_ptr = 0;
         mutable size_t virtual_ptr = 0;
 
         size_t converted_size = 0;
 
-        constexpr bool fallback() const {
-            return internal::fallback(sequence);
+        constexpr bool retreat() const {
+            return internal::retreat(seq);
         }
 
-        constexpr bool read_one() const {
+        constexpr bool read_one(bool forward = true) const {
             view.clear();
-            return convert_one(sequence, view, false, false);
+            auto save = seq.rptr;
+            auto res = convert_one(seq, view, false, false);
+            if (!forward) {
+                seq.rptr = save;
+            }
+            return res;
         }
 
         constexpr bool count_converted_size() {
-            auto tmp = sequence.rptr;
-            sequence.rptr = 0;
+            auto tmp = seq.rptr;
+            seq.rptr = 0;
             size_t count = 0;
-            while (!sequence.eos()) {
+            while (!seq.eos()) {
                 if (!read_one()) {
-                    sequence.rptr = tmp;
+                    seq.rptr = tmp;
                     converted_size = 0;
                     return false;
                 }
                 count += view.size();
             }
             converted_size = count;
-            sequence.rptr = tmp;
+            seq.rptr = tmp;
             return true;
         }
 
@@ -62,33 +67,31 @@ namespace utils::unicode::utf {
             if (position > virtual_ptr) {
                 while (position != virtual_ptr) {
                     virtual_ptr++;
-                    viewptr++;
-                    if (view.size() <= viewptr) {
-                        if (!read_one()) {
+                    view_ptr++;
+                    if (view.size() <= view_ptr) {
+                        if (!read_one(true)) {
                             return false;
                         }
-                        viewptr = 0;
+                        if (!read_one(false)) {
+                            return false;
+                        }
+                        view_ptr = 0;
                     }
                 }
             }
             else {
                 while (position != virtual_ptr) {
-                    virtual_ptr--;
-                    if (viewptr == 0) {
-                        if (!fallback()) {
+                    if (view_ptr == 0) {
+                        if (!retreat()) {
                             return false;
                         }
-                        if (sequence.rptr != 0) {
-                            if (!fallback()) {
-                                return false;
-                            }
-                        }
-                        if (!read_one()) {
+                        if (!read_one(false)) {
                             return false;
                         }
-                        viewptr = view.size();
+                        view_ptr = view.size();
                     }
-                    viewptr--;
+                    view_ptr--;
+                    virtual_ptr--;
                 }
             }
             return true;
@@ -97,13 +100,18 @@ namespace utils::unicode::utf {
        public:
         template <class... Args>
         constexpr View(Args&&... args)
-            : sequence(std::forward<Args>(args)...) {
+            : seq(std::forward<Args>(args)...) {
             resize();
+        }
+
+        constexpr View(View&& a)
+            : seq(std::move(a.seq)), view(std::move(a.view)), view_ptr(a.view_ptr), virtual_ptr(a.virtual_ptr), converted_size(a.converted_size) {
+            a.converted_size = 0;
         }
 
         constexpr void resize() {
             if (count_converted_size()) {
-                read_one();
+                read_one(false);
             }
             else {
                 view.clear();
@@ -118,7 +126,7 @@ namespace utils::unicode::utf {
             if (!move_to(pos)) {
                 return Char();
             }
-            return view[viewptr];
+            return view[view_ptr];
         }
     };
 

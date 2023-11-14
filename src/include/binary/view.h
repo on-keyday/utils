@@ -21,6 +21,15 @@ namespace utils {
 
             static_assert(sizeof(buf[1]) == 1, "expect sizeof(char_type) is 1");
 
+            constexpr EndianView() = default;
+
+            constexpr EndianView(EndianView&&) = default;
+            constexpr EndianView(const EndianView&) = default;
+
+            template <class V, helper_disable_self(EndianView, V)>
+            constexpr EndianView(V&& v, bool little_endian = false)
+                : buf(std::forward<V>(v)), little_endian(little_endian) {}
+
             constexpr Char operator[](size_t pos) const {
                 if (pos >= size()) {
                     return Char();

@@ -57,8 +57,16 @@ constexpr bool test_view_utf32_to_utf16() {
     return view[2] == u'野' && seq.match(u"𠮷野家abc");
 }
 
+constexpr bool test_edge_case() {
+    auto test = u8"\n # 本当はこっちが正しいのですが、現状のジェネレータの限界で、下を使っています\r\n";
+    utils::utf::View<const char8_t*, char32_t> view(test);
+    auto seq = utils::make_ref_seq(view);
+    view[41];  // touch
+    seq.rptr = 2;
+    return seq.match(U"# 本当はこっちが正しいのですが、現状のジェネレータの限界で、下を使っています\r\n");
+}
+
 void test_utfview() {
-#if !defined(__GNUC__) || defined(__clang__)
     constexpr bool result1 = test_view_utf8_to_utf32();
     static_assert(result1 == true, "view utf8 to utf32 is incorrect");
     constexpr bool result2 = test_view_utf8_to_utf16();
@@ -71,9 +79,28 @@ void test_utfview() {
     static_assert(result5 == true, "view utf32 to utf8 is incorrect");
     constexpr bool result6 = test_view_utf32_to_utf16();
     static_assert(result6 == true, "view utf32 to utf16 is incorrect");
-#endif
+    constexpr bool result7 = test_edge_case();
+    // static_assert(result7 == true, "view edge case is incorrect");
+}
+
+void test_utfview_non_constexpr() {
+    bool result1 = test_view_utf8_to_utf32();
+    // static_assert(result1 == true, "view utf8 to utf32 is incorrect");
+    bool result2 = test_view_utf8_to_utf16();
+    // static_assert(result2 == true, "view utf8 to utf16 is incorrect");
+    bool result3 = test_view_utf16_to_utf32();
+    // static_assert(result3 == true, "view utf16 to utf32 is incorrect");
+    bool result4 = test_view_utf16_to_utf8();
+    // static_assert(result4 == true, "view utf16 to utf8 is incorrect");
+    bool result5 = test_view_utf32_to_utf8();
+    // static_assert(result5 == true, "view utf32 to utf8 is incorrect");
+    bool result6 = test_view_utf32_to_utf16();
+    // static_assert(result6 == true, "view utf32 to utf16 is incorrect");
+    bool result7 = test_edge_case();
+    // static_assert(result7 == true, "view edge case is incorrect");
 }
 
 int main() {
     test_utfview();
+    test_utfview_non_constexpr();
 }

@@ -37,9 +37,9 @@ namespace utils {
         }
 
         template <class Char>
-        constexpr utf::Minibuffer<Char> get_space(char16_t c) {
+        constexpr utf::MiniBuffer<Char> get_space(char16_t c) {
             char16_t str[] = {c, 0};
-            utf::Minibuffer<Char> ret;
+            utf::MiniBuffer<Char> ret;
             utf::convert(str, ret);
             return ret;
         }

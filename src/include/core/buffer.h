@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <utility>
 #include "strlen.h"
+#include <helper/disable_self.h>
 
 namespace utils {
 
@@ -30,14 +31,13 @@ namespace utils {
 
         constexpr Buffer() {}
 
-        constexpr Buffer(unconst_type& in)
-            : buffer(in) {}
+        template <class T, helper_disable_self(Buffer, T)>
+        constexpr Buffer(T&& in)
+            : buffer(std::forward<T>(in)) {}
 
-        constexpr Buffer(const unconst_type& in)
-            : buffer(in) {}
-
-        constexpr Buffer(unconst_type&& in)
-            : buffer(std::forward<unref_type>(in)) {}
+        constexpr Buffer(Buffer&& in)
+            requires(std::is_move_constructible_v<Seq>)
+            : buffer(std::forward<decltype(in.buffer)>(in.buffer)) {}
 
         constexpr decltype(auto) at(size_t position) {
             return buffer[position];
@@ -73,6 +73,9 @@ namespace utils {
 
         constexpr Buffer(C* ptr, size_t size)
             : buffer(ptr), size_(ptr ? size : 0) {}
+
+        constexpr Buffer(Buffer&& in)
+            : buffer(std::forward<unref_type>(in.buffer)), size_(in.size_) {}
 
         constexpr char_type at(size_t position) {
             return buffer[position];

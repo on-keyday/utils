@@ -14,16 +14,16 @@
 
 namespace utils::unicode::utf {
     template <class C>
-    struct Minibuffer {
+    struct MiniBuffer {
         static constexpr size_t bufsize = 4 / sizeof(C);
         static_assert(bufsize != 0, "too large char size");
         C buf[bufsize + 1]{};
         size_t pos = 0;
 
-        constexpr Minibuffer() = default;
+        constexpr MiniBuffer() = default;
 
         template <class T>
-        constexpr Minibuffer(T&& t) {
+        constexpr MiniBuffer(T&& t) {
             Buffer<buffer_t<T&>> buf(t);
             for (auto i = 0; i < buf.size(); i++) {
                 push_back(buf.at(i));
@@ -75,7 +75,7 @@ namespace utils::unicode::utf {
         }
     };
 
-    using U8Buffer = Minibuffer<std::uint8_t>;
-    using U16Buffer = Minibuffer<char16_t>;
-    using U32Buffer = Minibuffer<char32_t>;
+    using U8Buffer = MiniBuffer<std::uint8_t>;
+    using U16Buffer = MiniBuffer<char16_t>;
+    using U32Buffer = MiniBuffer<char32_t>;
 }  // namespace utils::unicode::utf
