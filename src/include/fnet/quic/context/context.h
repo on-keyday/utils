@@ -134,12 +134,12 @@ namespace utils {
                     return true;
                 }
                 auto data = crypto.tls().get_peer_quic_transport_params();
-                if (data.null()) {
+                if (!data) {
                     return true;  // nothing can do
                 }
-                binary::reader r{data};
+                binary::reader r{*data};
                 auto accepted = crypto.tls().get_early_data_accepted();
-                auto err = params.parse_peer(r, status.is_server(), accepted);
+                auto err = params.parse_peer(r, status.is_server(), accepted.has_value());
                 if (err) {
                     set_quic_runtime_error(std::move(err));
                     return false;
@@ -754,7 +754,7 @@ namespace utils {
                     return false;
                 }
                 auto p = w.written();
-                auto err = crypto.tls().set_quic_transport_params(p);
+                auto err = crypto.tls().set_quic_transport_params(p).error_or(error::none);
                 if (err) {
                     set_quic_runtime_error(std::move(err));
                     return false;
@@ -1152,16 +1152,15 @@ namespace utils {
 
                 // setup TLS
                 error::Error tmp_err;
-                tls::TLS tls;
-                std::tie(tls, tmp_err) = tls::create_quic_tls_with_error(config.tls_config, crypto::qtls_callback, &crypto);
-                if (tmp_err) {
-                    set_quic_runtime_error(std::move(tmp_err));
+                auto tls = tls::create_quic_tls_with_error(config.tls_config, crypto::qtls_callback, &crypto);
+                if (!tls) {
+                    set_quic_runtime_error(std::move(tls.error()));
                     return false;
                 }
                 if (config.session) {
-                    tls.set_session(std::move(config.session));
+                    tls->set_session(std::move(config.session));
                 }
-                crypto.reset(std::move(tls), config.server);
+                crypto.reset(std::move(*tls), config.server);
 
                 // initialize connection status
                 status::InternalConfig internal;
@@ -1249,12 +1248,12 @@ namespace utils {
                 }
                 if (hostname) {
                     // enable SNI
-                    if (auto err = crypto.tls().set_hostname(hostname)) {
+                    if (auto err = crypto.tls().set_hostname(hostname).error_or(error::none)) {
                         set_quic_runtime_error(std::move(err));
                         return false;
                     }
                 }
-                auto err = crypto.tls().connect();
+                auto err = crypto.tls().connect().error_or(error::none);
                 if (err && !tls::isTLSBlock(err)) {
                     set_quic_runtime_error(std::move(err));
                     return false;
@@ -1438,7 +1437,7 @@ namespace utils {
 
             // thread unsafe call
             view::rvec get_selected_alpn() {
-                return crypto.tls().get_selected_alpn();
+                return crypto.tls().get_selected_alpn().value_or(view::rvec{});
             }
         };
     }  // namespace fnet::quic::context

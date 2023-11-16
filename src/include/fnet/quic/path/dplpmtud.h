@@ -137,13 +137,13 @@ namespace utils {
                     return false;
                 }
                 transport_param_value = value;
-                set_transport_parameter_set(true);
+                transport_parameter_set(true);
                 return true;
             }
 
            private:
             constexpr void on_searching() {
-                set_state(State::searching);
+                state(State::searching);
                 const auto max_mtu = transport_param_value < config.max_plpmtu ? transport_param_value : config.max_plpmtu;
                 bin_search.set(config.base_plpmtu, max_mtu);
             }
@@ -180,7 +180,7 @@ namespace utils {
                 }
                 if (bin_search.complete()) {
                     wait.confirm();
-                    set_state(State::search_complete);
+                    state(State::search_complete);
                     return {0, false};  // already done
                 }
                 wait.wait(observer);

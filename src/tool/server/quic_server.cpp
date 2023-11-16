@@ -61,10 +61,10 @@ path libcrypto;
 
 void load_env(std::string& cert, std::string& prv) {
     auto env = utils::env::sys::env_getter();
-    env.get_or(libssl, "FNET_QUIC_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
-    env.get_or(libcrypto, "FNET_QUIC_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
-    env.get_or(cert, "FNET_QUIC_LOCAL_CERT", "cert.pem");
-    env.get_or(prv, "FNET_QUIC_LOCAL_PRIVATE_KEY", "private.pem");
+    env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
+    env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
+    env.get_or(cert, "FNET_PUBLIC_KEY", "cert.pem");
+    env.get_or(prv, "FNET_PRIVATE_KEY", "private.pem");
     utils::fnet::tls::set_libcrypto(libcrypto.data());
     utils::fnet::tls::set_libssl(libssl.data());
 }

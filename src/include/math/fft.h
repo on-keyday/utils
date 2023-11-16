@@ -54,7 +54,7 @@ namespace utils::math::fft {
             }
             if (f.is_denormalized()) {
                 auto z = binary::zero<double>;
-                z.set_sign(f.sign());
+                z.sign(f.sign());
                 return z;
             }
             auto exponent = f.biased_exponent();
@@ -74,8 +74,8 @@ namespace utils::math::fft {
                 }
             }
             mantissa &= ~mask;
-            f.set_biased_exponent(exponent);
-            f.set_fraction(mantissa);
+            f.biased_exponent(exponent);
+            f.fraction(mantissa);
             return f.to_float();
         }
 
@@ -85,7 +85,7 @@ namespace utils::math::fft {
             }
             if (f.is_denormalized()) {
                 auto z = binary::zero<double>;
-                z.set_sign(f.sign());
+                z.sign(f.sign());
                 return z;
             }
             bool sign = f.sign();

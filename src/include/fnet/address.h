@@ -36,6 +36,7 @@ namespace utils {
 
         }  // namespace internal
 
+        // NetAddr is a network address representation
         struct NetAddr {
            private:
             friend constexpr NetAddr internal::make_netaddr(NetAddrType, view::rvec);

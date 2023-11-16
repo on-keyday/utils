@@ -82,8 +82,8 @@ namespace utils {
                 return exponent() - bias;
             }
 
-            constexpr bool set_biased_exponent(std::make_signed_t<exp_t> exp) noexcept {
-                return set_exponent(exp + bias);
+            constexpr bool biased_exponent(std::make_signed_t<exp_t> exp) noexcept {
+                return exponent(exp + bias);
             }
 
             // status
@@ -135,7 +135,7 @@ namespace utils {
                     if (bit & fraction_msb) {
                         return false;
                     }
-                    return set_fraction((fraction() & ~fraction_msb) | bit /*to be nan*/);
+                    return fraction((fraction() & ~fraction_msb) | bit /*to be nan*/);
                 }
                 return false;
             }
@@ -230,24 +230,24 @@ namespace utils {
         template <class Float>
         constexpr auto quiet_nan = [] {
             auto f = make_float(Float());
-            f.set_exponent(f.exponent_max);
-            f.set_fraction(f.fraction_msb);
+            f.exponent(f.exponent_max);
+            f.fraction(f.fraction_msb);
             return f;
         }();
 
         template <class Float>
         constexpr auto indeterminate_nan = [] {
             auto f = make_float(Float());
-            f.set_exponent(f.exponent_max);
-            f.set_fraction(f.fraction_msb);
-            f.set_sign(true);
+            f.exponent(f.exponent_max);
+            f.fraction(f.fraction_msb);
+            f.sign(true);
             return f;
         }();
 
         template <class Float>
         constexpr auto infinity = [] {
             auto f = make_float(Float());
-            f.set_exponent(f.exponent_max);
+            f.exponent(f.exponent_max);
             return f;
         }();
 
@@ -257,7 +257,7 @@ namespace utils {
         template <class Float>
         constexpr auto epsilon = [] {
             auto f = make_float(Float());
-            f.set_exponent(f.bias - f.fraction_bits_width);
+            f.exponent(f.bias - f.fraction_bits_width);
             return f;
         }();
 
@@ -265,8 +265,8 @@ namespace utils {
         template <class Float>
         constexpr auto min_denormalized = [] {
             auto f = make_float(Float());
-            f.set_exponent(0);
-            f.set_fraction(1);
+            f.exponent(0);
+            f.fraction(1);
             return f;
         }();
 
@@ -274,7 +274,7 @@ namespace utils {
         template <class Float>
         constexpr auto min_normalized = [] {
             auto f = make_float(Float());
-            f.set_exponent(1);
+            f.exponent(1);
             return f;
         }();
 

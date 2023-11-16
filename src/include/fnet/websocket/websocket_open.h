@@ -8,9 +8,10 @@
 // websocket_open - websocket opening protocol
 #pragma once
 #include "websocket.h"
-#include "http.h"
-#include "util/sha1.h"
-#include "util/base64.h"
+#include "../http.h"
+#include "../util/sha1.h"
+#include "../util/base64.h"
+#include <number/array.h>
 
 namespace utils {
     namespace fnet {

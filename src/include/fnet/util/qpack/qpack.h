@@ -432,8 +432,7 @@ namespace utils {
 
         auto http3_field_validate_wrapper(auto& field) {
             return [&](auto&& h, auto&& v, FieldPolicy policy = FieldPolicy::prior_static) {
-                if (!(http::header::is_valid_key(h, true) || http::header::is_http2_pseduo(h)) ||
-                    !http::header::is_valid_value(v, true)) {
+                if (!http::header::http2_validator(true, true)(h, v)) {
                     return false;
                 }
                 return field(h, v, policy);
@@ -442,8 +441,7 @@ namespace utils {
 
         auto http3_entry_validate_wrapper(auto& entry) {
             return [&](auto&& h, auto&& v) {
-                if (!(http::header::is_valid_key(h, true) || http::header::is_http2_pseduo(h)) ||
-                    !http::header::is_valid_value(v, true)) {
+                if (!http::header::http2_validator(true, true)(h, v)) {
                     return false;
                 }
                 return entry(h, v);

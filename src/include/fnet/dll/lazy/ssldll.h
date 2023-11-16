@@ -66,6 +66,8 @@ namespace utils {
 
             LAZY(SSL_ctrl)
 
+            LAZY(SSL_in_init)
+
             namespace ossl {
                 LAZY_BIND(libssl, ssl_import::bc::open_ssl::ssl::SSL_CTX_set_alpn_protos, SSL_CTX_set_alpn_protos)
                 LAZY_BIND(libssl, ssl_import::bc::open_ssl::ssl::SSL_set_alpn_protos, SSL_set_alpn_protos)

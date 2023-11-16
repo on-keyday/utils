@@ -114,7 +114,7 @@ namespace utils {
             }
             binary::Buf<std::uint32_t> data;
             data.write_be(value.value);
-            return w.write(view::rvec(data.data + 4 - value.len, value.len));
+            return w.write(view::rvec(data.data_ + 4 - value.len, value.len));
         }
 
         constexpr bool read(binary::reader& r, std::uint32_t& value, byte len) noexcept {

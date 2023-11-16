@@ -34,7 +34,7 @@ namespace utils {
                 // current waiting IOCP/epoll call count
                 std::atomic_uint32_t waiting_async_read;
                 // current enqueued count
-                std::atomic_uint32_t current_enqued;
+                std::atomic_uint32_t current_enqueued;
                 // total IOCP/epoll call count
                 std::atomic_uint64_t total_async_invocation;
                 // max concurrent IOCP/epoll call count
@@ -92,12 +92,15 @@ namespace utils {
 
             struct StateContext;
 
-            enum log_level {
+            enum class log_level {
                 perf,
                 debug,
                 info,
                 warn,
+                err,
             };
+
+            DEFINE_ENUM_COMPAREOP(log_level)
 
             struct Queued {
                 DeferredNotification runner;
@@ -112,7 +115,7 @@ namespace utils {
                 Counter count;
                 thread::SendChan<Client> send;
                 thread::RecvChan<Client> recv;
-                thread::SendChan<Queued> enque;
+                thread::SendChan<Queued> io_notify;
                 thread::RecvChan<Queued> deque;
                 ServerEntry handler;
                 void* ctx;
@@ -130,7 +133,7 @@ namespace utils {
                     send = w;
                     recv = r;
                     auto [eq, dq] = thread::make_chan<Queued>();
-                    enque = eq;
+                    io_notify = eq;
                     deque = dq;
                     count.waiting_recommend = 3;
                     count.max_handler_thread = 12;
@@ -205,7 +208,7 @@ namespace utils {
                         std::forward<decltype(context)>(context),
                         // HACK(on-keyday): in this case, this pointer is valid via th of runner function
                         // so use this pointer instead of shared_from_this()
-                        [this](DeferredNotification&& n) { this->enque_object(std::move(n)); },
+                        [this](DeferredNotification&& n) { this->enqueue_object(std::move(n)); },
                         [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& r) {
                             th->count.waiting_async_read--;
                             Enter ent{th->count.current_handling_handler_thread};
@@ -214,11 +217,11 @@ namespace utils {
                                 auto& size = *result;
                                 auto&& base_buffer = context.get_buffer();
                                 if (size) {
-                                    context.add_data(view::wvec(base_buffer).substr(0, *size));
+                                    context.add_data(view::wvec(base_buffer).substr(0, *size), {th});
                                 }
                                 if (!size || *size == base_buffer.size()) {
                                     result = s.read_until_block(base_buffer, [&](view::rvec s) {
-                                        context.add_data(s);
+                                        context.add_data(s, {th});
                                     });
                                 }
                             }
@@ -228,7 +231,7 @@ namespace utils {
                                     th->log_evt(log_level::warn, addr.value_ptr(), result.error());
                                 }
                             }
-                            fn(std::move(s), std::move(context), {th}, result.error_ptr());
+                            fn(std::move(s), std::move(context), {th}, (bool)result.error_ptr());
                         });
                 }
 
@@ -254,10 +257,10 @@ namespace utils {
                     return true;
                 }
 
-                void enque_object(DeferredNotification&& w) {
+                void enqueue_object(DeferredNotification&& w) {
                     count.total_queued++;
-                    count.current_enqued++;
-                    enque << Queued{std::move(w)};
+                    count.current_enqueued++;
+                    io_notify << Queued{std::move(w)};
                 }
             };
 
@@ -283,28 +286,6 @@ namespace utils {
 
                 void log(log_level level, const char* msg, NetAddrPort& addr) {
                     log(level, &addr, error::Error(msg, error::Category::app));
-                }
-
-                void enque_object(auto fn, auto&& obj) {
-                    struct Internal {
-                        std::decay_t<decltype(fn)> fn;
-                        std::remove_cvref_t<decltype(obj)> obj;
-                        std::shared_ptr<State> st;
-                    };
-                    auto inobj = std::allocate_shared<Internal>(
-                        glheap_allocator<Internal>{},
-                        std::forward<decltype(fn)>(fn),
-                        std::forward<decltype(obj)>(obj),
-                        std::as_const(s));
-                    auto w = thread::make_waker(std::move(inobj), [](const std::shared_ptr<thread::Waker>&, std::shared_ptr<void>& param, thread::WakerState s, void* arg) {
-                        if (s == thread::WakerState::running) {
-                            Internal* in = static_cast<Internal*>(param.get());
-                            in->fn(std::move(in->obj), StateContext{in->st});
-                        }
-                        return true;
-                    });
-                    w->wakeup();  // skip sleep state
-                    s->enque_object(std::move(w));
                 }
             };
 

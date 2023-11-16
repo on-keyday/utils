@@ -222,21 +222,21 @@ namespace utils {
         template <class T, byte... split>
         using flags_t = decltype(make_flags_value<T, split...>());
 
-#define bits_flag_alias_method(flags, num, name)                                    \
-    constexpr auto name() const noexcept {                                          \
-        return flags.template get<num>();                                           \
-    }                                                                               \
-    constexpr auto set_##name(decltype(flags.template get<num>()) val__) noexcept { \
-        return flags.template set<num>(val__);                                      \
-    }                                                                               \
-    static constexpr auto name##_max = decltype(flags)::template limit<num>();      \
+#define bits_flag_alias_method(flags, num, name)                               \
+    constexpr auto name() const noexcept {                                     \
+        return flags.template get<num>();                                      \
+    }                                                                          \
+    constexpr auto name(decltype(flags.template get<num>()) val__) noexcept {  \
+        return flags.template set<num>(val__);                                 \
+    }                                                                          \
+    static constexpr auto name##_max = decltype(flags)::template limit<num>(); \
     static constexpr auto name##_mask = decltype(flags)::template get_mask<num>();
 
 #define bits_flag_alias_method_with_enum(flags, num, name, Enum)                    \
     constexpr auto name() const noexcept {                                          \
         return Enum(flags.template get<num>());                                     \
     }                                                                               \
-    constexpr auto set_##name(Enum val__) noexcept {                                \
+    constexpr auto name(Enum val__) noexcept {                                      \
         return flags.template set<num>(decltype(flags.template get<num>())(val__)); \
     }                                                                               \
     static constexpr auto name##_max = decltype(flags)::limit<num>();               \

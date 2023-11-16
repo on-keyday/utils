@@ -20,47 +20,117 @@ namespace utils {
         namespace server {
             constexpr auto start_timing = "[hs]";
             struct Requester {
+               private:
                 void* internal_;
+
+                friend void*& internal(Requester& req);
+
+               public:
                 Client client;
+                tls::TLS tls;
                 HTTP http;
                 std::uintptr_t user_id;
                 fnet::flex_storage read_buf;
+                bool data_added = false;
 
                 view::wvec get_buffer() {
-                    read_buf.resize(2000);
+                    read_buf.resize(2048);
                     return read_buf;
                 }
 
-                void add_data(view::rvec d) {
-                    http.add_input(d, d.size());
+               private:
+                void send_tls_data(StateContext& as) {
+                    while (true) {
+                        byte buf[1024];
+                        auto data = tls.receive_tls_data(buf);
+                        if (!data) {
+                            if (!tls::isTLSBlock(data.error())) {
+                                as.log(log_level::err, &client.addr, data.error());
+                                client.sock.shutdown();
+                            }
+                            return;
+                        }
+                        client.sock.write(data.value());
+                    }
                 }
 
-                template <class Body = const char*>
-                bool respond(int status, auto&& header, Body&& body = "", size_t len = 0) {
-                    number::Array<char, 40, true> lenstr{};
-                    number::to_string(lenstr, len);
-                    header.emplace("Content-Length", lenstr.c_str());
-                    return http.write_response(status, header, body, len);
+               public:
+                void add_data(view::rvec d, StateContext as) {
+                    if (d.size() == 0) {
+                        return;
+                    }
+                    data_added = true;
+                    if (tls) {
+                        auto ok = tls.provide_tls_data(d);
+                        if (!ok) {
+                            if (!tls::isTLSBlock(ok.error())) {
+                                as.log(log_level::err, &client.addr, ok.error());
+                                client.sock.shutdown();
+                            }
+                            else {
+                                send_tls_data(as);
+                            }
+                            return;
+                        }
+                        while (true) {
+                            byte buf[1024];
+                            auto res = tls.read(buf);
+                            if (!res) {
+                                if (!tls::isTLSBlock(res.error())) {
+                                    as.log(log_level::err, &client.addr, res.error());
+                                    client.sock.shutdown();
+                                }
+                                else {
+                                    send_tls_data(as);
+                                }
+                                return;
+                            }
+                            http.add_input(res.value());
+                        }
+                    }
+                    else {
+                        http.add_input(d);
+                    }
                 }
 
-                void flush() {
-                    const char* data;
-                    size_t len;
-                    http.borrow_output(data, len);
-                    client.sock.write(view::rvec(data, len));
+                void flush(StateContext& as) {
+                    if (tls) {
+                        auto ok = tls.write(http.get_output());
+                        if (!ok) {
+                            if (!tls::isTLSBlock(ok.error())) {
+                                as.log(log_level::err, &client.addr, ok.error());
+                                client.sock.shutdown();
+                            }
+                            else {
+                                send_tls_data(as);
+                            }
+                            return;
+                        }
+                        send_tls_data(as);
+                    }
+                    else {
+                        client.sock.write(http.get_output());
+                    }
                 }
 
-                template <class Body = const char*>
-                bool respond_flush(int status, auto&& header, Body&& body = "", size_t len = 0) {
-                    if (!respond(status, header, body, len)) {
+                bool respond(auto&& status, auto&& header, view::rvec body = {}) {
+                    number::Array<char, 40, true> buffer{};
+                    number::to_string(buffer, body.size());
+                    header.emplace("Content-Length", buffer.c_str());
+                    return http.write_response(status, header, body);
+                }
+
+                bool respond_flush(StateContext& as, auto status, auto&& header, view::rvec body = {}) {
+                    if (!respond(status, header, body)) {
                         return false;
                     }
-                    flush();
+                    flush(as);
                     return true;
                 }
             };
 
             struct HTTPServ {
+                tls::TLSConfig tls_config;
                 void (*next)(void*, Requester req, StateContext s);
                 void* c;
             };
@@ -68,32 +138,38 @@ namespace utils {
             fnetserv_dll_export(void) handle_keep_alive(Requester&& cl, StateContext s);
 
             template <class TmpString>
-            bool has_keep_alive(HTTP& http, auto&& header) {
+            bool read_header_and_check_keep_alive(HTTP& http, auto&& header, bool& keep_alive) {
                 number::Array<char, 20, true> version;
-                bool keep_alive = false;
+                keep_alive = false;
                 bool close = false;
-                if (!http.read_request<TmpString>(helper::nop, helper::nop, header, nullptr, true, version, [&](auto&& key, auto&& value) {
-                        if (strutil::equal(key, "Connection", strutil::ignore_case())) {
-                            if (strutil::contains(value, "close", strutil::ignore_case())) {
-                                close = true;
+                if (!http.read_request<TmpString>(
+                        helper::nop, helper::nop, [&](auto&& key, auto&& value) {
+                            if (strutil::equal(key, "Connection", strutil::ignore_case())) {
+                                if (strutil::contains(value, "close", strutil::ignore_case())) {
+                                    close = true;
+                                }
+                                if (strutil::contains(value, "keep-alive", strutil::ignore_case())) {
+                                    keep_alive = true;
+                                }
                             }
-                            if (strutil::contains(value, "keep-alive", strutil::ignore_case())) {
-                                keep_alive = true;
-                            }
-                        }
-                    })) {
+                            return utils::http::header::apply_call_or_emplace(header, std::move(key), std::move(value));
+                        },
+                        nullptr, false, version)) {
                     return false;  // no keep alive
                 }
-                if (close) {
-                    return false;
-                }
-                if (keep_alive) {
+                if (close) {  // Connection: close
+                    keep_alive = false;
                     return true;
                 }
-                if (strutil::equal(version, "HTTP/1.0")) {
-                    return false;  // connection close
+                if (keep_alive) {  // Connection: keep-alive
+                    return true;
                 }
-                return true;  // HTTP/1.1 implicitly keep-alive
+                if (strutil::equal(version, "HTTP/1.0")) {  // HTTP/1.0 explicitly close
+                    keep_alive = false;
+                    return true;
+                }
+                keep_alive = true;  // HTTP/1.1 implicitly keep-alive
+                return true;
             }
 
         }  // namespace server

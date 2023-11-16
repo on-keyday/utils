@@ -179,9 +179,9 @@ std::string cert;
 
 void load_env() {
     auto env = utils::env::sys::env_getter();
-    env.get_or(libssl, "FNET_QUIC_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
-    env.get_or(libcrypto, "FNET_QUIC_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
-    env.get_or(cert, "FNET_QUIC_LOCAL_CERT", "cert.pem");
+    env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
+    env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
+    env.get_or(cert, "FNET_PUBLIC_KEY", "cert.pem");
 }
 
 int main() {

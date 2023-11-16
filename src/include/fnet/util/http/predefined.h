@@ -37,7 +37,7 @@ namespace utils {
                     case 300:
                         return "Multiple Choices";
                     case 301:
-                        return "Moved Permently";
+                        return "Moved Permanently";
                     case 302:
                         return "Found";
                     case 303:

@@ -109,8 +109,8 @@ namespace utils {
                 }
                 if (read_offset == frame.offset) {  // offset matched
                     auto stdata = frame.crypto_data;
-                    if (auto err = tls.provide_quic_data(level, stdata)) {
-                        return err;
+                    if (auto err = tls.provide_quic_data(level, stdata); !err) {
+                        return err.error();
                     }
                     read_offset += stdata.size();
                     if (recv_data.size() > 1) {
@@ -121,24 +121,24 @@ namespace utils {
                     while (recv_data.size() &&
                            read_offset == recv_data.back().offset) {
                         auto& src = recv_data.back();
-                        if (auto err = tls.provide_quic_data(level, src.fragment)) {
-                            return err;
+                        if (auto err = tls.provide_quic_data(level, src.fragment); !err) {
+                            return err.error();
                         }
                         read_offset += src.fragment.size();
                         recv_data.pop_back();
                     }
                     if (handshake_complete) {
-                        if (auto err = tls.progress_quic()) {
-                            return err;
+                        if (auto err = tls.progress_quic(); !err) {
+                            return err.error();
                         }
                     }
                     else {
                         error::Error err;
                         if (is_server) {
-                            err = tls.accept();
+                            err = tls.accept().error_or(error::none);
                         }
                         else {
-                            err = tls.connect();
+                            err = tls.connect().error_or(error::none);
                         }
                         if (err) {
                             if (tls::isTLSBlock(err)) {
@@ -170,7 +170,7 @@ namespace utils {
             byte flags = 0;
 
             tls::TLS tls;
-            CryptoHandshaker initial, handshake, onertt;
+            CryptoHandshaker initial, handshake, one_rtt;
 
             resend::ACKHandler wait_for_done;
 
@@ -195,7 +195,7 @@ namespace utils {
                 wait_for_done.reset();
                 initial.reset();
                 handshake.reset();
-                onertt.reset();
+                one_rtt.reset();
                 alert_code = 0;
             }
 
@@ -212,7 +212,7 @@ namespace utils {
                         handshake.add_send_data(data);
                         return true;
                     case EncryptionLevel::application:
-                        onertt.add_send_data(data);
+                        one_rtt.add_send_data(data);
                         return true;
                     default:
                         return false;
@@ -243,7 +243,7 @@ namespace utils {
                     case PacketType::Handshake:
                         return handshake.send(w, observer);
                     case PacketType::OneRTT:
-                        return onertt.send(w, observer);
+                        return one_rtt.send(w, observer);
                     default:
                         return IOResult::invalid_data;
                 }
@@ -277,7 +277,7 @@ namespace utils {
                         err = handshake.recv_crypto(tls, EncryptionLevel::handshake, is_server(), hs_complete, frame);
                         break;
                     case PacketType::OneRTT:
-                        err = onertt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
+                        err = one_rtt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
                         break;
                     default:
                         return error::Error("invalid packet type for crypto frame", error::Category::lib, error::fnet_quic_implementation_bug);

@@ -90,9 +90,9 @@ namespace utils {
             struct fnet_class_export TLSConfig {
                private:
                 void* ctx = nullptr;
-                friend fnet_dll_export(TLSConfig) configure();
-                friend fnet_dll_export(std::pair<TLS, error::Error>) create_tls_with_error(const TLSConfig&);
-                friend fnet_dll_export(std::pair<TLS, error::Error>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
+                friend fnet_dll_export(expected<TLSConfig>) configure_with_error();
+                friend fnet_dll_export(expected<TLS>) create_tls_with_error(const TLSConfig&);
+                friend fnet_dll_export(expected<TLS>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
 
                public:
                 constexpr TLSConfig() = default;
@@ -110,20 +110,20 @@ namespace utils {
 
                 TLSConfig& operator=(const TLSConfig& conf);
 
-                error::Error set_cacert_file(const char* cacert, const char* dir = nullptr);
-                error::Error set_verify(VerifyMode mode, int (*verify_callback)(int, void*) = nullptr);
-                error::Error set_client_cert_file(const char* cert);
-                error::Error set_alpn(view::rvec alpn);
-                error::Error set_cert_chain(const char* pubkey, const char* prvkey);
-                error::Error set_eraly_data_enabled(bool enable);
+                expected<void> set_cacert_file(const char* cacert, const char* dir = nullptr);
+                expected<void> set_verify(VerifyMode mode, int (*verify_callback)(int, void*) = nullptr);
+                expected<void> set_client_cert_file(const char* cert);
+                expected<void> set_alpn(view::rvec alpn);
+                expected<void> set_cert_chain(const char* pubkey, const char* prvkey);
+                expected<void> set_early_data_enabled(bool enable);
                 // if selector select protocol name and returns true,
                 // use it as negotiated protocol
                 // otherwise if returns true then alert warning
                 // if callback returns false then alert fatal error
                 // manage ALPNCallback yourself while connections alive
-                error::Error set_alpn_select_callback(const ALPNCallback* cb);
+                expected<void> set_alpn_select_callback(const ALPNCallback* cb);
 
-                error::Error set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg);
+                expected<void> set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg);
 
                 constexpr operator bool() const {
                     return ctx != nullptr;
@@ -131,7 +131,11 @@ namespace utils {
             };
 
             // configure() returns TLSConfig object initialized with SSL_CTX object
-            fnet_dll_export(TLSConfig) configure();
+            fnet_dll_export(expected<TLSConfig>) configure_with_error();
+
+            inline TLSConfig configure() {
+                return configure_with_error().value_or(TLSConfig{});
+            }
         }  // namespace tls
     }      // namespace fnet
 }  // namespace utils

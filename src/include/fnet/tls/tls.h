@@ -41,8 +41,8 @@ namespace utils {
                 constexpr TLS(void* o)
                     : opt(o) {}
 
-                friend fnet_dll_export(std::pair<TLS, error::Error>) create_tls_with_error(const TLSConfig&);
-                friend fnet_dll_export(std::pair<TLS, error::Error>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
+                friend fnet_dll_export(expected<TLS>) create_tls_with_error(const TLSConfig&);
+                friend fnet_dll_export(expected<TLS>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
 
                public:
                 constexpr TLS()
@@ -62,51 +62,53 @@ namespace utils {
                     return opt != nullptr;
                 }
 
-                error::Error set_verify(VerifyMode mode, int (*verify_callback)(int, void*) = nullptr);
-                error::Error set_client_cert_file(const char* cert);
-                error::Error set_cert_chain(const char* pubkey, const char* prvkey);
-                error::Error set_alpn(view::rvec alpn);
-                error::Error set_hostname(const char* hostname, bool verify = true);
-                error::Error set_eraly_data_enabled(bool enable);
+                expected<void> set_verify(VerifyMode mode, int (*verify_callback)(int, void*) = nullptr);
+                expected<void> set_client_cert_file(const char* cert);
+                expected<void> set_cert_chain(const char* pubkey, const char* prvkey);
+                expected<void> set_alpn(view::rvec alpn);
+                expected<void> set_hostname(const char* hostname, bool verify = true);
+                expected<void> set_early_data_enabled(bool enable);
 
-                bool get_early_data_accepted();
+                expected<void> get_early_data_accepted();
 
                 // quic extensions
-                error::Error provide_quic_data(quic::crypto::EncryptionLevel level, view::rvec data);
-                error::Error progress_quic();
-                error::Error set_quic_transport_params(view::rvec data);
-                view::rvec get_peer_quic_transport_params();
-                error::Error set_quic_eraly_data_context(view::rvec data);
+                expected<void> provide_quic_data(quic::crypto::EncryptionLevel level, view::rvec data);
+                expected<void> progress_quic();
+                expected<void> set_quic_transport_params(view::rvec data);
+                expected<view::rvec> get_peer_quic_transport_params();
+                expected<void> set_quic_early_data_context(view::rvec data);
 
                 // return (remain,err)
-                std::pair<view::rvec, error::Error> provide_tls_data(view::rvec data);
+                expected<view::rvec> provide_tls_data(view::rvec data);
                 // return (read,err)
-                std::pair<view::wvec, error::Error> receive_tls_data(view::wvec data);
+                expected<view::wvec> receive_tls_data(view::wvec data);
 
                 // TLS connection methods
                 // call setup_ssl before call these methods
 
-                std::pair<view::rvec, error::Error> write(view::rvec data);
-                std::pair<view::wvec, error::Error> read(view::wvec data);
+                expected<view::rvec> write(view::rvec data);
+                expected<view::wvec> read(view::wvec data);
 
-                error::Error shutdown();
+                expected<void> shutdown();
 
                 // TLS Handshake methods
                 // this can be called both by TLS and by QUIC
 
-                error::Error connect();
-                error::Error accept();
+                expected<void> connect();
+                expected<void> accept();
 
-                error::Error verify_ok();
+                expected<void> verify_ok();
 
                 bool has_ssl() const;
 
-                view::rvec get_selected_alpn();
+                expected<view::rvec> get_selected_alpn();
 
-                TLSCipher get_cipher();
+                expected<TLSCipher> get_cipher();
 
-                bool set_session(const Session& sess);
-                Session get_session();
+                expected<void> set_session(const Session& sess);
+                expected<Session> get_session();
+
+                bool in_handshake();
             };
 
             void get_error_strings(int (*cb)(const char*, size_t, void*), void* user);
@@ -125,23 +127,20 @@ namespace utils {
             fnet_dll_export(void) set_libcrypto(lazy::dll_path path);
 
             // new TLS create
-            fnet_dll_export(std::pair<TLS, error::Error>) create_tls_with_error(const TLSConfig&);
-            fnet_dll_export(std::pair<TLS, error::Error>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
+            fnet_dll_export(expected<TLS>) create_tls_with_error(const TLSConfig&);
+            fnet_dll_export(expected<TLS>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
             inline TLS create_tls(const TLSConfig& conf) {
-                auto [tls, _] = create_tls_with_error(conf);
-                return std::move(tls);
+                return create_tls_with_error(conf).value_or(TLS{});
             }
-            fnet_dll_export(std::pair<TLS, error::Error>) create_quic_tls_with_error(const TLSConfig&, int (*cb)(void*, quic::crypto::MethodArgs), void* user);
 
             template <class T>
-            std::pair<TLS, error::Error> create_quic_tls_with_error(const TLSConfig& conf, int (*cb)(T*, quic::crypto::MethodArgs), std::type_identity_t<T>* user) {
+            expected<TLS> create_quic_tls_with_error(const TLSConfig& conf, int (*cb)(T*, quic::crypto::MethodArgs), std::type_identity_t<T>* user) {
                 return create_quic_tls_with_error(conf, reinterpret_cast<int (*)(void*, quic::crypto::MethodArgs)>(cb), static_cast<void*>(user));
             }
 
             template <class T>
             inline TLS create_quic_tls(const TLSConfig& conf, int (*cb)(T*, quic::crypto::MethodArgs), std::type_identity_t<T>* user) {
-                auto [tls, _] = create_quic_tls_with_error(conf, cb, user);
-                return std::move(tls);
+                return create_quic_tls_with_error(conf, cb, user).value_or(TLS{});
             }
 
             // load libraries

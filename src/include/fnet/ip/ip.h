@@ -113,7 +113,7 @@ namespace utils::fnet::ip {
             if (length & 0x3) {
                 return false;
             }
-            return set_ihl(length >> 2);
+            return ihl(length >> 2);
         }
 
         constexpr bool parse(binary::reader& r) noexcept {

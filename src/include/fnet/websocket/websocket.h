@@ -21,6 +21,7 @@
 #include <helper/defer.h>
 #include <binary/flags.h>
 #include <unicode/utf/convert.h>
+#include "../storage.h"
 
 namespace utils {
     namespace fnet::websocket {
@@ -47,7 +48,7 @@ namespace utils {
             }
 
             constexpr bool set_opcode(FrameType op) {
-                return set_opcode_raw(byte(op));
+                return opcode_raw(byte(op));
             }
 
             constexpr void set(byte h) {
@@ -274,7 +275,7 @@ namespace utils {
                     frame.masked = false;
                 }
                 frame.data = data;
-                frame.flags.set_fin(fin);
+                frame.flags.fin(fin);
                 return write_frame(frame);
             }
 

@@ -47,28 +47,61 @@ namespace utils::file {
         bits_flag_alias_method(flags, 8, other_write);
         bits_flag_alias_method(flags, 9, other_execute);
 
-        constexpr void set_write(bool value) {
-            set_owner_write(value);
-            set_group_write(value);
-            set_other_write(value);
+        constexpr void write(bool value) {
+            owner_write(value);
+            group_write(value);
+            other_write(value);
         }
 
-        constexpr void set_read(bool value) {
-            set_owner_read(value);
-            set_group_read(value);
-            set_other_read(value);
+        constexpr void read(bool value) {
+            owner_read(value);
+            group_read(value);
+            other_read(value);
         }
 
-        constexpr void set_execute(bool value) {
-            set_owner_execute(value);
-            set_group_execute(value);
-            set_other_execute(value);
+        constexpr void execute(bool value) {
+            owner_execute(value);
+            group_execute(value);
+            other_execute(value);
         }
     };
 
     constexpr auto full_perm = Perm(0777);
     constexpr auto rw_perm = Perm(0666);
     constexpr auto r_perm = Perm(0444);
+
+    enum FileType {
+        regular,
+        directory,
+        symlink,
+        device,
+        pipe,
+        socket,
+        terminal,
+        unknown,
+    };
+
+    constexpr const char* to_string(FileType t) {
+        switch (t) {
+            case FileType::regular:
+                return "regular";
+            case FileType::directory:
+                return "directory";
+            case FileType::symlink:
+                return "symlink";
+            case FileType::device:
+                return "device";
+            case FileType::pipe:
+                return "pipe";
+            case FileType::socket:
+                return "socket";
+            case FileType::terminal:
+                return "terminal";
+            case FileType::unknown:
+                return "unknown";
+        }
+        return "unknown";
+    }
 
     struct Mode {
        private:
@@ -100,7 +133,7 @@ namespace utils::file {
         }
 
         void disable_extension() {
-            set_terminal(false);
+            terminal(false);
         }
 
         constexpr Mode()
@@ -108,20 +141,45 @@ namespace utils::file {
 
         constexpr Mode(std::uint32_t value)
             : flags(value) {
-            set_reserved(0);
+            reserved(0);
         }
 
         constexpr Mode(Perm perm)
             : flags(perm) {
-            set_reserved(0);
+            reserved(0);
         }
 
         constexpr operator std::uint32_t() const {
             return flags.as_value();
         }
+
+        constexpr FileType type() const {
+            if (terminal()) {
+                return FileType::terminal;
+            }
+            if (directory()) {
+                return FileType::directory;
+            }
+            if (symlink()) {
+                return FileType::symlink;
+            }
+            if (device()) {
+                return FileType::device;
+            }
+            if (pipe()) {
+                return FileType::pipe;
+            }
+            if (socket()) {
+                return FileType::socket;
+            }
+            if (regular()) {
+                return FileType::regular;
+            }
+            return FileType::unknown;
+        }
     };
 
-    // NOTE: if you want to use O_TMPFILE, you should use set_temporary() of Mode
+    // NOTE: if you want to use O_TMPFILE, you should use temporary() of Mode
     struct Flag {
        private:
         binary::flags_t<std::uint32_t, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 32 - 18> flags;
@@ -151,7 +209,7 @@ namespace utils::file {
 
         constexpr Flag(std::uint32_t value)
             : flags(value) {
-            set_reserved(0);
+            reserved(0);
         }
 
         constexpr operator std::uint32_t() const {
@@ -173,58 +231,58 @@ namespace utils::file {
     }  // namespace internal
 
     constexpr auto O_CREAT = internal::make_spec_flag([](Flag& flag) {
-        flag.set_create(true);
+        flag.create(true);
     });
     constexpr auto O_APPEND = internal::make_spec_flag([](Flag& flag) {
-        flag.set_append(true);
+        flag.append(true);
     });
     constexpr auto O_TRUNC = internal::make_spec_flag([](Flag& flag) {
-        flag.set_truncate(true);
+        flag.truncate(true);
     });
     constexpr auto O_EXCL = internal::make_spec_flag([](Flag& flag) {
-        flag.set_exclusive(true);
+        flag.exclusive(true);
     });
     constexpr auto O_SYNC = internal::make_spec_flag([](Flag& flag) {
-        flag.set_sync(true);
+        flag.sync(true);
     });
     constexpr auto O_SHARE_READ = internal::make_spec_flag([](Flag& flag) {
-        flag.set_share_read(true);
+        flag.share_read(true);
     });
     constexpr auto O_SHARE_WRITE = internal::make_spec_flag([](Flag& flag) {
-        flag.set_share_write(true);
+        flag.share_write(true);
     });
     constexpr auto O_CLOSE_ON_EXEC = internal::make_spec_flag([](Flag& flag) {
-        flag.set_close_on_exec(true);
+        flag.close_on_exec(true);
     });
     constexpr auto O_NON_BLOCK = internal::make_spec_flag([](Flag& flag) {
-        flag.set_non_block(true);
+        flag.non_block(true);
     });
     constexpr auto O_ASYNC = internal::make_spec_flag([](Flag& flag) {
-        flag.set_async(true);
+        flag.async(true);
     });
     constexpr auto O_NO_CTTY = internal::make_spec_flag([](Flag& flag) {
-        flag.set_no_ctty(true);
+        flag.no_ctty(true);
     });
     constexpr auto O_DIRECT = internal::make_spec_flag([](Flag& flag) {
-        flag.set_direct(true);
+        flag.direct(true);
     });
     constexpr auto O_NO_FOLLOW = internal::make_spec_flag([](Flag& flag) {
-        flag.set_no_follow(true);
+        flag.no_follow(true);
     });
     constexpr auto O_NO_ACCESS_TIME = internal::make_spec_flag([](Flag& flag) {
-        flag.set_no_access_time(true);
+        flag.no_access_time(true);
     });
     constexpr auto O_DSYNC = internal::make_spec_flag([](Flag& flag) {
-        flag.set_dsync(true);
+        flag.dsync(true);
     });
     constexpr auto O_READ = internal::make_spec_flag([](Flag& flag) {
-        flag.set_io(IOMode::read);
+        flag.io(IOMode::read);
     });
     constexpr auto O_WRITE = internal::make_spec_flag([](Flag& flag) {
-        flag.set_io(IOMode::write);
+        flag.io(IOMode::write);
     });
     constexpr auto O_READ_WRITE = internal::make_spec_flag([](Flag& flag) {
-        flag.set_io(IOMode::read_write);
+        flag.io(IOMode::read_write);
     });
 
     constexpr auto O_READ_DEFAULT = Flag(O_READ | O_SHARE_READ | O_SHARE_WRITE | O_CLOSE_ON_EXEC);

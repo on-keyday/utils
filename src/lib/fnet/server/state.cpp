@@ -29,7 +29,7 @@ namespace utils {
                     wait_io_event(1);
                     Queued q;
                     if (deq >> q) {
-                        state->count.current_enqued--;
+                        state->count.current_enqueued--;
                         Enter active(state->count.current_handling_handler_thread);
                         q.runner.invoke();
                     }
@@ -100,7 +100,7 @@ namespace utils {
                     wait_io_event(1);
                     Queued q;
                     if (deq >> q) {
-                        count.current_enqued--;
+                        count.current_enqueued--;
                         Enter active(count.current_handling_handler_thread);
                         q.runner.invoke();
                     }

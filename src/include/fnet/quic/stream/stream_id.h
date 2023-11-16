@@ -49,20 +49,20 @@ namespace utils {
             constexpr StreamID() = default;
 
             constexpr StreamID(std::uint64_t seq, Origin orig, StreamType typ) {
-                if (!set_seq_count_raw(seq)) {
-                    set_invalid_bit(1);
+                if (!seq_count_raw(seq)) {
+                    invalid_bit(1);
                 }
                 if (orig != Origin::server && orig != Origin::client) {
-                    set_invalid_bit(1);
+                    invalid_bit(1);
                 }
                 else {
-                    set_origin_raw(orig == Origin::server);
+                    origin_raw(orig == Origin::server);
                 }
                 if (typ != StreamType::bidi && typ != StreamType::uni) {
-                    set_invalid_bit(1);
+                    invalid_bit(1);
                 }
                 else {
-                    set_type_raw(typ == StreamType::uni);
+                    type_raw(typ == StreamType::uni);
                 }
             }
 

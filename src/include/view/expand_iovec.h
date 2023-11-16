@@ -76,7 +76,7 @@ namespace utils {
 
                 constexpr void set_dyn(C* dat, size_t size) noexcept {
                     dyn = basic_wvec<C>{dat, size};
-                    set_state(sso_state::dyn);
+                    state(sso_state::dyn);
                 }
 
                 static constexpr size_t sso_size() noexcept {
@@ -90,7 +90,7 @@ namespace utils {
                     for (auto i = 0; i < size; i++) {
                         sta.data[i] = dat[i];
                     }
-                    set_state(sso_state::sta);
+                    state(sso_state::sta);
                     return true;
                 }
 
@@ -154,7 +154,7 @@ namespace utils {
             }
 
             constexpr void copy_from_rvec(basic_rvec<C> input) {
-                while (!data_.set_size(input.size())) {
+                while (!data_.size(input.size())) {
                     handle_too_large();
                 }
                 if (data_.set_sta(input.data(), input.size())) {
@@ -277,13 +277,13 @@ namespace utils {
                 }
                 auto old_size = data_.size();
                 if (new_size <= old_size) {
-                    data_.set_size(new_size);  // must return true
-                    return old_size;           // already exists
+                    data_.size(new_size);  // must return true
+                    return old_size;       // already exists
                 }
                 if (capacity() < new_size) {
                     reserve(data_.size() * 2 > new_size ? data_.size() * 2 : new_size);
                 }
-                data_.set_size(new_size);  // must return true
+                data_.size(new_size);  // must return true
                 return old_size;
             }
 

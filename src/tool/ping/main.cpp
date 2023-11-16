@@ -86,7 +86,7 @@ void do_ping(utils::coro::C* ctx, Data* p) {
                 }
                 p->count++;
             });
-            auto val = r.readfrom_unwrap(buf_mgr.buffer, remote, [&] { return s.readfrom(buf_mgr.buffer); });
+            auto val = r.readfrom_unwrap(buf_mgr.buffer, remote, [&](auto buf) { return s.readfrom(buf); });
             if (!val) {
                 cerr << val.error().error<std::string>() << "\n";
                 p->period.back().failure = true;

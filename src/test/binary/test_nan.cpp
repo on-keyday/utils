@@ -43,16 +43,16 @@ void nan() {
     auto qNAN = f1.to_float() + f1.to_float();
     std::fegetexceptflag(&post2, FE_ALL_EXCEPT);
     utils::binary::SingleFloat fsNAN = sNAN, fqNAN = qNAN;
-    fsNAN.set_fraction(0);
+    fsNAN.fraction(0);
     auto n = fsNAN.to_float();
     n = -n;
     fsNAN = n / n;
     auto val = fsNAN.is_indeterminate_nan();
-    fsNAN.set_fraction(1);
-    fsNAN.set_fraction(fsNAN.fraction_msb | 1);
-    fsNAN.set_sign(false);
-    fsNAN.set_fraction(fsNAN.fraction_msb);
-    fsNAN.set_sign(true);
+    fsNAN.fraction(1);
+    fsNAN.fraction(fsNAN.fraction_msb | 1);
+    fsNAN.sign(false);
+    fsNAN.fraction(fsNAN.fraction_msb);
+    fsNAN.sign(true);
     fsNAN = n * 0.0f;
     auto nan = utils::binary::make_float(NAN);
     fsNAN = (-(float)(((float)(1e+300 * 1e+300)) * 0.0F));
@@ -61,7 +61,7 @@ void nan() {
     constexpr auto nanl = utils::binary::make_float(__builtin_nan(""));
     constexpr auto nan_with_sign = [&] {
         auto copy = nanf;
-        copy.set_sign(true);
+        copy.sign(true);
         return copy;
     }();
     constexpr auto yes_nan = nanf.to_float();

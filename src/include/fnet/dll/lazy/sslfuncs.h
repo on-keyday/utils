@@ -182,6 +182,8 @@ namespace ssl_import {
             // get CTX for callback
             SSL_CTX* SSL_get_SSL_CTX(const SSL* ssl);
 
+            int SSL_in_init(const SSL* ssl);
+
         }  // namespace ssl
 
         namespace crypto {

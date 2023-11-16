@@ -616,6 +616,8 @@ namespace utils {
 
             constexpr auto eof = Error("EOF", Category::lib, fnet_generic_error);
 
+            static_assert(eof == eof);
+
             // memory_exhausted is an emergency error
             // avoid heap allocation and free memory if this occurred.
             // this is common and exceptional error in program so that this has special ErrorType.

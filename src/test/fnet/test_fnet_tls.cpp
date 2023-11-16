@@ -32,9 +32,9 @@ int main() {
     tls.set_hostname("www.google.com");
     char buf[1024 * 3];
     auto provider_loop = [&] {
-        auto [read, err] = tls.receive_tls_data(buf);
-        if (!err) {
-            sock.write(read);
+        auto read = tls.receive_tls_data(buf);
+        if (read) {
+            sock.write(*read);
         }
         view::wvec v;
         while (true) {
@@ -48,19 +48,21 @@ int main() {
         }
         tls.provide_tls_data(v);
     };
-    while (auto err = tls.connect()) {
-        assert(fnet::tls::isTLSBlock(err));
+    auto err = tls.connect();
+    while (!err) {
+        assert(fnet::tls::isTLSBlock(err.error()));
         provider_loop();
+        err = tls.connect();
     }
     constexpr auto data = "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
     tls.write(data);
     provider_loop();
     while (true) {
-        auto [red, err] = tls.read(buf);
-        if (!err) {
+        auto data = tls.read(buf);
+        if (data) {
             break;
         }
-        assert(fnet::tls::isTLSBlock(err));
+        assert(fnet::tls::isTLSBlock(data.error()));
         provider_loop();
     }
 }

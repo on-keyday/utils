@@ -158,14 +158,14 @@ namespace utils::file {
         FILE_IO_PRIORITY_HINT_INFO priority_hint_info{};
         switch (type) {
             case FILE_TYPE_PIPE:
-                stat.mode.set_pipe(true);
+                stat.mode.pipe(true);
                 break;
             case FILE_TYPE_CHAR: {
-                stat.mode.set_char_device(true);
-                stat.mode.set_device(true);
+                stat.mode.char_device(true);
+                stat.mode.device(true);
                 DWORD mode = 0;
                 if (GetConsoleMode(h, &mode) != 0) {
-                    stat.mode.set_terminal(true);
+                    stat.mode.terminal(true);
                 }
                 break;
             }
@@ -189,27 +189,27 @@ namespace utils::file {
         }
         Perm perm;
         if (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY) {
-            perm.set_read(true);
+            perm.read(true);
         }
         else {
-            perm.set_read(true);
-            perm.set_write(true);
+            perm.read(true);
+            perm.write(true);
         }
         if ((info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 &&
             (tag_info.ReparseTag == IO_REPARSE_TAG_MOUNT_POINT ||
              tag_info.ReparseTag == IO_REPARSE_TAG_SYMLINK)) {
-            stat.mode.set_symlink(true);
-            stat.mode.set_perm(perm);
+            stat.mode.symlink(true);
+            stat.mode.perm(perm);
             return stat;
         }
         if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            stat.mode.set_directory(true);
-            perm.set_execute(true);
+            stat.mode.directory(true);
+            perm.execute(true);
         }
         if (priority_hint_info.PriorityHint == IoPriorityHintVeryLow) {
-            stat.flag.set_non_block(true);
+            stat.flag.non_block(true);
         }
-        stat.mode.set_perm(perm);
+        stat.mode.perm(perm);
         stat.size = (std::uint64_t(info.nFileSizeHigh) << 32) | info.nFileSizeLow;
         stat.create_time = filetime_to_Time(info.ftCreationTime);
         stat.access_time = filetime_to_Time(info.ftLastAccessTime);
@@ -625,57 +625,57 @@ namespace utils::file {
     Flag open_flag_to_flag(int flags, Mode &mode) {
         Flag flag;
         if (flags & O_APPEND) {
-            flag.set_append(true);
+            flag.append(true);
         }
         if (flags & O_CREAT) {
-            flag.set_create(true);
+            flag.create(true);
         }
         if (flags & O_EXCL) {
-            flag.set_exclusive(true);
+            flag.exclusive(true);
         }
         if (flags & O_TRUNC) {
-            flag.set_truncate(true);
+            flag.truncate(true);
         }
         if (flags & O_SYNC) {
-            flag.set_sync(true);
+            flag.sync(true);
         }
         if (flags & O_NOCTTY) {
-            flag.set_no_ctty(true);
+            flag.no_ctty(true);
         }
         if (flags & O_NOFOLLOW) {
-            flag.set_no_follow(true);
+            flag.no_follow(true);
         }
         if (flags & O_NONBLOCK) {
-            flag.set_non_block(true);
+            flag.non_block(true);
         }
         if (flags & O_CLOEXEC) {
-            flag.set_close_on_exec(true);
+            flag.close_on_exec(true);
         }
         if (flags & O_DSYNC) {
-            flag.set_dsync(true);
+            flag.dsync(true);
         }
         switch (flags & O_ACCMODE) {
             case O_RDONLY:
-                flag.set_io(IOMode::read);
+                flag.io(IOMode::read);
                 break;
             case O_WRONLY:
-                flag.set_io(IOMode::write);
+                flag.io(IOMode::write);
                 break;
             case O_RDWR:
-                flag.set_io(IOMode::read_write);
+                flag.io(IOMode::read_write);
                 break;
             default:
                 break;
         }
 #ifdef UTILS_PLATFORM_LINUX
         if (flags & O_DIRECT) {
-            flag.set_direct(true);
+            flag.direct(true);
         }
         if (flags & O_NOATIME) {
-            flag.set_no_access_time(true);
+            flag.no_access_time(true);
         }
         if (flags & O_TMPFILE) {
-            mode.set_temporary(true);
+            mode.temporary(true);
         }
 #endif
         return flag;
@@ -683,9 +683,9 @@ namespace utils::file {
 
     file_result<File> File::open(const wrap::path_char *filename, Flag flag, Mode mode) {
         auto perm = Mode(mode.perm());
-        perm.set_gid(mode.gid());
-        perm.set_uid(mode.uid());
-        perm.set_sticky(mode.sticky());
+        perm.gid(mode.gid());
+        perm.uid(mode.uid());
+        perm.sticky(mode.sticky());
         auto flags = flag_to_open_flag(flag, mode);
         auto h = openat(AT_FDCWD, filename, flags, std::uint32_t(perm));
         if (h < 0) {
@@ -706,33 +706,33 @@ namespace utils::file {
         }
         stat.flag = open_flag_to_flag(flag, stat.mode);
         if (S_ISBLK(st.st_mode)) {
-            stat.mode.set_device(true);
+            stat.mode.device(true);
         }
         if (S_ISCHR(st.st_mode)) {
-            stat.mode.set_char_device(true);
+            stat.mode.char_device(true);
             if (isatty(handle)) {
-                stat.mode.set_terminal(true);
+                stat.mode.terminal(true);
             }
         }
         if (S_ISDIR(st.st_mode)) {
-            stat.mode.set_directory(true);
+            stat.mode.directory(true);
         }
         if (S_ISFIFO(st.st_mode)) {
-            stat.mode.set_pipe(true);
+            stat.mode.pipe(true);
         }
         if (S_ISLNK(st.st_mode)) {
-            stat.mode.set_symlink(true);
+            stat.mode.symlink(true);
         }
         if (S_ISSOCK(st.st_mode)) {
-            stat.mode.set_socket(true);
+            stat.mode.socket(true);
         }
         if (S_ISREG(st.st_mode)) {
             // nothing
         }
-        stat.mode.set_perm(Perm(st.st_mode & 0777));
-        stat.mode.set_uid(st.st_mode & S_ISUID);
-        stat.mode.set_gid(st.st_mode & S_ISGID);
-        stat.mode.set_sticky(st.st_mode & S_ISVTX);
+        stat.mode.perm(Perm(st.st_mode & 0777));
+        stat.mode.uid(st.st_mode & S_ISUID);
+        stat.mode.gid(st.st_mode & S_ISGID);
+        stat.mode.sticky(st.st_mode & S_ISVTX);
         stat.size = st.st_size;
         stat.create_time.sec = st.st_ctim.tv_sec;
         stat.create_time.nsec = st.st_ctim.tv_nsec;

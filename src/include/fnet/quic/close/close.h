@@ -68,7 +68,7 @@ namespace utils {
                     return {{}, false};
                 }
                 if (flag.sent() && flag.should_send_again()) {
-                    flag.set_should_send_again(false);
+                    flag.should_send_again(false);
                     return {payload, true};
                 }
                 return {{}, true};
@@ -76,7 +76,7 @@ namespace utils {
 
             bool parse_udp_payload(view::rvec) {
                 if (flag.sent()) {
-                    flag.set_should_send_again(true);
+                    flag.should_send_again(true);
                     return true;
                 }
                 return false;
@@ -166,7 +166,7 @@ namespace utils {
             }
 
             void on_close_packet_sent(view::rvec close_packet) {
-                flag.set_sent(true);
+                flag.sent(true);
                 close_data = make_storage(close_packet);
             }
 
@@ -174,7 +174,7 @@ namespace utils {
                 if (!flag.sent()) {
                     return;
                 }
-                flag.set_should_send_again(false);
+                flag.should_send_again(false);
             }
 
             bool should_retransmit() const {
@@ -182,7 +182,7 @@ namespace utils {
             }
 
             void on_recv_after_close_sent() {
-                flag.set_should_send_again(true);
+                flag.should_send_again(true);
             }
 
             // returns (accepted)
@@ -190,7 +190,7 @@ namespace utils {
                 if (flag.received() || flag.sent()) {
                     return false;  // ignore
                 }
-                flag.set_received(true);
+                flag.received(true);
                 err_type.store(ErrorType::remote);
                 close_data = make_storage(cclose.len() + 1);
                 close_data.fill(0);

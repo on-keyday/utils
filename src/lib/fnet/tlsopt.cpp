@@ -39,12 +39,12 @@ namespace utils {
                 cant_load = true;
                 return 0;
             };
-            err.code = get_error_code();
+            err.err_code = get_error_code();
             if (cant_load) {
                 err.alt_err = error::Error("cannot decide OpenSSL/BoringSSL. maybe diffrent type library?", error::Category::lib, error::fnet_tls_lib_type_error);
                 return err;
             }
-            if (err.code == 0) {
+            if (err.err_code == 0) {
                 return reterr();
             }
             LibSubError* sub = nullptr;
@@ -110,11 +110,11 @@ namespace utils {
                     }
                 }
             }
-            if (code != 0) {
+            if (err_code != 0) {
                 if (ssl_code != 0) {
                     strutil::append(pb, " ");
                 }
-                print_lib_error(pb, "lib_error", code);
+                print_lib_error(pb, "lib_error", err_code);
             }
             if (alt_err) {
                 strutil::append(pb, " ");
@@ -138,14 +138,14 @@ namespace utils {
             void* sess_callback_arg = nullptr;
         };
 
-        fnet_dll_implement(TLSConfig) configure() {
+        fnet_dll_implement(expected<TLSConfig>) configure_with_error() {
             TLSConfig conf;
             if (!load_ssl()) {
-                return {};
+                return unexpect(error::Error("failed to load ssl library", error::Category::lib, error::fnet_lib_load_error));
             }
             auto ctx = lazy::ssl::SSL_CTX_new_(lazy::ssl::TLS_method_());
             if (!ctx) {
-                return {};
+                return unexpect(error::Error("failed to create SSL_CTX", error::Category::lib, error::fnet_tls_error));
             }
             auto release = helper::defer([&] {
                 lazy::ssl::SSL_CTX_free_(ctx);
@@ -174,14 +174,14 @@ namespace utils {
                     +del_fn);
             }
             if (idx < 0) {
-                return {};
+                return unexpect(error::Error("failed to get ex data index", error::Category::lib, error::fnet_tls_error));
             }
             if (!lazy::ssl::SSL_CTX_set_ex_data_(ctx, idx, data)) {
-                return {};
+                return unexpect(error::Error("failed to set ex data", error::Category::lib, error::fnet_tls_error));
             }
             release_data.cancel();
             if (!lazy::ssl::SSL_CTX_set_ex_data_(ctx, ssl_import::ssl_appdata_index, data)) {
-                return {};
+                return unexpect(error::Error("failed to set ex data", error::Category::lib, error::fnet_tls_error));
             }
             release.cancel();
             conf.ctx = ctx;
@@ -201,56 +201,56 @@ namespace utils {
         constexpr auto errNotInitialized = error::Error("TLSConfig is not initialized. call configure() to initialize.", error::Category::lib, error::fnet_tls_usage_error);
         constexpr auto errLibJudge = error::Error("library type judgement failure. maybe other type library?", error::Category::lib, error::fnet_tls_lib_type_error);
 
-#define CHECK_CTX(c)              \
-    if (!ctx) {                   \
-        return errNotInitialized; \
-    }                             \
+#define CHECK_CTX(c)                        \
+    if (!ctx) {                             \
+        return unexpect(errNotInitialized); \
+    }                                       \
     ssl_import::SSL_CTX* c = static_cast<ssl_import::SSL_CTX*>(ctx);
 
-        error::Error TLSConfig::set_cacert_file(const char* cacert, const char* dir) {
+        expected<void> TLSConfig::set_cacert_file(const char* cacert, const char* dir) {
             CHECK_CTX(c)
             if (!lazy::ssl::SSL_CTX_load_verify_locations_(c, cacert, dir)) {
-                return libError("SSL_CTX_load_verify_locations", "failed to load CA file or CA file directory location");
+                return unexpect(libError("SSL_CTX_load_verify_locations", "failed to load CA file or CA file directory location"));
             }
-            return error::none;
+            return {};
         }
 
         int map_verify_mode(VerifyMode);
 
-        error::Error TLSConfig::set_verify(VerifyMode mode, int (*verify_callback)(int, void*)) {
+        expected<void> TLSConfig::set_verify(VerifyMode mode, int (*verify_callback)(int, void*)) {
             CHECK_CTX(c)
             lazy::ssl::SSL_CTX_set_verify_(c, map_verify_mode(mode),
                                            (int (*)(int, ssl_import::X509_STORE_CTX*))(verify_callback));
-            return error::none;
+            return {};
         }
 
-        error::Error TLSConfig::set_client_cert_file(const char* cert) {
+        expected<void> TLSConfig::set_client_cert_file(const char* cert) {
             CHECK_CTX(c)
             auto ptr = lazy::ssl::SSL_load_client_CA_file_(cert);
             if (!ptr) {
-                return libError("SSL_load_client_CA_file", "failed to load client CA file");
+                return unexpect(libError("SSL_load_client_CA_file", "failed to load client CA file"));
             }
             lazy::ssl::SSL_CTX_set_client_CA_list_(c, ptr);
-            return error::none;
+            return {};
         }
 
-        error::Error TLSConfig::set_cert_chain(const char* pubkey, const char* prvkey) {
+        expected<void> TLSConfig::set_cert_chain(const char* pubkey, const char* prvkey) {
             CHECK_CTX(c)
             auto res = lazy::ssl::SSL_CTX_use_certificate_chain_file_(c, pubkey);
             if (!res) {
-                return libError("SSL_CTX_use_certificate_chain_file", "failed to load public key (certificate)");
+                return unexpect(libError("SSL_CTX_use_certificate_chain_file", "failed to load public key (certificate)"));
             }
             res = lazy::ssl::SSL_CTX_use_PrivateKey_file_(c, prvkey, ssl_import::SSL_FILETYPE_PEM_);
             if (!res) {
-                return libError("SSL_CTX_use_PrivateKey_file", "failed to load private key");
+                return unexpect(libError("SSL_CTX_use_PrivateKey_file", "failed to load private key"));
             }
             if (!lazy::ssl::SSL_CTX_check_private_key_(c)) {
-                return libError("SSL_CTX_check_private_key", "private key and public key are not matched or invalid");
+                return unexpect(libError("SSL_CTX_check_private_key", "private key and public key are not matched or invalid"));
             }
-            return error::none;
+            return {};
         }
 
-        error::Error TLSConfig::set_alpn(view::rvec alpn) {
+        expected<void> TLSConfig::set_alpn(view::rvec alpn) {
             CHECK_CTX(c)
             int res = 0;
             if (is_boring_ssl()) {
@@ -260,23 +260,23 @@ namespace utils {
                 res = lazy::ssl::ossl::SSL_CTX_set_alpn_protos_(c, alpn.data(), alpn.size());
             }
             else {
-                return errLibJudge;
+                return unexpect(errLibJudge);
             }
             if (res != 0) {
-                return libError("SSL_CTX_set_alpn_protos", "failed to set ALPN", nullptr, res);
+                return unexpect(libError("SSL_CTX_set_alpn_protos", "failed to set ALPN", nullptr, res));
             }
-            return error::none;
+            return {};
         }
 
-        error::Error TLSConfig::set_eraly_data_enabled(bool enable) {
+        expected<void> TLSConfig::set_early_data_enabled(bool enable) {
             CHECK_CTX(c);
             lazy::ssl::SSL_CTX_set_early_data_enabled_(c, enable ? 1 : 0);
-            return error::none;
+            return {};
         }
 
-        error::Error TLSConfig::set_alpn_select_callback(const ALPNCallback* cb) {
+        expected<void> TLSConfig::set_alpn_select_callback(const ALPNCallback* cb) {
             if (!cb) {
-                return error::Error("invalid argument", error::Category::lib, error::fnet_tls_usage_error);
+                return unexpect(error::Error("invalid argument", error::Category::lib, error::fnet_tls_usage_error));
             }
             CHECK_CTX(c)
             lazy::ssl::SSL_CTX_set_alpn_select_cb_(
@@ -297,10 +297,10 @@ namespace utils {
                     }
                 },
                 const_cast<ALPNCallback*>(cb));
-            return error::none;
+            return {};
         }
 
-        error::Error TLSConfig::set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg) {
+        expected<void> TLSConfig::set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg) {
             CHECK_CTX(c)
             auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(c, ssl_import::ssl_appdata_index));
             holder->session_callback = cb;
@@ -313,7 +313,7 @@ namespace utils {
                 Session s{sess};
                 return holder->session_callback(sess, holder->sess_callback_arg) ? 1 : 0;
             });
-            return error::none;
+            return {};
         }
 
         TLSConfig::~TLSConfig() {

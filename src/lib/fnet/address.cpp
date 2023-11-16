@@ -20,7 +20,7 @@ namespace utils {
                 auto p = reinterpret_cast<sockaddr_in*>(addr);
                 binary::Buf<std::uint32_t> buf;
                 buf.write_be(binary::bswap_net(p->sin_addr.s_addr));
-                naddr.addr = internal::make_netaddr(NetAddrType::ipv4, buf.data);
+                naddr.addr = internal::make_netaddr(NetAddrType::ipv4, buf.data_);
                 naddr.port = binary::bswap_net(p->sin_port);
             }
             else if (addr->sa_family == AF_INET6) {

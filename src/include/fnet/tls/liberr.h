@@ -31,13 +31,13 @@ namespace utils {
         // LibError is wrapper of OpenSSL/BoringSSL error
         struct fnet_class_export LibError {
             const char* method = nullptr;
-            std::uint32_t code = 0;
+            std::uint32_t err_code = 0;
             std::uint32_t ssl_code = 0;
             error::Error alt_err;
 
             void error(helper::IPushBacker<> pb) const;
-            constexpr std::uint64_t errnum() const {
-                return code;
+            constexpr std::uint64_t code() const {
+                return ssl_code ? ssl_code : err_code;
             }
 
             error::Error unwrap() const {

@@ -17,18 +17,18 @@
 namespace utils {
     namespace fnet {
         namespace server {
-            enum StatusCode {
+            enum class StatusCode {
                 http_continue = 100,
                 http_switching_protocol = 101,
                 http_early_hint = 103,
                 http_ok = 200,
                 http_created = 201,
                 http_accepted = 202,
-                http_non_authoritable_information = 204,
+                http_non_authenticatable_information = 204,
                 http_no_content = 205,
-                http_partical_content = 206,
+                http_partial_content = 206,
                 http_multiple_choices = 300,
-                http_moved_parmently = 301,
+                http_moved_permanently = 301,
                 http_found = 302,
                 http_see_other = 303,
                 http_not_modified = 304,
@@ -58,7 +58,7 @@ namespace utils {
                 http_upgrade_required = 426,
                 http_too_many_requests = 428,
                 http_request_header_field_too_large = 431,
-                http_unavailable_for_leagal_reason = 451,
+                http_unavailable_for_legal_reason = 451,
                 http_internal_server_error = 500,
                 http_not_implemented = 501,
                 http_bad_gateway = 502,
@@ -81,17 +81,11 @@ namespace utils {
             };
         }
 
-        // HTTPBodyInfo is body information of HTTP
-        // this is required for HTTP.body_read
-        // and also can get value by HTTP.read_response or HTTP.read_request
-        struct HTTPBodyInfo {
-            http::body::BodyType type = http::body::BodyType::no_info;
-            size_t expect = 0;
-        };
+        using HTTPBodyInfo = http::body::HTTPBodyInfo;
 
         // HTTP provides HyperText Transfer Protocol version 1 writer and reader implementation
-        // consistancy check of header and body is not provided
-        // most of implementation is rely to net/http
+        // consistency check of header and body is not provided
+        // most of implementation is rely to util/http
         // remote user data -> input
         // local user data <- output
         struct HTTP {
@@ -100,26 +94,24 @@ namespace utils {
             flex_storage output;
 
            public:
-            template <class Body = const char*>
-            bool write_request(auto&& method, auto&& path, auto&& header, Body&& body = "", size_t blen = 0) {
+            bool write_request(auto&& method, auto&& path, auto&& header, view::rvec body = {}, bool http_1_0 = false) {
                 namespace h = http::header;
-                if (!h::render_request(output, method, path, header, h::default_validator())) {
+                if (!h::render_request(output, method, path, header, h::default_validator(), false, http_1_0 ? "HTTP/1.0" : "HTTP/1.1")) {
                     return false;
                 }
-                strutil::append(output, view::CharVec(body, blen));
+                strutil::append(output, body);
                 return true;
             }
 
-            template <class Body = const char*>
-            bool write_response(auto&& status, auto&& header, Body&& body = "", size_t blen = 0, const char* reason = nullptr, bool http_1_0 = false) {
+            bool write_response(auto&& status, auto&& header, view::rvec body = {}, const char* reason = nullptr, bool http_1_0 = false) {
                 namespace h = http::header;
                 if (!reason) {
-                    reason = http::value::reason_phrase(status, true);
+                    reason = http::value::reason_phrase(std::uint16_t(status), true);
                 }
-                if (!h::render_response(output, status, reason, header, h::default_validator(), false, strutil::no_check(), http_1_0 ? 0 : 1)) {
+                if (!h::render_response(output, status, reason, header, h::default_validator(), false, http_1_0 ? "HTTP/1.0" : "HTTP/1.1")) {
                     return false;
                 }
-                strutil::append(output, view::SizedView(body, blen));
+                strutil::append(output, body);
                 return true;
             }
 
@@ -129,13 +121,22 @@ namespace utils {
 
             void write_chunked_data(auto&& data, size_t len) {
                 namespace h = http::body;
-                h::render_chuncked_data(output, view::SizedView(data, len));
+                h::render_chunked_data(output, view::SizedView(data, len));
             }
 
-            void write_end_of_chunck() {
+            void write_end_of_chunk() {
                 write_chunked_data("", 0);
             }
 
+            view::rvec get_input() {
+                return input;
+            }
+
+            view::rvec get_output() {
+                return output;
+            }
+
+            /*
             void borrow_output(const char*& data, size_t& size) {
                 data = output.as_char();
                 size = output.size();
@@ -153,8 +154,7 @@ namespace utils {
                 }
                 strutil::read_n(buf, check, limit);
                 if (!peek) {
-                    view::shift(output, 0, limit, output.size() - limit);
-                    output.resize(output.size() - limit);
+                    output.shift_front(limit);
                 }
                 return limit;
             }
@@ -170,6 +170,7 @@ namespace utils {
                 }
                 return limit;
             }
+            */
 
             void clear_input() {
                 input.resize(0);
@@ -179,8 +180,8 @@ namespace utils {
                 output.resize(0);
             }
 
-            void add_input(auto&& data, size_t size) {
-                strutil::append(input, view::SizedView(data, size));
+            void add_input(view::rvec data) {
+                strutil::append(input, data);
             }
 
             // check_response make sure input contains full of response header
@@ -208,7 +209,7 @@ namespace utils {
             size_t check_request(bool* begin_ok = nullptr, bool validate_method = true) {
                 namespace h = http::header;
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                auto begcheck = [&](auto& seq) {
+                auto begin_check = [&](auto& seq) {
                     if (validate_method) {
                         for (auto meth : http::value::methods) {
                             // auto rptr = seq.rptr;
@@ -228,23 +229,18 @@ namespace utils {
                     return true;
                 };
                 auto always_false = [](auto&&...) { return false; };
-                return h::guess_and_read_raw_header(check, always_false, begcheck);
+                return h::guess_and_read_raw_header(check, always_false, begin_check);
             }
 
-            template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
-                      class Preview = decltype(strutil::no_check2()), class Prepare = decltype(strutil::no_check2())>
-            size_t read_response(auto&& status, auto&& header, HTTPBodyInfo* info, bool peek = false, Reason&& reason = helper::nop, Version&& version = helper::nop,
-                                 Preview&& preview = strutil::no_check2(), Prepare&& prepare = strutil::no_check2()) {
+           private:
+           public:
+            template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&>
+            size_t read_response(auto&& status, auto&& header, HTTPBodyInfo* info, bool peek = false, Reason&& reason = helper::nop, Version&& version = helper::nop) {
                 namespace h = http::header;
                 HTTPBodyInfo body{};
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                auto body_check = http::body::bodyinfo_preview(body.type, body.expect);
-                if (!h::parse_response<TmpString>(
-                        check, version, status, reason, header, [&](auto&& key, auto&& value) {
-                            body_check(key, value);
-                            preview(key, value);
-                        },
-                        prepare)) {
+                auto body_check = http::body::body_info_preview(body.type, body.expect);
+                if (!h::parse_response(check, version, status, reason, h::default_parse_callback<TmpString>(body, header))) {
                     return 0;
                 }
                 if (info) {
@@ -256,20 +252,13 @@ namespace utils {
                 return check.rptr;
             }
 
-            template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&,
-                      class Preview = decltype(strutil::no_check2()), class Prepare = decltype(strutil::no_check2())>
-            size_t read_request(auto&& method, auto&& path, auto&& header, HTTPBodyInfo* info, bool peek = false, Version&& version = helper::nop,
-                                Preview&& preview = strutil::no_check2(), Prepare&& prepare = strutil::no_check2()) {
+            template <class TmpString = flex_storage, class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&>
+            size_t read_request(auto&& method, auto&& path, auto&& header, HTTPBodyInfo* info = nullptr, bool peek = false, Version&& version = helper::nop) {
                 namespace h = http::header;
                 HTTPBodyInfo body{};
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                auto body_check = http::body::bodyinfo_preview(body.type, body.expect);
-                if (!h::parse_request<TmpString>(
-                        check, method, path, version, header, [&](auto&& key, auto&& value) {
-                            body_check(key, value);
-                            preview(key, value);
-                        },
-                        prepare)) {
+                auto body_check = http::body::body_info_preview(body.type, body.expect);
+                if (!h::parse_request(check, method, path, version, h::default_parse_callback<TmpString>(body, header))) {
                     return 0;
                 }
                 if (info) {
@@ -340,8 +329,8 @@ namespace utils {
 
             // strict_check_header is strict header checker
             // this function uses check_request and check_response
-            // and check header byte is vaild
-            // if not valid header begining or not vaild byte appears
+            // and check header byte is valid
+            // if not valid header beginning or not valid byte appears
             // this function returns 0
             // otherwise this function returns header length current available
             size_t strict_check_header(bool request_header = true, bool* complete_header = nullptr) {

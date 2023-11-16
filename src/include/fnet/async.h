@@ -152,7 +152,7 @@ namespace utils::fnet {
                 return buf.substr(0, **result);
             }
             else {
-                auto res = read_op();
+                auto res = read_op(buf);
                 if (!res) {
                     return res.transform([&](auto) { return buf; });
                 }
@@ -168,7 +168,7 @@ namespace utils::fnet {
                 return std::make_pair(buf.substr(0, **result), std::move(addr));
             }
             else {
-                auto res = read_op();
+                auto res = read_op(buf);
                 if (!res) {
                     return res.transform([&](auto) { return std::make_pair(buf, addr); });
                 }
@@ -184,7 +184,7 @@ namespace utils::fnet {
                 return buf.substr(**result);
             }
             else {
-                auto res = write_op();
+                auto res = write_op(buf);
                 if (!res) {
                     return res.transform([&](auto) { return buf; });
                 }

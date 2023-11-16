@@ -29,11 +29,11 @@ namespace utils {
             return false;
         }
 
-        template <bool no_zero = false, class Result, class T, class Func>
-        constexpr bool read_whilef(Result& result, Sequencer<T>& seq, Func&& cmp) {
+        template <bool empty_is_error = false, class Result, class T, class Func>
+        constexpr bool read_whilef(Result& result, Sequencer<T>& seq, Func&& f) {
             bool first = true;
             while (!seq.eos()) {
-                if (cmp(seq.current())) {
+                if (f(seq.current())) {
                     result.push_back(seq.current());
                     seq.consume();
                     first = false;
@@ -41,7 +41,7 @@ namespace utils {
                 }
                 break;
             }
-            if constexpr (no_zero) {
+            if constexpr (empty_is_error) {
                 return first != true;
             }
             return true;
@@ -53,12 +53,12 @@ namespace utils {
         }
 
         template <class Result, class T, class Func = decltype(no_check())>
-        constexpr bool read_n(Result& result, Sequencer<T>& seq, size_t n, Func&& func = no_check()) {
+        constexpr bool read_n(Result& result, Sequencer<T>& seq, size_t n, Func&& validate = no_check()) {
             if (seq.remain() < n) {
                 return false;
             }
             for (size_t i = 0; i < n; i++) {
-                if (!func(seq.current())) {
+                if (!validate(seq.current())) {
                     return false;
                 }
                 result.push_back(seq.current());

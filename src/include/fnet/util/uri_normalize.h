@@ -43,7 +43,7 @@ namespace utils {
         NormalizeError normalize_uri(URI& uri, NormalizeFlag flag = NormalizeFlag::none, UrlEnc&& enc = urlenc::pathUnescape()) {
             if (any(flag & NormalizeFlag::host)) {
                 String encoded;
-                if (strutil::is_valid(uri.host, true, number::is_in_ascii_range<std::uint8_t>) &&
+                if (strutil::validate(uri.host, true, number::is_in_ascii_range<std::uint8_t>) &&
                     strutil::contains(uri.host, "xn--")) {
                     if (any(flag & NormalizeFlag::human_friendly)) {
                         if (!punycode::decode_host(uri.host, encoded)) {
@@ -63,7 +63,7 @@ namespace utils {
             }
             auto encode_each = [&](auto& input, bool query) {
                 String encoded;
-                if (strutil::is_valid(input, true, number::is_in_ascii_range<std::uint8_t>) &&
+                if (strutil::validate(input, true, number::is_in_ascii_range<std::uint8_t>) &&
                     strutil::contains(input, "%")) {
                     if (any(flag & NormalizeFlag::human_friendly)) {
                         if (net::urlenc::decode(input, encoded)) {

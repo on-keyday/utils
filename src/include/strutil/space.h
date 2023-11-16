@@ -44,7 +44,7 @@ namespace utils {
             return ret;
         }
 
-        template <bool consume = false, class T>
+        template <bool consume = true, class T>
         constexpr char16_t parse_space(Sequencer<T>& seq, bool incline = false) {
             auto ret = seq.current();
             if (ret == ' ' || ret == '\t' || (incline && (ret == '\n' || ret == '\r'))) {
@@ -68,9 +68,9 @@ namespace utils {
         }
 
         template <class T>
-        bool consume_space(Sequencer<T>& seq, bool inclline = false) {
+        bool consume_space(Sequencer<T>& seq, bool include_line = false) {
             bool ret = false;
-            while (parse_space<true>(seq, inclline)) {
+            while (parse_space<true>(seq, include_line)) {
                 ret = true;
             }
             return ret;

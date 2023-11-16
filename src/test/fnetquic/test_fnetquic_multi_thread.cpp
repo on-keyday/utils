@@ -111,7 +111,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
             if (red.size() == 0) {
                 break;
             }
-            http.add_input(red, red.size());
+            http.add_input(red);
             if (eos) {
                 break;
             }
@@ -134,10 +134,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
     auto v = http.read_body(text, info, 0, 0, &inval);
     assert(v);
     http.write_response(code, resp);
-    const char* data;
-    size_t size;
-    http.borrow_output(data, size);
-    utils::wrap::cout_wrap() << utils::view::CharVec(data, size);
+    utils::wrap::cout_wrap() << http.get_output();
 
     auto path = "./ignore/dump" + utils::number::to_string<std::string>(i) + ".";
     {

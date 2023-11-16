@@ -74,12 +74,12 @@ namespace utils {
             return target != ~0 && target < bef;
         }
 
-        template <class String, class Validate>
-        constexpr bool is_valid(String&& str, bool allow_empty, Validate&& validate) {
+        template <class String, class Validator>
+        constexpr bool validate(String&& str, bool allow_empty, Validator&& validator) {
             auto seq = make_ref_seq(str);
             bool first = true;
             while (!seq.eos()) {
-                if (!validate(seq.current())) {
+                if (!validator(seq.current())) {
                     return false;
                 }
                 seq.consume();

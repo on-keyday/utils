@@ -55,6 +55,7 @@ namespace utils {
             return number_transform[c] < radix;
         }
 
+        // '0'-'9'
         constexpr bool is_digit(std::uint8_t c) {
             return is_radix_char(c, 10);
         }

@@ -28,6 +28,7 @@ namespace utils {
             js["thread_sleep"] = servstate.thread_sleep.load();
             js["reduce_skip"] = servstate.reduce_skip.load();
             js["total_launched_handler_thread"] = servstate.total_launched_handler_thread.load();
+            js["current_enqueued"] = servstate.current_enqueued.load();
             return json::to_string<String>(js, json::FmtFlag::last_line);
         }
     }  // namespace fnet::server

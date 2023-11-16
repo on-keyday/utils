@@ -32,7 +32,7 @@ namespace utils {
             // -1 - invalid body format or length
             // 0 - reading http body is incomplete
             template <class String, class T>
-            int read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
+            constexpr int read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
                 auto inipos = seq.rptr;
                 if (type == BodyType::chuncked) {
                     while (true) {
@@ -82,7 +82,15 @@ namespace utils {
                 }
             }
 
-            constexpr auto bodyinfo_preview(BodyType& type, size_t& expect) {
+            // HTTPBodyInfo is body information of HTTP
+            // this is required for HTTP.body_read
+            // and also can get value by HTTP.read_response or HTTP.read_request
+            struct HTTPBodyInfo {
+                BodyType type = BodyType::no_info;
+                size_t expect = 0;
+            };
+
+            constexpr auto body_info_preview(BodyType& type, size_t& expect) {
                 return [&](auto& key, auto& value) {
                     if (strutil::equal(key, "transfer-encoding", strutil::ignore_case()) &&
                         strutil::contains(value, "chunked")) {
@@ -98,7 +106,7 @@ namespace utils {
             }
 
             template <class Buf, class Data = const char*>
-            void render_chuncked_data(Buf& buf, Data&& data = "", size_t len = 0) {
+            void render_chunked_data(Buf& buf, Data&& data = "", size_t len = 0) {
                 number::to_string(buf, len, 16);
                 strutil::append(buf, "\r\n");
                 strutil::append(buf, view::SizedView(data, len));

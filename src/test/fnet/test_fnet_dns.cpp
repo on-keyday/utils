@@ -21,10 +21,10 @@ int main() {
     auto addr = fnet::ipv4(1, 1, 1, 1, 53);
     namespace dns = fnet::dns;
     dns::Message<std::vector> msg;
-    msg.header.set_op_code(dns::OpCode::query);
+    msg.header.op_code(dns::OpCode::query);
     msg.header.id = 0x3f93;
-    msg.header.set_response(false);
-    msg.header.set_recursion_desired(true);
+    msg.header.response(false);
+    msg.header.recursion_desired(true);
     dns::Query query;
     query.name.name = "google.com";
     query.type = dns::RecordType::AAAA;
@@ -53,7 +53,7 @@ int main() {
     bool end = false;
     auto result = sock.readfrom_async(fnet::async_addr_then(d, [&](fnet::Socket&& s, fnet::BufferManager<view::wvec>& w, fnet::NetAddrPort&& addr, fnet::NotifyResult result) {
                           view::wvec data;
-                          std::tie(data, addr) = result.readfrom_unwrap(w.buffer, addr, [&] { return s.readfrom(w.buffer); }).value();
+                          std::tie(data, addr) = result.readfrom_unwrap(w.buffer, addr, [&](view::wvec b) { return s.readfrom(b); }).value();
                           utils::binary::reader r{data};
                           res = msg.parse(r);
                           assert(res);

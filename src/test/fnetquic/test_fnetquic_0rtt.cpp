@@ -22,9 +22,9 @@ std::string cert;
 
 void load_env() {
     auto env = env_sys::env_getter();
-    env.get_or(libssl, "FNET_QUIC_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
-    env.get_or(libcrypto, "FNET_QUIC_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
-    env.get_or(cert, "FNET_QUIC_LOCAL_CERT", "cert.pem");
+    env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
+    env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
+    env.get_or(cert, "FNET_PUBLIC_KEY", "cert.pem");
 }
 
 int main() {
@@ -39,7 +39,7 @@ int main() {
     auto ctx = std::make_shared<Context>();
     auto conf = utils::fnet::tls::configure();
     assert(conf);
-    conf.set_eraly_data_enabled(true);
+    conf.set_early_data_enabled(true);
     conf.set_alpn("\x04test");
     conf.set_cacert_file(cert.data());
     utils::fnet::tls::Session sess;

@@ -49,14 +49,18 @@ namespace utils {
 
         template <class T, class Data = byte[sizeof(T)]>
         struct Buf {
-            Data data;
+            Data data_;
 
             constexpr byte& operator[](size_t i) {
-                return data[i];
+                return data_[i];
             }
 
             constexpr const byte& operator[](size_t i) const {
-                return data[i];
+                return data_[i];
+            }
+
+            constexpr auto data() const {
+                return data_;
             }
 
             constexpr size_t size() const {
@@ -68,7 +72,7 @@ namespace utils {
                 using U = uns_t<decltype(input)>;
                 U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
-                    data[i] = byte((in >> ((sizeof(input) - 1 - i) * bit_per_byte)) & 0xff);
+                    data_[i] = byte((in >> ((sizeof(input) - 1 - i) * bit_per_byte)) & 0xff);
                 }
                 return *this;
             }
@@ -78,7 +82,7 @@ namespace utils {
                 using U = uns_t<decltype(input)>;
                 U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
-                    data[i] = byte((in >> (i * bit_per_byte)) & 0xff);
+                    data_[i] = byte((in >> (i * bit_per_byte)) & 0xff);
                 }
                 return *this;
             }
@@ -88,7 +92,7 @@ namespace utils {
                 using Out = uns_t<T>;
                 Out out = 0;
                 for (auto i = 0; i < sizeof(out); i++) {
-                    out |= Out(data[i]) << ((sizeof(out) - 1 - i) * bit_per_byte);
+                    out |= Out(data_[i]) << ((sizeof(out) - 1 - i) * bit_per_byte);
                 }
                 output = T(out);
                 return *this;
@@ -106,7 +110,7 @@ namespace utils {
                 using Out = uns_t<T>;
                 Out out = 0;
                 for (auto i = 0; i < sizeof(out); i++) {
-                    out |= Out(data[i]) << (i * bit_per_byte);
+                    out |= Out(data_[i]) << (i * bit_per_byte);
                 }
                 output = T(out);
                 return *this;
@@ -122,7 +126,7 @@ namespace utils {
             // into call output.push_back for each `data` element
             constexpr const Buf& into(auto&& output) const {
                 for (auto i = 0; i < size(); i++) {
-                    output.push_back(data[i]);
+                    output.push_back(data_[i]);
                 }
                 return *this;
             }
@@ -130,7 +134,7 @@ namespace utils {
             // from call input[offset+i] for each `data` element
             constexpr Buf& from(auto&& input, size_t offset = 0) {
                 for (auto i = 0; i < size(); i++) {
-                    data[i] = input[offset + i];
+                    data_[i] = input[offset + i];
                 }
                 return *this;
             }
@@ -138,16 +142,16 @@ namespace utils {
             // into_array call output[offset+i] for each data element
             constexpr const Buf& into_array(auto&& output, size_t offset = 0) const {
                 for (auto i = 0; i < size(); i++) {
-                    output[offset + i] = data[i];
+                    output[offset + i] = data_[i];
                 }
                 return *this;
             }
 
             constexpr Buf& reverse() {
                 for (auto i = 0; i < sizeof(T) / 2; i++) {
-                    auto tmp = data[i];
-                    data[i] = data[sizeof(T) - 1 - i];
-                    data[sizeof(T) - 1 - i] = tmp;
+                    auto tmp = data_[i];
+                    data_[i] = data_[sizeof(T) - 1 - i];
+                    data_[sizeof(T) - 1 - i] = tmp;
                 }
                 return *this;
             }

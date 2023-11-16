@@ -82,8 +82,13 @@ namespace utils::error {
         };
 
         template <class T>
-        concept has_code = requires(T t) {
+        concept has_code_fn = requires(T t) {
             { t.code() } -> std::convertible_to<std::int64_t>;
+        };
+
+        template <class T>
+        concept has_code_var = requires(T t) {
+            { t.code } -> std::convertible_to<std::int64_t>;
         };
 
         template <class T>
@@ -271,8 +276,11 @@ namespace utils::error {
                         return std::bit_cast<std::uintptr_t>(std::addressof(self->value));
                     }
                     case ReflectorOp::code: {
-                        if constexpr (has_code<T>) {
+                        if constexpr (has_code_fn<T>) {
                             return static_cast<std::int64_t>(self->value.code());
+                        }
+                        else if constexpr (has_code_var<T>) {
+                            return static_cast<std::int64_t>(self->value.code);
                         }
                         else {
                             return 0;
@@ -283,7 +291,7 @@ namespace utils::error {
                         traits->has_category = has_category<T>;
                         traits->has_subcategory = has_sub_category<T>;
                         traits->has_equal = has_equal<T>;
-                        traits->has_code = has_code<T>;
+                        traits->has_code = has_code_fn<T>;
                         traits->has_unwrap = has_unwrap<T, E>;
                         return 0;
                     }
