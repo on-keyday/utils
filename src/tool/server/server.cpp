@@ -20,6 +20,8 @@
 #include <testutil/alloc_hook.h>
 #include <fnet/debug.h>
 #include <env/env_sys.h>
+#include <chrono>
+#include <format>
 
 struct Flags : utils::cmdline::templ::HelpOption {
     std::string port = "8091";
@@ -60,16 +62,20 @@ auto& cout = utils::wrap::cout_wrap();
 
 void http_serve(void*, utils::fnet::server::Requester req, utils::fnet::server::StateContext s) {
     bool keep_alive;
+    std::string method, path;
+    req.http.peek_request_line(method, path);
+    s.log(serv::log_level::info, req.client.addr, "request ", method, " ", path);
     serv::read_header_and_check_keep_alive<std::string>(
         req.http, [](auto&&...) {}, keep_alive);
     std::map<std::string, std::string> h;
+    h["Content-Type"] = "text/html; charset=UTF-8";
     if (keep_alive) {
         h["Connection"] = "keep-alive";
     }
     else {
         h["Connection"] = "close";
     }
-    req.respond_flush(s, serv::StatusCode::http_ok, h, "hello world\n");
+    req.respond_flush(s, serv::StatusCode::http_ok, h, "<h1>hello world</h1>\n");
     if (keep_alive) {
         serv::handle_keep_alive(std::move(req), std::move(s));
     }
@@ -98,10 +104,15 @@ void log_thread() {
 }
 
 void log(auto&&... msg) {
-    auto r = utils::wrap::packln(msg...).raw();
+    auto r = utils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
     m.lock();
     ac.push_back(std::move(r));
     m.unlock();
+}
+
+void log_internal(auto&&... msg) {
+    auto r = utils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
+    cout << r;
 }
 
 void server_entry(void* p, serv::Client&& cl, serv::StateContext ctx) {
@@ -194,14 +205,14 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
             str.clear();
         }
         else if (str.back() == 3) {
-            cout << "stopping server\n";
+            log_internal("stopping server");
             s->notify();
             std::this_thread::sleep_for(std::chrono::seconds(1));
             return false;
         }
         return true;
     };
-    utils::wrap::cout_wrap() << "running server on port " << flag.port << " \n";
+    log_internal("running server on port ", flag.port);
     std::thread(log_thread).detach();
     if (flag.single_thread) {
         s->serve(server->first, input_callback);
@@ -211,6 +222,7 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     while (input_callback()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    log_internal("server stopped");
     return 0;
 }
 

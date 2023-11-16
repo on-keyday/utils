@@ -19,13 +19,21 @@ namespace utils {
                 return req.internal_;
             }
 
-            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, bool was_err);
+            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as);
 
             void call_read_async(HTTPServ* serv, Requester& req, StateContext& as) {
+                if (req.already_shutdown) {
+                    return;  // discard
+                }
                 auto fn = [=](Socket&& sock, Requester&& req, StateContext&& as, bool was_err) {
-                    req.client.sock = std::move(sock);  // restore
+                    if (was_err) {
+                        return;  // discard
+                    }
+                    if (req.already_shutdown) {
+                        return;  // discard
+                    }
                     as.log(log_level::debug, "reenter http handler from async read", req.client.addr);
-                    http_handler_impl(serv, std::move(req), std::move(as), was_err);
+                    http_handler_impl(serv, std::move(req), std::move(as));
                 };
                 req.data_added = false;
                 if (!as.read_async(req.client.sock, fn, std::move(req))) {
@@ -33,10 +41,7 @@ namespace utils {
                 }
             }
 
-            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as, bool was_err) {
-                if (was_err) {
-                    return;  // discard
-                }
+            void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as) {
                 bool complete = false;
                 if (!req.tls.in_handshake() && !req.http.strict_check_header(true, &complete)) {
                     if (req.tls && req.data_added) {
@@ -76,7 +81,7 @@ namespace utils {
                     s.log(log_level::warn, &req.client.addr, result.error());
                     return;  // discard
                 }
-                http_handler_impl(serv, std::move(req), std::move(s), false);
+                http_handler_impl(serv, std::move(req), std::move(s));
             }
 
             fnetserv_dll_internal(void) http_handler(void* v, Client&& cl, StateContext s) {

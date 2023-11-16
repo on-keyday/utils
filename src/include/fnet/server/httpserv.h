@@ -32,6 +32,7 @@ namespace utils {
                 std::uintptr_t user_id;
                 fnet::flex_storage read_buf;
                 bool data_added = false;
+                bool already_shutdown = false;
 
                 view::wvec get_buffer() {
                     read_buf.resize(2048);
@@ -55,6 +56,18 @@ namespace utils {
                 }
 
                public:
+                void shutdown(StateContext& as) {
+                    if (already_shutdown) {
+                        return;
+                    }
+                    already_shutdown = true;
+                    if (tls) {
+                        tls.shutdown();
+                        send_tls_data(as);
+                    }
+                    client.sock.shutdown();
+                }
+
                 void add_data(view::rvec d, StateContext as) {
                     if (d.size() == 0) {
                         return;
@@ -65,7 +78,7 @@ namespace utils {
                         if (!ok) {
                             if (!tls::isTLSBlock(ok.error())) {
                                 as.log(log_level::err, &client.addr, ok.error());
-                                client.sock.shutdown();
+                                shutdown(as);
                             }
                             else {
                                 send_tls_data(as);
@@ -78,7 +91,7 @@ namespace utils {
                             if (!res) {
                                 if (!tls::isTLSBlock(res.error())) {
                                     as.log(log_level::err, &client.addr, res.error());
-                                    client.sock.shutdown();
+                                    shutdown(as);
                                 }
                                 else {
                                     send_tls_data(as);
@@ -99,7 +112,7 @@ namespace utils {
                         if (!ok) {
                             if (!tls::isTLSBlock(ok.error())) {
                                 as.log(log_level::err, &client.addr, ok.error());
-                                client.sock.shutdown();
+                                shutdown(as);
                             }
                             else {
                                 send_tls_data(as);

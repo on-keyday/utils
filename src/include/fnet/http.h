@@ -271,14 +271,14 @@ namespace utils {
             }
 
             template <class Version = decltype(helper::nop)&>
-            bool peek_request_line(auto&& method, auto&& path, Version&& version = helper::nop) {
+            http::header::HeaderErr peek_request_line(auto&& method, auto&& path, Version&& version = helper::nop) {
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 namespace h = http::header;
                 return h::parse_request_line(check, method, path, version);
             }
 
             template <class Reason = decltype(helper::nop)&, class Version = decltype(helper::nop)&>
-            bool peek_status_line(auto&& status, Reason&& reason = helper::nop, Version&& version = helper::nop) {
+            http::header::HeaderErr peek_status_line(auto&& status, Reason&& reason = helper::nop, Version&& version = helper::nop) {
                 auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
                 namespace h = http::header;
                 return h::parse_status_line(check, version, status, reason);

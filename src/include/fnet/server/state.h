@@ -287,6 +287,36 @@ namespace utils {
                 void log(log_level level, const char* msg, NetAddrPort& addr) {
                     log(level, &addr, error::Error(msg, error::Category::app));
                 }
+
+               private:
+                template <class... Arg>
+                struct InfoLog {
+                    std::tuple<Arg...> tup;
+                    void error(auto&& e) {
+                        std::apply(
+                            [&](auto&&... arg) {
+                                auto print = [&](auto& arg) {
+                                    if constexpr (utils::error::internal::has_error<decltype(arg)>) {
+                                        arg.error(e);
+                                    }
+                                    else {
+                                        strutil::append(e, arg);
+                                    }
+                                };
+                                (print(arg), ...);
+                            },
+                            tup);
+                    }
+
+                    error::Category category() {
+                        return error::Category::app;
+                    }
+                };
+
+               public:
+                void log(log_level level, NetAddrPort& addr, auto&&... msg) {
+                    log(level, &addr, error::Error(InfoLog<decltype(msg)...>{std::forward_as_tuple(msg...)}, error::Category::app));
+                }
             };
 
         }  // namespace server
