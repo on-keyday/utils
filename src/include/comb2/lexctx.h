@@ -38,6 +38,9 @@ namespace utils::comb2 {
                     if constexpr (std::is_integral_v<std::decay_t<decltype(v)>>) {
                         errbuf.push_back(v);
                     }
+                    else if constexpr (ctxs::has_to_string<decltype(v)>) {
+                        strutil::append(errbuf, to_string(v));
+                    }
                     else {
                         strutil::append(errbuf, v);
                     }

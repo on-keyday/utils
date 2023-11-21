@@ -117,6 +117,11 @@ namespace utils::comb2 {
             }
         }
 
+        template <class T>
+        concept has_to_string = requires(T t) {
+            { to_string(t) };
+        };
+
     }  // namespace ctxs
 #undef HAS
 #undef CALL_IF
