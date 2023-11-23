@@ -36,7 +36,7 @@ namespace utils {
             }
             return new (ptr) T{};
         }
-#define new_glheap(...) new_from_global_heap<__VA_ARGS__>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(__VA_ARGS__), alignof(__VA_ARGS__)));
+#define new_glheap(...) new_from_global_heap<__VA_ARGS__>(DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(__VA_ARGS__), alignof(__VA_ARGS__)))
         template <class T>
         void delete_with_global_heap(T* p, DebugInfo info) {
             if (!p) {

@@ -22,7 +22,7 @@ void test_fnet_stun_run(utils::binary::writer& w, utils::fnet::ip::Version versi
     auto local = sock.get_local_addr().value();
     auto str = local.to_string<std::string>();
     ctx.original_address.family = local.addr.type() == NetAddrType::ipv6 ? stun::family_ipv6 : stun::family_ipv4;
-    ctx.original_address.port = local.port;
+    ctx.original_address.port = local.port();
     memcpy(ctx.original_address.address, local.addr.data(), local.addr.size());
     utils::byte duf[12]{1, 2, 3, 4, 5, 6, 4, 4, 4, 3, 0x93, 0x84};
     memcpy(ctx.transaction_id, duf, 12);

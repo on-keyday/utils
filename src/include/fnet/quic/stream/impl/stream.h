@@ -249,44 +249,61 @@ namespace utils {
             }
 
            private:
-            bool discard_written_data_impl(bool fin, auto&&... data) {
+            void append_data(core::StreamWriteBufferState& s, auto&&... data) {
+                s.perfect_written_buffer_count = 0;
+                s.written_size_of_last_buffer = 0;
+                s.result = IOResult::ok;
+                src.append(s, std::forward<decltype(data)>(data)...);
+            }
+
+            core::StreamWriteBufferState discard_written_data_impl(bool fin, auto&&... data) {
                 auto written = uni.data.written_offset;
                 auto discarded = uni.data.discarded_offset;
                 if (written - discarded) {
                     src.shift_front(written - discarded);
                 }
-                (..., src.append(data));
+                core::StreamWriteBufferState res;
+                append_data(res, data...);
+                if (res.result == IOResult::fatal) {
+                    return res;
+                }
                 if (fin) {
                     src.shrink_to_fit();
                 }
-                return uni.update_data(written, src, fin);
+                res.result = uni.update_data(written, src, fin) ? res.result : IOResult::fatal;  // must success
+                return res;
             }
 
            public:
             // discard_written_data discards written stream data from runtime buffer
             bool discard_written_data() {
                 const auto locked = uni.lock();
-                return discard_written_data_impl(uni.data.fin);
+                return discard_written_data_impl(uni.data.fin).result != IOResult::fatal;
             }
 
             // add_multi_data adds multiple data
             // this is better performance than multiple call of add_data because of reduction of lock.
             // see also description of add_data to know about parameters
-            IOResult add_multi_data(bool fin, bool discard_written, auto&&... data) {
+            core::StreamWriteBufferState add_multi_data(bool fin, bool discard_written, auto&&... data) {
                 const auto locked = uni.lock();
                 if (uni.data.fin) {
                     if (discard_written) {
-                        if (!discard_written_data_impl(true)) {
-                            return IOResult::fatal;
+                        if (auto res = discard_written_data_impl(true); res.result != IOResult::ok) {
+                            return res;
                         }
                     }
-                    return IOResult::cancel;
+                    return core::StreamWriteBufferState{.result = IOResult::cancel};
                 }
                 if (discard_written) {
-                    return discard_written_data_impl(fin, data...) ? IOResult::ok : IOResult::fatal;  // must success
+                    return discard_written_data_impl(fin, std::forward<decltype(data)>(data)...);
                 }
-                (..., src.append(data));
-                return uni.update_data(uni.data.discarded_offset, src, fin) ? IOResult::ok : IOResult::fatal;  // must success
+                core::StreamWriteBufferState res;
+                append_data(res, std::forward<decltype(data)>(data)...);
+                if (res.result == IOResult::fatal) {
+                    return res;
+                }
+                res.result = uni.update_data(uni.data.discarded_offset, src, fin) ? res.result : IOResult::fatal;  // must success
+                return res;
             }
 
             // add send data
@@ -294,7 +311,7 @@ namespace utils {
             // if discard_written is true, discard written data from runtime buffer
             // you can call this with discard_written = true to discard buffer even if fin is set
             // but use discard_written_data() instead to discard only.
-            IOResult add_data(view::rvec data, bool fin = false, bool discard_written = false) {
+            core::StreamWriteBufferState add_data(view::rvec data, bool fin = false, bool discard_written = false) {
                 return add_multi_data(fin, discard_written, data);
             }
 

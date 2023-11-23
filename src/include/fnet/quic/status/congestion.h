@@ -18,7 +18,7 @@ namespace utils {
             return config.window_minimum_factor * max_udp_payload_size;
         }
 
-        struct WindowModifiyer {
+        struct WindowModifier {
            private:
             template <class Alg>
             friend struct Congestion;
@@ -26,7 +26,7 @@ namespace utils {
             const PayloadSize* size = nullptr;
             std::uint64_t* window = nullptr;
             bool incr = false;
-            constexpr WindowModifiyer(const InternalConfig* c, const PayloadSize* p, std::uint64_t* val, bool incr)
+            constexpr WindowModifier(const InternalConfig* c, const PayloadSize* p, std::uint64_t* val, bool incr)
                 : conf(c), size(p), window(val), incr(incr) {}
 
            public:
@@ -60,8 +60,8 @@ namespace utils {
 
         struct NullAlgorithm {
             constexpr void on_packet_sent(std::uint64_t sent_bytes, time::Time time_sent) {}
-            constexpr void on_packet_ack(WindowModifiyer& modif, std::uint64_t sent_bytes, time::Time time_sent) {}
-            constexpr void on_congestion_event(WindowModifiyer& modif, time::Time time_sent) {}
+            constexpr void on_packet_ack(WindowModifier& modif, std::uint64_t sent_bytes, time::Time time_sent) {}
+            constexpr void on_congestion_event(WindowModifier& modif, time::Time time_sent) {}
         };
 
         template <class Alg>
@@ -103,7 +103,7 @@ namespace utils {
                 if (in_congestion_recovery(time_sent)) {
                     return;
                 }
-                WindowModifiyer modif{
+                WindowModifier modif{
                     &config,
                     &payload_size,
                     &congestion_window,
@@ -129,7 +129,7 @@ namespace utils {
                     return;
                 }
                 congestion_recovery_start_time = time_sent;
-                WindowModifiyer modif{
+                WindowModifier modif{
                     &config,
                     &payload_size,
                     &congestion_window,

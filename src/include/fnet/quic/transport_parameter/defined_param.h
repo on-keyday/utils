@@ -340,7 +340,7 @@ namespace utils {
             if (param.max_ack_delay > (1 << 14)) {
                 return TransportParamError::over_2pow14_max_ack_delay;
             }
-            if (!param.preferred_address.enable && param.preferred_address.connectionID.empty()) {
+            if (param.preferred_address.enable && param.preferred_address.connectionID.empty()) {
                 return TransportParamError::zero_length_connid;
             }
             if (param.initial_max_streams_bidi >= std::uint64_t(1) << 60) {

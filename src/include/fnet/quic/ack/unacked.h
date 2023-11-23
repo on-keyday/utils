@@ -40,7 +40,7 @@ namespace utils {
                     return false;
                 }
                 if (size == 1) {
-                    auto res = recved[0].value;
+                    auto res = recved[0].as_uint();
                     buffer.push_back(frame::ACKRange{res, res});
                     return true;
                 }
@@ -50,11 +50,11 @@ namespace utils {
                 cur.smallest = cur.largest;
                 for (std::uint64_t i = 1; i < size; i++) {
                     if (recved[i - 1] == recved[i] + 1) {
-                        cur.smallest = recved[i];
+                        cur.smallest = recved[i].as_uint();
                     }
                     else {
                         buffer.push_back(std::move(cur));
-                        cur.largest = recved[i];
+                        cur.largest = recved[i].as_uint();
                         cur.smallest = cur.largest;
                     }
                 }

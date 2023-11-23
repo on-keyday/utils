@@ -10,11 +10,11 @@
 
 namespace utils {
     namespace fnet::quic::status {
-        enum class PacketNumberSpace {
+        enum class PacketNumberSpace : byte {
             initial,
             handshake,
             application,
-            no_space = -1,
+            no_space = 0xff,
         };
 
         constexpr const char* to_string(PacketNumberSpace space) noexcept {

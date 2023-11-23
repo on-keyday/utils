@@ -71,7 +71,7 @@ namespace utils {
             storage initial_random;
             storage retry_random;
 
-            bool gen(storage& target, byte size, Random& rand) {
+            bool gen(storage& target, byte size, Random& rand, RandomUsage usage) {
                 if (!rand.valid()) {
                     return false;
                 }
@@ -79,7 +79,7 @@ namespace utils {
                     size = 8;
                 }
                 target = make_storage(size);
-                return target.size() == size && rand.gen_random(target);
+                return target.size() == size && rand.gen_random(target, usage);
             }
 
             bool recv(view::rvec id, storage& target) {
@@ -97,14 +97,14 @@ namespace utils {
                 if (is_server) {
                     return false;
                 }
-                return gen(initial_random, size, rand);
+                return gen(initial_random, size, rand, RandomUsage::original_dst_id);
             }
 
             bool gen_retry(bool is_server, byte size, Random& rand) {
                 if (is_server) {
                     return false;
                 }
-                return gen(retry_random, size, rand);
+                return gen(retry_random, size, rand, RandomUsage::retry_id);
             }
 
             bool recv_initial(bool is_server, view::rvec id) {

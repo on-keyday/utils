@@ -54,7 +54,7 @@ namespace utils {
 
         // rfc 9001 5.8. Retry Packet Integrity
         // this is not derived from Packet class
-        struct RetryPseduoPacket {
+        struct RetryPseudoPacket {
             byte origDstIDlen = 0;  // only parse
             view::rvec origDstID;
             LongPacketBase long_packet;
@@ -104,7 +104,7 @@ namespace utils {
                 if (!ok) {
                     return false;
                 }
-                RetryPseduoPacket pseduo;
+                RetryPseudoPacket pseduo;
                 pseduo.from_retry_packet(tok, retry);
                 w.reset();
                 return pseduo.render(w);

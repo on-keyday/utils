@@ -59,7 +59,7 @@ namespace utils {
                 writing_path = active_path;
             }
 
-            constexpr void set_writeing_path(PathID id) {
+            constexpr void set_writing_path(PathID id) {
                 writing_path = id;
             }
 
@@ -67,7 +67,7 @@ namespace utils {
                 return writing_path;
             }
 
-            void recv_path_challange(const frame::PathChallengeFrame& resp) {
+            void recv_path_challenge(const frame::PathChallengeFrame& resp) {
                 recv_data.push_back(resp.data);
             }
 
@@ -124,7 +124,7 @@ namespace utils {
                 }
             }
 
-            std::pair<IOResult, PathID> send_path_challange(frame::fwriter& w, auto&& observer, connid::Random& random, time::Time probe_deadline, const time::Clock& clock) {
+            std::pair<IOResult, PathID> send_path_challenge(frame::fwriter& w, auto&& observer, connid::Random& random, time::Time probe_deadline, const time::Clock& clock) {
                 for (auto it = probes.begin(); it != probes.end();) {
                     if (it->wait.not_confirmed()) {
                         if (detect_dead_probe(*it, clock)) {
@@ -139,7 +139,7 @@ namespace utils {
                     }
                     frame::PathChallengeFrame ch;
                     byte data[8]{};
-                    if (!random.gen_random(data)) {
+                    if (!random.gen_random(data, connid::RandomUsage::path_challenge)) {
                         return {IOResult::fatal, unknown_path};
                     }
                     binary::reader r{data};
@@ -171,7 +171,7 @@ namespace utils {
 
             constexpr error::Error recv(const frame::Frame& frame) {
                 if (frame.type.type_detail() == FrameType::PATH_CHALLENGE) {
-                    recv_path_challange(static_cast<const frame::PathChallengeFrame&>(frame));
+                    recv_path_challenge(static_cast<const frame::PathChallengeFrame&>(frame));
                     return error::none;
                 }
                 else if (frame.type.type_detail() == FrameType::PATH_RESPONSE) {

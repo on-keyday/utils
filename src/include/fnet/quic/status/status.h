@@ -209,13 +209,13 @@ namespace utils {
             // on_packet_sent should be called when packet is sent
             // this function returns [prev_highest_sent+1,current_sent]
             // if failure, returns [-1,-1]
-            constexpr std::pair<std::int64_t, std::int64_t> on_packet_sent(
+            constexpr expected<std::pair<std::int64_t, std::int64_t>> on_packet_sent(
                 PacketNumberSpace space, packetnum::Value pn, std::uint64_t sent_bytes,
                 time::Time time_sent, packet::PacketStatus status) {
                 auto& pn_issuer = pn_issuers[space_to_index(space)];
                 auto res = pn_issuer.on_packet_sent(config, pn, status);
-                if (res.first < 0 || res.second < 0) {
-                    return {-1, -1};
+                if (!res) {
+                    return res;
                 }
                 hs.on_packet_sent(space, sent_bytes);
                 idle.on_packet_sent(time_sent, status.is_ack_eliciting());
@@ -229,7 +229,7 @@ namespace utils {
                 return res;
             }
 
-            // on_datagram_received should be called when datagram receieved for this connection
+            // on_datagram_received should be called when datagram received for this connection
             constexpr void on_datagram_received(std::uint64_t recv_bytes) {
                 const auto was_limit = hs.is_at_anti_amplification_limit();
                 hs.on_datagram_received(recv_bytes);
@@ -564,13 +564,13 @@ namespace utils {
                 return loss;
             }
 
-            constexpr time::Time get_earliest_deadline(time::Time ack_delayt) const {
+            constexpr time::Time get_earliest_deadline(time::Time ack_delay) const {
                 auto losst = loss.get_deadline();
                 auto pingt = ping_timer.get_deadline();
                 auto closet = close_timer.get_deadline();
                 auto pacert = pacer.get_deadline();
                 auto idlet = idle.get_deadline(config, hs);
-                auto earliest = ack_delayt;
+                auto earliest = ack_delay;
                 auto maybe_set = [&](time::Time t) {
                     if (t.valid() && (!earliest.valid() || t < earliest)) {
                         earliest = t;
@@ -584,5 +584,7 @@ namespace utils {
                 return earliest;
             }
         };
+
+        constexpr auto sizeof_Status = sizeof(Status<NullAlgorithm>);
     }  // namespace fnet::quic::status
 }  // namespace utils

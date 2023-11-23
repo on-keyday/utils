@@ -10,6 +10,7 @@
 #include "../stream_id.h"
 #include "../../types.h"
 #include "../fragment.h"
+#include "../core/write_state.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -18,8 +19,8 @@ namespace utils {
         struct SendBufInterface {
             T impl;
 
-            constexpr void append(auto&& a) {
-                impl.append(std::forward<decltype(a)>(a));
+            constexpr void append(core::StreamWriteBufferState& state, auto&&... a) {
+                impl.append(state, std::forward<decltype(a)>(a)...);
             }
 
             constexpr auto data() {

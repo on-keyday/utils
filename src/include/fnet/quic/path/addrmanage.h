@@ -59,7 +59,7 @@ namespace utils {
             if (cmp1 != cmp2) {
                 return MigrateMode::migrate_address;
             }
-            if (a.port != a.port) {
+            if (a.port() != a.port()) {
                 return MigrateMode::migrate_port;
             }
             return MigrateMode::none;
@@ -73,12 +73,12 @@ namespace utils {
                 d.data[i] = local.addr.data()[i];
             }
             binary::writer w{view::wvec(d.data + 16, 2)};
-            binary::write_num(w, local.port.u16());
+            binary::write_num(w, local.port().u16());
             for (; j < peer.addr.size(); j++) {
                 d.data[18 + j] = peer.addr.data()[i];
             }
             w.reset(view::wvec(d.data + 34, 2));
-            binary::write_num(w, peer.port.u16());
+            binary::write_num(w, peer.port().u16());
             return d;
         }
 

@@ -57,6 +57,26 @@ namespace utils {
         constexpr auto err_idle_timeout = error::Error("IDLE_TIMEOUT", error::Category::lib, error::fnet_quic_transport_error);
         constexpr auto err_handshake_timeout = error::Error("HANDSHAKE_TIMEOUT", error::Category::lib, error::fnet_quic_transport_error);
 
+        struct CompareError {
+            flex_storage expect, actual;
+            void error(auto&& pb) {
+                strutil::append(pb, "expect: ");
+                for (auto c : expect) {
+                    if (c < 0x10) {
+                        strutil::append(pb, "0");
+                    }
+                    utils::number::to_string(pb, c, 16);
+                }
+                strutil::append(pb, " actual: ");
+                for (auto c : actual) {
+                    if (c < 0x10) {
+                        strutil::append(pb, "0");
+                    }
+                    utils::number::to_string(pb, c, 16);
+                }
+            }
+        };
+
         // Context is QUIC connection context suite
         // this class handles single connection both client and server
         // this class has no interest in about ip address and port
@@ -74,6 +94,7 @@ namespace utils {
             QUIC_ctx_type(ConnIDTypeConfig, TConfig, connid_type_config);
             QUIC_ctx_type(RecvPacketHistory, TConfig, recv_packet_history);
             QUIC_ctx_type(SentPacketHistory, TConfig, sent_packet_history);
+            QUIC_ctx_vector_type(VersionsVec, TConfig, versions_vec);
 
             // QUIC runtime handlers
             Version version = version_negotiation;
@@ -147,19 +168,27 @@ namespace utils {
                 auto& peer = params.peer;
                 // get registered initial_source_connection_id by peer
                 auto connID = connIDs.choose_dstID(0);
-                connIDs.on_transport_parameter_recieved(peer.active_connection_id_limit);
+                connIDs.on_transport_parameter_received(peer.active_connection_id_limit);
                 if (peer.initial_src_connection_id.empty() || peer.initial_src_connection_id != connID.id) {
                     set_quic_runtime_error(QUICError{
                         .msg = "initial_src_connection_id is not matched to id contained on initial packet",
                         .transport_error = TransportError::PROTOCOL_VIOLATION,
+                        .base = CompareError{
+                            .expect = connID.id,
+                            .actual = peer.initial_src_connection_id,
+                        },
                     });
                     return false;
                 }
                 if (!status.is_server()) {  // client
-                    if (peer.original_dst_connection_id != connIDs.get_initial()) {
+                    if (peer.original_dst_connection_id != connIDs.get_original_dst_id()) {
                         set_quic_runtime_error(QUICError{
                             .msg = "original_dst_connection_id is not matched to id contained on initial packet",
                             .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
+                            .base = CompareError{
+                                .expect = connIDs.get_original_dst_id(),
+                                .actual = peer.original_dst_connection_id,
+                            },
                         });
                         return false;
                     }
@@ -168,6 +197,10 @@ namespace utils {
                             set_quic_runtime_error(QUICError{
                                 .msg = "retry_src_connection_id is not matched to id previous received",
                                 .transport_error = TransportError::TRANSPORT_PARAMETER_ERROR,
+                                .base = CompareError{
+                                    .expect = connIDs.get_retry(),
+                                    .actual = peer.retry_src_connection_id,
+                                },
                             });
                             return false;
                         }
@@ -204,7 +237,7 @@ namespace utils {
                 auto peer = trsparam::to_0RTT(params.peer);
                 auto limits = trsparam::to_initial_limits(peer);
                 streams->apply_peer_initial_limits(limits);
-                connIDs.on_transport_parameter_recieved(peer.active_connection_id_limit);
+                connIDs.on_transport_parameter_received(peer.active_connection_id_limit);
                 mtu.on_transport_parameter_received(peer.max_udp_payload_size);
                 status.on_0RTT_transport_parameter(peer.max_idle_timeout);
                 datagrams->on_transport_parameter(peer.max_datagram_frame_size);
@@ -212,13 +245,23 @@ namespace utils {
                 logger.debug("apply 0-RTT transport parameter");
             }
 
+            // dropping handshake keys and crypto state
             void on_handshake_confirmed() {
                 ackh.on_packet_number_space_discarded(status, status::PacketNumberSpace::handshake);
                 logger.debug("drop handshake keys");
                 status.on_handshake_confirmed();
                 mtu.on_handshake_confirmed();
                 unacked.on_packet_number_space_discarded(status::PacketNumberSpace::handshake);
+                crypto.on_packet_number_space_discarded(status::PacketNumberSpace::handshake);
                 logger.debug("handshake confirmed");
+            }
+
+            // dropping initial keys and crypto state
+            void on_handshake_packet() {
+                ackh.on_packet_number_space_discarded(status, status::PacketNumberSpace::initial);
+                unacked.on_packet_number_space_discarded(status::PacketNumberSpace::initial);
+                crypto.on_packet_number_space_discarded(status::PacketNumberSpace::initial);
+                logger.debug("drop initial keys");
             }
 
             // write_frames calls each send() call of frame generator
@@ -284,14 +327,14 @@ namespace utils {
                     });
                     return false;
                 };
-                auto [err, id] = path_verifier.send_path_challange(fw, waiters, connIDs.random(), status.path_validation_deadline(), status.clock());
+                auto [err, id] = path_verifier.send_path_challenge(fw, waiters, connIDs.random(), status.path_validation_deadline(), status.clock());
                 if (err == IOResult::fatal) {
                     return wrap_io(err);
                 }
                 if (err != IOResult::ok) {
                     return true;  // nothing to write or no capacity
                 }
-                path_verifier.set_writeing_path(id);
+                path_verifier.set_writing_path(id);
                 if (should_be_non_probe) {
                     fw.write(frame::PingFrame{});  // must be non-probe
                     return write_frames(summary, waiters, fw);
@@ -555,9 +598,7 @@ namespace utils {
                     return false;
                 }
                 if (!status.is_server() && crypto.maybe_drop_initial()) {
-                    ackh.on_packet_number_space_discarded(status, status::PacketNumberSpace::initial);
-                    unacked.on_packet_number_space_discarded(status::PacketNumberSpace::initial);
-                    logger.debug("drop initial keys");
+                    on_handshake_packet();
                 }
                 return true;
             }
@@ -1005,6 +1046,9 @@ namespace utils {
                     })) {
                     return false;
                 }
+                if (summary.type == PacketType::Handshake && crypto.maybe_drop_initial()) {
+                    on_handshake_packet();
+                }
                 if (summary.type == PacketType::OneRTT && crypto.maybe_drop_handshake()) {
                     on_handshake_confirmed();
                 }
@@ -1016,6 +1060,8 @@ namespace utils {
             }
 
             bool handle_retry_packet(packet::RetryPacket retry, view::rvec raw_packet) {
+                logger.debug("received Retry packet");
+                logger.recv_packet(packet::summarize(retry), {});
                 if (status.is_server()) {
                     logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("received Retry packet at server", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
@@ -1028,11 +1074,11 @@ namespace utils {
                     logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("unexpected Retry packet after receiving Retry", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
                 }
-                packet::RetryPseduoPacket pseduo;
-                pseduo.from_retry_packet(connIDs.get_initial(), retry);
-                packet_creation_buffer.resize(pseduo.len());
+                packet::RetryPseudoPacket pseudo;
+                pseudo.from_retry_packet(connIDs.get_original_dst_id(), retry);
+                packet_creation_buffer.resize(pseudo.len());
                 binary::writer w{packet_creation_buffer};
-                if (!pseduo.render(w)) {
+                if (!pseudo.render(w)) {
                     set_quic_runtime_error(error::Error("failed to render Retry packet. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
@@ -1050,6 +1096,8 @@ namespace utils {
                 connIDs.on_retry_received(retry.srcID);
                 retry_token.on_retry_received(retry.retry_token);
                 crypto.install_initial_secret(version, retry.srcID);
+
+                logger.debug("retry packet accepted");
                 return true;
             }
 
@@ -1236,11 +1284,11 @@ namespace utils {
                     params.set_local(trsparam::make_transport_param(trsparam::DefinedID::initial_src_connection_id, {}));
                 }
 
-                if (!connIDs.gen_initial_random()) {
+                if (!connIDs.gen_original_dst_id()) {
                     set_quic_runtime_error(error::Error("failed to generate client destination connection ID. library bug!!", error::Category::lib, error::fnet_quic_implementation_bug));
                     return false;
                 }
-                if (!crypto.install_initial_secret(version, connIDs.get_initial())) {
+                if (!crypto.install_initial_secret(version, connIDs.get_original_dst_id())) {
                     return false;
                 }
                 if (!set_transport_parameter()) {
@@ -1289,6 +1337,11 @@ namespace utils {
                 return true;
             }
 
+            // create udp payload of QUIC packets
+            // if external_buffer is not null, use it as buffer
+            // otherwise use internal buffer
+            // if payload is empty, no packet is created
+            // if idle is false, connection is terminated
             // thread unsafe call
             // returns (payload,path_id,idle)
             std::tuple<view::rvec, path::PathID, bool> create_udp_payload(flex_storage* external_buffer = nullptr) {
@@ -1381,7 +1434,7 @@ namespace utils {
                     logger.drop_packet(type, packetnum::infinity, error::Error("plain packet failure", error::Category::lib, error::fnet_quic_packet_error), src, !is_ProtectedPacket(type));
                     return true;  // ignore error
                 };
-                auto ok = crypto::parse_with_decrypt<slib::vector>(
+                auto ok = crypto::parse_with_decrypt<VersionsVec>(
                     data, crypto::authentication_tag_length, is_stateless_reset, get_dstID_len,
                     crypto_cb, decrypt_suite, plain_cb, decrypt_err, plain_err, check_connID_cb);
                 if (!ok) {
@@ -1424,7 +1477,7 @@ namespace utils {
             }
 
             // thread unsafe call
-            // reprots whether migration is enabled for this connection
+            // reports whether migration is enabled for this connection
             constexpr bool migration_enabled() const {
                 return status.transport_parameter_read() &&
                        // RFC9000 9. Connection Migration says:

@@ -72,7 +72,7 @@ namespace utils {
                         packet_count_since_id_changed = 0;
                         if (change_mode == ConnIDChangeMode::random) {
                             byte d[4]{};
-                            cparam.random.gen_random(d);
+                            cparam.random.gen_random(d, RandomUsage::id_change_duration);
                             binary::reader r{d};
                             std::uint32_t v = 0;
                             binary::read_num(r, v);

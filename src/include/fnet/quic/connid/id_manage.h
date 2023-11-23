@@ -44,7 +44,7 @@ namespace utils {
                 issuer.expose_close_ids(ids);
             }
 
-            view::rvec get_initial() {
+            view::rvec get_original_dst_id() {
                 return iniret.get_initial();
             }
 
@@ -84,7 +84,7 @@ namespace utils {
                 return acceptor.initial_conn_id_accepted();
             }
 
-            bool gen_initial_random() {
+            bool gen_original_dst_id() {
                 return iniret.gen_initial(false, issuer.get_connID_len(), cparam.random);
             }
 
@@ -120,7 +120,9 @@ namespace utils {
                         return IOResult::fatal;
                     }
                 }
-                return issuer.send(w, observer) ? IOResult::ok : IOResult::fatal;
+                return issuer.send(w, observer)
+                           ? IOResult::ok
+                           : IOResult::fatal;
             }
 
             auto get_dstID_len_callback() {
@@ -147,7 +149,7 @@ namespace utils {
                 return acceptor.on_preferred_address_received(cparam, id, stateless_reset_token);
             }
 
-            void on_transport_parameter_recieved(std::uint64_t active_conn) {
+            void on_transport_parameter_received(std::uint64_t active_conn) {
                 issuer.on_transport_parameter_received(active_conn);
             }
 

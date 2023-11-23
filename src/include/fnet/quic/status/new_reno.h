@@ -11,11 +11,11 @@
 namespace utils {
     namespace fnet::quic::status {
         struct NewReno : NullAlgorithm {
-            size_t sstresh = ~0;
-            Ratio loss_reducion_factor{1, 2};
+            size_t ssthresh = ~0;
+            Ratio loss_reduction_factor{1, 2};
 
-            constexpr void on_packet_ack(WindowModifiyer& modif, std::uint64_t sent_bytes, time::Time time_sent) {
-                if (modif.get_window() < sstresh) {
+            constexpr void on_packet_ack(WindowModifier& modif, std::uint64_t sent_bytes, time::Time time_sent) {
+                if (modif.get_window() < ssthresh) {
                     modif.update(modif.get_window() + sent_bytes);
                 }
                 else {
@@ -23,9 +23,9 @@ namespace utils {
                 }
             }
 
-            constexpr void on_congestion_event(WindowModifiyer& modif, time::Time time_sent) {
-                sstresh = loss_reducion_factor.num * modif.get_window() / loss_reducion_factor.den;
-                modif.update(max_(sstresh, modif.min_window()));
+            constexpr void on_congestion_event(WindowModifier& modif, time::Time time_sent) {
+                ssthresh = loss_reduction_factor.num * modif.get_window() / loss_reduction_factor.den;
+                modif.update(max_(ssthresh, modif.min_window()));
             }
         };
     }  // namespace fnet::quic::status

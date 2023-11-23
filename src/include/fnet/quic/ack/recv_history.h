@@ -159,8 +159,8 @@ namespace utils {
                         b = lowest_recved_since_last_ack;
                     }
                     r.push_back(frame::ACKRange{
-                        .largest = e,
-                        .smallest = b,
+                        .largest = std::uint64_t(e),
+                        .smallest = std::uint64_t(b),
                     });
                 }
             }

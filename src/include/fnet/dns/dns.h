@@ -153,7 +153,7 @@ namespace utils {
             return r.read(label, len);
         }
 
-        // this not resove compressed labels
+        // this not resolve compressed labels
         constexpr bool read_labels(binary::reader& r, view::rvec& name, bool allow_compress) {
             binary::reader p{r.remain()};
             while (true) {

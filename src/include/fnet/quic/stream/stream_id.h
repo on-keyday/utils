@@ -39,7 +39,7 @@ namespace utils {
             // std::uint64_t id = ~0;
 
            private:
-            binary::flags_t<std::uint64_t, 2, 60, 1, 1> value;
+            binary::flags_t<std::uint64_t, 2, 60, 1, 1> value{~std::uint64_t(0)};
             bits_flag_alias_method(value, 0, invalid_bit);
             bits_flag_alias_method(value, 1, seq_count_raw);
             bits_flag_alias_method(value, 2, type_raw);
@@ -49,6 +49,7 @@ namespace utils {
             constexpr StreamID() = default;
 
             constexpr StreamID(std::uint64_t seq, Origin orig, StreamType typ) {
+                value.as_value() = 0;
                 if (!seq_count_raw(seq)) {
                     invalid_bit(1);
                 }
@@ -70,7 +71,7 @@ namespace utils {
                 : value(id) {}
 
             constexpr bool valid() const noexcept {
-                return invalid_bit() != 0;
+                return invalid_bit() == 0;
             }
 
             constexpr operator std::uint64_t() const {

@@ -124,7 +124,7 @@ namespace utils {
                         flags = static_cast<T>(uns(flags) | uns(mask));
                     }
                     else {
-                        flags = static_cast<T>(uns(flags) | ~uns(mask));
+                        flags = static_cast<T>(uns(flags) & ~uns(mask));
                     }
                 }
                 else {

@@ -52,8 +52,8 @@ namespace utils {
             if (!rand.valid()) {
                 return error::Error("invalid random", error::Category::lib, error::fnet_quic_user_arg_error);
             }
-            if (!rand.gen_random(connID) ||
-                !rand.gen_random(stateless_reset)) {
+            if (!rand.gen_random(connID, RandomUsage::connection_id) ||
+                !rand.gen_random(stateless_reset, RandomUsage::stateless_reset_token)) {
                 return error::Error("gen_random failed", error::Category::lib, error::fnet_quic_user_arg_error);
             }
             return error::none;

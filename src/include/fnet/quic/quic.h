@@ -75,8 +75,11 @@ namespace utils {
                     stream::impl::Bind<stream::impl::ConnHandlerSingleArg, void*>::template bound>;
             using DefaultTypeConfig = context::TypeConfig<std::mutex, DefaultStreamTypeConfig>;
             using Context = context::Context<DefaultTypeConfig>;
-
             using Streams = stream::impl::Conn<DefaultStreamTypeConfig>;
+
+            constexpr auto sizeof_quic_Context = sizeof(Context);
+            constexpr auto sizeof_quic_stream_Conn = sizeof(Streams);
+
             using RecvStream = stream::impl::RecvUniStream<DefaultStreamTypeConfig>;
             using SendStream = stream::impl::SendUniStream<DefaultStreamTypeConfig>;
             using BidiStream = stream::impl::BidiStream<DefaultStreamTypeConfig>;

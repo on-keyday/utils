@@ -7,6 +7,7 @@
 
 #pragma once
 #include "../../../storage.h"
+#include "../core/write_state.h"
 
 namespace utils {
     namespace fnet::quic::stream::impl {
@@ -30,8 +31,12 @@ namespace utils {
                 return src.size();
             }
 
-            void append(auto&& input) {
-                src.append(input);
+            void append(core::StreamWriteBufferState& s, auto&&... input) {
+                auto old = src.size();
+                (src.append(std::forward<decltype(input)>(input)), ...);
+                s.perfect_written_buffer_count = sizeof...(input);
+                s.written_size_of_last_buffer = 0;
+                s.result = IOResult::ok;
             }
 
             void shift_front(size_t n) {

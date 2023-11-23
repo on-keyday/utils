@@ -21,7 +21,8 @@ namespace utils {
                   class CongestionAlgorithm = status::NewReno,
                   class RecvPacketHistory = ack::RecvPacketHistory,
                   class SentPacketHistory = ack::SentPacketHistory,
-                  class DatagramDrop = datagram::DatagramDropNull>
+                  class DatagramDrop = datagram::DatagramDropNull,
+                  template <class...> class VersionsVec = slib::vector>
         struct TypeConfig {
             using context_lock = CtxLock;
             using stream_type_config = StreamTypeConfig;
@@ -34,6 +35,8 @@ namespace utils {
                 congestion_algorithm algorithm;
                 datagram_drop dgram_drop;
             };
+            template <class T>
+            using versions_vec = VersionsVec<T>;
         };
     }  // namespace fnet::quic::context
 }  // namespace utils

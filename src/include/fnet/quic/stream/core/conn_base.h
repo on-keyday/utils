@@ -198,8 +198,8 @@ namespace utils {
            private:
             constexpr void open_impl(auto& locker, auto& issuer, auto&& cb) {
                 const auto locked = helper::lock(locker);
-                auto id = issuer.issue();
-                if (id == invalid_id) {
+                StreamID id = issuer.issue();
+                if (!id.valid()) {
                     cb(id, issuer.limit.on_limit(1));
                     return;
                 }

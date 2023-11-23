@@ -188,6 +188,10 @@ namespace utils {
                     secrets.on_onertt_packet_sent(pn);
                 }
             }
+
+            void on_packet_number_space_discarded(status::PacketNumberSpace space) {
+                handshaker.on_packet_number_space_discarded(space);
+            }
         };
     }  // namespace fnet::quic::crypto
 }  // namespace utils

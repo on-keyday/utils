@@ -14,9 +14,9 @@ namespace utils {
 
         // render_payload is bool(io::writer&,packetnum::WireVal)
         constexpr std::pair<CryptoPacket, bool> create_packet(binary::writer& w, PacketSummary summary,
-                                                              std::uint64_t largest_acked, size_t auth_tag_len, bool use_full,
+                                                              packetnum::Value largest_acked, size_t auth_tag_len, bool use_full,
                                                               auto&& render_payload) {
-            auto tmp = packetnum::encode(summary.packet_number, largest_acked);
+            auto tmp = packetnum::encode(summary.packet_number.as_uint(), largest_acked.as_uint());
             if (!tmp) {
                 return {{}, false};
             }
@@ -90,7 +90,7 @@ namespace utils {
                 summary.version = 1;
                 summary.dstID = id;
                 summary.srcID = id;
-                auto [crypto, ok] = create_packet(w, summary, packetnum::infinity, 16, true, [&](binary::writer& w, packetnum::WireVal) {
+                auto [crypto, ok] = create_packet(w, summary, packetnum::infinity.as_uint(), 16, true, [&](binary::writer& w, packetnum::WireVal) {
                     return w.write(1, 250);
                 });
                 if (!ok) {

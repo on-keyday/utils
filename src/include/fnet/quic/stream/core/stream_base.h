@@ -152,7 +152,9 @@ namespace utils {
             StreamWriteData data;
 
             constexpr SendUniStreamBase(StreamID id)
-                : id(id) {}
+                : id(id) {
+                assert(this->id.valid());
+            }
 
             constexpr auto lock() {
                 return helper::lock(locker);

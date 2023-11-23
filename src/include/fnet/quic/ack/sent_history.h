@@ -34,16 +34,14 @@ namespace utils {
             template <class Alg>
             error::Error on_packet_sent(status::Status<Alg>& status, status::PacketNumberSpace space, SentPacket&& sent) {
                 sent.time_sent = status.now();
-                auto [begin, end] = status.on_packet_sent(space, sent.packet_number, sent.sent_bytes, sent.time_sent, sent.status);
-                if (begin == -1 && end == -1) {
-                    return QUICError{
-                        .msg = "failed to update QUIC status. maybe packet number is not valid in order. use status.next_packet_number() to get next packet number",
-                    };
+                auto range = status.on_packet_sent(space, sent.packet_number, sent.sent_bytes, sent.time_sent, sent.status);
+                if (!range) {
+                    return range.error();
                 }
                 auto& sent_packet = sent_packets[space_to_index(space)];
                 packet::PacketStatus skip;
                 skip.set_skipped();
-                for (auto i = begin; i < end; i++) {
+                for (auto i = range->first; i < range->second; i++) {
                     auto [_, ok] = sent_packet.try_emplace(
                         packetnum::Value(i),
                         SentPacket{

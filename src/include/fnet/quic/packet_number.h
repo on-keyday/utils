@@ -8,6 +8,7 @@
 #pragma once
 #include "../../binary/number.h"
 #include <fnet/error.h>
+#include <compare>
 
 namespace utils {
     namespace fnet::quic::packetnum {
@@ -17,14 +18,32 @@ namespace utils {
         };
 
         struct Value {
+           private:
             std::uint64_t value = 0;
 
+           public:
             constexpr Value() = default;
 
             constexpr Value(std::uint64_t v) noexcept
                 : value(v) {}
 
-            constexpr operator std::uint64_t() const noexcept {
+            constexpr explicit operator std::uint64_t() const noexcept {
+                return value;
+            }
+
+            constexpr friend bool operator==(const Value& left, const Value& right) noexcept {
+                return left.value == right.value;
+            }
+
+            constexpr friend auto operator<=>(const Value& left, const Value& right) noexcept {
+                return left.value <=> right.value;
+            }
+
+            constexpr friend Value operator+(const Value& left, const Value& right) noexcept {
+                return Value{left.value + right.value};
+            }
+
+            constexpr std::uint64_t as_uint() const noexcept {
                 return value;
             }
         };

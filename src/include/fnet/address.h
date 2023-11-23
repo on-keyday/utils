@@ -27,7 +27,7 @@ namespace utils {
         struct NetAddr;
 
         namespace internal {
-            constexpr bool NetAddronHeap(NetAddrType type) {
+            constexpr bool NetAddrOnHeap(NetAddrType type) {
                 return type != NetAddrType::ipv4 &&
                        type != NetAddrType::ipv6 &&
                        type != NetAddrType::null;
@@ -35,6 +35,37 @@ namespace utils {
             constexpr NetAddr make_netaddr(NetAddrType type, view::rvec b);
 
         }  // namespace internal
+
+        struct NetPort {
+           private:
+            std::uint16_t port = 0;
+
+           public:
+            constexpr operator std::uint16_t() const {
+                return port;
+            }
+            constexpr NetPort(std::uint16_t v) {
+                port = v;
+            }
+
+            constexpr NetPort() = default;
+
+            constexpr std::uint16_t u16() const {
+                return port;
+            }
+
+            constexpr bool is_system() const {
+                return port <= 1023;
+            }
+
+            constexpr bool is_user() const {
+                return 1024 <= port && port <= 49151;
+            }
+
+            constexpr bool is_dynamic_private() const {
+                return 49152 <= port;
+            }
+        };
 
         // NetAddr is a network address representation
         struct NetAddr {
@@ -44,7 +75,9 @@ namespace utils {
                 byte bdata[16]{};
                 storage fdata;
             };
+            NetPort place_for_port = 0;
             NetAddrType type_ = NetAddrType::null;
+            friend struct NetAddrPort;
 
             constexpr void data_copy(const byte* from, size_t len) {
                 for (auto i = 0; i < len; i++) {
@@ -53,7 +86,7 @@ namespace utils {
             }
 
             constexpr void copy(const NetAddr& from) {
-                if (internal::NetAddronHeap(from.type_)) {
+                if (internal::NetAddrOnHeap(from.type_)) {
                     fdata = make_storage(from.fdata);
                     if (!fdata.null()) {
                         type_ = NetAddrType::null;
@@ -63,22 +96,25 @@ namespace utils {
                 else {
                     data_copy(from.bdata, from.size());
                 }
+                place_for_port = from.place_for_port;
                 type_ = from.type_;
             }
 
             constexpr void move(NetAddr&& from) {
-                if (internal::NetAddronHeap(from.type_)) {
+                if (internal::NetAddrOnHeap(from.type_)) {
                     fdata = std::move(from.fdata);
                 }
                 else {
                     data_copy(from.bdata, from.size());
                 }
                 type_ = from.type_;
+                place_for_port = from.place_for_port;
                 from.type_ = NetAddrType::null;
+                from.place_for_port = 0;
             }
 
             constexpr void destruct() {
-                if (internal::NetAddronHeap(type_)) {
+                if (internal::NetAddrOnHeap(type_)) {
                     std::destroy_at(std::addressof(fdata));
                 }
             }
@@ -117,7 +153,7 @@ namespace utils {
             }
 
             constexpr const byte* data() const {
-                if (internal::NetAddronHeap(type_)) {
+                if (internal::NetAddrOnHeap(type_)) {
                     return fdata.cdata();
                 }
                 return const_cast<byte*>(bdata);
@@ -170,53 +206,32 @@ namespace utils {
             }
         };
 
-        struct NetPort {
-           private:
-            std::uint16_t port = 0;
-
-           public:
-            constexpr operator std::uint16_t() const {
-                return port;
-            }
-            constexpr NetPort(std::uint16_t v) {
-                port = v;
-            }
-
-            constexpr NetPort() = default;
-
-            constexpr std::uint16_t u16() const {
-                return port;
-            }
-
-            constexpr bool is_system() const {
-                return port <= 1023;
-            }
-
-            constexpr bool is_user() const {
-                return 1024 <= port && port <= 49151;
-            }
-
-            constexpr bool is_dynamic_private() const {
-                return 49152 <= port;
-            }
-        };
-
         struct NetAddrPort {
             NetAddr addr;
-            NetPort port;
+            constexpr NetPort& port() noexcept {
+                return addr.place_for_port;
+            }
+
+            constexpr const NetPort& port() const noexcept {
+                return addr.place_for_port;
+            }
+
+            constexpr void port(NetPort p) noexcept {
+                addr.place_for_port = p;
+            }
 
             template <class Str>
             constexpr void to_string(Str& str, bool detect_ipv4_mapped = false, bool ipv4mapped_as_ipv4 = false) const {
                 if (addr.type() == NetAddrType::ipv4) {
-                    ipaddr::ipv4_to_string_with_port(str, addr.data(), port);
+                    ipaddr::ipv4_to_string_with_port(str, addr.data(), port());
                 }
                 else if (addr.type() == NetAddrType::ipv6) {
                     auto is_v4_mapped = detect_ipv4_mapped && ipaddr::is_ipv4_mapped(addr.data());
                     if (ipv4mapped_as_ipv4 && is_v4_mapped) {
-                        ipaddr::ipv4_to_string_with_port(str, addr.data() + 12, port);
+                        ipaddr::ipv4_to_string_with_port(str, addr.data() + 12, port());
                     }
                     else {
-                        ipaddr::ipv6_to_string_with_port(str, addr.data(), port, is_v4_mapped);
+                        ipaddr::ipv6_to_string_with_port(str, addr.data(), port(), is_v4_mapped);
                     }
                 }
                 else if (addr.type() == NetAddrType::unix_path) {
@@ -238,7 +253,7 @@ namespace utils {
         namespace internal {
             constexpr NetAddr make_netaddr(NetAddrType type, view::rvec b) {
                 NetAddr addr;
-                if (internal::NetAddronHeap(type)) {
+                if (internal::NetAddrOnHeap(type)) {
                     addr.fdata = make_storage(b);
                     if (addr.fdata.null()) {
                         return {};
@@ -257,7 +272,7 @@ namespace utils {
             byte val[] = {a, b, c, d};
             NetAddrPort naddr;
             naddr.addr = internal::make_netaddr(NetAddrType::ipv4, val);
-            naddr.port = port;
+            naddr.port() = port;
             return naddr;
         }
 
@@ -267,7 +282,7 @@ namespace utils {
             byte val[] = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
             NetAddrPort naddr;
             naddr.addr = internal::make_netaddr(NetAddrType::ipv6, val);
-            naddr.port = port;
+            naddr.port() = port;
             return naddr;
         }
 

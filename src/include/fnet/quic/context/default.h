@@ -13,18 +13,22 @@
 
 namespace utils {
     namespace fnet::quic::context {
+        inline bool default_gen_random(std::shared_ptr<void>&, utils::view::wvec data, utils::fnet::quic::connid::RandomUsage) {
+            std::random_device dev;
+            std::uniform_int_distribution uni(0, 255);
+            for (auto& d : data) {
+                d = uni(dev);
+            }
+            return true;
+        }
+
         Config use_default_config(tls::TLSConfig&& tls) {
             Config config;
             config.tls_config = std::move(tls);
             config.connid_parameters.random = utils::fnet::quic::connid::Random{
-                nullptr, [](std::shared_ptr<void>&, utils::view::wvec data) {
-                    std::random_device dev;
-                    std::uniform_int_distribution uni(0, 255);
-                    for (auto& d : data) {
-                        d = uni(dev);
-                    }
-                    return true;
-                }};
+                nullptr,
+                default_gen_random,
+            };
             config.internal_parameters.clock = quic::time::Clock{
                 nullptr,
                 1,

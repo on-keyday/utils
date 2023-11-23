@@ -35,7 +35,7 @@ namespace utils {
             // decrypt_header decrypts packet header with specific cipher
             // cipher is got from TLS.get_cipher or is TLSCipher{}
             // to decrypt payload, call decrypt_payload after call this
-            fnet_dll_export(error::Error) decrypt_header(const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn);
+            fnet_dll_export(error::Error) decrypt_header(const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, packetnum::Value largest_pn);
 
             // decrypt_payload decrypts packet payload with specific cipher
             // cipher is got from TLS.get_cipher or is TLSCipher{}

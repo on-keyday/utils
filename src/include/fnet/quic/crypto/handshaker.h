@@ -13,6 +13,7 @@
 #include "../frame/crypto.h"
 #include <algorithm>
 #include "../transport_error.h"
+#include "../status/pn_space.h"
 
 namespace utils {
     namespace fnet::quic::crypto {
@@ -170,7 +171,9 @@ namespace utils {
             byte flags = 0;
 
             tls::TLS tls;
-            CryptoHandshaker initial, handshake, one_rtt;
+            using HandshakerPtr = std::unique_ptr<CryptoHandshaker, fnet::internal::Delete>;
+            HandshakerPtr initial, handshake;
+            CryptoHandshaker one_rtt;
 
             resend::ACKHandler wait_for_done;
 
@@ -193,8 +196,8 @@ namespace utils {
                 tls = std::move(new_tls);
                 flags = is_server ? flag_server : 0;
                 wait_for_done.reset();
-                initial.reset();
-                handshake.reset();
+                initial = HandshakerPtr(new_glheap(CryptoHandshaker));
+                handshake = HandshakerPtr(new_glheap(CryptoHandshaker));
                 one_rtt.reset();
                 alert_code = 0;
             }
@@ -206,10 +209,16 @@ namespace utils {
             bool add_handshake_data(EncryptionLevel level, view::rvec data) {
                 switch (level) {
                     case EncryptionLevel::initial:
-                        initial.add_send_data(data);
+                        if (!initial) {
+                            return false;
+                        }
+                        initial->add_send_data(data);
                         return true;
                     case EncryptionLevel::handshake:
-                        handshake.add_send_data(data);
+                        if (!handshake) {
+                            return false;
+                        }
+                        handshake->add_send_data(data);
                         return true;
                     case EncryptionLevel::application:
                         one_rtt.add_send_data(data);
@@ -239,9 +248,15 @@ namespace utils {
                 }
                 switch (type) {
                     case PacketType::Initial:
-                        return initial.send(w, observer);
+                        if (!initial) {
+                            return IOResult::no_data;
+                        }
+                        return initial->send(w, observer);
                     case PacketType::Handshake:
-                        return handshake.send(w, observer);
+                        if (!handshake) {
+                            return IOResult::no_data;
+                        }
+                        return handshake->send(w, observer);
                     case PacketType::OneRTT:
                         return one_rtt.send(w, observer);
                     default:
@@ -271,10 +286,16 @@ namespace utils {
                 error::Error err;
                 switch (type) {
                     case PacketType::Initial:
-                        err = initial.recv_crypto(tls, EncryptionLevel::initial, is_server(), hs_complete, frame);
+                        if (!initial) {
+                            return error::none;  // ignore
+                        }
+                        err = initial->recv_crypto(tls, EncryptionLevel::initial, is_server(), hs_complete, frame);
                         break;
                     case PacketType::Handshake:
-                        err = handshake.recv_crypto(tls, EncryptionLevel::handshake, is_server(), hs_complete, frame);
+                        if (!handshake) {
+                            return error::none;  // ignore
+                        }
+                        err = handshake->recv_crypto(tls, EncryptionLevel::handshake, is_server(), hs_complete, frame);
                         break;
                     case PacketType::OneRTT:
                         err = one_rtt.recv_crypto(tls, EncryptionLevel::application, is_server(), hs_complete, frame);
@@ -336,6 +357,15 @@ namespace utils {
                     return handshake_complete();
                 }
                 return handshake_done();
+            }
+
+            void on_packet_number_space_discarded(status::PacketNumberSpace space) {
+                if (space == status::PacketNumberSpace::initial) {
+                    initial = nullptr;
+                }
+                else if (space == status::PacketNumberSpace::handshake) {
+                    handshake = nullptr;
+                }
             }
         };
     }  // namespace fnet::quic::crypto

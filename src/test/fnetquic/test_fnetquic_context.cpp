@@ -24,7 +24,7 @@ void test_fnetquic_context() {
     config.tls_config = tls::configure();
     config.tls_config.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
     config.tls_config.set_alpn("\x02h3");
-    config.connid_parameters.random = {nullptr, [](std::shared_ptr<void>&, utils::view::wvec data) {
+    config.connid_parameters.random = {nullptr, [](std::shared_ptr<void>&, utils::view::wvec data, quic::connid::RandomUsage) {
                                            std::random_device dev;
                                            std::uniform_int_distribution uni(0, 255);
                                            for (auto& d : data) {

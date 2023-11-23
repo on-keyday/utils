@@ -99,7 +99,7 @@ namespace utils {
                         return dyn;
                     }
                     else {
-                        return basic_wvec<C>(sta.data);
+                        return basic_wvec<C>(sta.data, sizeof(sta.data));
                     }
                 }
 
@@ -108,7 +108,7 @@ namespace utils {
                         return dyn;
                     }
                     else {
-                        return basic_rvec<C>(sta.data);
+                        return basic_rvec<C>(sta.data, sizeof(sta.data));
                     }
                 }
 

@@ -46,6 +46,7 @@ namespace utils::comb2 {
                     }
                 };
                 (..., add(err));
+                add("\n");
             }
         }
     };

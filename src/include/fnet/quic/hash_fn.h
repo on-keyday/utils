@@ -18,7 +18,7 @@ namespace std {
     template <>
     struct hash<utils::fnet::quic::packetnum::Value> {
         constexpr size_t operator()(auto pn) const {
-            return std::hash<std::uint64_t>{}(pn.value);
+            return std::hash<decltype(pn.as_uint())>{}(pn.as_uint());
         }
     };
 

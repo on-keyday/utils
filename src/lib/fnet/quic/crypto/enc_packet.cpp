@@ -61,7 +61,7 @@ namespace utils {
             // see https://tex2e.github.io/rfc-translater/html/rfc9001.html#5-3--AEAD-Usage
             void make_nonce(view::rvec iv, byte (&nonce)[32], packetnum::Value packet_number) {
                 binary::Buf<std::uint64_t, byte*> data{nonce + iv.size() - 8};
-                data.write_be(packet_number);
+                data.write_be(packet_number.as_uint());
                 for (auto i = 0; i < iv.size(); i++) {
                     nonce[i] ^= iv[i];
                 }
@@ -152,7 +152,7 @@ namespace utils {
                 return protect_header(pnlen, hp.hp(), cipher, packet);
             }
 
-            fnet_dll_export(error::Error) decrypt_header(const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, size_t largest_pn) {
+            fnet_dll_export(error::Error) decrypt_header(const HP& hp, const tls::TLSCipher& cipher, packet::CryptoPacket& packet, packetnum::Value largest_pn) {
                 if (packet.head_len < 1 || packet.src.size() < 1) {
                     return err_packet_format;
                 }
@@ -165,7 +165,7 @@ namespace utils {
                     return err;
                 }
                 // decode packet number
-                auto ok = packetnum::decode(pn_wire, largest_pn);
+                auto ok = packetnum::decode(pn_wire, largest_pn.as_uint());
                 if (!ok) {
                     return err_decode_pn;
                 }
@@ -194,12 +194,12 @@ namespace utils {
                 return cipher_payload(cipher, pnknown, keyiv.key(), view::rvec(nonce, keyiv.iv().size()), false);
             }
 
-            fnet_dll_export(error::Error) generate_retry_integrity_tag(view::wvec tag, view::rvec pseduo_packet, std::uint32_t version) {
+            fnet_dll_export(error::Error) generate_retry_integrity_tag(view::wvec tag, view::rvec pseudo_packet, std::uint32_t version) {
                 if (version == version_1) {
                     packet::CryptoPacketPnKnown info;
                     byte tmp = 0;
                     info.auth_tag = tag;
-                    info.head = pseduo_packet;
+                    info.head = pseudo_packet;
                     info.protected_payload = view::wvec(&tmp, 0);
                     return cipher_payload({}, info,
                                           quic_v1_retry_integrity_tag_key.material,

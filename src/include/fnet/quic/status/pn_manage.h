@@ -18,7 +18,7 @@ namespace utils {
            private:
             std::int64_t issue_packet_number = 0;
             std::int64_t highest_sent = -1;
-            std::uint64_t largest_acked_packet = -1;
+            packetnum::Value largest_acked_packet = packetnum::infinity;
             time::Time last_ack_eliciting_packet_sent_time_ = 0;
             std::uint64_t ack_eliciting_in_flight_sent_packet_count = 0;
 
@@ -54,22 +54,24 @@ namespace utils {
                 return largest_acked_packet;
             }
 
-            constexpr std::pair<std::int64_t, std::int64_t> on_packet_sent(
+            constexpr expected<std::pair<std::int64_t, std::int64_t>> on_packet_sent(
                 const InternalConfig& config,
                 packetnum::Value pn, packet::PacketStatus status) {
-                const auto cmp = std::int64_t(pn.value);
+                const auto cmp = std::int64_t(pn.as_uint());
                 if (cmp <= highest_sent || issue_packet_number < cmp) {
-                    return {-1, -1};
+                    return unexpect(error::Error{
+                        "packet number is not valid in order. use status.next_packet_number() to get next packet number",
+                        error::Category::lib, error::fnet_quic_packet_number_error});
                 }
                 const auto range_begin = highest_sent + 1;
-                highest_sent = pn.value;
+                highest_sent = pn.as_uint();
                 if (status.is_ack_eliciting()) {
                     last_ack_eliciting_packet_sent_time_ = config.clock.now();
                 }
                 if (status.is_ack_eliciting() && status.is_byte_counted()) {
                     ack_eliciting_in_flight_sent_packet_count++;
                 }
-                return {range_begin, pn.value};
+                return std::pair{range_begin, pn.as_uint()};
             }
 
             constexpr void on_ack_received(packetnum::Value new_largest_ack_pn) {
@@ -110,7 +112,7 @@ namespace utils {
 
         struct PacketNumberAcceptor {
            private:
-            std::uint64_t largest_recv_packet = 0;
+            packetnum::Value largest_recv_packet = 0;
 
            public:
             constexpr void reset() {
@@ -118,33 +120,33 @@ namespace utils {
             }
 
             constexpr void on_packet_processed(packetnum::Value pn) {
-                if (largest_recv_packet < pn.value) {
-                    largest_recv_packet = pn.value;
+                if (largest_recv_packet < pn) {
+                    largest_recv_packet = pn;
                 }
             }
 
-            constexpr std::uint64_t largest_received_packet_number() const {
+            constexpr packetnum::Value largest_received_packet_number() const {
                 return largest_recv_packet;
             }
         };
 
         struct SentAckTracker {
            private:
-            std::uint64_t largest_onertt_acked_sent_ack = 0;
+            packetnum::Value largest_one_rtt_acked_sent_ack = 0;
 
            public:
             constexpr void reset() {
-                largest_onertt_acked_sent_ack = 0;
+                largest_one_rtt_acked_sent_ack = 0;
             }
 
-            constexpr std::uint64_t get_onertt_largest_acked_sent_ack() const {
-                return largest_onertt_acked_sent_ack;
+            constexpr packetnum::Value get_onertt_largest_acked_sent_ack() const {
+                return largest_one_rtt_acked_sent_ack;
             }
 
             constexpr void on_packet_acked(PacketNumberSpace space, packetnum::Value largest_sent_ack) {
                 if (space == PacketNumberSpace::application) {
                     if (largest_sent_ack != packetnum::infinity) {
-                        largest_onertt_acked_sent_ack = max_(largest_onertt_acked_sent_ack, largest_sent_ack.value + 1);
+                        largest_one_rtt_acked_sent_ack = max_(largest_one_rtt_acked_sent_ack, largest_sent_ack + 1);
                     }
                 }
             }

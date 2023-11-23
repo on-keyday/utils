@@ -72,16 +72,6 @@ namespace utils {
                 return set_(local, nullptr, param, false, false);
             }
 
-            /*
-            void local_boxing() {
-                // local_box.boxing(local);
-            }
-
-            void peer_boxing() {
-                // peer_box.boxing(peer);
-            }
-            */
-
             error::Error set_peer(TransportParameter param, bool is_server, bool accept_zero_rtt) {
                 return set_(peer, &peer_checker, param, is_server, accept_zero_rtt);
             }

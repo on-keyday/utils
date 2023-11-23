@@ -52,27 +52,6 @@ namespace utils {
             return std::allocate_shared<ACKLostRecord>(glheap_allocator<ACKLostRecord>{});
         }
 
-        /*
-        struct ACKCollector {
-           private:
-            void* p = nullptr;
-            void (*pb)(void*, std::shared_ptr<ACKLostRecord>&&) = nullptr;
-            template <class Ptr>
-            constexpr static void pb_(void* p, std::shared_ptr<ACKLostRecord>&& r) {
-                static_cast<Ptr>(p)->push_back(std::move(r));
-            }
-
-           public:
-            constexpr ACKCollector() = default;
-            constexpr ACKCollector(auto&& d)
-                : p(std::addressof(d)), pb(pb_<decltype(std::addressof(d))>) {}
-
-            constexpr void push_back(auto&& b) {
-                pb(p, std::forward<decltype(b)>(b));
-            }
-        };
-        */
-
         struct ACKRecorder {
            private:
             std::shared_ptr<ACKLostRecord> rec;

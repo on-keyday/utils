@@ -689,6 +689,7 @@ namespace utils {
             [](auto v) { throw bad_expected_access(std::move(v)); }(error()); \
         }                                                                     \
         throw bad_expected_access(error());                                   \
+        __builtin_unreachable();                                              \
     }
 
 #define must_move(has_val)                                                               \
@@ -697,6 +698,7 @@ namespace utils {
             [](auto v) { throw bad_expected_access(std::move(v)); }(std::move(error())); \
         }                                                                                \
         throw bad_expected_access(std::move(error()));                                   \
+        __builtin_unreachable();                                                         \
     }
 
            public:

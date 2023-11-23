@@ -29,6 +29,7 @@
 #include <testutil/timer.h>
 #include <fnet/quic/quic.h>
 #include <fnet/connect.h>
+#include <env/env_sys.h>
 
 using namespace utils::fnet::quic::use::smartptr;
 using QCTX = std::shared_ptr<Context>;
@@ -72,11 +73,11 @@ void thread(QCTX ctx, RecvChan c, int i) {
     std::string req = "GET /search?q=" + utils::number::to_string<std::string>(i + 1) + " HTTP/1.1\r\nHost: www.google.com\r\n";
     auto res = uni->add_data(req, false);
 #endif
-    assert(res == utils::fnet::quic::IOResult::ok);
+    assert(res.result == utils::fnet::quic::IOResult::ok);
     res = uni->add_data("Accept-Encoding: gzip\r\n", false);
-    assert(res == utils::fnet::quic::IOResult::ok);
+    assert(res.result == utils::fnet::quic::IOResult::ok);
     res = uni->add_data("\r\n", true, true);
-    assert(res == utils::fnet::quic::IOResult::ok);
+    assert(res.result == utils::fnet::quic::IOResult::ok);
     while (!uni->is_closed()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         if (ctx->is_closed()) {
@@ -88,8 +89,8 @@ void thread(QCTX ctx, RecvChan c, int i) {
     }
     auto sent_id = uni->id();
     utils::wrap::cout_wrap() << utils::wrap::packln("uni stream sent: ", i, "->", sent_id);
-    res = streams->remove(uni->id());
-    assert(res == utils::fnet::quic::IOResult::ok);
+    res.result = streams->remove(uni->id());
+    assert(res.result == utils::fnet::quic::IOResult::ok);
     Recvs runi;
     while (!runi.s) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -121,10 +122,10 @@ void thread(QCTX ctx, RecvChan c, int i) {
         }
         // std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    res = streams->remove(runi.s->id());
+    res.result = streams->remove(runi.s->id());
     // decref.execute();
 
-    assert(res == utils::fnet::quic::IOResult::ok);
+    assert(res.result == utils::fnet::quic::IOResult::ok);
     utils::http::header::StatusCode code;
     std::unordered_multimap<std::string, std::string> resp;
     utils::fnet::HTTPBodyInfo info;
@@ -160,7 +161,7 @@ void log_packet(std::shared_ptr<void>&, utils::fnet::quic::packet::PacketSummary
     std::string res = is_send ? "send: " : "recv: ";
     res += to_string(su.type);
     res += " ";
-    utils::number::to_string(res, su.packet_number.value);
+    utils::number::to_string(res, su.packet_number.as_uint());
     res += " src:";
     for (auto s : su.srcID) {
         if (s < 0x10) {
@@ -224,6 +225,17 @@ utils::fnet::quic::log::ConnLogCallbacks cbs{
     .rtt_state = rtt_event,
 };
 
+void load_env(std::string& cert) {
+    auto env = utils::env::sys::env_getter();
+    auto ssl = env.get_or<utils::wrap::path_string>("FNET_LIBSSL", "ssl.dll");
+    auto crypto = env.get_or<utils::wrap::path_string>("FNET_LIBCRYPTO", "crypto.dll");
+    tls::set_libcrypto(crypto.c_str());
+    tls::set_libssl(ssl.c_str());
+    tls::load_crypto();
+    tls::load_ssl();
+    cert = env.get_or<std::string>("FNET_PUBLIC_KEY", "D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
+}
+
 int main() {
     utils::fnet::set_normal_allocs(utils::fnet::debug::allocs());
     utils::fnet::set_objpool_allocs(utils::fnet::debug::allocs());
@@ -233,16 +245,25 @@ int main() {
     };
     utils::test::set_alloc_hook(true);
     utils::test::set_log_file("memuse.log");
-#ifdef _WIN32
-    tls::set_libcrypto(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/crypto.dll"));
-    tls::set_libssl(fnet_lazy_dll_path("D:/quictls/boringssl/built/lib/ssl.dll"));
-#endif
+    std::string cert;
+    load_env(cert);
     QCTX ctx = std::make_shared<Context>();
-    tls::TLSConfig conf = tls::configure();
-    conf.set_cacert_file("D:/MiniTools/QUIC_mock/goserver/keys/quic_mock_server.crt");
+    tls::TLSConfig conf = tls::configure_with_error().value();
+    conf.set_cacert_file(cert.c_str());
     conf.set_alpn("\4test");
     auto config = utils::fnet::quic::context::use_default_config(std::move(conf));
     config.logger.callbacks = &cbs;
+    config.connid_parameters.random = utils::fnet::quic::connid::Random{
+        nullptr,
+        [](std::shared_ptr<void>& arg, utils::view::wvec rand, utils::fnet::quic::connid::RandomUsage u) {
+            if (u == utils::fnet::quic::connid::RandomUsage::original_dst_id) {
+                rand[0] = 0x2f;
+                rand[1] = 0x00;
+                rand = rand.substr(2);
+            }
+            return utils::fnet::quic::context::default_gen_random(arg, rand, u);
+        },
+    };
     auto val = ctx->init(std::move(config)) &&
                ctx->connect_start();
     assert(val);
@@ -254,6 +275,7 @@ int main() {
     ch->uni_accept_cb = [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
         auto w2 = static_cast<SendChan*>(p.get());
         auto data = set_stream_reader(*s);
+        *w2 << Recvs{std::move(s), std::move(data)};
     };
     /*
     streams->set_accept_uni(, [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {

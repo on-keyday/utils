@@ -19,7 +19,7 @@ namespace utils {
 
         template <class Locker>
         struct RecvSorted {
-            StreamID id;
+            StreamID id = invalid_id;
 
            private:
             Locker locker;
