@@ -18,7 +18,7 @@ namespace utils {
     namespace fnet::quic::stream::impl {
 
         template <class Locker>
-        struct RecvSorted {
+        struct RecvSorter {
             StreamID id = invalid_id;
 
            private:
@@ -240,6 +240,7 @@ namespace utils {
             }
 
            public:
+            // returns (data,eos)
             std::pair<flex_storage, bool> read_direct(bool use_try_lock = false) {
                 if (use_try_lock) {
                     if (!locker.try_lock()) {
@@ -277,7 +278,7 @@ namespace utils {
             if (!arg) {
                 return {false, error::Error("unexpected arg", error::Category::lib, error::fnet_quic_implementation_bug)};
             }
-            auto s = static_cast<RecvSorted<Locker>*>(std::to_address(arg));
+            auto s = static_cast<RecvSorter<Locker>*>(std::to_address(arg));
             if (!s->id.valid()) {
                 s->id = id;
             }
@@ -296,7 +297,7 @@ namespace utils {
             if (!arg) {
                 return 0;
             }
-            auto s = static_cast<RecvSorted<Locker>*>(std::to_address(arg));
+            auto s = static_cast<RecvSorter<Locker>*>(std::to_address(arg));
             if (query_update) {
                 return s->read() - s->prev_read();
             }

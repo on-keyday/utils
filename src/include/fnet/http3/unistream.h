@@ -37,5 +37,17 @@ namespace utils {
                 return quic::varint::write(w, std::uint64_t(type));
             }
         };
+
+        using UniStreamHeaderArea = byte[16];
+
+        view::wvec get_header(UniStreamHeaderArea& area, Type type) {
+            UniStreamHeader head;
+            head.type = std::uint64_t(type);
+            binary::writer w{area};
+            if (!head.render(w)) {
+                return {};
+            }
+            return w.written();
+        }
     }  // namespace fnet::http3::unistream
 }  // namespace utils

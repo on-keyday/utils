@@ -34,7 +34,7 @@ namespace utils {
            private:
             bool write_push_frame(frame::Type type, std::uint32_t push_id) {
                 QuicSendStream* q = send_control.get();
-                if (q->id().dir() == quic::stream::Direction::server) {
+                if (q->id().dir() == quic::stream::Origin::client) {
                     return false;
                 }
                 frame::FrameHeaderArea id_area;
@@ -100,15 +100,22 @@ namespace utils {
 
             auto lock() {
                 locker.lock();
-                return helpe::defer([&] {
+                return helper::defer([&] {
                     locker.unlock();
                 });
             }
 
-            template <class String>
             bool read_field_section(quic::stream::StreamID id, binary::reader& r, auto&& read) {
                 auto locked = lock();
-                table.read_header(id, r, read);
+                auto err = table.read_header(id, r, read);
+                if (err != qpack::QpackError::none) {
+                    if (err == qpack::QpackError::input_length) {
+                        return false;
+                    }
+                    app_err.set_error_code(Error::H3_INTERNAL_ERROR);
+                    return false;
+                }
+                return true;
             }
 
             template <class String>
@@ -137,13 +144,14 @@ namespace utils {
 
         template <class Config>
         struct RequestStream {
-           private:
             using QuicStream = quic::stream::impl::BidiStream<typename Config::quic_config>;
+            using Reader = quic::stream::impl::RecvSorter<typename Config::reader_lock>;
             std::shared_ptr<QuicStream> stream;
             std::shared_ptr<Connection<Config>> conn;
+            std::shared_ptr<Reader> reader;
+            flex_storage read_buf;
             using String = typename Config::qpack_config::string;
 
-           public:
             bool write_header(auto&& write) {
                 QuicStream* q = stream.get();
                 if (q->sender.is_fin()) {
@@ -157,9 +165,80 @@ namespace utils {
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::HEADER, section.size());
                 auto res = q->sender.add_multi_data(false, true, header, section);
-                if (res != quic::IOResult::ok) {
+                if (res.result != quic::IOResult::ok) {
                     return false;
                 }
+                return true;
+            }
+
+           private:
+            bool append_to_read_buf() {
+                QuicStream* q = stream.get();
+                if (q->receiver.is_closed()) {
+                    return false;
+                }
+                Reader* re = reader.get();
+                bool one = false;
+                while (true) {
+                    auto [data, eof] = re->read_direct();
+                    if (data.size() == 0 && !eof) {
+                        return one;
+                    }
+                    read_buf.append(data);
+                    one = true;
+                    if (eof) {
+                        q->receiver.user_read_full();
+                        break;
+                    }
+                }
+                return true;
+            }
+
+           public:
+            bool read_header(auto&& read) {
+                if (read_buf.size() == 0) {
+                    if (!append_to_read_buf()) {
+                        return false;
+                    }
+                }
+                binary::reader r{read_buf};
+                frame::Headers hdrs;
+                while (!hdrs.parse(r)) {
+                    if (read_buf.size() && hdrs.type != std::uint64_t(frame::Type::HEADER)) {
+                        return false;
+                    }
+                    if (!append_to_read_buf()) {
+                        return false;
+                    }
+                }
+                auto offset = r.offset();
+                r.reset(hdrs.encoded_field);
+                auto err = conn->read_field_section(stream->receiver.id(), r, read);
+                if (!err) {
+                    return false;
+                }
+                read_buf.shift_front(offset);
+                return true;
+            }
+
+            bool read(auto&& callback) {
+                if (read_buf.size() == 0) {
+                    if (!append_to_read_buf()) {
+                        return false;
+                    }
+                }
+                binary::reader r{read_buf};
+                frame::Data hdrs;
+                while (!hdrs.parse(r)) {
+                    if (read_buf.size() && hdrs.type != std::uint64_t(frame::Type::DATA)) {
+                        return false;
+                    }
+                    if (!append_to_read_buf()) {
+                        return false;
+                    }
+                }
+                callback(hdrs.data);
+                read_buf.shift_front(r.offset());
                 return true;
             }
 
@@ -183,7 +262,7 @@ namespace utils {
 
             bool write_push_promise(std::uint64_t push_id, auto&& write) {
                 QuicStream* q = stream.get();
-                if (q->id().dir() == quic::stream::Direction::client) {
+                if (q->id().dir() == quic::stream::Origin::client) {
                     return false;
                 }
                 if (q->sender.is_fin()) {

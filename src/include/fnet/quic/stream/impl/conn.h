@@ -197,7 +197,7 @@ namespace utils {
 
             // thread unsafe call
             // call this before share this with multi thread
-            auto conn_handler() {
+            auto get_conn_handler() {
                 return handler.impl_ptr();
             }
 

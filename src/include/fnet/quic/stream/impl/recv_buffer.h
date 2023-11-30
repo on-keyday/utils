@@ -44,22 +44,11 @@ namespace utils {
 
            public:
             constexpr FragmentSaver() = default;
-            FragmentSaver(Arg&& a, SaveFragmentCallback<Arg> cb, AutoUpdateCallback<Arg> aup = nullptr) {
-                if (cb) {
-                    arg = std::move(a);
-                    callback = cb;
-                    auto_update = aup;
-                }
-                else {
-                    arg = Arg{};
-                    callback = nullptr;
-                }
-            }
-
-            FragmentSaver(const Arg& a, SaveFragmentCallback<Arg> cb) {
+            FragmentSaver(const Arg& a, SaveFragmentCallback<Arg> cb, AutoUpdateCallback<Arg> aup = nullptr) {
                 if (cb) {
                     arg = a;
                     callback = cb;
+                    auto_update = aup;
                 }
                 else {
                     arg = Arg{};

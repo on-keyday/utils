@@ -87,10 +87,10 @@ int main() {
     // so, use_count() here should be 3
     assert(ok == IOResult::ok && locals.get().use_count() == 3);
     RecvQ q;
-    auto h = conn_peer->conn_handler();
+    auto h = conn_peer->get_conn_handler();
     h->arg = std::shared_ptr<RecvQ>(&q, [](RecvQ*) {});
     h->bidi_accept_cb = [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
-        auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
+        auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorter<std::mutex>>();
         using H = utils::fnet::quic::stream::impl::FragmentSaver<>;
         d->receiver.set_receiver(H(std::move(recv),
                                    utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));

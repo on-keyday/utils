@@ -357,6 +357,11 @@ namespace utils {
                        is_terminal_state();
             }
 
+            constexpr bool is_reset() const noexcept {
+                return state == RecvState::reset_recved ||
+                       state == RecvState::reset_read;
+            }
+
             constexpr std::uint64_t get_error_code() const noexcept {
                 return error_code;
             }

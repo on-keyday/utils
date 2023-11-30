@@ -360,6 +360,12 @@ namespace utils {
                 return uni.data.fin;
             }
 
+            // get state of send stream
+            core::SendUniStreamState get_state() {
+                const auto locked = uni.lock();
+                return uni.state;
+            }
+
             auto access_flow_limit(auto&& access) {
                 const auto locked = uni.lock();
                 return access(uni.state.get_send_limiter());
@@ -581,7 +587,16 @@ namespace utils {
                 return uni.state.reset_read();
             }
 
-            // check whetehr stream closed
+            // notify application user read reset or all data
+            bool user_read_full() {
+                const auto locked = uni.lock();
+                if (uni.state.is_reset()) {
+                    return uni.state.reset_read();
+                }
+                return uni.state.data_read();
+            }
+
+            // check whether stream closed
             bool is_closed() {
                 const auto locked = uni.lock();
                 return conn.expired() || uni.state.is_terminal_state();
@@ -595,6 +610,17 @@ namespace utils {
                        // when all data has been received,
                        // this stream is removable even if user does not read any data
                        uni.state.is_recv_all_state();
+            }
+
+            bool is_reset() {
+                const auto locked = uni.lock();
+                return uni.state.is_reset();
+            }
+
+            // get state of recv stream
+            core::RecvUniStreamState get_state() {
+                const auto locked = uni.lock();
+                return uni.state;
             }
         };
 

@@ -42,7 +42,7 @@ namespace utils {
                 for (auto& v : data) {
                     v = uf(dev);
                 }
-                ClientKey fixed;
+                ClientKey fixed{};
                 SHAHash hash;
                 if (!base64::encode(view::CharVec(data, sizeof(data)), fixed)) {
                     return error_base64;
@@ -132,22 +132,25 @@ namespace utils {
             Error verify(HTTP& http, auto&& header, auto&& compare_sec_key, size_t* red = nullptr) {
                 number::Array<char, 4, true> meth;
                 HTTPBodyInfo body;
-                ClientKey fixed;
+                ClientKey fixed{};
                 bool accept = false;
                 bool upgrade = false;
                 bool connection = false;
                 http::header::StatusCode code;
-                auto res = http.read_response<TmpString>(code, header, &body, true, helper::nop, helper::nop, [&](auto&& key, auto&& value) {
-                    if (strutil::equal(key, "Sec-WebSocket-Accept", strutil::ignore_case())) {
-                        accept = strutil::equal(value, compare_sec_key);
-                    }
-                    else if (strutil::equal(key, "Connection", strutil::ignore_case())) {
-                        connection = helper::contains(value, "Upgrade", strutil::ignore_case());
-                    }
-                    else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
-                        upgrade = helper::contains(value, "websocket", strutil::ignore_case());
-                    }
-                });
+                auto res = http.read_response<TmpString>(
+                    code, [&](auto&& key, auto&& value) {
+                        if (strutil::equal(key, "Sec-WebSocket-Accept", strutil::ignore_case())) {
+                            accept = strutil::equal(value, compare_sec_key);
+                        }
+                        else if (strutil::equal(key, "Connection", strutil::ignore_case())) {
+                            connection = strutil::contains(value, "Upgrade", strutil::ignore_case());
+                        }
+                        else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
+                            upgrade = strutil::contains(value, "websocket", strutil::ignore_case());
+                        }
+                        http::header::apply_call_or_emplace(header, key, value);
+                    },
+                    &body, true);
                 if (res == 0) {
                     return error_http;
                 }

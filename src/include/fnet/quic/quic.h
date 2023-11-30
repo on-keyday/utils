@@ -27,13 +27,13 @@ namespace utils {
         using StreamID = stream::StreamID;
         using PacketNumber = packetnum::Value;
 
-        using Reader = stream::impl::RecvSorted<std::mutex>;
+        using Reader = stream::impl::RecvSorter<std::mutex>;
 
         using FlowLimiter = stream::core::Limiter;
 
         template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
-        std::shared_ptr<stream::impl::RecvSorted<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r, bool use_auto_update = false) {
-            auto read = std::allocate_shared<stream::impl::RecvSorted<Lock>>(glheap_allocator<stream::impl::RecvSorted<Lock>>{});
+        std::shared_ptr<stream::impl::RecvSorter<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r, bool use_auto_update = false) {
+            auto read = std::allocate_shared<stream::impl::RecvSorter<Lock>>(glheap_allocator<stream::impl::RecvSorter<Lock>>{});
             using Saver = typename TConfig::stream_handler::recv_buf;
             if (use_auto_update) {
                 r.set_receiver(Saver(read,
@@ -51,7 +51,13 @@ namespace utils {
         // using smart (std::shared_ptr<void>) pointer for open/accept callback argument object
         namespace smartptr {
             using namespace use;
-            using DefaultTypeConfig = context::TypeConfig<std::mutex>;
+            using DefaultTypeConfig = context::TypeConfig<
+                std::mutex,
+                stream::TypeConfig<
+                    std::mutex,
+                    stream::UserStreamHandlerType<
+                        stream::impl::SendBuffer<>,
+                        stream::impl::FragmentSaver<std::shared_ptr<stream::impl::RecvSorter<std::mutex>>>>>>;
             using DefaultStreamTypeConfig = typename DefaultTypeConfig::stream_type_config;
             using Context = context::Context<DefaultTypeConfig>;
 
@@ -62,6 +68,29 @@ namespace utils {
 
             constexpr auto sizeof_quic_Context = sizeof(Context);
             constexpr auto sizeof_quic_stream_Conn = sizeof(Streams);
+
+            template <bool auto_update = true>
+            std::shared_ptr<Context> make_quic(tls::TLSConfig&& conf, auto&& accept_callback) {
+                auto ctx = use_default_context<DefaultTypeConfig>(std::move(conf));
+                auto h = ctx->get_streams()->get_conn_handler();
+                using AcceptT = std::decay_t<decltype(accept_callback)>;
+                auto cb = std::allocate_shared<AcceptT>(glheap_allocator<AcceptT>(), std::move(accept_callback));
+                h->set_arg(std::move(cb));
+                h->set_open_bidi([](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
+                    set_stream_reader(stream->receiver, auto_update);
+                });
+                h->set_accept_bidi([](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
+                    auto cb = static_cast<AcceptT*>(arg.get());
+                    set_stream_reader(stream->receiver, auto_update);
+                    (*cb)(stream);
+                });
+                h->set_accept_uni([](std::shared_ptr<void>& arg, std::shared_ptr<RecvStream> stream) {
+                    auto cb = static_cast<AcceptT*>(arg.get());
+                    set_stream_reader(*stream, auto_update);
+                    (*cb)(stream);
+                });
+                return ctx;
+            }
         }  // namespace smartptr
 
         // using raw (void*) pointer for open/accept callback argument object
@@ -71,7 +100,9 @@ namespace utils {
             using DefaultStreamTypeConfig =
                 stream::TypeConfig<
                     std::mutex,
-                    stream::UserStreamHandlerType<>,
+                    stream::UserStreamHandlerType<
+                        stream::impl::SendBuffer<>,
+                        stream::impl::FragmentSaver<std::shared_ptr<stream::impl::RecvSorter<std::mutex>>>>,
                     stream::impl::Bind<stream::impl::ConnHandlerSingleArg, void*>::template bound>;
             using DefaultTypeConfig = context::TypeConfig<std::mutex, DefaultStreamTypeConfig>;
             using Context = context::Context<DefaultTypeConfig>;

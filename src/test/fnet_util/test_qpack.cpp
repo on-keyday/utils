@@ -57,6 +57,6 @@ int main() {
     ctx.read_encoder_stream(r);
     r.reset(w.written());
     ctx.read_header(0, r, [](auto&& field) {
-        utils::wrap::cout_wrap() << field.head << ": " << field.value << "\n";
+        utils::wrap::cout_wrap() << field.key << ": " << field.value << "\n";
     });
 }

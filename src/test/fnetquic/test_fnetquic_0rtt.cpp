@@ -93,7 +93,7 @@ int main() {
     auto streams = ctx->get_streams();
     auto stream = streams->open_uni();
     std::shared_ptr<Reader> read;
-    auto ch = streams->conn_handler();
+    auto ch = streams->get_conn_handler();
     ch->arg = &read;
     ch->auto_incr.auto_increase_max_data = true;
     ch->uni_accept_cb = [](void*& p, std::shared_ptr<RecvStream> r) {

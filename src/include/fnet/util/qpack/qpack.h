@@ -31,12 +31,12 @@ namespace utils {
 
         template <class String>
         struct DecodeField {
-            String head;
+            String key;
             String value;
             bool forward_as_literal = false;
 
             void set_header(auto&& h) {
-                encoder::assign_to(head, std::forward<decltype(h)>(h));
+                encoder::assign_to(key, std::forward<decltype(h)>(h));
             }
 
             void set_value(auto&& v) {

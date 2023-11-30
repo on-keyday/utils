@@ -148,7 +148,7 @@ namespace utils {
                         self_t value;
                         auto err = parse_impl(seq, value);
                         if (!err) {
-                            return false;
+                            return err;
                         }
                         auto res = ptr->emplace(std::move(key), std::move(value));
                         if (!get<1>(res)) {

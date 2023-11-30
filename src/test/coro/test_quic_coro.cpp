@@ -123,7 +123,7 @@ void request(utils::coro::C* c, void* p) {
 void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket& sock, utils::fnet::NetAddrPort& addr) {
     auto s = ctx->get_streams();
     // s->set_auto_remove(true);
-    auto ch = s->conn_handler();
+    auto ch = s->get_conn_handler();
     ch->arg = c;
     ch->uni_accept_cb = [](void*& c, std::shared_ptr<RecvStream> in) {
         auto s = set_stream_reader(*in);

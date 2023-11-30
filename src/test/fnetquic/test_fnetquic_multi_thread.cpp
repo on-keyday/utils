@@ -270,7 +270,7 @@ int main() {
 
     auto streams = ctx->get_streams();
     auto [w, r] = utils::thread::make_chan<Recvs>();
-    auto ch = streams->conn_handler();
+    auto ch = streams->get_conn_handler();
     ch->arg = std::shared_ptr<std::decay_t<decltype(w)>>(&w, [](auto*) {});
     ch->uni_accept_cb = [](std::shared_ptr<void>& p, std::shared_ptr<RecvStream> s) {
         auto w2 = static_cast<SendChan*>(p.get());

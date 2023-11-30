@@ -13,6 +13,8 @@ namespace utils {
         struct TypeConfig {
             using qpack_config = QpackConfig;
             using quic_config = QuicConfig;
+            using conn_lock = typename QuicConfig::conn_lock;
+            using reader_lock = typename QuicConfig::recv_stream_lock;
         };
     }  // namespace fnet::http3
 }  // namespace utils

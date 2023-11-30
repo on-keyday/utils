@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <random>
 #include <core/byte.h>
-#include "storage.h"
+#include "../storage.h"
 #include <binary/number.h>
 #include <helper/defer.h>
 #include <binary/flags.h>
@@ -93,7 +93,6 @@ namespace utils {
             int len = 0;
             byte lens[9]{};
             binary::writer w{lens};
-            const auto len = frame.data.size();
             if (len <= 125) {
                 w.write(byte(len), 1);
                 len = 1;
@@ -212,12 +211,12 @@ namespace utils {
 
             size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
                 auto seq = make_ref_seq(output);
-                if (out.size() < limit) {
-                    limit = out.size();
+                if (output.size() < limit) {
+                    limit = output.size();
                 }
                 strutil::read_n(buf, seq, limit);
                 if (!peek) {
-                    out.shift(seq.rptr);
+                    output.shift_front(seq.rptr);
                 }
                 return seq.rptr;
             }
@@ -229,7 +228,7 @@ namespace utils {
             bool read_frame(auto&& callback, bool peek = false) {
                 websocket::Frame frame;
                 binary::reader r{input};
-                if (!read_frame(frame, r)) {
+                if (!websocket::read_frame(r, frame)) {
                     return false;
                 }
                 if (frame.masked && peek) {
