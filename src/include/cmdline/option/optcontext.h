@@ -345,24 +345,38 @@ namespace utils {
                 }
 
                 template <class State, class F>
-                bool Func(auto&& option, auto&& help, auto&& argdesc, State state, F&& f, CustomFlag flag = CustomFlag::none) {
-                    return (bool)Option(option, std::move(state),
-                                        FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
-                                        help, argdesc, flag);
+                State* Func(auto&& option, auto&& help, auto&& argdesc, State state, F&& f, CustomFlag flag = CustomFlag::none) {
+                    return Option(option, std::move(state),
+                                  FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
+                                  help, argdesc, flag);
                 }
 
-                template <class State, class F>
+                template <class State = void, class F>
                 bool VarFunc(State* ptr, auto&& option, auto&& help, auto&& argdesc, F&& f, CustomFlag flag = CustomFlag::none) {
                     return (bool)Option(option, ptr,
                                         FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
                                         help, argdesc, flag);
                 }
 
+                template <class State, class F>
+                State* BoolFunc(auto&& option, auto&& help, State state, F&& f, CustomFlag flag = CustomFlag::none, bool rough = true) {
+                    return Option(option, std::move(state),
+                                  BoolFuncParser<std::decay_t<F>, State>{std::forward<F>(f), rough},
+                                  help, "", flag);
+                }
+
+                template <class State = void, class F>
+                bool VarBoolFunc(State* ptr, auto&& option, auto&& help, F&& f, CustomFlag flag = CustomFlag::none, bool rough = true) {
+                    return (bool)Option(option, ptr,
+                                        BoolFuncParser<std::decay_t<F>, State>{std::forward<F>(f), rough},
+                                        help, "", flag);
+                }
+
                 template <class Key, class Value, template <class...> class M>
-                bool Map(auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none, Value&& defaultv = Value()) {
-                    return (bool)Option(option, std::move(defaultv),
-                                        MappingParser<Key, Value, M>{std::move(mapping)},
-                                        help, argdesc, flag);
+                Value* Map(auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none, Value&& defaultv = Value()) {
+                    return Option(option, std::move(defaultv),
+                                  MappingParser<Key, Value, M>{std::move(mapping)},
+                                  help, argdesc, flag);
                 }
 
                 template <class Key, class Value, template <class...> class M>

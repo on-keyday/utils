@@ -346,6 +346,32 @@ namespace utils {
                     return true;
                 }
             };
+
+            template <class F, class State>
+            struct BoolFuncParser {
+                F f;
+                bool rough = false;
+
+                bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
+                    if (!reserved) {
+                        val.set_value(State{});
+                    }
+                    auto ptr = val.get_ptr<State>();
+                    if (!ptr) {
+                        state.state = FlagType::type_not_match;
+                        return false;
+                    }
+                    bool key = false;
+                    if (!BoolParser::parse(key, state, true, rough)) {
+                        return false;
+                    }
+                    if (!f(key, *ptr)) {
+                        state.state = FlagType::not_accepted;
+                        return false;
+                    }
+                    return true;
+                }
+            };
         }  // namespace option
     }      // namespace cmdline
 }  // namespace utils

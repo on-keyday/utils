@@ -161,7 +161,9 @@ namespace utils {
                         out.resize(len);
                         break;
                     }
-                    if (out.back() == '\n') {
+                    if (f->back() == '\n') {
+                        len += f->size();
+                        out.resize(len);
                         break;
                     }
                     out.resize(out.size() * 2);
