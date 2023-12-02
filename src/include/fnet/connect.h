@@ -12,6 +12,15 @@
 #include "addrinfo.h"
 
 namespace utils::fnet {
+    struct ConnectError {
+        error::Error err;
+
+        void error(auto&& p) {
+            strutil::append(p, "connect error: ");
+            err.error(p);
+        }
+    };
+
     auto connect(view::rvec hostname, view::rvec port, SockAttr attr, bool wait_write = true) {
         return resolve_address(hostname, port, attr)
             .and_then([](WaitAddrInfo&& info) {
@@ -48,9 +57,9 @@ namespace utils::fnet {
                     }
                 }
                 if (err) {
-                    return unexpect(std::move(err));
+                    return unexpect(ConnectError{std::move(err)});
                 }
-                return unexpect("cannot connect", error::Category::lib, error::fnet_network_error);
+                return unexpect(ConnectError{error::Error("cannot connect", error::Category::lib, error::fnet_network_error)});
             });
     }
 
