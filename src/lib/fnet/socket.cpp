@@ -68,6 +68,15 @@ namespace utils {
             });
         }
 
+        struct SelectError {
+            error::Error err;
+
+            void error(auto&& p) {
+                strutil::append(p, "select error: hit except fd: ");
+                err.error(p);
+            }
+        };
+
         expected<void> sock_wait(std::uintptr_t sock, std::uint32_t sec, std::uint32_t usec, bool read) {
             timeval val{};
             val.tv_sec = sec;
@@ -89,14 +98,14 @@ namespace utils {
             }
 #ifdef UTILS_PLATFORM_WINDOWS
             if (lazy::__WSAFDIsSet_(sock, &excset)) {
-                return unexpect(error::Errno());
+                return unexpect(SelectError{error::Errno()});
             }
             if (lazy::__WSAFDIsSet_(sock, &xset)) {
                 return {};
             }
 #else
             if (FD_ISSET(sock, &excset)) {
-                return unexpect(error::Errno());
+                return unexpect(SelectError{error::Errno()});
             }
             if (FD_ISSET(sock, &xset)) {
                 return {};
