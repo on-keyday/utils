@@ -12,6 +12,24 @@
 #include "addrinfo.h"
 
 namespace utils::fnet {
+
+    struct AddrError {
+        SockAddr addr;
+        error::Error err;
+
+        void error(auto&& p) {
+            strutil::append(p, "cannot connect to ");
+            addr.addr.to_string(p);
+            strutil::append(p, "(af=");
+            number::to_string(p, addr.attr.address_family);
+            strutil::append(p, ", type=");
+            number::to_string(p, addr.attr.socket_type);
+            strutil::append(p, ", proto=");
+            number::to_string(p, addr.attr.protocol);
+            strutil::append(p, "): ");
+            err.error(p);
+        }
+    };
     struct ConnectError {
         error::Error err;
 
@@ -50,10 +68,10 @@ namespace utils::fnet {
                         return s;
                     }
                     if (err) {
-                        err = error::ErrList{std::move(s.error()), std::move(err)};
+                        err = error::ErrList{AddrError{std::move(addr), std::move(s.error())}, std::move(err)};
                     }
                     else {
-                        err = std::move(s.error());
+                        err = std::move(AddrError{std::move(addr), s.error()});
                     }
                 }
                 if (err) {

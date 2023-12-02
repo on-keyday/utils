@@ -72,7 +72,7 @@ namespace utils {
             error::Error err;
 
             void error(auto&& p) {
-                strutil::append(p, "select error: hit except fd: ");
+                strutil::append(p, "select error: hit exception fd: ");
                 err.error(p);
             }
         };
