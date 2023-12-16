@@ -81,8 +81,9 @@ namespace utils {
         template <class String, class Indent = const char*>
         struct CodeWriter {
            private:
-            IndentWriter<String> w;
+            IndentWriter<String, Indent> w;
             bool should_indent = false;
+            size_t line_count_ = 1;
 
            public:
             constexpr CodeWriter(Indent indent = internal::DefaultIndent<Indent>::indent)
@@ -98,6 +99,14 @@ namespace utils {
 
             constexpr String& out() {
                 return w.t;
+            }
+
+            constexpr void set_line_count(size_t i = 1) {
+                line_count_ = i;
+            }
+
+            constexpr size_t line_count() const {
+                return line_count_;
             }
 
            private:
@@ -165,6 +174,8 @@ namespace utils {
                     });
             }
 
+            // NOTE: you should not contain '\\n' in v
+            // this function not guarantee to work if you do so
             constexpr void write(auto&&... v) {
                 if (should_indent) {
                     w.write_indent();
@@ -181,6 +192,7 @@ namespace utils {
             constexpr void line() {
                 w.write_ln();
                 should_indent = true;
+                line_count_++;
             }
 
             constexpr void should_write_indent(bool s) {
