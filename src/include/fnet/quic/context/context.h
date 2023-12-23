@@ -13,7 +13,7 @@
 #include "../packet/creation.h"
 #include "../packet/parse.h"
 #include "../connid/id_manage.h"
-#include "../path/dplpmtud.h"
+#include "../path/dlpmtud.h"
 #include "../path/verify.h"
 #include "../path/path.h"
 #include "../crypto/suite.h"
@@ -1180,7 +1180,7 @@ namespace utils {
                 return datagrams;
             }
 
-            // get eariest timer deadline
+            // get earliest timer deadline
             // thread unsafe call
             time::Time get_earliest_deadline() const {
                 return status.get_earliest_deadline(unacked.get_deadline());
@@ -1216,7 +1216,7 @@ namespace utils {
                 internal.local_ack_delay_exponent = config.transport_parameters.ack_delay_exponent;
                 internal.idle_timeout = config.transport_parameters.max_idle_timeout;
                 internal.local_max_ack_delay = config.transport_parameters.max_ack_delay;
-                mtu.reset(config.path_parameters);
+                mtu.reset(config.path_parameters.mtu);
                 status.reset(internal, std::move(udconfig.algorithm), config.server, mtu.current_datagram_size());
                 if (!status.now().valid()) {
                     set_quic_runtime_error(QUICError{
@@ -1257,7 +1257,7 @@ namespace utils {
                 datagrams->reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
 
                 // setup path validation status
-                path_verifier.reset(config.path_parameters.original_path);
+                path_verifier.reset(config.path_parameters.original_path, config.path_parameters.max_path_challenge);
 
                 // finalize initialization
                 closed.store(close::CloseReason::not_closed);

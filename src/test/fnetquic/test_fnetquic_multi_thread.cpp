@@ -16,7 +16,7 @@
 #include <fnet/quic/log/crypto_log.h>
 #include <testutil/alloc_hook.h>
 #include <wrap/cout.h>
-#include <fnet/quic/path/dplpmtud.h>
+#include <fnet/quic/path/dlpmtud.h>
 #ifdef _WIN32
 #include <format>
 #define HAS_FORMAT

@@ -33,8 +33,9 @@ namespace utils {
         struct PathVerifier {
            private:
             slib::deque<std::uint64_t> recv_data;
+            std::uint64_t max_path_challenge = 256;
 
-            // PATH_CHALLANGE
+            // PATH_CHALLENGE
             slib::list<PathProbeInfo> probes;
             std::uint64_t num_probe_to_send = 0;
 
@@ -46,13 +47,15 @@ namespace utils {
             PathID writing_path = original_path;
 
            public:
-            void reset(PathID hs_path) {
+            void reset(PathID hs_path, std::uint64_t max_path_challenge) {
                 recv_data.clear();
                 valid_path.clear();
+                probes.clear();
                 num_probe_to_send = 0;
                 migrate_path = hs_path;
                 active_path = hs_path;
                 writing_path = hs_path;
+                this->max_path_challenge = max_path_challenge;
             }
 
             constexpr void set_writing_path_to_active_path() {
@@ -67,8 +70,13 @@ namespace utils {
                 return writing_path;
             }
 
-            void recv_path_challenge(const frame::PathChallengeFrame& resp) {
+            bool recv_path_challenge(const frame::PathChallengeFrame& resp) {
+                if (max_path_challenge < recv_data.size()) {
+                    // to avoid memory exhaustion attack
+                    return false;
+                }
                 recv_data.push_back(resp.data);
+                return true;
             }
 
             IOResult send_path_response(frame::fwriter& w) {
@@ -171,7 +179,13 @@ namespace utils {
 
             constexpr error::Error recv(const frame::Frame& frame) {
                 if (frame.type.type_detail() == FrameType::PATH_CHALLENGE) {
-                    recv_path_challenge(static_cast<const frame::PathChallengeFrame&>(frame));
+                    if (!recv_path_challenge(static_cast<const frame::PathChallengeFrame&>(frame))) {
+                        return QUICError{
+                            .msg = "Too many PATH_CHALLENGE",
+                            .transport_error = TransportError::PROTOCOL_VIOLATION,
+                            .frame_type = FrameType::PATH_CHALLENGE,
+                        };
+                    }
                     return error::none;
                 }
                 else if (frame.type.type_detail() == FrameType::PATH_RESPONSE) {
@@ -212,7 +226,7 @@ namespace utils {
                     }
                 }
                 // TODO(on-keyday): when we implement recv packet handler,
-                //                  this does not detect sprious PATH_RESPONSE
+                //                  this does not detect spurious PATH_RESPONSE
                 //                  but currently, do
                 return QUICError{
                     .msg = "PathResponse contains not issued data",

@@ -101,7 +101,7 @@ namespace utils {
 
         struct MTU {
            private:
-            Config config;
+            MTUConfig config;
             size_t current_payload_size = 0;
             size_t probe_count = 0;
             BinarySearcher bin_search;
@@ -113,7 +113,7 @@ namespace utils {
             bits_flag_alias_method_with_enum(flags, 1, state, State);
 
            public:
-            constexpr void reset(Config conf) {
+            constexpr void reset(MTUConfig conf) {
                 config = conf;
                 if (path_rejects_quic(config.base_plpmtu)) {
                     config.base_plpmtu = initial_udp_datagram_size;

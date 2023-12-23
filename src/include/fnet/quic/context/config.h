@@ -27,7 +27,7 @@ namespace utils {
             tls::Session session;  // for 0RTT
             tls::TLSConfig tls_config;
             status::Config internal_parameters;
-            path::Config path_parameters;
+            path::PathConfig path_parameters;
             trsparam::DefinedTransportParams transport_parameters;
             log::ConnLogger logger;
             connid::Config connid_parameters;

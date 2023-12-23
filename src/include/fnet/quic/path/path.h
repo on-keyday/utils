@@ -29,6 +29,10 @@ namespace utils {
             constexpr operator std::uint32_t() const noexcept {
                 return id;
             }
+
+            friend constexpr bool operator==(PathID lhs, PathID rhs) noexcept {
+                return lhs.id == rhs.id;
+            }
         };
 
         // original_path is id for path that is used for handshake
