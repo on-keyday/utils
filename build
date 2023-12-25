@@ -8,23 +8,34 @@ fi
 if [ ! $UTILS_BUILD_MODE ]; then
 UTILS_BUILD_MODE=shared
 fi
-if [ $UTILS_BUILD_MODE != "shared" ]  &&  [ $UTILS_BUILD_MODE != "static" ] && [ $UTILS_BUILD_MODE != "wasm-rt" ] && [ $UTILS_BUILD_MODE != "wasm-em" ]; then
+if [ $UTILS_BUILD_MODE != "shared" ]  &&  [ $UTILS_BUILD_MODE != "static" ] && [ $UTILS_BUILD_MODE != "wasm-rt" ] && [ $UTILS_BUILD_MODE != "wasm-em" ] && [ $UTILS_BUILD_MODE != "gcc-static" ] && [ $UTILS_BUILD_MODE != "gcc-shared" ]; then
 echo "Invalid build type: $UTILS_BUILD_MODE"
 return 1
 fi
 
+OUTPUT_DIR=built/$UTILS_BUILD_MODE/$BUILD_TYPE
+C_COMPILER=clang
+CXX_COMPILER=clang++
+
+if [ $UTILS_BUILD_MODE == "gcc-static" ] || [ $UTILS_BUILD_MODE == "gcc-shared" ]; then
+C_COMPILER=gcc
+CXX_COMPILER=g++
+UTILS_BUILD_MODE=${UTILS_BUILD_MODE#gcc-}
+fi
+
+
 INSTALL_PREFIX=$(pwd)
 if [ $UTILS_BUILD_MODE = "wasm-rt" ]; then
 # wasimake must be enabled on this context
-cmake -D CMAKE_TOOLCHAIN_FILE=$WASI_SDK_PREFIX/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=$WASI_SDK_PREFIX -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -D UTILS_BUILD_MODE=static -S . -B built/$UTILS_BUILD_MODE/$BUILD_TYPE 
+cmake -D CMAKE_TOOLCHAIN_FILE=$WASI_SDK_PREFIX/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=$WASI_SDK_PREFIX -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -D UTILS_BUILD_MODE=static -S . -B $OUTPUT_DIR
 elif [ $UTILS_BUILD_MODE = "wasm-em" ]; then
 # emcmake must be enabled on this context
-emcmake cmake -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_MODE=static -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B built/$UTILS_BUILD_MODE/$BUILD_TYPE
+emcmake cmake -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_MODE=static -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B $OUTPUT_DIR
 else
-cmake -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_MODE=$UTILS_BUILD_MODE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B built/$UTILS_BUILD_MODE/$BUILD_TYPE
+cmake -D CMAKE_C_COMPILER=$C_COMPILER -D CMAKE_CXX_COMPILER=$CXX_COMPILER -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_MODE=$UTILS_BUILD_MODE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B $OUTPUT_DIR
 fi
 ninja -C built/$UTILS_BUILD_MODE/$BUILD_TYPE $TARGET
 if [ $? -ne  0 ]; then
 return 1
 fi 
-ninja -C built/$UTILS_BUILD_MODE/$BUILD_TYPE install
+ninja -C $OUTPUT_DIR install
