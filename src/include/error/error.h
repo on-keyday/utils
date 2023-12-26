@@ -10,6 +10,7 @@
 #include <memory>
 #include <atomic>
 #include <concepts>
+#include <bit>
 
 #include <core/byte.h>
 #include <view/iovec.h>
