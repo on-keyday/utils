@@ -734,12 +734,21 @@ namespace utils::file {
         stat.mode.gid(st.st_mode & S_ISGID);
         stat.mode.sticky(st.st_mode & S_ISVTX);
         stat.size = st.st_size;
+#ifdef UTILS_PLATFORM_MACOS
+        stat.create_time.sec = st.st_ctimespec.tv_sec;
+        stat.create_time.nsec = st.st_ctimespec.tv_nsec;
+        stat.access_time.sec = st.st_atimespec.tv_sec;
+        stat.access_time.nsec = st.st_atimespec.tv_nsec;
+        stat.mod_time.sec = st.st_mtimespec.tv_sec;
+        stat.mod_time.nsec = st.st_mtimespec.tv_nsec;
+#else
         stat.create_time.sec = st.st_ctim.tv_sec;
         stat.create_time.nsec = st.st_ctim.tv_nsec;
         stat.access_time.sec = st.st_atim.tv_sec;
         stat.access_time.nsec = st.st_atim.tv_nsec;
         stat.mod_time.sec = st.st_mtim.tv_sec;
         stat.mod_time.nsec = st.st_mtim.tv_nsec;
+#endif
         return stat;
     }
 

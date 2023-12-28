@@ -410,10 +410,10 @@ namespace utils::file {
         std::uintptr_t handle = ~0;
 
         friend struct utils_DLL_EXPORT File;
-        std::uint32_t base_flag = 0;
+        std::uint64_t base_flag = 0;
         byte rec[2]{};  // for linux
         bool zero_input = false;
-        constexpr ConsoleBuffer(std::uintptr_t handle, std::uint32_t base_flag, byte a = 0, byte b = 0)
+        constexpr ConsoleBuffer(std::uintptr_t handle, std::uint64_t base_flag, byte a = 0, byte b = 0)
             : handle(handle), base_flag(base_flag) {
             rec[0] = a;
             rec[1] = b;
