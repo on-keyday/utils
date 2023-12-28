@@ -51,6 +51,14 @@ if "%UTILS_BUILD_MODE%" == "gcc-shared" (
     set UTILS_BUILD_MODE=shared
 )
 
+rem override CXX_COMPILER and C_COMPILER if specified with UTILS_CXX_COMPILER and UTILS_C_COMPILER
+if not "%UTILS_CXX_COMPILER%" == "" (
+    set CXX_COMPILER=%UTILS_CXX_COMPILER%
+)
+if not "%UTILS_C_COMPILER%" == "" (
+    set C_COMPILER=%UTILS_C_COMPILER%
+)
+
 
 set LLVM_DIR=D:\llvm-project\%BUILD_TYPE%
 set INSTALL_PREFIX=%CD%

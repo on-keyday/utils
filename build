@@ -23,6 +23,15 @@ CXX_COMPILER=g++
 UTILS_BUILD_MODE=${UTILS_BUILD_MODE#gcc-}
 fi
 
+# override compiler if specified
+if [ $UTILS_CXX_COMPILER ]; then
+CXX_COMPILER=$UTILS_CXX_COMPILER
+fi
+if [ $UTILS_C_COMPILER ]; then
+C_COMPILER=$UTILS_C_COMPILER
+fi
+
+
 
 INSTALL_PREFIX=$(pwd)
 if [ $UTILS_BUILD_MODE = "wasm-rt" ]; then
