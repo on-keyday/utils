@@ -9,6 +9,12 @@ include_directories("src/include")
 set(CMAKE_CXX_STANDARD 20)
 
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if("$ENV{UTILS_TARGET_TRIPLE}" NOT STREQUAL "")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target $ENV{UTILS_TARGET_TRIPLE}")
+  endif()
+endif()
+
 if(WIN32)
 
   if(MSVC)
@@ -18,6 +24,8 @@ if(WIN32)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options("-ftemplate-backtrace-limit=0")
     add_compile_options("-fconstexpr-steps=2147483647")
+
+
   endif()
 else()
   # find_package(OPENSSL REQUIRED)
