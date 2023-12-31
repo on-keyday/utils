@@ -8,6 +8,7 @@
 #pragma once
 #include <type_traits>
 #include <concepts>
+#include <cstddef>
 
 namespace utils::unicode::internal {
     template <class T>
