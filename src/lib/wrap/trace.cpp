@@ -13,7 +13,7 @@
 #include <ImageHlp.h>
 #include <helper/lock.h>
 #pragma comment(lib, "imagehlp.lib")
-#elif __has_include(<execinfo.h>)
+#elif __has_include(<execinfo.h>) && (!defined(UTILS_PLATFORM_ANDROID) || __ANDROID_API__ >= 33)
 #include <execinfo.h>
 #else
 #define NO_TRACE_LIB

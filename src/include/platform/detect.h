@@ -10,8 +10,6 @@
 #ifndef UTILS_PLATFORM
 #if defined(_WIN32)
 #define UTILS_PLATFORM_WINDOWS
-#elif defined(__APPLE__) && defined(__MACH__)
-#define UTILS_PLATFORM_MACOS
 #elif defined(__wasi__)
 #define UTILS_PLATFORM_WASI
 #elif defined(__unix__)
@@ -21,6 +19,12 @@
 #endif
 #if defined(__EMSCRIPTEN__)
 #define UTILS_PLATFORM_EMSCRIPTEN
+#endif
+#if defined(__ANDROID__)
+#define UTILS_PLATFORM_ANDROID
+#endif
+#if defined(__APPLE__) && defined(__MACH__)
+#define UTILS_PLATFORM_MACOS
 #endif
 #else
 #error "Unsupported platform"
