@@ -170,31 +170,52 @@ namespace futils {
                 }
 
                 const std::int64_t* as_numi() const {
-                    return kind_ == JSONKind::number_i ? &i : nullptr;
+                    if (kind_ == JSONKind::number_i) {
+                        return &i;
+                    }
+                    return nullptr;
                 }
 
                 const std::uint64_t* as_numu() const {
-                    return kind_ == JSONKind::number_u ? &u : nullptr;
+                    if (kind_ == JSONKind::number_u) {
+                        return &u;
+                    }
+                    return nullptr;
                 }
 
                 const double* as_numf() const {
-                    return kind_ == JSONKind::number_f ? &f : nullptr;
+                    if (kind_ == JSONKind::number_f) {
+                        return &f;
+                    }
+                    return nullptr;
                 }
 
                 const bool* as_bool() const {
-                    return kind_ == JSONKind::boolean ? &b : nullptr;
+                    if (kind_ == JSONKind::boolean) {
+                        return &b;
+                    }
+                    return nullptr;
                 }
 
                 const String* as_str() const {
-                    return kind_ == JSONKind::string ? s : nullptr;
+                    if (kind_ == JSONKind::string) {
+                        return s;
+                    }
+                    return nullptr;
                 }
 
                 const object_t* as_obj() const {
-                    return kind_ == JSONKind::object ? o : nullptr;
+                    if (kind_ == JSONKind::object) {
+                        return o;
+                    }
+                    return nullptr;
                 }
 
                 const array_t* as_arr() const {
-                    return kind_ == JSONKind::array ? a : nullptr;
+                    if (kind_ == JSONKind::array) {
+                        return a;
+                    }
+                    return nullptr;
                 }
 
                 const void* as_rawp() const {
